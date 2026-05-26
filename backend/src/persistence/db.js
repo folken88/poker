@@ -106,6 +106,8 @@ const BOT_ROSTER = [
   { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard' }, // half-orc slayer/detective
   { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky'    }, // velociraptor — pure instinct
   { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious' }, // underworld doctor
+  { name: 'Toni',                 avatar: '/tokens/antoinette-borden.webp',      baseMode: 'risky'    }, // Antoinette Borden, Mandi's magus
+  { name: 'Agu',                  avatar: '/tokens/aguclandos-lem.webp',         baseMode: 'cautious' }, // elf inquisitor, purple hair (Lydia)
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
