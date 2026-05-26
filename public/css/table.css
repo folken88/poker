@@ -1137,14 +1137,29 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   padding: 0 3px;
 }
 
-/* ===== Seat gear strip (small icons under the chip line) ===== */
+/* ===== Seat gear strip (hover-only popup) =====
+   Hidden by default to keep the seat card compact. Pops up over the
+   seat on hover so curious players can still see what gear an opponent
+   is carrying. Position absolute so it never affects plate layout. */
 .seat__gear {
-  display: flex; align-items: center; justify-content: center;
-  flex-wrap: wrap;
-  gap: 2px;
-  margin-top: 2px;
-  font-size: 0.6rem;
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translate(-50%, 100%);
+  z-index: 35;
+  background: rgba(8, 16, 11, 0.96);
+  border: 1px solid rgba(241,207,131,0.45);
+  border-radius: 8px;
+  padding: 5px 8px;
+  align-items: center; justify-content: center;
+  gap: 4px;
+  font-size: 0.62rem;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.55);
+  white-space: nowrap;
+  pointer-events: none;   /* avoid covering the seat click target */
 }
+.seat:hover .seat__gear { display: flex; }
 .seat__gear-cell {
   position: relative;
   display: inline-flex; align-items: center; justify-content: center;
@@ -1739,6 +1754,9 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   .seat__waiting,
   .seat__afk-tag,
   .seat__leaving { display: none; }
+  /* The gear strip is hover-only on desktop; on mobile (no real hover)
+     suppress it entirely — players check gear via the leaderboard. */
+  .seat:hover .seat__gear { display: none; }
   /* Keep the action timer on whichever seat is acting (so opponents
      can see whose turn it is) — others stay hidden. */
   .seat__timer { display: none; font-size: 0.62rem; min-width: 60px; padding: 1px 4px; }
