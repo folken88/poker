@@ -67,6 +67,42 @@ class Bot {
     this.baseMode = MODES.includes(baseMode) ? baseMode : 'standard';
     this.mode = MODES.includes(mode) ? mode : this.baseMode;
     this.intelligence = INTEL_TIERS.includes(intelligence) ? intelligence : 'average';
+    // Per-opponent bluff-memory. Map<opponentId, {samples, bluffs}>.
+    // Higher intelligence "remembers" more samples; lower intel
+    // forgets faster (cap applied in noteOpponentReveal).
+    this._opponentMemory = new Map();
+  }
+
+  /** Record that we saw an opponent's hand at showdown / fold-win.
+   *  Caller decides isBluff based on revealed strength + their action.
+   *  Memory caps at MAX samples per opponent — old behavior fades. */
+  noteOpponentReveal(opponentId, isBluff) {
+    if (!opponentId || opponentId === this.playerId) return;
+    const MAX = this.intelligence === 'high' ? 24
+              : this.intelligence === 'average' ? 14
+              : 6;
+    const rec = this._opponentMemory.get(opponentId) || { samples: 0, bluffs: 0 };
+    rec.samples++;
+    if (isBluff) rec.bluffs++;
+    if (rec.samples > MAX) {
+      // Shrink proportionally so the running ratio stays meaningful.
+      const factor = MAX / rec.samples;
+      rec.bluffs  = Math.round(rec.bluffs * factor);
+      rec.samples = MAX;
+    }
+    this._opponentMemory.set(opponentId, rec);
+  }
+
+  /** Look up a smoothed bluff-ratio for an opponent.
+   *  Returns 0..1 with Bayesian prior (assumes 30% bluff baseline at 0
+   *  samples so unknown opponents aren't auto-trusted). Requires ≥2
+   *  samples before the data influences anything appreciable. */
+  _opponentBluffRatio(opponentId) {
+    if (!opponentId) return 0.30;
+    const rec = this._opponentMemory.get(opponentId);
+    if (!rec || rec.samples < 2) return 0.30;
+    // Smoothed: (bluffs + prior) / (samples + 2)
+    return (rec.bluffs + 0.6) / (rec.samples + 2);
   }
 
   /** Add intelligence-dependent noise to a true strength estimate (0..1).
@@ -94,7 +130,7 @@ class Bot {
   decide(ctx) {
     const {
       hole, board, toCall, potTotal, stack, currentBet, invested, minRaise, bigBlind,
-      selfWealth, opponents, aggressorWealth,
+      selfWealth, opponents, aggressorWealth, aggressorId,
     } = ctx;
     const tuning = MODE_TUNING[this.mode] || MODE_TUNING.standard;
     const intel  = INTEL_TUNING[this.intelligence] || INTEL_TUNING.average;
@@ -138,6 +174,17 @@ class Bot {
     //                       poor raiser → respect their bet (more fold).
     // aggRel = 2 (rich raiser) → -0.04; aggRel = 0.5 (poor raiser) → +0.04.
     const aggCredAdj = clamp(-0.08, 0.08, (aggRel - 1) * -0.05) * wealthWeight;
+
+    // Bluff-history adjustment. If we've seen the aggressor bluff a lot,
+    // call them down more (negative = lower fold threshold). High-intel
+    // bots weight this strongly; low-intel barely uses it.
+    // ratio 0.30 = neutral, 0.60+ = chronic bluffer.
+    const bluffRatio = this._opponentBluffRatio(aggressorId);
+    const memoryWeight = this.intelligence === 'high' ? 1.0
+                       : this.intelligence === 'average' ? 0.6
+                       : 0.2;
+    // Only act on deviations from the 0.30 prior. Cap effect at ±0.12.
+    const bluffAdj = clamp(-0.12, 0.12, (0.30 - bluffRatio) * 0.30) * memoryWeight;
 
     // Builds a raise action; auto-promotes to all-in if it'd commit the stack.
     const buildRaise = (sizeFactorMul, label) => {
@@ -198,9 +245,15 @@ class Bot {
         if (this.mode === 'risky' && this.intelligence === 'high' && v < 0.86 && rng() < 0.30) {
           return buildRaise(0.55, 'probe');
         }
-        // Monster + risky → shove (only risky shoves).
+        // Monster + risky → shove (only risky shoves on standard monsters).
         if (v >= tuning.monsterThresh && tuning.willShove) {
           return { action: 'allin', reason: `monster-shove v=${v.toFixed(2)} ${tag}` };
+        }
+        // Cautious patient-pays: near-nuts (v ≥ 0.92) finally trigger an
+        // all-in. The patient bot has waited for a great hand — when it
+        // comes, they jam to extract maximum value.
+        if (this.mode === 'cautious' && v >= 0.92) {
+          return { action: 'allin', reason: `patience-pays v=${v.toFixed(2)} ${tag}` };
         }
         return buildRaise(1.0, 'value-open');
       }
@@ -219,7 +272,7 @@ class Bot {
       this.mode === 'cautious' ? 0.42 :
       this.mode === 'risky'    ? 0.22 :
                                  0.32;
-    const foldThreshold = clamp01(baseFold + potOdds * 0.40 + tuning.foldBias + wealthFoldAdj + aggCredAdj);
+    const foldThreshold = clamp01(baseFold + potOdds * 0.40 + tuning.foldBias + wealthFoldAdj + aggCredAdj + bluffAdj);
 
     if (v < foldThreshold) {
       return { action: 'fold', reason: `fold v=${v.toFixed(2)} fT=${foldThreshold.toFixed(2)} ${tag}` };
@@ -230,10 +283,14 @@ class Bot {
       return { action: 'fold', reason: `fold-big v=${v.toFixed(2)} ${tag}` };
     }
 
-    // Strong → raise. Only risky promotes monsters to all-in.
+    // Strong → raise. Risky promotes monsters to all-in; cautious does so
+    // only on near-nuts (the patient bot's payoff move).
     if (v > tuning.raiseThresh) {
       if (this.mode === 'risky' && v >= tuning.monsterThresh) {
         return { action: 'allin', reason: `monster v=${v.toFixed(2)} ${tag}` };
+      }
+      if (this.mode === 'cautious' && v >= 0.92) {
+        return { action: 'allin', reason: `patience-pays v=${v.toFixed(2)} ${tag}` };
       }
       // Cautious only "bets big" when truly certain — otherwise small value bet.
       if (this.mode === 'cautious' && v < tuning.monsterThresh) {

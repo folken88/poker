@@ -552,6 +552,7 @@ class Table {
       const selfWealth = me.stack + myGear;
       const opponents = [];
       let aggressorWealth = null;
+      let aggressorId = null;
       for (let i = 0; i < this.hand.players.length; i++) {
         const p = this.hand.players[i];
         if (p.playerId === actor) continue;
@@ -566,7 +567,10 @@ class Table {
           invested: p.invested,
           allIn: p.allIn,
         });
-        if (i === this.hand.lastRaiser) aggressorWealth = oppWealth;
+        if (i === this.hand.lastRaiser) {
+          aggressorWealth = oppWealth;
+          aggressorId = p.playerId;
+        }
       }
 
       const decideCtx = {
@@ -584,6 +588,7 @@ class Table {
         selfGear: myGear,
         opponents,
         aggressorWealth,
+        aggressorId,
       };
       const decision = bot.decide(decideCtx);
       console.log(`[bot] ${actor} (${bot.mode}) → ${decision.action}${decision.amount != null ? ' to ' + decision.amount : ''}  // ${decision.reason}`);
@@ -629,6 +634,37 @@ class Table {
       seat.chipsAtTable = p.stack;
       db.setChips(p.playerId, p.stack);
     }
+
+    // ---- Feed bot bluff memory ----
+    // For every player whose hole cards were revealed (showdown
+    // contenders + fold-win winner), classify their action this
+    // hand as BLUFF or VALUE based on revealed strength vs how
+    // many chips they committed. Then notify each seated bot so
+    // they remember this opponent's tendencies going forward.
+    //
+    //   BLUFF  : committed ≥ 4 BB AND revealed strength < 0.40
+    //   VALUE  : committed ≥ 4 BB AND revealed strength ≥ 0.55
+    //   IGNORE : low commitment (no signal) OR marginal strength
+    //
+    // Folded players are skipped — their cards stay hidden, no signal.
+    try {
+      const MIN_COMMIT = this.bigBlind * 4;
+      const revealedThisHand = [];
+      for (const p of this.hand.players) {
+        if (p.folded) continue;                  // folded → hole not revealed
+        if (!p.hole || p.hole.length !== 2) continue;
+        if ((p.totalIn || 0) < MIN_COMMIT) continue;
+        const strength = strengthOf(p.hole, this.hand.board);
+        if (strength >= 0.55) revealedThisHand.push({ playerId: p.playerId, isBluff: false });
+        else if (strength < 0.40) revealedThisHand.push({ playerId: p.playerId, isBluff: true });
+        // else: marginal — no clear signal, skip
+      }
+      if (revealedThisHand.length > 0) {
+        for (const bot of this.bots.values()) {
+          for (const r of revealedThisHand) bot.noteOpponentReveal(r.playerId, r.isBluff);
+        }
+      }
+    } catch (_) { /* never let memory updates break a hand */ }
 
     // ---- Bot auto-invest in gear (breadth-first) ----
     // Bots spend excess chips on magic items, but the AI strategy is
