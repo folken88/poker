@@ -126,34 +126,89 @@
   });
 
   // ===== Roster picker =====
+  /** Compute total worth = chips + market value of every gear slot. */
+  function rosterWealth(p) {
+    let total = Number(p.chips || 0);
+    try {
+      const gear = JSON.parse(p.gear || '{}') || {};
+      for (const slot of GEAR_SLOTS) {
+        const tier = gear[slot] || 0;
+        if (tier) total += gearPrice(slot, tier);
+      }
+    } catch (_) {}
+    return total;
+  }
+  /** Count how many of the 6 gear slots a player owns. */
+  function rosterGearCount(p) {
+    try {
+      const gear = JSON.parse(p.gear || '{}') || {};
+      return GEAR_SLOTS.filter(s => gear[s]).length;
+    } catch { return 0; }
+  }
+
+  function rosterCardHtml(p) {
+    const wealth = rosterWealth(p);
+    const gearCount = rosterGearCount(p);
+    const badge = p.is_bot
+      ? `<span class="roster-pick__badge roster-pick__badge--bot" title="AI-playable character — superseded while a human controls the seat">🤖 AI</span>`
+      : `<span class="roster-pick__badge roster-pick__badge--human" title="Reserved human seat — AI never plays this identity">👤 Human</span>`;
+    // Show chips on first line; total worth + gear count on second line
+    // when there's gear or accumulated wealth beyond the buy-in.
+    const chipsLine = `<div class="roster-pick__chips">💰 ${formatChips(p.chips)} gp</div>`;
+    const wealthLine = (wealth > Number(p.chips || 0))
+      ? `<div class="roster-pick__worth" title="Total wealth (chips + market value of gear)">⚔️ ${formatChips(wealth)} gp${gearCount ? ' · ' + gearCount + '/6' : ''}</div>`
+      : '';
+    return `
+      ${badge}
+      <div class="roster-pick__avatar">${renderAvatar(p.avatar_id)}</div>
+      <div class="roster-pick__nick">${escapeText(p.nickname)}</div>
+      ${chipsLine}
+      ${wealthLine}`;
+  }
+
   function renderRoster() {
-    const grid = $('#rosterGrid');
-    grid.innerHTML = '';
-    // Sort: reserved humans first (the personal-name players), then
-    // AI-playable PC characters. Within each tier, alphabetical.
-    const sorted = (state.roster || []).slice().sort((a, b) => {
-      const ab = a.is_bot ? 1 : 0;
-      const bb = b.is_bot ? 1 : 0;
-      if (ab !== bb) return ab - bb;
-      return (a.nickname || '').localeCompare(b.nickname || '', undefined, { sensitivity: 'base' });
-    });
-    for (const p of sorted) {
+    const host = $('#rosterGrid');
+    host.innerHTML = '';
+    const all = state.roster || [];
+    const humans = all.filter(p => !p.is_bot)
+      .sort((a, b) => (a.nickname || '').localeCompare(b.nickname || '', undefined, { sensitivity: 'base' }));
+    // AI characters sorted by wealth (richest first) — makes the list a
+    // mini secondary leaderboard right in the picker.
+    const bots = all.filter(p => p.is_bot)
+      .map(p => ({ p, w: rosterWealth(p) }))
+      .sort((a, b) => b.w - a.w)
+      .map(x => x.p);
+
+    function makeCard(p) {
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = 'roster-pick' + (p.is_bot ? ' roster-pick--bot' : ' roster-pick--reserved');
+      card.className = 'roster-pick ' + (p.is_bot ? 'roster-pick--bot' : 'roster-pick--reserved');
       card.dataset.playerId = p.player_id;
-      // Tiny badge: 🤖 AI (bot character, anyone can play) or 👤 Human (reserved).
-      const badge = p.is_bot
-        ? `<span class="roster-pick__badge roster-pick__badge--bot" title="AI-playable character — superseded if a human picks them">🤖 AI</span>`
-        : `<span class="roster-pick__badge roster-pick__badge--human" title="Reserved human seat — AI never plays this identity">👤 Human</span>`;
-      card.innerHTML = `
-        ${badge}
-        <div class="roster-pick__avatar">${renderAvatar(p.avatar_id)}</div>
-        <div class="roster-pick__nick">${escapeText(p.nickname)}</div>
-        <div class="roster-pick__chips">💰 ${formatChips(p.chips)} gp</div>
-      `;
+      card.innerHTML = rosterCardHtml(p);
       card.addEventListener('click', () => onPickName(p.player_id));
-      grid.appendChild(card);
+      return card;
+    }
+
+    function section(title, subtitle, players, kind) {
+      const head = document.createElement('div');
+      head.className = 'roster-section-head roster-section-head--' + kind;
+      head.innerHTML = `<h2>${title}</h2><p>${subtitle}</p>`;
+      host.appendChild(head);
+      const grid = document.createElement('div');
+      grid.className = 'roster-section-grid';
+      for (const p of players) grid.appendChild(makeCard(p));
+      host.appendChild(grid);
+    }
+
+    if (humans.length) {
+      section('👤 Reserved Humans',
+        `${humans.length} seats saved for real friends — AI never plays these.`,
+        humans, 'human');
+    }
+    if (bots.length) {
+      section('🤖 AI Characters',
+        `${bots.length} personalities you can sit in for. Pick one and you take over their fortune, gear, and seat. Ranked by current worth.`,
+        bots, 'bot');
     }
   }
 
