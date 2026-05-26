@@ -714,7 +714,15 @@
     if (!state.me) return '';
     const t = state.table;
     const mySeat = t?.seats?.find(s => s.playerId === state.me.player_id);
-    const gear = (mySeat?.gear) || {};
+    // Prefer the live seat data (mid-hand updates), but fall back to the
+    // roster record when not currently seated — that record carries the
+    // persisted gear JSON so the bank doesn't go blank between hands or
+    // while sitting out.
+    let gear = mySeat?.gear;
+    if (!gear) {
+      try { gear = JSON.parse(state.me.gear || '{}') || {}; }
+      catch (_) { gear = {}; }
+    }
     const chips = mySeat?.chips ?? state.me.chips ?? 0;
 
     const rows = GEAR_SLOTS.map(slot => {
