@@ -738,6 +738,11 @@ class Table {
     // topbar countdown clock to switch from action-deadline mode to
     // "next hand in N" mode while everyone catches their breath.
     this.nextHandAt = Date.now() + HAND_RESULT_PAUSE_MS + HAND_AUTOSTART_DELAY_MS;
+    // Broadcast immediately so the topbar clock flips to the
+    // "Next hand in N" countdown the moment the hand resolves.
+    // Without this, the client doesn't see nextHandAt until the
+    // HAND_RESULT_PAUSE_MS setTimeout below fires its own broadcast.
+    this._broadcast();
     if (this._completeTimer) clearTimeout(this._completeTimer);
     this._completeTimer = setTimeout(() => {
       this._completeTimer = null;
