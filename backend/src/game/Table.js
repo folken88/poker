@@ -420,8 +420,51 @@ class Table {
   applyAction({ playerId, action, amount }) {
     if (!this.hand) return { ok: false, error: 'no active hand' };
     const before = this.hand.state;
+
+    // Snapshot the actor's stack BEFORE the action so we can compute
+    // how many chips actually went into the pot (for the chat log).
+    const actorBefore = this.hand.players.find(p => p.playerId === playerId);
+    const stackBefore = actorBefore ? actorBefore.stack : 0;
+    const nick = actorBefore?.nickname || playerId;
+    const isBot = !!this.bots.get(playerId);
+
     const result = this.hand.applyAction(playerId, action, amount);
     if (!result.ok) return result;
+
+    // ---- Per-action chat entry ----
+    // One short line per turn so spectators can follow the action
+    // in the chat log without having to watch the felt every second.
+    try {
+      const actorAfter = this.hand.players.find(p => p.playerId === playerId);
+      const stackAfter = actorAfter ? actorAfter.stack : 0;
+      const committed = Math.max(0, stackBefore - stackAfter);
+      const tag = isBot ? '🤖 ' : '';
+      let line = null;
+      switch (action) {
+        case 'fold':
+          line = `🪦 ${tag}${nick} folded`;
+          break;
+        case 'check':
+          line = `· ${tag}${nick} checked`;
+          break;
+        case 'call':
+          line = committed > 0
+            ? `📞 ${tag}${nick} called ${committed.toLocaleString()} gp`
+            : `· ${tag}${nick} called (no chips)`;
+          break;
+        case 'raise': {
+          const to = actorAfter ? actorAfter.invested : amount;
+          line = `🎯 ${tag}${nick} raised to ${Number(to).toLocaleString()} gp`;
+          break;
+        }
+        case 'allin':
+          line = `💥 ${tag}${nick} went ALL-IN (${committed.toLocaleString()} gp)`;
+          break;
+        default:
+          line = `${tag}${nick} ${action}`;
+      }
+      if (line) this.chat('action', line);
+    } catch (_) { /* never let chat logging break a hand */ }
 
     // If hand transitioned or completed, broadcast + handle next steps.
     this._broadcast();
