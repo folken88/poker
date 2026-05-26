@@ -1,0 +1,15 @@
+{
+  "_comment": "Hand-picked iconic villains and major NPCs from Cassbot's campaigns. Each entry is added to public/tokens/manifest.json with a `villain: true` flag so the gallery can badge them differently. Path is relative to FOUNDRY_DIR. Add more or remove any — re-run scripts/import-token-gallery.js to apply.",
+
+  "villains": [
+    { "name": "Tar Baphon",           "campaign": "TG", "race": "Lich",       "class": "The Whispering Tyrant", "source": "carrion_crown_characters/whisperingway/token_undead_king_gold_tar_baphon_whispering_tyrant.webp" },
+    { "name": "Arazni",               "campaign": "TG", "race": "Demigod",    "class": "Aroden's Herald (fallen)", "source": "undead/token_undead_arazni_lich_angel_wizard_demigod.webp" },
+    { "name": "Beast of Lepidstadt",  "campaign": "CC", "race": "Flesh Golem","class": "Innocent Monster",      "source": "carrion_crown_characters/token_monster_beast_of_lepidstadt_golem.webp" },
+    { "name": "Vorkstag",             "campaign": "CC", "race": "Skinwalker", "class": "Skinless Butcher",      "source": "carrion_crown_characters/token_skinwalker_vorkstag_with_no_skin_murderer_villain_scary_dark_fantasy.webp" },
+    { "name": "Barzillai Thrune",     "campaign": "HR", "race": "Human",      "class": "Lord-Mayor of Kintargo","source": "cheliax_characters/token_barzillai_thrune_battle_gear.webp" },
+    { "name": "Abrogail Thrune II",   "campaign": "HV", "race": "Human",      "class": "Queen of Cheliax",      "source": "cheliax_characters/token_human_female_abrogail_thrune_queen_sorcerer_cheliax_monarch.webp" },
+    { "name": "Unity",                "campaign": "IG", "race": "AI",         "class": "Iron God",              "source": "iron_gods_characters/token_robot_overlord_unity.webp" },
+    { "name": "Hellion",              "campaign": "IG", "race": "Construct",  "class": "Scorpion-Robot Iron God","source": "iron_gods_characters/token_hellion_body_scorpion_robot.webp" },
+    { "name": "Casandalee",           "campaign": "IG", "race": "AI",         "class": "Ascended Goddess",      "source": "iron_gods_characters/token_ai_android_tablet_casandalee_cass_goddess_round.webp" }
+  ]
+}

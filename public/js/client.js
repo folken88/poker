@@ -110,10 +110,12 @@
       if (!r.ok) throw new Error('manifest ' + r.status);
       const data = await r.json();
       if (!Array.isArray(data)) throw new Error('bad manifest shape');
-      // Surface campaign PCs first (they're the people the user
-      // probably wants to pick). Then everything else, alphabetical.
+      // Sort order: PCs first (most-pickable), then iconic villains,
+      // then generic recent tokens. Inside each tier, alphabetical.
+      const rank = t => t.pc ? 0 : (t.villain ? 1 : 2);
       data.sort((a, b) => {
-        if (!!b.pc - !!a.pc) return !!b.pc - !!a.pc;
+        const r = rank(a) - rank(b);
+        if (r) return r;
         return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
       });
       state.tokens = data;
@@ -160,13 +162,16 @@
         JG: 'Jade Regent',
       };
       const subBits = [tok.race, tok.class].filter(Boolean);
-      const subLine = tok.pc && subBits.length
+      const subLine = (tok.pc || tok.villain) && subBits.length
         ? `<span class="avatar-pick__sub">${escapeText(subBits.join(' · '))}</span>`
         : '';
       const campaignName = tok.campaign ? (CAMPAIGN_NAMES[tok.campaign] || tok.campaign) : '';
-      const pcBadge = tok.pc
-        ? `<span class="avatar-pick__pcbadge" title="${escapeAttr([campaignName, tok.player ? 'Player: ' + tok.player : ''].filter(Boolean).join(' · '))}">${escapeText(tok.campaign || 'PC')}</span>`
-        : '';
+      let pcBadge = '';
+      if (tok.villain) {
+        pcBadge = `<span class="avatar-pick__pcbadge avatar-pick__pcbadge--villain" title="${escapeAttr([campaignName, 'Iconic NPC / Villain'].filter(Boolean).join(' · '))}">${escapeText(tok.campaign || 'NPC')}</span>`;
+      } else if (tok.pc) {
+        pcBadge = `<span class="avatar-pick__pcbadge" title="${escapeAttr([campaignName, tok.player ? 'Player: ' + tok.player : ''].filter(Boolean).join(' · '))}">${escapeText(tok.campaign || 'PC')}</span>`;
+      }
       btn.innerHTML = `<img class="avatar-img" src="${tok.art}" alt="${escapeAttr(tok.name)}" loading="lazy" />`
                     + pcBadge
                     + `<span class="avatar-pick__label">${escapeText(tok.name)}</span>`

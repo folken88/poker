@@ -290,6 +290,11 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
+/* Villain / iconic NPC variant — crimson instead of brass. */
+.avatar-pick__pcbadge--villain {
+  background: linear-gradient(180deg, #b34141, #7a1f1f);
+  color: #ffe5e5;
+}
 .avatar-pick__more {
   grid-column: 1 / -1;
   text-align: center;
