@@ -357,11 +357,16 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
   padding: 0.6rem 1.25rem;
   background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.15));
   border-bottom: 1px solid rgba(217,176,106,0.18);
   z-index: 5;
 }
+.topbar__brand { flex: 0 0 auto; }
+.topbar__me    { flex: 0 0 auto; }
+/* The clock sits in the middle and absorbs slack. */
+.topbar__clock { flex: 1 1 auto; max-width: 360px; margin: 0 auto; }
 .topbar__brand {
   font-family: var(--font-display);
   letter-spacing: 0.22em;
@@ -372,6 +377,52 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   display: flex; align-items: center; gap: 0.6rem;
   font-size: 0.9rem;
 }
+
+/* ===== Topbar digital countdown clock ===== */
+.topbar__clock {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px;
+  padding: 4px 14px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.7));
+  border: 1px solid rgba(241,207,131,0.25);
+  border-radius: 10px;
+  min-width: 168px;
+  user-select: none;
+}
+.topbar__clock-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ivory-dim);
+  font-variant-numeric: tabular-nums;
+}
+.topbar__clock-digits {
+  display: inline-flex; gap: 6px; align-items: center;
+  line-height: 1;
+}
+.topbar__clock-digits svg { display: block; }
+/* Mode-driven colors. Style the SVG segments via currentColor below. */
+.topbar__clock[data-mode="action"]  { color: var(--brass-bright); border-color: var(--brass-bright); }
+.topbar__clock[data-mode="action"] .topbar__clock-label { color: var(--brass-bright); }
+.topbar__clock[data-mode="urgent"]  {
+  color: #ff8888;
+  border-color: var(--danger);
+  animation: clockPulse 0.7s ease-in-out infinite;
+}
+.topbar__clock[data-mode="urgent"] .topbar__clock-label { color: #ffd9d9; }
+.topbar__clock[data-mode="next"]    { color: #7af5ff; border-color: rgba(122, 245, 255, 0.45); }
+.topbar__clock[data-mode="next"] .topbar__clock-label { color: #7af5ff; }
+.topbar__clock[data-mode="idle"]    { color: rgba(245,236,214,0.35); }
+.topbar__clock[data-mode="idle"] .topbar__clock-label { color: var(--ivory-dim); }
+@keyframes clockPulse {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.03); }
+}
+/* 7-segment digit SVG: drive the "on" segments via currentColor and the
+   "off" ones via a dim tone of the same hue so the inactive segments
+   are visible (like a real LED clock). */
+.topbar__clock-digit-seg-on  { fill: currentColor; filter: drop-shadow(0 0 4px currentColor); }
+.topbar__clock-digit-seg-off { fill: currentColor; opacity: 0.08; }
 .me-avatar {
   display: inline-flex; align-items: center; justify-content: center;
   width: 32px; height: 32px;
@@ -824,6 +875,20 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   padding: 0.25rem 0.9rem;
   border-radius: 20px;
   border: 1px solid rgba(217,176,106,0.35);
+}
+/* Headline pot variant — sits ABOVE the community board so the chip
+   total is the most prominent thing on the felt. Big and gold. */
+.pot--big {
+  font-size: 2.4rem;
+  letter-spacing: 0.22em;
+  padding: 0.45rem 1.6rem;
+  border-radius: 28px;
+  border-width: 2px;
+  border-color: rgba(217,176,106,0.6);
+  background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.4));
+  box-shadow: 0 6px 24px rgba(0,0,0,0.55), inset 0 1px 0 rgba(241,207,131,0.18);
+  text-shadow: 0 2px 10px rgba(241,207,131,0.25);
+  margin-bottom: 0.2rem;
 }
 .stage-banner {
   color: var(--ivory-dim);

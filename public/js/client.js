@@ -483,8 +483,59 @@
     for (const e of entries) appendChatEntry(e);
   }
 
-  // ===== Action timer ticker (one interval, finds all .seat__timer elements) =====
+  // ===== SVG 7-segment digit renderer for the big topbar clock =====
+  // Segment layout (a = top, then clockwise; g = middle):
+  //    aaa
+  //   f   b
+  //    ggg
+  //   e   c
+  //    ddd
+  const DIGIT_SEGS = {
+    0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc',
+    5: 'afgcd', 6: 'afgecd', 7: 'abc', 8: 'abcdefg', 9: 'abfgcd',
+  };
+  // Each segment's drawn rectangle (h = horiz, v = vert). Coords assume
+  // a 26 × 46 viewBox per digit (so total clock with colon ≈ 130 × 46).
+  const SEG_PATHS = {
+    // x, y, w, h
+    a: 'M 4 1   L 22 1   L 20 5   L 6 5  Z',
+    b: 'M 23 2  L 25 4   L 25 21  L 22 22 L 21 20 L 21 6 Z',
+    c: 'M 25 25 L 25 42  L 23 44  L 21 41 L 21 26 L 22 24 Z',
+    d: 'M 4 45  L 6 41   L 20 41  L 22 45 Z',
+    e: 'M 3 25  L 5 24   L 5 41   L 3 44  L 1 42  L 1 26 Z',
+    f: 'M 3 1   L 5 5    L 5 20   L 3 22  L 1 21  L 1 4  Z',
+    g: 'M 4 23  L 6 21   L 20 21  L 22 23 L 20 25 L 6 25 Z',
+  };
+  function digitSvg(n) {
+    const on = new Set((DIGIT_SEGS[n] || '').split(''));
+    const segs = Object.entries(SEG_PATHS).map(([k, d]) =>
+      `<path d="${d}" class="topbar__clock-digit-seg-${on.has(k) ? 'on' : 'off'}" />`
+    ).join('');
+    return `<svg viewBox="0 0 26 46" width="22" height="38">${segs}</svg>`;
+  }
+  function colonSvg() {
+    return `<svg viewBox="0 0 8 46" width="6" height="38">`
+      + `<circle cx="4" cy="17" r="3" class="topbar__clock-digit-seg-on"/>`
+      + `<circle cx="4" cy="32" r="3" class="topbar__clock-digit-seg-on"/>`
+      + `</svg>`;
+  }
+  /** Render "M:SS" or "MM:SS" into the topbar clock digits container. */
+  function renderClockDigits(secs) {
+    const total = Math.max(0, Math.floor(secs));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    const ss = String(s).padStart(2, '0');
+    const mStr = String(m);
+    const el = document.getElementById('topClockDigits');
+    if (!el) return;
+    el.innerHTML = [...mStr].map(c => digitSvg(Number(c))).join('')
+                 + colonSvg()
+                 + [...ss].map(c => digitSvg(Number(c))).join('');
+  }
+
+  // ===== Combined timer tick: seat countdowns AND the big topbar clock =====
   function tickTimers() {
+    // Per-seat countdowns
     const els = $$('[data-seat-timer]');
     for (const el of els) {
       const deadline = Number(el.dataset.deadline);
@@ -494,6 +545,37 @@
       const ss = String(s % 60).padStart(2, '0');
       el.textContent = `⏱ ${mm}:${ss}`;
       el.classList.toggle('is-urgent', remaining < 10000);
+    }
+    // Topbar digital clock — three modes:
+    //   action: a human is on the clock (state.table.actionDeadline > now)
+    //   next:   between hands (state.table.nextHandAt > now)
+    //   idle:   waiting / no countdown
+    const clock = document.getElementById('topClock');
+    const label = document.getElementById('topClockLabel');
+    if (!clock || !label) return;
+    const t = state.table;
+    const now = Date.now();
+    const actionMs = t?.actionDeadline ? t.actionDeadline - now : 0;
+    const nextMs   = t?.nextHandAt ? t.nextHandAt - now : 0;
+
+    if (actionMs > 0) {
+      const secs = Math.ceil(actionMs / 1000);
+      const mode = actionMs < 10000 ? 'urgent' : 'action';
+      clock.dataset.mode = mode;
+      // Find the acting player's nickname for the label.
+      const actorId = t.hand?.actor;
+      const actorSeat = t.seats.find(s => s.playerId === actorId);
+      const isMe = actorId && state.me && actorId === state.me.player_id;
+      label.textContent = isMe ? 'Your turn' : `${actorSeat?.nickname || 'Acting'} · auto-fold in`;
+      renderClockDigits(secs);
+    } else if (nextMs > 0) {
+      clock.dataset.mode = 'next';
+      label.textContent = 'Next hand in';
+      renderClockDigits(Math.ceil(nextMs / 1000));
+    } else {
+      clock.dataset.mode = 'idle';
+      label.textContent = t?.hand ? 'In hand' : 'Waiting for players';
+      renderClockDigits(0);
     }
   }
   setInterval(tickTimers, 250);

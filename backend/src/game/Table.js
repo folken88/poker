@@ -56,6 +56,11 @@ class Table {
     this.chatLog = [];
     this._chatId = 0;
     this.handCount = 0;
+    /** Wall-clock ms when the next hand will be dealt. Set when the
+     *  current hand completes (or autostart is scheduled). Cleared once
+     *  a new hand actually starts. Drives the topbar "next hand in N"
+     *  countdown. */
+    this.nextHandAt = null;
   }
 
   // ============================================================
@@ -215,6 +220,10 @@ class Table {
   _scheduleAutoStart() {
     if (this.hand) return;
     if (this._autostartTimer) return;
+    // Surface to clients so the topbar clock can count down to it.
+    // Don't clobber a later nextHandAt that's already been set by _afterHandComplete.
+    const planned = Date.now() + HAND_AUTOSTART_DELAY_MS;
+    if (!this.nextHandAt || this.nextHandAt < planned) this.nextHandAt = planned;
     this._autostartTimer = setTimeout(() => {
       this._autostartTimer = null;
       this._maybeStartHand();
@@ -224,7 +233,14 @@ class Table {
   _maybeStartHand() {
     if (this.hand) return;
     const ready = this._seatsReadyForHand();
-    if (ready.length < 2) return;
+    if (ready.length < 2) {
+      // Not enough players — keep `nextHandAt` null so the topbar shows
+      // "waiting for players" instead of a misleading countdown.
+      this.nextHandAt = null;
+      return;
+    }
+    // A hand is about to start — clear the next-hand timer.
+    this.nextHandAt = null;
 
     // Rotate the dealer button — pick the next eligible seat clockwise.
     const buttonOrder = this._nextButtonIndex(ready);
@@ -508,6 +524,10 @@ class Table {
 
     // Hold the completed hand briefly so the client can show showdown, then start next.
     const finishedHand = this.hand;
+    // Tell clients roughly when the next hand will be dealt. Used by the
+    // topbar countdown clock to switch from action-deadline mode to
+    // "next hand in N" mode while everyone catches their breath.
+    this.nextHandAt = Date.now() + HAND_RESULT_PAUSE_MS + HAND_AUTOSTART_DELAY_MS;
     if (this._completeTimer) clearTimeout(this._completeTimer);
     this._completeTimer = setTimeout(() => {
       this._completeTimer = null;
@@ -620,6 +640,9 @@ class Table {
       // Wall-clock ms when the current human actor will be auto-folded.
       // Null when no human is on the clock (waiting, bot turn, between hands).
       actionDeadline: this.actionDeadline,
+      // Wall-clock ms when the next hand is scheduled to start (only set
+      // between hands or while autostart is pending; null during a live hand).
+      nextHandAt: this.nextHandAt,
       // Last 60 chat-log entries so newly-joined / refreshed clients
       // see context, not an empty panel.
       chatLog: this.chatLog.slice(-60),
