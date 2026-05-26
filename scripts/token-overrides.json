@@ -8,5 +8,7 @@
   "Dismas Aevrett":                "human/token_human_dismas_spirit_white.png",
   "Field Marshal Freya Kusanagi":  "human/token_human_female_freya.webp",
   "Kate Blackwood":                "human/token_human_female_kate_blackwood_decapiator_curly_black.webp",
-  "Aguclandos Lem":                "elf/token_elf_female_detective_purple_hair_yellow_eyes_tall_and_thin_dress.webp"
+  "Aguclandos Lem":                "elf/token_elf_female_detective_purple_hair_yellow_eyes_tall_and_thin_dress.webp",
+  "Kovira":                        "tiefling/token_tiefling_female_red_kovira_mj7.webp",
+  "Taelys of Starfall":            "tiefling/token_human_female_sniper_woman_of_30_from_a_desert_wasteland_expert.webp"
 }

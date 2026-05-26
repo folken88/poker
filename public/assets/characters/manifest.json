@@ -250,7 +250,7 @@
     "player": "Sydney",
     "campaign": "",
     "art": "/assets/characters/kovira.webp",
-    "sourceFile": "carrion_crown_characters/token_tiefling_female_blonde_kovira_midjourney.webp"
+    "sourceFile": "tiefling/token_tiefling_female_red_kovira_mj7.webp"
   },
   {
     "slug": "kroktah",
@@ -393,7 +393,7 @@
     "player": "Kayla",
     "campaign": "JG",
     "art": "/assets/characters/taelys-of-starfall.webp",
-    "sourceFile": "deathcourt/token_tiefling_female_taelys_magus.webp"
+    "sourceFile": "tiefling/token_human_female_sniper_woman_of_30_from_a_desert_wasteland_expert.webp"
   },
   {
     "slug": "tokala",
