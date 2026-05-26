@@ -153,6 +153,7 @@ class Table {
         playerId,
         baseMode: player.bot_mode || 'standard',
         mode: player.bot_mode || 'standard',
+        intelligence: player.bot_intelligence || 'average',
       }));
     }
     this.spectators.delete(playerId);
@@ -231,6 +232,7 @@ class Table {
         playerId,
         baseMode: seat.player.bot_mode || 'standard',
         mode: seat.player.bot_mode || 'standard',
+        intelligence: seat.player.bot_intelligence || 'average',
       }));
       this.chat('info', `🤖 The AI has resumed control of ${seat.player.nickname}.`);
     }

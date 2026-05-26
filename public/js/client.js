@@ -888,7 +888,11 @@
       const s = Math.ceil(remaining / 1000);
       const isBot = el.dataset.seatTimerBot === '1';
       if (isBot) {
-        const dots = '.'.repeat(1 + (Math.floor(Date.now() / 350) % 3));
+        // Fixed 3-character dot frame so the pill never reflows mid-think.
+        // The previous '...' / '..' / '.' rotation grew/shrank the timer
+        // box every 350ms, which jostled the surrounding seat layout.
+        const cycle = Math.floor(Date.now() / 350) % 3;
+        const dots = ['.  ', '.. ', '...'][cycle];
         el.textContent = `🤔 thinking${dots}`;
         el.classList.remove('is-urgent');
       } else {

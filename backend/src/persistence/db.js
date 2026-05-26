@@ -34,6 +34,11 @@ function ensureColumn(table, col, type) {
 }
 ensureColumn('players', 'is_bot',     'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('players', 'bot_mode',   'TEXT');
+// Bot intelligence: 'low' | 'average' | 'high'. Adds noise to the
+// strength estimate inside Bot.decide() — low-int bots mis-read hands
+// more often, high-int bots are nearly always right. Independent of
+// bot_mode (risk appetite).
+ensureColumn('players', 'bot_intelligence', "TEXT NOT NULL DEFAULT 'average'");
 // Long-term "tab" — every time a human hits Re-buy we add DEFAULT_STACK to
 // this debt. They can pay it down later from their stack via `lobby:payDebt`.
 // Bots do NOT accrue debt — their auto-rebuys are free (they're the house).
@@ -96,39 +101,45 @@ const ROSTER = [
 // also pick them from the roster to "supersede" the AI for a session.
 // Personality = baseMode (cautious / standard / risky). Avatar paths
 // point at /tokens/ files imported by scripts/import-token-gallery.js.
+// `intelligence`: 'low' | 'average' | 'high' — affects how much noise
+// is added to the bot's hand-strength estimate in Bot.decide(). High =
+// nearly always right; low = frequently misreads. Independent from
+// baseMode (risk appetite).
 const BOT_ROSTER = [
   // Original 6 bots
-  { name: 'Dinvaya',              avatar: '/tokens/dinvaya.webp',              baseMode: 'cautious' },
-  { name: 'Vaughan',              avatar: '/tokens/vaughan.webp',              baseMode: 'cautious' },
-  { name: 'Storgrim Thunderbeard', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'standard' },
-  { name: 'Kate Blackwood',        avatar: '/tokens/kate-blackwood.webp',        baseMode: 'standard' },
-  { name: 'Kovira',               avatar: '/tokens/kovira.webp',               baseMode: 'risky'    },
-  { name: 'Elfrip',               avatar: '/tokens/elfrip.webp',               baseMode: 'risky'    },
+  { name: 'Dinvaya',              avatar: '/tokens/dinvaya.webp',              baseMode: 'cautious', intelligence: 'high'    },
+  { name: 'Vaughan',              avatar: '/tokens/vaughan.webp',              baseMode: 'cautious', intelligence: 'average' },
+  { name: 'Storgrim Thunderbeard', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'standard', intelligence: 'average' },
+  { name: 'Kate Blackwood',        avatar: '/tokens/kate-blackwood.webp',        baseMode: 'standard', intelligence: 'high'    },
+  { name: 'Kovira',               avatar: '/tokens/kovira.webp',               baseMode: 'risky',    intelligence: 'high'    },
+  { name: 'Elfrip',               avatar: '/tokens/elfrip.webp',               baseMode: 'risky',    intelligence: 'average' },
 
-  // Round 2 additions — user-requested. Modes chosen to roughly match
-  // each character's archetype:
-  { name: 'Taelys',               avatar: '/tokens/taelys-of-starfall.webp',     baseMode: 'risky'    }, // tiefling gunslinger
-  { name: 'Lirienne',             avatar: '/tokens/lirienne-voss.webp',          baseMode: 'cautious' }, // hunter
-  { name: 'Kelda',                avatar: '/tokens/kelda-ironglim.webp',         baseMode: 'standard' }, // dwarf rogue
-  { name: 'Mr. Brow',             avatar: '/tokens/augustus-teabrow.webp',       baseMode: 'cautious' }, // halfling psychic
-  { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'risky'    }, // catfolk rogue
-  { name: 'Ulfred',               avatar: '/tokens/ulfred-stronginthearm.webp',  baseMode: 'standard' }, // dwarf cleric
-  { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard' }, // half-orc slayer/detective
-  { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky'    }, // velociraptor — pure instinct
-  { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious' }, // underworld doctor
-  { name: 'Toni',                 avatar: '/tokens/antoinette-borden.webp',      baseMode: 'risky'    }, // Antoinette Borden, Mandi's magus
-  { name: 'Agu',                  avatar: '/tokens/aguclandos-lem.webp',         baseMode: 'cautious' }, // elf inquisitor, purple hair (Lydia)
+  // Round 2 additions
+  { name: 'Taelys',               avatar: '/tokens/taelys-of-starfall.webp',     baseMode: 'risky',    intelligence: 'average' },
+  { name: 'Lirienne',             avatar: '/tokens/lirienne-voss.webp',          baseMode: 'cautious', intelligence: 'high'    },
+  { name: 'Kelda',                avatar: '/tokens/kelda-ironglim.webp',         baseMode: 'standard', intelligence: 'average' },
+  { name: 'Mr. Brow',             avatar: '/tokens/augustus-teabrow.webp',       baseMode: 'risky',    intelligence: 'high'    }, // user: highly intelligent + risky
+  { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'risky',    intelligence: 'average' },
+  { name: 'Ulfred',               avatar: '/tokens/ulfred-stronginthearm.webp',  baseMode: 'standard', intelligence: 'average' },
+  { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard', intelligence: 'high'    },
+  { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky',    intelligence: 'low'     }, // velociraptor — pure instinct, no thinking
+  { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious', intelligence: 'high'    },
+  { name: 'Toni',                 avatar: '/tokens/antoinette-borden.webp',      baseMode: 'risky',    intelligence: 'average' },
+  { name: 'Agu',                  avatar: '/tokens/aguclandos-lem.webp',         baseMode: 'cautious', intelligence: 'high'    },
 
-  // Round 3 additions — user-specified tokens (see scripts/villains.json
-  // for source paths). Concetta + Conchobar pinned to high-risk per
-  // user instruction.
-  { name: 'Fera',                 avatar: '/tokens/fera.webp',                   baseMode: 'cautious' },
-  { name: 'Gaspar',               avatar: '/tokens/gaspar.webp',                 baseMode: 'standard' },
-  { name: 'Daramid',              avatar: '/tokens/daramid.webp',                baseMode: 'cautious' },
-  { name: 'Farrah',               avatar: '/tokens/farrah.webp',                 baseMode: 'standard' },
-  { name: 'Concetta',             avatar: '/tokens/concetta.webp',               baseMode: 'risky'    }, // explicit: highly intelligent + risky
-  { name: 'Rissa',                avatar: '/tokens/rissa.webp',                  baseMode: 'standard' },
-  { name: 'Conchobar',            avatar: '/tokens/conchobar.webp',              baseMode: 'risky'    }, // explicit: always high-risk
+  // Round 3 additions
+  { name: 'Fera',                 avatar: '/tokens/fera.webp',                   baseMode: 'cautious', intelligence: 'average' },
+  { name: 'Gaspar',               avatar: '/tokens/gaspar.webp',                 baseMode: 'standard', intelligence: 'high'    },
+  { name: 'Daramid',              avatar: '/tokens/daramid.webp',                baseMode: 'cautious', intelligence: 'high'    },
+  { name: 'Farrah',               avatar: '/tokens/farrah.webp',                 baseMode: 'standard', intelligence: 'low'     },
+  { name: 'Concetta',             avatar: '/tokens/concetta.webp',               baseMode: 'risky',    intelligence: 'high'    }, // user: highly intelligent + risky
+  { name: 'Rissa',                avatar: '/tokens/rissa.webp',                  baseMode: 'standard', intelligence: 'average' },
+  { name: 'Conchobar',            avatar: '/tokens/conchobar.webp',              baseMode: 'risky',    intelligence: 'low'     }, // bard, pure vibes
+
+  // Round 4 additions — user-specified with explicit intel + risk:
+  { name: 'Tokala',               avatar: '/tokens/tokala.webp',                 baseMode: 'risky',    intelligence: 'low'     }, // user: high risk + low intel
+  { name: 'Casandalee',           avatar: '/tokens/casandalee.webp',             baseMode: 'cautious', intelligence: 'high'    }, // user: low risk + high intel
+  { name: 'Meyanda',              avatar: '/tokens/meyanda.webp',                baseMode: 'standard', intelligence: 'high'    }, // user: avg risk + high intel
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
@@ -247,6 +258,8 @@ function seedRoster() {
   const now = Date.now();
   let humans = 0, bots = 0, prunedBots = 0;
   const updateBotAvatar = db.prepare('UPDATE players SET avatar_id = ? WHERE player_id = ? AND is_bot = 1');
+  const updateBotMode   = db.prepare('UPDATE players SET bot_mode = ? WHERE player_id = ? AND is_bot = 1');
+  const updateBotIntel  = db.prepare('UPDATE players SET bot_intelligence = ? WHERE player_id = ? AND is_bot = 1');
   const deleteBot       = db.prepare('DELETE FROM players WHERE player_id = ? AND is_bot = 1');
   const listBotIds      = db.prepare('SELECT player_id FROM players WHERE is_bot = 1');
 
@@ -262,9 +275,13 @@ function seedRoster() {
       currentBotIds.add(id);
       const r = stmts.seedPlayer.run(id, p.name, p.avatar, DEFAULT_STACK, now, now, 1, p.baseMode);
       if (r.changes) bots++;
-      // Always sync the avatar URL — handles migrations from old paths
-      // (e.g. /foundry-art/... → /assets/characters/...).
+      // Always sync the avatar URL + mode + intelligence so BOT_ROSTER
+      // stays the source of truth for character configuration. (Mode
+      // can drift between hands via bot.maybeShiftMode(), but baseMode
+      // is what BOT_ROSTER pins.)
       updateBotAvatar.run(p.avatar, id);
+      updateBotMode.run(p.baseMode || 'standard', id);
+      updateBotIntel.run(p.intelligence || 'average', id);
     }
     // Prune stale bot rows from previous rosters so they don't show up in
     // the "+ Bot" picker. Humans are never pruned (their chip totals matter).

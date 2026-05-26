@@ -1379,6 +1379,11 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   padding: 1px 7px;
   border-radius: 999px;
   margin-top: 2px;
+  /* Fixed width so neither the human's mm:ss tick nor the bot's
+     "thinking..." dot frames reflow the seat plate around it. */
+  min-width: 92px;
+  text-align: center;
+  white-space: pre;   /* preserves trailing spaces in the dot frames */
 }
 .seat__timer.is-urgent {
   color: #ffd9d9;

@@ -30,6 +30,7 @@
     { "name": "Farrah",               "campaign": "CC", "race": "Human",      "class": "Teenage Heir (Richton)",               "source": "carrion_crown_characters/token_human_female_redhead_farrah_richton_teenage2.webp" },
     { "name": "Concetta",             "campaign": "CC", "race": "Human",      "class": "Swashbuckler",                          "source": "carrion_crown_characters/token_human_female_concetta_swashbuckler_sword.webp" },
     { "name": "Rissa",                "campaign": "CC", "race": "Wood Golem", "class": "Druid",                                  "source": "carrion_crown_characters/token_golem_made_of_wood_49_years_old_druid_dd_charact.webp" },
-    { "name": "Conchobar",            "campaign": "SS", "race": "Gnome",      "class": "Bard (Shackles)",                       "source": "shackles_characters/token_gnome_conchobar_2_male_bard_shackles_red_eye.webp" }
+    { "name": "Conchobar",            "campaign": "SS", "race": "Gnome",      "class": "Bard (Shackles)",                       "source": "shackles_characters/token_gnome_conchobar_2_male_bard_shackles_red_eye.webp" },
+    { "name": "Meyanda",              "campaign": "IG", "race": "Android",    "class": "Priestess of Hellion",                   "source": "iron_gods_characters/token_android_female_meyanda_alternate_.webp" }
   ]
 }

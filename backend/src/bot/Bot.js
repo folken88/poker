@@ -21,17 +21,35 @@ const MODE_TUNING = {
   risky:    { boost: +0.13, raiseProb: 0.70, bluffProb: 0.18, sizing: 1.10 },
 };
 
+// Intelligence tier → ±noise applied to the hand-strength estimate
+// every decision. Higher = closer to ground truth, lower = the bot
+// reads the board wrong more often. Independent of risk appetite, so
+// you can have a "smart but reckless" Concetta or a "dumb but calm"
+// Crisp (the velociraptor).
+const INTEL_TIERS = ['low', 'average', 'high'];
+const INTEL_NOISE = { low: 0.25, average: 0.10, high: 0.03 };
+
 class Bot {
   /**
    * @param {Object} opts
    * @param {string} opts.playerId
-   * @param {string} [opts.baseMode]   - the bot's "personality" mode it tends back to
-   * @param {string} [opts.mode]       - the current mode (may differ from base)
+   * @param {string} [opts.baseMode]      - the bot's "personality" mode it tends back to
+   * @param {string} [opts.mode]          - the current mode (may differ from base)
+   * @param {string} [opts.intelligence]  - 'low' | 'average' | 'high'
    */
-  constructor({ playerId, baseMode = 'standard', mode }) {
+  constructor({ playerId, baseMode = 'standard', mode, intelligence = 'average' }) {
     this.playerId = playerId;
     this.baseMode = MODES.includes(baseMode) ? baseMode : 'standard';
     this.mode = MODES.includes(mode) ? mode : this.baseMode;
+    this.intelligence = INTEL_TIERS.includes(intelligence) ? intelligence : 'average';
+  }
+
+  /** Add intelligence-dependent noise to a true strength estimate (0..1).
+   *  Returns the clamped noisy value the bot will base decisions on. */
+  _perceivedStrength(trueStrength) {
+    const noise = INTEL_NOISE[this.intelligence] ?? INTEL_NOISE.average;
+    const drift = (Math.random() - 0.5) * 2 * noise;
+    return Math.max(0, Math.min(1, trueStrength + drift));
   }
 
   /**
@@ -53,9 +71,15 @@ class Bot {
     const tuning = MODE_TUNING[this.mode] || MODE_TUNING.standard;
     const rng = Math.random;
 
-    const baseStrength = strengthOf(hole, board);
-    // Adjusted strength includes mode boost + ±0.075 variance
-    const v = clamp01(baseStrength + tuning.boost + (rng() - 0.5) * 0.15);
+    // Bot's noisy READ of its own hand. High-intel bots see truth;
+    // low-intel ones can think they have a great hand when they don't.
+    const trueStrength = strengthOf(hole, board);
+    const perceived    = this._perceivedStrength(trueStrength);
+    // Adjusted strength includes mode boost + ±0.075 mood variance.
+    const v = clamp01(perceived + tuning.boost + (rng() - 0.5) * 0.15);
+    // Keep the old name for downstream metric logging — it's the
+    // ground-truth value, not what drove the decision.
+    const baseStrength = trueStrength;
 
     // --- No bet to call (we can check or open) ---
     if (toCall === 0) {
