@@ -137,6 +137,13 @@ function registerLobbyHandlers(io, socket, { tables }) {
     if (table) {
       const seat = table.findSeat(player.player_id);
       if (seat) seat.chipsAtTable = refreshed.chips;
+      // CRITICAL: if a hand is live, also deduct from the in-hand stack.
+      // Without this, _afterHandComplete's `db.setChips(p.playerId, p.stack)`
+      // overwrites the deduction we just made and the purchase appears free.
+      if (table.hand) {
+        const hp = table.hand.players.find(pp => pp.playerId === player.player_id);
+        if (hp) hp.stack = Math.max(0, hp.stack - cost);
+      }
       const itemName = db.GEAR_BY_KEY[slot].label;
       const action = cur > 0 ? `upgraded to +${target}` : `bought a +${target}`;
       table.chat('rebuy', `🛒 ${refreshed.nickname} ${action} ${itemName} for ${cost.toLocaleString()} gp.`);
@@ -171,6 +178,12 @@ function registerLobbyHandlers(io, socket, { tables }) {
     if (table) {
       const seat = table.findSeat(player.player_id);
       if (seat) seat.chipsAtTable = refreshed.chips;
+      // Same hand-sync fix as buyGear: credit the refund into the live
+      // hand stack so it doesn't get wiped at hand-end.
+      if (table.hand) {
+        const hp = table.hand.players.find(pp => pp.playerId === player.player_id);
+        if (hp) hp.stack = hp.stack + refund;
+      }
       const itemName = db.GEAR_BY_KEY[slot].label;
       table.chat('rebuy', `💰 ${refreshed.nickname} hocked a +${cur} ${itemName} for ${refund.toLocaleString()} gp.`);
       table._broadcast?.();
