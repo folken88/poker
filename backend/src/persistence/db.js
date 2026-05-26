@@ -108,20 +108,20 @@ const ROSTER = [
 const BOT_ROSTER = [
   // Original 6 bots
   { name: 'Dinvaya',              avatar: '/tokens/dinvaya.webp',              baseMode: 'cautious', intelligence: 'high'    },
-  { name: 'Vaughan',              avatar: '/tokens/vaughan.webp',              baseMode: 'cautious', intelligence: 'average' },
-  { name: 'Storgrim Thunderbeard', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'standard', intelligence: 'average' },
-  { name: 'Kate Blackwood',        avatar: '/tokens/kate-blackwood.webp',        baseMode: 'standard', intelligence: 'high'    },
+  { name: 'Vaughan',              avatar: '/tokens/vaughan.webp',              baseMode: 'risky',    intelligence: 'high'    }, // user: high intel + high risk
+  { name: 'Storgrim Thunderbeard', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'cautious', intelligence: 'average' }, // user: avg intel + cautious
+  { name: 'Kate Blackwood',        avatar: '/tokens/kate-blackwood.webp',        baseMode: 'cautious', intelligence: 'high'    }, // user: high intel + low risk
   { name: 'Kovira',               avatar: '/tokens/kovira.webp',               baseMode: 'risky',    intelligence: 'high'    },
   { name: 'Elfrip',               avatar: '/tokens/elfrip.webp',               baseMode: 'risky',    intelligence: 'average' },
 
   // Round 2 additions
-  { name: 'Taelys',               avatar: '/tokens/taelys-of-starfall.webp',     baseMode: 'risky',    intelligence: 'average' },
+  { name: 'Taelys',               avatar: '/tokens/taelys-of-starfall.webp',     baseMode: 'risky',    intelligence: 'low'     }, // user: low intel + high risk
   { name: 'Lirienne',             avatar: '/tokens/lirienne-voss.webp',          baseMode: 'standard', intelligence: 'average' }, // user: avg intel + normal risk
   { name: 'Kelda',                avatar: '/tokens/kelda-ironglim.webp',         baseMode: 'cautious', intelligence: 'high'    }, // user: cautious + high intel
   { name: 'Mr. Brow',             avatar: '/tokens/augustus-teabrow.webp',       baseMode: 'risky',    intelligence: 'high'    }, // user: highly intelligent + risky
   { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'standard', intelligence: 'average' }, // user: avg intel + avg risk
   { name: 'Ulfred',               avatar: '/tokens/ulfred-stronginthearm.webp',  baseMode: 'standard', intelligence: 'average' },
-  { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard', intelligence: 'high'    },
+  { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard', intelligence: 'average' }, // user: avg intel + avg risk
   { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky',    intelligence: 'low'     }, // velociraptor — pure instinct, no thinking
   { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious', intelligence: 'high'    },
   { name: 'Toni',                 avatar: '/tokens/antoinette-borden.webp',      baseMode: 'risky',    intelligence: 'average' },

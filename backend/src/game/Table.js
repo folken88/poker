@@ -581,6 +581,30 @@ class Table {
       seat.chipsAtTable = p.stack;
       db.setChips(p.playerId, p.stack);
     }
+
+    // ---- Bot auto-invest in gear (breadth-first) ----
+    // Bots spend excess chips on magic items, but the AI strategy is
+    // *breadth-first*: fill every slot at +1 before any slot gets +2,
+    // every slot at +2 before any slot gets +3, etc. — building toward
+    // a balanced kit instead of one shiny +5 weapon. Keeps a chip
+    // reserve (≥ DEFAULT_STACK) so the bot stays solvent for blinds.
+    for (const seat of this.seats) {
+      if (seat.isEmpty() || !seat.isBot) continue;
+      const plan = this._planBotGearPurchase(seat);
+      if (!plan) continue;
+      const { slot, target, cost } = plan;
+      const gear = db.getGear(seat.playerId);
+      const prev = gear[slot] || 0;
+      gear[slot] = target;
+      db.setGear(seat.playerId, gear);
+      seat.chipsAtTable -= cost;
+      db.setChips(seat.playerId, seat.chipsAtTable);
+      const nick = seat.player?.nickname || seat.playerId;
+      const itemName = db.GEAR_BY_KEY[slot].label;
+      const verb = prev > 0 ? `upgraded to +${target}` : `picked up a +${target}`;
+      this.chat('rebuy', `🛒 ${nick} ${verb} ${itemName} for ${cost.toLocaleString()} gp.`);
+    }
+
     // Loot Lord check — if anyone now holds +5 in every gear slot, they
     // win the entire game. _declareLootLord posts the celebration and
     // resets EVERYONE'S chips + gear back to defaults; the rest of the
@@ -666,6 +690,45 @@ class Table {
   // ============================================================
   // Magic-longsword auto-invest (PF1e flavor)
   // ============================================================
+
+  /** Plan ONE gear purchase for a bot this hand. Returns
+   *  `{ slot, target, cost }` or null if nothing affordable.
+   *
+   *  Strategy: breadth-first. The bot wants every slot at +N before
+   *  any slot reaches +(N+1) — start by completing the +1 set across
+   *  all six slots, then move to +2, etc. up to +5 (LOOT LORD).
+   *  Among slots that are still at the lowest current tier (minTier),
+   *  the bot picks the *cheapest* upgrade it can afford.
+   *
+   *  A reserve of DEFAULT_STACK chips is held back so the bot can
+   *  still pay blinds and call modest bets after the purchase. */
+  _planBotGearPurchase(seat) {
+    const RESERVE = db.DEFAULT_STACK;
+    const available = seat.chipsAtTable - RESERVE;
+    if (available <= 0) return null;
+
+    const gear = db.getGear(seat.playerId);
+    let minTier = 5;
+    for (const s of db.GEAR_SLOTS) {
+      const t = gear[s.key] || 0;
+      if (t < minTier) minTier = t;
+    }
+    if (minTier >= 5) return null;   // already maxed — Loot Lord triggers separately
+    const targetTier = minTier + 1;
+
+    // Affordable upgrades for slots currently sitting at minTier.
+    const candidates = [];
+    for (const s of db.GEAR_SLOTS) {
+      const cur = gear[s.key] || 0;
+      if (cur !== minTier) continue;
+      const cost = db.gearPrice(s.key, targetTier) - (cur ? db.gearPrice(s.key, cur) : 0);
+      if (cost > available) continue;
+      candidates.push({ slot: s.key, target: targetTier, cost });
+    }
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => a.cost - b.cost);
+    return candidates[0];
+  }
 
   /** Scan all seated players. If exactly one has +5 in every gear slot,
    *  return that seat. If multiple do simultaneously (rare but possible

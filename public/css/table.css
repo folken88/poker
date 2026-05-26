@@ -1638,8 +1638,6 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 
   /* Felt: leave room for the fixed bottom action bar. */
   .felt { aspect-ratio: 1 / 1; }
-  body.is-mobile .table-screen,
-  .table-screen { padding-bottom: 220px; }
 
   /* ===== Tiny seat cards (token + name ONLY on mobile) =====
      Everything else (chips, gear, current bet, hole cards, timer) is
@@ -1674,17 +1672,24 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   .chat-panel__list { font-size: 0.76rem; padding: 0.25rem 0.6rem 0.3rem; }
 
   /* ===== Action panel → fixed bottom bar ===== */
+  /* Sits ABOVE the chat panel (which is 80px tall on mobile) so the
+     chat log stays visible — the actpanel bottom: 80px matches the
+     chat panel's height exactly so they're flush. */
   .actpanel-host {
     position: fixed;
-    left: 0; right: 0; bottom: 0;
+    left: 0; right: 0; bottom: 80px;
     top: auto;
     transform: none;
     width: 100%;
     z-index: 60;
-    padding: 6px 8px max(8px, env(safe-area-inset-bottom));
+    padding: 6px 8px;
     background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.92));
     border-top: 1px solid rgba(241,207,131,0.35);
+    border-bottom: 1px solid rgba(241,207,131,0.18);
   }
+  /* Chat panel keeps its z-index lower — it stays in flow at viewport
+     bottom; the actpanel-host floats just above it. */
+  .chat-panel { z-index: 5; }
   .actpanel {
     transform: none !important;     /* override drag offset on mobile */
     min-width: 0;
@@ -1750,6 +1755,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   /* Smaller hand cards in the bottom bar */
   .actpanel__myhand-cards .card-svg { width: 38px; height: 54px; }
   .actpanel__btn { min-height: 34px; font-size: 0.8rem; }
-  /* Tighten chat */
+  /* Tighten chat — and reposition the actpanel above it to match. */
   .chat-panel { height: 64px; }
+  .actpanel-host { bottom: 64px; }
 }
