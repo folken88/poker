@@ -129,6 +129,37 @@ function registerTableHandlers(io, socket, { tables }) {
     ack?.({ ok: true });
   });
 
+  // Player keeps their seat but isn't dealt in upcoming hands.
+  // Doesn't affect a hand already in progress — bets stand and the
+  // current hand plays out. Toggles via table:rejoin.
+  socket.on('table:sitOut', (_p, ack) => {
+    const me = meOf(socket);
+    if (!me) return ack?.({ ok: false, error: 'choose a player first' });
+    const table = tables.get(socket.data.tableId);
+    if (!table) return ack?.({ ok: false, error: 'not at a table' });
+    const seat = table.findSeat(me.player_id);
+    if (!seat) return ack?.({ ok: false, error: 'not seated' });
+    if (seat.sittingOut) return ack?.({ ok: true, alreadySittingOut: true });
+    seat.sittingOut = true;
+    table.chat('info', `🪑 ${me.nickname} sat out — they'll skip the next deal.`);
+    table._broadcast();
+    ack?.({ ok: true });
+  });
+  socket.on('table:rejoin', (_p, ack) => {
+    const me = meOf(socket);
+    if (!me) return ack?.({ ok: false, error: 'choose a player first' });
+    const table = tables.get(socket.data.tableId);
+    if (!table) return ack?.({ ok: false, error: 'not at a table' });
+    const seat = table.findSeat(me.player_id);
+    if (!seat) return ack?.({ ok: false, error: 'not seated' });
+    if (!seat.sittingOut) return ack?.({ ok: true, alreadyIn: true });
+    seat.sittingOut = false;
+    table.chat('info', `🎲 ${me.nickname} rejoined the next deal.`);
+    table._broadcast();
+    table._scheduleAutoStart();
+    ack?.({ ok: true });
+  });
+
   // Client can ask "give me my hole cards" any time. Used as a recovery
   // path when the deal-time emit might have missed an in-flight reconnect.
   socket.on('table:requestHole', (_p, ack) => {

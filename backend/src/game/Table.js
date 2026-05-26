@@ -40,6 +40,10 @@ class Seat {
     this.inHand = false;
     this.chipsAtTable = 0;
     this.isBot = false;
+    // Player keeps their seat but isn't dealt in. They can rejoin at
+    // any time. Takes effect on the NEXT deal — can't undo bets or
+    // exit a hand already in progress (those still resolve normally).
+    this.sittingOut = false;
   }
   isEmpty() { return this.playerId === null; }
 }
@@ -240,11 +244,13 @@ class Table {
   _seatsReadyForHand() {
     // Eligible to be dealt in:
     //   - Has chips
+    //   - Has NOT clicked Sit Out
     //   - AND either is a bot OR has a live socket connection
     //     (humans whose tab is closed / network dropped sit OUT this hand)
     return this.seats.filter(s =>
       !s.isEmpty() &&
       s.chipsAtTable > 0 &&
+      !s.sittingOut &&
       (s.isBot || s.socketId)
     );
   }
@@ -780,6 +786,9 @@ class Table {
         // True when a human clicked "× remove this bot" mid-hand. The seat
         // will vacate as soon as the current hand resolves.
         pendingStand: !!s._standAfterHand,
+        // Player has clicked "Sit out" — they keep the seat but skip
+        // upcoming deals until they click "Rejoin".
+        sittingOut: !!s.sittingOut,
         // Gear inventory (PF1e). Map of slot → tier (1..5) or null.
         gear: s.isEmpty() ? null : db.getGear(s.playerId),
         gearValue: s.isEmpty() ? 0 : db.gearTotalValue(db.getGear(s.playerId)),

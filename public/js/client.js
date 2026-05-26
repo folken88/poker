@@ -110,7 +110,11 @@
         socket.emit('table:requestHole', null, () => {});
       }
     }
-    if (document.body.dataset.screen === 'table') renderTable();
+    if (document.body.dataset.screen === 'table') {
+      renderTable();
+      // Keep topbar / sit-out button label in sync with seat state.
+      if (state.me) paintMe();
+    }
   });
 
   socket.on('table:hole', ({ playerId, hole }) => {
@@ -369,6 +373,20 @@
     $('#meNick').textContent = p.nickname;
     $('#meChips').textContent = '💰 ' + formatChips(p.chips) + ' gp';
     $('#meAvatar').innerHTML = renderAvatar(p.avatar_id);
+    // Sit out / Rejoin button label reflects current seat state.
+    const mySeat = state.table?.seats?.find(s => s.playerId === p.player_id);
+    const sitBtn = $('#sitOutBtn');
+    if (sitBtn) {
+      if (mySeat?.sittingOut) {
+        sitBtn.textContent = 'Rejoin';
+        sitBtn.title = 'Come back into the next deal.';
+        sitBtn.classList.add('btn--sit-out-active');
+      } else {
+        sitBtn.textContent = 'Sit out';
+        sitBtn.title = 'Keep your seat but skip upcoming deals. Click Rejoin to come back. Cannot undo bets in a hand already in progress.';
+        sitBtn.classList.remove('btn--sit-out-active');
+      }
+    }
     // Debt indicator + Pay Debt button. Both hidden when debt is 0.
     const debt = Number(p.rebuy_debt || 0);
     const debtEl = $('#meDebt');
@@ -449,15 +467,18 @@
         const betHtml = handPlayer?.invested
           ? `<div class="seat__bet">bet ${formatChips(handPlayer.invested)}</div>` : '';
 
-        // Bot tag: just "AI" — temperament (cautious / standard / risky)
-        // is intentionally hidden so opponents can't profile the bot's
-        // play style. Mode lives only in the chat-log decision records
-        // and tooltips for the admin / yourself.
-        const botTag = seat.isBot
-          ? `<span class="seat__bot-tag" title="AI player">AI</span>`
-          : (seat.isAfk
-              ? `<span class="seat__afk-tag" title="Disconnected — sitting out until they return">AFK · sitting out</span>`
+        // AI badge is now an avatar-corner overlay (see below) — no
+        // longer a line of body text. Inline pills stay for the
+        // edge-case statuses: AFK (disconnected) and SIT-OUT (user
+        // chose to skip deals).
+        const botTag = seat.sittingOut
+          ? `<span class="seat__afk-tag" title="Sat out — skipping deals until they Rejoin">sitting out</span>`
+          : (!seat.isBot && seat.isAfk
+              ? `<span class="seat__afk-tag" title="Disconnected — sitting out until they return">AFK</span>`
               : '');
+        const avatarBadge = seat.isBot
+          ? `<span class="seat__avatar-ai" title="AI player">AI</span>`
+          : '';
         // Per-bot remove button. Any seated human can click × to ask the
         // bot to leave after the current hand. If clicked while a hand is
         // in progress, the seat shows "leaving after hand" until it resolves.
@@ -490,7 +511,7 @@
           <div class="seat__plate ${myTurn ? 'seat__plate--acting' : ''}">
             ${removeBotHtml}
             ${badgeHtml}
-            <div class="seat__avatar">${renderAvatar(seat.avatarId)}</div>
+            <div class="seat__avatar">${renderAvatar(seat.avatarId)}${avatarBadge}</div>
             <div class="seat__nick" title="${escapeAttr(seat.nickname)}">${escapeText(seat.nickname)}${isAllIn ? ' · ALL-IN' : ''}</div>
             ${botTag}
             <div class="seat__chips">💰 ${formatChips(handPlayer ? handPlayer.stack : seat.chips)} gp</div>
@@ -1284,11 +1305,67 @@
     socket.emit('table:stand', null, () => toast('Left the table'));
   });
 
-  $('#addBotBtn').addEventListener('click', () => {
-    socket.emit('table:addBot', null, (resp) => {
+  // Sit out / Rejoin — toggles based on current seat state. Label and
+  // tooltip update in paintMe() so the button always reflects reality.
+  $('#sitOutBtn').addEventListener('click', () => {
+    const mySeat = state.table?.seats?.find(s => s.playerId === state.me?.player_id);
+    if (!mySeat) { toast('Not at a table.', true); return; }
+    if (mySeat.sittingOut) {
+      socket.emit('table:rejoin', null, (resp) => {
+        if (resp?.ok) toast('Back in for the next deal.');
+        else toast(resp?.error || 'Could not rejoin', true);
+      });
+    } else {
+      socket.emit('table:sitOut', null, (resp) => {
+        if (resp?.ok) toast(state.table?.hand ? 'You\'ll sit out starting next hand.' : 'Sitting out.');
+        else toast(resp?.error || 'Could not sit out', true);
+      });
+    }
+  });
+
+  // + Bot opens a picker modal. The user can pick a specific AI or
+  // hit Random. table:addBot accepts either an explicit playerId or
+  // null (server-side random).
+  function openBotPicker() {
+    const modal = $('#botPickerModal');
+    const grid  = $('#botPickerGrid');
+    if (!modal || !grid) return;
+    const seatedIds = new Set((state.table?.seats || []).filter(s => s.playerId).map(s => s.playerId));
+    const bots = (state.roster || [])
+      .filter(p => p.is_bot && !seatedIds.has(p.player_id))
+      .map(p => ({ p, w: rosterWealth(p) }))
+      .sort((a, b) => b.w - a.w);
+    if (bots.length === 0) {
+      toast('All 24 AI characters are already seated.', true);
+      return;
+    }
+    grid.innerHTML = bots.map(({ p, w }) => `
+      <button type="button" class="bot-picker__card" data-bot-id="${escapeAttr(p.player_id)}" title="${escapeAttr(p.nickname)} · ${formatChips(w)} gp current wealth">
+        <div class="bot-picker__avatar">${renderAvatar(p.avatar_id)}</div>
+        <div class="bot-picker__nick">${escapeText(p.nickname)}</div>
+        <div class="bot-picker__worth">💰 ${formatChips(w)} gp</div>
+      </button>
+    `).join('');
+    modal.hidden = false;
+  }
+  function closeBotPicker() {
+    const m = $('#botPickerModal');
+    if (m) m.hidden = true;
+  }
+  function emitAddBot(playerId) {
+    socket.emit('table:addBot', playerId ? { playerId } : null, (resp) => {
       if (!resp?.ok) { toast(resp?.error || 'Could not add bot', true); return; }
-      toast('Bot joined the table');
+      const seated = state.roster?.find(p => p.player_id === resp.playerId);
+      toast(`${seated?.nickname || 'Bot'} joined the table`);
     });
+    closeBotPicker();
+  }
+  $('#addBotBtn').addEventListener('click', openBotPicker);
+  $('#botPickerModal').addEventListener('click', (e) => {
+    if (e.target.closest('[data-close-bot-picker]')) { closeBotPicker(); return; }
+    if (e.target.closest('#botPickerRandom')) { emitAddBot(null); return; }
+    const card = e.target.closest('[data-bot-id]');
+    if (card) emitAddBot(card.dataset.botId);
   });
   // (Per-bot × buttons handle removal — wired in the seatRing delegate above.)
 
