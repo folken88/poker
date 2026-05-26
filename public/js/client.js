@@ -510,6 +510,56 @@
       ring.appendChild(el);
     });
 
+    // ----- Collision-avoidance pass -----
+    // After all seats are placed via percentage-based (cx, cy), measure
+    // their actual pixel rects and nudge any pair that overlaps along
+    // their connecting line until they clear. Iterates a few times so
+    // multi-seat clusters settle. The CSS max-height on .seat already
+    // caps growth; this is the last-line-of-defense for the cramped
+    // side-rail positions where vertical centers are only ~150 px apart.
+    requestAnimationFrame(() => {
+      const seatEls = [...ring.children];
+      const ringRect = ring.getBoundingClientRect();
+      const PAD = 6;  // breathing-space px between plates
+      const MAX_PASSES = 4;
+      for (let pass = 0; pass < MAX_PASSES; pass++) {
+        let anyMoved = false;
+        const rects = seatEls.map(e => e.getBoundingClientRect());
+        for (let i = 0; i < seatEls.length; i++) {
+          for (let j = i + 1; j < seatEls.length; j++) {
+            const a = rects[i], b = rects[j];
+            const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+            const overlapY = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+            if (overlapX <= -PAD || overlapY <= -PAD) continue;
+            // Push apart along the line between centers. Resolve along
+            // the SHORTER overlap dimension for minimal disturbance.
+            const ax = (a.left + a.right) / 2, ay = (a.top + a.bottom) / 2;
+            const bx = (b.left + b.right) / 2, by = (b.top + b.bottom) / 2;
+            const dx = bx - ax, dy = by - ay;
+            const dist = Math.hypot(dx, dy) || 1;
+            const need = (Math.abs(overlapX) < Math.abs(overlapY))
+              ? overlapX + PAD
+              : overlapY + PAD;
+            const nudge = need / 2;
+            const ux = (dx / dist) * nudge;
+            const uy = (dy / dist) * nudge;
+            // Apply nudges by adjusting % position relative to the ring.
+            const ringW = ringRect.width || 1, ringH = ringRect.height || 1;
+            const ax_pct = parseFloat(seatEls[i].style.left) - (ux / ringW * 100);
+            const ay_pct = parseFloat(seatEls[i].style.top)  - (uy / ringH * 100);
+            const bx_pct = parseFloat(seatEls[j].style.left) + (ux / ringW * 100);
+            const by_pct = parseFloat(seatEls[j].style.top)  + (uy / ringH * 100);
+            seatEls[i].style.left = ax_pct + '%';
+            seatEls[i].style.top  = ay_pct + '%';
+            seatEls[j].style.left = bx_pct + '%';
+            seatEls[j].style.top  = by_pct + '%';
+            anyMoved = true;
+          }
+        }
+        if (!anyMoved) break;
+      }
+    });
+
     // Community board
     const board = $('#board');
     board.innerHTML = '';

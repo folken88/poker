@@ -1185,17 +1185,31 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .seat {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 110px;
+  width: 102px;
   text-align: center;
   pointer-events: auto;
+  /* Hard ceiling on seat size so growth in content (gear strip, timer,
+     bet line, hole cards) can't push neighbors into overlap. Anything
+     beyond is clipped — the bank UI in the action panel is the
+     authoritative source for full info. */
+  max-height: 170px;
 }
 .seat__plate {
   background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.7));
   border: 1px solid rgba(217,176,106,0.28);
   border-radius: 14px;
-  padding: 0.45rem 0.5rem 0.55rem;
-  display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+  padding: 5px 6px 7px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
   box-shadow: var(--shadow-soft);
+  max-height: 170px;
+  overflow: hidden;
+}
+/* The acting seat overrides max-height so its hole cards aren't
+   clipped — z-index 4 already lifts it above neighbors. */
+.seat.is-me .seat__plate,
+.seat.is-acting .seat__plate {
+  max-height: none;
+  overflow: visible;
 }
 .seat.is-empty .seat__plate {
   background: rgba(0,0,0,0.25);
@@ -1213,7 +1227,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   box-shadow: 0 0 0 2px rgba(241,207,131,0.25), var(--shadow-soft);
 }
 .seat__avatar {
-  width: 56px; height: 56px;
+  width: 46px; height: 46px;
   border-radius: 50%;
   background: rgba(0,0,0,0.5);
   border: 2px solid rgba(217,176,106,0.4);
