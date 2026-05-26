@@ -1,0 +1,19 @@
+node_modules/
+backend/data/*.db
+backend/data/*.db-*
+backend/logs/
+*.log
+.env
+.DS_Store
+Thumbs.db
+
+# Character tokens are copied locally from Cassbot's Obsidian vault +
+# Foundry character art library via scripts/import-vault-tokens.js.
+# We keep the manifest committed (so the wiring is documented) but
+# don't redistribute the source art on GitHub. Re-run the import
+# script to regenerate them locally.
+public/assets/characters/*.webp
+public/assets/characters/*.png
+public/assets/characters/*.jpg
+public/assets/characters/*.jpeg
+!public/assets/characters/manifest.json

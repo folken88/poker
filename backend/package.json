@@ -1,0 +1,21 @@
+{
+  "name": "folken-poker-backend",
+  "version": "0.1.0",
+  "description": "Multiplayer Texas Hold'em server for folkengames.com",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "cookie": "^1.0.2",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.0",
+    "pokersolver": "^2.1.4",
+    "socket.io": "^4.8.0"
+  }
+}

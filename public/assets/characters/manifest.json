@@ -1,0 +1,372 @@
+[
+  {
+    "slug": "antoinette-borden",
+    "name": "Antoinette Borden",
+    "race": "Human",
+    "class": "Magus",
+    "level": "5",
+    "player": "Mandi",
+    "art": "/assets/characters/antoinette-borden.webp",
+    "sourceFile": "undead/token_vampire_noble_antoinette_borden_blonde_female_axe.webp"
+  },
+  {
+    "slug": "bruce",
+    "name": "Bruce",
+    "race": "Aasimar",
+    "class": "Monk (Unchained) / Sorcerer / Dragon Disciple",
+    "level": "13",
+    "player": "Chris",
+    "art": "/assets/characters/bruce.webp",
+    "sourceFile": "cheliax_characters/token_human_male_bruce_mongolian_dragon_34_years_old_peak_physical_condition_bald.webp"
+  },
+  {
+    "slug": "bujon-storm-of-cheliax",
+    "name": "Bujon, Storm of Cheliax",
+    "race": "Iku-Turso (reincarnated; originally Human)",
+    "class": "Sorcerer",
+    "level": "5",
+    "player": "Graham",
+    "art": "/assets/characters/bujon-storm-of-cheliax.webp",
+    "sourceFile": "cheliax_characters/asmodeans/token_human_female_bald_thin_monk_cheliax_sailor_shackles.webp"
+  },
+  {
+    "slug": "celeb",
+    "name": "Celeb",
+    "race": "Samsaran",
+    "class": "Theurge / Monk (Unchained)",
+    "level": "12",
+    "player": "Tim",
+    "art": "/assets/characters/celeb.webp",
+    "sourceFile": "cheliax_characters/kintargo/token_human_samsaran_male_celeb_silver_haired_35_year_old_elf.webp"
+  },
+  {
+    "slug": "dinvaya",
+    "name": "Dinvaya",
+    "race": "Aasimar",
+    "class": "Cleric",
+    "level": "11",
+    "player": "Josh",
+    "art": "/assets/characters/dinvaya.webp",
+    "sourceFile": "carrion_crown_characters/token_aasimar_female_angel_dinvaya_cleric.webp"
+  },
+  {
+    "slug": "dismas-aevrett",
+    "name": "Dismas Aevrett",
+    "race": "Human",
+    "class": "Paladin",
+    "level": "11",
+    "player": "Harrison",
+    "art": "/assets/characters/dismas-aevrett.webp",
+    "sourceFile": "human/token_human_male_dismas_paladin_rifleman_marksman_shooter.webp"
+  },
+  {
+    "slug": "draymus-keshaal-mortiarum",
+    "name": "Draymus Keshaal Mortiarum",
+    "race": "Dhampir",
+    "class": "Agent of the Grave / Necromancer",
+    "level": "14",
+    "player": "Harrison",
+    "art": "/assets/characters/draymus-keshaal-mortiarum.webp",
+    "sourceFile": "token_draymus.webp"
+  },
+  {
+    "slug": "eldrin",
+    "name": "Eldrin",
+    "race": "Elf",
+    "class": "Investigator",
+    "level": "8",
+    "player": "Enrique",
+    "art": "/assets/characters/eldrin.webp",
+    "sourceFile": "elf/token_elf_male_eldrin_purple.webp"
+  },
+  {
+    "slug": "elfrip",
+    "name": "Elfrip",
+    "race": "Goblin",
+    "class": "Oracle",
+    "level": "11",
+    "player": "Anna",
+    "art": "/assets/characters/elfrip.webp",
+    "sourceFile": "carrion_crown_characters/token_dinvaya_grumpy_elfrip_art.webp"
+  },
+  {
+    "slug": "femmik-embersword",
+    "name": "Femmik Embersword",
+    "race": "Ifrit",
+    "class": "Dervish Dancer",
+    "level": "12",
+    "player": "Harrison",
+    "art": "/assets/characters/femmik-embersword.webp",
+    "sourceFile": "cheliax_characters/kintargo/token_ifrit_femmik_male_blue_coat.webp"
+  },
+  {
+    "slug": "field-marshal-freya-kusanagi",
+    "name": "Field Marshal Freya Kusanagi",
+    "race": "Half-Elf",
+    "class": "Samurai / Hellknight (Order of the Rack)",
+    "level": "14",
+    "player": "Betty",
+    "art": "/assets/characters/field-marshal-freya-kusanagi.webp",
+    "sourceFile": "human/token_human_female_samurai_freya_kusanagi_balrog_blade.webp"
+  },
+  {
+    "slug": "gabriel",
+    "name": "Gabriel",
+    "race": "Aasimar",
+    "class": "Bloodrager / Paladin",
+    "level": "12",
+    "player": "Josh",
+    "art": "/assets/characters/gabriel.webp",
+    "sourceFile": "carrion_crown_characters/blackwood-clan/token_human_male_blackwood_gabriel.webp"
+  },
+  {
+    "slug": "gavrilo",
+    "name": "Gavrilo",
+    "race": "null",
+    "class": "null",
+    "level": "null",
+    "player": "Enrique",
+    "art": "/assets/characters/gavrilo.webp",
+    "sourceFile": "orc/token_orc_male_gavrilo_durz.webp"
+  },
+  {
+    "slug": "holden-aleistair",
+    "name": "Holden Aleistair",
+    "race": "Human",
+    "class": "Swashbuckler",
+    "level": "5",
+    "player": "Kip",
+    "art": "/assets/characters/holden-aleistair.webp",
+    "sourceFile": "human/token_human_male_holden_captain_oblivious_swashbuckler_s.webp"
+  },
+  {
+    "slug": "jason",
+    "name": "Jason",
+    "race": "Tiefling",
+    "class": "Cleric of Asmodeus / Divine Scion",
+    "level": "14",
+    "player": "Charles",
+    "art": "/assets/characters/jason.webp",
+    "sourceFile": "deathcourt/token_archfey_male_autumncourt_jason_fighter.webp"
+  },
+  {
+    "slug": "kaelin-kringle",
+    "name": "Kaelin Kringle",
+    "race": "Tiefling",
+    "class": "Witch",
+    "level": "6",
+    "player": "Tracy",
+    "art": "/assets/characters/kaelin-kringle.webp",
+    "sourceFile": "tiefling/token_tiefling_male_blue_kringle_kale_tracy8.webp"
+  },
+  {
+    "slug": "kai-gin",
+    "name": "Kai Gin",
+    "race": "Half-Orc",
+    "class": "Slayer",
+    "level": "11",
+    "player": "Graham",
+    "art": "/assets/characters/kai-gin.webp",
+    "sourceFile": "carrion_crown_characters/token_orc_half_male_kai_gin_graham_detective_elf_ears.webp"
+  },
+  {
+    "slug": "kate-blackwood",
+    "name": "Kate Blackwood",
+    "race": "Skinwalker",
+    "class": "Magus",
+    "level": "11",
+    "player": "Mandi",
+    "art": "/assets/characters/kate-blackwood.webp",
+    "sourceFile": "carrion_crown_characters/token_human_female_magus_kate_blackwood_psychic - Copy.webp"
+  },
+  {
+    "slug": "kelda-ironglim",
+    "name": "Kelda Ironglim",
+    "race": "Dwarf",
+    "class": "Rogue (Unchained)",
+    "level": "5",
+    "player": "Graham",
+    "art": "/assets/characters/kelda-ironglim.webp",
+    "sourceFile": "deathcourt/token_dwarf_female_kelda_rogue.webp"
+  },
+  {
+    "slug": "kovira",
+    "name": "Kovira",
+    "race": "Tiefling",
+    "class": "Admixture Evoker / Arcane Trickster / Rogue (Unchained)",
+    "level": "11",
+    "player": "Sydney",
+    "art": "/assets/characters/kovira.webp",
+    "sourceFile": "carrion_crown_characters/token_tiefling_female_blonde_kovira_midjourney.webp"
+  },
+  {
+    "slug": "kroktah",
+    "name": "Kroktah",
+    "race": "Kasatha",
+    "class": "Druid",
+    "level": "null",
+    "player": "Enrique",
+    "art": "/assets/characters/kroktah.webp",
+    "sourceFile": "kasatha/token_kasatha_female_air_caster_druid_kroktah.webp"
+  },
+  {
+    "slug": "lirienne-voss",
+    "name": "Lirienne Voss",
+    "race": "Human",
+    "class": "Hunter",
+    "level": "5",
+    "player": "Anna",
+    "art": "/assets/characters/lirienne-voss.webp",
+    "sourceFile": "human/token_human_female_lirienne_dino_crisp_crossbow.webp"
+  },
+  {
+    "slug": "luna-kresnik",
+    "name": "Luna Kresnik",
+    "race": "Aasimar",
+    "class": "Bloodrager",
+    "level": "15",
+    "player": "Rye",
+    "art": "/assets/characters/luna-kresnik.webp",
+    "sourceFile": "iron_gods_characters/token_angel_female_luna_blackwing_greatsword.webp"
+  },
+  {
+    "slug": "maginnis",
+    "name": "Maginnis",
+    "race": "Human",
+    "class": "Gunslinger",
+    "level": "null",
+    "player": "Hans",
+    "art": "/assets/characters/maginnis.webp",
+    "sourceFile": "human/token_human_male_maginnis_cowboy_with_thin_beard_and_black_hat_38_year_old.webp"
+  },
+  {
+    "slug": "nigel",
+    "name": "Nigel",
+    "race": "Tiefling",
+    "class": "Arcane Trickster / Evoker / Rogue (Unchained)",
+    "level": "12",
+    "player": "Chris",
+    "art": "/assets/characters/nigel.webp",
+    "sourceFile": "human/token_human_male_nigel_uncle_roger.webp"
+  },
+  {
+    "slug": "nomkath",
+    "name": "Nomkath",
+    "race": "Catfolk",
+    "class": "Rogue",
+    "level": "15",
+    "player": "Daemon",
+    "art": "/assets/characters/nomkath.webp",
+    "sourceFile": "catfolk/token_catfolk_male_nomkath.webp"
+  },
+  {
+    "slug": "olbryn",
+    "name": "Olbryn",
+    "race": "Drow",
+    "class": "Sorcerer",
+    "level": "14",
+    "player": "Josh",
+    "art": "/assets/characters/olbryn.webp",
+    "sourceFile": "elf/token_elf_male_drow_olbryn_shorthair_sorcerer.webp"
+  },
+  {
+    "slug": "reese",
+    "name": "Reese",
+    "race": "Strix",
+    "class": "Arcane Archer / Ranger / Wizard",
+    "level": "14",
+    "player": "Josh",
+    "art": "/assets/characters/reese.webp",
+    "sourceFile": "starfinder_strix_reese_male.webp"
+  },
+  {
+    "slug": "rhyarca-jillyr",
+    "name": "Rhyarca Jillyr",
+    "race": "Catfolk",
+    "class": "Oracle",
+    "level": "5",
+    "player": "Mandi",
+    "art": "/assets/characters/rhyarca-jillyr.webp",
+    "sourceFile": "deathcourt/token_catfolk_female_rhyarca_cleric_angel.webp"
+  },
+  {
+    "slug": "rodney-danger-smith",
+    "name": "Rodney -Danger- Smith",
+    "race": "Human",
+    "class": "Ranger",
+    "level": "11",
+    "player": "Chris",
+    "art": "/assets/characters/rodney-danger-smith.webp",
+    "sourceFile": "carrion_crown_characters/token_human_male_ranger_danger_courtaud_robinhood.webp"
+  },
+  {
+    "slug": "sha-feng",
+    "name": "Sha Feng",
+    "race": "Hobgoblin",
+    "class": "Brawler",
+    "level": "7",
+    "player": "Enrique",
+    "art": "/assets/characters/sha-feng.webp",
+    "sourceFile": "shackles_characters/token_sha_feng_hobgoblin_bald.webp"
+  },
+  {
+    "slug": "storgrim-thunderbeard",
+    "name": "Storgrim Thunderbeard",
+    "race": "Dwarf",
+    "class": "Fighter",
+    "level": "5",
+    "player": "Daemon",
+    "art": "/assets/characters/storgrim-thunderbeard.webp",
+    "sourceFile": "shackles_characters/token_dwarf_male_captain_storgrim_brogans_axe_blue_fighter_pirate_sailor.webp"
+  },
+  {
+    "slug": "taelys-of-starfall",
+    "name": "Taelys of Starfall",
+    "race": "Tiefling",
+    "class": "Gunslinger",
+    "level": "5",
+    "player": "Kayla",
+    "art": "/assets/characters/taelys-of-starfall.webp",
+    "sourceFile": "deathcourt/token_tiefling_female_taelys_magus.webp"
+  },
+  {
+    "slug": "tokala",
+    "name": "Tokala",
+    "race": "Half-drow",
+    "class": "null",
+    "level": "null",
+    "player": "Tracy",
+    "art": "/assets/characters/tokala.webp",
+    "sourceFile": "iron_gods_characters/token_orc_male_tokala_mecha_face - Copy.webp"
+  },
+  {
+    "slug": "ulfred-stronginthearm",
+    "name": "Ulfred Stronginthearm",
+    "race": "Dwarf",
+    "class": "Cleric",
+    "level": "15",
+    "player": "Kip",
+    "art": "/assets/characters/ulfred-stronginthearm.webp",
+    "sourceFile": "token_ulfred_stronginthearm.webp"
+  },
+  {
+    "slug": "vaughan",
+    "name": "Vaughan",
+    "race": "Half-Elf",
+    "class": "Magus",
+    "level": "5",
+    "player": "Tim",
+    "art": "/assets/characters/vaughan.webp",
+    "sourceFile": "shackles_characters/token_human_male_vaughan_samsaran_handsome_pirate_35_year_radiance2.webp"
+  },
+  {
+    "slug": "william-gaspar",
+    "name": "William Gaspar",
+    "race": "Human",
+    "class": "Inquisitor",
+    "level": "11",
+    "player": "Tim",
+    "art": "/assets/characters/william-gaspar.webp",
+    "sourceFile": "carrion_crown_characters/token_human_male_gaspar_cowboy_vampire_hunter_dd_character_40_year_old_man.webp"
+  }
+]

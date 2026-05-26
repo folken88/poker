@@ -1,0 +1,36 @@
+services:
+  backend:
+    build: ./backend
+    container_name: folken-poker-backend
+    environment:
+      - PORT=3000
+      - DATA_DIR=/app/data
+      - DEFAULT_STACK=5000
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - poker-net
+
+  web:
+    image: nginx:alpine
+    container_name: folken-poker-web
+    ports:
+      - "32086:80"
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # NOTE: character art (PCs/villains from Cassbot's Obsidian vault) is
+      # now copied permanently into public/assets/characters/ — see
+      # scripts/import-vault-tokens.js. The poker game is fully independent
+      # of FoundryVTT; no bind mount needed.
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - poker-net
+
+networks:
+  poker-net:
+    driver: bridge

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0d1b14" />
+  <title>Folken Poker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/table.css?v=20260512r" />
+</head>
+<body data-screen="loading">
+  <!-- ===== Loading screen ===== -->
+  <section class="screen" data-show-on="loading">
+    <div class="loading-pulse">Dealing…</div>
+  </section>
+
+  <!-- ===== Roster picker ===== -->
+  <section class="screen" data-show-on="roster">
+    <div class="card roster-card">
+      <header class="roster-card__head">
+        <h1 class="brand">Folken Poker</h1>
+        <p class="subtitle">Pick a player to continue</p>
+        <p class="hint subtle">Each browser tab can be a different player.</p>
+      </header>
+      <div class="roster-grid" id="rosterGrid"></div>
+    </div>
+  </section>
+
+  <!-- ===== Confirm + avatar pick ===== -->
+  <section class="screen" data-show-on="confirm">
+    <div class="card confirm-card">
+      <header class="confirm-card__head">
+        <h1 class="brand">Continue as <span id="confirmNick">…</span>?</h1>
+        <p class="subtitle">Pick an avatar</p>
+      </header>
+      <div class="confirm-avatar-big" id="confirmAvatarBig"></div>
+      <div class="avatar-grid" id="confirmAvatarGrid" role="radiogroup" aria-label="Choose avatar"></div>
+      <div class="confirm-card__actions">
+        <button class="btn btn--ghost"   id="confirmBackBtn">← Back</button>
+        <button class="btn btn--primary" id="confirmGoBtn">Take a seat →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Table screen ===== -->
+  <section class="screen" data-show-on="table">
+    <header class="topbar">
+      <div class="topbar__brand">Folken Poker</div>
+      <div class="topbar__me">
+        <span class="me-avatar" id="meAvatar"></span>
+        <span class="me-nick"   id="meNick">…</span>
+        <span class="me-chips"  id="meChips">—</span>
+        <button class="btn btn--ghost btn--sm" id="addBotBtn"    title="Add a bot to an empty seat">+ Bot</button>
+        <button class="btn btn--ghost btn--sm" id="removeBotBtn" title="Remove a bot from the table">– Bot</button>
+        <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Reset YOUR chip stack to default">Re-buy</button>
+        <button class="btn btn--ghost btn--sm" id="switchBtn"     title="Switch to a different player">Switch</button>
+        <button class="btn btn--ghost btn--sm" id="leaveBtn"      title="Leave the table (stay logged in)">Leave</button>
+        <button class="btn btn--danger btn--sm" id="resetGameBtn" title="Reset EVERYONE's chips + cancel hand">Reset</button>
+      </div>
+    </header>
+
+    <main class="table-wrap">
+      <!-- ===== LEFT perimeter: Actions guide ===== -->
+      <aside class="help-panel help-panel--left" aria-label="Action guide">
+        <h3 class="help-panel__title">Actions</h3>
+        <dl class="help-panel__list">
+          <dt><span class="help-key">Fold</span></dt>
+          <dd>Throw your hand away. You lose what you've already bet — but nothing more.</dd>
+          <dt><span class="help-key">Check</span></dt>
+          <dd>Pass the action. Only if nobody has bet this round.</dd>
+          <dt><span class="help-key">Call</span></dt>
+          <dd>Match the current bet to stay in the hand.</dd>
+          <dt><span class="help-key">Raise</span></dt>
+          <dd>Increase the bet. Must be at least the previous raise size.</dd>
+          <dt><span class="help-key">All-in</span></dt>
+          <dd>Shove every chip you have. Others can call, fold, or raise (if they have more).</dd>
+        </dl>
+
+        <h3 class="help-panel__title">Position badges</h3>
+        <dl class="help-panel__list help-panel__list--compact">
+          <dt><span class="help-badge">D</span></dt>
+          <dd>Dealer button — rotates left each hand. In heads-up, acts first preflop.</dd>
+          <dt><span class="help-badge">SB</span></dt>
+          <dd>Small blind — forced half-bet, posted left of the dealer.</dd>
+          <dt><span class="help-badge">BB</span></dt>
+          <dd>Big blind — forced full bet, posted left of SB. Acts last preflop, first after.</dd>
+        </dl>
+      </aside>
+
+      <div class="felt">
+        <div class="seat-ring" id="seatRing"></div>
+        <div class="center">
+          <div class="board" id="board"></div>
+          <div class="pot" id="pot">Pot 0</div>
+          <div class="stage-banner" id="stageBanner">Waiting for players…</div>
+        </div>
+        <div class="hand-banner" id="handBanner" hidden></div>
+      </div>
+
+      <!-- ===== RIGHT perimeter: Hand rankings + tips ===== -->
+      <aside class="help-panel help-panel--right" aria-label="Hand rankings">
+        <h3 class="help-panel__title">Hand rankings</h3>
+        <ol class="help-panel__rankings">
+          <li><strong>Royal Flush</strong> <em>10-J-Q-K-A, same suit</em></li>
+          <li><strong>Straight Flush</strong> <em>5 in a row, same suit</em></li>
+          <li><strong>Four of a Kind</strong> <em>four 7s, four Ks…</em></li>
+          <li><strong>Full House</strong> <em>three + a pair</em></li>
+          <li><strong>Flush</strong> <em>5 same suit</em></li>
+          <li><strong>Straight</strong> <em>5 in a row</em></li>
+          <li><strong>Three of a Kind</strong></li>
+          <li><strong>Two Pair</strong></li>
+          <li><strong>One Pair</strong></li>
+          <li><strong>High Card</strong></li>
+        </ol>
+
+        <h3 class="help-panel__title">How a hand works</h3>
+        <ol class="help-panel__flow">
+          <li><b>Blinds</b> — SB and BB are posted automatically.</li>
+          <li><b>Hole cards</b> — 2 cards dealt to each player (yours show face-up).</li>
+          <li><b>Preflop</b> — bet, call, raise, or fold.</li>
+          <li><b>Flop</b> — 3 community cards. Another betting round.</li>
+          <li><b>Turn</b> — 4th card. Bet again.</li>
+          <li><b>River</b> — 5th card. Final bet.</li>
+          <li><b>Showdown</b> — best 5-card hand from your 2 + the 5 board cards wins the pot.</li>
+        </ol>
+
+        <h3 class="help-panel__title">Tips</h3>
+        <ul class="help-panel__tips">
+          <li>Click an empty seat to join the next hand.</li>
+          <li>The brass ring shows whose turn it is.</li>
+          <li>Out of chips? Hit <b>Re-buy</b> for a fresh stack.</li>
+          <li>Want to start over? <b>Reset</b> wipes the whole table.</li>
+        </ul>
+      </aside>
+    </main>
+
+    <!-- Mini status line shown only when waiting on another player. -->
+    <footer class="actionbar actionbar--wait" id="actionWait" hidden>
+      <div class="actionbar__status" id="actionStatus"></div>
+    </footer>
+  </section>
+
+  <!-- ===== Reset confirm modal ===== -->
+  <div class="modal" id="resetModal" hidden>
+    <div class="modal__backdrop"></div>
+    <div class="modal__panel">
+      <h2 class="modal__title">Reset the game?</h2>
+      <p class="modal__body">
+        Pick what to reset. Both actions affect <strong>every player at the table</strong>.
+      </p>
+      <div class="modal__choices">
+        <button class="btn btn--ghost  modal__choice" data-reset="cancelHand">
+          <strong>Cancel current hand</strong>
+          <span>Refund all bets back to seats. Stacks unchanged. Auto-starts a new hand.</span>
+        </button>
+        <button class="btn btn--danger modal__choice" data-reset="resetGame">
+          <strong>Full reset</strong>
+          <span>Cancel the hand AND reset every player's chips to 5,000. Wipes stats.</span>
+        </button>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" id="resetCancelBtn">Never mind</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Toast ===== -->
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/avatars.js?v=20260512r"></script>
+  <script src="/js/cards.js?v=20260512r"></script>
+  <script src="/js/client.js?v=20260512r"></script>
+</body>
+</html>
