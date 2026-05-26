@@ -10,7 +10,10 @@ const { logHand, logBotDecision } = require('../persistence/logger');
 const { strengthOf } = require('../bot/strength');
 const { botRebuyMessage, humanRebuyMessage, bustMessage } = require('../util/flavor');
 
-const HAND_RESULT_PAUSE_MS = parseInt(process.env.HAND_RESULT_PAUSE_MS || '6000', 10);
+// Showdown pause — how long the final hand stays on screen before clearing.
+// 15 s by default so everyone can read winners, hole cards, and the board.
+// Override per-table via env var HAND_RESULT_PAUSE_MS if you want it shorter.
+const HAND_RESULT_PAUSE_MS = parseInt(process.env.HAND_RESULT_PAUSE_MS || '15000', 10);
 const HAND_AUTOSTART_DELAY_MS = parseInt(process.env.HAND_AUTOSTART_DELAY_MS || '1500', 10);
 const BOT_THINK_MIN_MS = parseInt(process.env.BOT_THINK_MIN_MS || '900', 10);
 const BOT_THINK_MAX_MS = parseInt(process.env.BOT_THINK_MAX_MS || '2200', 10);
