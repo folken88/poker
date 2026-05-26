@@ -507,10 +507,14 @@
         // myTurn used by .seat__plate--acting class below.
         const myTurn = isMe && isActor && handPlayer && !handPlayer.folded && !handPlayer.allIn
           && hand.state !== 'SHOWDOWN' && hand.state !== 'COMPLETE';
+        // removeBotHtml and badgeHtml live OUTSIDE seat__plate so they
+        // aren't clipped by the plate's overflow:hidden (which exists
+        // to enforce max-height for overlap prevention). They anchor
+        // to .seat itself — same visual position, just unclipped.
         el.innerHTML = `
+          ${removeBotHtml}
+          ${badgeHtml}
           <div class="seat__plate ${myTurn ? 'seat__plate--acting' : ''}">
-            ${removeBotHtml}
-            ${badgeHtml}
             <div class="seat__avatar">${renderAvatar(seat.avatarId)}${avatarBadge}</div>
             <div class="seat__nick" title="${escapeAttr(seat.nickname)}">${escapeText(seat.nickname)}${isAllIn ? ' · ALL-IN' : ''}</div>
             ${botTag}

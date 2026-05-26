@@ -239,7 +239,7 @@
     "player": "Graham",
     "campaign": "JG",
     "art": "/assets/characters/kelda-ironglim.webp",
-    "sourceFile": "deathcourt/token_dwarf_female_kelda_rogue.webp"
+    "sourceFile": "dwarf/token_dwarf_female_rogue_redhair_glasses_ustalav.webp"
   },
   {
     "slug": "kovira",

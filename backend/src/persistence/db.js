@@ -117,7 +117,7 @@ const BOT_ROSTER = [
   // Round 2 additions
   { name: 'Taelys',               avatar: '/tokens/taelys-of-starfall.webp',     baseMode: 'risky',    intelligence: 'average' },
   { name: 'Lirienne',             avatar: '/tokens/lirienne-voss.webp',          baseMode: 'cautious', intelligence: 'high'    },
-  { name: 'Kelda',                avatar: '/tokens/kelda-ironglim.webp',         baseMode: 'standard', intelligence: 'average' },
+  { name: 'Kelda',                avatar: '/tokens/kelda-ironglim.webp',         baseMode: 'cautious', intelligence: 'high'    }, // user: cautious + high intel
   { name: 'Mr. Brow',             avatar: '/tokens/augustus-teabrow.webp',       baseMode: 'risky',    intelligence: 'high'    }, // user: highly intelligent + risky
   { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'risky',    intelligence: 'average' },
   { name: 'Ulfred',               avatar: '/tokens/ulfred-stronginthearm.webp',  baseMode: 'standard', intelligence: 'average' },

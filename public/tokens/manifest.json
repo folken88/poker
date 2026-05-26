@@ -857,15 +857,23 @@
     "id": "kelda-ironglim",
     "name": "Kelda Ironglim",
     "art": "/tokens/kelda-ironglim.webp",
-    "sourceFile": "deathcourt/token_dwarf_female_kelda_rogue.webp",
-    "mtime": "2026-03-20T05:34:19.485Z",
-    "size": 7982,
+    "sourceFile": "dwarf/token_dwarf_female_rogue_redhair_glasses_ustalav.webp",
+    "mtime": "2024-10-24T04:04:18.000Z",
+    "size": 13766,
     "pc": true,
     "race": "Dwarf",
     "class": "Rogue (Unchained)",
     "level": "5",
     "player": "Graham",
     "campaign": "JG"
+  },
+  {
+    "id": "token-dwarf-female-kelda-rogue",
+    "name": "Kelda Rogue",
+    "art": "/tokens/token-dwarf-female-kelda-rogue.webp",
+    "sourceFile": "deathcourt/token_dwarf_female_kelda_rogue.webp",
+    "mtime": "2026-03-20T05:34:19.485Z",
+    "size": 7982
   },
   {
     "id": "token-kobold-archer-tribal-warrior-dd-creature",
