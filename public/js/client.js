@@ -449,8 +449,12 @@
         const betHtml = handPlayer?.invested
           ? `<div class="seat__bet">bet ${formatChips(handPlayer.invested)}</div>` : '';
 
+        // Bot tag: just "AI" — temperament (cautious / standard / risky)
+        // is intentionally hidden so opponents can't profile the bot's
+        // play style. Mode lives only in the chat-log decision records
+        // and tooltips for the admin / yourself.
         const botTag = seat.isBot
-          ? `<span class="seat__bot-tag" title="AI player — ${escapeAttr(seat.botMode || 'standard')} mode">AI · ${escapeText(seat.botMode || 'standard')}</span>`
+          ? `<span class="seat__bot-tag" title="AI player">AI</span>`
           : (seat.isAfk
               ? `<span class="seat__afk-tag" title="Disconnected — sitting out until they return">AFK · sitting out</span>`
               : '');
