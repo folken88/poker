@@ -40,6 +40,48 @@ const RANK_WORD = { A: 'Ace', K: 'King', Q: 'Queen', J: 'Jack', T: '10' };
 function rankWord(v)   { return RANK_WORD[v] || v; }
 function rankPlural(v) { return rankWord(v) + 's'; }
 
+/** Order two hole cards highest-rank first so descriptions read "AK"
+ *  not "KA". Returns [highCard, lowCard]. */
+const RANK_ORDER = { '2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'T':10,'J':11,'Q':12,'K':13,'A':14 };
+function sortHoleHighFirst(hole) {
+  if (!hole || hole.length !== 2) return hole || [];
+  const [c1, c2] = hole;
+  return (RANK_ORDER[c1[0]] || 0) >= (RANK_ORDER[c2[0]] || 0) ? [c1, c2] : [c2, c1];
+}
+
+/** Describe two hole cards in poker shorthand. Used when a hand is
+ *  won by fold (no real showdown) so opponents can see if the winner
+ *  was bluffing. Examples:
+ *    "Pocket Aces"            (pair)
+ *    "Ace-King suited"        (premium)
+ *    "Ten-Two off — total bluff" (junk)
+ */
+function describeHoleCards(hole) {
+  const sorted = sortHoleHighFirst(hole);
+  if (sorted.length !== 2) return 'no cards';
+  const [c1, c2] = sorted;
+  const r1 = c1[0], r2 = c2[0];
+  const s1 = c1[1], s2 = c2[1];
+  if (r1 === r2) {
+    return r1 === 'A' ? 'Pocket Aces' :
+           r1 === 'K' ? 'Pocket Kings' :
+           r1 === 'Q' ? 'Pocket Queens' :
+           r1 === 'J' ? 'Pocket Jacks' :
+           `Pocket ${rankPlural(r1)}`;
+  }
+  const high = rankWord(r1), low = rankWord(r2);
+  const suit = s1 === s2 ? 'suited' : 'off';
+  // Bluff label: unconnected + low (both ≤ 10) is shouting "bluff".
+  const r1n = RANK_ORDER[r1] || 0;
+  const r2n = RANK_ORDER[r2] || 0;
+  const gap = r1n - r2n;
+  let suffix = '';
+  if (r1n <= 10 && gap >= 3 && s1 !== s2)       suffix = ' — total bluff';
+  else if (r1n <= 11 && gap >= 4)               suffix = ' — definite bluff';
+  else if (r1n <= 9)                            suffix = ' — sketchy bluff';
+  return `${high}-${low} ${suit}${suffix}`;
+}
+
 /** Take a pokersolver Hand result and return a sentence including kickers.
  *  Falls back to the library's own `descr` on any unexpected shape. */
 function describeWinningHand(solverHand) {
@@ -379,15 +421,36 @@ class Hand {
 
   _winByFold(winner) {
     // Single live player; they win the entire pot (uncontested showdown).
+    // We REVEAL the winner's hole cards (and describe them) so opponents
+    // can see whether the bet was for value or a bluff. Folded players'
+    // cards stay hidden — the gate in publicState filters them via
+    // `!p.folded`.
     const total = this.pot.totalSize();
     winner.stack += total;
     this.state = STATES.SHOWDOWN;
+
+    // Describe what they were holding. If 5+ board cards are out we can
+    // name a made hand; otherwise fall back to hole-card shorthand
+    // (which can also tag obvious bluffs).
+    let handDesc;
+    try {
+      if (this.board.length >= 3) {
+        const solver = SolverHand.solve([...winner.hole, ...this.board]);
+        const made = describeWinningHand(solver);
+        handDesc = `showing ${describeHoleCards(winner.hole)} — ${made}`;
+      } else {
+        handDesc = `showing ${describeHoleCards(winner.hole)}`;
+      }
+    } catch (_) {
+      handDesc = `showing ${describeHoleCards(winner.hole)}`;
+    }
+
     this.winners = [{
       playerId: winner.playerId,
       amount: total,
       pot: 0,
-      handDesc: 'wins (others folded)',
-      cards: null,
+      handDesc,
+      cards: winner.hole.slice(),
     }];
     this.events.push({ type: 'win-fold', player: winner.playerId, amount: total });
     return this._complete();
