@@ -113,15 +113,15 @@ if (fs.existsSync(PC_MANIFEST)) {
   console.log(`  (no PC manifest at ${PC_MANIFEST} — run import-vault-tokens.js first if you want PCs in the gallery)`);
 }
 
-// Merge in hand-picked villains / major NPCs (separate from PCs). These
-// always get included regardless of age and carry their own metadata
-// (villain: true) so the gallery can badge them differently.
-const villainEntries = new Map();
+// Villains are processed in a SEPARATE pass below so that a villain
+// sharing the same source file as a PC (e.g. "Texas Holden" pointing
+// at the same swashbuckler art as the PC "Holden Aleistair") still
+// emits as its own gallery entry. We just record them here.
+const villains = [];
 if (fs.existsSync(VILLAINS_FILE)) {
   try {
     const data = JSON.parse(fs.readFileSync(VILLAINS_FILE, 'utf8'));
     const list = Array.isArray(data?.villains) ? data.villains : [];
-    let added = 0;
     for (const v of list) {
       if (!v.source || !v.name) continue;
       const abs = path.resolve(FOUNDRY_DIR, v.source);
@@ -130,18 +130,16 @@ if (fs.existsSync(VILLAINS_FILE)) {
         continue;
       }
       const st = fs.statSync(abs);
-      villainEntries.set(abs, { villain: v });
-      candidates.push({ path: abs, mtimeMs: st.mtimeMs, size: st.size });
-      added++;
+      villains.push({ villain: v, path: abs, mtimeMs: st.mtimeMs, size: st.size });
     }
-    console.log(`  +${added} hand-picked villains/major NPCs`);
+    console.log(`  +${villains.length} hand-picked villains/major NPCs (separate pass)`);
   } catch (e) {
     console.warn(`  [villains] could not parse ${VILLAINS_FILE}: ${e.message}`);
   }
 }
 
-// Dedupe by absolute path. A PC-match that ALSO falls in the recency
-// window would otherwise be copied twice.
+// Dedupe the PC/recent candidates by absolute path. A PC-match that also
+// falls in the recency window would otherwise be copied twice.
 {
   const seen = new Map();
   for (const c of candidates) {
@@ -149,7 +147,7 @@ if (fs.existsSync(VILLAINS_FILE)) {
   }
   candidates.length = 0;
   for (const c of seen.values()) candidates.push(c);
-  console.log(`  ${candidates.length} unique tokens after dedupe`);
+  console.log(`  ${candidates.length} unique PC/recent tokens after dedupe`);
 }
 
 const manifest = [];
@@ -164,14 +162,10 @@ for (const c of candidates) {
   const basename = path.basename(c.path);
   const ext = path.extname(basename).toLowerCase();
   const pcMatch = pcMatches.get(c.path);
-  const villainMatch = villainEntries.get(c.path);
   // Stable slug priority:
   //   1. PC slug from vault manifest         → /tokens/dinvaya.webp
-  //   2. Villain slugified-from-name         → /tokens/tar-baphon.webp
-  //   3. Fallback: slugified source filename → /tokens/token-…-…-…
-  let baseSlug = pcMatch?.pc?.slug
-              || (villainMatch ? slugify(villainMatch.villain.name) : null)
-              || slugify(basename.replace(ext, ''));
+  //   2. Fallback: slugified source filename → /tokens/token-…-…-…
+  let baseSlug = pcMatch?.pc?.slug || slugify(basename.replace(ext, ''));
   if (!baseSlug) baseSlug = 'token-' + Math.random().toString(36).slice(2, 10);
   let slug = baseSlug;
   let n = 2;
@@ -190,9 +184,7 @@ for (const c of candidates) {
   }
   const entry = {
     id: slug,
-    name: pcMatch?.pc?.name
-       || villainMatch?.villain?.name
-       || displayName(basename),
+    name: pcMatch?.pc?.name || displayName(basename),
     art: '/tokens/' + destName,
     sourceFile: path.relative(FOUNDRY_DIR, c.path).replace(/\\/g, '/'),
     mtime: new Date(c.mtimeMs).toISOString(),
@@ -205,13 +197,44 @@ for (const c of candidates) {
     entry.level     = pcMatch.pc.level || null;
     entry.player    = pcMatch.pc.player || null;
     entry.campaign  = pcMatch.pc.campaign || null;
-  } else if (villainMatch) {
-    entry.villain   = true;
-    entry.race      = villainMatch.villain.race || null;
-    entry.class     = villainMatch.villain.class || null;
-    entry.campaign  = villainMatch.villain.campaign || null;
   }
   manifest.push(entry);
+}
+
+// ---- Pass 2: villains / major NPCs ----
+// Independent of the PC/recent dedupe — a villain can legitimately share
+// its source file with a PC (Texas Holden ↔ Holden Aleistair) and must
+// still emit as its own gallery entry with its own slug.
+for (const v of villains) {
+  const ext = path.extname(v.path).toLowerCase();
+  let baseSlug = slugify(v.villain.name) || 'villain-' + Math.random().toString(36).slice(2, 10);
+  let slug = baseSlug;
+  let n = 2;
+  while (usedSlugs.has(slug)) { slug = `${baseSlug}-${n++}`; }
+  usedSlugs.add(slug);
+
+  const destName = slug + ext;
+  const dest = path.join(OUT_DIR, destName);
+  try {
+    fs.copyFileSync(v.path, dest);
+    copied++;
+  } catch (e) {
+    console.warn(`  [skip villain] ${v.villain.name}: ${e.message}`);
+    skipped++;
+    continue;
+  }
+  manifest.push({
+    id: slug,
+    name: v.villain.name,
+    art: '/tokens/' + destName,
+    sourceFile: path.relative(FOUNDRY_DIR, v.path).replace(/\\/g, '/'),
+    mtime: new Date(v.mtimeMs).toISOString(),
+    size: v.size,
+    villain: true,
+    race: v.villain.race || null,
+    class: v.villain.class || null,
+    campaign: v.villain.campaign || null,
+  });
 }
 
 // Alphabetize the manifest by display name so the gallery is browsable.

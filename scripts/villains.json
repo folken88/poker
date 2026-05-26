@@ -11,6 +11,17 @@
     { "name": "Unity",                "campaign": "IG", "race": "AI",         "class": "Iron God",              "source": "iron_gods_characters/token_robot_overlord_unity.webp" },
     { "name": "Hellion",              "campaign": "IG", "race": "Construct",  "class": "Scorpion-Robot Iron God","source": "iron_gods_characters/token_hellion_body_scorpion_robot.webp" },
     { "name": "Casandalee",           "campaign": "IG", "race": "AI",         "class": "Ascended Goddess",      "source": "iron_gods_characters/token_ai_android_tablet_casandalee_cass_goddess_round.webp" },
-    { "name": "Binch",                "campaign": "CC", "race": "Half-Elf",   "class": "Witch · Priestess of the Pirate God", "source": "human/token_human_female_binch_priestess_of_the_pirate_god_confident_intimidating.webp" }
+    { "name": "Binch",                "campaign": "CC", "race": "Half-Elf",   "class": "Witch · Priestess of the Pirate God", "source": "human/token_human_female_binch_priestess_of_the_pirate_god_confident_intimidating.webp" },
+    { "name": "Sirona",               "campaign": "CC", "race": "Deva",       "class": "Paladin · Deva of the First Circle", "source": "human/token_human_female_ilona_paladin_warrior_plate_fighter_yellow.webp" },
+    { "name": "Granny Gunns",         "campaign": "SS", "race": "Human",      "class": "Witch (Pirate's Grandma)",           "source": "human/token_human_female_pirates_grandma_79_year_old_lady_reti.webp" },
+    { "name": "Sandara",              "campaign": "SS", "race": "Human",      "class": "Cleric of Besmara",                   "source": "human/token_human_female_sendara_quinn_pirate_besmara_priest.webp" },
+    { "name": "Taylor",               "campaign": "IG", "race": "Skinwalker", "class": "Arms Dealer (Numeria)",               "source": "human/token_human_female_taylor_blackwood_arms_dealer_numeria.webp" },
+    { "name": "Tamsin",               "campaign": null, "race": "Human",      "class": "Underworld Doctor",                   "source": "human/token_human_female_underworld_doctor_female_on_a_city_street.webp" },
+    { "name": "Bastion",              "campaign": null, "race": "Human",      "class": "Paladin (Dead-White)",                "source": "human/token_human_male_bastion_paladin_dead_white.png" },
+    { "name": "Clenchjaw",            "campaign": null, "race": "Human",      "class": "Brawler",                              "source": "human/token_human_male_brawler_clenchjaw.webp" },
+    { "name": "Chef",                 "campaign": "IG", "race": "Human",      "class": "Expert / Barbarian (Chef Ramsay)",    "source": "human/token_human_male_chef_gordon_ramsay_as_a_dd_character_.webp" },
+    { "name": "Texas Holden",         "campaign": null, "race": "Human",      "class": "Captain · Oblivious Swashbuckler",    "source": "human/token_human_male_holden_captain_oblivious_swashbuckler_s.webp" },
+    { "name": "John Wizard",          "campaign": null, "race": "Human",      "class": "Wizard (Biker Gang)",                  "source": "human/token_human_male_john__wizard_in_a_biker_gang_big_grey.webp" },
+    { "name": "Chief",                "campaign": null, "race": "Human",      "class": "Master Chief (Gothic Fantasy)",        "source": "human/token_human_male_master_chief_dark_gothic_fantasy_setting_saga.webp" }
   ]
 }
