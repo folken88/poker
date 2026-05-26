@@ -113,7 +113,7 @@ const BOT_ROSTER = [
   { name: 'Storgrim Thunderbeard', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'cautious', intelligence: 'average' }, // user: avg intel + cautious
   { name: 'Kate Blackwood',        avatar: '/tokens/kate-blackwood.webp',        baseMode: 'cautious', intelligence: 'high'    }, // user: high intel + low risk
   { name: 'Kovira',               avatar: '/tokens/kovira.webp',               baseMode: 'risky',    intelligence: 'high'    },
-  { name: 'Elfrip',               avatar: '/tokens/elfrip.webp',               baseMode: 'risky',    intelligence: 'average' },
+  { name: 'Elfrip',               avatar: '/tokens/elfrip.webp',               baseMode: 'standard', intelligence: 'low'     }, // user: goblin cleric, low intel + normal risk
 
   // Round 2 additions
   { name: 'Taelys',               avatar: '/tokens/taelys-of-starfall.webp',     baseMode: 'risky',    intelligence: 'low'     }, // user: low intel + high risk
