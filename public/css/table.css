@@ -1248,6 +1248,122 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   50%     { transform: scale(1.08); }
 }
 
+/* ===== LOOT LORD ceremony ===== */
+.lootlord-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+}
+.lootlord-overlay__backdrop {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, rgba(75, 50, 10, 0.7) 0%, rgba(0,0,0,0.92) 70%);
+  backdrop-filter: blur(8px);
+}
+.lootlord-overlay__content {
+  position: relative;
+  text-align: center;
+  color: var(--ivory);
+  padding: 2rem 3rem;
+  border: 2px solid var(--brass-bright);
+  border-radius: 24px;
+  background: radial-gradient(ellipse at center, rgba(40, 28, 10, 0.95), rgba(20, 12, 5, 0.97));
+  box-shadow: 0 0 80px rgba(241, 207, 131, 0.5), 0 30px 80px rgba(0,0,0,0.8);
+  animation: lootlordPop 0.6s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes lootlordPop {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.lootlord-overlay__rays {
+  position: absolute;
+  inset: -100px;
+  background: conic-gradient(from 0deg,
+    transparent 0deg, rgba(241,207,131,0.18) 8deg, transparent 16deg,
+    transparent 30deg, rgba(241,207,131,0.18) 38deg, transparent 46deg,
+    transparent 60deg, rgba(241,207,131,0.18) 68deg, transparent 76deg,
+    transparent 90deg, rgba(241,207,131,0.18) 98deg, transparent 106deg,
+    transparent 120deg, rgba(241,207,131,0.18) 128deg, transparent 136deg,
+    transparent 150deg, rgba(241,207,131,0.18) 158deg, transparent 166deg,
+    transparent 180deg, rgba(241,207,131,0.18) 188deg, transparent 196deg,
+    transparent 210deg, rgba(241,207,131,0.18) 218deg, transparent 226deg,
+    transparent 240deg, rgba(241,207,131,0.18) 248deg, transparent 256deg,
+    transparent 270deg, rgba(241,207,131,0.18) 278deg, transparent 286deg,
+    transparent 300deg, rgba(241,207,131,0.18) 308deg, transparent 316deg,
+    transparent 330deg, rgba(241,207,131,0.18) 338deg, transparent 346deg,
+    transparent 360deg);
+  animation: lootlordSpin 20s linear infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes lootlordSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.lootlord-overlay__pre {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  letter-spacing: 0.4em;
+  color: var(--brass-bright);
+  text-shadow: 0 0 12px rgba(241,207,131,0.6);
+}
+.lootlord-overlay__title {
+  margin: 0.4rem 0 1.4rem;
+  font-family: var(--font-display);
+  font-size: 5.5rem;
+  letter-spacing: 0.18em;
+  color: var(--brass-bright);
+  text-shadow:
+    0 0 30px rgba(241,207,131,0.9),
+    0 0 60px rgba(241,207,131,0.5),
+    0 6px 16px rgba(0,0,0,0.8);
+  background: linear-gradient(180deg, #fff5d2, var(--brass-bright), var(--brass));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.lootlord-overlay__portrait {
+  width: 280px; height: 280px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  border: 6px solid var(--brass-bright);
+  overflow: hidden;
+  box-shadow:
+    0 0 50px rgba(241,207,131,0.7),
+    0 0 100px rgba(241,207,131,0.4),
+    inset 0 0 30px rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.5);
+  animation: lootlordGlow 2s ease-in-out infinite;
+}
+.lootlord-overlay__portrait img,
+.lootlord-overlay__portrait svg { width: 100%; height: 100%; object-fit: cover; }
+@keyframes lootlordGlow {
+  0%,100% { box-shadow: 0 0 50px rgba(241,207,131,0.7), 0 0 100px rgba(241,207,131,0.4), inset 0 0 30px rgba(0,0,0,0.4); }
+  50%     { box-shadow: 0 0 70px rgba(241,207,131,1.0), 0 0 140px rgba(241,207,131,0.6), inset 0 0 30px rgba(0,0,0,0.4); }
+}
+.lootlord-overlay__name {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  letter-spacing: 0.18em;
+  color: var(--ivory);
+  text-shadow: 0 0 12px rgba(241,207,131,0.5);
+  margin-bottom: 0.4rem;
+}
+.lootlord-overlay__stats {
+  font-size: 0.95rem;
+  color: var(--ivory-dim);
+  margin-bottom: 1.2rem;
+}
+.lootlord-overlay__countdown {
+  font-size: 0.95rem;
+  color: var(--brass-bright);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.lootlord-overlay__countdown span {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #fff;
+}
+
 /* ===== Toast ===== */
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);

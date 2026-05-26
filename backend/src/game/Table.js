@@ -75,6 +75,13 @@ class Table {
      *  a new hand actually starts. Drives the topbar "next hand in N"
      *  countdown. */
     this.nextHandAt = null;
+    /** Loot Lord ceremony state. When non-null, the table is paused on
+     *  a celebration screen showing the winner. Frontend renders a
+     *  full-screen overlay; the game-state reset is deferred until
+     *  resetAt ms wall-clock so everyone gets to see the big reveal.
+     *  Shape: { playerId, nickname, avatarId, handCount, resetAt }. */
+    this.lootLord = null;
+    this._lootLordTimer = null;
   }
 
   // ============================================================
@@ -266,6 +273,8 @@ class Table {
 
   _maybeStartHand() {
     if (this.hand) return;
+    // Don't deal mid-ceremony — wait for the Loot Lord reveal to finish.
+    if (this.lootLord) return;
     const ready = this._seatsReadyForHand();
     if (ready.length < 2) {
       // Not enough players — keep `nextHandAt` null so the topbar shows
@@ -634,12 +643,21 @@ class Table {
     return winners[0];
   }
 
-  /** Crown the Loot Lord, log to the Champions Board, then nuke the
-   *  game state back to defaults — everyone (including the lord)
-   *  returns to DEFAULT_STACK chips and empty gear so the chase begins
-   *  anew. */
+  /** Crown the Loot Lord and start the ceremony. Doesn't reset state
+   *  immediately — sets `this.lootLord` so the frontend can show a big
+   *  reveal screen for LOOT_LORD_CEREMONY_MS, then `_resetForNextRun`
+   *  fires the actual chip/gear wipe.
+   *
+   *  If a ceremony is already in progress (e.g. multiple bots cross
+   *  the line on the same hand), the first winner stays — this is a
+   *  no-op for subsequent calls. */
   _declareLootLord(seat) {
+    if (this.lootLord) return;   // already crowned this game
+
     const nick = seat.player?.nickname || seat.playerId;
+    const CEREMONY_MS = parseInt(process.env.LOOT_LORD_CEREMONY_MS || '20000', 10);
+    const resetAt = Date.now() + CEREMONY_MS;
+
     db.recordChampion({
       playerId:    seat.playerId,
       nickname:    nick,
@@ -647,24 +665,46 @@ class Table {
       handsToWin:  this.handCount,
       finalChips:  seat.chipsAtTable,
     });
-    this.chat('lootlord', `👑 LOOT LORD! ${nick} has assembled a full +5 set after ${this.handCount} hand${this.handCount===1?'':'s'}. They are crowned and added to the Champions Board.`);
-    this.chat('lootlord', `🎲 The game resets — everyone returns to ${db.DEFAULT_STACK.toLocaleString()} gp, gear cleared. May the next Loot Lord be among us.`);
+    this.chat('lootlord', `👑 LOOTMAXXING LOOT LORD: ${nick}! Full +5 set assembled after ${this.handCount} hand${this.handCount===1?'':'s'}.`);
+    this.chat('lootlord', `🎲 Game resets in ${Math.round(CEREMONY_MS/1000)} seconds — savor the crown.`);
 
-    // Wipe all chips + gear back to defaults for EVERY player in the DB
-    // (so bots and unseated humans also reset, not just folks currently
-    // at the table).
+    // Pause the action-timer machinery so no auto-fold fires during the show.
+    this._clearHumanActionTimer();
+    if (this._botActionTimer) { clearTimeout(this._botActionTimer); this._botActionTimer = null; }
+    this.actionDeadline = null;
+
+    this.lootLord = {
+      playerId:  seat.playerId,
+      nickname:  nick,
+      avatarId:  seat.player?.avatar_id || null,
+      handCount: this.handCount,
+      finalChips: seat.chipsAtTable,
+      resetAt,
+    };
+
+    this._lootLordTimer = setTimeout(() => {
+      this._lootLordTimer = null;
+      this._resetForNextRun();
+    }, CEREMONY_MS);
+
+    this._broadcast();
+  }
+
+  /** Wipe chips + gear + debt for every player. Clears the ceremony
+   *  state. Sends fresh roster + state so clients drop the overlay
+   *  and resume normal play. Called after LOOT_LORD_CEREMONY_MS. */
+  _resetForNextRun() {
     const resetAll = db.db.prepare(`
       UPDATE players SET chips = ?, gear = '{}', swords = '{}', rebuy_debt = 0
     `);
     resetAll.run(db.DEFAULT_STACK);
-
-    // Sync seat objects with the fresh chip totals + push fresh state.
     for (const s of this.seats) {
       if (s.isEmpty()) continue;
       s.chipsAtTable = db.DEFAULT_STACK;
     }
-    // Reset hand counter so the post-win game starts at Hand #1.
     this.handCount = 0;
+    this.lootLord = null;
+    this.chat('lootlord', `🃏 New game. Everyone back to ${db.DEFAULT_STACK.toLocaleString()} gp, gear cleared.`);
     if (this.io) {
       this.io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
     }
@@ -754,6 +794,10 @@ class Table {
       // Last 60 chat-log entries so newly-joined / refreshed clients
       // see context, not an empty panel.
       chatLog: this.chatLog.slice(-60),
+      // Active Loot Lord celebration. null normally; { playerId,
+      // nickname, avatarId, handCount, finalChips, resetAt } during
+      // the ceremony pause between win and game-reset.
+      lootLord: this.lootLord,
     };
   }
 }

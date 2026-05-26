@@ -473,6 +473,7 @@
     // content here.
     renderActionPanel();
     renderBank();
+    renderLootLord();
 
     // Re-apply the saved action-panel drag offset. The panel host element
     // itself is permanent now, but its inline CSS vars can get cleared
@@ -574,6 +575,21 @@
           <span class="bank__progress-text">${formatChips(totalValue)} / ${formatChips(LOOT_LORD_TOTAL)} gp · ${progressPct}% to LOOT LORD</span>
         </div>
       </div>`;
+  }
+
+  // ===== LOOT LORD ceremony overlay =====
+  function renderLootLord() {
+    const overlay = $('#lootlordOverlay');
+    if (!overlay) return;
+    const ll = state.table?.lootLord;
+    if (!ll) { overlay.hidden = true; return; }
+    overlay.hidden = false;
+    $('#lootlordPortrait').innerHTML = renderAvatar(ll.avatarId);
+    $('#lootlordName').textContent = ll.nickname.toUpperCase();
+    $('#lootlordStats').textContent = `Crowned after ${ll.handCount} hand${ll.handCount===1?'':'s'} · ${formatChips(ll.finalChips)} gp in the bank`;
+    // Initial countdown text; tickTimers updates it every 250ms.
+    const remain = Math.max(0, Math.ceil((ll.resetAt - Date.now()) / 1000));
+    $('#lootlordCountdown').textContent = remain + 's';
   }
 
   // ===== Action panel host (permanent — never destroyed) =====
@@ -704,6 +720,17 @@
     const actionMs = t?.actionDeadline ? t.actionDeadline - now : 0;
     const nextMs   = t?.nextHandAt ? t.nextHandAt - now : 0;
 
+    // If a Loot Lord ceremony is running, the topbar clock shows the
+    // reset countdown and the overlay's countdown updates here too.
+    const llMs = t?.lootLord?.resetAt ? t.lootLord.resetAt - now : 0;
+    if (t?.lootLord) {
+      const lc = document.getElementById('lootlordCountdown');
+      if (lc) lc.textContent = Math.max(0, Math.ceil(llMs/1000)) + 's';
+      clock.dataset.mode = 'urgent';
+      label.textContent = 'GAME RESETS IN';
+      renderClockDigits(Math.max(0, Math.ceil(llMs/1000)));
+      return;
+    }
     if (actionMs > 0) {
       const secs = Math.ceil(actionMs / 1000);
       const mode = actionMs < 10000 ? 'urgent' : 'action';
@@ -862,12 +889,15 @@
     });
   }
 
-  // ===== Action panel drag wiring (handle is inside seatRing) =====
+  // ===== Action panel drag wiring =====
+  // The action panel lives in #actpanelHost (sibling of #seatRing) so
+  // pointerdown on its drag handle does NOT bubble to seatRing. Listen
+  // on the document instead — that catches drags anywhere the user
+  // moves their mouse, including off the panel mid-drag.
   let _dragState = null;
-  $('#seatRing').addEventListener('pointerdown', (e) => {
+  document.addEventListener('pointerdown', (e) => {
     const handle = e.target.closest('[data-actpanel-drag]');
     if (!handle) return;
-    // Ignore clicks on the reset button (its click handler runs separately).
     if (e.target.closest('[data-actpanel-reset]')) return;
     const panel = handle.closest('[data-actpanel]');
     if (!panel) return;
@@ -882,16 +912,14 @@
       pointerId: e.pointerId,
     };
     panel.classList.add('is-dragging');
-    handle.setPointerCapture(e.pointerId);
+    try { handle.setPointerCapture(e.pointerId); } catch (_) { /* not supported here */ }
   });
-  $('#seatRing').addEventListener('pointermove', (e) => {
+  document.addEventListener('pointermove', (e) => {
     if (!_dragState || e.pointerId !== _dragState.pointerId) return;
     const dx = _dragState.origDx + (e.clientX - _dragState.startX);
     const dy = _dragState.origDy + (e.clientY - _dragState.startY);
     state.actpanelOffset = { dx, dy };
     applyActpanelOffset();
-    // Persist immediately so a missed pointerup (focus loss, OS interrupt)
-    // can't lose the drag offset.
     saveActpanelOffset();
   });
   const endDrag = (e) => {
@@ -901,24 +929,26 @@
     _dragState = null;
     saveActpanelOffset();
   };
-  $('#seatRing').addEventListener('pointerup', endDrag);
-  $('#seatRing').addEventListener('pointercancel', endDrag);
+  document.addEventListener('pointerup', endDrag);
+  document.addEventListener('pointercancel', endDrag);
+
+  // The reset link inside the drag handle (separate from the seat-ring
+  // click delegate below).
+  document.addEventListener('click', (e) => {
+    const reset = e.target.closest('[data-actpanel-reset]');
+    if (!reset) return;
+    e.stopPropagation();
+    state.actpanelOffset = null;
+    applyActpanelOffset();
+    saveActpanelOffset();
+  });
 
   // ===== Action panel click wiring (delegated; panel is re-rendered each turn) =====
+  // Seat-ring clicks (sit-down on empty seat, × on bot seats).
   $('#seatRing').addEventListener('click', (e) => {
-    // "reset" link in the drag handle → recenter the panel
-    const resetBtn = e.target.closest('[data-actpanel-reset]');
-    if (resetBtn) {
-      e.stopPropagation();
-      state.actpanelOffset = null;
-      applyActpanelOffset();
-      saveActpanelOffset();
-      return;
-    }
-    // × on a bot seat → ask that bot to leave (after the current hand)
     const removeBot = e.target.closest('button[data-remove-bot]');
     if (removeBot) {
-      e.stopPropagation();  // don't bubble to sit-down handler on the parent
+      e.stopPropagation();
       const playerId = removeBot.dataset.removeBot;
       const nick = removeBot.getAttribute('title') || playerId;
       socket.emit('table:removeBot', { playerId }, (resp) => {
@@ -927,6 +957,10 @@
       });
       return;
     }
+  });
+
+  // Action panel clicks (now OUTSIDE the seat ring — delegate on document).
+  document.addEventListener('click', (e) => {
     // Preset chip → fill the raise input
     const preset = e.target.closest('button[data-raise]');
     if (preset) {
@@ -941,7 +975,7 @@
     // Action button (fold/check/call/raise/allin)
     const btn = e.target.closest('button[data-act]');
     if (!btn) return;
-    e.stopPropagation();   // don't bubble to sit-down handler
+    e.stopPropagation();
     const act = btn.dataset.act;
     const payload = { action: act };
     if (act === 'raise') {

@@ -82,23 +82,30 @@ const ROSTER = [
   { name: 'Cram',      avatar: 'bear'    },
 ];
 
-// AI players — pre-seeded, available via "Add bot" button. Personality
-// = baseMode. Bots impersonate notable Cassbot-vault PCs whose tokens
-// were imported into public/tokens/ via scripts/import-token-gallery.js
-// (which now also merges in PC-matched tokens from import-vault-tokens.js).
-// All avatar paths share the /tokens/ root so the player gallery and
-// the bot avatars draw from the same gitignored folder. Re-running the
-// import script overwrites the files but keeps the same slugs.
+// AI players — pre-seeded, available via "Add bot" button. Humans can
+// also pick them from the roster to "supersede" the AI for a session.
+// Personality = baseMode (cautious / standard / risky). Avatar paths
+// point at /tokens/ files imported by scripts/import-token-gallery.js.
 const BOT_ROSTER = [
-  // Cautious — careful clerics / tacticians
+  // Original 6 bots
   { name: 'Dinvaya',              avatar: '/tokens/dinvaya.webp',              baseMode: 'cautious' },
   { name: 'Vaughan',              avatar: '/tokens/vaughan.webp',              baseMode: 'cautious' },
-  // Standard — steady frontline / calculating
   { name: 'Storgrim Thunderbeard', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'standard' },
   { name: 'Kate Blackwood',        avatar: '/tokens/kate-blackwood.webp',        baseMode: 'standard' },
-  // Risky — chaotic / bold
   { name: 'Kovira',               avatar: '/tokens/kovira.webp',               baseMode: 'risky'    },
   { name: 'Elfrip',               avatar: '/tokens/elfrip.webp',               baseMode: 'risky'    },
+
+  // Round 2 additions — user-requested. Modes chosen to roughly match
+  // each character's archetype:
+  { name: 'Taelys',               avatar: '/tokens/taelys-of-starfall.webp',     baseMode: 'risky'    }, // tiefling gunslinger
+  { name: 'Lirienne',             avatar: '/tokens/lirienne-voss.webp',          baseMode: 'cautious' }, // hunter
+  { name: 'Kelda',                avatar: '/tokens/kelda-ironglim.webp',         baseMode: 'standard' }, // dwarf rogue
+  { name: 'Mr. Brow',             avatar: '/tokens/augustus-teabrow.webp',       baseMode: 'cautious' }, // halfling psychic
+  { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'risky'    }, // catfolk rogue
+  { name: 'Ulfred',               avatar: '/tokens/ulfred-stronginthearm.webp',  baseMode: 'standard' }, // dwarf cleric
+  { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard' }, // half-orc slayer/detective
+  { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky'    }, // velociraptor — pure instinct
+  { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious' }, // underworld doctor
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
@@ -179,6 +186,39 @@ const stmts = {
   `),
   recentHands:  db.prepare('SELECT * FROM hand_history WHERE table_id = ? ORDER BY played_at DESC LIMIT ?'),
 };
+
+// One-shot migration: any player with non-empty `swords` (legacy sword
+// inventory from the old auto-invest system) gets the full market value
+// refunded to chips and their swords cleared. Runs once per boot — if
+// no legacy data remains, this is a no-op.
+function migrateLegacySwords() {
+  const legacy = db.prepare("SELECT player_id, chips, swords FROM players WHERE swords != '{}' AND swords IS NOT NULL").all();
+  if (legacy.length === 0) return;
+  let totalRefund = 0;
+  const tx = db.transaction(() => {
+    for (const row of legacy) {
+      let inv = {};
+      try { inv = JSON.parse(row.swords) || {}; } catch { continue; }
+      let refund = 0;
+      for (const tierStr of Object.keys(inv)) {
+        const tier = Number(tierStr);
+        const count = Number(inv[tierStr]) || 0;
+        const price = ALL_SWORD_PRICES_LEGACY[tier] || 0;
+        refund += price * count;
+      }
+      if (refund <= 0) continue;
+      totalRefund += refund;
+      db.prepare('UPDATE players SET chips = chips + ?, swords = \'{}\' WHERE player_id = ?')
+        .run(refund, row.player_id);
+    }
+  });
+  tx();
+  console.log(`[poker] migrated legacy swords: refunded ${totalRefund.toLocaleString()} gp across ${legacy.length} player(s); swords cleared`);
+}
+// Same numbers as the old ALL_SWORD_PRICES table — kept here so the
+// migration above doesn't depend on the rest of the new gear system.
+const ALL_SWORD_PRICES_LEGACY = { 1: 2315, 2: 8315, 3: 18315, 4: 32315, 5: 50315 };
+migrateLegacySwords();
 
 function seedRoster() {
   const now = Date.now();

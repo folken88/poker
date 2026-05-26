@@ -350,6 +350,18 @@
     "size": 43722
   },
   {
+    "id": "crisp",
+    "name": "Crisp",
+    "art": "/tokens/crisp.webp",
+    "sourceFile": "animal/token_animal_dino_crisp_crossbow.webp",
+    "mtime": "2025-02-08T21:45:00.000Z",
+    "size": 11886,
+    "villain": true,
+    "race": "Velociraptor",
+    "class": "Animal Companion · Loyal Reptile",
+    "campaign": "JG"
+  },
+  {
     "id": "token-human-danger-male-spirit-camo",
     "name": "Danger Spirit Camo",
     "art": "/tokens/token-human-danger-male-spirit-camo.png",
