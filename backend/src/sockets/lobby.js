@@ -100,7 +100,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
     if (table) {
       const seat = table.findSeat(player.player_id);
       if (seat) seat.chipsAtTable = refreshed.chips;
-      table.chat('debt', `💸 ${refreshed.nickname} paid down ${amt.toLocaleString()} of debt. (Owes ${refreshed.rebuy_debt.toLocaleString()}.)`);
+      table.chat('debt', `💸 ${refreshed.nickname} paid down ${amt.toLocaleString()} gp of debt. (Owes ${refreshed.rebuy_debt.toLocaleString()} gp.)`);
       table._broadcast?.();
     }
     io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });

@@ -65,9 +65,9 @@ const SUFFIXES = [
 
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-/** Generate "Storgrim hocked their X for 5000 to Y" line. */
+/** Generate "Storgrim hocked their X for 5000 gp to Y" line. */
 function botRebuyMessage(nickname, amount) {
-  return `${nickname} ${pick(VERBS)} their ${pick(ITEMS)} for ${amount.toLocaleString()} chips ${pick(SUFFIXES)}`;
+  return `${nickname} ${pick(VERBS)} their ${pick(ITEMS)} for ${amount.toLocaleString()} gp ${pick(SUFFIXES)}`;
 }
 
 const HUMAN_REBUY = [
@@ -80,14 +80,14 @@ const HUMAN_REBUY = [
 
 /** Human re-buy line (no flavor items — humans are paying real debt). */
 function humanRebuyMessage(nickname, amount) {
-  return `${nickname} ${pick(HUMAN_REBUY)} ${amount.toLocaleString()} chips. (debt accrued.)`;
+  return `${nickname} ${pick(HUMAN_REBUY)} ${amount.toLocaleString()} gp. (debt accrued.)`;
 }
 
 const BUST_LINES = [
-  'is out of chips. Time for the walk of shame.',
+  'is out of gp. Time for the walk of shame.',
   'busted out. The table observes a moment of silence.',
-  'is broke. Anyone got a spare 5,000?',
-  'donked their last chip. Brutal.',
+  'is broke. Anyone got a spare 5,000 gp?',
+  'donked their last gp. Brutal.',
   'has departed the table with nothing but lessons.',
 ];
 function bustMessage(nickname) {

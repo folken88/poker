@@ -38,6 +38,10 @@ ensureColumn('players', 'bot_mode',   'TEXT');
 // this debt. They can pay it down later from their stack via `lobby:payDebt`.
 // Bots do NOT accrue debt — their auto-rebuys are free (they're the house).
 ensureColumn('players', 'rebuy_debt', 'INTEGER NOT NULL DEFAULT 0');
+// JSON object mapping sword tier (string '1'..'5') to count, e.g.
+// '{"1":2,"2":1}' = two +1 longswords and one +2. Bought automatically
+// at end of hand by Table._autoInvest — see backend/src/game/Table.js.
+ensureColumn('players', 'swords',     "TEXT NOT NULL DEFAULT '{}'");
 
 // ---- Roster (the fixed test players) ----
 // 14 names, 12 avatars — two avatars get reused on purpose.
@@ -79,6 +83,17 @@ const BOT_ROSTER = [
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
+
+// Pathfinder 1e magic longsword prices (gp). Each entry = enhancement
+// bonus tier with the full market price (base 15 gp + masterwork 300 gp
+// + enhancement cost: +1=2000, +2=8000, +3=18000, +4=32000, +5=50000).
+const SWORD_TIERS = [
+  { tier: 1, price: 2315,  name: '+1 longsword' },
+  { tier: 2, price: 8315,  name: '+2 longsword' },
+  { tier: 3, price: 18315, name: '+3 longsword' },
+  { tier: 4, price: 32315, name: '+4 longsword' },
+  { tier: 5, price: 50315, name: '+5 longsword' },
+];
 
 const stmts = {
   getPlayer:    db.prepare('SELECT * FROM players WHERE player_id = ?'),
@@ -165,6 +180,15 @@ function payRebuyDebt(playerId, amount) {
   if (!Number.isFinite(amount) || amount <= 0) return;
   stmts.payDebt.run(amount, amount, playerId);
 }
+function getSwords(playerId) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return {};
+  try { return JSON.parse(p.swords || '{}') || {}; } catch { return {}; }
+}
+function setSwords(playerId, swords) {
+  const json = JSON.stringify(swords || {});
+  db.prepare('UPDATE players SET swords = ? WHERE player_id = ?').run(json, playerId);
+}
 function recordWin(playerId, amount)  { stmts.recordWin.run(amount, playerId); }
 function recordLoss(playerId, amount) { stmts.recordLoss.run(amount, playerId); }
 function insertHand({ tableId, board, players, winners }) {
@@ -185,6 +209,7 @@ module.exports = {
   ROSTER,
   BOT_ROSTER,
   DEFAULT_STACK,
+  SWORD_TIERS,
   getPlayer,
   listPlayers,
   listHumans,
@@ -193,6 +218,8 @@ module.exports = {
   setChips,
   addRebuyDebt,
   payRebuyDebt,
+  getSwords,
+  setSwords,
   recordWin,
   recordLoss,
   insertHand,

@@ -482,7 +482,7 @@ class Table {
         const nick = nickById.get(w.playerId) || w.playerId;
         const amt  = (w.amount || 0).toLocaleString();
         const hand = w.handDesc ? ` with ${w.handDesc}` : '';
-        this.chat('win', `🏆 ${nick} wins ${amt}${hand}.`);
+        this.chat('win', `🏆 ${nick} wins ${amt} gp${hand}.`);
       }
     } catch (e) { /* never let logging break a hand */ }
 
@@ -493,6 +493,10 @@ class Table {
       seat.chipsAtTable = p.stack;
       db.setChips(p.playerId, p.stack);
     }
+    // Magic-longsword auto-invest pass. Players with chips well above
+    // the buy-in reserve convert some of their winnings into permanent
+    // PF1e magic longswords. At most one sword per hand per player.
+    this._autoInvestSwords();
     // Push a fresh roster so every client's topbar (state.me.chips) updates.
     if (this.io) this.io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
     // Record hand history (SQLite — for the UI/admin).
@@ -570,6 +574,47 @@ class Table {
   }
 
   // ============================================================
+  // Magic-longsword auto-invest (PF1e flavor)
+  // ============================================================
+
+  /** After a hand resolves, players with significantly more than the
+   *  buy-in stack convert some of those winnings into magic longswords.
+   *  At most one sword per player per hand. Highest tier they can afford
+   *  while keeping >= DEFAULT_STACK gp in reserve.
+   *
+   *  Posts a chat line per acquisition. Persists swords + new chip total.
+   */
+  _autoInvestSwords() {
+    const reserve = db.DEFAULT_STACK;
+    for (const seat of this.seats) {
+      if (seat.isEmpty()) continue;
+      let chips = seat.chipsAtTable;
+      // Highest tier we can afford while keeping `reserve` gp in stack.
+      let pick = null;
+      for (let i = db.SWORD_TIERS.length - 1; i >= 0; i--) {
+        const t = db.SWORD_TIERS[i];
+        if (chips - t.price >= reserve) { pick = t; break; }
+      }
+      if (!pick) continue;
+
+      const swords = db.getSwords(seat.playerId);
+      swords[pick.tier] = (swords[pick.tier] || 0) + 1;
+      chips -= pick.price;
+
+      seat.chipsAtTable = chips;
+      db.setChips(seat.playerId, chips);
+      db.setSwords(seat.playerId, swords);
+
+      const nick = seat.player?.nickname || seat.playerId;
+      const total = Object.values(swords).reduce((a, b) => a + b, 0);
+      this.chat('rebuy',
+        `⚔️ ${nick} invested ${pick.price.toLocaleString()} gp into a ${pick.name}` +
+        ` (now wielding ${total} magic sword${total === 1 ? '' : 's'}).`
+      );
+    }
+  }
+
+  // ============================================================
   // Broadcast
   // ============================================================
 
@@ -637,6 +682,8 @@ class Table {
         // True when a human clicked "× remove this bot" mid-hand. The seat
         // will vacate as soon as the current hand resolves.
         pendingStand: !!s._standAfterHand,
+        // Sword inventory (PF1e auto-invest). Map of tier → count.
+        swords: s.isEmpty() ? null : db.getSwords(s.playerId),
       })),
       spectatorCount: this.spectators.size,
       hand,

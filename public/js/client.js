@@ -123,7 +123,7 @@
       card.innerHTML = `
         <div class="roster-pick__avatar">${renderAvatar(p.avatar_id)}</div>
         <div class="roster-pick__nick">${escapeText(p.nickname)}</div>
-        <div class="roster-pick__chips">💰 ${formatChips(p.chips)}</div>
+        <div class="roster-pick__chips">💰 ${formatChips(p.chips)} gp</div>
       `;
       card.addEventListener('click', () => onPickName(p.player_id));
       grid.appendChild(card);
@@ -285,14 +285,14 @@
   function paintMe() {
     const p = state.me; if (!p) return;
     $('#meNick').textContent = p.nickname;
-    $('#meChips').textContent = '💰 ' + formatChips(p.chips);
+    $('#meChips').textContent = '💰 ' + formatChips(p.chips) + ' gp';
     $('#meAvatar').innerHTML = renderAvatar(p.avatar_id);
     // Debt indicator + Pay Debt button. Both hidden when debt is 0.
     const debt = Number(p.rebuy_debt || 0);
     const debtEl = $('#meDebt');
     const payBtn = $('#payDebtBtn');
     if (debt > 0) {
-      debtEl.textContent = '📜 Debt: ' + formatChips(debt);
+      debtEl.textContent = '📜 Debt: ' + formatGp(debt);
       debtEl.hidden = false;
       payBtn.hidden = false;
       payBtn.disabled = (p.chips <= 0);
@@ -312,11 +312,13 @@
     const myId = state.me?.player_id;
 
     t.seats.forEach((seat, i) => {
-      // Position seats on a flatter ellipse so the center (board/pot/stage)
-      // has clearance at the top and bottom.
+      // Position seats on an ellipse around the center (board/pot/stage).
+      // ry was originally 33 (very flat) but adjacent side-seats overlapped
+      // each other vertically. 38 spreads them enough that their plates
+      // breathe without pushing the corner seats off the felt.
       const angle = (Math.PI * 2 * i) / n + Math.PI / 2;
-      const cx = 50 + Math.cos(angle) * 46;
-      const cy = 50 + Math.sin(angle) * 33;
+      const cx = 50 + Math.cos(angle) * 44;
+      const cy = 50 + Math.sin(angle) * 38;
       const isBottomHalf = cy > 50;
       const el = document.createElement('div');
       const isMe = seat.occupied && seat.playerId === myId;
@@ -390,6 +392,23 @@
         const timerHtml = showTimer
           ? `<div class="seat__timer" data-deadline="${t.actionDeadline}" data-seat-timer></div>`
           : '';
+        // Magic-longsword inventory (PF1e auto-invest). Compact row like
+        // "⚔ +1×2 +2×1" listing each tier they own. Tooltip explodes to
+        // the full PF1e item names with total count.
+        const swordsObj = seat.swords || {};
+        const swordTiers = Object.keys(swordsObj)
+          .map(k => ({ tier: Number(k), count: swordsObj[k] }))
+          .filter(s => s.count > 0)
+          .sort((a, b) => a.tier - b.tier);
+        let swordsHtml = '';
+        if (swordTiers.length) {
+          const totalSwords = swordTiers.reduce((a, b) => a + b.count, 0);
+          const tooltip = swordTiers.map(s => `+${s.tier} longsword × ${s.count}`).join(', ');
+          const inline = swordTiers.map(s => `+${s.tier}×${s.count}`).join(' ');
+          // ⚔️ with U+FE0F variation selector forces emoji-style rendering;
+          // bare U+2694 falls back to a plain X glyph in some fonts.
+          swordsHtml = `<div class="seat__swords" title="${escapeAttr(`${totalSwords} magic sword${totalSwords===1?'':'s'}: ${tooltip}`)}">⚔️ ${escapeText(inline)}</div>`;
+        }
         el.innerHTML = `
           <div class="seat__plate ${myTurn ? 'seat__plate--acting' : ''}">
             ${removeBotHtml}
@@ -397,7 +416,8 @@
             <div class="seat__avatar">${renderAvatar(seat.avatarId)}</div>
             <div class="seat__nick" title="${escapeAttr(seat.nickname)}">${escapeText(seat.nickname)}${isAllIn ? ' · ALL-IN' : ''}</div>
             ${botTag}
-            <div class="seat__chips">💰 ${formatChips(handPlayer ? handPlayer.stack : seat.chips)}</div>
+            <div class="seat__chips">💰 ${formatChips(handPlayer ? handPlayer.stack : seat.chips)} gp</div>
+            ${swordsHtml}
             ${betHtml}
             ${timerHtml}
             ${holeHtml}
@@ -425,7 +445,7 @@
 
     // Pot + stage
     const potTotal = hand?.potTotal || 0;
-    $('#pot').textContent = 'Pot ' + formatChips(potTotal);
+    $('#pot').textContent = 'Pot ' + formatGp(potTotal);
     $('#pot').style.opacity = hand ? 1 : 0.3;
 
     const seated = t.seats.filter(s => s.occupied).length;
@@ -604,7 +624,7 @@
     const lines = hand.winners.map(w => {
       const seat = state.table.seats.find(s => s.playerId === w.playerId);
       const nick = seat?.nickname || w.playerId;
-      return `${nick} wins ${formatChips(w.amount)} — ${w.handDesc}`;
+      return `${nick} wins ${formatGp(w.amount)} — ${w.handDesc}`;
     });
     banner.innerHTML = lines.join('<br>');
     banner.hidden = false;
@@ -660,10 +680,10 @@
 
     const callOrCheck = toCall === 0
       ? `<button class="btn btn--primary actpanel__btn" data-act="check">Check</button>`
-      : `<button class="btn btn--primary actpanel__btn" data-act="call">Call ${formatChips(Math.min(toCall, me.stack))}</button>`;
+      : `<button class="btn btn--primary actpanel__btn" data-act="call">Call ${formatGp(Math.min(toCall, me.stack))}</button>`;
 
     const presetHtml = presets.map(p =>
-      `<button type="button" class="actpanel__preset" data-raise="${p.value}">${p.label} · ${formatChips(p.value)}</button>`
+      `<button type="button" class="actpanel__preset" data-raise="${p.value}">${p.label} · ${formatGp(p.value)}</button>`
     ).join('');
 
     return `
@@ -809,9 +829,9 @@
   $('#resetStackBtn').addEventListener('click', () => {
     const debtNow = Number(state.me?.rebuy_debt || 0);
     const newDebt = debtNow + state.defaultStack;
-    const msg = `Re-buy ${state.defaultStack.toLocaleString()} chips?\n\n`
+    const msg = `Re-buy ${state.defaultStack.toLocaleString()} gp?\n\n`
               + `This is a LOAN. Your long-term debt will go from `
-              + `${debtNow.toLocaleString()} → ${newDebt.toLocaleString()}.\n`
+              + `${debtNow.toLocaleString()} → ${newDebt.toLocaleString()} gp.\n`
               + `Pay it down later with winnings.`;
     if (!confirm(msg)) return;
     socket.emit('lobby:resetStack', null, (resp) => {
@@ -819,7 +839,7 @@
       state.me.chips = resp.chips;
       state.me.rebuy_debt = resp.rebuyDebt;
       paintMe();
-      toast(`Stack reset to ${resp.chips}. Debt: ${resp.rebuyDebt.toLocaleString()}`);
+      toast(`Stack reset to ${resp.chips.toLocaleString()} gp. Debt: ${resp.rebuyDebt.toLocaleString()} gp`);
     });
   });
 
@@ -832,9 +852,9 @@
     const cap = Math.min(chips, debt);
     const raw = prompt(
       `Pay down rebuy debt.\n\n`
-      + `Current chips: ${chips.toLocaleString()}\n`
-      + `Current debt:  ${debt.toLocaleString()}\n\n`
-      + `How many chips to pay? (max ${cap.toLocaleString()})`,
+      + `Current chips: ${chips.toLocaleString()} gp\n`
+      + `Current debt:  ${debt.toLocaleString()} gp\n\n`
+      + `How many gp to pay? (max ${cap.toLocaleString()})`,
       String(cap),
     );
     if (raw === null) return;
@@ -846,7 +866,7 @@
       state.me.chips = resp.chips;
       state.me.rebuy_debt = resp.rebuyDebt;
       paintMe();
-      toast(`Paid ${amt.toLocaleString()}. Debt now ${resp.rebuyDebt.toLocaleString()}.`);
+      toast(`Paid ${amt.toLocaleString()} gp. Debt now ${resp.rebuyDebt.toLocaleString()} gp.`);
     });
   });
   $('#switchBtn').addEventListener('click', () => {
@@ -890,7 +910,7 @@
       });
     } else if (choice === 'resetGame') {
       socket.emit('lobby:resetGame', null, (resp) => {
-        if (resp?.ok) toast('Game reset — everyone back to ' + formatChips(state.defaultStack));
+        if (resp?.ok) toast('Game reset — everyone back to ' + formatGp(state.defaultStack));
         else toast(resp?.error || 'Reset failed', true);
       });
     }
@@ -900,6 +920,9 @@
   function escapeText(s) { return String(s ?? '').replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])); }
   function escapeAttr(s) { return String(s ?? '').replace(/["&<>]/g, c => ({ '"':'&quot;','&':'&amp;','<':'&lt;','>':'&gt;' }[c])); }
   function formatChips(n) { return Number(n || 0).toLocaleString(); }
+  /** Same number, with "gp" suffix — for places where the currency
+   *  shouldn't be implicit (pot, chat lines, dialogs). */
+  function formatGp(n)    { return formatChips(n) + ' gp'; }
   /** Render an avatar: URL → <img>, short key → inline SVG from FolkenAvatars. */
   function renderAvatar(id) {
     if (!id) return '';

@@ -571,10 +571,16 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .board .card-svg { animation: dealIn .35s ease-out both; }
 @keyframes dealIn { from { opacity: 0; transform: translateY(-12px) rotate(-6deg); } to { opacity: 1; transform: none; } }
 .seat__hole {
-  display: flex; gap: 4px; margin-top: 5px; justify-content: center;
+  display: flex; gap: 3px; margin-top: 4px; justify-content: center;
 }
-.seat__hole .card-svg { width: 46px; height: 66px; }
-.seat__hole .card-svg--mine { box-shadow: 0 0 0 2px rgba(241,207,131,0.55); border-radius: 4px; }
+/* Default = OPPONENT cards (smaller so adjacent seats don't fight for space). */
+.seat__hole .card-svg { width: 34px; height: 49px; }
+/* My own cards stay big and gold-bordered so I can read them at a glance. */
+.seat__hole .card-svg--mine {
+  width: 46px; height: 66px;
+  box-shadow: 0 0 0 2px rgba(241,207,131,0.55);
+  border-radius: 4px;
+}
 .seat__waiting {
   margin-top: 5px;
   padding: 4px 8px;
@@ -603,6 +609,22 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   padding: 1px 6px;
   border-radius: 999px;
   margin-top: 1px;
+}
+.seat__swords {
+  display: inline-block;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--brass-bright);
+  background: rgba(241,207,131,0.08);
+  border: 1px solid rgba(217,176,106,0.32);
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .seat__afk-tag {
   display: inline-block;
@@ -678,7 +700,12 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   text-transform: uppercase;
   box-shadow: var(--shadow-soft);
 }
-.seat { position: absolute; }
+.seat { position: absolute; z-index: 1; }
+/* Bring the player's own seat + the acting seat above their neighbors so
+   their plates / hole cards aren't hidden by adjacent seats on the
+   crowded side rails. The acting seat additionally has its glow pulse. */
+.seat.is-me      { z-index: 3; }
+.seat.is-acting  { z-index: 4; }
 .seat__plate { position: relative; }
 
 .hand-banner {
