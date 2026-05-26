@@ -696,13 +696,15 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 
 /* ===== In-seat action panel (popover anchored below the player's seat
    plate so the controls are right under their hand without bloating the
-   plate itself) ===== */
+   plate itself). Draggable — the user can grab the handle and move it
+   anywhere. The drag offset is applied via --drag-x / --drag-y CSS
+   variables so it composes with the centering transform. ===== */
 .seat__plate--acting { /* no vertical inflation — panel is absolute */ }
 .actpanel {
   position: absolute;
   top: calc(100% + 6px);
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(calc(-50% + var(--drag-x, 0px)), var(--drag-y, 0px));
   padding: 7px 8px;
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0.88));
@@ -712,9 +714,47 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   min-width: 230px;
   z-index: 20;
 }
-/* Panel always extends BELOW the seat. For bottom-row seats it overflows
-   the felt into the page-bottom area, so the page gives extra padding
-   underneath the felt to accommodate it. */
+/* Seats on the BOTTOM half of the ellipse: by default the panel would
+   extend down and collide with the chat-log strip. Flip its anchor to
+   the top of the seat plate so it sits ABOVE the avatar instead. */
+.seat--bottom .actpanel {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+/* Drag handle at the top of the panel. Grab + move to put the panel
+   anywhere. Double-click to reset the offset. */
+.actpanel__drag {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 6px;
+  margin: -2px -2px 2px;
+  padding: 2px 4px;
+  cursor: grab;
+  user-select: none;
+  color: var(--ivory-dim);
+  border-radius: 6px;
+  background: rgba(241,207,131,0.06);
+}
+.actpanel__drag:hover { color: var(--brass-bright); background: rgba(241,207,131,0.12); }
+.actpanel.is-dragging .actpanel__drag,
+.actpanel__drag:active { cursor: grabbing; }
+.actpanel__drag-grip {
+  font-size: 0.78rem;
+  letter-spacing: 0.4em;
+  line-height: 1;
+}
+.actpanel__drag-reset {
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ivory-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.actpanel__drag-reset:hover { color: var(--brass-bright); }
+.actpanel.is-dragging { opacity: 0.92; }
 .actpanel__status {
   font-size: 0.7rem;
   color: var(--brass-bright);

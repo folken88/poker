@@ -20,7 +20,44 @@
     /** Player avatar gallery — lazy-loaded from /tokens/manifest.json on
      *  first roster pick. Array of { id, name, art }. */
     tokens: null,
+    /** User's drag offset for the action panel — persisted per tab in
+     *  sessionStorage so it survives refresh/re-deal within the session.
+     *  Null = use the CSS default placement (centered under/over seat). */
+    actpanelOffset: null,
   };
+
+  // Restore any persisted action-panel drag offset.
+  try {
+    const raw = sessionStorage.getItem('folken-poker.actpanelOffset');
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (Number.isFinite(o?.dx) && Number.isFinite(o?.dy)) state.actpanelOffset = o;
+    }
+  } catch (_) { /* corrupt — ignore */ }
+
+  function saveActpanelOffset() {
+    try {
+      if (state.actpanelOffset) {
+        sessionStorage.setItem('folken-poker.actpanelOffset', JSON.stringify(state.actpanelOffset));
+      } else {
+        sessionStorage.removeItem('folken-poker.actpanelOffset');
+      }
+    } catch (_) { /* quota? ignore */ }
+  }
+
+  /** Apply the saved offset to whatever .actpanel exists in the current DOM. */
+  function applyActpanelOffset() {
+    const panel = document.querySelector('[data-actpanel]');
+    if (!panel) return;
+    const o = state.actpanelOffset;
+    if (o) {
+      panel.style.setProperty('--drag-x', o.dx + 'px');
+      panel.style.setProperty('--drag-y', o.dy + 'px');
+    } else {
+      panel.style.removeProperty('--drag-x');
+      panel.style.removeProperty('--drag-y');
+    }
+  }
 
   function setScreen(name) { document.body.dataset.screen = name; }
   function toast(msg, isError = false) {
@@ -407,6 +444,10 @@
 
     // Fire the timer text once immediately (otherwise it'd show blank for ~1s).
     tickTimers();
+
+    // Re-apply the saved action-panel drag offset (renderTable just rebuilt
+    // the panel from scratch).
+    applyActpanelOffset();
   }
 
   // ===== Chat log (bottom panel) =====
@@ -545,7 +586,11 @@
 
     return `
       <div class="actpanel" data-actpanel>
-        <div class="actpanel__status">to call ${formatChips(toCall)} · pot ${formatChips(potNow)}</div>
+        <div class="actpanel__drag" data-actpanel-drag title="Drag to move · click reset to recenter">
+          <span class="actpanel__drag-grip">⋮⋮</span>
+          <span class="actpanel__status">to call ${formatChips(toCall)} · pot ${formatChips(potNow)}</span>
+          <button type="button" class="actpanel__drag-reset" data-actpanel-reset title="Reset to default position">reset</button>
+        </div>
         <div class="actpanel__row">
           <button class="btn btn--ghost actpanel__btn" data-act="fold">Fold</button>
           ${callOrCheck}
@@ -587,8 +632,56 @@
     });
   }
 
-  // ===== Action panel wiring (delegated; panel is re-rendered each turn) =====
+  // ===== Action panel drag wiring (handle is inside seatRing) =====
+  let _dragState = null;
+  $('#seatRing').addEventListener('pointerdown', (e) => {
+    const handle = e.target.closest('[data-actpanel-drag]');
+    if (!handle) return;
+    // Ignore clicks on the reset button (its click handler runs separately).
+    if (e.target.closest('[data-actpanel-reset]')) return;
+    const panel = handle.closest('[data-actpanel]');
+    if (!panel) return;
+    e.preventDefault();
+    const start = state.actpanelOffset || { dx: 0, dy: 0 };
+    _dragState = {
+      panel,
+      startX: e.clientX,
+      startY: e.clientY,
+      origDx: start.dx,
+      origDy: start.dy,
+      pointerId: e.pointerId,
+    };
+    panel.classList.add('is-dragging');
+    handle.setPointerCapture(e.pointerId);
+  });
+  $('#seatRing').addEventListener('pointermove', (e) => {
+    if (!_dragState || e.pointerId !== _dragState.pointerId) return;
+    const dx = _dragState.origDx + (e.clientX - _dragState.startX);
+    const dy = _dragState.origDy + (e.clientY - _dragState.startY);
+    state.actpanelOffset = { dx, dy };
+    applyActpanelOffset();
+  });
+  const endDrag = (e) => {
+    if (!_dragState) return;
+    if (e && e.pointerId !== _dragState.pointerId) return;
+    _dragState.panel.classList.remove('is-dragging');
+    _dragState = null;
+    saveActpanelOffset();
+  };
+  $('#seatRing').addEventListener('pointerup', endDrag);
+  $('#seatRing').addEventListener('pointercancel', endDrag);
+
+  // ===== Action panel click wiring (delegated; panel is re-rendered each turn) =====
   $('#seatRing').addEventListener('click', (e) => {
+    // "reset" link in the drag handle → recenter the panel
+    const resetBtn = e.target.closest('[data-actpanel-reset]');
+    if (resetBtn) {
+      e.stopPropagation();
+      state.actpanelOffset = null;
+      applyActpanelOffset();
+      saveActpanelOffset();
+      return;
+    }
     // × on a bot seat → ask that bot to leave (after the current hand)
     const removeBot = e.target.closest('button[data-remove-bot]');
     if (removeBot) {
