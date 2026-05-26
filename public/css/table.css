@@ -1063,6 +1063,40 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   list-style: none;
 }
 
+/* ===== Left-side sidebar bank (my gear + purchase buttons) ===== */
+.help-panel--bank {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 0.65rem;
+}
+.help-panel--bank .help-panel__title {
+  flex: 0 0 auto;
+  margin: 0 0 0.25rem;
+}
+.sidebar-bank {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.sidebar-bank__empty {
+  margin: 1rem 0.5rem;
+  font-size: 0.78rem;
+  color: var(--ivory-dim);
+  font-style: italic;
+  text-align: center;
+}
+/* Tighten bank rows in the sidebar (column is only 240px) */
+.sidebar-bank .bank { gap: 3px; font-size: 0.72rem; }
+.sidebar-bank .bank__row {
+  grid-template-columns: 22px 1fr auto;
+  padding: 4px 6px;
+  gap: 2px 4px;
+}
+.sidebar-bank .bank__btn { font-size: 0.62rem; padding: 2px 3px; }
+.sidebar-bank .bank__btn small { font-size: 0.56rem; }
+.sidebar-bank .bank__progress { height: 14px; }
+.sidebar-bank .bank__progress-text { font-size: 0.6rem; }
+
 /* ===== Right-side sidebar leaderboard ===== */
 /* Tighter than the in-actpanel version since the panel is 240px wide
    and shows the full roster (no slice). Wealth shown without the 'gp'

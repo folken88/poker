@@ -129,6 +129,9 @@
     // The right-side sidebar leaderboard updates whenever the roster
     // changes (chip totals, gear purchases, bot wins, etc.).
     renderSidebarLeaderboard();
+    // Left sidebar bank reflects my own gear + chips after roster
+    // events (which fire on hand completion, gear purchases, etc.).
+    renderSidebarBank();
   });
 
   socket.on('table:state', (st) => {
@@ -656,6 +659,7 @@
     // content here.
     renderActionPanel();
     renderBank();
+    renderSidebarBank();   // left-side gear/purchase column reflects live chip totals
     renderLootLord();
 
     // Re-apply the saved action-panel drag offset. The panel host element
@@ -826,6 +830,19 @@
           <span class="lb__wealth">${formatChips(row.wealth)}</span>
         </li>`;
     }).join('');
+  }
+
+  /** Render the player's gear bank into the left-side perimeter panel.
+   *  Pulls fresh chip + gear state via buildBankHtml. Called on roster
+   *  events and renderTable so seat chip changes mid-hand show up. */
+  function renderSidebarBank() {
+    const el = $('#sidebarBank');
+    if (!el) return;
+    if (!state.me) {
+      el.innerHTML = '<p class="sidebar-bank__empty">Pick a character to start your collection.</p>';
+      return;
+    }
+    el.innerHTML = buildBankHtml();
   }
 
   /** Legacy no-op — bank now lives inline inside the action panel. */
@@ -1069,28 +1086,16 @@
    *  with another. `canAct` toggles disabled state on the buttons so the
    *  panel stays visible even when it's not the user's turn. */
   function buildActionPanelInner(hand, me, canAct) {
-    // If no live hand / no seat, show a minimal "Waiting" panel — still
-    // include the bank/leaderboard toggles so the player can shop or
-    // check the rankings while waiting for the next deal.
+    // If no live hand / no seat, show a minimal "Waiting" panel. The
+    // bank + leaderboard live in the perimeter columns now, so the
+    // panel itself is just a status header here.
     if (!hand || !me) {
-      const sec = state.actpanelSection;
-      const togglesHtml = `
-        <div class="actpanel__toggles">
-          <button type="button" class="actpanel__toggle ${sec==='bank'?'is-open':''}" data-toggle-section="bank">🎒 Loot Bank ${sec==='bank'?'▾':'▸'}</button>
-          <button type="button" class="actpanel__toggle ${sec==='leaderboard'?'is-open':''}" data-toggle-section="leaderboard">🏆 Leaderboard ${sec==='leaderboard'?'▾':'▸'}</button>
-        </div>`;
-      const sectionHtml =
-        sec === 'bank'        ? `<div class="actpanel__section">${buildBankHtml()}</div>` :
-        sec === 'leaderboard' ? `<div class="actpanel__section">${buildLeaderboardHtml()}</div>` :
-        '';
       return `
         <div class="actpanel__drag" data-actpanel-drag title="Drag to move · click reset to recenter">
           <span class="actpanel__drag-grip">⋮⋮</span>
           <span class="actpanel__status">${hand ? 'Spectating' : 'Waiting for next hand'}</span>
           <button type="button" class="actpanel__drag-reset" data-actpanel-reset title="Reset to default position">reset</button>
-        </div>
-        ${togglesHtml}
-        ${sectionHtml}`;
+        </div>`;
     }
     const toCall = Math.max(0, hand.currentBet - me.invested);
     const minRaiseTo = Math.max(hand.currentBet + hand.minRaise, hand.currentBet + 1);
@@ -1146,16 +1151,9 @@
       ? `to call ${formatChips(toCall)} · pot ${formatChips(potNow)}`
       : `pot ${formatChips(potNow)} · waiting on opponent`;
 
-    const sec = state.actpanelSection;
-    const togglesHtml = `
-      <div class="actpanel__toggles">
-        <button type="button" class="actpanel__toggle ${sec==='bank'?'is-open':''}" data-toggle-section="bank">🎒 Loot Bank ${sec==='bank'?'▾':'▸'}</button>
-        <button type="button" class="actpanel__toggle ${sec==='leaderboard'?'is-open':''}" data-toggle-section="leaderboard">🏆 Leaderboard ${sec==='leaderboard'?'▾':'▸'}</button>
-      </div>`;
-    const sectionHtml =
-      sec === 'bank'        ? `<div class="actpanel__section">${buildBankHtml()}</div>` :
-      sec === 'leaderboard' ? `<div class="actpanel__section">${buildLeaderboardHtml()}</div>` :
-      '';
+    // Bank + leaderboard now live in the perimeter sidebars, so the
+    // in-panel toggles are gone — the action panel is purely action
+    // buttons + the raise input.
 
     // ----- Mobile "my hand" strip -----
     // On mobile, seats are tiny (token + name only) so the player's own
@@ -1193,8 +1191,6 @@
         <button class="btn btn--accent actpanel__btn" data-act="raise" ${dis}>Raise to</button>
       </div>
       <div class="actpanel__presets">${presetHtml}</div>
-      ${togglesHtml}
-      ${sectionHtml}
     `;
   }
 

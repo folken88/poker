@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260526ag" />
+  <link rel="stylesheet" href="/css/table.css?v=20260526ah" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -77,67 +77,15 @@
     </header>
 
     <main class="table-wrap">
-      <!-- ===== LEFT perimeter: consolidated scrollable tips/help =====
-           All reference material in one scrollable column so the right
-           side can stay locked to the live leaderboard. -->
-      <aside class="help-panel help-panel--left" aria-label="Game help">
-        <h3 class="help-panel__title">Actions</h3>
-        <dl class="help-panel__list">
-          <dt><span class="help-key">Fold</span></dt>
-          <dd>Throw your hand away. You lose what you've already bet — but nothing more.</dd>
-          <dt><span class="help-key">Check</span></dt>
-          <dd>Pass the action. Only if nobody has bet this round.</dd>
-          <dt><span class="help-key">Call</span></dt>
-          <dd>Match the current bet to stay in the hand.</dd>
-          <dt><span class="help-key">Raise</span></dt>
-          <dd>Increase the bet. Must be at least the previous raise size.</dd>
-          <dt><span class="help-key">All-in</span></dt>
-          <dd>Shove every chip you have. Others can call, fold, or raise (if they have more).</dd>
-        </dl>
-
-        <h3 class="help-panel__title">Position badges</h3>
-        <dl class="help-panel__list help-panel__list--compact">
-          <dt><span class="help-badge">D</span></dt>
-          <dd>Dealer button — rotates left each hand. In heads-up, acts first preflop.</dd>
-          <dt><span class="help-badge">SB</span></dt>
-          <dd>Small blind — forced half-bet, posted left of the dealer.</dd>
-          <dt><span class="help-badge">BB</span></dt>
-          <dd>Big blind — forced full bet, posted left of SB. Acts last preflop, first after.</dd>
-        </dl>
-
-        <h3 class="help-panel__title">Hand rankings</h3>
-        <ol class="help-panel__rankings">
-          <li><strong>Royal Flush</strong> <em>10-J-Q-K-A, same suit</em></li>
-          <li><strong>Straight Flush</strong> <em>5 in a row, same suit</em></li>
-          <li><strong>Four of a Kind</strong></li>
-          <li><strong>Full House</strong> <em>three + a pair</em></li>
-          <li><strong>Flush</strong> <em>5 same suit</em></li>
-          <li><strong>Straight</strong> <em>5 in a row</em></li>
-          <li><strong>Three of a Kind</strong></li>
-          <li><strong>Two Pair</strong></li>
-          <li><strong>One Pair</strong></li>
-          <li><strong>High Card</strong></li>
-        </ol>
-
-        <h3 class="help-panel__title">How a hand works</h3>
-        <ol class="help-panel__flow">
-          <li><b>Blinds</b> — SB and BB are posted automatically.</li>
-          <li><b>Hole cards</b> — 2 cards dealt to each player (yours show face-up).</li>
-          <li><b>Preflop</b> — bet, call, raise, or fold.</li>
-          <li><b>Flop</b> — 3 community cards. Another betting round.</li>
-          <li><b>Turn</b> — 4th card. Bet again.</li>
-          <li><b>River</b> — 5th card. Final bet.</li>
-          <li><b>Showdown</b> — best 5-card hand from your 2 + the 5 board cards wins the pot.</li>
-        </ol>
-
-        <h3 class="help-panel__title">Tips</h3>
-        <ul class="help-panel__tips">
-          <li>Click an empty seat to join the next hand.</li>
-          <li>The brass ring shows whose turn it is.</li>
-          <li>Out of chips? Hit <b>Re-buy</b> for a fresh stack.</li>
-          <li>Want to start over? <b>Reset</b> wipes the whole table.</li>
-          <li>Goal: <b>+5 in all 5 gear slots</b> → LOOT LORD.</li>
-        </ul>
+      <!-- ===== LEFT perimeter: My Loot Bank (gear + purchase) =====
+           Help content moved to the ? Help modal in the topbar.
+           This column is the player's personal item bank — current
+           +N tier per slot plus buy/upgrade/hock buttons. Always
+           visible during play so purchases are one click away. -->
+      <aside class="help-panel help-panel--left help-panel--bank" aria-label="My loot bank">
+        <h3 class="help-panel__title">🎒 My Loot Bank</h3>
+        <p class="help-panel__sub">Spend gp on magic items. Build toward a +5 set in all 5 slots → LOOT LORD.</p>
+        <div id="sidebarBank" class="sidebar-bank"></div>
       </aside>
 
       <div class="felt">
@@ -301,8 +249,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260526ag"></script>
-  <script src="/js/cards.js?v=20260526ag"></script>
-  <script src="/js/client.js?v=20260526ag"></script>
+  <script src="/js/avatars.js?v=20260526ah"></script>
+  <script src="/js/cards.js?v=20260526ah"></script>
+  <script src="/js/client.js?v=20260526ah"></script>
 </body>
 </html>
