@@ -773,8 +773,12 @@ class Table {
       }
       // Bots may shift mode at the end of each hand.
       for (const bot of this.bots.values()) bot.maybeShiftMode();
-      // Push a fresh roster so clients see the bank totals AND the seat changes.
-      if (vacated > 0 && this.io) {
+      // Push a fresh roster whenever a seat changed (vacate OR rebuy) so
+      // the right-side leaderboard reflects new chip totals. Without
+      // including the rebuy case here, a bot that busted and was auto-
+      // rebought to DEFAULT_STACK still showed 0 gp on the leaderboard
+      // until the next vacate or external roster event.
+      if ((vacated > 0 || rebought > 0) && this.io) {
         this.io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
       }
       this._broadcast();
