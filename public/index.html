@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260526aa" />
+  <link rel="stylesheet" href="/css/table.css?v=20260526ab" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -65,6 +65,7 @@
         <span class="me-chips"  id="meChips">—</span>
         <span class="me-debt"   id="meDebt" title="Long-term debt from past re-buys. Pay it down with winnings." hidden>📜 0</span>
         <button class="btn btn--ghost btn--sm" id="payDebtBtn" title="Pay down rebuy debt from your stack" hidden>Pay Debt</button>
+        <button class="btn btn--ghost btn--sm" id="helpBtn" title="How to play (actions, hand rankings, tips)">?</button>
         <button class="btn btn--ghost btn--sm" id="addBotBtn" title="Add a random AI to an empty seat">+ Bot</button>
         <button class="btn btn--ghost btn--sm" id="pickBotBtn" title="Pick a specific AI character to seat">Pick AI ▾</button>
         <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Re-buy 5,000 chips (added to your long-term debt)">Re-buy</button>
@@ -193,6 +194,74 @@
     </div>
   </div>
 
+  <!-- ===== Help modal (mobile + on-demand) ===== -->
+  <div class="modal" id="helpModal" hidden>
+    <div class="modal__backdrop" data-close-help></div>
+    <div class="modal__panel modal__panel--help">
+      <h2 class="modal__title">How to Play</h2>
+      <div class="help-modal__body">
+        <section>
+          <h3>Actions</h3>
+          <dl>
+            <dt><span class="help-key">Fold</span></dt><dd>Throw your hand away. You lose what you've already bet — but nothing more.</dd>
+            <dt><span class="help-key">Check</span></dt><dd>Pass the action. Only if nobody has bet this round.</dd>
+            <dt><span class="help-key">Call</span></dt><dd>Match the current bet to stay in the hand.</dd>
+            <dt><span class="help-key">Raise</span></dt><dd>Increase the bet. Must be at least the previous raise size.</dd>
+            <dt><span class="help-key">All-in</span></dt><dd>Shove every chip you have. Others can call, fold, or raise (if they have more).</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Position badges</h3>
+          <dl>
+            <dt><span class="help-badge">D</span></dt><dd>Dealer button — rotates left each hand. In heads-up, acts first preflop.</dd>
+            <dt><span class="help-badge">SB</span></dt><dd>Small blind — forced half-bet, posted left of the dealer.</dd>
+            <dt><span class="help-badge">BB</span></dt><dd>Big blind — forced full bet, posted left of SB. Acts last preflop, first after.</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Hand rankings</h3>
+          <ol class="help-modal__rankings">
+            <li><strong>Royal Flush</strong> <em>10-J-Q-K-A, same suit</em></li>
+            <li><strong>Straight Flush</strong> <em>5 in a row, same suit</em></li>
+            <li><strong>Four of a Kind</strong> <em>four 7s, four Ks…</em></li>
+            <li><strong>Full House</strong> <em>three + a pair</em></li>
+            <li><strong>Flush</strong> <em>5 same suit</em></li>
+            <li><strong>Straight</strong> <em>5 in a row</em></li>
+            <li><strong>Three of a Kind</strong></li>
+            <li><strong>Two Pair</strong></li>
+            <li><strong>One Pair</strong></li>
+            <li><strong>High Card</strong></li>
+          </ol>
+        </section>
+        <section>
+          <h3>How a hand works</h3>
+          <ol class="help-modal__flow">
+            <li><b>Blinds</b> — SB and BB are posted automatically.</li>
+            <li><b>Hole cards</b> — 2 cards dealt to each player.</li>
+            <li><b>Preflop</b> — bet, call, raise, or fold.</li>
+            <li><b>Flop</b> — 3 community cards. Another betting round.</li>
+            <li><b>Turn</b> — 4th card. Bet again.</li>
+            <li><b>River</b> — 5th card. Final bet.</li>
+            <li><b>Showdown</b> — best 5-card hand wins the pot.</li>
+          </ol>
+        </section>
+        <section>
+          <h3>Tips</h3>
+          <ul class="help-modal__tips">
+            <li>Click an empty seat to join the next hand.</li>
+            <li>The brass ring shows whose turn it is.</li>
+            <li>Out of chips? Hit <b>Re-buy</b> for a fresh stack (adds to debt).</li>
+            <li>Open the <b>🎒 Loot Bank</b> inside the action panel to buy gear.</li>
+            <li>Goal: assemble a +5 gear set to become the <b>LOOT LORD</b>.</li>
+          </ul>
+        </section>
+      </div>
+      <div class="modal__actions">
+        <button class="btn btn--primary" data-close-help>Got it</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== + Bot picker modal ===== -->
   <div class="modal" id="botPickerModal" hidden>
     <div class="modal__backdrop" data-close-bot-picker></div>
@@ -225,8 +294,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260526aa"></script>
-  <script src="/js/cards.js?v=20260526aa"></script>
-  <script src="/js/client.js?v=20260526aa"></script>
+  <script src="/js/avatars.js?v=20260526ab"></script>
+  <script src="/js/cards.js?v=20260526ab"></script>
+  <script src="/js/client.js?v=20260526ab"></script>
 </body>
 </html>

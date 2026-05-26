@@ -1571,10 +1571,102 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .toast.is-error { border-color: var(--danger); color: #ffd9d9; }
 
 /* ===== Small screens ===== */
+/* ===== Help modal ===== */
+.modal__panel--help {
+  width: min(680px, 96vw);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.help-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0.5rem 0 1rem;
+}
+.help-modal__body section h3 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.18em;
+  color: var(--brass-bright);
+  font-size: 0.9rem;
+}
+.help-modal__body dl {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+}
+.help-modal__body dt { grid-column: 1; }
+.help-modal__body dd { grid-column: 2; margin: 0; color: var(--ivory-dim); }
+.help-modal__rankings { list-style: none; counter-reset: rk; padding: 0; margin: 0; font-size: 0.85rem; }
+.help-modal__rankings li { counter-increment: rk; padding-left: 1.6rem; position: relative; margin: 0 0 0.2rem; }
+.help-modal__rankings li::before {
+  content: counter(rk);
+  position: absolute; left: 0;
+  width: 1.2rem; text-align: center;
+  color: var(--brass-bright); font-weight: 700;
+}
+.help-modal__rankings em { color: var(--ivory-dim); font-style: normal; margin-left: 0.4rem; }
+.help-modal__flow { list-style: decimal inside; padding: 0; margin: 0; font-size: 0.85rem; }
+.help-modal__flow li { margin: 0 0 0.2rem; }
+.help-modal__tips { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+.help-modal__tips li { padding-left: 1rem; position: relative; margin: 0 0 0.25rem; }
+.help-modal__tips li::before { content: "→"; position: absolute; left: 0; color: var(--brass); }
+
+/* ===== Tablet ===== */
+@media (max-width: 1100px) {
+  .help-panel { width: 200px; }
+}
+
+/* ===== Mobile ===== */
 @media (max-width: 720px) {
-  .avatar-grid { grid-template-columns: repeat(4, 1fr); }
-  .seat { width: 92px; }
-  .seat__avatar { width: 44px; height: 44px; }
-  .topbar__me { font-size: 0.8rem; gap: 0.4rem; }
-  .felt { aspect-ratio: 1.4 / 1; }
+  /* Hide the side help panels — content moves into the Help modal. */
+  .help-panel { display: none; }
+  /* Topbar: drop brand text, tighten everything */
+  .topbar { padding: 0.35rem 0.5rem; gap: 0.35rem; flex-wrap: wrap; }
+  .topbar__brand { display: none; }
+  .topbar__clock { min-width: 110px; padding: 2px 8px; }
+  .topbar__clock-digits svg { width: 16px; height: 28px; }
+  .topbar__me { font-size: 0.75rem; gap: 0.3rem; flex-wrap: wrap; }
+  .me-debt, .me-chips { font-size: 0.75rem; }
+  .topbar__me .btn { padding: 4px 8px; font-size: 0.75rem; min-height: 32px; }
+  /* Felt: taller to match phone aspect */
+  .felt { aspect-ratio: 1 / 1; }
+  /* Seats: smaller plates, smaller avatars */
+  .seat { width: 84px; max-height: 145px; }
+  .seat__plate { padding: 4px 5px 5px; max-height: 145px; }
+  .seat__avatar { width: 38px; height: 38px; }
+  .seat__nick { font-size: 0.72rem; }
+  .seat__chips { font-size: 0.68rem; }
+  /* Pot: smaller display font */
+  .pot--big { font-size: 1.5rem; padding: 0.3rem 0.9rem; }
+  .board { gap: 0.3rem; min-height: 100px; }
+  .card-svg { width: 60px; height: 86px; }
+  /* Chat log: shrink */
+  .chat-panel { height: 90px; }
+  .chat-panel__list { font-size: 0.78rem; padding: 0.25rem 0.6rem 0.3rem; }
+  /* Roster picker grid: 3 wide on phones */
+  .roster-section-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+  .roster-pick { padding: 0.5rem 0.4rem 0.5rem; }
+  .roster-pick__avatar { width: 44px; height: 44px; }
+  .roster-pick__nick { font-size: 0.78rem; }
+  /* Avatar gallery in confirm screen */
+  .avatar-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+}
+
+/* ===== Very small (phones in portrait) ===== */
+@media (max-width: 480px) {
+  /* Stack topbar buttons; hide the less-critical ones behind the
+     Help modal (they're still accessible from there in the future). */
+  .topbar__me { font-size: 0.7rem; }
+  .topbar__me .btn { padding: 3px 6px; font-size: 0.7rem; }
+  /* Pot smaller still */
+  .pot--big { font-size: 1.2rem; padding: 0.25rem 0.7rem; }
+  .card-svg { width: 48px; height: 70px; }
+  .seat { width: 72px; max-height: 130px; }
+  .seat__avatar { width: 32px; height: 32px; }
+  /* Tighten chat */
+  .chat-panel { height: 70px; }
 }

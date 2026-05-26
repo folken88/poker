@@ -73,6 +73,37 @@
     }
   }
 
+  // ===== Mobile detection =====
+  // Tags <body> with `is-mobile` when the viewport is phone-sized OR
+  // the device only has touch input (and the window is moderately
+  // small). CSS keys major layout shifts off `.is-mobile` so we can
+  // tweak responsiveness in one place. Re-evaluated on resize /
+  // orientation change.
+  function detectMobile() {
+    const narrow = window.matchMedia('(max-width: 720px)').matches;
+    const touchOnly = (window.matchMedia('(pointer: coarse)').matches
+                       && !window.matchMedia('(pointer: fine)').matches);
+    return narrow || (touchOnly && window.innerWidth < 900);
+  }
+  function syncMobileClass() {
+    document.body.classList.toggle('is-mobile', detectMobile());
+  }
+  syncMobileClass();
+  window.addEventListener('resize', syncMobileClass);
+  window.addEventListener('orientationchange', syncMobileClass);
+
+  // ===== Help modal — consolidates the side-panel content. Always
+  //       available from the topbar "?" button; auto-discoverable on
+  //       mobile where the side panels are hidden. =====
+  $('#helpBtn').addEventListener('click', () => {
+    const m = $('#helpModal'); if (m) m.hidden = false;
+  });
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-close-help]')) {
+      const m = $('#helpModal'); if (m) m.hidden = true;
+    }
+  });
+
   function setScreen(name) { document.body.dataset.screen = name; }
   function toast(msg, isError = false) {
     const t = $('#toast');

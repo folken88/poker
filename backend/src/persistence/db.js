@@ -116,10 +116,10 @@ const BOT_ROSTER = [
 
   // Round 2 additions
   { name: 'Taelys',               avatar: '/tokens/taelys-of-starfall.webp',     baseMode: 'risky',    intelligence: 'average' },
-  { name: 'Lirienne',             avatar: '/tokens/lirienne-voss.webp',          baseMode: 'cautious', intelligence: 'high'    },
+  { name: 'Lirienne',             avatar: '/tokens/lirienne-voss.webp',          baseMode: 'standard', intelligence: 'average' }, // user: avg intel + normal risk
   { name: 'Kelda',                avatar: '/tokens/kelda-ironglim.webp',         baseMode: 'cautious', intelligence: 'high'    }, // user: cautious + high intel
   { name: 'Mr. Brow',             avatar: '/tokens/augustus-teabrow.webp',       baseMode: 'risky',    intelligence: 'high'    }, // user: highly intelligent + risky
-  { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'risky',    intelligence: 'average' },
+  { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'standard', intelligence: 'average' }, // user: avg intel + avg risk
   { name: 'Ulfred',               avatar: '/tokens/ulfred-stronginthearm.webp',  baseMode: 'standard', intelligence: 'average' },
   { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard', intelligence: 'high'    },
   { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky',    intelligence: 'low'     }, // velociraptor — pure instinct, no thinking
@@ -128,12 +128,12 @@ const BOT_ROSTER = [
   { name: 'Agu',                  avatar: '/tokens/aguclandos-lem.webp',         baseMode: 'cautious', intelligence: 'high'    },
 
   // Round 3 additions
-  { name: 'Fera',                 avatar: '/tokens/fera.webp',                   baseMode: 'cautious', intelligence: 'average' },
-  { name: 'Gaspar',               avatar: '/tokens/gaspar.webp',                 baseMode: 'standard', intelligence: 'high'    },
-  { name: 'Daramid',              avatar: '/tokens/daramid.webp',                baseMode: 'cautious', intelligence: 'high'    },
+  { name: 'Fera',                 avatar: '/tokens/fera.webp',                   baseMode: 'cautious', intelligence: 'high'    }, // user: high intel + low risk
+  { name: 'Gaspar',               avatar: '/tokens/gaspar.webp',                 baseMode: 'standard', intelligence: 'average' }, // user: avg intel + normal risk
+  { name: 'Daramid',              avatar: '/tokens/daramid.webp',                baseMode: 'cautious', intelligence: 'high'    }, // user: high intel + cautious
   { name: 'Farrah',               avatar: '/tokens/farrah.webp',                 baseMode: 'standard', intelligence: 'low'     },
   { name: 'Concetta',             avatar: '/tokens/concetta.webp',               baseMode: 'risky',    intelligence: 'high'    }, // user: highly intelligent + risky
-  { name: 'Rissa',                avatar: '/tokens/rissa.webp',                  baseMode: 'standard', intelligence: 'average' },
+  { name: 'Rissa',                avatar: '/tokens/rissa.webp',                  baseMode: 'risky',    intelligence: 'average' }, // user: avg intel + risky
   { name: 'Conchobar',            avatar: '/tokens/conchobar.webp',              baseMode: 'risky',    intelligence: 'low'     }, // bard, pure vibes
 
   // Round 4 additions — user-specified with explicit intel + risk:
