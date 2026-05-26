@@ -15,9 +15,20 @@ const { botRebuyMessage, humanRebuyMessage, bustMessage } = require('../util/fla
 // Override per-table via env var HAND_RESULT_PAUSE_MS if you want it shorter.
 const HAND_RESULT_PAUSE_MS = parseInt(process.env.HAND_RESULT_PAUSE_MS || '15000', 10);
 const HAND_AUTOSTART_DELAY_MS = parseInt(process.env.HAND_AUTOSTART_DELAY_MS || '1500', 10);
-const BOT_THINK_MIN_MS = parseInt(process.env.BOT_THINK_MIN_MS || '900', 10);
-const BOT_THINK_MAX_MS = parseInt(process.env.BOT_THINK_MAX_MS || '2200', 10);
-const ACTION_TIMEOUT_MS = parseInt(process.env.ACTION_TIMEOUT_MS || '45000', 10);
+const ACTION_TIMEOUT_MS = parseInt(process.env.ACTION_TIMEOUT_MS || '120000', 10);
+// Bot "thinking" time is mode-flavored — riskier bots act snappy, cautious
+// ones brood. Each entry = number of d-sides; final delay is 1..N seconds.
+// Hard cap 30s (cautious 1d29 already enforces this).
+const BOT_TIMING = {
+  risky:    { sides: 4  },   // 1d4  seconds
+  standard: { sides: 10 },   // 1d10 seconds
+  cautious: { sides: 29 },   // 1d29 seconds — they really do think it over
+};
+function rollBotDelayMs(mode) {
+  const cfg = BOT_TIMING[mode] || BOT_TIMING.standard;
+  const sec = Math.floor(Math.random() * cfg.sides) + 1;
+  return Math.min(sec, 30) * 1000;
+}
 
 class Seat {
   constructor(index) {
@@ -116,7 +127,15 @@ class Table {
     seat.player = player;
     seat.socketId = socketId;
     seat.chipsAtTable = player.chips;
-    seat.isBot = !!isBot || !!player.is_bot;
+    // A player is treated as a BOT at the seat only if EITHER:
+    //   - the call was explicit (table.seatBot), OR
+    //   - the player_record is is_bot AND no human socket is attached
+    //     (i.e. nobody is driving them).
+    // When a human picks an AI character from the roster, they sit with
+    // a real socketId attached — the bot driver below is skipped so the
+    // human controls the seat.
+    const humanSupersede = !!socketId && !!player.is_bot;
+    seat.isBot = (!!isBot || !!player.is_bot) && !humanSupersede;
     if (seat.isBot) {
       this.bots.set(playerId, new Bot({
         playerId,
@@ -191,6 +210,18 @@ class Table {
     // We only mark their socket null; the action timer will auto-fold them
     // if it's their turn and they don't come back in time.
     seat.socketId = null;
+    // If a human was superseding a bot character (their underlying
+    // player record is is_bot but the seat was being human-driven),
+    // hand control back to the AI now that the human is gone.
+    if (!seat.isBot && seat.player?.is_bot) {
+      seat.isBot = true;
+      this.bots.set(playerId, new Bot({
+        playerId,
+        baseMode: seat.player.bot_mode || 'standard',
+        mode: seat.player.bot_mode || 'standard',
+      }));
+      this.chat('info', `🤖 The AI has resumed control of ${seat.player.nickname}.`);
+    }
     this._broadcast();
   }
 
@@ -428,7 +459,14 @@ class Table {
     const bot = this.bots.get(actor);
     if (!bot) return;
 
-    const delay = BOT_THINK_MIN_MS + Math.random() * (BOT_THINK_MAX_MS - BOT_THINK_MIN_MS);
+    // Mode-flavored thinking delay: risky 1d4s, standard 1d10s, cautious 1d29s.
+    const delay = rollBotDelayMs(bot.mode);
+    // Surface the bot's deadline so the topbar clock ticks for everyone,
+    // not just humans.
+    this.actionDeadline = Date.now() + delay;
+    // Push the bot's new deadline to clients immediately so the topbar
+    // countdown updates without waiting for the next hand event.
+    this._broadcast();
     const expectedHand = this.hand;
     this._botActionTimer = setTimeout(() => {
       this._botActionTimer = null;
@@ -493,10 +531,12 @@ class Table {
       seat.chipsAtTable = p.stack;
       db.setChips(p.playerId, p.stack);
     }
-    // Magic-longsword auto-invest pass. Players with chips well above
-    // the buy-in reserve convert some of their winnings into permanent
-    // PF1e magic longswords. At most one sword per hand per player.
-    this._autoInvestSwords();
+    // Loot Lord check — if anyone now holds +5 in every gear slot, they
+    // win the entire game. _declareLootLord posts the celebration and
+    // resets EVERYONE'S chips + gear back to defaults; the rest of the
+    // function still runs so the next hand schedules normally.
+    const lord = this._checkLootLord();
+    if (lord) this._declareLootLord(lord);
     // Push a fresh roster so every client's topbar (state.me.chips) updates.
     if (this.io) this.io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
     // Record hand history (SQLite — for the UI/admin).
@@ -577,41 +617,58 @@ class Table {
   // Magic-longsword auto-invest (PF1e flavor)
   // ============================================================
 
-  /** After a hand resolves, players with significantly more than the
-   *  buy-in stack convert some of those winnings into magic longswords.
-   *  At most one sword per player per hand. Highest tier they can afford
-   *  while keeping >= DEFAULT_STACK gp in reserve.
-   *
-   *  Posts a chat line per acquisition. Persists swords + new chip total.
-   */
-  _autoInvestSwords() {
-    const reserve = db.DEFAULT_STACK;
+  /** Scan all seated players. If exactly one has +5 in every gear slot,
+   *  return that seat. If multiple do simultaneously (rare but possible
+   *  if two bots both upgrade in this hand's auto-buy phase), return
+   *  whichever has the highest chip stack at the table — they earned it.
+   *  Returns null if no Loot Lord this hand. */
+  _checkLootLord() {
+    const winners = [];
     for (const seat of this.seats) {
       if (seat.isEmpty()) continue;
-      let chips = seat.chipsAtTable;
-      // Highest tier we can afford while keeping `reserve` gp in stack.
-      let pick = null;
-      for (let i = db.SWORD_TIERS.length - 1; i >= 0; i--) {
-        const t = db.SWORD_TIERS[i];
-        if (chips - t.price >= reserve) { pick = t; break; }
-      }
-      if (!pick) continue;
-
-      const swords = db.getSwords(seat.playerId);
-      swords[pick.tier] = (swords[pick.tier] || 0) + 1;
-      chips -= pick.price;
-
-      seat.chipsAtTable = chips;
-      db.setChips(seat.playerId, chips);
-      db.setSwords(seat.playerId, swords);
-
-      const nick = seat.player?.nickname || seat.playerId;
-      const total = Object.values(swords).reduce((a, b) => a + b, 0);
-      this.chat('rebuy',
-        `⚔️ ${nick} invested ${pick.price.toLocaleString()} gp into a ${pick.name}` +
-        ` (now wielding ${total} magic sword${total === 1 ? '' : 's'}).`
-      );
+      const gear = db.getGear(seat.playerId);
+      if (db.gearIsLootLord(gear)) winners.push(seat);
     }
+    if (winners.length === 0) return null;
+    winners.sort((a, b) => b.chipsAtTable - a.chipsAtTable);
+    return winners[0];
+  }
+
+  /** Crown the Loot Lord, log to the Champions Board, then nuke the
+   *  game state back to defaults — everyone (including the lord)
+   *  returns to DEFAULT_STACK chips and empty gear so the chase begins
+   *  anew. */
+  _declareLootLord(seat) {
+    const nick = seat.player?.nickname || seat.playerId;
+    db.recordChampion({
+      playerId:    seat.playerId,
+      nickname:    nick,
+      avatarId:    seat.player?.avatar_id || null,
+      handsToWin:  this.handCount,
+      finalChips:  seat.chipsAtTable,
+    });
+    this.chat('lootlord', `👑 LOOT LORD! ${nick} has assembled a full +5 set after ${this.handCount} hand${this.handCount===1?'':'s'}. They are crowned and added to the Champions Board.`);
+    this.chat('lootlord', `🎲 The game resets — everyone returns to ${db.DEFAULT_STACK.toLocaleString()} gp, gear cleared. May the next Loot Lord be among us.`);
+
+    // Wipe all chips + gear back to defaults for EVERY player in the DB
+    // (so bots and unseated humans also reset, not just folks currently
+    // at the table).
+    const resetAll = db.db.prepare(`
+      UPDATE players SET chips = ?, gear = '{}', swords = '{}', rebuy_debt = 0
+    `);
+    resetAll.run(db.DEFAULT_STACK);
+
+    // Sync seat objects with the fresh chip totals + push fresh state.
+    for (const s of this.seats) {
+      if (s.isEmpty()) continue;
+      s.chipsAtTable = db.DEFAULT_STACK;
+    }
+    // Reset hand counter so the post-win game starts at Hand #1.
+    this.handCount = 0;
+    if (this.io) {
+      this.io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+    }
+    this._broadcast();
   }
 
   // ============================================================
@@ -682,8 +739,9 @@ class Table {
         // True when a human clicked "× remove this bot" mid-hand. The seat
         // will vacate as soon as the current hand resolves.
         pendingStand: !!s._standAfterHand,
-        // Sword inventory (PF1e auto-invest). Map of tier → count.
-        swords: s.isEmpty() ? null : db.getSwords(s.playerId),
+        // Gear inventory (PF1e). Map of slot → tier (1..5) or null.
+        gear: s.isEmpty() ? null : db.getGear(s.playerId),
+        gearValue: s.isEmpty() ? 0 : db.gearTotalValue(db.getGear(s.playerId)),
       })),
       spectatorCount: this.spectators.size,
       hand,

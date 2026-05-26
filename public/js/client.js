@@ -26,30 +26,41 @@
     actpanelOffset: null,
   };
 
-  // Restore any persisted action-panel drag offset.
-  try {
-    const raw = sessionStorage.getItem('folken-poker.actpanelOffset');
-    if (raw) {
-      const o = JSON.parse(raw);
-      if (Number.isFinite(o?.dx) && Number.isFinite(o?.dy)) state.actpanelOffset = o;
-    }
-  } catch (_) { /* corrupt — ignore */ }
+  // (Initial restore happens lazily via readActpanelOffset on first apply.)
+
+  const ACTPANEL_OFFSET_KEY = 'folken-poker.actpanelOffset';
 
   function saveActpanelOffset() {
     try {
       if (state.actpanelOffset) {
-        sessionStorage.setItem('folken-poker.actpanelOffset', JSON.stringify(state.actpanelOffset));
+        sessionStorage.setItem(ACTPANEL_OFFSET_KEY, JSON.stringify(state.actpanelOffset));
       } else {
-        sessionStorage.removeItem('folken-poker.actpanelOffset');
+        sessionStorage.removeItem(ACTPANEL_OFFSET_KEY);
       }
     } catch (_) { /* quota? ignore */ }
+  }
+
+  /** Read the current offset. sessionStorage is the source of truth; the
+   *  in-memory state.actpanelOffset is a cache. If they diverge (a render
+   *  fires before init reseed completes, for example) we fall back to
+   *  sessionStorage and refresh the cache. */
+  function readActpanelOffset() {
+    if (state.actpanelOffset) return state.actpanelOffset;
+    try {
+      const raw = sessionStorage.getItem(ACTPANEL_OFFSET_KEY);
+      if (!raw) return null;
+      const o = JSON.parse(raw);
+      if (!Number.isFinite(o?.dx) || !Number.isFinite(o?.dy)) return null;
+      state.actpanelOffset = o;
+      return o;
+    } catch (_) { return null; }
   }
 
   /** Apply the saved offset to whatever .actpanel exists in the current DOM. */
   function applyActpanelOffset() {
     const panel = document.querySelector('[data-actpanel]');
     if (!panel) return;
-    const o = state.actpanelOffset;
+    const o = readActpanelOffset();
     if (o) {
       panel.style.setProperty('--drag-x', o.dx + 'px');
       panel.style.setProperty('--drag-y', o.dy + 'px');
@@ -380,35 +391,27 @@
               ? `<span class="seat__leaving" title="Bot leaves at end of current hand">leaving after hand</span>`
               : `<button type="button" class="seat__remove" data-remove-bot="${escapeAttr(seat.playerId)}" title="Ask ${escapeAttr(seat.nickname)} to leave (after this hand)">×</button>`)
           : '';
-        // Build the inline action panel for ME-when-it's-my-turn.
-        const myTurn = isMe && isActor && handPlayer && !handPlayer.folded && !handPlayer.allIn
-          && hand.state !== 'SHOWDOWN' && hand.state !== 'COMPLETE';
-        const actionPanelHtml = myTurn ? buildActionPanelHtml(hand, handPlayer) : '';
-        // Action timer countdown — only on the currently-acting HUMAN. The
-        // text is filled in by tickTimers() so we don't re-render the whole
-        // ring once a second. Bots don't get a visible timer (they decide
-        // in <2s anyway).
-        const showTimer = isActor && !seat.isBot && t.actionDeadline;
+        // Action timer countdown — shown on ANY acting seat now (human
+        // OR bot), so spectators can watch the clock tick down on a
+        // bot's thinking delay. Bots' actionDeadline is the broadcast
+        // value set by Table._maybeDriveBot.
+        const showTimer = isActor && t.actionDeadline;
         const timerHtml = showTimer
           ? `<div class="seat__timer" data-deadline="${t.actionDeadline}" data-seat-timer></div>`
           : '';
-        // Magic-longsword inventory (PF1e auto-invest). Compact row like
-        // "⚔ +1×2 +2×1" listing each tier they own. Tooltip explodes to
-        // the full PF1e item names with total count.
-        const swordsObj = seat.swords || {};
-        const swordTiers = Object.keys(swordsObj)
-          .map(k => ({ tier: Number(k), count: swordsObj[k] }))
-          .filter(s => s.count > 0)
-          .sort((a, b) => a.tier - b.tier);
-        let swordsHtml = '';
-        if (swordTiers.length) {
-          const totalSwords = swordTiers.reduce((a, b) => a + b.count, 0);
-          const tooltip = swordTiers.map(s => `+${s.tier} longsword × ${s.count}`).join(', ');
-          const inline = swordTiers.map(s => `+${s.tier}×${s.count}`).join(' ');
-          // ⚔️ with U+FE0F variation selector forces emoji-style rendering;
-          // bare U+2694 falls back to a plain X glyph in some fonts.
-          swordsHtml = `<div class="seat__swords" title="${escapeAttr(`${totalSwords} magic sword${totalSwords===1?'':'s'}: ${tooltip}`)}">⚔️ ${escapeText(inline)}</div>`;
-        }
+        // Compact gear summary on the seat plate — small icons + total
+        // value. Full bank UI is the bottom-right widget.
+        const seatGear = seat.gear || {};
+        const seatGearTotal = seat.gearValue || 0;
+        const gearIconsHtml = renderSeatGearStrip(seatGear, seatGearTotal);
+        // Keep the variable from the old code path to avoid touching every
+        // template literal — bank renders gear separately now.
+        let swordsHtml = gearIconsHtml;
+        // No more in-seat action panel — it lives in #actpanelHost.
+        const actionPanelHtml = '';
+        // myTurn used by .seat__plate--acting class below.
+        const myTurn = isMe && isActor && handPlayer && !handPlayer.folded && !handPlayer.allIn
+          && hand.state !== 'SHOWDOWN' && hand.state !== 'COMPLETE';
         el.innerHTML = `
           <div class="seat__plate ${myTurn ? 'seat__plate--acting' : ''}">
             ${removeBotHtml}
@@ -465,9 +468,132 @@
     // Fire the timer text once immediately (otherwise it'd show blank for ~1s).
     tickTimers();
 
-    // Re-apply the saved action-panel drag offset (renderTable just rebuilt
-    // the panel from scratch).
+    // The action panel + gear bank live OUTSIDE the seat ring so they
+    // survive these full-DOM re-renders. We just refresh their inner
+    // content here.
+    renderActionPanel();
+    renderBank();
+
+    // Re-apply the saved action-panel drag offset. The panel host element
+    // itself is permanent now, but its inline CSS vars can get cleared
+    // when innerHTML is set inside it — re-apply defensively.
     applyActpanelOffset();
+  }
+
+  // ===== Gear bank (bottom-right of felt) =====
+  const GEAR_SVGS = {
+    weapon: '<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4l5 5-9 9-5-5z"/><path d="M9 11l4 4"/><path d="M4 20l3-3"/></svg>',
+    armor:  '<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>',
+    shield: '<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 11l2 2 4-4"/></svg>',
+    cloak:  '<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l-3 7 4 2v9h10v-9l4-2-3-7"/><path d="M9 4c0 2 1 3 3 3s3-1 3-3"/></svg>',
+    ring:   '<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="15" r="5"/><path d="M9 7l-2-4h10l-2 4"/></svg>',
+    amulet: '<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l6 4 6-4"/><circle cx="12" cy="15" r="5"/></svg>',
+  };
+  // PF1e price formulas, mirrored from backend so we can compute upgrade
+  // costs without a round-trip. Keep in sync with db.js GEAR_SLOTS.
+  const GEAR_META = {
+    weapon: { label: 'Longsword',           mw: 315,  mult: 2000 },
+    armor:  { label: 'Full Plate',          mw: 1650, mult: 1000 },
+    shield: { label: 'Heavy Steel Shield',  mw: 170,  mult: 1000 },
+    cloak:  { label: 'Cloak of Resistance', mw: 0,    mult: 1000 },
+    ring:   { label: 'Ring of Protection',  mw: 0,    mult: 2000 },
+    amulet: { label: 'Amulet of Natural Armor', mw: 0, mult: 2000 },
+  };
+  const GEAR_SLOTS = ['weapon', 'armor', 'shield', 'cloak', 'ring', 'amulet'];
+  function gearPrice(slot, tier) {
+    const m = GEAR_META[slot];
+    if (!m || tier < 1 || tier > 5) return 0;
+    return m.mw + tier * tier * m.mult;
+  }
+  /** Compact strip of the gear icons a player owns, shown under their
+   *  chip count. Greys out empty slots. Highlights +5. */
+  function renderSeatGearStrip(gear, total) {
+    if (!gear) return '';
+    const cells = GEAR_SLOTS.map(slot => {
+      const tier = gear[slot] || 0;
+      if (!tier) return `<span class="seat__gear-cell seat__gear-cell--empty" title="${GEAR_META[slot].label}: not owned">${GEAR_SVGS[slot]}</span>`;
+      const cls = tier === 5 ? 'seat__gear-cell--max' : '';
+      return `<span class="seat__gear-cell ${cls}" title="+${tier} ${GEAR_META[slot].label}">${GEAR_SVGS[slot]}<sup>+${tier}</sup></span>`;
+    }).join('');
+    const totalStr = total ? `<span class="seat__gear-total" title="Total gear value">${formatChips(total)} gp</span>` : '';
+    return `<div class="seat__gear">${cells}${totalStr}</div>`;
+  }
+
+  const LOOT_LORD_TOTAL = 227135;   // +5 in all 6 slots, PF1e prices
+  function renderBank() {
+    const host = $('#bankPanel');
+    if (!host) return;
+    if (!state.me) { host.hidden = true; return; }
+    host.hidden = false;
+    const t = state.table;
+    const mySeat = t?.seats?.find(s => s.playerId === state.me.player_id);
+    const gear = (mySeat?.gear) || {};
+    const chips = mySeat?.chips ?? state.me.chips ?? 0;
+
+    const rows = GEAR_SLOTS.map(slot => {
+      const cur = gear[slot] || 0;
+      const meta = GEAR_META[slot];
+      const next = cur < 5 ? cur + 1 : null;
+      const nextPrice = next ? gearPrice(slot, next) : 0;
+      const upgradeCost = next ? nextPrice - (cur ? gearPrice(slot, cur) : 0) : 0;
+      const canAfford = upgradeCost > 0 && chips >= upgradeCost;
+      const sellValue = cur ? Math.floor(gearPrice(slot, cur) / 2) : 0;
+      const tierBadge = cur
+        ? `<span class="bank__tier bank__tier--${cur===5?'max':'on'}">+${cur}</span>`
+        : `<span class="bank__tier bank__tier--off">—</span>`;
+      const upgradeBtn = next
+        ? `<button type="button" class="bank__btn bank__btn--buy" ${canAfford?'':'disabled'} data-buy-slot="${slot}" data-buy-tier="${next}" title="${cur?'Upgrade to':'Buy a'} +${next} ${meta.label} for ${upgradeCost.toLocaleString()} gp">${cur?'Upgrade to':'Buy'} +${next}<br><small>${formatChips(upgradeCost)} gp</small></button>`
+        : `<button type="button" class="bank__btn bank__btn--max" disabled title="Maxed">+5 ✓</button>`;
+      const sellBtn = cur
+        ? `<button type="button" class="bank__btn bank__btn--sell" data-sell-slot="${slot}" title="Hock for ${sellValue.toLocaleString()} gp (50% of market price)">Hock<br><small>+${formatChips(sellValue)} gp</small></button>`
+        : '';
+      return `
+        <div class="bank__row">
+          <div class="bank__icon" title="${meta.label}">${GEAR_SVGS[slot]}</div>
+          <div class="bank__label">${meta.label}</div>
+          ${tierBadge}
+          <div class="bank__actions">${upgradeBtn}${sellBtn}</div>
+        </div>`;
+    }).join('');
+
+    const totalValue = GEAR_SLOTS.reduce((sum, slot) => {
+      const t = gear[slot] || 0;
+      return sum + (t ? gearPrice(slot, t) : 0);
+    }, 0);
+    const progressPct = Math.min(100, Math.round((totalValue / LOOT_LORD_TOTAL) * 100));
+
+    host.innerHTML = `
+      <header class="bank__head">
+        <h3 class="bank__title">⚔️ Loot Bank</h3>
+        <button type="button" class="bank__collapse" id="bankCollapse" title="Collapse / expand">−</button>
+      </header>
+      <div class="bank__body">
+        ${rows}
+        <div class="bank__progress" title="Progress to LOOT LORD (full +5 set)">
+          <div class="bank__progress-bar" style="width:${progressPct}%"></div>
+          <span class="bank__progress-text">${formatChips(totalValue)} / ${formatChips(LOOT_LORD_TOTAL)} gp · ${progressPct}% to LOOT LORD</span>
+        </div>
+      </div>`;
+  }
+
+  // ===== Action panel host (permanent — never destroyed) =====
+  function renderActionPanel() {
+    const host = $('#actpanelHost');
+    const panel = $('#actionPanel');
+    if (!host || !panel) return;
+    if (!state.me || !state.table) { host.hidden = true; return; }
+    const t = state.table;
+    const hand = t.hand;
+    const mySeat = t.seats?.find(s => s.playerId === state.me.player_id);
+    if (!mySeat) { host.hidden = true; return; }
+    host.hidden = false;
+    // Find me in the hand (if active).
+    const meInHand = hand?.players?.find(p => p.playerId === state.me.player_id);
+    const isActor = hand && hand.actor === state.me.player_id;
+    const canAct = !!(isActor && meInHand && !meInHand.folded && !meInHand.allIn
+                     && hand.state !== 'SHOWDOWN' && hand.state !== 'COMPLETE');
+    panel.classList.toggle('actpanel--idle', !canAct);
+    panel.innerHTML = buildActionPanelInner(hand, meInHand, canAct);
   }
 
   // ===== Chat log (bottom panel) =====
@@ -635,12 +761,24 @@
    * it's their turn. Compact layout with Fold / Check|Call / Raise / All-in
    * and a row of preset raise-to amounts that fill the editable input.
    */
-  function buildActionPanelHtml(hand, me) {
+  /** Build the INNER markup of the action panel — the outer .actpanel
+   *  element is permanent in the DOM (#actionPanel), so we never wrap
+   *  with another. `canAct` toggles disabled state on the buttons so the
+   *  panel stays visible even when it's not the user's turn. */
+  function buildActionPanelInner(hand, me, canAct) {
+    // If no live hand / no seat, show a minimal "Waiting" panel.
+    if (!hand || !me) {
+      return `
+        <div class="actpanel__drag" data-actpanel-drag title="Drag to move · click reset to recenter">
+          <span class="actpanel__drag-grip">⋮⋮</span>
+          <span class="actpanel__status">${hand ? 'Spectating' : 'Waiting for next hand'}</span>
+          <button type="button" class="actpanel__drag-reset" data-actpanel-reset title="Reset to default position">reset</button>
+        </div>`;
+    }
     const toCall = Math.max(0, hand.currentBet - me.invested);
     const minRaiseTo = Math.max(hand.currentBet + hand.minRaise, hand.currentBet + 1);
     const maxRaiseTo = me.invested + me.stack;        // shove
     const potNow = hand.potTotal;
-    const bb = hand.minRaise || 50;
 
     // Adaptive presets — different sizings for opening vs. facing a bet.
     let presets;
@@ -678,54 +816,44 @@
       seen.add(p.value); return true;
     });
 
+    const dis = canAct ? '' : 'disabled';
     const callOrCheck = toCall === 0
-      ? `<button class="btn btn--primary actpanel__btn" data-act="check">Check</button>`
-      : `<button class="btn btn--primary actpanel__btn" data-act="call">Call ${formatGp(Math.min(toCall, me.stack))}</button>`;
+      ? `<button class="btn btn--primary actpanel__btn" data-act="check" ${dis}>Check</button>`
+      : `<button class="btn btn--primary actpanel__btn" data-act="call" ${dis}>Call ${formatGp(Math.min(toCall, me.stack))}</button>`;
 
     const presetHtml = presets.map(p =>
-      `<button type="button" class="actpanel__preset" data-raise="${p.value}">${p.label} · ${formatGp(p.value)}</button>`
+      `<button type="button" class="actpanel__preset" data-raise="${p.value}" ${dis}>${p.label} · ${formatGp(p.value)}</button>`
     ).join('');
 
+    const status = canAct
+      ? `to call ${formatChips(toCall)} · pot ${formatChips(potNow)}`
+      : `pot ${formatChips(potNow)} · waiting on opponent`;
+
     return `
-      <div class="actpanel" data-actpanel>
-        <div class="actpanel__drag" data-actpanel-drag title="Drag to move · click reset to recenter">
-          <span class="actpanel__drag-grip">⋮⋮</span>
-          <span class="actpanel__status">to call ${formatChips(toCall)} · pot ${formatChips(potNow)}</span>
-          <button type="button" class="actpanel__drag-reset" data-actpanel-reset title="Reset to default position">reset</button>
-        </div>
-        <div class="actpanel__row">
-          <button class="btn btn--ghost actpanel__btn" data-act="fold">Fold</button>
-          ${callOrCheck}
-          <button class="btn btn--danger actpanel__btn" data-act="allin">All-in</button>
-        </div>
-        <div class="actpanel__row actpanel__row--raise">
-          <input type="number" class="actpanel__amount" data-raise-input
-                 min="${minRaiseTo}" max="${maxRaiseTo}"
-                 placeholder="≥ ${formatChips(minRaiseTo)}" />
-          <button class="btn btn--accent actpanel__btn" data-act="raise">Raise to</button>
-        </div>
-        <div class="actpanel__presets">${presetHtml}</div>
-      </div>`;
+      <div class="actpanel__drag" data-actpanel-drag title="Drag to move · click reset to recenter">
+        <span class="actpanel__drag-grip">⋮⋮</span>
+        <span class="actpanel__status">${status}</span>
+        <button type="button" class="actpanel__drag-reset" data-actpanel-reset title="Reset to default position">reset</button>
+      </div>
+      <div class="actpanel__row">
+        <button class="btn btn--ghost actpanel__btn" data-act="fold" ${dis}>Fold</button>
+        ${callOrCheck}
+        <button class="btn btn--danger actpanel__btn" data-act="allin" ${dis}>All-in</button>
+      </div>
+      <div class="actpanel__row actpanel__row--raise">
+        <input type="number" class="actpanel__amount" data-raise-input
+               min="${minRaiseTo}" max="${maxRaiseTo}"
+               placeholder="≥ ${formatChips(minRaiseTo)}" ${dis} />
+        <button class="btn btn--accent actpanel__btn" data-act="raise" ${dis}>Raise to</button>
+      </div>
+      <div class="actpanel__presets">${presetHtml}</div>
+    `;
   }
 
-  /** Tiny "waiting on X" status only — main controls live in the seat. */
-  function renderActionBar(hand) {
-    const bar = $('#actionWait');
-    const myId = state.me?.player_id;
-    if (!hand || !myId) { bar.hidden = true; return; }
-    const me = hand.players.find(p => p.playerId === myId);
-    if (!me) { bar.hidden = true; return; }
-    const isMyTurn = hand.actor === myId;
-    if (isMyTurn || me.folded || me.allIn ||
-        hand.state === 'SHOWDOWN' || hand.state === 'COMPLETE') {
-      bar.hidden = true;
-      return;
-    }
-    const actorSeat = state.table.seats.find(s => s.playerId === hand.actor);
-    const actorNick = actorSeat?.nickname || hand.actor || 'someone';
-    $('#actionStatus').textContent = `Waiting on ${actorNick}…`;
-    bar.hidden = false;
-  }
+  /** Legacy no-op. The actionWait footer was replaced by the chat panel
+   *  + the persistent actpanel host; "waiting on X" lives in the
+   *  topbar clock label and the actpanel status now. */
+  function renderActionBar(_hand) { /* intentionally empty */ }
 
   function sitDown(seatIndex) {
     socket.emit('table:sit', { seatIndex }, (resp) => {
@@ -744,7 +872,7 @@
     const panel = handle.closest('[data-actpanel]');
     if (!panel) return;
     e.preventDefault();
-    const start = state.actpanelOffset || { dx: 0, dy: 0 };
+    const start = readActpanelOffset() || { dx: 0, dy: 0 };
     _dragState = {
       panel,
       startX: e.clientX,
@@ -762,6 +890,9 @@
     const dy = _dragState.origDy + (e.clientY - _dragState.startY);
     state.actpanelOffset = { dx, dy };
     applyActpanelOffset();
+    // Persist immediately so a missed pointerup (focus loss, OS interrupt)
+    // can't lose the drag offset.
+    saveActpanelOffset();
   });
   const endDrag = (e) => {
     if (!_dragState) return;
@@ -889,6 +1020,35 @@
     });
   });
   // (Per-bot × buttons handle removal — wired in the seatRing delegate above.)
+
+  // ---- Gear bank: buy / upgrade / sell (delegated on #bankPanel) ----
+  $('#bankPanel').addEventListener('click', (e) => {
+    const buy = e.target.closest('[data-buy-slot]');
+    if (buy) {
+      e.preventDefault();
+      const slot = buy.dataset.buySlot;
+      const tier = Number(buy.dataset.buyTier);
+      socket.emit('lobby:buyGear', { slot, tier }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not buy', true); return; }
+        // state.me chip total gets refreshed via the roster broadcast.
+      });
+      return;
+    }
+    const sell = e.target.closest('[data-sell-slot]');
+    if (sell) {
+      e.preventDefault();
+      const slot = sell.dataset.sellSlot;
+      socket.emit('lobby:sellGear', { slot }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not sell', true); return; }
+        toast(`Hocked your ${GEAR_META[slot].label} for ${formatChips(resp.refund)} gp`);
+      });
+      return;
+    }
+    // Collapse / expand
+    if (e.target.closest('#bankCollapse')) {
+      $('#bankPanel')?.classList.toggle('bank--collapsed');
+    }
+  });
 
   // ---- Reset modal ----
   const resetModal = $('#resetModal');

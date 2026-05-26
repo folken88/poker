@@ -772,17 +772,23 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 }
 .btn[data-act]:disabled { opacity: 0.3; }
 
-/* ===== In-seat action panel (popover anchored below the player's seat
-   plate so the controls are right under their hand without bloating the
-   plate itself). Draggable — the user can grab the handle and move it
-   anywhere. The drag offset is applied via --drag-x / --drag-y CSS
-   variables so it composes with the centering transform. ===== */
-.seat__plate--acting { /* no vertical inflation — panel is absolute */ }
-.actpanel {
+/* ===== Permanent action panel (PERSISTENT — outside seat ring) =====
+   Lives in #actpanelHost inside the .felt. Never destroyed by
+   renderTable. Draggable; drag offset applied via --drag-x / --drag-y
+   CSS variables so it composes with the centering transform. */
+.seat__plate--acting { /* legacy hook, no styling needed */ }
+.actpanel-host {
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: 16px;
   left: 50%;
-  transform: translate(calc(-50% + var(--drag-x, 0px)), var(--drag-y, 0px));
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 25;
+}
+.actpanel {
+  position: relative;
+  pointer-events: auto;
+  transform: translate(var(--drag-x, 0px), var(--drag-y, 0px));
   padding: 7px 8px;
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0.88));
@@ -833,6 +839,143 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 }
 .actpanel__drag-reset:hover { color: var(--brass-bright); }
 .actpanel.is-dragging { opacity: 0.92; }
+.actpanel--idle .actpanel__btn,
+.actpanel--idle .actpanel__preset,
+.actpanel--idle .actpanel__amount { opacity: 0.45; }
+.actpanel--idle { border-color: rgba(241,207,131,0.2); }
+
+/* ===== Gear bank (bottom-right of felt) ===== */
+.bank {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 280px;
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  background: linear-gradient(180deg, rgba(8,16,11,0.95), rgba(5,10,7,0.98));
+  border: 1px solid rgba(241,207,131,0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+  font-size: 0.74rem;
+  z-index: 15;
+  color: var(--ivory);
+}
+.bank--collapsed .bank__body { display: none; }
+.bank--collapsed { width: auto; }
+.bank__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 8px 4px 12px;
+  border-bottom: 1px solid rgba(241,207,131,0.18);
+}
+.bank__title {
+  margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: 0.14em;
+  color: var(--brass-bright);
+  font-size: 0.92rem;
+}
+.bank__collapse {
+  background: transparent; border: none; color: var(--ivory-dim);
+  font-size: 1rem; cursor: pointer; line-height: 1; padding: 4px 6px;
+}
+.bank__body { padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+.bank__row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  grid-template-areas: "icon label tier"
+                        "icon actions actions";
+  gap: 2px 6px;
+  padding: 6px 8px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(241,207,131,0.12);
+  border-radius: 8px;
+}
+.bank__icon  { grid-area: icon; color: var(--brass-bright); align-self: center; }
+.bank__label { grid-area: label; color: var(--ivory); font-weight: 600; }
+.bank__tier  { grid-area: tier; font-variant-numeric: tabular-nums; align-self: center; }
+.bank__tier--off { color: rgba(245,236,214,0.4); }
+.bank__tier--on  { color: var(--brass-bright); font-weight: 700; }
+.bank__tier--max { color: #6be0a9; font-weight: 800; }
+.bank__actions {
+  grid-area: actions;
+  display: flex; gap: 4px;
+}
+.bank__btn {
+  flex: 1;
+  font-size: 0.66rem;
+  padding: 3px 5px;
+  line-height: 1.1;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid rgba(217,176,106,0.35);
+  background: rgba(217,176,106,0.1);
+  color: var(--ivory);
+  text-align: center;
+}
+.bank__btn small { font-size: 0.6rem; color: var(--brass-bright); }
+.bank__btn--buy:not(:disabled):hover { background: rgba(217,176,106,0.25); }
+.bank__btn--sell { background: rgba(180,60,60,0.18); border-color: rgba(227,88,88,0.45); }
+.bank__btn--sell small { color: #ff9999; }
+.bank__btn--sell:hover { background: rgba(180,60,60,0.32); }
+.bank__btn--max  { background: rgba(107,224,169,0.15); border-color: rgba(107,224,169,0.4); color: #6be0a9; }
+.bank__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.bank__progress {
+  position: relative;
+  height: 18px;
+  margin-top: 4px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(241,207,131,0.25);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.bank__progress-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, var(--brass), var(--brass-bright));
+  transition: width 0.3s ease-out;
+}
+.bank__progress-text {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--ivory);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* ===== Seat gear strip (small icons under the chip line) ===== */
+.seat__gear {
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 2px;
+  font-size: 0.6rem;
+}
+.seat__gear-cell {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px;
+  color: var(--brass-bright);
+}
+.seat__gear-cell svg { width: 14px; height: 14px; }
+.seat__gear-cell--empty { color: rgba(245,236,214,0.18); }
+.seat__gear-cell--max  { color: #6be0a9; }
+.seat__gear-cell sup {
+  font-size: 0.55rem;
+  position: absolute;
+  bottom: -4px; right: -6px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 2px;
+  padding: 0 1px;
+  line-height: 1;
+}
+.seat__gear-total {
+  margin-left: 4px;
+  font-size: 0.6rem;
+  color: var(--ivory-dim);
+  font-variant-numeric: tabular-nums;
+}
 .actpanel__status {
   font-size: 0.7rem;
   color: var(--brass-bright);

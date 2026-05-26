@@ -27,9 +27,19 @@ function registerTableHandlers(io, socket, { tables }) {
     // refresh / second tab as same player), re-attach the new socket.id to
     // their existing seat. Otherwise hand events (incl. private hole cards)
     // would still be addressed to the dead socket and never reach them.
+    //
+    // If the player_record is a bot AND they're currently seated as a bot,
+    // the human is SUPERSEDING the AI — flip the seat to human-controlled
+    // by clearing the bot driver. The next time it's the seat's turn the
+    // human's action panel will be enabled instead of the bot deciding.
     const existingSeat = table.findSeat(me.player_id);
     if (existingSeat) {
       existingSeat.socketId = socket.id;
+      if (existingSeat.isBot && me.is_bot) {
+        existingSeat.isBot = false;
+        table.bots.delete(me.player_id);
+        table.chat('info', `🎮 ${me.nickname} has taken control from the AI.`);
+      }
     } else {
       table.addSpectator({ playerId: me.player_id, socketId: socket.id, player: me });
     }

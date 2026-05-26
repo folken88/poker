@@ -39,9 +39,28 @@ ensureColumn('players', 'bot_mode',   'TEXT');
 // Bots do NOT accrue debt — their auto-rebuys are free (they're the house).
 ensureColumn('players', 'rebuy_debt', 'INTEGER NOT NULL DEFAULT 0');
 // JSON object mapping sword tier (string '1'..'5') to count, e.g.
-// '{"1":2,"2":1}' = two +1 longswords and one +2. Bought automatically
-// at end of hand by Table._autoInvest — see backend/src/game/Table.js.
+// '{"1":2,"2":1}' = two +1 longswords and one +2. LEGACY — superseded by
+// the `gear` column below. Left in place so older rows don't break.
 ensureColumn('players', 'swords',     "TEXT NOT NULL DEFAULT '{}'");
+// JSON object: { weapon: 5, armor: null, shield: 3, ring: null, amulet: 2, cloak: 4 }.
+// One slot per gear type, value = enhancement tier (1–5) or null/absent.
+// Players keep one item per slot. Goal: +5 in all six = LOOT LORD.
+ensureColumn('players', 'gear',       "TEXT NOT NULL DEFAULT '{}'");
+
+// Champions Board — one row per Loot Lord. Logged when someone hits +5
+// in every slot. The reset-to-default that follows wipes everyone's
+// chips/gear but this table records the historical winners forever.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS champions (
+    id INTEGER PRIMARY KEY,
+    player_id TEXT NOT NULL,
+    nickname  TEXT NOT NULL,
+    avatar_id TEXT,
+    won_at    INTEGER NOT NULL,
+    hands_to_win INTEGER,
+    final_chips  INTEGER
+  );
+`);
 
 // ---- Roster (the fixed test players) ----
 // 14 names, 12 avatars — two avatars get reused on purpose.
@@ -84,16 +103,59 @@ const BOT_ROSTER = [
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
 
-// Pathfinder 1e magic longsword prices (gp). Each entry = enhancement
-// bonus tier with the full market price (base 15 gp + masterwork 300 gp
-// + enhancement cost: +1=2000, +2=8000, +3=18000, +4=32000, +5=50000).
-const SWORD_TIERS = [
-  { tier: 1, price: 2315,  name: '+1 longsword' },
-  { tier: 2, price: 8315,  name: '+2 longsword' },
-  { tier: 3, price: 18315, name: '+3 longsword' },
-  { tier: 4, price: 32315, name: '+4 longsword' },
-  { tier: 5, price: 50315, name: '+5 longsword' },
+// ============================================================
+// PF1e GEAR ECONOMY
+// ============================================================
+// Six magic-item slots, each upgradeable from +1 to +5. Goal of the game:
+// own a full +5 set across every slot. First player to do so is declared
+// the LOOT LORD, wins, and gets logged on the Champions Board.
+//
+// PF1e standard prices = base item + masterwork + enhancement(bonus² × multiplier).
+// Multipliers: weapon/ring/amulet ×2000, armor/shield/cloak ×1000.
+const GEAR_SLOTS = [
+  { key: 'weapon', label: 'Longsword',           short: 'Weapon',  mw: 315,  multiplier: 2000 },
+  { key: 'armor',  label: 'Full Plate',          short: 'Armor',   mw: 1650, multiplier: 1000 },
+  { key: 'shield', label: 'Heavy Steel Shield',  short: 'Shield',  mw: 170,  multiplier: 1000 },
+  { key: 'cloak',  label: 'Cloak of Resistance', short: 'Cloak',   mw: 0,    multiplier: 1000 },
+  { key: 'ring',   label: 'Ring of Protection',  short: 'Ring',    mw: 0,    multiplier: 2000 },
+  { key: 'amulet', label: 'Amulet of Natural Armor', short: 'Amulet', mw: 0, multiplier: 2000 },
 ];
+const GEAR_SLOT_KEYS = GEAR_SLOTS.map(s => s.key);
+const GEAR_BY_KEY = Object.fromEntries(GEAR_SLOTS.map(s => [s.key, s]));
+
+/** Price (gp) for the given slot at the given enhancement tier (1–5). */
+function gearPrice(slotKey, tier) {
+  const s = GEAR_BY_KEY[slotKey];
+  if (!s || tier < 1 || tier > 5) return 0;
+  return s.mw + tier * tier * s.multiplier;
+}
+
+/** All tier prices for one slot, useful for the bank UI. */
+function gearPriceTable(slotKey) {
+  return [1, 2, 3, 4, 5].map(t => ({ tier: t, price: gearPrice(slotKey, t) }));
+}
+
+/** Half of the current item's market price, rounded down. PF1e standard
+ *  resale rate. Returns 0 if the slot is empty. */
+function gearHockValue(slotKey, currentTier) {
+  if (!currentTier) return 0;
+  return Math.floor(gearPrice(slotKey, currentTier) / 2);
+}
+
+/** Total market value of everything in this gear object. */
+function gearTotalValue(gear) {
+  let total = 0;
+  for (const k of GEAR_SLOT_KEYS) {
+    const t = gear?.[k] || 0;
+    if (t) total += gearPrice(k, t);
+  }
+  return total;
+}
+
+/** True iff every slot holds a +5 item. */
+function gearIsLootLord(gear) {
+  return GEAR_SLOT_KEYS.every(k => gear?.[k] === 5);
+}
 
 const stmts = {
   getPlayer:    db.prepare('SELECT * FROM players WHERE player_id = ?'),
@@ -189,6 +251,38 @@ function setSwords(playerId, swords) {
   const json = JSON.stringify(swords || {});
   db.prepare('UPDATE players SET swords = ? WHERE player_id = ?').run(json, playerId);
 }
+
+// ---- Gear API ----
+function getGear(playerId) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return {};
+  try {
+    const obj = JSON.parse(p.gear || '{}') || {};
+    // Defensive normalization — clamp tiers to 0..5, null missing keys.
+    const out = {};
+    for (const k of GEAR_SLOT_KEYS) {
+      const t = Math.floor(Number(obj[k]));
+      out[k] = (Number.isFinite(t) && t >= 1 && t <= 5) ? t : null;
+    }
+    return out;
+  } catch { return {}; }
+}
+function setGear(playerId, gear) {
+  const json = JSON.stringify(gear || {});
+  db.prepare('UPDATE players SET gear = ? WHERE player_id = ?').run(json, playerId);
+}
+
+// ---- Champions API ----
+const insertChampion = db.prepare(`
+  INSERT INTO champions (player_id, nickname, avatar_id, won_at, hands_to_win, final_chips)
+  VALUES (?, ?, ?, ?, ?, ?)
+`);
+function recordChampion({ playerId, nickname, avatarId, handsToWin, finalChips }) {
+  insertChampion.run(playerId, nickname, avatarId || null, Date.now(), handsToWin || null, finalChips || null);
+}
+function listChampions(limit = 50) {
+  return db.prepare('SELECT * FROM champions ORDER BY won_at DESC LIMIT ?').all(limit);
+}
 function recordWin(playerId, amount)  { stmts.recordWin.run(amount, playerId); }
 function recordLoss(playerId, amount) { stmts.recordLoss.run(amount, playerId); }
 function insertHand({ tableId, board, players, winners }) {
@@ -209,7 +303,20 @@ module.exports = {
   ROSTER,
   BOT_ROSTER,
   DEFAULT_STACK,
-  SWORD_TIERS,
+  // Gear / Loot Lord
+  GEAR_SLOTS,
+  GEAR_SLOT_KEYS,
+  GEAR_BY_KEY,
+  gearPrice,
+  gearPriceTable,
+  gearHockValue,
+  gearTotalValue,
+  gearIsLootLord,
+  getGear,
+  setGear,
+  recordChampion,
+  listChampions,
+  // Players
   getPlayer,
   listPlayers,
   listHumans,

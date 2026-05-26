@@ -16,19 +16,25 @@ function tableFor(socket, tables) {
 
 function registerLobbyHandlers(io, socket, { tables }) {
 
-  // Send the roster snapshot as soon as the socket connects.
-  socket.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+  // Roster snapshot includes everyone — humans AND bots. Bots are
+  // playable identities; picking one lets a human supersede the AI.
+  function fullRoster() {
+    // Humans first, then bots — sorted within each group.
+    return [...db.listHumans(), ...db.listBots()];
+  }
+  socket.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
 
   socket.on('lobby:roster', (_p, ack) => {
-    ack?.({ ok: true, players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, players: fullRoster(), defaultStack: db.DEFAULT_STACK });
   });
 
   socket.on('lobby:choosePlayer', ({ playerId } = {}, ack) => {
     if (typeof playerId !== 'string') return ack?.({ ok: false, error: 'playerId required' });
     const player = db.getPlayer(playerId.toLowerCase());
     if (!player) return ack?.({ ok: false, error: 'unknown player' });
-    if (player.is_bot) return ack?.({ ok: false, error: 'cannot play as a bot' });
-
+    // Picking a bot is allowed — the human supersedes the AI for the
+    // duration of their session. The character keeps its persistent
+    // chips + gear; the human just drives the seat.
     socket.data.player = player;
     db.touchPlayer(player.player_id);
     ack?.({ ok: true, player });
@@ -56,7 +62,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
     db.db.prepare('UPDATE players SET avatar_id = ?, last_seen_at = ? WHERE player_id = ?').run(avatarId, Date.now(), player.player_id);
     const refreshed = db.getPlayer(player.player_id);
     socket.data.player = refreshed;
-    io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+    io.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, player: refreshed });
   });
 
@@ -78,7 +84,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
       table.chat('rebuy', humanRebuyMessage(refreshed.nickname, db.DEFAULT_STACK));
       table._broadcast?.();
     }
-    io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+    io.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, chips: refreshed.chips, rebuyDebt: refreshed.rebuy_debt });
   });
 
@@ -103,8 +109,84 @@ function registerLobbyHandlers(io, socket, { tables }) {
       table.chat('debt', `💸 ${refreshed.nickname} paid down ${amt.toLocaleString()} gp of debt. (Owes ${refreshed.rebuy_debt.toLocaleString()} gp.)`);
       table._broadcast?.();
     }
-    io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+    io.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, chips: refreshed.chips, rebuyDebt: refreshed.rebuy_debt });
+  });
+
+  // ---- Gear: buy / upgrade ----
+  // Body: { slot: 'weapon'|'armor'|'shield'|'cloak'|'ring'|'amulet', tier: 1-5 }
+  // Charges the chip difference between current item and target tier.
+  socket.on('lobby:buyGear', ({ slot, tier } = {}, ack) => {
+    const player = socket.data.player;
+    if (!player) return ack?.({ ok: false, error: 'choose a player first' });
+    if (!db.GEAR_BY_KEY[slot]) return ack?.({ ok: false, error: 'unknown slot' });
+    const target = Math.floor(Number(tier));
+    if (!Number.isFinite(target) || target < 1 || target > 5) {
+      return ack?.({ ok: false, error: 'tier must be 1–5' });
+    }
+    const fresh = db.getPlayer(player.player_id);
+    const gear  = db.getGear(player.player_id);
+    const cur   = gear[slot] || 0;
+    if (target <= cur) return ack?.({ ok: false, error: 'already at or above that tier — sell first' });
+    const cost = db.gearPrice(slot, target) - (cur ? db.gearPrice(slot, cur) : 0);
+    if (fresh.chips < cost) {
+      return ack?.({ ok: false, error: `need ${cost.toLocaleString()} gp; you have ${fresh.chips.toLocaleString()}` });
+    }
+    gear[slot] = target;
+    db.setGear(player.player_id, gear);
+    db.setChips(player.player_id, fresh.chips - cost);
+    const refreshed = db.getPlayer(player.player_id);
+    socket.data.player = refreshed;
+    const table = tableFor(socket, tables);
+    if (table) {
+      const seat = table.findSeat(player.player_id);
+      if (seat) seat.chipsAtTable = refreshed.chips;
+      const itemName = db.GEAR_BY_KEY[slot].label;
+      const action = cur > 0 ? `upgraded to +${target}` : `bought a +${target}`;
+      table.chat('rebuy', `🛒 ${refreshed.nickname} ${action} ${itemName} for ${cost.toLocaleString()} gp.`);
+      // Loot Lord check on every purchase, not just hand-end.
+      if (db.gearIsLootLord(gear)) {
+        const seatRef = table.findSeat(player.player_id) || { playerId: player.player_id, player: refreshed, chipsAtTable: refreshed.chips };
+        table._declareLootLord(seatRef);
+      }
+      table._broadcast?.();
+    }
+    io.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, chips: refreshed.chips, gear });
+  });
+
+  // ---- Gear: sell ----
+  // Body: { slot }. Refunds 50% of current item's market price, clears slot.
+  socket.on('lobby:sellGear', ({ slot } = {}, ack) => {
+    const player = socket.data.player;
+    if (!player) return ack?.({ ok: false, error: 'choose a player first' });
+    if (!db.GEAR_BY_KEY[slot]) return ack?.({ ok: false, error: 'unknown slot' });
+    const gear = db.getGear(player.player_id);
+    const cur  = gear[slot] || 0;
+    if (!cur) return ack?.({ ok: false, error: 'nothing to sell in that slot' });
+    const refund = db.gearHockValue(slot, cur);
+    gear[slot] = null;
+    db.setGear(player.player_id, gear);
+    const fresh = db.getPlayer(player.player_id);
+    db.setChips(player.player_id, fresh.chips + refund);
+    const refreshed = db.getPlayer(player.player_id);
+    socket.data.player = refreshed;
+    const table = tableFor(socket, tables);
+    if (table) {
+      const seat = table.findSeat(player.player_id);
+      if (seat) seat.chipsAtTable = refreshed.chips;
+      const itemName = db.GEAR_BY_KEY[slot].label;
+      table.chat('rebuy', `💰 ${refreshed.nickname} hocked a +${cur} ${itemName} for ${refund.toLocaleString()} gp.`);
+      table._broadcast?.();
+    }
+    io.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, chips: refreshed.chips, gear, refund });
+  });
+
+  // ---- Champions Board ----
+  socket.on('lobby:listChampions', (_p, ack) => {
+    try { ack?.({ ok: true, champions: db.listChampions(50) }); }
+    catch (e) { ack?.({ ok: false, error: 'server error' }); }
   });
 
   socket.on('lobby:listTables', (_p, ack) => {
