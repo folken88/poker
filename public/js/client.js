@@ -668,7 +668,6 @@
     shield: '<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 11l2 2 4-4"/></svg>',
     cloak:  '<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l-3 7 4 2v9h10v-9l4-2-3-7"/><path d="M9 4c0 2 1 3 3 3s3-1 3-3"/></svg>',
     ring:   '<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="15" r="5"/><path d="M9 7l-2-4h10l-2 4"/></svg>',
-    amulet: '<svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l6 4 6-4"/><circle cx="12" cy="15" r="5"/></svg>',
   };
   // PF1e price formulas, mirrored from backend so we can compute upgrade
   // costs without a round-trip. Keep in sync with db.js GEAR_SLOTS.
@@ -678,9 +677,8 @@
     shield: { label: 'Heavy Steel Shield',  mw: 170,  mult: 1000 },
     cloak:  { label: 'Cloak of Resistance', mw: 0,    mult: 1000 },
     ring:   { label: 'Ring of Protection',  mw: 0,    mult: 2000 },
-    amulet: { label: 'Amulet of Natural Armor', mw: 0, mult: 2000 },
   };
-  const GEAR_SLOTS = ['weapon', 'armor', 'shield', 'cloak', 'ring', 'amulet'];
+  const GEAR_SLOTS = ['weapon', 'armor', 'shield', 'cloak', 'ring'];
   function gearPrice(slot, tier) {
     const m = GEAR_META[slot];
     if (!m || tier < 1 || tier > 5) return 0;
@@ -700,7 +698,7 @@
     return `<div class="seat__gear">${cells}${totalStr}</div>`;
   }
 
-  const LOOT_LORD_TOTAL = 227135;   // +5 in all 6 slots, PF1e prices
+  const LOOT_LORD_TOTAL = 177135;   // +5 in all 5 slots, PF1e prices
 
   /** Build the bank rows + progress HTML — used inline inside the
    *  action panel when state.actpanelSection === 'bank'. */

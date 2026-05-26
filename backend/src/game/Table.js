@@ -696,7 +696,7 @@ class Table {
    *
    *  Strategy: breadth-first. The bot wants every slot at +N before
    *  any slot reaches +(N+1) — start by completing the +1 set across
-   *  all six slots, then move to +2, etc. up to +5 (LOOT LORD).
+   *  all five slots, then move to +2, etc. up to +5 (LOOT LORD).
    *  Among slots that are still at the lowest current tier (minTier),
    *  the bot picks the *cheapest* upgrade it can afford.
    *

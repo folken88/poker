@@ -47,9 +47,10 @@ ensureColumn('players', 'rebuy_debt', 'INTEGER NOT NULL DEFAULT 0');
 // '{"1":2,"2":1}' = two +1 longswords and one +2. LEGACY — superseded by
 // the `gear` column below. Left in place so older rows don't break.
 ensureColumn('players', 'swords',     "TEXT NOT NULL DEFAULT '{}'");
-// JSON object: { weapon: 5, armor: null, shield: 3, ring: null, amulet: 2, cloak: 4 }.
+// JSON object: { weapon: 5, armor: null, shield: 3, ring: null, cloak: 4 }.
+// (Amulet slot removed 2026-05; see migrateRemoveAmulet below.)
 // One slot per gear type, value = enhancement tier (1–5) or null/absent.
-// Players keep one item per slot. Goal: +5 in all six = LOOT LORD.
+// Players keep one item per slot. Goal: +5 in all five = LOOT LORD.
 ensureColumn('players', 'gear',       "TEXT NOT NULL DEFAULT '{}'");
 
 // Champions Board — one row per Loot Lord. Logged when someone hits +5
@@ -147,19 +148,19 @@ const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
 // ============================================================
 // PF1e GEAR ECONOMY
 // ============================================================
-// Six magic-item slots, each upgradeable from +1 to +5. Goal of the game:
+// Five magic-item slots, each upgradeable from +1 to +5. Goal of the game:
 // own a full +5 set across every slot. First player to do so is declared
 // the LOOT LORD, wins, and gets logged on the Champions Board.
 //
 // PF1e standard prices = base item + masterwork + enhancement(bonus² × multiplier).
-// Multipliers: weapon/ring/amulet ×2000, armor/shield/cloak ×1000.
+// Multipliers: weapon/ring ×2000, armor/shield/cloak ×1000.
+// (5-slot game — amulet slot was removed to save space on seat cards.)
 const GEAR_SLOTS = [
   { key: 'weapon', label: 'Longsword',           short: 'Weapon',  mw: 315,  multiplier: 2000 },
   { key: 'armor',  label: 'Full Plate',          short: 'Armor',   mw: 1650, multiplier: 1000 },
   { key: 'shield', label: 'Heavy Steel Shield',  short: 'Shield',  mw: 170,  multiplier: 1000 },
   { key: 'cloak',  label: 'Cloak of Resistance', short: 'Cloak',   mw: 0,    multiplier: 1000 },
   { key: 'ring',   label: 'Ring of Protection',  short: 'Ring',    mw: 0,    multiplier: 2000 },
-  { key: 'amulet', label: 'Amulet of Natural Armor', short: 'Amulet', mw: 0, multiplier: 2000 },
 ];
 const GEAR_SLOT_KEYS = GEAR_SLOTS.map(s => s.key);
 const GEAR_BY_KEY = Object.fromEntries(GEAR_SLOTS.map(s => [s.key, s]));
@@ -253,6 +254,35 @@ function migrateLegacySwords() {
 // migration above doesn't depend on the rest of the new gear system.
 const ALL_SWORD_PRICES_LEGACY = { 1: 2315, 2: 8315, 3: 18315, 4: 32315, 5: 50315 };
 migrateLegacySwords();
+
+// One-shot migration: amulet slot was removed (5-slot game now). Any
+// player carrying a +N amulet gets the FULL market price refunded
+// (not the usual 50% hock value — this is a forced removal, not a
+// player choice), and the amulet field is stripped from their gear.
+// Idempotent: re-running finds nothing matching the LIKE filter.
+const AMULET_PRICE = (tier) => 0 + tier * tier * 2000;  // mw=0, mult=2000
+function migrateRemoveAmulet() {
+  const rows = db.prepare("SELECT player_id, chips, gear FROM players WHERE gear LIKE '%amulet%'").all();
+  if (rows.length === 0) return;
+  let totalRefund = 0, affected = 0;
+  const tx = db.transaction(() => {
+    for (const row of rows) {
+      let gear = {};
+      try { gear = JSON.parse(row.gear) || {}; } catch { continue; }
+      if (!('amulet' in gear)) continue;
+      const tier = Number(gear.amulet) || 0;
+      const refund = tier > 0 ? AMULET_PRICE(tier) : 0;
+      delete gear.amulet;
+      db.prepare('UPDATE players SET chips = chips + ?, gear = ? WHERE player_id = ?')
+        .run(refund, JSON.stringify(gear), row.player_id);
+      totalRefund += refund;
+      affected++;
+    }
+  });
+  tx();
+  console.log(`[poker] migrated: removed amulet slot, refunded ${totalRefund.toLocaleString()} gp across ${affected} player(s)`);
+}
+migrateRemoveAmulet();
 
 function seedRoster() {
   const now = Date.now();

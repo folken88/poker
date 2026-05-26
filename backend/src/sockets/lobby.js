@@ -110,7 +110,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
   });
 
   // ---- Gear: buy / upgrade ----
-  // Body: { slot: 'weapon'|'armor'|'shield'|'cloak'|'ring'|'amulet', tier: 1-5 }
+  // Body: { slot: 'weapon'|'armor'|'shield'|'cloak'|'ring', tier: 1-5 }
   // Charges the chip difference between current item and target tier.
   socket.on('lobby:buyGear', ({ slot, tier } = {}, ack) => {
     const player = socket.data.player;
