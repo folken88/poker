@@ -384,7 +384,7 @@ class Table {
     }
     for (const s of this.seats) s.inHand = false;
     if (this.io) {
-      this.io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+      this.io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     }
     this._broadcast();
     this._scheduleAutoStart();
@@ -556,7 +556,7 @@ class Table {
     const lord = this._checkLootLord();
     if (lord) this._declareLootLord(lord);
     // Push a fresh roster so every client's topbar (state.me.chips) updates.
-    if (this.io) this.io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+    if (this.io) this.io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     // Record hand history (SQLite — for the UI/admin).
     try {
       db.insertHand({
@@ -624,7 +624,7 @@ class Table {
       for (const bot of this.bots.values()) bot.maybeShiftMode();
       // Push a fresh roster so clients see the bank totals AND the seat changes.
       if (vacated > 0 && this.io) {
-        this.io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+        this.io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
       }
       this._broadcast();
       this._scheduleAutoStart();
@@ -715,7 +715,7 @@ class Table {
     this.lootLord = null;
     this.chat('lootlord', `🃏 New game. Everyone back to ${db.DEFAULT_STACK.toLocaleString()} gp, gear cleared.`);
     if (this.io) {
-      this.io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+      this.io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     }
     this._broadcast();
   }

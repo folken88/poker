@@ -1364,7 +1364,9 @@
     });
     closeBotPicker();
   }
-  $('#addBotBtn').addEventListener('click', openBotPicker);
+  // "+ Bot" = random AI (fast path), "Pick AI ▾" opens the modal picker.
+  $('#addBotBtn').addEventListener('click', () => emitAddBot(null));
+  $('#pickBotBtn').addEventListener('click', openBotPicker);
   $('#botPickerModal').addEventListener('click', (e) => {
     if (e.target.closest('[data-close-bot-picker]')) { closeBotPicker(); return; }
     if (e.target.closest('#botPickerRandom')) { emitAddBot(null); return; }

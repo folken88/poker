@@ -306,6 +306,11 @@ function listPlayers() {
 }
 function listHumans() { return stmts.listHumans.all(); }
 function listBots()   { return stmts.listBots.all();   }
+/** Full roster snapshot for the lobby:roster event. Returns humans
+ *  first (for the picker UI), then bots. The wealth-ranked
+ *  leaderboard + bot picker on the client need this whole list, not
+ *  just one half. */
+function listAll()    { return [...listHumans(), ...listBots()]; }
 function touchPlayer(playerId) {
   stmts.touchPlayer.run(Date.now(), playerId);
 }
@@ -401,6 +406,7 @@ module.exports = {
   listPlayers,
   listHumans,
   listBots,
+  listAll,
   touchPlayer,
   setChips,
   addRebuyDebt,

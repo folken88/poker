@@ -18,14 +18,10 @@ function registerLobbyHandlers(io, socket, { tables }) {
 
   // Roster snapshot includes everyone — humans AND bots. Bots are
   // playable identities; picking one lets a human supersede the AI.
-  function fullRoster() {
-    // Humans first, then bots — sorted within each group.
-    return [...db.listHumans(), ...db.listBots()];
-  }
-  socket.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
+  socket.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
 
   socket.on('lobby:roster', (_p, ack) => {
-    ack?.({ ok: true, players: fullRoster(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, players: db.listAll(), defaultStack: db.DEFAULT_STACK });
   });
 
   socket.on('lobby:choosePlayer', ({ playerId } = {}, ack) => {
@@ -62,7 +58,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
     db.db.prepare('UPDATE players SET avatar_id = ?, last_seen_at = ? WHERE player_id = ?').run(avatarId, Date.now(), player.player_id);
     const refreshed = db.getPlayer(player.player_id);
     socket.data.player = refreshed;
-    io.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, player: refreshed });
   });
 
@@ -84,7 +80,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
       table.chat('rebuy', humanRebuyMessage(refreshed.nickname, db.DEFAULT_STACK));
       table._broadcast?.();
     }
-    io.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, chips: refreshed.chips, rebuyDebt: refreshed.rebuy_debt });
   });
 
@@ -109,7 +105,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
       table.chat('debt', `💸 ${refreshed.nickname} paid down ${amt.toLocaleString()} gp of debt. (Owes ${refreshed.rebuy_debt.toLocaleString()} gp.)`);
       table._broadcast?.();
     }
-    io.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, chips: refreshed.chips, rebuyDebt: refreshed.rebuy_debt });
   });
 
@@ -151,7 +147,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
       }
       table._broadcast?.();
     }
-    io.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, chips: refreshed.chips, gear });
   });
 
@@ -179,7 +175,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
       table.chat('rebuy', `💰 ${refreshed.nickname} hocked a +${cur} ${itemName} for ${refund.toLocaleString()} gp.`);
       table._broadcast?.();
     }
-    io.emit('roster', { players: fullRoster(), defaultStack: db.DEFAULT_STACK });
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, chips: refreshed.chips, gear, refund });
   });
 

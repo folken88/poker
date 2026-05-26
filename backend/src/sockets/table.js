@@ -101,7 +101,7 @@ function registerTableHandlers(io, socket, { tables }) {
     const result = table.seatBot(botId);
     if (!result.ok) return ack?.(result);
     io.to(table.roomName()).emit('table:state', table.publicState());
-    io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, seatIndex: result.seatIndex, playerId: botId });
   });
 
