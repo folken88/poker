@@ -110,6 +110,12 @@
       if (!r.ok) throw new Error('manifest ' + r.status);
       const data = await r.json();
       if (!Array.isArray(data)) throw new Error('bad manifest shape');
+      // Surface campaign PCs first (they're the people the user
+      // probably wants to pick). Then everything else, alphabetical.
+      data.sort((a, b) => {
+        if (!!b.pc - !!a.pc) return !!b.pc - !!a.pc;
+        return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+      });
       state.tokens = data;
     } catch (e) {
       console.warn('[tokens] could not load gallery:', e);
@@ -125,7 +131,12 @@
     const tokens = state.tokens || [];
     const q = query.trim().toLowerCase();
     const matched = q
-      ? tokens.filter(t => t.name.toLowerCase().includes(q) || t.id.toLowerCase().includes(q))
+      ? tokens.filter(t =>
+          t.name.toLowerCase().includes(q)
+          || t.id.toLowerCase().includes(q)
+          || (t.class || '').toLowerCase().includes(q)
+          || (t.race  || '').toLowerCase().includes(q)
+          || (t.player|| '').toLowerCase().includes(q))
       : tokens;
     const counter = $('#tokenCount');
     if (counter) counter.textContent =
@@ -142,8 +153,14 @@
       btn.dataset.avatar = tok.art;
       btn.title = tok.name;
       btn.setAttribute('aria-checked', tok.art === state.pendingAvatar ? 'true' : 'false');
-      btn.innerHTML = `<img class="avatar-img" src="${tok.art}" alt="${tok.name}" loading="lazy" />`
-                    + `<span class="avatar-pick__label">${tok.name}</span>`;
+      const subLine = tok.pc
+        ? `<span class="avatar-pick__sub">${escapeText([tok.race, tok.class].filter(Boolean).join(' · '))}</span>`
+        : '';
+      const pcBadge = tok.pc ? `<span class="avatar-pick__pcbadge" title="Campaign PC${tok.player ? ' · ' + escapeText(tok.player) : ''}">PC</span>` : '';
+      btn.innerHTML = `<img class="avatar-img" src="${tok.art}" alt="${escapeAttr(tok.name)}" loading="lazy" />`
+                    + pcBadge
+                    + `<span class="avatar-pick__label">${escapeText(tok.name)}</span>`
+                    + subLine;
       btn.addEventListener('click', () => {
         state.pendingAvatar = tok.art;
         $('#confirmAvatarBig').innerHTML = `<img class="avatar-img" src="${tok.art}" alt="${tok.name}" />`;

@@ -60,20 +60,22 @@ const ROSTER = [
 ];
 
 // AI players — pre-seeded, available via "Add bot" button. Personality
-// = baseMode. Bots impersonate notable Cassbot-vault PCs whose tokens were
-// imported permanently into public/assets/characters/ (see
-// scripts/import-vault-tokens.js + manifest.json). The game does NOT depend
-// on the live Foundry character art mount.
+// = baseMode. Bots impersonate notable Cassbot-vault PCs whose tokens
+// were imported into public/tokens/ via scripts/import-token-gallery.js
+// (which now also merges in PC-matched tokens from import-vault-tokens.js).
+// All avatar paths share the /tokens/ root so the player gallery and
+// the bot avatars draw from the same gitignored folder. Re-running the
+// import script overwrites the files but keeps the same slugs.
 const BOT_ROSTER = [
   // Cautious — careful clerics / tacticians
-  { name: 'Dinvaya',              avatar: '/assets/characters/dinvaya.webp',              baseMode: 'cautious' },
-  { name: 'Vaughan',              avatar: '/assets/characters/vaughan.webp',              baseMode: 'cautious' },
+  { name: 'Dinvaya',              avatar: '/tokens/dinvaya.webp',              baseMode: 'cautious' },
+  { name: 'Vaughan',              avatar: '/tokens/vaughan.webp',              baseMode: 'cautious' },
   // Standard — steady frontline / calculating
-  { name: 'Storgrim Thunderbeard', avatar: '/assets/characters/storgrim-thunderbeard.webp', baseMode: 'standard' },
-  { name: 'Kate Blackwood',        avatar: '/assets/characters/kate-blackwood.webp',        baseMode: 'standard' },
+  { name: 'Storgrim Thunderbeard', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'standard' },
+  { name: 'Kate Blackwood',        avatar: '/tokens/kate-blackwood.webp',        baseMode: 'standard' },
   // Risky — chaotic / bold
-  { name: 'Kovira',               avatar: '/assets/characters/kovira.webp',               baseMode: 'risky'    },
-  { name: 'Elfrip',               avatar: '/assets/characters/elfrip.webp',               baseMode: 'risky'    },
+  { name: 'Kovira',               avatar: '/tokens/kovira.webp',               baseMode: 'risky'    },
+  { name: 'Elfrip',               avatar: '/tokens/elfrip.webp',               baseMode: 'risky'    },
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);

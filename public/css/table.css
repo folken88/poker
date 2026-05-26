@@ -246,6 +246,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 }
 /* Token-pick variant: square art on top, name label below. */
 .avatar-pick--token {
+  position: relative;
   border-radius: 12px;
 }
 .avatar-pick--token .avatar-img {
@@ -258,13 +259,36 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .avatar-pick__label {
   font-size: 0.66rem;
   letter-spacing: 0.02em;
-  color: var(--ivory-dim);
+  color: var(--ivory);
   text-align: center;
   line-height: 1.15;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.avatar-pick__sub {
+  font-size: 0.58rem;
+  letter-spacing: 0.02em;
+  color: var(--ivory-dim);
+  text-align: center;
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.avatar-pick__pcbadge {
+  position: absolute;
+  top: 4px; left: 4px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 1px 4px;
+  background: linear-gradient(180deg, var(--brass-bright), var(--brass));
+  color: #2a1a05;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 .avatar-pick__more {
   grid-column: 1 / -1;
