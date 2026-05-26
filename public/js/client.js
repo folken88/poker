@@ -678,12 +678,13 @@
   };
   // PF1e price formulas, mirrored from backend so we can compute upgrade
   // costs without a round-trip. Keep in sync with db.js GEAR_SLOTS.
+  // `short` is the column label used in the bank UI.
   const GEAR_META = {
-    weapon: { label: 'Longsword',           mw: 315,  mult: 2000 },
-    armor:  { label: 'Full Plate',          mw: 1650, mult: 1000 },
-    shield: { label: 'Heavy Steel Shield',  mw: 170,  mult: 1000 },
-    cloak:  { label: 'Cloak of Resistance', mw: 0,    mult: 1000 },
-    ring:   { label: 'Ring of Protection',  mw: 0,    mult: 2000 },
+    weapon: { label: 'Longsword',              short: 'Weapon', mw: 315,  mult: 2000 },
+    armor:  { label: 'Full Plate',             short: 'Armor',  mw: 1650, mult: 1000 },
+    shield: { label: 'Heavy Steel Shield',     short: 'Shield', mw: 170,  mult: 1000 },
+    cloak:  { label: 'Cloak of Resistance',    short: 'Cloak',  mw: 0,    mult: 1000 },
+    ring:   { label: 'Ring of Protection',     short: 'Ring',   mw: 0,    mult: 2000 },
   };
   const GEAR_SLOTS = ['weapon', 'armor', 'shield', 'cloak', 'ring'];
   function gearPrice(slot, tier) {
