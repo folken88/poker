@@ -844,41 +844,46 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .actpanel--idle .actpanel__amount { opacity: 0.45; }
 .actpanel--idle { border-color: rgba(241,207,131,0.2); }
 
-/* ===== Gear bank (bottom-right of felt) ===== */
-.bank {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  width: 280px;
-  max-height: calc(100% - 24px);
-  overflow: auto;
-  background: linear-gradient(180deg, rgba(8,16,11,0.95), rgba(5,10,7,0.98));
-  border: 1px solid rgba(241,207,131,0.3);
-  border-radius: 12px;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.55);
-  font-size: 0.74rem;
-  z-index: 15;
-  color: var(--ivory);
+/* ===== Action panel toggle row (🎒 Loot Bank / 🏆 Leaderboard) ===== */
+.actpanel__toggles {
+  display: flex; gap: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(241,207,131,0.15);
 }
-.bank--collapsed .bank__body { display: none; }
-.bank--collapsed { width: auto; }
-.bank__head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 4px 8px 4px 12px;
-  border-bottom: 1px solid rgba(241,207,131,0.18);
+.actpanel__toggle {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  background: rgba(217,176,106,0.08);
+  border: 1px solid rgba(217,176,106,0.22);
+  color: var(--ivory-dim);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
 }
-.bank__title {
-  margin: 0;
-  font-family: var(--font-display);
-  letter-spacing: 0.14em;
+.actpanel__toggle:hover { background: rgba(217,176,106,0.18); color: var(--ivory); }
+.actpanel__toggle.is-open {
+  background: rgba(217,176,106,0.25);
+  border-color: var(--brass);
   color: var(--brass-bright);
-  font-size: 0.92rem;
+  font-weight: 600;
 }
-.bank__collapse {
-  background: transparent; border: none; color: var(--ivory-dim);
-  font-size: 1rem; cursor: pointer; line-height: 1; padding: 4px 6px;
+.actpanel__section {
+  margin-top: 6px;
+  max-height: 360px;
+  overflow-y: auto;
+  border-top: 1px solid rgba(241,207,131,0.12);
+  padding-top: 6px;
 }
-.bank__body { padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+
+/* ===== Gear bank (now inline inside the action panel) ===== */
+.bank {
+  font-size: 0.74rem;
+  color: var(--ivory);
+  display: flex; flex-direction: column; gap: 4px;
+}
 .bank__row {
   display: grid;
   grid-template-columns: 26px 1fr auto;
@@ -942,6 +947,55 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   letter-spacing: 0.04em;
   color: var(--ivory);
   text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+/* ===== Leaderboard (inside actpanel) ===== */
+.lb {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex; flex-direction: column;
+  gap: 2px;
+}
+.lb__row {
+  display: grid;
+  grid-template-columns: 24px 24px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(241,207,131,0.1);
+  border-radius: 6px;
+  font-size: 0.72rem;
+}
+.lb__row.is-me {
+  background: rgba(217,176,106,0.18);
+  border-color: var(--brass);
+}
+.lb__rank { text-align: center; font-variant-numeric: tabular-nums; }
+.lb__avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(217,176,106,0.4);
+}
+.lb__avatar img, .lb__avatar svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lb__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb__bot {
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  padding: 0 4px;
+  margin-left: 4px;
+  background: rgba(122,245,255,0.12);
+  color: #7af5ff;
+  border-radius: 3px;
+}
+.lb__wealth {
+  font-variant-numeric: tabular-nums;
+  color: var(--brass-bright);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* ===== Seat gear strip (small icons under the chip line) ===== */

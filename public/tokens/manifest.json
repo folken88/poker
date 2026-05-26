@@ -340,6 +340,30 @@
     "campaign": null
   },
   {
+    "id": "concetta",
+    "name": "Concetta",
+    "art": "/tokens/concetta.webp",
+    "sourceFile": "carrion_crown_characters/token_human_female_concetta_swashbuckler_sword.webp",
+    "mtime": "2024-01-10T15:44:00.000Z",
+    "size": 10268,
+    "villain": true,
+    "race": "Human",
+    "class": "Swashbuckler",
+    "campaign": "CC"
+  },
+  {
+    "id": "conchobar",
+    "name": "Conchobar",
+    "art": "/tokens/conchobar.webp",
+    "sourceFile": "shackles_characters/token_gnome_conchobar_2_male_bard_shackles_red_eye.webp",
+    "mtime": "2026-01-23T01:00:51.171Z",
+    "size": 39862,
+    "villain": true,
+    "race": "Gnome",
+    "class": "Bard (Shackles)",
+    "campaign": "SS"
+  },
+  {
     "id": "token-human-male-connor-apprentice",
     "name": "Connor Apprentice",
     "art": "/tokens/token-human-male-connor-apprentice.webp",
@@ -382,6 +406,18 @@
     "sourceFile": "human/token_human_danger_male_spirit_camo.png",
     "mtime": "2026-05-24T05:36:59.419Z",
     "size": 460997
+  },
+  {
+    "id": "daramid",
+    "name": "Daramid",
+    "art": "/tokens/daramid.webp",
+    "sourceFile": "carrion_crown_characters/token_human_female_woman_judge_wearing_a_noblewomans_suit_in_black_darymid.webp",
+    "mtime": "2024-01-10T15:44:34.000Z",
+    "size": 13230,
+    "villain": true,
+    "race": "Human",
+    "class": "Judge of Lepidstadt",
+    "campaign": "CC"
   },
   {
     "id": "token-demon-veiltear",
@@ -518,6 +554,18 @@
     "size": 40320
   },
   {
+    "id": "farrah",
+    "name": "Farrah",
+    "art": "/tokens/farrah.webp",
+    "sourceFile": "carrion_crown_characters/token_human_female_redhead_farrah_richton_teenage2.webp",
+    "mtime": "2024-03-02T17:02:02.000Z",
+    "size": 8430,
+    "villain": true,
+    "race": "Human",
+    "class": "Teenage Heir (Richton)",
+    "campaign": "CC"
+  },
+  {
     "id": "femmik-embersword",
     "name": "Femmik Embersword",
     "art": "/tokens/femmik-embersword.webp",
@@ -530,6 +578,18 @@
     "level": "12",
     "player": "Harrison",
     "campaign": "HR"
+  },
+  {
+    "id": "fera",
+    "name": "Fera",
+    "art": "/tokens/fera.webp",
+    "sourceFile": "halfling/token_halfling_female_readhead_fera_.webp",
+    "mtime": "2024-01-10T15:44:26.000Z",
+    "size": 10016,
+    "villain": true,
+    "race": "Halfling",
+    "class": "Redhead",
+    "campaign": "CC"
   },
   {
     "id": "field-marshal-freya-kusanagi",
@@ -574,6 +634,18 @@
     "sourceFile": "deathcourt/token_gallows_shade_spirit.webp",
     "mtime": "2026-03-15T04:29:18.485Z",
     "size": 10548
+  },
+  {
+    "id": "gaspar",
+    "name": "Gaspar",
+    "art": "/tokens/gaspar.webp",
+    "sourceFile": "carrion_crown_characters/token_human_male_gaspar_inquisitor_cowboy_plate.webp",
+    "mtime": "2024-01-10T15:44:34.000Z",
+    "size": 11804,
+    "villain": true,
+    "race": "Human",
+    "class": "Inquisitor (Cowboy Plate)",
+    "campaign": "CC"
   },
   {
     "id": "token-human-gaspar-spirit-white",
@@ -1030,6 +1102,18 @@
     "level": "5",
     "player": "Mandi",
     "campaign": "SS"
+  },
+  {
+    "id": "rissa",
+    "name": "Rissa",
+    "art": "/tokens/rissa.webp",
+    "sourceFile": "carrion_crown_characters/token_golem_made_of_wood_49_years_old_druid_dd_charact.webp",
+    "mtime": "2024-08-10T13:50:28.000Z",
+    "size": 9810,
+    "villain": true,
+    "race": "Wood Golem",
+    "class": "Druid",
+    "campaign": "CC"
   },
   {
     "id": "token-robot-octopus-monster-tentacles-electricity3",

@@ -108,6 +108,17 @@ const BOT_ROSTER = [
   { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious' }, // underworld doctor
   { name: 'Toni',                 avatar: '/tokens/antoinette-borden.webp',      baseMode: 'risky'    }, // Antoinette Borden, Mandi's magus
   { name: 'Agu',                  avatar: '/tokens/aguclandos-lem.webp',         baseMode: 'cautious' }, // elf inquisitor, purple hair (Lydia)
+
+  // Round 3 additions — user-specified tokens (see scripts/villains.json
+  // for source paths). Concetta + Conchobar pinned to high-risk per
+  // user instruction.
+  { name: 'Fera',                 avatar: '/tokens/fera.webp',                   baseMode: 'cautious' },
+  { name: 'Gaspar',               avatar: '/tokens/gaspar.webp',                 baseMode: 'standard' },
+  { name: 'Daramid',              avatar: '/tokens/daramid.webp',                baseMode: 'cautious' },
+  { name: 'Farrah',               avatar: '/tokens/farrah.webp',                 baseMode: 'standard' },
+  { name: 'Concetta',             avatar: '/tokens/concetta.webp',               baseMode: 'risky'    }, // explicit: highly intelligent + risky
+  { name: 'Rissa',                avatar: '/tokens/rissa.webp',                  baseMode: 'standard' },
+  { name: 'Conchobar',            avatar: '/tokens/conchobar.webp',              baseMode: 'risky'    }, // explicit: always high-risk
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);

@@ -23,6 +23,13 @@
     { "name": "Texas Holden",         "campaign": null, "race": "Human",      "class": "Captain · Oblivious Swashbuckler",    "source": "human/token_human_male_holden_captain_oblivious_swashbuckler_s.webp" },
     { "name": "John Wizard",          "campaign": null, "race": "Human",      "class": "Wizard (Biker Gang)",                  "source": "human/token_human_male_john__wizard_in_a_biker_gang_big_grey.webp" },
     { "name": "Chief",                "campaign": null, "race": "Human",      "class": "Master Chief (Gothic Fantasy)",        "source": "human/token_human_male_master_chief_dark_gothic_fantasy_setting_saga.webp" },
-    { "name": "Crisp",                "campaign": "JG", "race": "Velociraptor","class": "Animal Companion · Loyal Reptile",  "source": "animal/token_animal_dino_crisp_crossbow.webp" }
+    { "name": "Crisp",                "campaign": "JG", "race": "Velociraptor","class": "Animal Companion · Loyal Reptile",  "source": "animal/token_animal_dino_crisp_crossbow.webp" },
+    { "name": "Fera",                 "campaign": "CC", "race": "Halfling",   "class": "Redhead",                              "source": "halfling/token_halfling_female_readhead_fera_.webp" },
+    { "name": "Gaspar",               "campaign": "CC", "race": "Human",      "class": "Inquisitor (Cowboy Plate)",            "source": "carrion_crown_characters/token_human_male_gaspar_inquisitor_cowboy_plate.webp" },
+    { "name": "Daramid",              "campaign": "CC", "race": "Human",      "class": "Judge of Lepidstadt",                  "source": "carrion_crown_characters/token_human_female_woman_judge_wearing_a_noblewomans_suit_in_black_darymid.webp" },
+    { "name": "Farrah",               "campaign": "CC", "race": "Human",      "class": "Teenage Heir (Richton)",               "source": "carrion_crown_characters/token_human_female_redhead_farrah_richton_teenage2.webp" },
+    { "name": "Concetta",             "campaign": "CC", "race": "Human",      "class": "Swashbuckler",                          "source": "carrion_crown_characters/token_human_female_concetta_swashbuckler_sword.webp" },
+    { "name": "Rissa",                "campaign": "CC", "race": "Wood Golem", "class": "Druid",                                  "source": "carrion_crown_characters/token_golem_made_of_wood_49_years_old_druid_dd_charact.webp" },
+    { "name": "Conchobar",            "campaign": "SS", "race": "Gnome",      "class": "Bard (Shackles)",                       "source": "shackles_characters/token_gnome_conchobar_2_male_bard_shackles_red_eye.webp" }
   ]
 }

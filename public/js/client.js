@@ -24,6 +24,9 @@
      *  sessionStorage so it survives refresh/re-deal within the session.
      *  Null = use the CSS default placement (centered under/over seat). */
     actpanelOffset: null,
+    /** Which collapsible section inside the action panel is open right
+     *  now: 'bank' | 'leaderboard' | null. */
+    actpanelSection: null,
   };
 
   // (Initial restore happens lazily via readActpanelOffset on first apply.)
@@ -521,11 +524,11 @@
   }
 
   const LOOT_LORD_TOTAL = 227135;   // +5 in all 6 slots, PF1e prices
-  function renderBank() {
-    const host = $('#bankPanel');
-    if (!host) return;
-    if (!state.me) { host.hidden = true; return; }
-    host.hidden = false;
+
+  /** Build the bank rows + progress HTML — used inline inside the
+   *  action panel when state.actpanelSection === 'bank'. */
+  function buildBankHtml() {
+    if (!state.me) return '';
     const t = state.table;
     const mySeat = t?.seats?.find(s => s.playerId === state.me.player_id);
     const gear = (mySeat?.gear) || {};
@@ -535,23 +538,22 @@
       const cur = gear[slot] || 0;
       const meta = GEAR_META[slot];
       const next = cur < 5 ? cur + 1 : null;
-      const nextPrice = next ? gearPrice(slot, next) : 0;
-      const upgradeCost = next ? nextPrice - (cur ? gearPrice(slot, cur) : 0) : 0;
+      const upgradeCost = next ? gearPrice(slot, next) - (cur ? gearPrice(slot, cur) : 0) : 0;
       const canAfford = upgradeCost > 0 && chips >= upgradeCost;
       const sellValue = cur ? Math.floor(gearPrice(slot, cur) / 2) : 0;
       const tierBadge = cur
         ? `<span class="bank__tier bank__tier--${cur===5?'max':'on'}">+${cur}</span>`
         : `<span class="bank__tier bank__tier--off">—</span>`;
       const upgradeBtn = next
-        ? `<button type="button" class="bank__btn bank__btn--buy" ${canAfford?'':'disabled'} data-buy-slot="${slot}" data-buy-tier="${next}" title="${cur?'Upgrade to':'Buy a'} +${next} ${meta.label} for ${upgradeCost.toLocaleString()} gp">${cur?'Upgrade to':'Buy'} +${next}<br><small>${formatChips(upgradeCost)} gp</small></button>`
+        ? `<button type="button" class="bank__btn bank__btn--buy" ${canAfford?'':'disabled'} data-buy-slot="${slot}" data-buy-tier="${next}" title="${cur?'Upgrade to':'Buy a'} +${next} ${meta.label} for ${upgradeCost.toLocaleString()} gp">${cur?'+':'Buy +'}${next}<br><small>${formatChips(upgradeCost)} gp</small></button>`
         : `<button type="button" class="bank__btn bank__btn--max" disabled title="Maxed">+5 ✓</button>`;
       const sellBtn = cur
-        ? `<button type="button" class="bank__btn bank__btn--sell" data-sell-slot="${slot}" title="Hock for ${sellValue.toLocaleString()} gp (50% of market price)">Hock<br><small>+${formatChips(sellValue)} gp</small></button>`
+        ? `<button type="button" class="bank__btn bank__btn--sell" data-sell-slot="${slot}" title="Hock for ${sellValue.toLocaleString()} gp (50% market)">Hock<br><small>+${formatChips(sellValue)}</small></button>`
         : '';
       return `
         <div class="bank__row">
           <div class="bank__icon" title="${meta.label}">${GEAR_SVGS[slot]}</div>
-          <div class="bank__label">${meta.label}</div>
+          <div class="bank__label">${meta.short}</div>
           ${tierBadge}
           <div class="bank__actions">${upgradeBtn}${sellBtn}</div>
         </div>`;
@@ -563,19 +565,56 @@
     }, 0);
     const progressPct = Math.min(100, Math.round((totalValue / LOOT_LORD_TOTAL) * 100));
 
-    host.innerHTML = `
-      <header class="bank__head">
-        <h3 class="bank__title">⚔️ Loot Bank</h3>
-        <button type="button" class="bank__collapse" id="bankCollapse" title="Collapse / expand">−</button>
-      </header>
-      <div class="bank__body">
+    return `
+      <div class="bank">
         ${rows}
         <div class="bank__progress" title="Progress to LOOT LORD (full +5 set)">
           <div class="bank__progress-bar" style="width:${progressPct}%"></div>
-          <span class="bank__progress-text">${formatChips(totalValue)} / ${formatChips(LOOT_LORD_TOTAL)} gp · ${progressPct}% to LOOT LORD</span>
+          <span class="bank__progress-text">${formatChips(totalValue)} / ${formatChips(LOOT_LORD_TOTAL)} · ${progressPct}%</span>
         </div>
       </div>`;
   }
+
+  /** Wealth ranking — chips + total gear value, descending. Returns HTML.
+   *  Pulls from state.roster (which carries all humans + bots after the
+   *  lobby:roster broadcast). Top 10 only — keeps the panel compact. */
+  function buildLeaderboardHtml() {
+    const all = (state.roster || []).slice();
+    const meId = state.me?.player_id;
+    function wealthOf(p) {
+      let total = Number(p.chips || 0);
+      try {
+        const gear = JSON.parse(p.gear || '{}') || {};
+        for (const slot of GEAR_SLOTS) {
+          const tier = gear[slot] || 0;
+          if (tier) total += gearPrice(slot, tier);
+        }
+      } catch (_) {}
+      return total;
+    }
+    const ranked = all
+      .map(p => ({ p, wealth: wealthOf(p) }))
+      .sort((a, b) => b.wealth - a.wealth)
+      .slice(0, 10);
+
+    const rows = ranked.map((row, i) => {
+      const p = row.p;
+      const mine = p.player_id === meId ? 'is-me' : '';
+      const rankMedal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1) + '.';
+      const lord = p.is_bot ? 'AI' : '';
+      return `
+        <li class="lb__row ${mine}">
+          <span class="lb__rank">${rankMedal}</span>
+          <span class="lb__avatar">${renderAvatar(p.avatar_id)}</span>
+          <span class="lb__name">${escapeText(p.nickname)}${lord?'<span class="lb__bot">'+lord+'</span>':''}</span>
+          <span class="lb__wealth">${formatChips(row.wealth)} gp</span>
+        </li>`;
+    }).join('');
+    return `<ol class="lb">${rows}</ol>`;
+  }
+
+  /** Legacy no-op — bank now lives inline inside the action panel. */
+  function renderBank() { /* see buildBankHtml inside actpanel */ }
 
   // ===== LOOT LORD ceremony overlay =====
   function renderLootLord() {
@@ -793,14 +832,28 @@
    *  with another. `canAct` toggles disabled state on the buttons so the
    *  panel stays visible even when it's not the user's turn. */
   function buildActionPanelInner(hand, me, canAct) {
-    // If no live hand / no seat, show a minimal "Waiting" panel.
+    // If no live hand / no seat, show a minimal "Waiting" panel — still
+    // include the bank/leaderboard toggles so the player can shop or
+    // check the rankings while waiting for the next deal.
     if (!hand || !me) {
+      const sec = state.actpanelSection;
+      const togglesHtml = `
+        <div class="actpanel__toggles">
+          <button type="button" class="actpanel__toggle ${sec==='bank'?'is-open':''}" data-toggle-section="bank">🎒 Loot Bank ${sec==='bank'?'▾':'▸'}</button>
+          <button type="button" class="actpanel__toggle ${sec==='leaderboard'?'is-open':''}" data-toggle-section="leaderboard">🏆 Leaderboard ${sec==='leaderboard'?'▾':'▸'}</button>
+        </div>`;
+      const sectionHtml =
+        sec === 'bank'        ? `<div class="actpanel__section">${buildBankHtml()}</div>` :
+        sec === 'leaderboard' ? `<div class="actpanel__section">${buildLeaderboardHtml()}</div>` :
+        '';
       return `
         <div class="actpanel__drag" data-actpanel-drag title="Drag to move · click reset to recenter">
           <span class="actpanel__drag-grip">⋮⋮</span>
           <span class="actpanel__status">${hand ? 'Spectating' : 'Waiting for next hand'}</span>
           <button type="button" class="actpanel__drag-reset" data-actpanel-reset title="Reset to default position">reset</button>
-        </div>`;
+        </div>
+        ${togglesHtml}
+        ${sectionHtml}`;
     }
     const toCall = Math.max(0, hand.currentBet - me.invested);
     const minRaiseTo = Math.max(hand.currentBet + hand.minRaise, hand.currentBet + 1);
@@ -856,6 +909,17 @@
       ? `to call ${formatChips(toCall)} · pot ${formatChips(potNow)}`
       : `pot ${formatChips(potNow)} · waiting on opponent`;
 
+    const sec = state.actpanelSection;
+    const togglesHtml = `
+      <div class="actpanel__toggles">
+        <button type="button" class="actpanel__toggle ${sec==='bank'?'is-open':''}" data-toggle-section="bank">🎒 Loot Bank ${sec==='bank'?'▾':'▸'}</button>
+        <button type="button" class="actpanel__toggle ${sec==='leaderboard'?'is-open':''}" data-toggle-section="leaderboard">🏆 Leaderboard ${sec==='leaderboard'?'▾':'▸'}</button>
+      </div>`;
+    const sectionHtml =
+      sec === 'bank'        ? `<div class="actpanel__section">${buildBankHtml()}</div>` :
+      sec === 'leaderboard' ? `<div class="actpanel__section">${buildLeaderboardHtml()}</div>` :
+      '';
+
     return `
       <div class="actpanel__drag" data-actpanel-drag title="Drag to move · click reset to recenter">
         <span class="actpanel__drag-grip">⋮⋮</span>
@@ -874,6 +938,8 @@
         <button class="btn btn--accent actpanel__btn" data-act="raise" ${dis}>Raise to</button>
       </div>
       <div class="actpanel__presets">${presetHtml}</div>
+      ${togglesHtml}
+      ${sectionHtml}
     `;
   }
 
@@ -961,6 +1027,38 @@
 
   // Action panel clicks (now OUTSIDE the seat ring — delegate on document).
   document.addEventListener('click', (e) => {
+    // Bank / Leaderboard toggle buttons inside the actpanel.
+    const toggle = e.target.closest('[data-toggle-section]');
+    if (toggle) {
+      e.preventDefault();
+      const section = toggle.dataset.toggleSection;
+      state.actpanelSection = (state.actpanelSection === section) ? null : section;
+      renderActionPanel();
+      applyActpanelOffset();
+      return;
+    }
+    // Bank: buy / upgrade
+    const buy = e.target.closest('[data-buy-slot]');
+    if (buy) {
+      e.preventDefault();
+      const slot = buy.dataset.buySlot;
+      const tier = Number(buy.dataset.buyTier);
+      socket.emit('lobby:buyGear', { slot, tier }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not buy', true); return; }
+      });
+      return;
+    }
+    // Bank: sell / hock
+    const sell = e.target.closest('[data-sell-slot]');
+    if (sell) {
+      e.preventDefault();
+      const slot = sell.dataset.sellSlot;
+      socket.emit('lobby:sellGear', { slot }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not sell', true); return; }
+        toast(`Hocked your ${GEAR_META[slot].label} for ${formatChips(resp.refund)} gp`);
+      });
+      return;
+    }
     // Preset chip → fill the raise input
     const preset = e.target.closest('button[data-raise]');
     if (preset) {
@@ -1055,34 +1153,8 @@
   });
   // (Per-bot × buttons handle removal — wired in the seatRing delegate above.)
 
-  // ---- Gear bank: buy / upgrade / sell (delegated on #bankPanel) ----
-  $('#bankPanel').addEventListener('click', (e) => {
-    const buy = e.target.closest('[data-buy-slot]');
-    if (buy) {
-      e.preventDefault();
-      const slot = buy.dataset.buySlot;
-      const tier = Number(buy.dataset.buyTier);
-      socket.emit('lobby:buyGear', { slot, tier }, (resp) => {
-        if (!resp?.ok) { toast(resp?.error || 'Could not buy', true); return; }
-        // state.me chip total gets refreshed via the roster broadcast.
-      });
-      return;
-    }
-    const sell = e.target.closest('[data-sell-slot]');
-    if (sell) {
-      e.preventDefault();
-      const slot = sell.dataset.sellSlot;
-      socket.emit('lobby:sellGear', { slot }, (resp) => {
-        if (!resp?.ok) { toast(resp?.error || 'Could not sell', true); return; }
-        toast(`Hocked your ${GEAR_META[slot].label} for ${formatChips(resp.refund)} gp`);
-      });
-      return;
-    }
-    // Collapse / expand
-    if (e.target.closest('#bankCollapse')) {
-      $('#bankPanel')?.classList.toggle('bank--collapsed');
-    }
-  });
+  // (Bank buy/sell handlers now live in the document-level click delegate
+  // above — bank UI is inline inside the actpanel.)
 
   // ---- Reset modal ----
   const resetModal = $('#resetModal');
