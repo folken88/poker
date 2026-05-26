@@ -17,3 +17,12 @@ public/assets/characters/*.png
 public/assets/characters/*.jpg
 public/assets/characters/*.jpeg
 !public/assets/characters/manifest.json
+
+# Player-avatar gallery imported from FVTT via scripts/import-token-gallery.js
+# (token_* files modified within last 90 days). Same rationale — manifest
+# committed, binaries gitignored.
+public/tokens/*.webp
+public/tokens/*.png
+public/tokens/*.jpg
+public/tokens/*.jpeg
+!public/tokens/manifest.json

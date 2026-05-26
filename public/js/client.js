@@ -17,6 +17,9 @@
     pendingPlayerId: null,
     pendingAvatar: null,
     winnerBannerTimer: null,
+    /** Player avatar gallery — lazy-loaded from /tokens/manifest.json on
+     *  first roster pick. Array of { id, name, art }. */
+    tokens: null,
   };
 
   function setScreen(name) { document.body.dataset.screen = name; }
@@ -99,31 +102,82 @@
     renderConfirm();
   }
 
-  // ===== Confirm =====
-  function renderConfirm() {
-    const p = state.roster.find(r => r.player_id === state.pendingPlayerId);
-    if (!p) { setScreen('roster'); return; }
-    $('#confirmNick').textContent = p.nickname;
-    $('#confirmAvatarBig').innerHTML = renderAvatar(state.pendingAvatar);
+  // ===== Confirm — token gallery picker =====
+  async function ensureTokensLoaded() {
+    if (state.tokens) return state.tokens;
+    try {
+      const r = await fetch('/tokens/manifest.json', { cache: 'no-cache' });
+      if (!r.ok) throw new Error('manifest ' + r.status);
+      const data = await r.json();
+      if (!Array.isArray(data)) throw new Error('bad manifest shape');
+      state.tokens = data;
+    } catch (e) {
+      console.warn('[tokens] could not load gallery:', e);
+      state.tokens = [];   // sentinel so we don't refetch on every render
+    }
+    return state.tokens;
+  }
+
+  /** Render the visible subset of the gallery, optionally filtered by `query`. */
+  function renderTokenGrid(query = '') {
     const grid = $('#confirmAvatarGrid');
+    if (!grid) return;
+    const tokens = state.tokens || [];
+    const q = query.trim().toLowerCase();
+    const matched = q
+      ? tokens.filter(t => t.name.toLowerCase().includes(q) || t.id.toLowerCase().includes(q))
+      : tokens;
+    const counter = $('#tokenCount');
+    if (counter) counter.textContent =
+      q ? `${matched.length} of ${tokens.length} match "${query}"` : `${tokens.length} tokens`;
     grid.innerHTML = '';
-    for (const id of ALL_AVATARS) {
+    // Cap rendered items at 200 to keep the DOM snappy; if filter narrows it,
+    // they all show.
+    const slice = matched.slice(0, 200);
+    for (const tok of slice) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'avatar-pick';
+      btn.className = 'avatar-pick avatar-pick--token';
       btn.role = 'radio';
-      btn.dataset.avatar = id;
-      btn.setAttribute('aria-checked', id === state.pendingAvatar ? 'true' : 'false');
-      btn.innerHTML = renderAvatar(id);
+      btn.dataset.avatar = tok.art;
+      btn.title = tok.name;
+      btn.setAttribute('aria-checked', tok.art === state.pendingAvatar ? 'true' : 'false');
+      btn.innerHTML = `<img class="avatar-img" src="${tok.art}" alt="${tok.name}" loading="lazy" />`
+                    + `<span class="avatar-pick__label">${tok.name}</span>`;
       btn.addEventListener('click', () => {
-        state.pendingAvatar = id;
-        $('#confirmAvatarBig').innerHTML = renderAvatar(id);
+        state.pendingAvatar = tok.art;
+        $('#confirmAvatarBig').innerHTML = `<img class="avatar-img" src="${tok.art}" alt="${tok.name}" />`;
         $$('#confirmAvatarGrid .avatar-pick').forEach(el => {
-          el.setAttribute('aria-checked', el.dataset.avatar === id ? 'true' : 'false');
+          el.setAttribute('aria-checked', el.dataset.avatar === tok.art ? 'true' : 'false');
         });
       });
       grid.appendChild(btn);
     }
+    if (matched.length > slice.length) {
+      const more = document.createElement('div');
+      more.className = 'avatar-pick__more';
+      more.textContent = `(+${matched.length - slice.length} more — narrow your search)`;
+      grid.appendChild(more);
+    }
+  }
+
+  async function renderConfirm() {
+    const p = state.roster.find(r => r.player_id === state.pendingPlayerId);
+    if (!p) { setScreen('roster'); return; }
+    $('#confirmNick').textContent = p.nickname;
+    $('#confirmAvatarBig').innerHTML = renderAvatar(state.pendingAvatar);
+    // Wire the search box once.
+    const search = $('#confirmAvatarSearch');
+    if (search && !search._wired) {
+      search._wired = true;
+      search.addEventListener('input', (e) => renderTokenGrid(e.target.value));
+    }
+    if (search) search.value = '';
+    // Load gallery + render.
+    const grid = $('#confirmAvatarGrid');
+    grid.innerHTML = '<div class="avatar-pick__more">Loading gallery…</div>';
+    await ensureTokensLoaded();
+    renderTokenGrid('');
   }
   $('#confirmBackBtn').addEventListener('click', () => {
     state.pendingPlayerId = null;

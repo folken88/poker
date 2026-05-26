@@ -41,8 +41,18 @@ function registerLobbyHandlers(io, socket, { tables }) {
   socket.on('lobby:setAvatar', ({ avatarId } = {}, ack) => {
     const player = socket.data.player;
     if (!player) return ack?.({ ok: false, error: 'choose a player first' });
-    const ALLOWED = new Set(['fox','owl','raccoon','knight','wizard','robot','cat','bear','frog','lion','wolf','dragon']);
-    if (!ALLOWED.has(avatarId)) return ack?.({ ok: false, error: 'unknown avatar' });
+    // Accept three formats:
+    //   1. /tokens/<file>   — player gallery (preferred)
+    //   2. /assets/characters/<file>  — bot/PC tokens (rarely picked by humans)
+    //   3. Legacy SVG ids   — old players still keep these until they re-pick
+    if (typeof avatarId !== 'string' || !avatarId) {
+      return ack?.({ ok: false, error: 'avatarId required' });
+    }
+    const LEGACY_SVG = new Set(['fox','owl','raccoon','knight','wizard','robot','cat','bear','frog','lion','wolf','dragon']);
+    const isTokenPath = /^\/(tokens|assets\/characters)\/[A-Za-z0-9._\-]+\.(webp|png|jpe?g)$/i.test(avatarId);
+    if (!isTokenPath && !LEGACY_SVG.has(avatarId)) {
+      return ack?.({ ok: false, error: 'unknown avatar' });
+    }
     db.db.prepare('UPDATE players SET avatar_id = ?, last_seen_at = ? WHERE player_id = ?').run(avatarId, Date.now(), player.player_id);
     const refreshed = db.getPlayer(player.player_id);
     socket.data.player = refreshed;
