@@ -32,6 +32,50 @@ const STATES = {
   COMPLETE: 'COMPLETE',
 };
 
+// ---- Hand description helpers ----
+// pokersolver's `descr` gives the category but not the kicker, so
+// "Three of a Kind, 8's" doesn't tell you whether it was ace-high or
+// duece-high. These helpers produce a richer line for the chat log.
+const RANK_WORD = { A: 'Ace', K: 'King', Q: 'Queen', J: 'Jack', T: '10' };
+function rankWord(v)   { return RANK_WORD[v] || v; }
+function rankPlural(v) { return rankWord(v) + 's'; }
+
+/** Take a pokersolver Hand result and return a sentence including kickers.
+ *  Falls back to the library's own `descr` on any unexpected shape. */
+function describeWinningHand(solverHand) {
+  try {
+    const name  = solverHand.name;
+    const cards = solverHand.cards;          // best 5, made-hand first then kickers desc
+    const r     = cards.map(c => c.value);   // ['8','8','8','A','K']
+    switch (name) {
+      case 'Royal Flush':
+        return 'Royal Flush';
+      case 'Straight Flush':
+        return `Straight Flush, ${rankWord(r[0])} high`;
+      case 'Four of a Kind':
+        return `Four ${rankPlural(r[0])}, ${rankWord(r[4])} kicker`;
+      case 'Full House':
+        return `Full House, ${rankPlural(r[0])} over ${rankPlural(r[3])}`;
+      case 'Flush':
+        return `Flush, ${rankWord(r[0])} high`;
+      case 'Straight':
+        return `Straight, ${rankWord(r[0])} high`;
+      case 'Three of a Kind':
+        return `Three ${rankPlural(r[0])}, ${rankWord(r[3])} high`;
+      case 'Two Pair':
+        return `Two Pair: ${rankPlural(r[0])} and ${rankPlural(r[2])}, ${rankWord(r[4])} kicker`;
+      case 'Pair':
+        return `Pair of ${rankPlural(r[0])}, ${rankWord(r[2])} high`;
+      case 'High Card':
+        return `${rankWord(r[0])} high, ${rankWord(r[1])} kicker`;
+      default:
+        return solverHand.descr || name || 'Best hand';
+    }
+  } catch (_) {
+    return solverHand?.descr || 'Best hand';
+  }
+}
+
 class Hand {
   /**
    * @param {Object} opts
@@ -395,10 +439,10 @@ class Hand {
           playerId: w.playerId,
           amount: amt,
           pot: potIdx,
-          handDesc: solverHands[contenders.indexOf(w)].descr,
+          handDesc: describeWinningHand(solverHands[contenders.indexOf(w)]),
           cards: w.hole,
         });
-        this.events.push({ type: 'win-pot', player: w.playerId, amount: amt, pot: potIdx, hand: solverHands[contenders.indexOf(w)].descr });
+        this.events.push({ type: 'win-pot', player: w.playerId, amount: amt, pot: potIdx, hand: describeWinningHand(solverHands[contenders.indexOf(w)]) });
       }
     });
 
