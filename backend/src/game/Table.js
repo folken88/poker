@@ -502,6 +502,11 @@ class Table {
       console.log('[poker] action timeout — auto-folding', actor);
       this.applyAction({ playerId: actor, action: 'fold' });
     }, ACTION_TIMEOUT_MS);
+    // Push the fresh deadline to clients — the applyAction broadcast
+    // fired BEFORE this method, so without re-emitting the client is
+    // still looking at the previous (stale) deadline and the topbar
+    // clock shows 0:00 on the human's turn.
+    this._broadcast();
   }
 
   _clearHumanActionTimer() {
