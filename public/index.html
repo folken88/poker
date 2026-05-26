@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260526ak" />
+  <link rel="stylesheet" href="/css/table.css?v=20260526al" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -77,15 +77,32 @@
     </header>
 
     <main class="table-wrap">
-      <!-- ===== LEFT perimeter: My Loot Bank (gear + purchase) =====
-           Help content moved to the ? Help modal in the topbar.
-           This column is the player's personal item bank — current
-           +N tier per slot plus buy/upgrade/hock buttons. Always
-           visible during play so purchases are one click away. -->
-      <aside class="help-panel help-panel--left help-panel--bank" aria-label="My loot bank">
-        <h3 class="help-panel__title">🎒 My Loot Bank</h3>
-        <p class="help-panel__sub">Spend gp on magic items. Build toward a +5 set in all 5 slots → LOOT LORD.</p>
+      <!-- ===== LEFT perimeter: collapsible Loot Bank + hand rankings =====
+           Loot Bank header is a button — click to expand/collapse the
+           gear rows + purchase buttons. State persists per tab via
+           sessionStorage. Hand rankings stay visible underneath
+           regardless so the reference is always one glance away. -->
+      <aside class="help-panel help-panel--left help-panel--bank" aria-label="My loot bank and hand rankings">
+        <button type="button" class="help-panel__collapser" id="sidebarBankToggle"
+                aria-expanded="true" aria-controls="sidebarBank">
+          <span class="help-panel__title">🎒 My Loot Bank</span>
+          <span class="help-panel__chevron" aria-hidden="true">▾</span>
+        </button>
         <div id="sidebarBank" class="sidebar-bank"></div>
+
+        <h3 class="help-panel__title help-panel__title--ranks">Hand rankings</h3>
+        <ol class="help-panel__rankings">
+          <li><strong>Royal Flush</strong> <em>10-J-Q-K-A, same suit</em></li>
+          <li><strong>Straight Flush</strong> <em>5 in a row, same suit</em></li>
+          <li><strong>Four of a Kind</strong></li>
+          <li><strong>Full House</strong> <em>three + a pair</em></li>
+          <li><strong>Flush</strong> <em>5 same suit</em></li>
+          <li><strong>Straight</strong> <em>5 in a row</em></li>
+          <li><strong>Three of a Kind</strong></li>
+          <li><strong>Two Pair</strong></li>
+          <li><strong>One Pair</strong></li>
+          <li><strong>High Card</strong></li>
+        </ol>
       </aside>
 
       <div class="felt">
@@ -249,8 +266,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260526ak"></script>
-  <script src="/js/cards.js?v=20260526ak"></script>
-  <script src="/js/client.js?v=20260526ak"></script>
+  <script src="/js/avatars.js?v=20260526al"></script>
+  <script src="/js/cards.js?v=20260526al"></script>
+  <script src="/js/client.js?v=20260526al"></script>
 </body>
 </html>

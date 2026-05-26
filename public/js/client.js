@@ -844,16 +844,72 @@
 
   /** Render the player's gear bank into the left-side perimeter panel.
    *  Pulls fresh chip + gear state via buildBankHtml. Called on roster
-   *  events and renderTable so seat chip changes mid-hand show up. */
+   *  events and renderTable so seat chip changes mid-hand show up.
+   *
+   *  Collapsed state is per-tab (sessionStorage). If the user hasn't
+   *  expressed a preference, we auto-collapse when there's nothing
+   *  actionable — no affordable upgrade AND no item worth hocking — so
+   *  the rankings underneath get more room. The user's manual toggle
+   *  always overrides the auto-state for the rest of the session. */
   function renderSidebarBank() {
     const el = $('#sidebarBank');
+    const toggle = $('#sidebarBankToggle');
     if (!el) return;
     if (!state.me) {
       el.innerHTML = '<p class="sidebar-bank__empty">Pick a character to start your collection.</p>';
+      if (toggle) applySidebarBankCollapsed(true);
       return;
     }
     el.innerHTML = buildBankHtml();
+    if (!toggle) return;
+    // Collapsed state precedence: explicit user choice → otherwise auto
+    // (collapse when nothing actionable, expand otherwise).
+    const saved = sessionStorage.getItem('actpanel.bankCollapsed');
+    const collapsed = saved !== null ? saved === '1' : !_bankHasActions();
+    applySidebarBankCollapsed(collapsed);
   }
+
+  /** Walk the current bank state to see if any row has either an
+   *  affordable upgrade or a hockable item. Used to decide whether to
+   *  auto-collapse the bank when it offers nothing actionable. */
+  function _bankHasActions() {
+    if (!state.me) return false;
+    const t = state.table;
+    const mySeat = t?.seats?.find(s => s.playerId === state.me.player_id);
+    let gear = mySeat?.gear;
+    if (!gear) {
+      try { gear = JSON.parse(state.me.gear || '{}') || {}; }
+      catch (_) { gear = {}; }
+    }
+    const chips = mySeat?.chips ?? state.me.chips ?? 0;
+    for (const slot of GEAR_SLOTS) {
+      const cur = gear[slot] || 0;
+      if (cur > 0) return true;                            // hockable
+      const cost = gearPrice(slot, 1);                     // cheapest path: +1 fresh
+      if (cur < 5 && chips >= (gearPrice(slot, cur + 1) - (cur ? gearPrice(slot, cur) : 0))) return true;
+    }
+    return false;
+  }
+
+  /** Apply collapsed state to DOM + aria. */
+  function applySidebarBankCollapsed(collapsed) {
+    const toggle = $('#sidebarBankToggle');
+    const body   = $('#sidebarBank');
+    if (!toggle || !body) return;
+    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    body.hidden = collapsed;
+    const chev = toggle.querySelector('.help-panel__chevron');
+    if (chev) chev.textContent = collapsed ? '▸' : '▾';
+  }
+
+  // Click handler — record user's preference + apply.
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('#sidebarBankToggle');
+    if (!t) return;
+    const collapsed = t.getAttribute('aria-expanded') === 'true';   // currently expanded → collapsing
+    sessionStorage.setItem('actpanel.bankCollapsed', collapsed ? '1' : '0');
+    applySidebarBankCollapsed(collapsed);
+  });
 
   /** Legacy no-op — bank now lives inline inside the action panel. */
   function renderBank() { /* see buildBankHtml inside actpanel */ }
