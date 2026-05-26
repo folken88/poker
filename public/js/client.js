@@ -1119,12 +1119,30 @@
       sec === 'leaderboard' ? `<div class="actpanel__section">${buildLeaderboardHtml()}</div>` :
       '';
 
+    // ----- Mobile "my hand" strip -----
+    // On mobile, seats are tiny (token + name only) so the player's own
+    // hole cards + chips live here in the action panel. Hidden on desktop
+    // via CSS (.actpanel__myhand display none) but always rendered so
+    // toggling viewport doesn't need a re-render.
+    const myHoleCards = (state.myHole && state.myHole.length === 2)
+      ? state.myHole.map(c => window.FolkenCards.card(c)).join('')
+      : `${window.FolkenCards.faceDown()}${window.FolkenCards.faceDown()}`;
+    const myHandStrip = `
+      <div class="actpanel__myhand">
+        <div class="actpanel__myhand-cards">${myHoleCards}</div>
+        <div class="actpanel__myhand-info">
+          <div class="actpanel__myhand-chips">💰 ${formatGp(me.stack)}</div>
+          ${me.invested ? `<div class="actpanel__myhand-bet">bet ${formatGp(me.invested)}</div>` : ''}
+        </div>
+      </div>`;
+
     return `
       <div class="actpanel__drag" data-actpanel-drag title="Drag to move · click reset to recenter">
         <span class="actpanel__drag-grip">⋮⋮</span>
         <span class="actpanel__status">${status}</span>
         <button type="button" class="actpanel__drag-reset" data-actpanel-reset title="Reset to default position">reset</button>
       </div>
+      ${myHandStrip}
       <div class="actpanel__row">
         <button class="btn btn--ghost actpanel__btn" data-act="fold" ${dis}>Fold</button>
         ${callOrCheck}

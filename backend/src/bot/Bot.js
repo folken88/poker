@@ -92,7 +92,10 @@ class Bot {
    * @returns {{action:string, amount?:number, reason:string}}
    */
   decide(ctx) {
-    const { hole, board, toCall, potTotal, stack, currentBet, invested, minRaise, bigBlind } = ctx;
+    const {
+      hole, board, toCall, potTotal, stack, currentBet, invested, minRaise, bigBlind,
+      selfWealth, opponents, aggressorWealth,
+    } = ctx;
     const tuning = MODE_TUNING[this.mode] || MODE_TUNING.standard;
     const intel  = INTEL_TUNING[this.intelligence] || INTEL_TUNING.average;
     const rng = Math.random;
@@ -101,9 +104,44 @@ class Bot {
     const v = this._perceivedStrength(trueStrength);
     const tag = `${this.mode}/${this.intelligence}`;
 
+    // ─── Wealth context (chips + magic items) ────────────────────────────────
+    // High-intel bots use this accurately; low-intel ones mostly ignore it
+    // (the noise on perception swamps the small wealth adjustment).
+    //
+    //   selfRel  > 1 → I'm richer than the average opponent (can risk more)
+    //                < 1 → I'm poorer (chips matter more, tighten up)
+    //   aggRel   > 1 → the raiser is richer than me (bet less credible —
+    //                  they can afford to bluff)
+    //                < 1 → the raiser is poorer than me (more credible —
+    //                  they're committing a larger share of their bankroll)
+    const myW = Number.isFinite(selfWealth) && selfWealth > 0 ? selfWealth : stack;
+    const oppsLive = Array.isArray(opponents) ? opponents.filter(o => o && o.wealth > 0) : [];
+    const avgOppW = oppsLive.length
+      ? oppsLive.reduce((s, o) => s + o.wealth, 0) / oppsLive.length
+      : myW;
+    const selfRel = avgOppW > 0 ? myW / avgOppW : 1;
+    const aggRel  = (aggressorWealth && aggressorWealth > 0) ? aggressorWealth / Math.max(1, myW) : 1;
+
+    // How much wealth awareness drives behavior — high intel reads it
+    // well, average half, low only barely.
+    const wealthWeight = this.intelligence === 'high' ? 1.0
+                       : this.intelligence === 'average' ? 0.5
+                       : 0.15;
+
+    // Fold-threshold tweak: poorer bot folds more; richer bot folds less.
+    // selfRel = 2 (twice as rich) → -0.04 to fold threshold;
+    // selfRel = 0.5 (half as rich) → +0.04.
+    const wealthFoldAdj = clamp(-0.08, 0.08, (1 - selfRel) * 0.08) * wealthWeight;
+    // Sizing tweak: richer bot can size up; poorer scales down.
+    const wealthSizeAdj = clamp(0.7, 1.3, 1 + (selfRel - 1) * 0.15 * wealthWeight);
+    // Aggressor credibility: rich raiser → discount their bet (less fold);
+    //                       poor raiser → respect their bet (more fold).
+    // aggRel = 2 (rich raiser) → -0.04; aggRel = 0.5 (poor raiser) → +0.04.
+    const aggCredAdj = clamp(-0.08, 0.08, (aggRel - 1) * -0.05) * wealthWeight;
+
     // Builds a raise action; auto-promotes to all-in if it'd commit the stack.
     const buildRaise = (sizeFactorMul, label) => {
-      const factor = tuning.sizing * sizeFactorMul * (0.75 + rng() * 0.5);
+      const factor = tuning.sizing * sizeFactorMul * wealthSizeAdj * (0.75 + rng() * 0.5);
       const size = Math.max(minRaise, Math.round(Math.max(potTotal, bigBlind) * factor));
       const raiseTo = Math.min(currentBet + size, invested + stack);
       const addedChips = raiseTo - invested;
@@ -181,7 +219,7 @@ class Bot {
       this.mode === 'cautious' ? 0.42 :
       this.mode === 'risky'    ? 0.22 :
                                  0.32;
-    const foldThreshold = clamp01(baseFold + potOdds * 0.40 + tuning.foldBias);
+    const foldThreshold = clamp01(baseFold + potOdds * 0.40 + tuning.foldBias + wealthFoldAdj + aggCredAdj);
 
     if (v < foldThreshold) {
       return { action: 'fold', reason: `fold v=${v.toFixed(2)} fT=${foldThreshold.toFixed(2)} ${tag}` };
@@ -223,5 +261,6 @@ class Bot {
 }
 
 function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+function clamp(lo, hi, x) { return Math.max(lo, Math.min(hi, x)); }
 
 module.exports = { Bot, MODES };

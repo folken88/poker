@@ -494,6 +494,33 @@ class Table {
 
       const me = this.hand.players.find(p => p.playerId === actor);
       if (!me) return;
+
+      // ---- Build opponent wealth picture so the bot can scale risk ----
+      // Wealth = chips at the table + total magic-item value. We pass the
+      // bot's own wealth and a list of still-live opponents (non-folded).
+      // The aggressor (last raiser) is flagged so the bot can weigh how
+      // credible the bet is given who's firing it.
+      const myGear = db.gearTotalValue(db.getGear(actor) || {});
+      const selfWealth = me.stack + myGear;
+      const opponents = [];
+      let aggressorWealth = null;
+      for (let i = 0; i < this.hand.players.length; i++) {
+        const p = this.hand.players[i];
+        if (p.playerId === actor) continue;
+        if (p.folded) continue;
+        const oppGear = db.gearTotalValue(db.getGear(p.playerId) || {});
+        const oppWealth = p.stack + oppGear;
+        opponents.push({
+          playerId: p.playerId,
+          stack: p.stack,
+          gearValue: oppGear,
+          wealth: oppWealth,
+          invested: p.invested,
+          allIn: p.allIn,
+        });
+        if (i === this.hand.lastRaiser) aggressorWealth = oppWealth;
+      }
+
       const decideCtx = {
         hole: me.hole,
         board: this.hand.board,
@@ -504,6 +531,11 @@ class Table {
         invested: me.invested,
         minRaise: this.hand.minRaise,
         bigBlind: this.bigBlind,
+        // New: wealth-aware fields
+        selfWealth,
+        selfGear: myGear,
+        opponents,
+        aggressorWealth,
       };
       const decision = bot.decide(decideCtx);
       console.log(`[bot] ${actor} (${bot.mode}) → ${decision.action}${decision.amount != null ? ' to ' + decision.amount : ''}  // ${decision.reason}`);

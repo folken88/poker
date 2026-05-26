@@ -1621,6 +1621,9 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 }
 
 /* ===== Mobile ===== */
+/* The "my hand" strip lives inside the action panel; hidden on desktop. */
+.actpanel__myhand { display: none; }
+
 @media (max-width: 720px) {
   /* Hide the side help panels — content moves into the Help modal. */
   .help-panel { display: none; }
@@ -1632,21 +1635,97 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   .topbar__me { font-size: 0.75rem; gap: 0.3rem; flex-wrap: wrap; }
   .me-debt, .me-chips { font-size: 0.75rem; }
   .topbar__me .btn { padding: 4px 8px; font-size: 0.75rem; min-height: 32px; }
-  /* Felt: taller to match phone aspect */
+
+  /* Felt: leave room for the fixed bottom action bar. */
   .felt { aspect-ratio: 1 / 1; }
-  /* Seats: smaller plates, smaller avatars */
-  .seat { width: 84px; max-height: 145px; }
-  .seat__plate { padding: 4px 5px 5px; max-height: 145px; }
-  .seat__avatar { width: 38px; height: 38px; }
-  .seat__nick { font-size: 0.72rem; }
-  .seat__chips { font-size: 0.68rem; }
+  body.is-mobile .table-screen,
+  .table-screen { padding-bottom: 220px; }
+
+  /* ===== Tiny seat cards (token + name ONLY on mobile) =====
+     Everything else (chips, gear, current bet, hole cards, timer) is
+     suppressed for opponent seats so the table shows who's there at a
+     glance. The player's own chips + hole cards live in the bottom
+     action bar instead. */
+  .seat { width: 64px; max-height: 96px; }
+  .seat__plate { padding: 3px 3px 4px; max-height: 96px; }
+  .seat__avatar { width: 44px; height: 44px; }
+  .seat__nick { font-size: 0.7rem; line-height: 1.1; }
+  /* Hide secondary detail on every seat */
+  .seat__chips,
+  .seat__swords,
+  .seat__bet,
+  .seat__hole,
+  .seat__waiting,
+  .seat__afk-tag,
+  .seat__leaving { display: none; }
+  /* Keep the action timer on whichever seat is acting (so opponents
+     can see whose turn it is) — others stay hidden. */
+  .seat__timer { display: none; font-size: 0.62rem; min-width: 60px; padding: 1px 4px; }
+  .seat.is-acting .seat__timer { display: inline-block; }
+  /* Allinindicator stays inline on the nick because it's short */
+
   /* Pot: smaller display font */
-  .pot--big { font-size: 1.5rem; padding: 0.3rem 0.9rem; }
-  .board { gap: 0.3rem; min-height: 100px; }
-  .card-svg { width: 60px; height: 86px; }
+  .pot--big { font-size: 1.4rem; padding: 0.3rem 0.8rem; }
+  .board { gap: 0.3rem; min-height: 80px; }
+  .card-svg { width: 50px; height: 72px; }
+
   /* Chat log: shrink */
-  .chat-panel { height: 90px; }
-  .chat-panel__list { font-size: 0.78rem; padding: 0.25rem 0.6rem 0.3rem; }
+  .chat-panel { height: 80px; }
+  .chat-panel__list { font-size: 0.76rem; padding: 0.25rem 0.6rem 0.3rem; }
+
+  /* ===== Action panel → fixed bottom bar ===== */
+  .actpanel-host {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    top: auto;
+    transform: none;
+    width: 100%;
+    z-index: 60;
+    padding: 6px 8px max(8px, env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.92));
+    border-top: 1px solid rgba(241,207,131,0.35);
+  }
+  .actpanel {
+    transform: none !important;     /* override drag offset on mobile */
+    min-width: 0;
+    width: 100%;
+    margin: 0 auto;
+    padding: 4px 6px 6px;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  /* Drag handle, bank/leaderboard toggles, and preset buttons are all
+     hidden on mobile — too cramped. They remain available from the
+     help/menu modal. */
+  .actpanel__drag,
+  .actpanel__presets,
+  .actpanel__toggles,
+  .actpanel__section { display: none; }
+
+  /* Show the my-hand strip on mobile, above the action buttons. */
+  .actpanel__myhand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 2px 6px;
+  }
+  .actpanel__myhand-cards { display: flex; gap: 4px; }
+  .actpanel__myhand-cards .card-svg { width: 44px; height: 64px; }
+  .actpanel__myhand-info {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+    font-size: 0.72rem; color: var(--ivory-dim);
+  }
+  .actpanel__myhand-chips { color: var(--brass-bright); font-weight: 600; }
+  .actpanel__myhand-bet { color: var(--ivory-dim); }
+
+  /* Buttons stay in a single row; raise amount + presets get the next row. */
+  .actpanel__row { gap: 4px; }
+  .actpanel__btn { flex: 1; min-height: 38px; font-size: 0.86rem; padding: 6px 4px; }
+  .actpanel__amount { font-size: 0.85rem; min-height: 38px; }
+
   /* Roster picker grid: 3 wide on phones */
   .roster-section-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
   .roster-pick { padding: 0.5rem 0.4rem 0.5rem; }
@@ -1663,10 +1742,14 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   .topbar__me { font-size: 0.7rem; }
   .topbar__me .btn { padding: 3px 6px; font-size: 0.7rem; }
   /* Pot smaller still */
-  .pot--big { font-size: 1.2rem; padding: 0.25rem 0.7rem; }
-  .card-svg { width: 48px; height: 70px; }
-  .seat { width: 72px; max-height: 130px; }
-  .seat__avatar { width: 32px; height: 32px; }
+  .pot--big { font-size: 1.1rem; padding: 0.2rem 0.6rem; }
+  .card-svg { width: 42px; height: 60px; }
+  .seat { width: 56px; max-height: 88px; }
+  .seat__avatar { width: 38px; height: 38px; }
+  .seat__nick { font-size: 0.66rem; }
+  /* Smaller hand cards in the bottom bar */
+  .actpanel__myhand-cards .card-svg { width: 38px; height: 54px; }
+  .actpanel__btn { min-height: 34px; font-size: 0.8rem; }
   /* Tighten chat */
-  .chat-panel { height: 70px; }
+  .chat-panel { height: 64px; }
 }
