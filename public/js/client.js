@@ -463,12 +463,11 @@
               : `<button type="button" class="seat__remove" data-remove-bot="${escapeAttr(seat.playerId)}" title="Ask ${escapeAttr(seat.nickname)} to leave (after this hand)">×</button>`)
           : '';
         // Action timer countdown — shown on ANY acting seat now (human
-        // OR bot), so spectators can watch the clock tick down on a
-        // bot's thinking delay. Bots' actionDeadline is the broadcast
-        // value set by Table._maybeDriveBot.
+        // OR bot). Tag with data-seat-timer-bot so tickTimers can label
+        // it differently for bots ("thinking…") vs humans ("⏱ 0:42").
         const showTimer = isActor && t.actionDeadline;
         const timerHtml = showTimer
-          ? `<div class="seat__timer" data-deadline="${t.actionDeadline}" data-seat-timer></div>`
+          ? `<div class="seat__timer" data-deadline="${t.actionDeadline}" data-seat-timer data-seat-timer-bot="${seat.isBot ? '1' : '0'}"></div>`
           : '';
         // Compact gear summary on the seat plate — small icons + total
         // value. Full bank UI is the bottom-right widget.
@@ -804,16 +803,25 @@
 
   // ===== Combined timer tick: seat countdowns AND the big topbar clock =====
   function tickTimers() {
-    // Per-seat countdowns
+    // Per-seat countdowns. Bots show "🤔 thinking…" with no urgency
+    // pulse — they're not going to time out, they're just deciding.
+    // Humans show a precise mm:ss with red pulse under 10s.
     const els = $$('[data-seat-timer]');
     for (const el of els) {
       const deadline = Number(el.dataset.deadline);
       const remaining = Math.max(0, deadline - Date.now());
       const s = Math.ceil(remaining / 1000);
-      const mm = Math.floor(s / 60);
-      const ss = String(s % 60).padStart(2, '0');
-      el.textContent = `⏱ ${mm}:${ss}`;
-      el.classList.toggle('is-urgent', remaining < 10000);
+      const isBot = el.dataset.seatTimerBot === '1';
+      if (isBot) {
+        const dots = '.'.repeat(1 + (Math.floor(Date.now() / 350) % 3));
+        el.textContent = `🤔 thinking${dots}`;
+        el.classList.remove('is-urgent');
+      } else {
+        const mm = Math.floor(s / 60);
+        const ss = String(s % 60).padStart(2, '0');
+        el.textContent = `⏱ ${mm}:${ss}`;
+        el.classList.toggle('is-urgent', remaining < 10000);
+      }
     }
     // Topbar digital clock — three modes:
     //   action: a human is on the clock (state.table.actionDeadline > now)
@@ -840,13 +848,22 @@
     }
     if (actionMs > 0) {
       const secs = Math.ceil(actionMs / 1000);
-      const mode = actionMs < 10000 ? 'urgent' : 'action';
-      clock.dataset.mode = mode;
-      // Find the acting player's nickname for the label.
+      // Bots show "thinking", humans show "auto-fold in" with urgency
+      // colors only when the auto-fold clock is real (i.e. it's a
+      // human who'll actually be folded by the server).
       const actorId = t.hand?.actor;
       const actorSeat = t.seats.find(s => s.playerId === actorId);
-      const isMe = actorId && state.me && actorId === state.me.player_id;
-      label.textContent = isMe ? 'Your turn' : `${actorSeat?.nickname || 'Acting'} · auto-fold in`;
+      const isBot = !!actorSeat?.isBot;
+      const isMe  = actorId && state.me && actorId === state.me.player_id;
+      const mode = isBot
+        ? 'next'                                        // cyan, no urgency pulse
+        : (actionMs < 10000 ? 'urgent' : 'action');     // brass → red pulse
+      clock.dataset.mode = mode;
+      label.textContent = isMe
+        ? `Your turn · auto-fold in`
+        : isBot
+          ? `${actorSeat?.nickname || 'Bot'} · thinking`
+          : `${actorSeat?.nickname || 'Acting'} · auto-fold in`;
       renderClockDigits(secs);
     } else if (nextMs > 0) {
       clock.dataset.mode = 'next';

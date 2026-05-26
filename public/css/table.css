@@ -63,8 +63,11 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 @keyframes pulse { 0%,100% { opacity:.4; } 50% { opacity:1; } }
 
 /* ===== Roster picker ===== */
+/* html/body have overflow:hidden so .screen needs an explicit height
+   for overflow-y: auto to actually create a scrollable region. */
 .screen[data-show-on="roster"] {
   align-items: flex-start; justify-content: center; padding: 2rem 1.5rem;
+  height: 100vh;
   overflow-y: auto;
 }
 .card.roster-card { width: min(900px, 100%); padding: 2rem; }

@@ -20,9 +20,10 @@ const ACTION_TIMEOUT_MS = parseInt(process.env.ACTION_TIMEOUT_MS || '120000', 10
 // ones brood. Each entry = number of d-sides; final delay is 1..N seconds.
 // Hard cap 30s (cautious 1d29 already enforces this).
 const BOT_TIMING = {
-  risky:    { sides: 4  },   // 1d4  seconds
+  risky:    { sides: 4  },   // 1d4  seconds — snap decisions
   standard: { sides: 10 },   // 1d10 seconds
-  cautious: { sides: 29 },   // 1d29 seconds — they really do think it over
+  cautious: { sides: 15 },   // 1d15 seconds — they brood, but not for ever.
+                              // Was 1d29; players felt that was too long.
 };
 function rollBotDelayMs(mode) {
   const cfg = BOT_TIMING[mode] || BOT_TIMING.standard;
