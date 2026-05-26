@@ -81,11 +81,22 @@ function registerTableHandlers(io, socket, { tables }) {
     if (!table) return ack?.({ ok: false, error: 'not at a table' });
     let botId = (payload && typeof payload === 'object') ? payload.playerId : null;
     if (!botId) {
-      // Auto-pick: first bot not already seated at this table, with chips
+      // Auto-pick: first bot not already seated at this table, with chips.
+      // listBots() already filters to is_bot=1, so reserved humans (Tobis,
+      // Fred, etc.) can never appear in this list. The extra guard below
+      // belts-and-suspenders the same invariant.
       const seatedIds = new Set(table.seats.filter(s => s.playerId).map(s => s.playerId));
-      const candidates = db.listBots().filter(b => !seatedIds.has(b.player_id) && b.chips > 0);
+      const candidates = db.listBots()
+        .filter(b => b.is_bot === 1 && !seatedIds.has(b.player_id) && b.chips > 0);
       if (candidates.length === 0) return ack?.({ ok: false, error: 'no available bots' });
       botId = candidates[Math.floor(Math.random() * candidates.length)].player_id;
+    }
+    // Even if someone POSTs a specific playerId, refuse to seat a reserved
+    // human as a bot. Real humans control their own destiny here.
+    const candidate = db.getPlayer(botId);
+    if (!candidate) return ack?.({ ok: false, error: 'unknown player' });
+    if (candidate.is_bot !== 1) {
+      return ack?.({ ok: false, error: `${candidate.nickname} is a reserved human; AI cannot play them` });
     }
     const result = table.seatBot(botId);
     if (!result.ok) return ack?.(result);

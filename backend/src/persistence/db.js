@@ -62,8 +62,18 @@ db.exec(`
   );
 `);
 
-// ---- Roster (the fixed test players) ----
-// 14 names, 12 avatars — two avatars get reused on purpose.
+// ---- Reserved human roster ----
+// EVERY entry here is a RESERVED HUMAN identity — saved for real
+// people the user plays with. The "+ Bot" button (lobby:addBot) never
+// picks from this list; the AI driver (_maybeDriveBot in Table.js)
+// only acts on seats where seat.isBot === true, which itself comes
+// from player.is_bot = 1. Reserved humans always seed with is_bot = 0,
+// so AI cannot drive or supersede them. Their chips, gear, and rebuy
+// debt persist across sessions for whoever sits down as them.
+// User explicitly named these as reserved: Tobis, Timmy (Timmay),
+// Sydness, BRION, Zachariah, Harry, Banana, Fred, LEEESA — the rest
+// (Chrees, Lowgan, Farts, Butt, Boobs, Cram) follow the same policy
+// since they all live in this ROSTER as is_bot=0 humans.
 const ROSTER = [
   { name: 'Tobis',     avatar: 'dragon'  },
   { name: 'Fred',      avatar: 'fox'     },

@@ -129,12 +129,25 @@
   function renderRoster() {
     const grid = $('#rosterGrid');
     grid.innerHTML = '';
-    for (const p of state.roster) {
+    // Sort: reserved humans first (the personal-name players), then
+    // AI-playable PC characters. Within each tier, alphabetical.
+    const sorted = (state.roster || []).slice().sort((a, b) => {
+      const ab = a.is_bot ? 1 : 0;
+      const bb = b.is_bot ? 1 : 0;
+      if (ab !== bb) return ab - bb;
+      return (a.nickname || '').localeCompare(b.nickname || '', undefined, { sensitivity: 'base' });
+    });
+    for (const p of sorted) {
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = 'roster-pick';
+      card.className = 'roster-pick' + (p.is_bot ? ' roster-pick--bot' : ' roster-pick--reserved');
       card.dataset.playerId = p.player_id;
+      // Tiny badge: 🤖 AI (bot character, anyone can play) or 👤 Human (reserved).
+      const badge = p.is_bot
+        ? `<span class="roster-pick__badge roster-pick__badge--bot" title="AI-playable character — superseded if a human picks them">🤖 AI</span>`
+        : `<span class="roster-pick__badge roster-pick__badge--human" title="Reserved human seat — AI never plays this identity">👤 Human</span>`;
       card.innerHTML = `
+        ${badge}
         <div class="roster-pick__avatar">${renderAvatar(p.avatar_id)}</div>
         <div class="roster-pick__nick">${escapeText(p.nickname)}</div>
         <div class="roster-pick__chips">💰 ${formatChips(p.chips)} gp</div>
