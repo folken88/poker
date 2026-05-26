@@ -156,6 +156,18 @@
     "campaign": "CC"
   },
   {
+    "id": "binch",
+    "name": "Binch",
+    "art": "/tokens/binch.webp",
+    "sourceFile": "human/token_human_female_binch_priestess_of_the_pirate_god_confident_intimidating.webp",
+    "mtime": "2025-05-19T00:36:00.000Z",
+    "size": 8728,
+    "villain": true,
+    "race": "Half-Elf",
+    "class": "Witch · Priestess of the Pirate God",
+    "campaign": "CC"
+  },
+  {
     "id": "bruce",
     "name": "Bruce",
     "art": "/tokens/bruce.webp",
@@ -330,24 +342,16 @@
   {
     "id": "dismas-aevrett",
     "name": "Dismas Aevrett",
-    "art": "/tokens/dismas-aevrett.webp",
-    "sourceFile": "human/token_human_male_dismas_paladin_rifleman_marksman_shooter.webp",
-    "mtime": "2024-09-29T14:04:48.000Z",
-    "size": 12816,
+    "art": "/tokens/dismas-aevrett.png",
+    "sourceFile": "human/token_human_dismas_spirit_white.png",
+    "mtime": "2026-05-24T05:32:55.971Z",
+    "size": 456876,
     "pc": true,
     "race": "Human",
     "class": "Paladin",
     "level": "11",
     "player": "Harrison",
     "campaign": "CC"
-  },
-  {
-    "id": "token-human-dismas-spirit-white",
-    "name": "Dismas Spirit White",
-    "art": "/tokens/token-human-dismas-spirit-white.png",
-    "sourceFile": "human/token_human_dismas_spirit_white.png",
-    "mtime": "2026-05-24T05:32:55.971Z",
-    "size": 456876
   },
   {
     "id": "draymus-keshaal-mortiarum",
@@ -457,9 +461,9 @@
     "id": "field-marshal-freya-kusanagi",
     "name": "Field Marshal Freya Kusanagi",
     "art": "/tokens/field-marshal-freya-kusanagi.webp",
-    "sourceFile": "human/token_human_female_samurai_freya_kusanagi_balrog_blade.webp",
-    "mtime": "2025-04-19T23:38:16.000Z",
-    "size": 9580,
+    "sourceFile": "human/token_human_female_freya.webp",
+    "mtime": "2024-01-10T15:45:02.000Z",
+    "size": 5512,
     "pc": true,
     "race": "Half-Elf",
     "class": "Samurai / Hellknight (Order of the Rack)",

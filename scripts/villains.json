@@ -10,6 +10,7 @@
     { "name": "Abrogail Thrune II",   "campaign": "HV", "race": "Human",      "class": "Queen of Cheliax",      "source": "cheliax_characters/token_human_female_abrogail_thrune_queen_sorcerer_cheliax_monarch.webp" },
     { "name": "Unity",                "campaign": "IG", "race": "AI",         "class": "Iron God",              "source": "iron_gods_characters/token_robot_overlord_unity.webp" },
     { "name": "Hellion",              "campaign": "IG", "race": "Construct",  "class": "Scorpion-Robot Iron God","source": "iron_gods_characters/token_hellion_body_scorpion_robot.webp" },
-    { "name": "Casandalee",           "campaign": "IG", "race": "AI",         "class": "Ascended Goddess",      "source": "iron_gods_characters/token_ai_android_tablet_casandalee_cass_goddess_round.webp" }
+    { "name": "Casandalee",           "campaign": "IG", "race": "AI",         "class": "Ascended Goddess",      "source": "iron_gods_characters/token_ai_android_tablet_casandalee_cass_goddess_round.webp" },
+    { "name": "Binch",                "campaign": "CC", "race": "Half-Elf",   "class": "Witch · Priestess of the Pirate God", "source": "human/token_human_female_binch_priestess_of_the_pirate_god_confident_intimidating.webp" }
   ]
 }
