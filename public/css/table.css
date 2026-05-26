@@ -298,7 +298,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   position: relative;
   display: flex; align-items: center; justify-content: center;
   gap: 1rem;
-  padding: 1rem 1rem 200px;  /* extra room beneath felt for the action panel */
+  padding: 1rem 1rem 120px;  /* room beneath felt for the actpanel popover */
   min-height: 0;
 }
 .felt-col { display: contents; }  /* reserved for future grouping */
@@ -466,6 +466,44 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   background: rgba(227, 88, 88, 0.12);
   border: 1px solid rgba(227, 88, 88, 0.4);
   color: #ff9999;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-top: 1px;
+}
+/* Tiny × in the top-left of a bot's seat plate. Lets any seated human ask
+   that specific bot to leave (it actually leaves after the current hand). */
+.seat__remove {
+  position: absolute;
+  top: -8px; left: -8px;
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, rgba(60,18,18,0.95), rgba(40,10,10,0.95));
+  color: #ff9999;
+  border: 1px solid rgba(227, 88, 88, 0.55);
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  z-index: 4;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  transition: background .12s, color .12s, transform .1s, border-color .12s;
+}
+.seat__remove:hover {
+  background: linear-gradient(180deg, rgba(227,88,88,0.9), rgba(180,40,40,0.95));
+  color: #fff;
+  border-color: #ffb3b3;
+  transform: scale(1.1);
+}
+.seat__leaving {
+  display: inline-block;
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(227, 88, 88, 0.18);
+  border: 1px solid rgba(227, 88, 88, 0.5);
+  color: #ffb3b3;
   padding: 1px 6px;
   border-radius: 999px;
   margin-top: 1px;
@@ -737,6 +775,107 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   border-radius: var(--radius-btn);
   color: var(--ivory);
   outline: none;
+}
+
+/* ===== Topbar debt indicator ===== */
+.me-debt {
+  color: #ffb874;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  background: rgba(255, 140, 66, 0.12);
+  border: 1px solid rgba(255, 140, 66, 0.35);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* ===== Chat / event log panel (bottom strip) ===== */
+.chat-panel {
+  flex: 0 0 auto;
+  height: 140px;
+  background: linear-gradient(180deg, rgba(8,16,11,0.95), rgba(5,10,7,0.98));
+  border-top: 1px solid rgba(217,176,106,0.25);
+  display: flex; flex-direction: column;
+  z-index: 6;
+}
+.chat-panel__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 0.35rem 1rem 0.25rem;
+  border-bottom: 1px solid rgba(217,176,106,0.12);
+}
+.chat-panel__title {
+  margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: 0.18em;
+  color: var(--brass-bright);
+  font-size: 0.85rem;
+}
+.chat-panel__hint {
+  font-size: 0.7rem;
+  color: var(--ivory-dim);
+  letter-spacing: 0.04em;
+}
+.chat-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem 1rem 0.5rem;
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  display: flex; flex-direction: column; gap: 0.2rem;
+}
+/* Subtle scrollbar so the panel doesn't feel desktop-default */
+.chat-panel__list::-webkit-scrollbar { width: 8px; }
+.chat-panel__list::-webkit-scrollbar-track { background: transparent; }
+.chat-panel__list::-webkit-scrollbar-thumb {
+  background: rgba(217,176,106,0.25);
+  border-radius: 4px;
+}
+.chat-entry {
+  display: flex; gap: 0.6rem;
+  padding: 1px 0;
+  color: var(--ivory-dim);
+}
+.chat-entry__time {
+  flex: 0 0 auto;
+  width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: rgba(245,236,214,0.4);
+  font-size: 0.78rem;
+}
+.chat-entry__text { flex: 1; }
+.chat-entry--hand   .chat-entry__text { color: var(--brass-bright); font-weight: 600; }
+.chat-entry--win    .chat-entry__text { color: var(--success); font-weight: 600; }
+.chat-entry--rebuy  .chat-entry__text { color: #ffd092; }
+.chat-entry--leave  .chat-entry__text { color: #ff9999; }
+.chat-entry--debt   .chat-entry__text { color: #ffb874; }
+.chat-entry--info   .chat-entry__text { color: var(--ivory); }
+
+/* ===== Action timer countdown under acting seat ===== */
+.seat__timer {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--brass-bright);
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(241,207,131,0.45);
+  padding: 1px 7px;
+  border-radius: 999px;
+  margin-top: 2px;
+}
+.seat__timer.is-urgent {
+  color: #ffd9d9;
+  border-color: var(--danger);
+  background: rgba(80, 15, 15, 0.7);
+  animation: timerPulse 0.8s ease-in-out infinite;
+}
+@keyframes timerPulse {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.08); }
 }
 
 /* ===== Toast ===== */

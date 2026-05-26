@@ -8,6 +8,11 @@
  */
 
 const db = require('../persistence/db');
+const { humanRebuyMessage } = require('../util/flavor');
+
+function tableFor(socket, tables) {
+  return tables.get(socket.data.tableId || 'main') || null;
+}
 
 function registerLobbyHandlers(io, socket, { tables }) {
 
@@ -48,12 +53,48 @@ function registerLobbyHandlers(io, socket, { tables }) {
   socket.on('lobby:resetStack', (_p, ack) => {
     const player = socket.data.player;
     if (!player) return ack?.({ ok: false, error: 'choose a player first' });
+    // Re-buy is a LOAN. Set chips back to default and add DEFAULT_STACK
+    // to the player's long-term debt. They can pay it down later via
+    // lobby:payDebt from accumulated winnings.
     db.setChips(player.player_id, db.DEFAULT_STACK);
+    db.addRebuyDebt(player.player_id, db.DEFAULT_STACK);
     const refreshed = db.getPlayer(player.player_id);
     socket.data.player = refreshed;
-    // Broadcast updated roster so other tabs see the new chip count.
+    // Update seat chips at the table too, if they're seated.
+    const table = tableFor(socket, tables);
+    if (table) {
+      const seat = table.findSeat(player.player_id);
+      if (seat) seat.chipsAtTable = refreshed.chips;
+      table.chat('rebuy', humanRebuyMessage(refreshed.nickname, db.DEFAULT_STACK));
+      table._broadcast?.();
+    }
     io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
-    ack?.({ ok: true, chips: refreshed.chips });
+    ack?.({ ok: true, chips: refreshed.chips, rebuyDebt: refreshed.rebuy_debt });
+  });
+
+  /** Pay down some of your rebuy debt from your current chip stack.
+   *  Validates that you have enough chips AND that the amount doesn't
+   *  exceed your debt. Smallest gesture (100) and capped at min(chips, debt). */
+  socket.on('lobby:payDebt', ({ amount } = {}, ack) => {
+    const player = socket.data.player;
+    if (!player) return ack?.({ ok: false, error: 'choose a player first' });
+    const amt = Math.floor(Number(amount));
+    if (!Number.isFinite(amt) || amt < 1) return ack?.({ ok: false, error: 'amount must be ≥ 1' });
+    const fresh = db.getPlayer(player.player_id);
+    if (amt > fresh.chips)       return ack?.({ ok: false, error: 'not enough chips' });
+    if (amt > fresh.rebuy_debt)  return ack?.({ ok: false, error: 'amount exceeds debt' });
+    db.payRebuyDebt(player.player_id, amt);
+    const refreshed = db.getPlayer(player.player_id);
+    socket.data.player = refreshed;
+    const table = tableFor(socket, tables);
+    if (table) {
+      const seat = table.findSeat(player.player_id);
+      if (seat) seat.chipsAtTable = refreshed.chips;
+      table.chat('debt', `💸 ${refreshed.nickname} paid down ${amt.toLocaleString()} of debt. (Owes ${refreshed.rebuy_debt.toLocaleString()}.)`);
+      table._broadcast?.();
+    }
+    io.emit('roster', { players: db.listHumans(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, chips: refreshed.chips, rebuyDebt: refreshed.rebuy_debt });
   });
 
   socket.on('lobby:listTables', (_p, ack) => {

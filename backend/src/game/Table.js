@@ -8,6 +8,7 @@ const { Hand, STATES } = require('./Hand');
 const { Bot } = require('../bot/Bot');
 const { logHand, logBotDecision } = require('../persistence/logger');
 const { strengthOf } = require('../bot/strength');
+const { botRebuyMessage, humanRebuyMessage, bustMessage } = require('../util/flavor');
 
 const HAND_RESULT_PAUSE_MS = parseInt(process.env.HAND_RESULT_PAUSE_MS || '6000', 10);
 const HAND_AUTOSTART_DELAY_MS = parseInt(process.env.HAND_AUTOSTART_DELAY_MS || '1500', 10);
@@ -46,6 +47,32 @@ class Table {
     this.bots = new Map();
     this._botActionTimer = null;
     this._humanActionTimer = null;
+    /** Timestamp (ms since epoch) when the current human actor will be
+     *  auto-folded. Null when no human is on the clock. Broadcast in
+     *  publicState so clients can show a live countdown under the actor. */
+    this.actionDeadline = null;
+    /** Append-only chat / event log shown in the bottom panel. Ring
+     *  buffer trimmed at MAX_CHAT_LOG. Each entry: { id, ts, kind, text }. */
+    this.chatLog = [];
+    this._chatId = 0;
+    this.handCount = 0;
+  }
+
+  // ============================================================
+  // Chat log
+  // ============================================================
+
+  static MAX_CHAT_LOG = 200;
+  /** Append an event line and broadcast it. `kind` is one of:
+   *  hand, win, rebuy, leave, join, info, debt. */
+  chat(kind, text) {
+    const entry = { id: ++this._chatId, ts: Date.now(), kind, text };
+    this.chatLog.push(entry);
+    if (this.chatLog.length > Table.MAX_CHAT_LOG) {
+      this.chatLog.splice(0, this.chatLog.length - Table.MAX_CHAT_LOG);
+    }
+    if (this.io) this.io.to(this.roomName()).emit('table:chat', entry);
+    return entry;
   }
 
   setIo(io) { this.io = io; }
@@ -223,6 +250,16 @@ class Table {
       if (s) s.inHand = true;
     }
 
+    // Announce the hand in the chat log.
+    this.handCount++;
+    const dealer = this.hand.players[this.hand.dealerButton];
+    const sb     = this.hand.players[this.hand.sbIndex];
+    const bb     = this.hand.players[this.hand.bbIndex];
+    this.chat('hand',
+      `— Hand #${this.handCount} — Dealer: ${dealer?.nickname || '?'}`
+      + (sb && bb ? ` · SB ${sb.nickname} · BB ${bb.nickname}` : '')
+    );
+
     this._broadcast();
     this._emitPrivateHoleCards();
     this._maybeDriveBot();
@@ -341,8 +378,10 @@ class Table {
     const actor = this.hand.getCurrentActor();
     if (!actor) return;
     if (this.bots.has(actor)) return;   // bots have their own timer
+    this.actionDeadline = Date.now() + ACTION_TIMEOUT_MS;
     this._humanActionTimer = setTimeout(() => {
       this._humanActionTimer = null;
+      this.actionDeadline = null;
       if (!this.hand || this.hand.getCurrentActor() !== actor) return;
       console.log('[poker] action timeout — auto-folding', actor);
       this.applyAction({ playerId: actor, action: 'fold' });
@@ -354,6 +393,7 @@ class Table {
       clearTimeout(this._humanActionTimer);
       this._humanActionTimer = null;
     }
+    this.actionDeadline = null;
   }
 
   /**
@@ -415,6 +455,18 @@ class Table {
   }
 
   _afterHandComplete() {
+    // Announce winners in the chat log before we tear the hand down.
+    try {
+      const ws = this.hand.winners || [];
+      const nickById = new Map(this.hand.players.map(p => [p.playerId, p.nickname]));
+      for (const w of ws) {
+        const nick = nickById.get(w.playerId) || w.playerId;
+        const amt  = (w.amount || 0).toLocaleString();
+        const hand = w.handDesc ? ` with ${w.handDesc}` : '';
+        this.chat('win', `🏆 ${nick} wins ${amt}${hand}.`);
+      }
+    } catch (e) { /* never let logging break a hand */ }
+
     // Sync seat chips from hand state + persist to DB.
     for (const p of this.hand.players) {
       const seat = this.seats[p.seatIndex];
@@ -461,13 +513,27 @@ class Table {
       this._completeTimer = null;
       // Clear hand only after pause so clients can render showdown via the COMPLETE snapshot.
       if (this.hand === finishedHand) this.hand = null;
-      // Vacate broke players so the next hand can size correctly.
-      let vacated = 0;
+      // Handle broke seats. Humans vacate; bots auto-rebuy back to the
+      // default stack and stay seated (we want a persistent house roster
+      // of NPCs, not seats that drain to zero and disappear).
+      let vacated = 0, rebought = 0;
       for (const seat of this.seats) {
-        if (!seat.isEmpty() && seat.chipsAtTable <= 0) {
+        if (seat.isEmpty() || seat.chipsAtTable > 0) continue;
+        if (seat.isBot) {
+          const nick = seat.player?.nickname || seat.playerId;
+          seat.chipsAtTable = db.DEFAULT_STACK;
+          db.setChips(seat.playerId, db.DEFAULT_STACK);
+          this.chat('rebuy', botRebuyMessage(nick, db.DEFAULT_STACK));
+          rebought++;
+        } else {
+          const nick = seat.player?.nickname || seat.playerId;
+          this.chat('leave', bustMessage(nick));
           this._vacate(seat);
           vacated++;
         }
+      }
+      if (rebought > 0) {
+        console.log(`[poker] auto-rebought ${rebought} bot seat(s) at table ${this.id}`);
       }
       // Bots may shift mode at the end of each hand.
       for (const bot of this.bots.values()) bot.maybeShiftMode();
@@ -545,9 +611,18 @@ class Table {
         isBot: s.isBot,
         botMode: s.isBot ? (this.bots.get(s.playerId)?.mode || null) : null,
         isAfk: this._isSeatAfk(s),
+        // True when a human clicked "× remove this bot" mid-hand. The seat
+        // will vacate as soon as the current hand resolves.
+        pendingStand: !!s._standAfterHand,
       })),
       spectatorCount: this.spectators.size,
       hand,
+      // Wall-clock ms when the current human actor will be auto-folded.
+      // Null when no human is on the clock (waiting, bot turn, between hands).
+      actionDeadline: this.actionDeadline,
+      // Last 60 chat-log entries so newly-joined / refreshed clients
+      // see context, not an empty panel.
+      chatLog: this.chatLog.slice(-60),
     };
   }
 }

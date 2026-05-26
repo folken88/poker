@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260512r" />
+  <link rel="stylesheet" href="/css/table.css?v=20260526b" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -52,9 +52,10 @@
         <span class="me-avatar" id="meAvatar"></span>
         <span class="me-nick"   id="meNick">…</span>
         <span class="me-chips"  id="meChips">—</span>
-        <button class="btn btn--ghost btn--sm" id="addBotBtn"    title="Add a bot to an empty seat">+ Bot</button>
-        <button class="btn btn--ghost btn--sm" id="removeBotBtn" title="Remove a bot from the table">– Bot</button>
-        <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Reset YOUR chip stack to default">Re-buy</button>
+        <span class="me-debt"   id="meDebt" title="Long-term debt from past re-buys. Pay it down with winnings." hidden>📜 0</span>
+        <button class="btn btn--ghost btn--sm" id="payDebtBtn" title="Pay down rebuy debt from your stack" hidden>Pay Debt</button>
+        <button class="btn btn--ghost btn--sm" id="addBotBtn" title="Add a bot to an empty seat">+ Bot</button>
+        <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Re-buy 5,000 chips (added to your long-term debt)">Re-buy</button>
         <button class="btn btn--ghost btn--sm" id="switchBtn"     title="Switch to a different player">Switch</button>
         <button class="btn btn--ghost btn--sm" id="leaveBtn"      title="Leave the table (stay logged in)">Leave</button>
         <button class="btn btn--danger btn--sm" id="resetGameBtn" title="Reset EVERYONE's chips + cancel hand">Reset</button>
@@ -136,9 +137,13 @@
       </aside>
     </main>
 
-    <!-- Mini status line shown only when waiting on another player. -->
-    <footer class="actionbar actionbar--wait" id="actionWait" hidden>
-      <div class="actionbar__status" id="actionStatus"></div>
+    <!-- ===== Bottom chat / event log ===== -->
+    <footer class="chat-panel" id="chatPanel" aria-label="Table chat and events">
+      <header class="chat-panel__head">
+        <h3 class="chat-panel__title">Table log</h3>
+        <span class="chat-panel__hint" id="chatHint">events scroll here</span>
+      </header>
+      <ol class="chat-panel__list" id="chatList"></ol>
     </footer>
   </section>
 
@@ -170,8 +175,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260512r"></script>
-  <script src="/js/cards.js?v=20260512r"></script>
-  <script src="/js/client.js?v=20260512r"></script>
+  <script src="/js/avatars.js?v=20260526b"></script>
+  <script src="/js/cards.js?v=20260526b"></script>
+  <script src="/js/client.js?v=20260526b"></script>
 </body>
 </html>

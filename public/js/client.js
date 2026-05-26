@@ -66,6 +66,11 @@
     }
   });
 
+  // Incremental chat events (in addition to the snapshot in table:state).
+  socket.on('table:chat', (entry) => {
+    if (entry && typeof entry === 'object') appendChatEntry(entry);
+  });
+
   // ===== Roster picker =====
   function renderRoster() {
     const grid = $('#rosterGrid');
@@ -159,6 +164,19 @@
     $('#meNick').textContent = p.nickname;
     $('#meChips').textContent = '💰 ' + formatChips(p.chips);
     $('#meAvatar').innerHTML = renderAvatar(p.avatar_id);
+    // Debt indicator + Pay Debt button. Both hidden when debt is 0.
+    const debt = Number(p.rebuy_debt || 0);
+    const debtEl = $('#meDebt');
+    const payBtn = $('#payDebtBtn');
+    if (debt > 0) {
+      debtEl.textContent = '📜 Debt: ' + formatChips(debt);
+      debtEl.hidden = false;
+      payBtn.hidden = false;
+      payBtn.disabled = (p.chips <= 0);
+    } else {
+      debtEl.hidden = true;
+      payBtn.hidden = true;
+    }
   }
 
   // ===== Table render =====
@@ -229,18 +247,36 @@
           : (seat.isAfk
               ? `<span class="seat__afk-tag" title="Disconnected — sitting out until they return">AFK · sitting out</span>`
               : '');
+        // Per-bot remove button. Any seated human can click × to ask the
+        // bot to leave after the current hand. If clicked while a hand is
+        // in progress, the seat shows "leaving after hand" until it resolves.
+        const removeBotHtml = (seat.isBot && state.me)
+          ? (seat.pendingStand
+              ? `<span class="seat__leaving" title="Bot leaves at end of current hand">leaving after hand</span>`
+              : `<button type="button" class="seat__remove" data-remove-bot="${escapeAttr(seat.playerId)}" title="Ask ${escapeAttr(seat.nickname)} to leave (after this hand)">×</button>`)
+          : '';
         // Build the inline action panel for ME-when-it's-my-turn.
         const myTurn = isMe && isActor && handPlayer && !handPlayer.folded && !handPlayer.allIn
           && hand.state !== 'SHOWDOWN' && hand.state !== 'COMPLETE';
         const actionPanelHtml = myTurn ? buildActionPanelHtml(hand, handPlayer) : '';
+        // Action timer countdown — only on the currently-acting HUMAN. The
+        // text is filled in by tickTimers() so we don't re-render the whole
+        // ring once a second. Bots don't get a visible timer (they decide
+        // in <2s anyway).
+        const showTimer = isActor && !seat.isBot && t.actionDeadline;
+        const timerHtml = showTimer
+          ? `<div class="seat__timer" data-deadline="${t.actionDeadline}" data-seat-timer></div>`
+          : '';
         el.innerHTML = `
           <div class="seat__plate ${myTurn ? 'seat__plate--acting' : ''}">
+            ${removeBotHtml}
             ${badgeHtml}
             <div class="seat__avatar">${renderAvatar(seat.avatarId)}</div>
             <div class="seat__nick" title="${escapeAttr(seat.nickname)}">${escapeText(seat.nickname)}${isAllIn ? ' · ALL-IN' : ''}</div>
             ${botTag}
             <div class="seat__chips">💰 ${formatChips(handPlayer ? handPlayer.stack : seat.chips)}</div>
             ${betHtml}
+            ${timerHtml}
             ${holeHtml}
             ${actionPanelHtml}
           </div>`;
@@ -278,7 +314,62 @@
 
     // Action bar
     renderActionBar(hand);
+
+    // Replace the chat-log render with whatever the server snapshot has.
+    // Subsequent `table:chat` events append incrementally without a full redo.
+    if (Array.isArray(t.chatLog)) renderChatLog(t.chatLog);
+
+    // Fire the timer text once immediately (otherwise it'd show blank for ~1s).
+    tickTimers();
   }
+
+  // ===== Chat log (bottom panel) =====
+  const KIND_CLASS = { hand: 'hand', win: 'win', rebuy: 'rebuy', leave: 'leave', join: 'leave', debt: 'debt', info: 'info' };
+  const _seenChatIds = new Set();
+  function fmtClock(ts) {
+    const d = new Date(ts);
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+  function appendChatEntry(entry) {
+    if (_seenChatIds.has(entry.id)) return;
+    _seenChatIds.add(entry.id);
+    const list = $('#chatList');
+    if (!list) return;
+    const li = document.createElement('li');
+    li.className = 'chat-entry chat-entry--' + (KIND_CLASS[entry.kind] || 'info');
+    li.innerHTML =
+      `<span class="chat-entry__time">${fmtClock(entry.ts)}</span>` +
+      `<span class="chat-entry__text">${escapeText(entry.text)}</span>`;
+    list.appendChild(li);
+    // Auto-scroll only if user is already near the bottom; don't yank them
+    // back if they've scrolled up to read history.
+    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+    if (nearBottom) list.scrollTop = list.scrollHeight;
+  }
+  function renderChatLog(entries) {
+    const list = $('#chatList');
+    if (!list) return;
+    // Only render entries we haven't already seen (e.g. on a state snapshot,
+    // many will already be there from earlier events).
+    for (const e of entries) appendChatEntry(e);
+  }
+
+  // ===== Action timer ticker (one interval, finds all .seat__timer elements) =====
+  function tickTimers() {
+    const els = $$('[data-seat-timer]');
+    for (const el of els) {
+      const deadline = Number(el.dataset.deadline);
+      const remaining = Math.max(0, deadline - Date.now());
+      const s = Math.ceil(remaining / 1000);
+      const mm = Math.floor(s / 60);
+      const ss = String(s % 60).padStart(2, '0');
+      el.textContent = `⏱ ${mm}:${ss}`;
+      el.classList.toggle('is-urgent', remaining < 10000);
+    }
+  }
+  setInterval(tickTimers, 250);
 
   function stageLabel(stage, seated, watching) {
     const t = state.table;
@@ -412,6 +503,18 @@
 
   // ===== Action panel wiring (delegated; panel is re-rendered each turn) =====
   $('#seatRing').addEventListener('click', (e) => {
+    // × on a bot seat → ask that bot to leave (after the current hand)
+    const removeBot = e.target.closest('button[data-remove-bot]');
+    if (removeBot) {
+      e.stopPropagation();  // don't bubble to sit-down handler on the parent
+      const playerId = removeBot.dataset.removeBot;
+      const nick = removeBot.getAttribute('title') || playerId;
+      socket.emit('table:removeBot', { playerId }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not remove bot', true); return; }
+        toast(state.table?.hand ? `${nick} will leave after this hand` : `${nick} left the table`);
+      });
+      return;
+    }
     // Preset chip → fill the raise input
     const preset = e.target.closest('button[data-raise]');
     if (preset) {
@@ -443,12 +546,46 @@
 
   // ===== Topbar =====
   $('#resetStackBtn').addEventListener('click', () => {
-    if (!confirm('Reset your chip stack to ' + state.defaultStack + '?')) return;
+    const debtNow = Number(state.me?.rebuy_debt || 0);
+    const newDebt = debtNow + state.defaultStack;
+    const msg = `Re-buy ${state.defaultStack.toLocaleString()} chips?\n\n`
+              + `This is a LOAN. Your long-term debt will go from `
+              + `${debtNow.toLocaleString()} → ${newDebt.toLocaleString()}.\n`
+              + `Pay it down later with winnings.`;
+    if (!confirm(msg)) return;
     socket.emit('lobby:resetStack', null, (resp) => {
       if (!resp?.ok) { toast(resp?.error || 'Could not reset', true); return; }
       state.me.chips = resp.chips;
+      state.me.rebuy_debt = resp.rebuyDebt;
       paintMe();
-      toast(`Stack reset to ${resp.chips}`);
+      toast(`Stack reset to ${resp.chips}. Debt: ${resp.rebuyDebt.toLocaleString()}`);
+    });
+  });
+
+  // Pay down rebuy debt from your stack.
+  $('#payDebtBtn').addEventListener('click', () => {
+    const chips = Number(state.me?.chips || 0);
+    const debt  = Number(state.me?.rebuy_debt || 0);
+    if (debt <= 0) { toast('No debt to pay.'); return; }
+    if (chips <= 0) { toast('No chips to pay with.', true); return; }
+    const cap = Math.min(chips, debt);
+    const raw = prompt(
+      `Pay down rebuy debt.\n\n`
+      + `Current chips: ${chips.toLocaleString()}\n`
+      + `Current debt:  ${debt.toLocaleString()}\n\n`
+      + `How many chips to pay? (max ${cap.toLocaleString()})`,
+      String(cap),
+    );
+    if (raw === null) return;
+    const amt = Math.floor(Number(String(raw).replace(/[^0-9]/g, '')));
+    if (!Number.isFinite(amt) || amt < 1) { toast('Enter a positive number', true); return; }
+    if (amt > cap) { toast(`Max you can pay right now is ${cap.toLocaleString()}`, true); return; }
+    socket.emit('lobby:payDebt', { amount: amt }, (resp) => {
+      if (!resp?.ok) { toast(resp?.error || 'Could not pay debt', true); return; }
+      state.me.chips = resp.chips;
+      state.me.rebuy_debt = resp.rebuyDebt;
+      paintMe();
+      toast(`Paid ${amt.toLocaleString()}. Debt now ${resp.rebuyDebt.toLocaleString()}.`);
     });
   });
   $('#switchBtn').addEventListener('click', () => {
@@ -470,12 +607,7 @@
       toast('Bot joined the table');
     });
   });
-  $('#removeBotBtn').addEventListener('click', () => {
-    socket.emit('table:removeBot', null, (resp) => {
-      if (!resp?.ok) { toast(resp?.error || 'No bot to remove', true); return; }
-      toast('Bot removed');
-    });
-  });
+  // (Per-bot × buttons handle removal — wired in the seatRing delegate above.)
 
   // ---- Reset modal ----
   const resetModal = $('#resetModal');

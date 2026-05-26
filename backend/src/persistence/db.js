@@ -32,8 +32,12 @@ function ensureColumn(table, col, type) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
   }
 }
-ensureColumn('players', 'is_bot',   'INTEGER NOT NULL DEFAULT 0');
-ensureColumn('players', 'bot_mode', 'TEXT');
+ensureColumn('players', 'is_bot',     'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('players', 'bot_mode',   'TEXT');
+// Long-term "tab" — every time a human hits Re-buy we add DEFAULT_STACK to
+// this debt. They can pay it down later from their stack via `lobby:payDebt`.
+// Bots do NOT accrue debt — their auto-rebuys are free (they're the house).
+ensureColumn('players', 'rebuy_debt', 'INTEGER NOT NULL DEFAULT 0');
 
 // ---- Roster (the fixed test players) ----
 // 14 names, 12 avatars — two avatars get reused on purpose.
@@ -52,6 +56,7 @@ const ROSTER = [
   { name: 'Farts',     avatar: 'cat'     },
   { name: 'Butt',      avatar: 'wizard'  },
   { name: 'Boobs',     avatar: 'robot'   },
+  { name: 'Cram',      avatar: 'bear'    },
 ];
 
 // AI players — pre-seeded, available via "Add bot" button. Personality
@@ -85,6 +90,8 @@ const stmts = {
   `),
   touchPlayer:  db.prepare('UPDATE players SET last_seen_at = ? WHERE player_id = ?'),
   updateChips:  db.prepare('UPDATE players SET chips = ?, last_seen_at = ? WHERE player_id = ?'),
+  addDebt:      db.prepare('UPDATE players SET rebuy_debt = rebuy_debt + ? WHERE player_id = ?'),
+  payDebt:      db.prepare('UPDATE players SET chips = chips - ?, rebuy_debt = rebuy_debt - ? WHERE player_id = ?'),
   recordWin:    db.prepare('UPDATE players SET total_won = total_won + ?, hands_played = hands_played + 1 WHERE player_id = ?'),
   recordLoss:   db.prepare('UPDATE players SET total_lost = total_lost + ?, hands_played = hands_played + 1 WHERE player_id = ?'),
   insertHand:   db.prepare(`
@@ -146,6 +153,16 @@ function touchPlayer(playerId) {
 function setChips(playerId, chips) {
   stmts.updateChips.run(chips, Date.now(), playerId);
 }
+function addRebuyDebt(playerId, amount) {
+  if (!Number.isFinite(amount) || amount <= 0) return;
+  stmts.addDebt.run(amount, playerId);
+}
+/** Take `amount` from chips and reduce debt by the same. Caller must
+ *  pre-validate (amount > 0, amount <= chips, amount <= rebuy_debt). */
+function payRebuyDebt(playerId, amount) {
+  if (!Number.isFinite(amount) || amount <= 0) return;
+  stmts.payDebt.run(amount, amount, playerId);
+}
 function recordWin(playerId, amount)  { stmts.recordWin.run(amount, playerId); }
 function recordLoss(playerId, amount) { stmts.recordLoss.run(amount, playerId); }
 function insertHand({ tableId, board, players, winners }) {
@@ -172,6 +189,8 @@ module.exports = {
   listBots,
   touchPlayer,
   setChips,
+  addRebuyDebt,
+  payRebuyDebt,
   recordWin,
   recordLoss,
   insertHand,
