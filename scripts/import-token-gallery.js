@@ -167,11 +167,12 @@ for (const c of candidates) {
   if (pcMatch) {
     // Attach campaign metadata so the gallery can show "Aasimar Cleric · Josh"
     // under the PC's name.
-    entry.pc      = true;
-    entry.race    = pcMatch.pc.race || null;
-    entry.class   = pcMatch.pc.class || null;
-    entry.level   = pcMatch.pc.level || null;
-    entry.player  = pcMatch.pc.player || null;
+    entry.pc        = true;
+    entry.race      = pcMatch.pc.race || null;
+    entry.class     = pcMatch.pc.class || null;
+    entry.level     = pcMatch.pc.level || null;
+    entry.player    = pcMatch.pc.player || null;
+    entry.campaign  = pcMatch.pc.campaign || null;
   }
   manifest.push(entry);
 }

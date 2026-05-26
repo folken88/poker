@@ -40,7 +40,15 @@ function parsePcs() {
       if (m) meta[m[1]] = m[2];
     }
     const name = (meta.name || f.replace(/\.md$/,'')).replace(/^-|-$/g,'').trim();
-    pcs.push({ file: f, name, race: meta.race || '', class: meta.class || '', level: meta.level || '', player: meta.player || '' });
+    pcs.push({
+      file: f,
+      name,
+      race: meta.race || '',
+      class: meta.class || '',
+      level: meta.level || '',
+      player: meta.player || '',
+      campaign: meta.primary_campaign || meta.campaign || '',
+    });
   }
   return pcs;
 }
@@ -117,6 +125,22 @@ function findBestMatch(name, library) {
   return best;
 }
 
+// ---- Load manual overrides ----
+// scripts/token-overrides.json maps PC name (exact match against vault
+// `name:` frontmatter) to an FVTT-relative path. Overrides bypass the
+// heuristic matcher entirely — use them for PCs the heuristic misses or
+// gets wrong, and for any PC where YOU have a specific token in mind.
+const OVERRIDES_PATH = path.join(__dirname, 'token-overrides.json');
+let overrides = {};
+if (fs.existsSync(OVERRIDES_PATH)) {
+  try {
+    overrides = JSON.parse(fs.readFileSync(OVERRIDES_PATH, 'utf8'));
+    console.log(`Loaded ${Object.keys(overrides).length} manual override(s) from ${path.basename(OVERRIDES_PATH)}`);
+  } catch (e) {
+    console.warn(`[overrides] could not parse ${OVERRIDES_PATH}: ${e.message}`);
+  }
+}
+
 // ---- Run ----
 console.log('Indexing Foundry art library…');
 const library = indexFoundry();
@@ -126,10 +150,21 @@ const pcs = parsePcs();
 console.log(`Found ${pcs.length} PCs in vault`);
 
 const manifest = [];
-let matched = 0, skipped = 0;
+let matched = 0, skipped = 0, overridden = 0;
 
 for (const pc of pcs) {
-  const best = findBestMatch(pc.name, library);
+  let best;
+  let viaOverride = false;
+  if (overrides[pc.name]) {
+    const overridePath = path.resolve(FOUNDRY_DIR, overrides[pc.name]);
+    if (fs.existsSync(overridePath)) {
+      best = overridePath;
+      viaOverride = true;
+    } else {
+      console.warn(`  [override miss] ${pc.name}: ${overrides[pc.name]} not found, falling back to heuristic`);
+    }
+  }
+  if (!best) best = findBestMatch(pc.name, library);
   if (!best) {
     skipped++;
     console.log(`  [skip] ${pc.name}: no match`);
@@ -146,15 +181,17 @@ for (const pc of pcs) {
     class: pc.class,
     level: pc.level,
     player: pc.player,
+    campaign: pc.campaign,
     art: `/assets/characters/${s}${ext}`,
     sourceFile: path.relative(FOUNDRY_DIR, best).replace(/\\/g, '/'),
   });
   matched++;
-  console.log(`  [ok]   ${pc.name} → ${path.basename(best)}`);
+  if (viaOverride) overridden++;
+  console.log(`  [${viaOverride ? 'OVR' : 'ok'}]  ${pc.name} → ${path.basename(best)}`);
 }
 
 manifest.sort((a, b) => a.name.localeCompare(b.name));
 fs.writeFileSync(path.join(OUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
-console.log(`\nDone: ${matched} matched, ${skipped} skipped. Manifest written.`);
+console.log(`\nDone: ${matched} matched (${overridden} via overrides), ${skipped} skipped. Manifest written.`);
 console.log(`Output: ${OUT_DIR}`);

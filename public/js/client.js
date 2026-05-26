@@ -134,9 +134,10 @@
       ? tokens.filter(t =>
           t.name.toLowerCase().includes(q)
           || t.id.toLowerCase().includes(q)
-          || (t.class || '').toLowerCase().includes(q)
-          || (t.race  || '').toLowerCase().includes(q)
-          || (t.player|| '').toLowerCase().includes(q))
+          || (t.class    || '').toLowerCase().includes(q)
+          || (t.race     || '').toLowerCase().includes(q)
+          || (t.player   || '').toLowerCase().includes(q)
+          || (t.campaign || '').toLowerCase().includes(q))
       : tokens;
     const counter = $('#tokenCount');
     if (counter) counter.textContent =
@@ -153,10 +154,19 @@
       btn.dataset.avatar = tok.art;
       btn.title = tok.name;
       btn.setAttribute('aria-checked', tok.art === state.pendingAvatar ? 'true' : 'false');
-      const subLine = tok.pc
-        ? `<span class="avatar-pick__sub">${escapeText([tok.race, tok.class].filter(Boolean).join(' · '))}</span>`
+      const CAMPAIGN_NAMES = {
+        CC: 'Carrion Crown', TG: 'Tyrant\'s Grasp', IG: 'Iron Gods',
+        HV: 'Hell\'s Vengeance', HR: 'Hell\'s Rebels', SS: 'Skull & Shackles',
+        JG: 'Jade Regent',
+      };
+      const subBits = [tok.race, tok.class].filter(Boolean);
+      const subLine = tok.pc && subBits.length
+        ? `<span class="avatar-pick__sub">${escapeText(subBits.join(' · '))}</span>`
         : '';
-      const pcBadge = tok.pc ? `<span class="avatar-pick__pcbadge" title="Campaign PC${tok.player ? ' · ' + escapeText(tok.player) : ''}">PC</span>` : '';
+      const campaignName = tok.campaign ? (CAMPAIGN_NAMES[tok.campaign] || tok.campaign) : '';
+      const pcBadge = tok.pc
+        ? `<span class="avatar-pick__pcbadge" title="${escapeAttr([campaignName, tok.player ? 'Player: ' + tok.player : ''].filter(Boolean).join(' · '))}">${escapeText(tok.campaign || 'PC')}</span>`
+        : '';
       btn.innerHTML = `<img class="avatar-img" src="${tok.art}" alt="${escapeAttr(tok.name)}" loading="lazy" />`
                     + pcBadge
                     + `<span class="avatar-pick__label">${escapeText(tok.name)}</span>`

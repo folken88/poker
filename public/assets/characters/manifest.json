@@ -6,8 +6,20 @@
     "class": "Magus",
     "level": "5",
     "player": "Mandi",
+    "campaign": "JG",
     "art": "/assets/characters/antoinette-borden.webp",
     "sourceFile": "undead/token_vampire_noble_antoinette_borden_blonde_female_axe.webp"
+  },
+  {
+    "slug": "augustus-teabrow",
+    "name": "Augustus Teabrow",
+    "race": "Halfling",
+    "class": "Psychic",
+    "level": "15",
+    "player": "Enrique",
+    "campaign": "IG",
+    "art": "/assets/characters/augustus-teabrow.webp",
+    "sourceFile": "iron_gods_characters/hafling_brow_mentalist_big_head_bird_helmet.webp"
   },
   {
     "slug": "bruce",
@@ -16,6 +28,7 @@
     "class": "Monk (Unchained) / Sorcerer / Dragon Disciple",
     "level": "13",
     "player": "Chris",
+    "campaign": "HV",
     "art": "/assets/characters/bruce.webp",
     "sourceFile": "cheliax_characters/token_human_male_bruce_mongolian_dragon_34_years_old_peak_physical_condition_bald.webp"
   },
@@ -26,8 +39,9 @@
     "class": "Sorcerer",
     "level": "5",
     "player": "Graham",
+    "campaign": "SS",
     "art": "/assets/characters/bujon-storm-of-cheliax.webp",
-    "sourceFile": "cheliax_characters/asmodeans/token_human_female_bald_thin_monk_cheliax_sailor_shackles.webp"
+    "sourceFile": "tiefling/token_iku_turso_bujon_purple_scale_eel.webp"
   },
   {
     "slug": "celeb",
@@ -36,6 +50,7 @@
     "class": "Theurge / Monk (Unchained)",
     "level": "12",
     "player": "Tim",
+    "campaign": "HR",
     "art": "/assets/characters/celeb.webp",
     "sourceFile": "cheliax_characters/kintargo/token_human_samsaran_male_celeb_silver_haired_35_year_old_elf.webp"
   },
@@ -46,6 +61,7 @@
     "class": "Cleric",
     "level": "11",
     "player": "Josh",
+    "campaign": "",
     "art": "/assets/characters/dinvaya.webp",
     "sourceFile": "carrion_crown_characters/token_aasimar_female_angel_dinvaya_cleric.webp"
   },
@@ -56,6 +72,7 @@
     "class": "Paladin",
     "level": "11",
     "player": "Harrison",
+    "campaign": "CC",
     "art": "/assets/characters/dismas-aevrett.webp",
     "sourceFile": "human/token_human_male_dismas_paladin_rifleman_marksman_shooter.webp"
   },
@@ -66,6 +83,7 @@
     "class": "Agent of the Grave / Necromancer",
     "level": "14",
     "player": "Harrison",
+    "campaign": "HV",
     "art": "/assets/characters/draymus-keshaal-mortiarum.webp",
     "sourceFile": "token_draymus.webp"
   },
@@ -76,6 +94,7 @@
     "class": "Investigator",
     "level": "8",
     "player": "Enrique",
+    "campaign": "IG",
     "art": "/assets/characters/eldrin.webp",
     "sourceFile": "elf/token_elf_male_eldrin_purple.webp"
   },
@@ -86,6 +105,7 @@
     "class": "Oracle",
     "level": "11",
     "player": "Anna",
+    "campaign": "CC",
     "art": "/assets/characters/elfrip.webp",
     "sourceFile": "carrion_crown_characters/token_dinvaya_grumpy_elfrip_art.webp"
   },
@@ -96,6 +116,7 @@
     "class": "Dervish Dancer",
     "level": "12",
     "player": "Harrison",
+    "campaign": "HR",
     "art": "/assets/characters/femmik-embersword.webp",
     "sourceFile": "cheliax_characters/kintargo/token_ifrit_femmik_male_blue_coat.webp"
   },
@@ -106,6 +127,7 @@
     "class": "Samurai / Hellknight (Order of the Rack)",
     "level": "14",
     "player": "Betty",
+    "campaign": "HV",
     "art": "/assets/characters/field-marshal-freya-kusanagi.webp",
     "sourceFile": "human/token_human_female_samurai_freya_kusanagi_balrog_blade.webp"
   },
@@ -116,6 +138,7 @@
     "class": "Bloodrager / Paladin",
     "level": "12",
     "player": "Josh",
+    "campaign": "HR",
     "art": "/assets/characters/gabriel.webp",
     "sourceFile": "carrion_crown_characters/blackwood-clan/token_human_male_blackwood_gabriel.webp"
   },
@@ -126,6 +149,7 @@
     "class": "null",
     "level": "null",
     "player": "Enrique",
+    "campaign": "IG",
     "art": "/assets/characters/gavrilo.webp",
     "sourceFile": "orc/token_orc_male_gavrilo_durz.webp"
   },
@@ -136,8 +160,20 @@
     "class": "Swashbuckler",
     "level": "5",
     "player": "Kip",
+    "campaign": "SS",
     "art": "/assets/characters/holden-aleistair.webp",
     "sourceFile": "human/token_human_male_holden_captain_oblivious_swashbuckler_s.webp"
+  },
+  {
+    "slug": "jmal",
+    "name": "J'Mal",
+    "race": "Hobgoblin",
+    "class": "Red Mantis Assassin / Rogue (Unchained)",
+    "level": "14",
+    "player": "Tim",
+    "campaign": "HV",
+    "art": "/assets/characters/jmal.webp",
+    "sourceFile": "goblin/token_hobgoblin_jamal_rogue_assassin_red_mantis.webp"
   },
   {
     "slug": "jason",
@@ -146,8 +182,9 @@
     "class": "Cleric of Asmodeus / Divine Scion",
     "level": "14",
     "player": "Charles",
+    "campaign": "HV",
     "art": "/assets/characters/jason.webp",
-    "sourceFile": "deathcourt/token_archfey_male_autumncourt_jason_fighter.webp"
+    "sourceFile": "tiefling/token_tiefling_male_jason_priest_asmodeus_devil.webp"
   },
   {
     "slug": "kaelin-kringle",
@@ -156,6 +193,7 @@
     "class": "Witch",
     "level": "6",
     "player": "Tracy",
+    "campaign": "SS",
     "art": "/assets/characters/kaelin-kringle.webp",
     "sourceFile": "tiefling/token_tiefling_male_blue_kringle_kale_tracy8.webp"
   },
@@ -166,6 +204,7 @@
     "class": "Slayer",
     "level": "11",
     "player": "Graham",
+    "campaign": "CC",
     "art": "/assets/characters/kai-gin.webp",
     "sourceFile": "carrion_crown_characters/token_orc_half_male_kai_gin_graham_detective_elf_ears.webp"
   },
@@ -176,6 +215,7 @@
     "class": "Magus",
     "level": "11",
     "player": "Mandi",
+    "campaign": "CC",
     "art": "/assets/characters/kate-blackwood.webp",
     "sourceFile": "carrion_crown_characters/token_human_female_magus_kate_blackwood_psychic - Copy.webp"
   },
@@ -186,6 +226,7 @@
     "class": "Rogue (Unchained)",
     "level": "5",
     "player": "Graham",
+    "campaign": "JG",
     "art": "/assets/characters/kelda-ironglim.webp",
     "sourceFile": "deathcourt/token_dwarf_female_kelda_rogue.webp"
   },
@@ -196,6 +237,7 @@
     "class": "Admixture Evoker / Arcane Trickster / Rogue (Unchained)",
     "level": "11",
     "player": "Sydney",
+    "campaign": "",
     "art": "/assets/characters/kovira.webp",
     "sourceFile": "carrion_crown_characters/token_tiefling_female_blonde_kovira_midjourney.webp"
   },
@@ -206,6 +248,7 @@
     "class": "Druid",
     "level": "null",
     "player": "Enrique",
+    "campaign": "IG",
     "art": "/assets/characters/kroktah.webp",
     "sourceFile": "kasatha/token_kasatha_female_air_caster_druid_kroktah.webp"
   },
@@ -216,6 +259,7 @@
     "class": "Hunter",
     "level": "5",
     "player": "Anna",
+    "campaign": "JG",
     "art": "/assets/characters/lirienne-voss.webp",
     "sourceFile": "human/token_human_female_lirienne_dino_crisp_crossbow.webp"
   },
@@ -226,6 +270,7 @@
     "class": "Bloodrager",
     "level": "15",
     "player": "Rye",
+    "campaign": "IG",
     "art": "/assets/characters/luna-kresnik.webp",
     "sourceFile": "iron_gods_characters/token_angel_female_luna_blackwing_greatsword.webp"
   },
@@ -236,6 +281,7 @@
     "class": "Gunslinger",
     "level": "null",
     "player": "Hans",
+    "campaign": "IG",
     "art": "/assets/characters/maginnis.webp",
     "sourceFile": "human/token_human_male_maginnis_cowboy_with_thin_beard_and_black_hat_38_year_old.webp"
   },
@@ -246,6 +292,7 @@
     "class": "Arcane Trickster / Evoker / Rogue (Unchained)",
     "level": "12",
     "player": "Chris",
+    "campaign": "HR",
     "art": "/assets/characters/nigel.webp",
     "sourceFile": "human/token_human_male_nigel_uncle_roger.webp"
   },
@@ -256,6 +303,7 @@
     "class": "Rogue",
     "level": "15",
     "player": "Daemon",
+    "campaign": "IG",
     "art": "/assets/characters/nomkath.webp",
     "sourceFile": "catfolk/token_catfolk_male_nomkath.webp"
   },
@@ -266,6 +314,7 @@
     "class": "Sorcerer",
     "level": "14",
     "player": "Josh",
+    "campaign": "IG",
     "art": "/assets/characters/olbryn.webp",
     "sourceFile": "elf/token_elf_male_drow_olbryn_shorthair_sorcerer.webp"
   },
@@ -276,6 +325,7 @@
     "class": "Arcane Archer / Ranger / Wizard",
     "level": "14",
     "player": "Josh",
+    "campaign": "HV",
     "art": "/assets/characters/reese.webp",
     "sourceFile": "starfinder_strix_reese_male.webp"
   },
@@ -286,6 +336,7 @@
     "class": "Oracle",
     "level": "5",
     "player": "Mandi",
+    "campaign": "SS",
     "art": "/assets/characters/rhyarca-jillyr.webp",
     "sourceFile": "deathcourt/token_catfolk_female_rhyarca_cleric_angel.webp"
   },
@@ -296,6 +347,7 @@
     "class": "Ranger",
     "level": "11",
     "player": "Chris",
+    "campaign": "CC",
     "art": "/assets/characters/rodney-danger-smith.webp",
     "sourceFile": "carrion_crown_characters/token_human_male_ranger_danger_courtaud_robinhood.webp"
   },
@@ -306,6 +358,7 @@
     "class": "Brawler",
     "level": "7",
     "player": "Enrique",
+    "campaign": "SS",
     "art": "/assets/characters/sha-feng.webp",
     "sourceFile": "shackles_characters/token_sha_feng_hobgoblin_bald.webp"
   },
@@ -316,6 +369,7 @@
     "class": "Fighter",
     "level": "5",
     "player": "Daemon",
+    "campaign": "SS",
     "art": "/assets/characters/storgrim-thunderbeard.webp",
     "sourceFile": "shackles_characters/token_dwarf_male_captain_storgrim_brogans_axe_blue_fighter_pirate_sailor.webp"
   },
@@ -326,6 +380,7 @@
     "class": "Gunslinger",
     "level": "5",
     "player": "Kayla",
+    "campaign": "JG",
     "art": "/assets/characters/taelys-of-starfall.webp",
     "sourceFile": "deathcourt/token_tiefling_female_taelys_magus.webp"
   },
@@ -336,6 +391,7 @@
     "class": "null",
     "level": "null",
     "player": "Tracy",
+    "campaign": "IG",
     "art": "/assets/characters/tokala.webp",
     "sourceFile": "iron_gods_characters/token_orc_male_tokala_mecha_face - Copy.webp"
   },
@@ -346,6 +402,7 @@
     "class": "Cleric",
     "level": "15",
     "player": "Kip",
+    "campaign": "IG",
     "art": "/assets/characters/ulfred-stronginthearm.webp",
     "sourceFile": "token_ulfred_stronginthearm.webp"
   },
@@ -356,6 +413,7 @@
     "class": "Magus",
     "level": "5",
     "player": "Tim",
+    "campaign": "SS",
     "art": "/assets/characters/vaughan.webp",
     "sourceFile": "shackles_characters/token_human_male_vaughan_samsaran_handsome_pirate_35_year_radiance2.webp"
   },
@@ -366,6 +424,7 @@
     "class": "Inquisitor",
     "level": "11",
     "player": "Tim",
+    "campaign": "CC",
     "art": "/assets/characters/william-gaspar.webp",
     "sourceFile": "carrion_crown_characters/token_human_male_gaspar_cowboy_vampire_hunter_dd_character_40_year_old_man.webp"
   }

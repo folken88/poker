@@ -1,0 +1,8 @@
+{
+  "_comment": "Manual PC → token mappings that override the heuristic matcher in import-vault-tokens.js. Keys are exact PC names from vault frontmatter `name:`. Values are paths relative to F:/foundryvttstorage/foundryvtt-media/Art - Characters/. Re-run scripts/import-vault-tokens.js (then import-token-gallery.js) after editing.",
+
+  "Bujon, Storm of Cheliax": "tiefling/token_iku_turso_bujon_purple_scale_eel.webp",
+  "Jason":                    "tiefling/token_tiefling_male_jason_priest_asmodeus_devil.webp",
+  "J'Mal":                    "goblin/token_hobgoblin_jamal_rogue_assassin_red_mantis.webp",
+  "Augustus Teabrow":         "iron_gods_characters/hafling_brow_mentalist_big_head_bird_helmet.webp"
+}
