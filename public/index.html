@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260526ae" />
+  <link rel="stylesheet" href="/css/table.css?v=20260526af" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -77,8 +77,10 @@
     </header>
 
     <main class="table-wrap">
-      <!-- ===== LEFT perimeter: Actions guide ===== -->
-      <aside class="help-panel help-panel--left" aria-label="Action guide">
+      <!-- ===== LEFT perimeter: consolidated scrollable tips/help =====
+           All reference material in one scrollable column so the right
+           side can stay locked to the live leaderboard. -->
+      <aside class="help-panel help-panel--left" aria-label="Game help">
         <h3 class="help-panel__title">Actions</h3>
         <dl class="help-panel__list">
           <dt><span class="help-key">Fold</span></dt>
@@ -102,34 +104,12 @@
           <dt><span class="help-badge">BB</span></dt>
           <dd>Big blind — forced full bet, posted left of SB. Acts last preflop, first after.</dd>
         </dl>
-      </aside>
 
-      <div class="felt">
-        <div class="seat-ring" id="seatRing"></div>
-        <div class="center">
-          <div class="pot pot--big" id="pot">Pot 0</div>
-          <div class="board" id="board"></div>
-          <div class="stage-banner" id="stageBanner">Waiting for players…</div>
-        </div>
-        <div class="hand-banner" id="handBanner" hidden></div>
-
-        <!-- Persistent action panel — outside the seat ring so renderTable
-             doesn't destroy it every state update. The Loot Bank and
-             Leaderboard now live as collapsible sections INSIDE the
-             panel (toggled with 🎒 and 🏆 buttons), so they ride along
-             when the player drags the panel anywhere on screen. -->
-        <div class="actpanel-host" id="actpanelHost" hidden>
-          <div class="actpanel" id="actionPanel" data-actpanel></div>
-        </div>
-      </div>
-
-      <!-- ===== RIGHT perimeter: Hand rankings + tips ===== -->
-      <aside class="help-panel help-panel--right" aria-label="Hand rankings">
         <h3 class="help-panel__title">Hand rankings</h3>
         <ol class="help-panel__rankings">
           <li><strong>Royal Flush</strong> <em>10-J-Q-K-A, same suit</em></li>
           <li><strong>Straight Flush</strong> <em>5 in a row, same suit</em></li>
-          <li><strong>Four of a Kind</strong> <em>four 7s, four Ks…</em></li>
+          <li><strong>Four of a Kind</strong></li>
           <li><strong>Full House</strong> <em>three + a pair</em></li>
           <li><strong>Flush</strong> <em>5 same suit</em></li>
           <li><strong>Straight</strong> <em>5 in a row</em></li>
@@ -156,7 +136,34 @@
           <li>The brass ring shows whose turn it is.</li>
           <li>Out of chips? Hit <b>Re-buy</b> for a fresh stack.</li>
           <li>Want to start over? <b>Reset</b> wipes the whole table.</li>
+          <li>Goal: <b>+5 in all 5 gear slots</b> → LOOT LORD.</li>
         </ul>
+      </aside>
+
+      <div class="felt">
+        <div class="seat-ring" id="seatRing"></div>
+        <div class="center">
+          <div class="pot pot--big" id="pot">Pot 0</div>
+          <div class="board" id="board"></div>
+          <div class="stage-banner" id="stageBanner">Waiting for players…</div>
+        </div>
+        <div class="hand-banner" id="handBanner" hidden></div>
+
+        <!-- Persistent action panel — outside the seat ring so renderTable
+             doesn't destroy it every state update. The Loot Bank and
+             Leaderboard now live as collapsible sections INSIDE the
+             panel (toggled with 🎒 and 🏆 buttons), so they ride along
+             when the player drags the panel anywhere on screen. -->
+        <div class="actpanel-host" id="actpanelHost" hidden>
+          <div class="actpanel" id="actionPanel" data-actpanel></div>
+        </div>
+      </div>
+
+      <!-- ===== RIGHT perimeter: Live wealth leaderboard ===== -->
+      <aside class="help-panel help-panel--right help-panel--leaderboard" aria-label="Leaderboard">
+        <h3 class="help-panel__title">🏆 Leaderboard</h3>
+        <p class="help-panel__sub">Chips + magic-item value, updated in real time. Goal: full +5 set = LOOT LORD.</p>
+        <ol class="lb lb--sidebar" id="sidebarLeaderboard"></ol>
       </aside>
     </main>
 
@@ -294,8 +301,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260526ae"></script>
-  <script src="/js/cards.js?v=20260526ae"></script>
-  <script src="/js/client.js?v=20260526ae"></script>
+  <script src="/js/avatars.js?v=20260526af"></script>
+  <script src="/js/cards.js?v=20260526af"></script>
+  <script src="/js/client.js?v=20260526af"></script>
 </body>
 </html>

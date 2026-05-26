@@ -126,6 +126,9 @@
     }
     if (document.body.dataset.screen === 'roster') renderRoster();
     if (document.body.dataset.screen === 'confirm') renderConfirm();
+    // The right-side sidebar leaderboard updates whenever the roster
+    // changes (chip totals, gear purchases, bot wins, etc.).
+    renderSidebarLeaderboard();
   });
 
   socket.on('table:state', (st) => {
@@ -786,6 +789,43 @@
         </li>`;
     }).join('');
     return `<ol class="lb">${rows}</ol>`;
+  }
+
+  /** Refresh the right-side perimeter leaderboard. Same data as the
+   *  in-actpanel leaderboard but always visible. */
+  function renderSidebarLeaderboard() {
+    const el = $('#sidebarLeaderboard');
+    if (!el) return;
+    const all = (state.roster || []).slice();
+    if (all.length === 0) { el.innerHTML = '<li class="lb__empty">No players yet…</li>'; return; }
+    const meId = state.me?.player_id;
+    function wealthOf(p) {
+      let total = Number(p.chips || 0);
+      try {
+        const gear = JSON.parse(p.gear || '{}') || {};
+        for (const slot of GEAR_SLOTS) {
+          const tier = gear[slot] || 0;
+          if (tier) total += gearPrice(slot, tier);
+        }
+      } catch (_) {}
+      return total;
+    }
+    const ranked = all
+      .map(p => ({ p, wealth: wealthOf(p) }))
+      .sort((a, b) => b.wealth - a.wealth);
+    el.innerHTML = ranked.map((row, i) => {
+      const p = row.p;
+      const mine = p.player_id === meId ? 'is-me' : '';
+      const rankMedal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1) + '.';
+      const lord = p.is_bot ? '<span class="lb__bot">AI</span>' : '';
+      return `
+        <li class="lb__row ${mine}">
+          <span class="lb__rank">${rankMedal}</span>
+          <span class="lb__avatar">${renderAvatar(p.avatar_id)}</span>
+          <span class="lb__name">${escapeText(p.nickname)}${lord}</span>
+          <span class="lb__wealth">${formatChips(row.wealth)}</span>
+        </li>`;
+    }).join('');
   }
 
   /** Legacy no-op — bank now lives inline inside the action panel. */
