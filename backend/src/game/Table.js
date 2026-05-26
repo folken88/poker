@@ -482,13 +482,18 @@ class Table {
   /**
    * If the current actor is a HUMAN, arm a timer that auto-folds them after
    * ACTION_TIMEOUT_MS so a disconnected / AFK player doesn't stall the table.
+   * IMPORTANT: this must NOT touch actionDeadline when the actor is a bot —
+   * _maybeDriveBot owns that deadline and any subsequent broadcast would
+   * otherwise wipe the bot's "thinking" clock to null.
    */
   _armHumanActionTimer() {
-    this._clearHumanActionTimer();
     if (!this.hand) return;
     const actor = this.hand.getCurrentActor();
-    if (!actor) return;
-    if (this.bots.has(actor)) return;   // bots have their own timer
+    // Bot's turn — _maybeDriveBot has already set actionDeadline + the
+    // thinking-delay setTimeout. Leave both alone.
+    if (!actor || this.bots.has(actor)) return;
+    // Human's turn — clear any stale human timer first, then arm fresh.
+    this._clearHumanActionTimer();
     this.actionDeadline = Date.now() + ACTION_TIMEOUT_MS;
     this._humanActionTimer = setTimeout(() => {
       this._humanActionTimer = null;
