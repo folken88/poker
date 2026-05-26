@@ -328,10 +328,12 @@ class Table {
       + (sb && bb ? ` · SB ${sb.nickname} · BB ${bb.nickname}` : '')
     );
 
-    this._broadcast();
-    this._emitPrivateHoleCards();
+    // Same ordering rule as applyAction: timer setup BEFORE broadcast so
+    // a single emit carries the new actor's fresh deadline.
     this._maybeDriveBot();
     this._armHumanActionTimer();
+    this._broadcast();              // _broadcast() also emits hole cards internally
+    this._emitPrivateHoleCards();   // belt-and-suspenders for race conditions during deal
   }
 
   _nextButtonIndex(ready) {
@@ -466,9 +468,11 @@ class Table {
       if (line) this.chat('action', line);
     } catch (_) { /* never let chat logging break a hand */ }
 
-    // If hand transitioned or completed, broadcast + handle next steps.
-    this._broadcast();
-
+    // Set up all state changes (timers, next-hand bookkeeping) BEFORE
+    // broadcasting so the single emit captures the final, consistent
+    // snapshot — fresh deadlines, post-hand nextHandAt, etc. Previously
+    // we broadcast first then mutated, and three separate fix-up
+    // broadcasts had to compensate for the resulting stale state.
     if (this.hand.state === STATES.COMPLETE) {
       this._clearHumanActionTimer();
       this._afterHandComplete();
@@ -476,6 +480,7 @@ class Table {
       this._maybeDriveBot();   // if next actor is a bot, schedule its decision
       this._armHumanActionTimer();
     }
+    this._broadcast();
     return { ok: true };
   }
 
@@ -486,13 +491,18 @@ class Table {
    * _maybeDriveBot owns that deadline and any subsequent broadcast would
    * otherwise wipe the bot's "thinking" clock to null.
    */
+  /**
+   * If the current actor is a HUMAN, arm a timer that auto-folds them after
+   * ACTION_TIMEOUT_MS so a disconnected / AFK player doesn't stall the table.
+   * Must NOT broadcast — callers do that AFTER all timer setup is complete,
+   * so a single broadcast captures the final state.
+   */
   _armHumanActionTimer() {
     if (!this.hand) return;
     const actor = this.hand.getCurrentActor();
-    // Bot's turn — _maybeDriveBot has already set actionDeadline + the
-    // thinking-delay setTimeout. Leave both alone.
+    // Bot's turn — _maybeDriveBot owns actionDeadline + the
+    // thinking-delay setTimeout. Don't touch either.
     if (!actor || this.bots.has(actor)) return;
-    // Human's turn — clear any stale human timer first, then arm fresh.
     this._clearHumanActionTimer();
     this.actionDeadline = Date.now() + ACTION_TIMEOUT_MS;
     this._humanActionTimer = setTimeout(() => {
@@ -502,11 +512,6 @@ class Table {
       console.log('[poker] action timeout — auto-folding', actor);
       this.applyAction({ playerId: actor, action: 'fold' });
     }, ACTION_TIMEOUT_MS);
-    // Push the fresh deadline to clients — the applyAction broadcast
-    // fired BEFORE this method, so without re-emitting the client is
-    // still looking at the previous (stale) deadline and the topbar
-    // clock shows 0:00 on the human's turn.
-    this._broadcast();
   }
 
   _clearHumanActionTimer() {
@@ -533,11 +538,9 @@ class Table {
     // Mode-flavored thinking delay: risky 1d4s, standard 1d10s, cautious 1d29s.
     const delay = rollBotDelayMs(bot.mode);
     // Surface the bot's deadline so the topbar clock ticks for everyone,
-    // not just humans.
+    // not just humans. Callers broadcast after all timer setup is done —
+    // no internal broadcast here so we never emit a half-updated state.
     this.actionDeadline = Date.now() + delay;
-    // Push the bot's new deadline to clients immediately so the topbar
-    // countdown updates without waiting for the next hand event.
-    this._broadcast();
     const expectedHand = this.hand;
     this._botActionTimer = setTimeout(() => {
       this._botActionTimer = null;
@@ -738,11 +741,9 @@ class Table {
     // topbar countdown clock to switch from action-deadline mode to
     // "next hand in N" mode while everyone catches their breath.
     this.nextHandAt = Date.now() + HAND_RESULT_PAUSE_MS + HAND_AUTOSTART_DELAY_MS;
-    // Broadcast immediately so the topbar clock flips to the
-    // "Next hand in N" countdown the moment the hand resolves.
-    // Without this, the client doesn't see nextHandAt until the
-    // HAND_RESULT_PAUSE_MS setTimeout below fires its own broadcast.
-    this._broadcast();
+    // No broadcast here — applyAction broadcasts AFTER calling us so
+    // the client gets one consistent snapshot with nextHandAt set,
+    // actionDeadline cleared, and chips synced.
     if (this._completeTimer) clearTimeout(this._completeTimer);
     this._completeTimer = setTimeout(() => {
       this._completeTimer = null;
