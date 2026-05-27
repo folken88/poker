@@ -73,7 +73,7 @@ const CHARACTER_VOICES = {
   'Kelda':             'Xb7hH8MSUJpSbSDYk0k2', // Alice — Clear, Engaging Educator (British) — dry cynic
   'Vesorianna':        'Ir1QNHvhaJXbAGhT50w3', // Sara Martin — Light, Intimate and Tender — ethereal ghost
   'Lou Candlebean':    'gHu9GtaHOXcSqFTK06ux', // Anjali — Warm, Cheerful and Clear — cheerful gnome
-  'Elodie':            'cVd39cx0VtXNC13y5Y7z', // Hope — Vibrant, Warm and Innocent — kind bard
+  'Elodie':            'CKfuQaJKfvUG2Wtrda3Y', // Lison — French (shared library), young + soft
   'Chef':              'SOYHLrjzK2X1ezoPC6cr', // Harry — Fierce Warrior — shouty Ramsay
 
   // Crisp: chirps and pops only, no English. 11labs sound-effects

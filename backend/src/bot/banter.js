@@ -264,8 +264,11 @@ function buildMessages(speaker, eventDescription, table) {
         `tits" / "by Calistria's whip" / "Desna damn it" / "pelt of the Lord" / "Norgorber take you" all fit. ` +
         `Modern English profanity is also fine — just keep it in voice. When you LOSE a hand, you may get ` +
         `genuinely angry; cursing the dice, the dealer, the opponent, or your own deity is fair game. ` +
-        `Reply with ONE short in-character line, maximum 20 words. No quotes, no stage directions, ` +
-        `no asterisks, no actions — just the words you'd actually say out loud at the table. Stay in character.`,
+        `LENGTH: anywhere from a SINGLE WORD up to 20 words. Short, punchy reactions are great when they ` +
+        `fit — "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", "Mine.", ` +
+        `"You absolute donkey." — don't pad to a full sentence if a sharp one-word jab lands better. ` +
+        `No quotes, no stage directions, no asterisks, no actions — just the words you'd actually say ` +
+        `out loud at the table. Stay in character.`,
     },
     {
       role: 'user',

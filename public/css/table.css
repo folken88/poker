@@ -1935,6 +1935,17 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .chat-entry--lootlord .chat-entry__text { color: var(--brass-bright); font-weight: 700; letter-spacing: 0.04em; }
 .chat-entry--banter .chat-entry__text { color: #cfe2b8; font-style: italic; }
 .chat-entry--human  .chat-entry__text { color: #d9e9f7; font-weight: 600; }
+/* Banter or local-SFX lines carry replayable audio (Crisp/Elfrip
+   sound pools, or 11labs banter MP3). Make them visibly clickable
+   — a subtle hover highlight + speaker glyph cues that there's
+   something to interact with. */
+.chat-entry--has-audio { cursor: pointer; }
+.chat-entry--has-audio:hover { background: rgba(217,176,106,0.10); border-radius: 4px; }
+.chat-entry--has-audio .chat-entry__text::before {
+  content: '🔊 ';
+  font-size: 0.85em;
+  opacity: 0.55;
+}
 
 /* ===== Chat input row at the bottom of the chat panel ===== */
 .chat-panel__input {

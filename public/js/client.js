@@ -1265,6 +1265,11 @@
     const mm = String(d.getMinutes()).padStart(2, '0');
     return `${hh}:${mm}`;
   }
+  // Map of chat-entry id → audio payload, retained so the user can
+  // click a banter line later to replay it. Stored in JS (not the
+  // DOM) because base64 11labs audio can be 10-30kB per line and
+  // shoving that into data attributes balloons the DOM tree.
+  const _chatAudioById = new Map();
   function appendChatEntry(entry) {
     if (_seenChatIds.has(entry.id)) return;
     _seenChatIds.add(entry.id);
@@ -1272,6 +1277,18 @@
     if (!list) return;
     const li = document.createElement('li');
     li.className = 'chat-entry chat-entry--' + (KIND_CLASS[entry.kind] || 'info');
+    li.dataset.chatId = entry.id;
+    // Stash audio so we can replay on click. audioUrl is a static
+    // path (Crisp/Elfrip sound pools); audio is base64 11labs MP3.
+    if (entry.audioUrl || entry.audio) {
+      _chatAudioById.set(entry.id, {
+        audioUrl: entry.audioUrl || null,
+        audio: entry.audio || null,
+        audioMime: entry.audioMime || 'audio/mpeg',
+      });
+      li.classList.add('chat-entry--has-audio');
+      li.title = 'Click to replay';
+    }
     li.innerHTML =
       `<span class="chat-entry__time">${fmtClock(entry.ts)}</span>` +
       `<span class="chat-entry__text">${escapeText(entry.text)}</span>`;
@@ -1280,6 +1297,27 @@
     // back if they've scrolled up to read history.
     const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
     if (nearBottom) list.scrollTop = list.scrollHeight;
+  }
+  // Click-to-replay: any chat entry with stored audio re-plays on
+  // click. Ignores the voice-toggle gate on the assumption that an
+  // explicit user click overrides the global preference — they're
+  // asking for this specific line, right now.
+  const _chatList = $('#chatList');
+  if (_chatList) {
+    _chatList.addEventListener('click', (e) => {
+      const li = e.target.closest('li.chat-entry');
+      if (!li) return;
+      const id = Number(li.dataset.chatId);
+      if (!Number.isFinite(id)) return;
+      const a = _chatAudioById.get(id);
+      if (!a) return;
+      if (a.audioUrl) {
+        try { const el = new Audio(a.audioUrl); el.volume = 0.85; el.play().catch(()=>{}); }
+        catch (_) {}
+      } else if (a.audio) {
+        playBase64Mp3(a.audio, a.audioMime || 'audio/mpeg');
+      }
+    });
   }
   function renderChatLog(entries) {
     const list = $('#chatList');
