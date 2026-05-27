@@ -86,6 +86,11 @@ poker-game/
 - **Sit out / Rejoin** — keep your seat but skip deals until you're ready.
 - **Reset modal** — cancel current hand (refund bets) or full reset (everyone back to 5,000).
 - **Per-action chat log** — one line per turn (fold/check/call/raise/all-in) with chip amounts, plus winner announcements with revealed hand descriptions.
+- **Human chat input** — type below the table log, Enter to send. Posts as `💬 Nick: text`. 240-char cap, 1.5s per-socket cooldown. Triggers an LLM banter reply ~5% of the time so AI characters can clap back.
+- **× kick button** on every non-self seat — any seated player can boot any other (human or bot). Takes effect at end of current hand; chat announces who kicked whom (`🚪 Tobis kicked Mr. Brow — leaves after this hand.`).
+- **Auto-yield seat** — when a human spectator joins a full AI table, a random bot is flagged to leave at hand-end so the human can sit on the next deal without waiting.
+- **Vacate grace window** — when a seat opens up (kick / auto-yield / bust), the next-hand autostart pause extends from 1.5s → 5s so a watching spectator has time to click in. Topbar countdown reflects the longer wait.
+- **Card sound effects** — shuffle between hands (randomized), deal on flop/turn/river. 🔊 mute toggle in the topbar; preference persists per tab.
 
 ## Goal: LOOT LORD
 
@@ -170,6 +175,19 @@ Each entry is a short bio injected into the system prompt. Add new
 entries by exact nickname match; missing characters fall back to a
 generic `${mode}/${intelligence}` template.
 
+**Per-event probability override.** Different trigger kinds use different
+fire rates so noisy events (a chatty human) don't flood the table:
+
+| Event           | Probability   | Notes                                    |
+|-----------------|---------------|------------------------------------------|
+| raise / allin   | LLM_BANTER_PROB (default 0.30) | opponent reacts to the pressure |
+| big call        | LLM_BANTER_PROB                | reaction to a notable defense   |
+| winner declared | LLM_BANTER_PROB                | flagged extra if it was a bluff |
+| human-chat      | **0.05**                       | low rate so bots only chime in occasionally |
+
+The per-table cooldown (`LLM_BANTER_COOLDOWN_MS`, default 18s) still
+applies on top of every roll.
+
 ### Roster sample
 
 | Bot                     | Mode      | Intel    | Source              |
@@ -208,9 +226,11 @@ A subset of human-roster names (Tobis, Timmy, Sydness, BRION, Zachariah, Harry, 
 └────────────────────────────────────────────────────────────────┘
 ```
 
-- **Left** — your gear bank + buy/upgrade/hock buttons. Reads from the persisted roster record so it stays correct even between hands or while sat out.
-- **Right** — live wealth leaderboard (chips + gear value). Updates on every roster event.
-- **Help / Hand rankings / Tips** — in the `?` modal in the topbar (not the perimeter).
+- **Left** — your gear bank + buy/upgrade/hock buttons (collapsible — auto-collapses when nothing is actionable so the rankings underneath get more room) and a Hand rankings reference list. Bank reads from the persisted roster record so it stays correct even between hands or while sat out.
+- **Right** — live wealth leaderboard (chips + gear value, all 27 bots + humans). Updates on every roster event.
+- **Centered chat column** — the bottom table log is centered to a 760px max-width column so long lines stay readable on wide monitors; text within each line stays left-justified.
+- **Help / Actions / Position badges / Flow / Tips** — in the `?` modal in the topbar.
+- **Seat gear popup** — opponents' magic items show on hover (popup below the seat, never affects layout). Player's own gear lives in the left-sidebar bank.
 
 ## Mobile (≤720px)
 
@@ -245,6 +265,33 @@ The villain tier (`scripts/villains.json`) is curated by hand — iconic NPCs fr
 
 Both are append-only and gitignored.
 
+## Deploy protocol (backend rebuilds)
+
+The container restart kills any bot mid-thought and breaks the player's
+sense of continuity. To avoid landing mid-hand, **wait for an explicit
+`hand-complete` log marker** before recreating:
+
+```bash
+# 1. Build the new image (no service impact)
+docker compose build backend
+
+# 2. Block until the next hand actually finishes
+docker logs -f --since 1s folken-poker-backend 2>&1 \
+  | grep --line-buffered -m1 'hand-complete'
+
+# 3. Recreate — we're guaranteed to be in the post-hand pause (~20s window)
+docker compose up -d backend
+```
+
+The marker is `[poker] hand-complete table=<id> #<handCount>`, emitted
+from `Table._afterHandComplete()`. Don't use a quiet-gap heuristic —
+cautious bots can brood for 15s normally, which is indistinguishable
+from the post-hand pause.
+
+Frontend-only changes (CSS, JS, HTML, audio assets) don't need a
+container recreate — nginx serves them live. Just bump the
+`?v=…` cache-bust in `public/index.html` and push.
+
 ## Coding principles
 
 When making changes:
@@ -252,3 +299,4 @@ When making changes:
 2. **No duplication.** One source of truth per piece of data; one function per piece of logic.
 3. **Stable — don't lose data.** Migrations are idempotent. Mid-hand changes preserve in-hand state.
 4. **Commit + push every change with a clear message.** Explain *why*, not just *what*.
+5. **Defer container recreates to between-hand windows** (see Deploy protocol above). Frontend changes ship instantly via cache-bust; backend rebuilds wait for `hand-complete`.
