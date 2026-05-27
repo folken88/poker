@@ -90,7 +90,13 @@ poker-game/
 - **× kick button** on every non-self seat — any seated player can boot any other (human or bot). Takes effect at end of current hand; chat announces who kicked whom (`🚪 Tobis kicked Mr. Brow — leaves after this hand.`).
 - **Auto-yield seat** — when a human spectator joins a full AI table, a random bot is flagged to leave at hand-end so the human can sit on the next deal without waiting.
 - **Vacate grace window** — when a seat opens up (kick / auto-yield / bust), the next-hand autostart pause extends from 1.5s → 5s so a watching spectator has time to click in. Topbar countdown reflects the longer wait.
-- **Card sound effects** — shuffle between hands (randomized), deal on flop/turn/river. 🔊 mute toggle in the topbar; preference persists per tab.
+- **Card sound effects** — shuffle between hands (randomized), deal on flop/turn/river, plus a solo your-turn chime that fires only on your own client when the action lands on you. 🔊 mute toggle in the topbar; preference persists per tab.
+- **Dual-cell topbar clock** — the timer pill is split into two side-by-side cells. Left cell (blue) shows the action clock and its label ("action timer" / "next hand in"). Right cell (brass) shows the hand clock running total. Each cell has a fixed min-width so digits don't jitter when labels swap.
+- **Winner banner (center stage)** — between rounds, the felt center shows the winner's avatar at 2× size, the chips awarded, and the winning 5-card combo sorted low → high using PF1e rank order. Doubled token size for this display only; box auto-fits.
+- **Cash cap (20,000 gp)** — at hand-end, any seat over the cap is clipped back to 20k and the overflow is announced in chat. Forces wealth into gear instead of stockpiled chips.
+- **Hock-required rebuy** — busted players can no longer accrue debt. To re-buy after going broke you must first sell off your magic items in the Loot Bank. The legacy `rebuy_debt` column is migrated to zero on boot. Each forced rebuy gets an embarrassing flavor line (pocket squirrel, slightly-used lute, etc.).
+- **Reset evicts bots** — the reset-hand button (full reset path) vacates every bot at the table along with refunding bets, so a human cleanup ritual doesn't leave AI sitting on huge stacks.
+- **Folded bots can banter + give advice** — bots who have folded or are waiting their turn are eligible speakers for the LLM banter system. A dedicated `advice` event fires at ~8% probability whenever the action moves to a new actor, letting tablemates kibitz on the live decision.
 
 ## Goal: LOOT LORD
 
@@ -184,6 +190,7 @@ fire rates so noisy events (a chatty human) don't flood the table:
 | big call        | LLM_BANTER_PROB                | reaction to a notable defense   |
 | winner declared | LLM_BANTER_PROB                | flagged extra if it was a bluff |
 | human-chat      | **0.05**                       | low rate so bots only chime in occasionally |
+| advice          | **0.08**                       | folded/waiting bot kibitzes on the live decision when action moves to a new actor |
 
 The per-table cooldown (`LLM_BANTER_COOLDOWN_MS`, default 18s) still
 applies on top of every roll.
@@ -226,7 +233,7 @@ A subset of human-roster names (Tobis, Timmy, Sydness, BRION, Zachariah, Harry, 
 └────────────────────────────────────────────────────────────────┘
 ```
 
-- **Left** — your gear bank + buy/upgrade/hock buttons (collapsible — auto-collapses when nothing is actionable so the rankings underneath get more room) and a Hand rankings reference list. Bank reads from the persisted roster record so it stays correct even between hands or while sat out.
+- **Left** — your gear bank + buy/upgrade/hock buttons (collapsible via a brass-tinted clickable header — defaults to expanded so options are always reachable) and a Hand rankings reference list. Buttons sized for usability (≥34px min-height). Bank reads from the persisted roster record so it stays correct even between hands or while sat out.
 - **Right** — live wealth leaderboard (chips + gear value, all 27 bots + humans). Updates on every roster event.
 - **Centered chat column** — the bottom table log is centered to a 760px max-width column so long lines stay readable on wide monitors; text within each line stays left-justified.
 - **Help / Actions / Position badges / Flow / Tips** — in the `?` modal in the topbar.

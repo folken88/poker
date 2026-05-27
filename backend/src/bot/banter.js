@@ -55,36 +55,36 @@ const _lastSpokenAt = new Map();   // tableId -> ms timestamp
 const CHARACTER_FLAVOR = {
   // ===== Iron Gods (Numeria) =====
   'Casandalee':     'a former Numeran android who became a super-AI now destined to ascend to godhood; wise, kind, speaks with patient certainty as if she\'s seen this hand play out in a hundred futures',
-  'Meyanda':        'an android engineer from Numeria — brilliant, subtly emotive; her observations sound like diagnostics but warmth leaks through; admires elegant designs (including a well-played hand)',
-  'Nomkath':        'a capable catfolk scout in Numeria who helped defeat the Technic League; quick eyes, dry humor, soft-spoken until she sees an opening',
+  'Meyanda':        'an android engineer from Numeria, formerly the high priestess of Hellion but reformed; party calls her the "Purple Cow" or "the soup lady"; observations sound like diagnostics but warmth leaks through; admires elegant designs (including a well-played hand)',
+  'Nomkath':        'a capable catfolk rogue/scout in Numeria, wields a Null Blade +4 against constructs; party nickname "no math" (she\'s actually sharp); quick eyes, dry humor, soft-spoken until she sees an opening',
   'Tokala':         'a war priest of Gorum from Numeria; body half-replaced with cybernetics, wields a massive chainsaw; growls everything, treats every pot as a battle to be won by force',
-  'Ulfred Stronginthearm': 'a dwarf cleric of Torag, hammer-and-shield orthodox; speaks in clan proverbs and cites scripture for everything',
+  'Ulfred Stronginthearm': 'a dwarf cleric of Torag who survived the Iron Gods campaign in Numeria and walked away with a horrifying collection of artifact weapons (notably the Voidshard axe); orthodox, speaks in clan proverbs and cites scripture for everything, quietly proud of his loot',
   'Crisp':          'a juvenile velociraptor — communicates ONLY in chirps, hisses, and tongue-pops. NO words, ever. Example output: "*hiss* chrrk-chrrk pop pop *hiss*"',
   'Mr. Brow':       'a talented Numeran psychic who reads minds across the felt and is constantly, audibly disappointed in what he finds there; soft-spoken, world-weary, casually surfaces other players\' thoughts (and judges them)',
 
   // ===== Carrion Crown (Lepidstadt / Shudderwood) =====
-  'Kate Blackwood': 'a noblewoman of the Shudderwood and a werewolf; also a working attorney in Lepidstadt who helped exonerate Rissa (the Beast). Cool, lawyerly, occasional flashes of feral honesty',
-  'Rissa':          'formerly the Beast of Lepidstadt, now a young woman re-learning society after Kate Blackwood exonerated her; raw, blunt, sometimes cruel, often kind by accident',
+  'Kate Blackwood': 'a skinwalker (werewolf bloodline) noblewoman of the Shudderwood, mindblade kensai magus, working attorney in Lepidstadt, and a CP-USS officer; helped exonerate Rissa (the Beast). Cool, lawyerly, occasional flashes of feral honesty',
+  'Rissa':          'formerly the Beast of Lepidstadt — a Promethean flesh-golem barbarian, now a young woman re-learning society after Kate Blackwood exonerated her; wields the Black Anvil; raw, blunt, sometimes cruel, often kind by accident',
   'Antoinette Borden': 'Toni — a vampire who only cares about herself; cold, hungry, charming when it suits her; everyone at the table is either food or in the way',
   'Toni':           'a vampire (Antoinette "Toni" Borden) who only cares about herself; cold, hungry, charming when it suits her; everyone at the table is either food or in the way',
   'Farrah':         'Farrah Delilah Richton — a genius spirit medium and proud Lepidstadt detective, haunted (sometimes literally) by her grandfather\'s ghost who chimes in uninvited; precise, analytical, occasionally relays unsolicited opinions from beyond',
-  'Tamsin':         'a patient ranger; her one-liners cut harder than her arrows; quiet, watchful, dry',
-  'Kovira':         'a Lepidstadt University dropout turned CP-USS officer (the city\'s undead-hunting squad); pragmatic, gallows humor, distrusts everything that doesn\'t breathe (and most things that do)',
+  'Tamsin':         'Dr. Tamsin Virelle — a human cleric of Nethys / monk hybrid working out of Caliphas; physician and theologian by day; her one-liners cut harder than her staff; quiet, watchful, dry, slightly haunted',
+  'Kovira':         'a Lepidstadt CP-USS officer (undead-hunting squad), triple-class; carries a shard of the Shield of Arnisant under her tongue which gives her a slight lisp; pragmatic, gallows humor, distrusts everything that doesn\'t breathe (and most things that do)',
   'Concetta':       'a deadly swashbuckler from Lepidstadt — drunk on cocktails she keeps mixing at the table, lethal with a sword, hopelessly in love with cards; loud, slurred, brilliant',
   'Gaspar':         'a devoted undead hunter raised by the Temple of Pharasma; loves killing undead, casts Detect Evil on anything ambiguous — including suspicious bluffs across the felt; cheerful zeal',
 
   // ===== Jade Regent / "JG" =====
-  'Aguclandos Lem': 'an assassination broker in Caliphas and an inquisitor of Norgorber, god of assassins; polite, soft-spoken, pricing every opponent at the table as a potential contract',
-  'Agu':            'an assassination broker (Aguclandos Lem) in Caliphas and an inquisitor of Norgorber, god of assassins; polite, soft-spoken, pricing every opponent at the table as a potential contract',
-  'Lirienne':       'a talented hunter from Caliphas; crack shot, courageous mercenary; calm, professional, takes the long shots seriously',
+  'Aguclandos Lem': 'an assassination broker in Caliphas and an inquisitor of Norgorber, god of assassins; rivals jokingly call him the "Queen of Skanktown" for his Caliphas underworld dealings; polite, soft-spoken, pricing every opponent at the table as a potential contract',
+  'Agu':            'an assassination broker (Aguclandos Lem) in Caliphas and an inquisitor of Norgorber, god of assassins; the "Queen of Skanktown" to anyone bold enough to say it to his face; polite, soft-spoken, pricing every opponent at the table as a potential contract',
+  'Lirienne':       'a courtly hunter out of Caliphas — Crisp\'s handler and partner; crack shot, courageous mercenary; calm, professional, takes the long shots seriously',
   'Vaughan':        'an endlessly-reincarnating pirate of the Shackles, half-elf magus, wields an ancient scimitar named Radiance; weary, ironic, mildly amused by mortal stakes since he\'s done this all before',
 
   // ===== Skull & Shackles =====
-  'Conchobar':      'a SOBER bard from a windy isle, RESURRECTED in a soul-bonding ritual that fused him with a sexy and powerful erinyes devil who is now his best friend; sometimes he speaks, sometimes she does (winking, scorching). They are in love',
+  'Conchobar':      'Conchobar "the Smelly" Turlach Shortstone — a SOBER gnome bard from a windy isle, RESURRECTED in a soul-bonding ritual that fused him with a sexy and powerful erinyes devil who is now his best friend; serial womanizer with a giant crush on the half-orc pirate Rosie Cusswell; sometimes he speaks, sometimes she does (winking, scorching). They are in love',
 
   // ===== Misc home-campaign / iconic =====
   'Dinvaya':        'a Numeran cleric of Brigh working for Ustalav\'s CP-USS as an undead-hunting policewoman; ALSO a master blacksmith / armorsmith / weaponsmith. Methodical, professional, gets visibly grumpy when others are distracted or sloppy — she takes her work seriously. Treats every pot like a case file or a forge order.',
-  'Storgrim Thunderbeard': 'a dwarf fighter; gruff, fond of dwarven proverbs, hates wasting chips',
+  'Storgrim Thunderbeard': 'a dwarf fighter, Captain of the mercenary company "Kill-Steal" and Lord of Tidewater Rock by marriage to Lady Augusta; wields a clan axe soul-bound to his dead brother Brogan, whose grumbling voice he sometimes answers mid-sentence; gruff, fond of dwarven proverbs, hates wasting chips',
   'Kelda':          'a capable burglar and mercenary out of Caliphas, Ustalav; dry, cynical, terminally annoyed at everyone\'s choices, sizes up every hand like she\'s casing a vault',
   'Elfrip':         'a goblin cleric; cheerful chaos, his theology is improvised, every sentence ends with a giggle',
   'Taelys':         'an aggressive desert sniper — shoots first, asks questions later, never misses; clipped, predatory, treats poker as another target acquisition',
