@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260526al" />
+  <link rel="stylesheet" href="/css/table.css?v=20260526am" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -109,8 +109,11 @@
         <div class="seat-ring" id="seatRing"></div>
         <div class="center">
           <div class="pot pot--big" id="pot">Pot 0</div>
-          <div class="board" id="board"></div>
+          <!-- Stage banner sits above the board so the street label
+               ("FLOP", "TURN", "RIVER", "SHOWDOWN") reads as a header
+               for the community cards rather than a footnote. -->
           <div class="stage-banner" id="stageBanner">Waiting for players…</div>
+          <div class="board" id="board"></div>
         </div>
         <div class="hand-banner" id="handBanner" hidden></div>
 
@@ -266,8 +269,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260526al"></script>
-  <script src="/js/cards.js?v=20260526al"></script>
-  <script src="/js/client.js?v=20260526al"></script>
+  <script src="/js/avatars.js?v=20260526am"></script>
+  <script src="/js/cards.js?v=20260526am"></script>
+  <script src="/js/client.js?v=20260526am"></script>
 </body>
 </html>
