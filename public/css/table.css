@@ -1457,7 +1457,14 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 }
 .chat-panel__list {
   list-style: none;
-  margin: 0;
+  /* Centered as a fixed-width column inside the full-width panel,
+     so the conversation reads down the middle of the screen but each
+     line is still left-justified internally (no awkward centering of
+     the text itself). max-width keeps long lines readable on wide
+     monitors; auto margins center the column. */
+  margin: 0 auto;
+  width: 100%;
+  max-width: 760px;
   padding: 0.4rem 1rem 0.5rem;
   flex: 1;
   overflow-y: auto;
@@ -1465,6 +1472,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   font-size: 0.85rem;
   line-height: 1.35;
   display: flex; flex-direction: column; gap: 0.2rem;
+  text-align: left;
 }
 /* Subtle scrollbar so the panel doesn't feel desktop-default */
 .chat-panel__list::-webkit-scrollbar { width: 8px; }
@@ -1502,9 +1510,15 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .chat-panel__input {
   display: flex;
   gap: 6px;
+  /* Same centered max-width as the list above so the input lines up
+     with the conversation column. */
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
   padding: 6px 10px 8px;
   border-top: 1px solid rgba(217,176,106,0.15);
   background: rgba(0,0,0,0.35);
+  box-sizing: border-box;
 }
 .chat-panel__input input {
   flex: 1;
