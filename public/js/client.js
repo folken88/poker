@@ -955,10 +955,12 @@
     }
     el.innerHTML = buildBankHtml();
     if (!toggle) return;
-    // Collapsed state precedence: explicit user choice → otherwise auto
-    // (collapse when nothing actionable, expand otherwise).
+    // Default expanded. Auto-collapse based on "no affordable upgrade"
+    // was hiding the bank when players actually wanted to see it —
+    // confusing. The header is now visibly a clickable toggle, so let
+    // the user drive it. Saved preference still wins.
     const saved = sessionStorage.getItem('actpanel.bankCollapsed');
-    const collapsed = saved !== null ? saved === '1' : !_bankHasActions();
+    const collapsed = saved !== null ? saved === '1' : false;
     applySidebarBankCollapsed(collapsed);
   }
 

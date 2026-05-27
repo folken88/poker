@@ -1223,18 +1223,26 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   margin: 0;
 }
 /* Toggle button that wraps the bank title + chevron. */
+/* Visibly-clickable toggle header — readable as a button so users
+   know they can click it to expand/collapse the section underneath. */
 .help-panel__collapser {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  background: transparent;
-  border: 0;
-  padding: 0;
+  background: rgba(217,176,106,0.08);
+  border: 1px solid rgba(217,176,106,0.25);
+  border-radius: 8px;
+  padding: 6px 10px;
   margin: 0;
   cursor: pointer;
   color: var(--brass-bright);
   text-align: left;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.help-panel__collapser:hover {
+  background: rgba(217,176,106,0.18);
+  border-color: var(--brass);
 }
 .help-panel__collapser:hover .help-panel__chevron { color: var(--ivory); }
 .help-panel__chevron {
@@ -1243,20 +1251,12 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   letter-spacing: 0;
   transition: color 0.15s ease;
 }
-/* Bank rows: take the natural height when expanded; native [hidden]
-   handles the collapsed state (display: none). */
+/* Bank body — grows to fit its rows naturally when expanded.
+   The native [hidden] attribute handles the collapsed state. */
 .sidebar-bank {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   overflow-y: auto;
   padding-right: 2px;
-  max-height: 60vh;
-}
-/* Hand rankings header sits just above the rankings list; trim its
-   top margin since the bank already gave us a gap. */
-.help-panel__title--ranks {
-  margin-top: 0.4rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(217,176,106,0.18);
 }
 .sidebar-bank__empty {
   margin: 1rem 0.5rem;
@@ -1265,17 +1265,35 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   font-style: italic;
   text-align: center;
 }
-/* Tighten bank rows in the sidebar (column is only 240px) */
-.sidebar-bank .bank { gap: 3px; font-size: 0.72rem; }
+/* Slight sidebar-specific bank tweaks — the column is 240px wide so
+   we tighten ONLY the gear-row label/font to avoid wrapping, but
+   keep the buy/hock buttons at their full ~0.76rem so they're
+   actually tappable. Previously the buttons were 0.62rem with 2px
+   padding, which made the whole bank "squished and unusable". */
+.sidebar-bank .bank { gap: 5px; font-size: 0.78rem; }
 .sidebar-bank .bank__row {
   grid-template-columns: 22px 1fr auto;
-  padding: 4px 6px;
-  gap: 2px 4px;
+  padding: 6px 7px;
+  gap: 3px 6px;
 }
-.sidebar-bank .bank__btn { font-size: 0.62rem; padding: 2px 3px; }
-.sidebar-bank .bank__btn small { font-size: 0.56rem; }
-.sidebar-bank .bank__progress { height: 14px; }
-.sidebar-bank .bank__progress-text { font-size: 0.6rem; }
+.sidebar-bank .bank__btn {
+  font-size: 0.72rem;
+  padding: 5px 6px;
+  min-height: 34px;
+}
+.sidebar-bank .bank__btn small { font-size: 0.62rem; }
+.sidebar-bank .bank__progress { height: 18px; }
+.sidebar-bank .bank__progress-text { font-size: 0.64rem; }
+
+/* Hand rankings header sits just above the rankings list; trim its
+   top margin since the bank already gave us a gap. Also acts as a
+   collapse toggle now — see the .help-panel__collapser--ranks rule
+   added in client.js wiring. */
+.help-panel__title--ranks {
+  margin-top: 0.4rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(217,176,106,0.18);
+}
 
 /* ===== Right-side sidebar leaderboard ===== */
 /* Tighter than the in-actpanel version since the panel is 240px wide
