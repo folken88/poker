@@ -6,6 +6,21 @@ services:
       - PORT=3000
       - DATA_DIR=/app/data
       - DEFAULT_STACK=5000
+      # ---- LLM banter (in-character chat from Ollama) ----
+      # Set ENABLED=0 to silence. Model name must match `ollama list`
+      # output on the host. host.docker.internal points at the host
+      # network from inside the container.
+      - LLM_BANTER_ENABLED=1
+      - LLM_ENDPOINT=http://host.docker.internal:11434/api/chat
+      - LLM_MODEL=gemma4:e4b
+      - LLM_BANTER_COOLDOWN_MS=18000
+      - LLM_BANTER_PROB=0.30
+      - LLM_BANTER_TIMEOUT_MS=8000
+    extra_hosts:
+      # Required on Linux Docker so host.docker.internal resolves
+      # (Docker Desktop on Windows/Mac maps it automatically; harmless
+      # there). Lets the container reach the host's Ollama at :11434.
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./backend/data:/app/data
       - ./backend/logs:/app/logs

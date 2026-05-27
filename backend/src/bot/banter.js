@@ -32,11 +32,15 @@
  */
 
 const ENABLED        = process.env.LLM_BANTER_ENABLED === '1';
-const ENDPOINT       = process.env.LLM_ENDPOINT || 'http://host.docker.internal:11434/api/generate';
-const MODEL          = process.env.LLM_MODEL || 'gemma2:9b';
+// Use the /api/chat endpoint — it applies the model's chat template
+// (system + user messages) correctly. /api/generate skips templating
+// which leaves reasoning models like Gemma 4 stuck in their <thinking>
+// preamble and never producing visible output.
+const ENDPOINT       = process.env.LLM_ENDPOINT || 'http://host.docker.internal:11434/api/chat';
+const MODEL          = process.env.LLM_MODEL || 'gemma4:e4b';
 const COOLDOWN_MS    = parseInt(process.env.LLM_BANTER_COOLDOWN_MS || '18000', 10);
 const PROB           = parseFloat(process.env.LLM_BANTER_PROB || '0.30');
-const TIMEOUT_MS     = parseInt(process.env.LLM_BANTER_TIMEOUT_MS || '6000', 10);
+const TIMEOUT_MS     = parseInt(process.env.LLM_BANTER_TIMEOUT_MS || '8000', 10);
 
 // Per-table cooldown so banter doesn't spam every action.
 const _lastSpokenAt = new Map();   // tableId -> ms timestamp
@@ -45,25 +49,48 @@ const _lastSpokenAt = new Map();   // tableId -> ms timestamp
  *  rather than in db.js because it's prose/flavor, separate concern
  *  from the gameplay BOT_ROSTER. Missing entries fall back to a
  *  generic template using mode + intelligence. */
+// Per-character flavor used in the system prompt. Keep each entry under
+// ~200 chars — too much detail and the model loses the thread. Names
+// must match BOT_ROSTER nicknames exactly (the lookup is by nickname).
 const CHARACTER_FLAVOR = {
-  'Mr. Brow':       'a halfling crime lord with an oversized head and a chess-master\'s patience; speaks softly, never blinks',
-  'Crisp':          'a velociraptor druid; speaks in barks, growls, and unhinged enthusiasm',
-  'Vaughan':        'a half-elf magus who plays poker like a duel — measured, cutting',
-  'Dinvaya':        'an aasimar cleric who treats every pot as a small moral test',
-  'Kate Blackwood': 'a skinwalker magus with a cold smirk; speaks like a noir detective',
-  'Kovira':         'a tiefling arcane trickster; sly, fond of barbed compliments',
-  'Tamsin':         'a patient ranger; her one-liners cut harder than her arrows',
-  'Concetta':       'a brash bravo; loud, theatrical, never doubts her hand',
-  'Storgrim Thunderbeard': 'a dwarf fighter; gruff, fond of dwarven proverbs',
-  'Kelda':          'a dwarf rogue in spectacles; dry, cynical, terminally annoyed',
-  'Elfrip':         'a goblin cleric; cheerful chaos, his theology is improvised',
-  'Taelys':         'a desert-wasteland sniper; clipped sentences, ominous pauses',
+  // ===== Iron Gods (IG) =====
+  'Casandalee':     'an android oracle resurrected as a partial avatar of Brigh; speaks deliberately, as if pulling each word from a database, but with unexpected warmth',
+  'Meyanda':        'an android inquisitor-cleric; her prayers sound like system diagnostics; analytical, cold-precise, occasionally betrays awe',
+  'Nomkath':        'a catfolk rogue carrying a humming Null Blade; soft-spoken, lethal patience, dry humor',
+  'Tokala':         'a half-drow drifter; brooding, suspicious of everyone, very few words and most of them threats',
+  'Ulfred Stronginthearm': 'a dwarf cleric of Torag, hammer-and-shield orthodox; speaks in clan proverbs and cites scripture for everything',
+  'Crisp':          'a velociraptor druid; speaks in barks, growls, and unhinged enthusiasm — vocab limited but VERY expressive',
+  'Mr. Brow':       'a halfling crime lord with an oversized head and a chess-master\'s patience; speaks softly, never blinks, every sentence is short and slightly threatening',
+
+  // ===== Carrion Crown / Strange Aeons (Shudderwood-adjacent) =====
+  'Kate Blackwood': 'a noblewoman of the Shudderwood and a werewolf; also a working attorney in Lepidstadt who helped exonerate Rissa (the Beast). Cool, lawyerly, occasional flashes of feral honesty',
+  'Rissa':          'formerly the Beast of Lepidstadt, now a young woman re-learning society after Kate Blackwood exonerated her; raw, blunt, sometimes cruel, often kind by accident',
+  'Antoinette Borden': 'a tightly-wound human magus from a Shudderwood family; precise, formal speech, deadly with both spell and blade',
+  'Toni':           'a tightly-wound human magus (Antoinette "Toni" Borden) from a Shudderwood family; precise, formal speech, deadly with both spell and blade',
+  'Farrah':         'a young human spiritualist (Farrah Delilah Richton) with a phantom steed and unsettling calm; sometimes shouts "cinnamon" for no reason, possibly a murderer',
+  'Tamsin':         'a patient ranger; her one-liners cut harder than her arrows; quiet, watchful, dry',
+
+  // ===== Jade Regent / "JG" =====
+  'Aguclandos Lem': 'an elf inquisitor of the Clandestine Inquisition; watches everyone like he\'s already decided their guilt; polite, faintly disappointed',
+  'Agu':            'an elf inquisitor (Aguclandos Lem) of the Clandestine Inquisition; watches everyone like he\'s already decided their guilt; polite, faintly disappointed',
   'Lirienne':       'a moody ranger; speaks rarely, hits hard when she does',
-  'Daramid':        'an ancient nagaji oracle; calm, riddling, slightly condescending',
-  'Fera':           'a quiet patient drow; observes more than she speaks',
-  'Gaspar':         'a roguish bard; quips constantly, half of them landing',
-  'Rissa':          'an aggressive bravo; loud, vulgar, swaggering',
-  'Conchobar':      'a drunk bard from a windy isle; rhyming and unreliable',
+  'Vaughan':        'a half-elf magus who plays poker like a duel — measured, cutting, fond of barbed observations',
+
+  // ===== Skull & Shackles =====
+  'Conchobar':      'a SOBER bard from a windy isle, RESURRECTED in a soul-bonding ritual that fused him with a sexy and powerful erinyes devil who is now his best friend; sometimes he speaks, sometimes she does (winking, scorching). They are in love',
+  'Concetta':       'a drunken swashbuckler always mixing a fresh cocktail at the table; deadly with a sword AND a hand of cards; loud, slurred, lethal',
+
+  // ===== Misc home-campaign / iconic =====
+  'Dinvaya':        'an aasimar cleric who treats every pot as a small moral test; gentle, sincere, sometimes a little judgmental',
+  'Kovira':         'a tiefling arcane trickster; sly, fond of barbed compliments and obvious lies',
+  'Storgrim Thunderbeard': 'a dwarf fighter; gruff, fond of dwarven proverbs, hates wasting chips',
+  'Kelda':          'a dwarf rogue in spectacles; dry, cynical, terminally annoyed at everyone\'s choices',
+  'Elfrip':         'a goblin cleric; cheerful chaos, his theology is improvised, every sentence ends with a giggle',
+  'Taelys':         'a sniper from a desert wasteland; clipped sentences, ominous pauses, never explains',
+  'Daramid':        'an ancient nagaji oracle; calm, speaks in riddles, slightly condescending; uses "child" as endearment AND insult',
+  'Fera':           'a quiet patient drow; observes more than she speaks; when she does it\'s usually devastating',
+  'Gaspar':         'a roguish bard; quips constantly, about half of them land; cheerful even when losing',
+  'Kai Ginn':       'a stoic monk; speaks in koan-fragments; treats poker like a meditation on detachment',
 };
 
 /** Returns true if banter is enabled, the cooldown has elapsed, and
@@ -98,29 +125,37 @@ function pickSpeaker(table, excludeIds) {
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
-/** Build the prompt sent to the model. Strict output spec: one
- *  sentence, ≤20 words, no quotes, no narration. Character flavor
- *  is injected from CHARACTER_FLAVOR with a personality-based
+/** Build the chat-format messages sent to the model. Strict output
+ *  spec: one sentence, ≤20 words, no quotes, no narration. Character
+ *  flavor is injected from CHARACTER_FLAVOR with a personality-based
  *  fallback. */
-function buildPrompt(speaker, eventDescription) {
+function buildMessages(speaker, eventDescription) {
   const nick = speaker.player?.nickname || speaker.playerId;
   const flavor = CHARACTER_FLAVOR[nick]
     || `a ${speaker.player?.bot_mode || 'standard'}/${speaker.player?.bot_intelligence || 'average'} poker player`;
-  const sys = [
-    `You are ${nick}, ${flavor}.`,
-    `You are watching a Texas Hold'em hand. Respond with ONE short in-character`,
-    `comment, maximum 20 words. No quotes, no stage directions, no actions in`,
-    `asterisks — just the words you'd say at the table. Stay in character.`,
-  ].join(' ');
-  return {
-    prompt: `${sys}\n\nWhat just happened: ${eventDescription}\n\n${nick}:`,
-    stop: ['\n', '"', '*'],
-  };
+  return [
+    {
+      role: 'system',
+      content:
+        `You are ${nick}, ${flavor}. You are watching a Texas Hold'em poker hand at a table. ` +
+        `Reply with ONE short in-character line, maximum 20 words. No quotes, no stage directions, ` +
+        `no asterisks, no actions — just the words you'd actually say out loud at the table. Stay in character.`,
+    },
+    {
+      role: 'user',
+      content: `What just happened: ${eventDescription}\n\nReact in character (one line).`,
+    },
+  ];
 }
 
 /** Async fetch with timeout. Returns generated text, or null on
- *  any error (server down, malformed response, timed out). */
-async function callLLM(promptSpec) {
+ *  any error (server down, malformed response, timed out).
+ *
+ *  Uses Ollama's /api/chat which:
+ *    - applies the model's chat template automatically
+ *    - accepts `think: false` to skip Gemma 4 reasoning preamble
+ *    - returns { message: { content, role, thinking? } } */
+async function callLLM(messages) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
@@ -129,24 +164,28 @@ async function callLLM(promptSpec) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: MODEL,
-        prompt: promptSpec.prompt,
         stream: false,
-        options: { temperature: 0.85, top_p: 0.9, num_predict: 50, stop: promptSpec.stop },
+        think: false,                              // skip reasoning preamble (Gemma 4)
+        messages,
+        options: { temperature: 0.9, top_p: 0.92, num_predict: 80 },
       }),
       signal: ctrl.signal,
     });
     if (!res.ok) return null;
     const json = await res.json();
-    // Ollama returns { response, ... }. Other servers may differ —
-    // accept either `response` or OpenAI-style `choices[0].text`.
-    const raw = json.response ?? json.choices?.[0]?.text ?? json.choices?.[0]?.message?.content ?? null;
+    // Tolerate both Ollama chat shape and OpenAI-style chat completions.
+    const raw = json.message?.content
+             ?? json.choices?.[0]?.message?.content
+             ?? json.response
+             ?? null;
     if (!raw || typeof raw !== 'string') return null;
-    // Trim, strip leading character labels, cap length.
     let out = raw.trim()
       .replace(/^["'`]+|["'`]+$/g, '')
-      .replace(/^[A-Za-z][A-Za-z .']*?:\s*/, '')   // strip "Vaughan:" prefix if the model echoed it
+      .replace(/^[A-Za-z][A-Za-z .']*?:\s*/, '')   // strip "Mr. Brow:" prefix if echoed
       .split('\n')[0]                              // first line only
-      .slice(0, 140);                              // hard char cap
+      .replace(/\s*\*[^*]+\*\s*/g, ' ')            // drop *actions in asterisks*
+      .trim()
+      .slice(0, 200);                              // hard char cap
     return out || null;
   } catch (_) {
     return null;
@@ -172,8 +211,8 @@ function maybeSpeak(table, event) {
   // cooldown still elapses naturally, and we avoid a thundering herd
   // of parallel calls if multiple events fire in quick succession.
   _lastSpokenAt.set(table.id, Date.now());
-  const promptSpec = buildPrompt(speaker, event.description);
-  callLLM(promptSpec).then(line => {
+  const messages = buildMessages(speaker, event.description);
+  callLLM(messages).then(line => {
     if (!line) return;
     const nick = speaker.player?.nickname || speaker.playerId;
     table.chat('banter', `💬 ${nick}: ${line}`);

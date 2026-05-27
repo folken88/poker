@@ -144,19 +144,31 @@ Disabled by default. To enable, set these env vars on the backend container
 
 ```
 LLM_BANTER_ENABLED=1
-LLM_ENDPOINT=http://host.docker.internal:11434/api/generate
-LLM_MODEL=gemma2:9b
+LLM_ENDPOINT=http://host.docker.internal:11434/api/chat
+LLM_MODEL=gemma4:e4b
 LLM_BANTER_COOLDOWN_MS=18000   # min gap per-table between lines
 LLM_BANTER_PROB=0.30           # roll per trigger event
-LLM_BANTER_TIMEOUT_MS=6000     # hard timeout on the HTTP call
+LLM_BANTER_TIMEOUT_MS=8000     # hard timeout on the HTTP call
 ```
 
-Bring up an Ollama server on the host (`ollama serve` + `ollama pull gemma2:9b`),
+Notes:
+- Use the `/api/chat` endpoint, not `/api/generate` — only the chat
+  endpoint applies the model's template, which is required for
+  reasoning models like Gemma 4 to produce visible output.
+- The request sends `think: false` so Gemma 4's `<thinking>` preamble
+  is skipped — without it the model produces 100+ tokens of reasoning
+  before its actual reply.
+- First request after Ollama boots cold-loads the model (~30–70 s).
+  Subsequent calls are ~0.5–2 s.
+
+Bring up an Ollama server on the host (`ollama serve` + `ollama pull gemma4:e4b`),
 then restart the backend container. If the LLM is unreachable for any reason,
 the banter system silently no-ops — no breakage, no game-state impact.
 
 Character flavor lives in `backend/src/bot/banter.js` (`CHARACTER_FLAVOR` map).
-Add a short bio per bot for stronger in-character voice.
+Each entry is a short bio injected into the system prompt. Add new
+entries by exact nickname match; missing characters fall back to a
+generic `${mode}/${intelligence}` template.
 
 ### Roster sample
 
