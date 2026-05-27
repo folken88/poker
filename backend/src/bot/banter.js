@@ -153,14 +153,91 @@ function pickSpeaker(table, excludeIds, speakerHint) {
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
+/** Snapshot the current table situation for the speaker, scaled by
+ *  intelligence. The richer the bot's awareness, the more opponents,
+ *  chip-stack data, and past-behavior cues are baked into the prompt:
+ *
+ *   - low intel    : own seat + table size + the chip leader
+ *                    ("most impressive" tablemate at the moment)
+ *   - average intel: low's view + 2 randomly-sampled other seats
+ *   - high  intel  : every seated player by name + chips, table
+ *                    fullness, and a deviation-from-default note
+ *                    that gestures at long-run behavior
+ *
+ *  Returns a plain string ready to be appended to the user-role
+ *  message. Never throws — falls back to '' if anything is off.
+ */
+function buildTableContext(table, speakerSeat) {
+  try {
+    const intel = speakerSeat.player?.bot_intelligence || 'average';
+    const others = table.seats
+      .filter(s => !s.isEmpty() && s.playerId !== speakerSeat.playerId)
+      .map(s => ({
+        nick: s.player?.nickname || s.playerId,
+        chips: Number(s.chipsAtTable || 0),
+        isBot: !!s.isBot,
+      }));
+    if (others.length === 0) return ''; // alone at the table — no context
+
+    const filled = others.length + 1;        // including speaker
+    const total  = table.maxSeats || table.seats.length;
+    const tableSize = `Table is ${filled}/${total} seated`;
+
+    // "Most impressive" = current chip leader other than the speaker.
+    const leader = others.slice().sort((a, b) => b.chips - a.chips)[0];
+    const leaderLine = leader
+      ? `Chip leader is ${leader.nick} (${leader.chips.toLocaleString()} gp).`
+      : '';
+
+    if (intel === 'low') {
+      // Just the room shape + the loudest stack. Low-intel bots can
+      // basically only orient against "the obvious threat" and the
+      // crowd-size in their peripheral vision.
+      return `\nTABLE: ${tableSize}. ${leaderLine}`;
+    }
+
+    if (intel === 'high') {
+      // Full board awareness — every seated tablemate with stack and
+      // deviation from the 5,000-default starting stack as a coarse
+      // "this person has been winning / losing lately" signal.
+      const roster = others
+        .map(o => {
+          const delta = o.chips - 5000;
+          const tail  = delta === 0 ? ''
+            : delta > 0 ? ` (up ${delta.toLocaleString()})`
+            :             ` (down ${(-delta).toLocaleString()})`;
+          return `${o.nick} ${o.chips.toLocaleString()} gp${tail}`;
+        })
+        .join('; ');
+      return `\nTABLE: ${tableSize}. ${leaderLine}\nALL SEATS: ${roster}.`;
+    }
+
+    // average intel: leader + 2 random other seats.
+    const pool = others.filter(o => o !== leader);
+    const sample = [];
+    while (sample.length < Math.min(2, pool.length)) {
+      const i = Math.floor(Math.random() * pool.length);
+      sample.push(pool.splice(i, 1)[0]);
+    }
+    const sampleLine = sample.length
+      ? ` Also at the table: ${sample.map(o => `${o.nick} (${o.chips.toLocaleString()} gp)`).join(', ')}.`
+      : '';
+    return `\nTABLE: ${tableSize}. ${leaderLine}${sampleLine}`;
+  } catch (_) {
+    return '';
+  }
+}
+
 /** Build the chat-format messages sent to the model. Strict output
  *  spec: one sentence, ≤20 words, no quotes, no narration. Character
  *  flavor is injected from CHARACTER_FLAVOR with a personality-based
- *  fallback. */
-function buildMessages(speaker, eventDescription) {
+ *  fallback. Table-context awareness scales with the bot's intel tier
+ *  (see buildTableContext above). */
+function buildMessages(speaker, eventDescription, table) {
   const nick = speaker.player?.nickname || speaker.playerId;
   const flavor = CHARACTER_FLAVOR[nick]
     || `a ${speaker.player?.bot_mode || 'standard'}/${speaker.player?.bot_intelligence || 'average'} poker player`;
+  const ctx = table ? buildTableContext(table, speaker) : '';
   return [
     {
       role: 'system',
@@ -182,7 +259,7 @@ function buildMessages(speaker, eventDescription) {
     },
     {
       role: 'user',
-      content: `What just happened: ${eventDescription}\n\nReact in character (one line).`,
+      content: `What just happened: ${eventDescription}${ctx}\n\nReact in character (one line). Use the table info above only if it naturally informs your reaction — never recite it.`,
     },
   ];
 }
@@ -258,7 +335,7 @@ function maybeSpeak(table, event) {
   // cooldown still elapses naturally, and we avoid a thundering herd
   // of parallel calls if multiple events fire in quick succession.
   _lastSpokenAt.set(table.id, Date.now());
-  const messages = buildMessages(speaker, event.description);
+  const messages = buildMessages(speaker, event.description, table);
   callLLM(messages).then(line => {
     if (!line) return;
     const nick = speaker.player?.nickname || speaker.playerId;
