@@ -516,13 +516,15 @@
         const avatarBadge = seat.isBot
           ? `<span class="seat__avatar-ai" title="AI player">AI</span>`
           : '';
-        // Per-bot remove button. Any seated human can click × to ask the
-        // bot to leave after the current hand. If clicked while a hand is
-        // in progress, the seat shows "leaving after hand" until it resolves.
-        const removeBotHtml = (seat.isBot && state.me)
+        // Per-seat kick button. Any seated player can click × on any OTHER
+        // occupied seat (human or bot) to kick them — takes effect at end
+        // of the current hand, and posts a chat line naming who kicked
+        // whom. The pendingStand label shows once the kick is queued.
+        const canKick = state.me && seat.playerId !== state.me.player_id;
+        const removeBotHtml = canKick
           ? (seat.pendingStand
-              ? `<span class="seat__leaving" title="Bot leaves at end of current hand">leaving after hand</span>`
-              : `<button type="button" class="seat__remove" data-remove-bot="${escapeAttr(seat.playerId)}" title="Ask ${escapeAttr(seat.nickname)} to leave (after this hand)">×</button>`)
+              ? `<span class="seat__leaving" title="Leaves at end of current hand">leaving after hand</span>`
+              : `<button type="button" class="seat__remove" data-kick-player="${escapeAttr(seat.playerId)}" title="Kick ${escapeAttr(seat.nickname)} — takes effect at end of this hand">×</button>`)
           : '';
         // Action timer countdown — shown on ANY acting seat now (human
         // OR bot). Tag with data-seat-timer-bot so tickTimers can label
@@ -1327,15 +1329,18 @@
   });
 
   // ===== Action panel click wiring (delegated; panel is re-rendered each turn) =====
-  // Seat-ring clicks (sit-down on empty seat, × on bot seats).
+  // Seat-ring clicks (sit-down on empty seat, × to kick a player/bot).
   $('#seatRing').addEventListener('click', (e) => {
-    const removeBot = e.target.closest('button[data-remove-bot]');
-    if (removeBot) {
+    // New unified kick (humans + bots). Also accept the legacy data-remove-bot
+    // attribute so any in-flight DOM from a stale render still works.
+    const kickBtn = e.target.closest('button[data-kick-player], button[data-remove-bot]');
+    if (kickBtn) {
       e.stopPropagation();
-      const playerId = removeBot.dataset.removeBot;
-      const nick = removeBot.getAttribute('title') || playerId;
-      socket.emit('table:removeBot', { playerId }, (resp) => {
-        if (!resp?.ok) { toast(resp?.error || 'Could not remove bot', true); return; }
+      const playerId = kickBtn.dataset.kickPlayer || kickBtn.dataset.removeBot;
+      const seat = state.table?.seats?.find(s => s.playerId === playerId);
+      const nick = seat?.nickname || playerId;
+      socket.emit('table:kickPlayer', { playerId }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not kick player', true); return; }
         toast(state.table?.hand ? `${nick} will leave after this hand` : `${nick} left the table`);
       });
       return;

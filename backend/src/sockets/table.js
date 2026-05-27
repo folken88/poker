@@ -105,6 +105,39 @@ function registerTableHandlers(io, socket, { tables }) {
     ack?.({ ok: true, seatIndex: result.seatIndex, playerId: botId });
   });
 
+  /**
+   * Kick a player (human or bot) from the table. Effect is deferred to
+   * end of current hand — same mechanism as table.stand(self). Requires
+   * the caller is seated (only players at the table can kick others)
+   * and can't be used to kick yourself (use table:stand for that).
+   * Posts a chat line naming who kicked whom for transparency.
+   */
+  socket.on('table:kickPlayer', (payload, ack) => {
+    const me = meOf(socket);
+    if (!me) return ack?.({ ok: false, error: 'choose a player first' });
+    const table = tables.get(socket.data.tableId);
+    if (!table) return ack?.({ ok: false, error: 'not at a table' });
+    const callerSeat = table.findSeat(me.player_id);
+    if (!callerSeat) return ack?.({ ok: false, error: 'must be seated to kick' });
+    const playerId = (payload && typeof payload === 'object') ? payload.playerId : null;
+    if (!playerId) return ack?.({ ok: false, error: 'missing playerId' });
+    if (playerId === me.player_id) return ack?.({ ok: false, error: 'cannot kick yourself — use Leave' });
+    const targetSeat = table.findSeat(playerId);
+    if (!targetSeat) return ack?.({ ok: false, error: 'target not seated' });
+    if (targetSeat.pendingStand) return ack?.({ ok: false, error: 'already leaving after this hand' });
+
+    const callerNick = me.nickname || me.player_id;
+    const targetNick = targetSeat.player?.nickname || playerId;
+    const verb = targetSeat.isBot ? 'kicked the bot' : 'kicked';
+    table.chat('leave', `🚪 ${callerNick} ${verb} ${targetNick} — leaves after this hand.`);
+    table.stand(playerId);
+    io.to(table.roomName()).emit('table:state', table.publicState());
+    ack?.({ ok: true });
+  });
+
+  // Legacy alias for old client tabs that haven't refreshed yet.
+  // Routes to the same handler logic without the caller/self checks
+  // (the old UI only allowed × on bots, not on humans).
   socket.on('table:removeBot', (payload, ack) => {
     const table = tables.get(socket.data.tableId);
     if (!table) return ack?.({ ok: false, error: 'not at a table' });
@@ -114,6 +147,11 @@ function registerTableHandlers(io, socket, { tables }) {
       if (!botSeat) return ack?.({ ok: false, error: 'no bots seated' });
       playerId = botSeat.playerId;
     }
+    const me = meOf(socket);
+    const callerNick = me?.nickname || 'A player';
+    const target = table.findSeat(playerId);
+    const targetNick = target?.player?.nickname || playerId;
+    table.chat('leave', `🚪 ${callerNick} kicked ${targetNick} — leaves after this hand.`);
     table.stand(playerId);
     io.to(table.roomName()).emit('table:state', table.publicState());
     ack?.({ ok: true });
