@@ -1209,20 +1209,22 @@
       renderClockDigits(0);
     }
 
-    // ----- Hand-elapsed display (right of divider) -----
-    // Same SVG digits as the action timer for visual consistency;
-    // CSS gives it a different color so the two halves are easy
-    // to tell apart at a glance. Hidden when no hand is live.
-    const handEl   = document.getElementById('topClockHand');
+    // ----- Hand-elapsed cell (right of divider) -----
+    // Whole cell (label + digits) shows/hides as a unit so the "HAND
+    // TIMER" label and the divider both appear only when a hand is
+    // live. Same SVG digit renderer as the action timer for visual
+    // consistency; CSS colors the hand-timer brass.
+    const handEl    = document.getElementById('topClockHand');
     const dividerEl = document.getElementById('topClockDivider');
-    if (handEl && dividerEl) {
+    const handCell  = document.getElementById('topClockHandCell');
+    if (handEl && dividerEl && handCell) {
       if (t?.hand?.startedAt) {
         const elapsedSec = Math.max(0, Math.floor((now - t.hand.startedAt) / 1000));
         handEl.innerHTML = buildClockDigitsHtml(elapsedSec);
-        handEl.hidden = false;
+        handCell.hidden = false;
         dividerEl.hidden = false;
       } else {
-        handEl.hidden = true;
+        handCell.hidden = true;
         dividerEl.hidden = true;
       }
     }

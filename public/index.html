@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260526ba" />
+  <link rel="stylesheet" href="/css/table.css?v=20260526bb" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -54,16 +54,20 @@
       <div class="topbar__brand">Folken Poker</div>
 
       <!-- ===== Big digital-clock countdown =====
-           Top: label ("Your turn", "Next hand in", etc.).
-           Bottom row: [SVG digits]  |  [🎴 hand-elapsed]
-           Divider + hand-elapsed hide when no hand is live. -->
+           Two side-by-side cells, each with its own label above its
+           digits. Divider + hand cell hide when no hand is live.
+           Left:  per-turn or next-hand countdown (mode-colored)
+           Right: total elapsed time of the current hand (brass) -->
       <div class="topbar__clock" id="topClock" data-mode="idle"
            title="Action timer + total hand elapsed">
-        <span class="topbar__clock-label" id="topClockLabel">Waiting</span>
-        <div class="topbar__clock-row">
+        <div class="topbar__clock-cell">
+          <span class="topbar__clock-label" id="topClockLabel">Waiting</span>
           <span class="topbar__clock-digits" id="topClockDigits" aria-label="countdown"></span>
-          <span class="topbar__clock-divider" id="topClockDivider" aria-hidden="true" hidden></span>
-          <span class="topbar__clock-hand" id="topClockHand" title="Total time this hand has been live" hidden></span>
+        </div>
+        <span class="topbar__clock-divider" id="topClockDivider" aria-hidden="true" hidden></span>
+        <div class="topbar__clock-cell topbar__clock-cell--hand" id="topClockHandCell" hidden>
+          <span class="topbar__clock-label topbar__clock-label--hand">HAND TIMER</span>
+          <span class="topbar__clock-hand" id="topClockHand" title="Total time this hand has been live"></span>
         </div>
       </div>
 
@@ -289,8 +293,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260526ba"></script>
-  <script src="/js/cards.js?v=20260526ba"></script>
-  <script src="/js/client.js?v=20260526ba"></script>
+  <script src="/js/avatars.js?v=20260526bb"></script>
+  <script src="/js/cards.js?v=20260526bb"></script>
+  <script src="/js/client.js?v=20260526bb"></script>
 </body>
 </html>

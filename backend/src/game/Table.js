@@ -782,6 +782,27 @@ class Table {
       this.chat('rebuy', `🛒 ${nick} ${verb} ${itemName} for ${cost.toLocaleString()} gp.`);
     }
 
+    // ---- Cash cap (20,000 gp) ----
+    // No player can hoard more than CASH_CAP in unspent chips at
+    // hand-end. The winnings still pay out fully, but any excess
+    // above the cap gets burned with a chat callout. Players are
+    // expected to bank their wins into gear via the Loot Bank — the
+    // cap is the pressure that nudges them toward the LOOT LORD
+    // win condition instead of just stockpiling cash to bully with.
+    // (Bots already drain to a ~5k reserve via the auto-invest loop
+    // above, so this almost never fires on AI seats.)
+    const CASH_CAP = 20000;
+    for (const seat of this.seats) {
+      if (seat.isEmpty()) continue;
+      if (seat.chipsAtTable > CASH_CAP) {
+        const overflow = seat.chipsAtTable - CASH_CAP;
+        seat.chipsAtTable = CASH_CAP;
+        db.setChips(seat.playerId, CASH_CAP);
+        const nick = seat.player?.nickname || seat.playerId;
+        this.chat('debt', `💸 ${nick} hit the ${CASH_CAP.toLocaleString()} gp cash cap — ${overflow.toLocaleString()} gp lost (buy magic items to keep your winnings!).`);
+      }
+    }
+
     // Loot Lord check — if anyone now holds +5 in every gear slot, they
     // win the entire game. _declareLootLord posts the celebration and
     // resets EVERYONE'S chips + gear back to defaults; the rest of the

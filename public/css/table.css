@@ -437,15 +437,21 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 }
 
 /* ===== Topbar digital countdown clock ===== */
+/* Topbar clock is now a horizontal row of cells (action + divider +
+   hand-timer). Each cell stacks its own label above its digits. */
 .topbar__clock {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 2px;
+  display: flex; flex-direction: row; align-items: stretch;
+  gap: 10px;
   padding: 4px 14px;
   background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.7));
   border: 1px solid rgba(241,207,131,0.25);
   border-radius: 10px;
   min-width: 168px;
   user-select: none;
+}
+.topbar__clock-cell {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px;
 }
 .topbar__clock-label {
   font-size: 0.6rem;
@@ -454,12 +460,16 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   color: var(--ivory-dim);
   font-variant-numeric: tabular-nums;
 }
-/* Row that holds the countdown digits + divider + hand-elapsed. */
+/* Legacy wrapper, no longer used after the two-cell refactor.
+   Kept defined so old cached HTML doesn't break layout. */
 .topbar__clock-row {
   display: flex; align-items: center;
   gap: 10px;
   line-height: 1;
 }
+/* Hand-timer label uses the same style as the action label, just
+   always brass (matches the brass digits) rather than mode-driven. */
+.topbar__clock-label--hand { color: var(--brass) !important; }
 .topbar__clock-digits {
   display: inline-flex; gap: 6px; align-items: center;
   line-height: 1;
