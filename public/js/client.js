@@ -1212,19 +1212,36 @@
     return stage + watchPart;
   }
 
+  /** Big centered winner display, shown during the post-hand pause.
+   *  One block per pot winner (covers side-pot scenarios). Pulls
+   *  avatar from the seat, nickname + amount + hand description from
+   *  the winners[] entry. Hidden whenever the hand isn't at
+   *  SHOWDOWN / COMPLETE — clears on the next deal. */
   function renderWinnerBanner(hand) {
     const banner = $('#handBanner');
-    if (!hand || (hand.state !== 'COMPLETE' && hand.state !== 'SHOWDOWN')) {
+    if (!banner) return;
+    if (!hand || (hand.state !== 'COMPLETE' && hand.state !== 'SHOWDOWN')
+        || !hand.winners?.length) {
       banner.hidden = true;
-      banner.textContent = '';
+      banner.innerHTML = '';
       return;
     }
-    const lines = hand.winners.map(w => {
-      const seat = state.table.seats.find(s => s.playerId === w.playerId);
+    const blocks = hand.winners.map(w => {
+      const seat = state.table?.seats?.find(s => s.playerId === w.playerId);
       const nick = seat?.nickname || w.playerId;
-      return `${nick} wins ${formatGp(w.amount)} — ${w.handDesc}`;
-    });
-    banner.innerHTML = lines.join('<br>');
+      const avatar = seat?.avatarId ? renderAvatar(seat.avatarId) : '';
+      const desc = w.handDesc || '';
+      return `
+        <div class="hand-banner__win">
+          <div class="hand-banner__avatar">${avatar}</div>
+          <div class="hand-banner__text">
+            <div class="hand-banner__nick">${escapeText(nick)}</div>
+            <div class="hand-banner__amount">+ ${formatGp(w.amount)}</div>
+            ${desc ? `<div class="hand-banner__hand">${escapeText(desc)}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+    banner.innerHTML = `<div class="hand-banner__inner">${blocks}</div>`;
     banner.hidden = false;
   }
 

@@ -766,22 +766,85 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .seat.is-acting  { z-index: 4; }
 .seat__plate { position: relative; }
 
+/* ===== Winner banner (centered, post-hand) =====
+   Shown during the SHOWDOWN / COMPLETE state (~15s before next deal)
+   so the room can see exactly who won and how much. Centered over
+   the felt; pointer-events:none so the board cards underneath stay
+   clickable. One .hand-banner__win block per winner (side pots
+   stack vertically). */
 .hand-banner {
   position: absolute;
-  top: 12px; left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(180deg, rgba(241,207,131,0.95), rgba(217,176,106,0.95));
-  color: #2c1d05;
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 0.92rem;
-  letter-spacing: 0.04em;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.4);
-  z-index: 5;
-  max-width: 80%;
-  text-align: center;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 12;
   pointer-events: none;
+  animation: winnerFadeIn 0.35s ease-out;
+}
+.hand-banner__inner {
+  display: flex; flex-direction: column; gap: 10px;
+  max-width: 92%;
+}
+.hand-banner__win {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 22px 14px 16px;
+  background: linear-gradient(180deg, rgba(20,32,25,0.92), rgba(8,16,11,0.96));
+  border: 2px solid var(--brass-bright);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.7),
+              inset 0 1px 0 rgba(241,207,131,0.25),
+              0 0 0 1px rgba(0,0,0,0.5);
+}
+.hand-banner__avatar {
+  width: 64px; height: 64px;
+  flex: 0 0 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(0,0,0,0.5);
+  border: 2px solid var(--brass);
+  box-shadow: 0 0 14px rgba(241,207,131,0.35);
+}
+.hand-banner__avatar img,
+.hand-banner__avatar svg {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.hand-banner__text {
+  display: flex; flex-direction: column; gap: 2px;
+  text-align: left;
+}
+.hand-banner__nick {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: 0.08em;
+  color: var(--brass-bright);
+  text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  line-height: 1;
+}
+.hand-banner__amount {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  line-height: 1.1;
+}
+.hand-banner__hand {
+  font-size: 0.82rem;
+  color: var(--ivory-dim);
+  font-style: italic;
+  margin-top: 2px;
+  max-width: 380px;
+}
+@keyframes winnerFadeIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* Mobile: smaller avatar + tighter padding so it doesn't bury the felt. */
+@media (max-width: 720px) {
+  .hand-banner__win { padding: 10px 14px 10px 10px; gap: 10px; border-radius: 12px; }
+  .hand-banner__avatar { width: 46px; height: 46px; flex: 0 0 46px; }
+  .hand-banner__nick { font-size: 1.1rem; }
+  .hand-banner__amount { font-size: 1.1rem; }
+  .hand-banner__hand { font-size: 0.72rem; max-width: 240px; }
 }
 
 /* ===== Reset modal ===== */
