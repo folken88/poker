@@ -539,7 +539,47 @@
         sitBtn.classList.remove('btn--sit-out-active');
       }
     }
-    // (Rebuy-debt UI removed — the embarrassing chat line is the cost.)
+    // ---- Abadar-bank hover popover off the chips badge ----
+    // Shows the player's outstanding debt and pay-down buttons. Hidden
+    // by default; revealed by :hover on desktop, by tap-toggling
+    // .is-open on touch. Only this client sees their own debt amount —
+    // others get a red dot in the leaderboard but never the number.
+    const pop = $('#mePursePop');
+    if (pop) {
+      const debt = Number(p.rebuy_debt || 0);
+      const chips = Number(p.chips || 0);
+      if (debt > 0) {
+        const maxAffordable = Math.min(debt, chips);
+        const smallPayment = Math.min(maxAffordable, 1000);
+        // Render two buttons only if they'd be different amounts.
+        const buttons = [];
+        if (smallPayment >= 1) {
+          buttons.push(`<button type="button" class="purse__btn" data-pay-debt="${smallPayment}">Pay ${formatChips(smallPayment)} gp</button>`);
+        }
+        if (maxAffordable > smallPayment) {
+          buttons.push(`<button type="button" class="purse__btn purse__btn--max" data-pay-debt="${maxAffordable}">Pay ${formatChips(maxAffordable)} gp (max)</button>`);
+        }
+        const payBlock = buttons.length
+          ? `<div class="purse__actions">${buttons.join('')}</div>`
+          : `<div class="purse__hint">No chips to spare — keep playing.</div>`;
+        pop.innerHTML = `
+          <div class="purse__head">🏦 First Bank of Abadar</div>
+          <div class="purse__row"><span>Chips on hand</span><span>${formatChips(chips)} gp</span></div>
+          <div class="purse__row purse__row--debt"><span>Outstanding loan</span><span>${formatChips(debt)} gp</span></div>
+          ${payBlock}
+          <div class="purse__foot">Pay it down to clear the red dot from the leaderboard. Full settlement happens automatically on the next Loot Lord reset.</div>
+        `;
+        pop.classList.add('has-content');
+      } else {
+        pop.innerHTML = `
+          <div class="purse__head">🏦 First Bank of Abadar</div>
+          <div class="purse__row"><span>Chips on hand</span><span>${formatChips(chips)} gp</span></div>
+          <div class="purse__row purse__row--clear"><span>Loan balance</span><span>—</span></div>
+          <div class="purse__foot">You owe nothing. Abadar approves.</div>
+        `;
+        pop.classList.add('has-content');
+      }
+    }
   }
 
   // ===== Table render =====
@@ -865,6 +905,10 @@
     }, 0);
     const progressPct = Math.min(100, Math.round((totalValue / LOOT_LORD_TOTAL) * 100));
 
+    // (The Abadar-debt readout + pay-down buttons live in the hover
+    // popover off the topbar #meChips badge, not in this panel. Keeps
+    // the gear bank focused on gear.)
+
     return `
       <div class="bank">
         ${rows}
@@ -882,6 +926,10 @@
     const all = (state.roster || []).slice();
     const meId = state.me?.player_id;
     function wealthOf(p) {
+      // Net worth = chips + market value of all gear − outstanding
+      // First Bank of Abadar debt. Debt drags the score down so the
+      // leaderboard truthfully reflects "what you'd be worth if you
+      // settled up tomorrow." Bots have rebuy_debt always = 0.
       let total = Number(p.chips || 0);
       try {
         const gear = JSON.parse(p.gear || '{}') || {};
@@ -890,6 +938,7 @@
           if (tier) total += gearPrice(slot, tier);
         }
       } catch (_) {}
+      total -= Number(p.rebuy_debt || 0);
       return total;
     }
     const ranked = all
@@ -902,11 +951,19 @@
       const mine = p.player_id === meId ? 'is-me' : '';
       const rankMedal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1) + '.';
       const lord = p.is_bot ? 'AI' : '';
+      // Red dot ⏺ next to indebted players so others know why they're
+      // ranked low. Exact amount only shown to the player themselves
+      // (see buildBankHtml). Tooltip differs accordingly.
+      const debt = Number(p.rebuy_debt || 0);
+      const isMine = p.player_id === meId;
+      const debtDot = debt > 0
+        ? `<span class="lb__debt" title="${isMine ? ('Owe '+debt.toLocaleString()+' gp to the First Bank of Abadar') : 'In debt to the First Bank of Abadar'}">●</span>`
+        : '';
       return `
         <li class="lb__row ${mine}">
           <span class="lb__rank">${rankMedal}</span>
           <span class="lb__avatar">${renderAvatar(p.avatar_id)}</span>
-          <span class="lb__name">${escapeText(p.nickname)}${lord?'<span class="lb__bot">'+lord+'</span>':''}</span>
+          <span class="lb__name">${escapeText(p.nickname)}${lord?'<span class="lb__bot">'+lord+'</span>':''}${debtDot}</span>
           <span class="lb__wealth">${formatChips(row.wealth)} gp</span>
         </li>`;
     }).join('');
@@ -922,6 +979,10 @@
     if (all.length === 0) { el.innerHTML = '<li class="lb__empty">No players yet…</li>'; return; }
     const meId = state.me?.player_id;
     function wealthOf(p) {
+      // Net worth = chips + market value of all gear − outstanding
+      // First Bank of Abadar debt. Debt drags the score down so the
+      // leaderboard truthfully reflects "what you'd be worth if you
+      // settled up tomorrow." Bots have rebuy_debt always = 0.
       let total = Number(p.chips || 0);
       try {
         const gear = JSON.parse(p.gear || '{}') || {};
@@ -930,6 +991,7 @@
           if (tier) total += gearPrice(slot, tier);
         }
       } catch (_) {}
+      total -= Number(p.rebuy_debt || 0);
       return total;
     }
     const ranked = all
@@ -940,11 +1002,16 @@
       const mine = p.player_id === meId ? 'is-me' : '';
       const rankMedal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1) + '.';
       const lord = p.is_bot ? '<span class="lb__bot">AI</span>' : '';
+      const debt = Number(p.rebuy_debt || 0);
+      const isMine = p.player_id === meId;
+      const debtDot = debt > 0
+        ? `<span class="lb__debt" title="${isMine ? ('Owe '+debt.toLocaleString()+' gp to the First Bank of Abadar') : 'In debt to the First Bank of Abadar'}">●</span>`
+        : '';
       return `
         <li class="lb__row ${mine}">
           <span class="lb__rank">${rankMedal}</span>
           <span class="lb__avatar">${renderAvatar(p.avatar_id)}</span>
-          <span class="lb__name">${escapeText(p.nickname)}${lord}</span>
+          <span class="lb__name">${escapeText(p.nickname)}${lord}${debtDot}</span>
           <span class="lb__wealth">${formatChips(row.wealth)}</span>
         </li>`;
     }).join('');
@@ -1540,6 +1607,23 @@
       });
       return;
     }
+    // Abadar bank: pay down debt (popover button)
+    const pay = e.target.closest('[data-pay-debt]');
+    if (pay) {
+      e.preventDefault();
+      const amount = Number(pay.dataset.payDebt);
+      if (!Number.isFinite(amount) || amount < 1) return;
+      socket.emit('lobby:payDebt', { amount }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not pay debt', true); return; }
+        if (state.me) {
+          state.me.chips = resp.chips;
+          state.me.rebuy_debt = resp.rebuyDebt;
+        }
+        paintMe();
+        toast(`Paid ${formatChips(amount)} gp to the First Bank of Abadar`);
+      });
+      return;
+    }
     // Preset chip → fill the raise input
     const preset = e.target.closest('button[data-raise]');
     if (preset) {
@@ -1568,6 +1652,25 @@
       if (!resp?.ok) toast(resp?.error || 'Action rejected', true);
     });
   });
+
+  // ===== Topbar — Abadar purse popover tap-to-toggle =====
+  // Hover handles desktop via CSS. For touch users (no :hover), tap
+  // the chips badge to toggle .is-open on the wrapper; a click anywhere
+  // outside closes it. Keyboard users can also Tab onto it (it has
+  // tabindex=0) and CSS :focus-within will reveal the popover.
+  (function wirePursePopover() {
+    const purse = $('#mePurse');
+    if (!purse) return;
+    purse.addEventListener('click', (e) => {
+      // Don't toggle when the click is on a button inside the popover.
+      if (e.target.closest('[data-pay-debt]')) return;
+      purse.classList.toggle('is-open');
+    });
+    document.addEventListener('click', (e) => {
+      if (purse.contains(e.target)) return;
+      purse.classList.remove('is-open');
+    });
+  })();
 
   // ===== Topbar =====
   $('#resetStackBtn').addEventListener('click', () => {

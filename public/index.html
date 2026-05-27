@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260527-chat" />
+  <link rel="stylesheet" href="/css/table.css?v=20260527-abadar" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -74,10 +74,14 @@
       <div class="topbar__me">
         <span class="me-avatar" id="meAvatar"></span>
         <span class="me-nick"   id="meNick">…</span>
-        <span class="me-chips"  id="meChips">—</span>
-        <!-- Rebuy debt tracking removed — embarrassing chat line
-             is the cost. Players with magic items must hock them
-             before they can re-buy. -->
+        <!-- Chips badge doubles as the Abadar-bank hover trigger. The
+             popover (#mePursePop) is hidden by default; the .me-purse
+             wrapper's :hover (or .is-open on touch) reveals it. -->
+        <span class="me-purse" id="mePurse" tabindex="0">
+          <span class="me-chips" id="meChips">—</span>
+          <span class="me-purse__chev" aria-hidden="true">▾</span>
+          <div class="me-purse__pop" id="mePursePop" role="dialog" aria-label="First Bank of Abadar"></div>
+        </span>
 
         <button class="btn btn--ghost btn--sm" id="muteBtn" title="Mute card-shuffle / deal sound effects">🔊</button>
         <button class="btn btn--ghost btn--sm" id="helpBtn" title="How to play (actions, hand rankings, tips)">?</button>
@@ -293,8 +297,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260527-chat"></script>
-  <script src="/js/cards.js?v=20260527-chat"></script>
-  <script src="/js/client.js?v=20260527-chat"></script>
+  <script src="/js/avatars.js?v=20260527-abadar"></script>
+  <script src="/js/cards.js?v=20260527-abadar"></script>
+  <script src="/js/client.js?v=20260527-abadar"></script>
 </body>
 </html>

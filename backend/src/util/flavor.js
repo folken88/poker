@@ -134,11 +134,39 @@ function botRebuyMessage(nickname, amount) {
   return `${nickname} ${pick(VERBS)} their ${pick(ITEMS)} for ${amount.toLocaleString()} gp ${pick(SUFFIXES)}`;
 }
 
-/** Human re-buy line — uses the same embarrassing pool as bots.
- *  No more debt tracking; the social cost of admitting they pawned
- *  their mother's wedding ring IS the cost. */
+// Bank-of-Abadar-themed rebuy lines for HUMANS. (Bots are the house —
+// they keep using botRebuyMessage with the embarrassing-items pool.)
+// Humans take out a LOAN from the First Bank of Abadar, so the flavor
+// is bank-and-ledger-themed rather than pawnshop-themed.
+const ABADAR_LINES = [
+  'took out a',
+  'signed for a',
+  'borrowed a',
+  'cosigned themselves into a',
+  'pledged their good name for a',
+  'tapped the ledger for another',
+  'opened a fresh line of credit for',
+  'walked out of the Vault with',
+  'put their soul up as collateral for',
+  'whispered the Codex of Abadar over a',
+  'shook hands with a smiling Abadaran banker on a',
+  'sealed a contract in gold wax for a',
+];
+const ABADAR_PURPOSES = [
+  'gp loan from the First Bank of Abadar.',
+  'gp loan against future winnings.',
+  'gp from the Abadaran lender at terms best left undisclosed.',
+  'gp at the going Abadaran rate of "your dignity, plus interest."',
+  'gp note marked URGENT in red ink.',
+  'gp draft. The contract gleams faintly.',
+  'gp promissory note. The clerk did not smile.',
+  'gp loan. Abadar is patient, but the ledger is not.',
+];
+
+/** Human re-buy line — Bank of Abadar themed. Each re-buy adds
+ *  DEFAULT_STACK to the player's debt; this line announces the loan. */
 function humanRebuyMessage(nickname, amount) {
-  return botRebuyMessage(nickname, amount);
+  return `${nickname} ${pick(ABADAR_LINES)} ${amount.toLocaleString()} ${pick(ABADAR_PURPOSES)}`;
 }
 
 const BUST_LINES = [

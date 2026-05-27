@@ -65,9 +65,12 @@ function registerLobbyHandlers(io, socket, { tables }) {
   socket.on('lobby:resetStack', (_p, ack) => {
     const player = socket.data.player;
     if (!player) return ack?.({ ok: false, error: 'choose a player first' });
-    // Block re-buy while the player still owns magic items — they
-    // have to hock those first. (Otherwise they could ignore their
-    // gear and keep tapping the bank for fresh chips.)
+    // Hock-first gate: as long as you own magic items, you have to
+    // liquidate those before going to the bank. Otherwise you could
+    // hoard +5 gear AND ride the loan window indefinitely. Once you
+    // hit a true 0-gear / 0-gold floor, the First Bank of Abadar will
+    // extend you a fresh DEFAULT_STACK loan. There's no cap on how
+    // many times you can do this — the debt just keeps stacking.
     const gear = db.getGear(player.player_id) || {};
     const ownedItems = Object.entries(gear).filter(([, t]) => t > 0);
     if (ownedItems.length > 0) {
@@ -76,9 +79,12 @@ function registerLobbyHandlers(io, socket, { tables }) {
         error: 'You own magic items — hock them first (use the Loot Bank).',
       });
     }
-    // Re-buy: chips back to default. No more debt accounting — the
-    // social cost (an embarrassing chat line) IS the cost.
+    // 0 gear, 0 gold → take an Abadar loan. Chips back to DEFAULT_STACK,
+    // outstanding debt += DEFAULT_STACK. Pay it down voluntarily via
+    // lobby:payDebt; otherwise it lingers on the ledger (and drags net
+    // worth) until the next Loot Lord reset wipes everyone clean.
     db.setChips(player.player_id, db.DEFAULT_STACK);
+    db.addRebuyDebt(player.player_id, db.DEFAULT_STACK);
     const refreshed = db.getPlayer(player.player_id);
     socket.data.player = refreshed;
     const table = tableFor(socket, tables);
@@ -89,7 +95,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
       table._broadcast?.();
     }
     io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
-    ack?.({ ok: true, chips: refreshed.chips });
+    ack?.({ ok: true, chips: refreshed.chips, rebuyDebt: refreshed.rebuy_debt });
   });
 
   /** Pay down some of your rebuy debt from your current chip stack.
@@ -110,7 +116,10 @@ function registerLobbyHandlers(io, socket, { tables }) {
     if (table) {
       const seat = table.findSeat(player.player_id);
       if (seat) seat.chipsAtTable = refreshed.chips;
-      table.chat('debt', `💸 ${refreshed.nickname} paid down ${amt.toLocaleString()} gp of debt. (Owes ${refreshed.rebuy_debt.toLocaleString()} gp.)`);
+      const owesLine = refreshed.rebuy_debt > 0
+        ? ` (Still owes ${refreshed.rebuy_debt.toLocaleString()} gp to the First Bank of Abadar.)`
+        : ' Debt cleared — Abadar smiles on you.';
+      table.chat('debt', `💸 ${refreshed.nickname} paid down ${amt.toLocaleString()} gp of debt.${owesLine}`);
       table._broadcast?.();
     }
     io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });

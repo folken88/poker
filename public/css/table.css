@@ -574,6 +574,129 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   font-weight: 700;
 }
 
+/* ===== Abadar-bank hover popover (off the chips badge) ===== */
+/* The .me-purse wrapper holds the visible chips badge + a chevron +
+   the hidden popover. Hovering the wrapper (or focusing it, or
+   adding .is-open via tap on touch) reveals the popover. */
+.me-purse {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: default;
+  outline: none;
+}
+.me-purse:hover, .me-purse:focus-within, .me-purse.is-open {
+  background: rgba(217,176,106,0.08);
+}
+.me-purse__chev {
+  font-size: 0.65rem;
+  color: var(--brass);
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+.me-purse:hover .me-purse__chev,
+.me-purse:focus-within .me-purse__chev,
+.me-purse.is-open .me-purse__chev { transform: rotate(180deg); }
+.me-purse__pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 260px;
+  max-width: 320px;
+  background: linear-gradient(180deg, rgba(20,24,18,0.97), rgba(10,14,10,0.99));
+  border: 1px solid rgba(217,176,106,0.4);
+  border-radius: 10px;
+  padding: 10px 12px 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 50;
+  color: var(--ivory);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  font-weight: 400;
+  text-align: left;
+}
+.me-purse:hover .me-purse__pop,
+.me-purse:focus-within .me-purse__pop,
+.me-purse.is-open .me-purse__pop {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.purse__head {
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
+  font-size: 0.85rem;
+  color: var(--brass-bright);
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(217,176,106,0.18);
+  padding-bottom: 6px;
+}
+.purse__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 2px 0;
+  font-variant-numeric: tabular-nums;
+}
+.purse__row--debt { color: #ffb874; font-weight: 600; }
+.purse__row--clear { color: var(--success); }
+.purse__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 6px;
+}
+.purse__btn {
+  background: linear-gradient(180deg, rgba(217,176,106,0.18), rgba(217,176,106,0.08));
+  border: 1px solid rgba(217,176,106,0.45);
+  color: var(--ivory);
+  font: inherit;
+  font-weight: 600;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+.purse__btn:hover { background: linear-gradient(180deg, rgba(217,176,106,0.28), rgba(217,176,106,0.14)); }
+.purse__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.purse__btn--max {
+  border-color: var(--brass);
+  background: linear-gradient(180deg, rgba(241,207,131,0.28), rgba(217,176,106,0.14));
+}
+.purse__hint {
+  font-size: 0.78rem;
+  color: var(--ivory-dim);
+  font-style: italic;
+  margin: 6px 0;
+}
+.purse__foot {
+  font-size: 0.72rem;
+  color: var(--ivory-dim);
+  line-height: 1.35;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(217,176,106,0.12);
+}
+
+/* Red dot in the leaderboard for indebted players. Visible to everyone,
+   but the tooltip only shows the precise amount for the indebted user
+   themselves. */
+.lb__debt {
+  display: inline-block;
+  margin-left: 4px;
+  color: #ff5252;
+  font-size: 0.7em;
+  text-shadow: 0 0 4px rgba(255,82,82,0.6);
+  vertical-align: 0.1em;
+}
+
 .table-wrap {
   flex: 1;
   position: relative;
