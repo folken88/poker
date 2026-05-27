@@ -777,7 +777,21 @@ class Table {
         aggressorWealth,
         aggressorId,
       };
-      const decision = bot.decide(decideCtx);
+      // Defensive: bot.decide() must never throw (would silently strand the
+      // actor — the setTimeout already nulled itself, no new timer would be
+      // scheduled, the table sits forever showing "thinking" past the
+      // displayed countdown). If a decision is rejected by validate (e.g.
+      // 'check' when toCall>0) the same dead-end occurs because the bot
+      // driver previously ignored applyAction's return value.
+      // Wrap both calls and force-fold on any anomaly so the hand keeps
+      // moving and the bug surfaces in logs instead of hanging silently.
+      let decision = null;
+      try {
+        decision = bot.decide(decideCtx);
+      } catch (e) {
+        console.error(`[bot] ${actor} (${bot.mode}) decide() threw — force-folding: ${e?.message || e}`);
+        decision = { action: 'fold', reason: 'decide-threw->force-fold' };
+      }
       console.log(`[bot] ${actor} (${bot.mode}) → ${decision.action}${decision.amount != null ? ' to ' + decision.amount : ''}  // ${decision.reason}`);
       // Persist for offline analysis. Strength recomputed for record (cheap).
       logBotDecision({
@@ -797,7 +811,21 @@ class Table {
           invested: decideCtx.invested,
         },
       });
-      this.applyAction({ playerId: actor, action: decision.action, amount: decision.amount });
+      const applyResult = this.applyAction({ playerId: actor, action: decision.action, amount: decision.amount });
+      if (!applyResult?.ok) {
+        // Rejected by validator — the bot picked an action illegal in the
+        // current state. Log the details so we can fix the decision logic
+        // and force-fold the actor so the hand isn't stranded.
+        console.error(
+          `[bot] ${actor} (${bot.mode}) action ${decision.action} ${decision.amount ?? ''} REJECTED: ${applyResult?.error || 'unknown'} — ` +
+          `state={toCall:${decideCtx.toCall}, currentBet:${decideCtx.currentBet}, invested:${decideCtx.invested}, ` +
+          `minRaise:${decideCtx.minRaise}, stack:${decideCtx.stack}}`
+        );
+        const recovery = this.applyAction({ playerId: actor, action: 'fold' });
+        if (!recovery?.ok) {
+          console.error(`[bot] ${actor} recovery fold also failed: ${recovery?.error || 'unknown'} — table may be stuck`);
+        }
+      }
     }, delay);
   }
 
