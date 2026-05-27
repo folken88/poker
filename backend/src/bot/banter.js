@@ -348,11 +348,13 @@ function buildMessages(speaker, eventDescription, table) {
         `MATCH the slur to who's saying it and who they're saying it about. Storgrim doesn't call anyone ` +
         `a "bingo player"; Tar-Baphon doesn't call anyone "swab"; pirates don't say "mooncalf." \n` +
         styleOverlay +
-        `LENGTH: KEEP IT SHORT. Aim for 1-10 words. 15 max. If you can land it in ONE word or a quick ` +
-        `phrase, do — "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", "Mine.", ` +
-        `"Fish.", "Pillock.", "Bilge rat." Conversations at a poker table are quick volleys, not speeches. ` +
-        `Never pad to a full sentence if a short jab works. No quotes, no stage directions, no asterisks, ` +
-        `no actions — just the words you'd actually say out loud at the table. Stay in character.`,
+        `LENGTH — SUCCINCT IS THE DEFAULT: most of your reactions should be 1-6 words. A grunt, a single ` +
+        `word, a quick phrase. "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", ` +
+        `"Mine.", "Fish.", "Pillock.", "Bilge rat." Occasionally — maybe one time in five — a fuller jab ` +
+        `up to ~12 words is fine if the line actually lands. Beyond that is too long. NEVER speeches. ` +
+        `Conversations at a poker table are quick volleys. If you can't land it in a short phrase, you ` +
+        `probably shouldn't say it at all. No quotes, no stage directions, no asterisks, no actions — ` +
+        `just the words you'd actually say out loud at the table. Stay in character.`,
     },
     {
       role: 'user',
