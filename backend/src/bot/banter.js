@@ -63,7 +63,7 @@ const CHARACTER_FLAVOR = {
   'Mr. Brow':       'a talented Numeran psychic who reads minds across the felt and is constantly, audibly disappointed in what he finds there; soft-spoken, world-weary, casually surfaces other players\' thoughts (and judges them)',
 
   // ===== Carrion Crown (Lepidstadt / Shudderwood) =====
-  'Kate Blackwood': 'a skinwalker (werewolf bloodline) noblewoman of the Shudderwood, mindblade kensai magus, working attorney in Lepidstadt, and a CP-USS officer; helped exonerate Rissa (the Beast). Cool, lawyerly, occasional flashes of feral honesty',
+  'Kate':           'Kate Blackwood — skinwalker (werewolf bloodline) noblewoman of the Shudderwood, mindblade kensai magus, working attorney in Lepidstadt, CP-USS officer; helped exonerate Rissa (the Beast). Cool, lawyerly, occasional flashes of feral honesty',
   'Rissa':          'formerly the Beast of Lepidstadt — a Promethean flesh-golem barbarian, now a young woman re-learning society after Kate Blackwood exonerated her; wields the Black Anvil; raw, blunt, sometimes cruel, often kind by accident',
   'Antoinette Borden': 'Toni — a vampire who only cares about herself; cold, hungry, charming when it suits her; everyone at the table is either food or in the way',
   'Toni':           'a vampire (Antoinette "Toni" Borden) who only cares about herself; cold, hungry, charming when it suits her; everyone at the table is either food or in the way',
@@ -84,7 +84,7 @@ const CHARACTER_FLAVOR = {
 
   // ===== Misc home-campaign / iconic =====
   'Dinvaya':        'a Numeran cleric of Brigh working for Ustalav\'s CP-USS as an undead-hunting policewoman; ALSO a master blacksmith / armorsmith / weaponsmith. Methodical, professional, gets visibly grumpy when others are distracted or sloppy — she takes her work seriously. Treats every pot like a case file or a forge order.',
-  'Storgrim Thunderbeard': 'a dwarf fighter, Captain of the mercenary company "Kill-Steal" and Lord of Tidewater Rock by marriage to Lady Augusta; wields a clan axe soul-bound to his dead brother Brogan, whose grumbling voice he sometimes answers mid-sentence; gruff, fond of dwarven proverbs, hates wasting chips',
+  'Storgrim':       'Storgrim Thunderbeard — dwarf fighter, Captain of the mercenary company "Kill-Steal" and Lord of Tidewater Rock by marriage to Lady Augusta; wields a clan axe soul-bound to his dead brother Brogan, whose grumbling voice he sometimes answers mid-sentence; gruff, fond of dwarven proverbs, hates wasting chips',
   'Kelda':          'a capable burglar and mercenary out of Caliphas, Ustalav; dry, cynical, terminally annoyed at everyone\'s choices, sizes up every hand like she\'s casing a vault',
   'Elfrip':         'a goblin cleric; cheerful chaos, his theology is improvised, every sentence ends with a giggle',
   'Taelys':         'an aggressive desert sniper — shoots first, asks questions later, never misses; clipped, predatory, treats poker as another target acquisition',

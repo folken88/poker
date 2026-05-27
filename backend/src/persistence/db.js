@@ -115,8 +115,8 @@ const BOT_ROSTER = [
   // Original 6 bots
   { name: 'Dinvaya',              avatar: '/tokens/dinvaya.webp',              baseMode: 'cautious', intelligence: 'high'    },
   { name: 'Vaughan',              avatar: '/tokens/vaughan.webp',              baseMode: 'risky',    intelligence: 'high'    }, // user: high intel + high risk
-  { name: 'Storgrim Thunderbeard', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'cautious', intelligence: 'average' }, // user: avg intel + cautious
-  { name: 'Kate Blackwood',        avatar: '/tokens/kate-blackwood.webp',        baseMode: 'cautious', intelligence: 'high'    }, // user: high intel + low risk
+  { name: 'Storgrim Thunderbeard', nickname: 'Storgrim', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'cautious', intelligence: 'average' }, // user: avg intel + cautious
+  { name: 'Kate Blackwood',        nickname: 'Kate',     avatar: '/tokens/kate-blackwood.webp',        baseMode: 'cautious', intelligence: 'high'    }, // user: high intel + low risk
   { name: 'Kovira',               avatar: '/tokens/kovira.webp',               baseMode: 'risky',    intelligence: 'high'    },
   { name: 'Elfrip',               avatar: '/tokens/elfrip.webp',               baseMode: 'standard', intelligence: 'low'     }, // user: goblin cleric, low intel + normal risk
 
@@ -310,6 +310,12 @@ function seedRoster() {
   const updateBotAvatar = db.prepare('UPDATE players SET avatar_id = ? WHERE player_id = ? AND is_bot = 1');
   const updateBotMode   = db.prepare('UPDATE players SET bot_mode = ? WHERE player_id = ? AND is_bot = 1');
   const updateBotIntel  = db.prepare('UPDATE players SET bot_intelligence = ? WHERE player_id = ? AND is_bot = 1');
+  // BOT_ROSTER entries may optionally specify a short display `nickname`
+  // distinct from the canonical `name` (which is also the persistence key
+  // / player_id). When the bot row already exists, we update its nickname
+  // column so the seat label flips to the short form on the next render.
+  // Player_id never changes, so chips/gear/history stay attached.
+  const updateBotNick   = db.prepare('UPDATE players SET nickname = ? WHERE player_id = ? AND is_bot = 1');
   const deleteBot       = db.prepare('DELETE FROM players WHERE player_id = ? AND is_bot = 1');
   const listBotIds      = db.prepare('SELECT player_id FROM players WHERE is_bot = 1');
 
@@ -322,13 +328,15 @@ function seedRoster() {
     const currentBotIds = new Set();
     for (const p of BOT_ROSTER) {
       const id = p.name.toLowerCase();
+      const displayNick = p.nickname || p.name;
       currentBotIds.add(id);
-      const r = stmts.seedPlayer.run(id, p.name, p.avatar, DEFAULT_STACK, now, now, 1, p.baseMode);
+      const r = stmts.seedPlayer.run(id, displayNick, p.avatar, DEFAULT_STACK, now, now, 1, p.baseMode);
       if (r.changes) bots++;
-      // Always sync the avatar URL + mode + intelligence so BOT_ROSTER
-      // stays the source of truth for character configuration. (Mode
-      // can drift between hands via bot.maybeShiftMode(), but baseMode
-      // is what BOT_ROSTER pins.)
+      // Always sync the nickname (short label), avatar URL, mode, and
+      // intelligence so BOT_ROSTER stays the source of truth for
+      // character configuration. (Mode can drift between hands via
+      // bot.maybeShiftMode(), but baseMode is what BOT_ROSTER pins.)
+      updateBotNick.run(displayNick, id);
       updateBotAvatar.run(p.avatar, id);
       updateBotMode.run(p.baseMode || 'standard', id);
       updateBotIntel.run(p.intelligence || 'average', id);
