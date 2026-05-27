@@ -146,14 +146,22 @@ function registerTableHandlers(io, socket, { tables }) {
     if (!me) return ack?.({ ok: false, error: 'choose a player first' });
     const table = tables.get(socket.data.tableId);
     if (!table) return ack?.({ ok: false, error: 'not at a table' });
-    const callerSeat = table.findSeat(me.player_id);
-    if (!callerSeat) return ack?.({ ok: false, error: 'must be seated to kick' });
     const playerId = (payload && typeof payload === 'object') ? payload.playerId : null;
     if (!playerId) return ack?.({ ok: false, error: 'missing playerId' });
     if (playerId === me.player_id) return ack?.({ ok: false, error: 'cannot kick yourself — use Leave' });
     const targetSeat = table.findSeat(playerId);
     if (!targetSeat) return ack?.({ ok: false, error: 'target not seated' });
     if (targetSeat.pendingStand) return ack?.({ ok: false, error: 'already leaving after this hand' });
+    // Seating requirement applies ONLY when kicking another HUMAN —
+    // that has real political weight, so only players sharing the
+    // felt should have standing to do it. Bots are fair game for any
+    // logged-in caller: a spectator needs to be able to clear stale
+    // bots before sitting down. Mirrors the old table:removeBot path
+    // (kept below as a legacy alias) which had no seated check.
+    const callerSeat = table.findSeat(me.player_id);
+    if (!targetSeat.isBot && !callerSeat) {
+      return ack?.({ ok: false, error: 'must be seated to kick a human player' });
+    }
 
     const callerNick = me.nickname || me.player_id;
     // displayNickname() preserves Vorkstag's disguise — chat says
