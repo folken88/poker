@@ -39,6 +39,14 @@
   const supportsTTS = !!TTS;
   const supportsSR  = !!SR;
 
+  // ---------- Pronunciation overrides ----------
+  // Written → phonetic spelling for names the TTS voice mispronounces.
+  // Applied as a word-boundary case-insensitive replace in speak().
+  // Add new entries when a screen-reader user reports a butchered name.
+  const NAME_PRONUNCIATIONS = [
+    ['Mandore', 'Man door'],
+  ];
+
   // ---------- State ----------
   const state = {
     on: false,
@@ -113,13 +121,17 @@
   const PRIO = { urgent: 3, event: 2, ambient: 1 };
   function speak(text, prio = 'event') {
     if (!state.on || !supportsTTS || !text) return;
+    text = String(text);
     // "GP" / "gp" → "gold" so the synth says "two thousand gold"
     // instead of "two thousand GP" or letter-spelling "gee pee".
-    // Single substitution boundary — every code path that queues a
-    // chip-amount line flows through here, including the server-
-    // sent action lines ("Kate calls 200 gp.") and our own pot/stack
-    // announcements.
-    text = String(text).replace(/\bgp\b/gi, 'gold');
+    text = text.replace(/\bgp\b/gi, 'gold');
+    // Pronunciation fixes — written names the TTS engine routinely
+    // mangles get spelled phonetically here so the screen-reader
+    // voice says them correctly. Add new pairs as they surface.
+    // Word-boundary match keeps it from corrupting substrings.
+    for (const [orig, phon] of NAME_PRONUNCIATIONS) {
+      text = text.replace(new RegExp(`\\b${orig}\\b`, 'gi'), phon);
+    }
     const p = PRIO[prio] ?? PRIO.event;
     // ambient: drop if anything else is queued OR currently speaking
     if (p === PRIO.ambient && (state.queue.length > 0 || state.speaking)) return;
