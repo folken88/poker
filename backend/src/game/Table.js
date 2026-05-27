@@ -691,6 +691,11 @@ class Table {
   }
 
   _afterHandComplete() {
+    // Distinctive marker for log-tail watchers (e.g. the deploy script
+    // that waits for a between-hand window before recreating the
+    // container). A long quiet gap could just be a cautious bot
+    // brooding — this is the unambiguous "round just ended" signal.
+    console.log(`[poker] hand-complete table=${this.id} #${this.handCount}`);
     // Announce winners in the chat log before we tear the hand down.
     try {
       const ws = this.hand.winners || [];
