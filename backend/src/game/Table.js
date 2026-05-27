@@ -249,7 +249,14 @@ class Table {
   stand(playerId) {
     const seat = this.findSeat(playerId);
     if (!seat) return { ok: false, error: 'not seated' };
-    if (this.hand && this._inHandPlayerIds().has(playerId)) {
+    // Mid-hand ONLY when the seat is actively dealt in. After hand-complete
+    // the hand reference lingers ~2-3s for the showdown pause, but
+    // seat.inHand is already cleared in _afterHandComplete. If we don't
+    // also gate on seat.inHand here, a kick in that pause window flags
+    // the seat for "leave after this hand" — which then never fires when
+    // the kicked player was the only AI at the table (no new hand starts,
+    // no _afterHandComplete to consume the flag, seat stranded forever).
+    if (this.hand && seat.inHand && this._inHandPlayerIds().has(playerId)) {
       // Mid-hand: treat as a fold via the hand engine, then vacate after the hand resolves.
       this._foldMidHandAndVacate(playerId, seat);
       return { ok: true };

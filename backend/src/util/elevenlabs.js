@@ -37,9 +37,10 @@ if (ENABLED) {
  *  browser TTS fallback also benefits.
  *  Add new pairs as users report butchered pronunciations. */
 const PRONUNCIATIONS = [
-  ['Mandore',  'Man door'],
-  ['Lirienne', 'Leery in'],
-  ['Bujon',    'Boo han'],
+  ['Mandore',    'Man door'],
+  ['Lirienne',   'Leery in'],
+  ['Bujon',      'Boo han'],
+  ['Casandalee', 'Cah san dah lee'],
 ];
 function applyPronunciations(text) {
   let out = text;

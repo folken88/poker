@@ -44,9 +44,10 @@
   // Applied as a word-boundary case-insensitive replace in speak().
   // Add new entries when a screen-reader user reports a butchered name.
   const NAME_PRONUNCIATIONS = [
-    ['Mandore',  'Man door'],
-    ['Lirienne', 'Leery in'],
-    ['Bujon',    'Boo han'],
+    ['Mandore',    'Man door'],
+    ['Lirienne',   'Leery in'],
+    ['Bujon',      'Boo han'],
+    ['Casandalee', 'Cah san dah lee'],
   ];
 
   // ---------- State ----------
