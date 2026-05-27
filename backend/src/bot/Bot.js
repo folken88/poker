@@ -238,6 +238,41 @@ class Bot {
       return buildRaise(1.05, 'bluff');
     }
 
+    // ─── High-intel slow-play (build the pot, slam-dunk later) ──────────────
+    // A skilled player doesn't fire a huge bet the moment they get a
+    // monster — they flat-call or small-probe on the early streets to
+    // let the pot grow and disguise their strength, then go big on
+    // turn / river once opponents are committed. Gated on:
+    //   - intelligence === 'high' (only the smart ones know how)
+    //   - v >= monsterThresh (only true monsters — medium-strong hands
+    //     still play normally so they don't leak by under-betting)
+    //   - street <= 3 (preflop + flop are "early"; turn=4 / river=5
+    //     fall through to the normal value/jam logic below)
+    // Without this, high-intel cautious bots monster-shove on flop and
+    // scare everyone out, leaving them with a tiny pot for a huge hand.
+    const street = board?.length || 0;
+    if (this.intelligence === 'high' && v >= tuning.monsterThresh && street <= 3) {
+      if (toCall === 0) {
+        // Mix check (60%) with a small probe bet (40% at 0.35× pot).
+        // The check looks weak-passive; the probe looks like a feeler.
+        // Either way, opponents stay in or start betting into us.
+        if (rng() < 0.60) {
+          return { action: 'check', reason: `slowplay-check v=${v.toFixed(2)} ${tag}` };
+        }
+        return buildRaise(0.35, 'slowplay-probe');
+      }
+      // Facing a bet — just call to disguise the monster and let them
+      // keep firing on later streets. Exception: if the call is itself
+      // pot-committing (>30% of stack), the hand is going all-in by the
+      // river anyway, so falling through to the existing strong-hand
+      // logic (which will shove) is correct.
+      const wouldCommitNow = toCall > stack * 0.30;
+      if (!wouldCommitNow) {
+        return { action: 'call', reason: `slowplay-trap v=${v.toFixed(2)} ${tag}` };
+      }
+      // Pot-committed → fall through; existing logic will shove.
+    }
+
     // ─── No bet to call (we can check or open) ───────────────────────────────
     if (toCall === 0) {
       if (v > tuning.raiseThresh) {
