@@ -196,21 +196,39 @@ class Table {
   }
 
   _foldMidHandAndVacate(playerId, seat) {
-    // Best-effort: ask the hand engine to fold if it's their turn; otherwise mark
-    // them folded by setting folded=true directly on the in-hand record.
+    // CRITICAL: flag the seat for vacate BEFORE applying the fold. If the
+    // fold ends the hand, _afterHandComplete's vacate loop runs in the
+    // same call stack and needs to see the flag already set, or the
+    // player would still be sitting there after the hand resolves.
+    seat._standAfterHand = true;
+
     if (this.hand && this.hand.getCurrentActor() === playerId) {
-      this.hand.applyAction(playerId, 'fold');
-    } else if (this.hand) {
+      // Their turn: dispatch through Table.applyAction (not Hand directly)
+      // so the post-action handling runs — chat line, broadcast, and most
+      // importantly _afterHandComplete if the fold ended the hand. Without
+      // this, the seat flagged above never gets vacated and the next hand
+      // never starts.
+      this.applyAction({ playerId, action: 'fold' });
+      return;   // applyAction broadcasts at the end
+    }
+
+    if (this.hand) {
       const p = this.hand.players.find(pp => pp.playerId === playerId);
       if (p && !p.folded) {
         p.folded = true;
         this.hand.pot.fold(playerId);
-        // If only one live player remains, end the hand.
+        // If only one live player remains, end the hand here. Because we
+        // bypassed Table.applyAction, we have to drive the close-out
+        // manually so the vacate loop, chat winners, chip sync, and
+        // nextHandAt all get set.
         const live = this.hand.players.filter(q => !q.folded);
-        if (live.length === 1) this.hand._winByFold(live[0]);
+        if (live.length === 1) {
+          this.hand._winByFold(live[0]);
+          this._clearHumanActionTimer();
+          this._afterHandComplete();
+        }
       }
     }
-    seat._standAfterHand = true;
     this._broadcast();
   }
 
