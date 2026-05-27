@@ -49,8 +49,17 @@ class Seat {
     // any time. Takes effect on the NEXT deal — can't undo bets or
     // exit a hand already in progress (those still resolve normally).
     this.sittingOut = false;
+    // Optional per-seat avatar override. Used today by Vorkstag (the
+    // skinwalker serial killer) — when seated, he picks a random
+    // tablemate's avatar and wears their face. Stored at the SEAT
+    // level (not the DB), so leaving the table restores his true
+    // visage and a fresh seating picks a fresh disguise.
+    this.avatarOverride = null;
   }
   isEmpty() { return this.playerId === null; }
+  effectiveAvatar() {
+    return this.avatarOverride || this.player?.avatar_id || null;
+  }
 }
 
 class Table {
@@ -176,7 +185,22 @@ class Table {
     const player = db.getPlayer(playerId);
     if (!player) return { ok: false, error: 'unknown bot' };
     if (!player.is_bot) return { ok: false, error: 'not a bot' };
-    return this.sit({ playerId, socketId: null, player, isBot: true });
+    // Snapshot the avatars currently at the table BEFORE we sit Vorkstag,
+    // so his "wear someone's face" pick is from real tablemates (not
+    // himself). If nobody else is here, he just shows his true visage —
+    // the skinless butcher with nothing to mimic.
+    const stealableAvatars = playerId === 'vorkstag'
+      ? this.seats
+          .filter(s => !s.isEmpty() && s.player?.avatar_id)
+          .map(s => s.player.avatar_id)
+      : null;
+    const result = this.sit({ playerId, socketId: null, player, isBot: true });
+    if (result.ok && playerId === 'vorkstag' && stealableAvatars && stealableAvatars.length > 0) {
+      const seat = this.seats[result.seatIndex];
+      seat.avatarOverride = stealableAvatars[Math.floor(Math.random() * stealableAvatars.length)];
+      this.chat('info', `🎭 Something is wrong with one of the players at the table…`);
+    }
+    return result;
   }
 
   stand(playerId) {
@@ -203,6 +227,7 @@ class Table {
     seat.inHand = false;
     seat.chipsAtTable = 0;
     seat.isBot = false;
+    seat.avatarOverride = null;   // strip any Vorkstag-style disguise
     // Signal to _scheduleAutoStart that a seat just opened up — the
     // next-hand delay should be extended so a spectator has time to
     // grab it. Also push back an autostart that's already armed but
@@ -1151,7 +1176,11 @@ class Table {
         occupied: !s.isEmpty(),
         playerId: s.playerId,
         nickname: s.player?.nickname || null,
-        avatarId: s.player?.avatar_id || null,
+        // effectiveAvatar() returns seat.avatarOverride when set
+        // (Vorkstag's stolen face), otherwise the player's stored
+        // avatar_id. Lets the skinwalker wear someone else's portrait
+        // without polluting the DB record.
+        avatarId: s.effectiveAvatar(),
         chips: s.chipsAtTable,
         inHand: s.inHand,
         isBot: s.isBot,

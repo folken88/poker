@@ -160,6 +160,13 @@ const BOT_ROSTER = [
   { name: 'Lou Candlebean',       avatar: '/tokens/lou-candlebean.webp',         baseMode: 'standard', intelligence: 'low'     }, // Caliphas gnome cavalier mercenary; user: low intel + avg risk
   { name: 'Elodie',               avatar: '/tokens/elodie.webp',                 baseMode: 'standard', intelligence: 'average' }, // Caliphas gnome bard / estoc-swashbuckler; user: avg intel + avg risk
   { name: 'Chef',                 avatar: '/tokens/chef.webp',                   baseMode: 'risky',    intelligence: 'high'    }, // Gordon-Ramsay-but-won't-admit-it; high-intensity host (user: not specified, picking risky/high)
+  // Vorkstag — skinwalker serial killer. avatar field is his TRUE
+  // face (skinless butcher art). At seating-time Table.seatBot detects
+  // playerId === 'vorkstag' and overlays a random tablemate's avatar
+  // onto the seat (Seat.avatarOverride) — so the displayed face shifts
+  // every time he sits. true face only shows when no one else is at
+  // the table.
+  { name: 'Vorkstag',             avatar: '/tokens/vorkstag.webp',               baseMode: 'cautious', intelligence: 'high'    }, // user: very intelligent + cautious
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
