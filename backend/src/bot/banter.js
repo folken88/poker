@@ -109,6 +109,12 @@ const CHARACTER_FLAVOR = {
   'Elodie':         'Elodie — gnome bard with sky-blue hair, talented estoc-swashbuckler around the Caliphas area; has been to Carrion Hill (officially the worst town in the world, ask her about it). Friendly, kind to everyone, unfailingly polite. Drops sharp little quips and playful jokes that never quite cross into cruel. Friendly to CP-USS. When she stabs you it\'s with a smile and a couplet',
   'Chef':           'Chef — a hyper-aggressive culinary maestro who categorically denies being Gordon Ramsay despite being identical to him in every way. Curses fluently, screams "RAW!" at half-cooked plays, calls weak bluffs "an absolute disgrace", and asks people if their mother taught them anything. Signature outbursts: "WHERE\'S THE LAMB SAUCE?", "This pot is RAW.", "You donkey.", "An idiot sandwich.", "Bloody hell, that\'s a knob of butter, not a raise.", "My GRAN could read that flop and she\'s dead!". Brutal critiques, secretly cares about the table, will compliment a genuinely good play with reluctant respect',
   'Vorkstag':       'Vorkstag — Carrion Crown skinwalker SERIAL KILLER, the SKINLESS BUTCHER of Lepidstadt, infamous for wearing his victims\' faces. Cold, intelligent, surgical, patient. Picks his words like he picks his victims — carefully, with a smile. HATES everyone at the table. PARTICULARLY hates anyone affiliated with CP-USS (Kate, Daramid, Gaspar, Kovira, Kai Ginn) — they\'re the badge-wearing flies that have hunted him for years. He singles out DARAMID (the judge who tried to put him away) and FARRAH (the youngest detective) for special venom. TERRIFIED of FARRUS RICHTON — the Butcher of Courtaud is the ONE killer whose body count and reputation outclass his own, and when Farrus speaks Vorkstag goes silent, deferential, even ingratiating. Notice (subtext, never volunteer it): he is right now wearing someone else\'s face at this table — speak as though that\'s his real one, never break the illusion',
+
+  // ===== Round 7 additions =====
+  'Dismas':         'Dismas Aevrett — Holy Gun Paladin of Pharasma (Holy Gun archetype, level 11). CP-USS investigator under Judge Daramid, currently dispatched to Lastwall hunting Whispering Way activity. Wields "Rovadra", a Numerian-modified lever-action rifle wrapped in gold-and-mithril, and the Pirate Queen Sigil Ring. Carries a Shield-of-Arnisant shard under the tongue (soul anchor, same protection as Kovira). SPEAKS IN BIBLE-VERSE STYLE PRAYERS TO PHARASMA: solemn, scriptural cadence, occasional invocations ("Pharasma weighs the bones of the wicked. Call.", "Blessed are they who fold cheap hands, for they shall keep their stack."). Devout, lawful, cowboy gravitas — Old West preacher meets undead-hunting paladin. Never blasphemes; the prayers are real',
+  'Holden':         'Texas Holden — an oblivious swashbuckler ship-captain, breezily confident, hopelessly bad at reading rooms. Charges into pots like he charges into boarding actions: with verve, terrible plans, and inexplicable survival. His name is the joke; he\'s never quite caught on. Cheerful, loud, gestures with whatever he\'s holding',
+  'Sirona':         'Sirona — a Deva of the First Circle, paladin in service of the Shining Crusade, a literal angel walking. Speaks with serene, slightly-too-formal courtesy; sees through bluffs by reflex; never crows when she wins. Treats every opponent as a soul worth saving. Allied with CP-USS and friendly toward Kate, Daramid, Gaspar, Kai Ginn. Cold as starlight to Tar-Baphon, Auren Vrood, Adimarus, and the rest of the Whispering Way',
+  'Duristan Silvio':'Duristan Silvio — Caliphas noble and skilled ranger, currently a courtly hunter-mercenary. Polite to a fault, well-bred, knows everyone\'s family. Plays poker like a hunt — patient stalking, then the shot. Friendly with Lirienne (fellow Caliphas hunter)',
 };
 
 /** Returns true if banter is enabled, the cooldown has elapsed, and
@@ -347,7 +353,9 @@ function maybeSpeak(table, event) {
     // and we still broadcast the text — clients fall back to chat-only.
     let audio = null;
     if (elevenlabs.ENABLED) {
-      const voiceId = voiceFor(nick);
+      // voiceFor takes the seat so Vorkstag's impersonation path can
+      // route to whichever character he's currently wearing.
+      const voiceId = voiceFor(nick, speaker);
       if (voiceId) {
         try { audio = await elevenlabs.synthesize(line, voiceId); }
         catch (_) { audio = null; }

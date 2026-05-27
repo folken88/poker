@@ -163,10 +163,16 @@ const BOT_ROSTER = [
   // Vorkstag — skinwalker serial killer. avatar field is his TRUE
   // face (skinless butcher art). At seating-time Table.seatBot detects
   // playerId === 'vorkstag' and overlays a random tablemate's avatar
-  // onto the seat (Seat.avatarOverride) — so the displayed face shifts
-  // every time he sits. true face only shows when no one else is at
-  // the table.
+  // onto the seat (Seat.avatarOverride + Seat.impersonatedNick) — so
+  // the displayed face AND 11labs voice shift every time he sits.
+  // True face only shows when no one else is at the table.
   { name: 'Vorkstag',             avatar: '/tokens/vorkstag.webp',               baseMode: 'cautious', intelligence: 'high'    }, // user: very intelligent + cautious
+
+  // Round 7 additions — characters with user-specified 11labs voices:
+  { name: 'Dismas',               avatar: '/tokens/dismas-aevrett.webp',         baseMode: 'risky',    intelligence: 'average' }, // CC Holy Gun Paladin 11, CP-USS / Daramid Knights; user: normal intel + high risk
+  { name: 'Holden',               avatar: '/tokens/texas-holden.webp',           baseMode: 'risky',    intelligence: 'low'     }, // Texas Holden — Captain / Oblivious Swashbuckler
+  { name: 'Sirona',               avatar: '/tokens/sirona.webp',                 baseMode: 'cautious', intelligence: 'high'    }, // Deva Paladin · First Circle of the Shining Crusade
+  { name: 'Duristan Silvio',      avatar: '/tokens/duristan-silvio.webp',        baseMode: 'standard', intelligence: 'average' }, // Caliphas Noble Ranger
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);

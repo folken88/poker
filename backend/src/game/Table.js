@@ -55,6 +55,11 @@ class Seat {
     // level (not the DB), so leaving the table restores his true
     // visage and a fresh seating picks a fresh disguise.
     this.avatarOverride = null;
+    // Nickname of the player whose face/voice we're impersonating
+    // (Vorkstag only). When set, the 11labs voice lookup routes
+    // through this name instead of "Vorkstag" so he sounds like
+    // whoever he's wearing.
+    this.impersonatedNick = null;
   }
   isEmpty() { return this.playerId === null; }
   effectiveAvatar() {
@@ -192,19 +197,23 @@ class Table {
     const player = db.getPlayer(playerId);
     if (!player) return { ok: false, error: 'unknown bot' };
     if (!player.is_bot) return { ok: false, error: 'not a bot' };
-    // Snapshot the avatars currently at the table BEFORE we sit Vorkstag,
-    // so his "wear someone's face" pick is from real tablemates (not
-    // himself). If nobody else is here, he just shows his true visage —
-    // the skinless butcher with nothing to mimic.
-    const stealableAvatars = playerId === 'vorkstag'
+    // Snapshot tablemates BEFORE we sit Vorkstag so his "wear someone's
+    // face" pick is from real other seats (not himself). We capture both
+    // avatar AND nickname — the avatar drives the visual disguise via
+    // Seat.avatarOverride, the nickname drives the 11labs voice swap
+    // via Seat.impersonatedNick (see character_voices.voiceFor). If
+    // nobody else is here he just shows his true skinless visage.
+    const stealableTargets = playerId === 'vorkstag'
       ? this.seats
           .filter(s => !s.isEmpty() && s.player?.avatar_id)
-          .map(s => s.player.avatar_id)
+          .map(s => ({ avatar: s.player.avatar_id, nick: s.player.nickname }))
       : null;
     const result = this.sit({ playerId, socketId: null, player, isBot: true });
-    if (result.ok && playerId === 'vorkstag' && stealableAvatars && stealableAvatars.length > 0) {
+    if (result.ok && playerId === 'vorkstag' && stealableTargets && stealableTargets.length > 0) {
       const seat = this.seats[result.seatIndex];
-      seat.avatarOverride = stealableAvatars[Math.floor(Math.random() * stealableAvatars.length)];
+      const t = stealableTargets[Math.floor(Math.random() * stealableTargets.length)];
+      seat.avatarOverride   = t.avatar;
+      seat.impersonatedNick = t.nick;
       this.chat('info', `🎭 Something is wrong with one of the players at the table…`);
     }
     return result;
@@ -235,6 +244,7 @@ class Table {
     seat.chipsAtTable = 0;
     seat.isBot = false;
     seat.avatarOverride = null;   // strip any Vorkstag-style disguise
+    seat.impersonatedNick = null; // and the matching voice override
     // Signal to _scheduleAutoStart that a seat just opened up — the
     // next-hand delay should be extended so a spectator has time to
     // grab it. Also push back an autostart that's already armed but
