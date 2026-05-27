@@ -471,14 +471,21 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   background: rgba(241,207,131,0.45);
   margin: 4px 2px;
 }
+/* Hand-elapsed: same SVG digits as the action timer for size + font
+   consistency. Different color (brass) so the two halves are visually
+   distinct — action timer takes its color from .topbar__clock data-mode
+   (brass-bright / red / cyan); hand-elapsed is always brass. */
 .topbar__clock-hand {
-  font-size: 0.82rem;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.05em;
-  color: var(--brass);
-  font-weight: 700;
-  white-space: nowrap;
+  display: inline-flex; gap: 6px; align-items: center;
+  line-height: 1;
 }
+.topbar__clock-hand svg { display: block; }
+/* Need same specificity as the data-mode color rules above
+   (.topbar__clock[data-mode=…]) so this isn't overridden. */
+.topbar__clock[data-mode="action"]  .topbar__clock-hand,
+.topbar__clock[data-mode="urgent"]  .topbar__clock-hand,
+.topbar__clock[data-mode="next"]    .topbar__clock-hand,
+.topbar__clock[data-mode="idle"]    .topbar__clock-hand { color: var(--brass); }
 /* Mode-driven colors. Style the SVG segments via currentColor below. */
 .topbar__clock[data-mode="action"]  { color: var(--brass-bright); border-color: var(--brass-bright); }
 .topbar__clock[data-mode="action"] .topbar__clock-label { color: var(--brass-bright); }
@@ -1423,7 +1430,9 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   border: 1px solid rgba(217,176,106,0.28);
   border-radius: 14px;
   padding: 5px 6px 7px;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  /* Tightened from 2px → 1px so nick + chips lines don't crowd each
+     other when the avatar+name+chips stack is at its tallest. */
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
   box-shadow: var(--shadow-soft);
   max-height: 170px;
   overflow: hidden;
@@ -1483,8 +1492,10 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .confirm-avatar-big .avatar-img,
 .me-avatar .avatar-img,
 .avatar-pick .avatar-img { width: 100%; height: 100%; object-fit: cover; }
-.seat__nick { font-size: 0.82rem; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.seat__chips { font-size: 0.78rem; color: var(--brass-bright); font-variant-numeric: tabular-nums; }
+/* Tightened line-height on both text rows so the nickname can't be
+   clipped by the chip line that immediately follows it. */
+.seat__nick { font-size: 0.82rem; font-weight: 600; line-height: 1.05; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seat__chips { font-size: 0.78rem; line-height: 1.05; color: var(--brass-bright); font-variant-numeric: tabular-nums; }
 .seat__empty { font-size: 0.75rem; color: var(--ivory-dim); letter-spacing: 0.08em; text-transform: uppercase; }
 
 .prototype-note {

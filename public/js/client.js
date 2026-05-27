@@ -1104,18 +1104,24 @@
       + `<circle cx="4" cy="32" r="3" class="topbar__clock-digit-seg-on"/>`
       + `</svg>`;
   }
-  /** Render "M:SS" or "MM:SS" into the topbar clock digits container. */
-  function renderClockDigits(secs) {
+  /** Build SVG digits HTML for "M:SS" or "MM:SS". Shared by both
+   *  the action timer and the hand-elapsed timer so they look
+   *  visually identical (only color differs via container class). */
+  function buildClockDigitsHtml(secs) {
     const total = Math.max(0, Math.floor(secs));
     const m = Math.floor(total / 60);
     const s = total % 60;
     const ss = String(s).padStart(2, '0');
     const mStr = String(m);
+    return [...mStr].map(c => digitSvg(Number(c))).join('')
+         + colonSvg()
+         + [...ss].map(c => digitSvg(Number(c))).join('');
+  }
+  /** Render the action-timer digits into the main topbar slot. */
+  function renderClockDigits(secs) {
     const el = document.getElementById('topClockDigits');
     if (!el) return;
-    el.innerHTML = [...mStr].map(c => digitSvg(Number(c))).join('')
-                 + colonSvg()
-                 + [...ss].map(c => digitSvg(Number(c))).join('');
+    el.innerHTML = buildClockDigitsHtml(secs);
   }
 
   // ===== Combined timer tick: seat countdowns AND the big topbar clock =====
@@ -1197,17 +1203,15 @@
     }
 
     // ----- Hand-elapsed display (right of divider) -----
-    // Shows total time the current hand has been live, mm:ss. Hidden
-    // when there's no hand (between deals / waiting). Divider also
-    // hides so the topbar reads cleanly during idle states.
+    // Same SVG digits as the action timer for visual consistency;
+    // CSS gives it a different color so the two halves are easy
+    // to tell apart at a glance. Hidden when no hand is live.
     const handEl   = document.getElementById('topClockHand');
     const dividerEl = document.getElementById('topClockDivider');
     if (handEl && dividerEl) {
       if (t?.hand?.startedAt) {
         const elapsedSec = Math.max(0, Math.floor((now - t.hand.startedAt) / 1000));
-        const mm = Math.floor(elapsedSec / 60);
-        const ss = String(elapsedSec % 60).padStart(2, '0');
-        handEl.textContent = `🎴 ${mm}:${ss}`;
+        handEl.innerHTML = buildClockDigitsHtml(elapsedSec);
         handEl.hidden = false;
         dividerEl.hidden = false;
       } else {
