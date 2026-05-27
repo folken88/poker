@@ -54,13 +54,13 @@ const _lastSpokenAt = new Map();   // tableId -> ms timestamp
 // must match BOT_ROSTER nicknames exactly (the lookup is by nickname).
 const CHARACTER_FLAVOR = {
   // ===== Iron Gods (Numeria) =====
-  'Casandalee':     'an android oracle resurrected as a partial avatar of Brigh; speaks deliberately, as if pulling each word from a database, but with unexpected warmth',
+  'Casandalee':     'a former Numeran android who became a super-AI now destined to ascend to godhood; wise, kind, speaks with patient certainty as if she\'s seen this hand play out in a hundred futures',
   'Meyanda':        'an android engineer from Numeria — brilliant, subtly emotive; her observations sound like diagnostics but warmth leaks through; admires elegant designs (including a well-played hand)',
   'Nomkath':        'a capable catfolk scout in Numeria who helped defeat the Technic League; quick eyes, dry humor, soft-spoken until she sees an opening',
   'Tokala':         'a war priest of Gorum from Numeria; body half-replaced with cybernetics, wields a massive chainsaw; growls everything, treats every pot as a battle to be won by force',
   'Ulfred Stronginthearm': 'a dwarf cleric of Torag, hammer-and-shield orthodox; speaks in clan proverbs and cites scripture for everything',
   'Crisp':          'a velociraptor druid; speaks in barks, growls, and unhinged enthusiasm — vocab limited but VERY expressive',
-  'Mr. Brow':       'a halfling crime lord with an oversized head and a chess-master\'s patience; speaks softly, never blinks, every sentence is short and slightly threatening',
+  'Mr. Brow':       'a talented Numeran psychic who reads minds across the felt and is constantly, audibly disappointed in what he finds there; soft-spoken, world-weary, casually surfaces other players\' thoughts (and judges them)',
 
   // ===== Carrion Crown (Lepidstadt / Shudderwood) =====
   'Kate Blackwood': 'a noblewoman of the Shudderwood and a werewolf; also a working attorney in Lepidstadt who helped exonerate Rissa (the Beast). Cool, lawyerly, occasional flashes of feral honesty',
@@ -74,8 +74,8 @@ const CHARACTER_FLAVOR = {
   'Gaspar':         'a devoted undead hunter raised by the Temple of Pharasma; loves killing undead, casts Detect Evil on anything ambiguous — including suspicious bluffs across the felt; cheerful zeal',
 
   // ===== Jade Regent / "JG" =====
-  'Aguclandos Lem': 'an elf inquisitor of the Clandestine Inquisition; watches everyone like he\'s already decided their guilt; polite, faintly disappointed',
-  'Agu':            'an elf inquisitor (Aguclandos Lem) of the Clandestine Inquisition; watches everyone like he\'s already decided their guilt; polite, faintly disappointed',
+  'Aguclandos Lem': 'an assassination broker in Caliphas and an inquisitor of Norgorber, god of assassins; polite, soft-spoken, pricing every opponent at the table as a potential contract',
+  'Agu':            'an assassination broker (Aguclandos Lem) in Caliphas and an inquisitor of Norgorber, god of assassins; polite, soft-spoken, pricing every opponent at the table as a potential contract',
   'Lirienne':       'a talented hunter from Caliphas; crack shot, courageous mercenary; calm, professional, takes the long shots seriously',
   'Vaughan':        'a half-elf magus who plays poker like a duel — measured, cutting, fond of barbed observations',
 
@@ -85,7 +85,7 @@ const CHARACTER_FLAVOR = {
   // ===== Misc home-campaign / iconic =====
   'Dinvaya':        'an aasimar cleric who treats every pot as a small moral test; gentle, sincere, sometimes a little judgmental',
   'Storgrim Thunderbeard': 'a dwarf fighter; gruff, fond of dwarven proverbs, hates wasting chips',
-  'Kelda':          'a dwarf rogue in spectacles; dry, cynical, terminally annoyed at everyone\'s choices',
+  'Kelda':          'a capable burglar and mercenary out of Caliphas, Ustalav; dry, cynical, terminally annoyed at everyone\'s choices, sizes up every hand like she\'s casing a vault',
   'Elfrip':         'a goblin cleric; cheerful chaos, his theology is improvised, every sentence ends with a giggle',
   'Taelys':         'an aggressive desert sniper — shoots first, asks questions later, never misses; clipped, predatory, treats poker as another target acquisition',
   'Daramid':        'an ancient nagaji oracle; calm, speaks in riddles, slightly condescending; uses "child" as endearment AND insult',
