@@ -13,6 +13,10 @@
 
   function rankDisplay(r) { return RANK_LABEL[r] || r; }
 
+  // Card viewBox is 70×111 (aspect ≈ 0.63) — matches the back-art PNG
+  // exactly so face-down cards aren't cropped. Face cards inherit the
+  // same dimensions for consistency. CSS sizes cards by width only,
+  // using aspect-ratio: 70 / 111 to derive height.
   function card(code) {
     if (!code || code.length !== 2) return faceDown();
     const r = code[0].toUpperCase();
@@ -21,13 +25,15 @@
     const path = SUIT_PATH[s] || SUIT_PATH.s;
     const rank = rankDisplay(r);
     const rankFontSize = rank.length > 1 ? 18 : 22;
-    return `<svg viewBox="0 0 70 100" xmlns="http://www.w3.org/2000/svg" class="card-svg" aria-label="${rank} of ${s}">
-      <rect x="1" y="1" width="68" height="98" rx="7" ry="7" fill="#fefefe" stroke="#1a1a1a" stroke-width="1"/>
+    // Center of the new 70×111 viewBox is (35, 55.5) — the big center
+    // pip + rotation pivot move with it.
+    return `<svg viewBox="0 0 70 111" xmlns="http://www.w3.org/2000/svg" class="card-svg" aria-label="${rank} of ${s}">
+      <rect x="1" y="1" width="68" height="109" rx="7" ry="7" fill="#fefefe" stroke="#1a1a1a" stroke-width="1"/>
       <g fill="${color}">
         <text x="6" y="${rankFontSize + 2}" font-family="Inter, sans-serif" font-weight="700" font-size="${rankFontSize}">${rank}</text>
         <g transform="translate(8 ${rankFontSize + 6}) scale(0.13)"><path d="${path}"/></g>
-        <g transform="translate(35 50)"><g transform="translate(-25 -25) scale(0.5)"><path d="${path}"/></g></g>
-        <g transform="rotate(180 35 50)">
+        <g transform="translate(35 55.5)"><g transform="translate(-25 -25) scale(0.5)"><path d="${path}"/></g></g>
+        <g transform="rotate(180 35 55.5)">
           <text x="6" y="${rankFontSize + 2}" font-family="Inter, sans-serif" font-weight="700" font-size="${rankFontSize}">${rank}</text>
           <g transform="translate(8 ${rankFontSize + 6}) scale(0.13)"><path d="${path}"/></g>
         </g>
@@ -48,18 +54,18 @@
   let _backClipSeq = 0;
   function faceDown() {
     const clipId = `cardBackClip_${++_backClipSeq}`;
-    return `<svg viewBox="0 0 70 100" xmlns="http://www.w3.org/2000/svg" class="card-svg card-svg--back" aria-hidden="true">
+    return `<svg viewBox="0 0 70 111" xmlns="http://www.w3.org/2000/svg" class="card-svg card-svg--back" aria-hidden="true">
       <defs>
-        <clipPath id="${clipId}"><rect x="1" y="1" width="68" height="98" rx="7" ry="7"/></clipPath>
+        <clipPath id="${clipId}"><rect x="1" y="1" width="68" height="109" rx="7" ry="7"/></clipPath>
       </defs>
-      <image href="/assets/cards/back-shackles.png?v=2" x="1" y="1" width="68" height="98" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
-      <rect x="1" y="1" width="68" height="98" rx="7" ry="7" fill="none" stroke="#1a1a1a" stroke-width="1"/>
+      <image href="/assets/cards/back-shackles.png?v=2" x="1" y="1" width="68" height="109" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
+      <rect x="1" y="1" width="68" height="109" rx="7" ry="7" fill="none" stroke="#1a1a1a" stroke-width="1"/>
     </svg>`;
   }
 
   function emptySlot() {
-    return `<svg viewBox="0 0 70 100" xmlns="http://www.w3.org/2000/svg" class="card-svg card-svg--empty" aria-hidden="true">
-      <rect x="1" y="1" width="68" height="98" rx="7" ry="7" fill="rgba(0,0,0,0.25)" stroke="rgba(245,236,214,0.15)" stroke-width="1" stroke-dasharray="4 3"/>
+    return `<svg viewBox="0 0 70 111" xmlns="http://www.w3.org/2000/svg" class="card-svg card-svg--empty" aria-hidden="true">
+      <rect x="1" y="1" width="68" height="109" rx="7" ry="7" fill="rgba(0,0,0,0.25)" stroke="rgba(245,236,214,0.15)" stroke-width="1" stroke-dasharray="4 3"/>
     </svg>`;
   }
 

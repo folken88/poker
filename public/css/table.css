@@ -828,7 +828,12 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   min-height: 150px;
   pointer-events: auto;
 }
-.card-svg { width: 92px; height: 132px; display: block; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5)); transition: transform .25s; }
+/* Card aspect ratio = 70 / 111 (matches the Shackles back-art PNG).
+   We set width and let aspect-ratio derive the height so every card
+   slot stays in sync without us having to edit a dozen pixel pairs.
+   Re-aspect the whole deck by tweaking --card-aspect in one place. */
+:root { --card-aspect: 70 / 111; }
+.card-svg { width: 92px; aspect-ratio: var(--card-aspect); display: block; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5)); transition: transform .25s; }
 .card-svg--back { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
 .card-svg--empty { opacity: 0.5; }
 .board .card-svg { animation: dealIn .35s ease-out both; }
@@ -837,10 +842,10 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   display: flex; gap: 3px; margin-top: 4px; justify-content: center;
 }
 /* Default = OPPONENT cards (smaller so adjacent seats don't fight for space). */
-.seat__hole .card-svg { width: 34px; height: 49px; }
+.seat__hole .card-svg { width: 34px; height: auto; }
 /* My own cards stay big and gold-bordered so I can read them at a glance. */
 .seat__hole .card-svg--mine {
-  width: 46px; height: 66px;
+  width: 46px; height: auto;
   box-shadow: 0 0 0 2px rgba(241,207,131,0.55);
   border-radius: 4px;
 }
@@ -1051,7 +1056,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   margin-top: 8px;
 }
 .hand-banner__cards .card-svg {
-  width: 50px; height: 72px;
+  width: 50px; height: auto;
   filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
 }
 @keyframes winnerFadeIn {
@@ -1066,7 +1071,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   .hand-banner__nick { font-size: 1.1rem; }
   .hand-banner__amount { font-size: 1.1rem; }
   .hand-banner__hand { font-size: 0.72rem; max-width: 240px; }
-  .hand-banner__cards .card-svg { width: 34px; height: 50px; }
+  .hand-banner__cards .card-svg { width: 34px; height: auto; }
   .hand-banner__cards { gap: 3px; margin-top: 5px; }
 }
 
@@ -2162,7 +2167,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   /* Pot: smaller display font */
   .pot--big { font-size: 1.4rem; padding: 0.3rem 0.8rem; }
   .board { gap: 0.3rem; min-height: 80px; }
-  .card-svg { width: 50px; height: 72px; }
+  .card-svg { width: 50px; height: auto; }
 
   /* Chat log: shrink */
   .chat-panel { height: 80px; }
@@ -2215,7 +2220,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
     padding: 2px 6px;
   }
   .actpanel__myhand-cards { display: flex; gap: 4px; }
-  .actpanel__myhand-cards .card-svg { width: 44px; height: 64px; }
+  .actpanel__myhand-cards .card-svg { width: 44px; height: auto; }
   .actpanel__myhand-info {
     display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
     font-size: 0.72rem; color: var(--ivory-dim);
@@ -2245,13 +2250,13 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   .topbar__me .btn { padding: 3px 6px; font-size: 0.7rem; }
   /* Pot smaller still */
   .pot--big { font-size: 1.1rem; padding: 0.2rem 0.6rem; }
-  .card-svg { width: 42px; height: 60px; }
+  .card-svg { width: 42px; height: auto; }
   /* Phone-portrait: avatar +20% (38 → 46), seat + plate scaled to match. */
   .seat { width: 62px; max-height: 98px; }
   .seat__avatar { width: 46px; height: 46px; }
   .seat__nick { font-size: 0.66rem; }
   /* Smaller hand cards in the bottom bar */
-  .actpanel__myhand-cards .card-svg { width: 38px; height: 54px; }
+  .actpanel__myhand-cards .card-svg { width: 38px; height: auto; }
   .actpanel__btn { min-height: 34px; font-size: 0.8rem; }
   /* Tighten chat — and reposition the actpanel above it to match. */
   .chat-panel { height: 64px; }
