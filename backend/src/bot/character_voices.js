@@ -37,7 +37,12 @@ const CHARACTER_VOICES = {
   'Holden':            '0exky5u6rYq7ksXZEN5G', // Nick
   'Kate':              '5tQ5OiKpM78sVuxrgC4W', // Phoebe
   'Vaughan':           'CJnd8k7Q0w2Y1HegJ65F', // John 117
-  'Farrah':            'NmuGDgA7keY3NYIjArX3', // Mimi2
+  // FARRAH / Mimi2 ─ 11labs returns 403 voice_access_denied
+  // ("detected_captcha_voice", "may violate our Terms of Service and
+  // requires verification"). Until you verify the voice on the 11labs
+  // dashboard, this will silently fall back to text-only banter. Swap
+  // to a different voice_id any time to unblock without verification.
+  'Farrah':            'NmuGDgA7keY3NYIjArX3', // Mimi2 — BLOCKED, see comment above
   'Kai Ginn':          'Yj3XGMd9w2H4C0P0L28M', // Sean
   'Daramid':           'poTX7WPM13yOc28z0sVi', // Shoreh Thing
   'Sirona':            'EXAVITQu4vr4xnSDxMaL', // Sarah — Mature, Reassuring, Confident (paladin barking orders)
