@@ -661,6 +661,10 @@
     // No-ops cleanly when the keys aren't present yet (defaults kick in).
     loadAudioSettings();
     $('#meNick').textContent = p.nickname;
+    // Sync the pronoun dropdown to the player's stored value. Defaults
+    // to 'they' if the column is missing (legacy rows / old backend).
+    const gsel = $('#meGender');
+    if (gsel) gsel.value = (p.gender === 'he' || p.gender === 'she') ? p.gender : 'they';
     $('#meChips').textContent = '💰 ' + formatChips(p.chips) + ' gp';
     $('#meAvatar').innerHTML = renderAvatar(p.avatar_id);
     // Chat input becomes available once a character is chosen.
@@ -1847,6 +1851,22 @@
       if (!resp?.ok) toast(resp?.error || 'Action rejected', true);
     });
   });
+
+  // Pronoun dropdown — pushes the selection up to the server so the
+  // banter LLM can use the correct pronouns when referring to this
+  // player. Server validates against 'he'|'she'|'they'; anything else
+  // falls back silently to 'they'.
+  (function wireGenderDropdown() {
+    const sel = $('#meGender');
+    if (!sel) return;
+    sel.addEventListener('change', (e) => {
+      const v = e.target.value;
+      socket.emit('lobby:setGender', { gender: v }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not save pronouns', true); return; }
+        if (state.me) state.me.gender = resp.gender;
+      });
+    });
+  })();
 
   // ===== Topbar — Abadar purse popover tap-to-toggle =====
   // Hover handles desktop via CSS. For touch users (no :hover), tap

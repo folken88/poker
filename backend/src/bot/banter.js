@@ -181,12 +181,17 @@ function pickSpeaker(table, excludeIds, speakerHint) {
 function buildTableContext(table, speakerSeat) {
   try {
     const intel = speakerSeat.player?.bot_intelligence || 'average';
+    // Map db gender → human-readable pronoun set so the LLM has the
+    // information naturally instead of having to interpret 'he'/'she'/
+    // 'they' codes. Defaults to they/them when unset (legacy rows).
+    const PRONOUNS = { he: 'he/him', she: 'she/her', they: 'they/them' };
     const others = table.seats
       .filter(s => !s.isEmpty() && s.playerId !== speakerSeat.playerId)
       .map(s => ({
         nick: s.player?.nickname || s.playerId,
         chips: Number(s.chipsAtTable || 0),
         isBot: !!s.isBot,
+        pron: PRONOUNS[s.player?.gender] || PRONOUNS.they,
       }));
     if (others.length === 0) return ''; // alone at the table — no context
 
@@ -197,7 +202,7 @@ function buildTableContext(table, speakerSeat) {
     // "Most impressive" = current chip leader other than the speaker.
     const leader = others.slice().sort((a, b) => b.chips - a.chips)[0];
     const leaderLine = leader
-      ? `Chip leader is ${leader.nick} (${leader.chips.toLocaleString()} gp).`
+      ? `Chip leader is ${leader.nick} (${leader.pron}, ${leader.chips.toLocaleString()} gp).`
       : '';
 
     if (intel === 'low') {
@@ -217,7 +222,7 @@ function buildTableContext(table, speakerSeat) {
           const tail  = delta === 0 ? ''
             : delta > 0 ? ` (up ${delta.toLocaleString()})`
             :             ` (down ${(-delta).toLocaleString()})`;
-          return `${o.nick} ${o.chips.toLocaleString()} gp${tail}`;
+          return `${o.nick} (${o.pron}) ${o.chips.toLocaleString()} gp${tail}`;
         })
         .join('; ');
       return `\nTABLE: ${tableSize}. ${leaderLine}\nALL SEATS: ${roster}.`;
@@ -231,7 +236,7 @@ function buildTableContext(table, speakerSeat) {
       sample.push(pool.splice(i, 1)[0]);
     }
     const sampleLine = sample.length
-      ? ` Also at the table: ${sample.map(o => `${o.nick} (${o.chips.toLocaleString()} gp)`).join(', ')}.`
+      ? ` Also at the table: ${sample.map(o => `${o.nick} (${o.pron}, ${o.chips.toLocaleString()} gp)`).join(', ')}.`
       : '';
     return `\nTABLE: ${tableSize}. ${leaderLine}${sampleLine}`;
   } catch (_) {
@@ -249,11 +254,21 @@ function buildMessages(speaker, eventDescription, table) {
   const flavor = CHARACTER_FLAVOR[nick]
     || `a ${speaker.player?.bot_mode || 'standard'}/${speaker.player?.bot_intelligence || 'average'} poker player`;
   const ctx = table ? buildTableContext(table, speaker) : '';
+  // Speaker's own pronoun set — maps the db column ('he'|'she'|'they')
+  // to a natural phrase the LLM can latch onto. Defaults to they/them
+  // if missing so a brand-new row without the column still works.
+  const speakerGender = speaker.player?.gender || 'they';
+  const PRONOUN_HINT = {
+    he:   'You use he/him pronouns.',
+    she:  'You use she/her pronouns.',
+    they: 'You use they/them pronouns.',
+  };
+  const pronounLine = PRONOUN_HINT[speakerGender] || PRONOUN_HINT.they;
   return [
     {
       role: 'system',
       content:
-        `You are ${nick}, ${flavor}. You are at a Texas Hold'em poker table with other characters and humans. ` +
+        `You are ${nick}, ${flavor}. ${pronounLine} You are at a Texas Hold'em poker table with other characters and humans. ` +
         `You may freely tease, roast, trash-talk, or make fun of other players (humans AND other bots) — ` +
         `keep it in character and don't be cruel, but DO have an edge. Inside jokes, callouts by name, ` +
         `backhanded compliments, and petty rivalries are all welcome. ` +

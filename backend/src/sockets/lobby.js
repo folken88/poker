@@ -51,6 +51,25 @@ function registerLobbyHandlers(io, socket, { tables }) {
     ack?.({ ok: true });
   });
 
+  // Player chooses their pronouns from the topbar dropdown. Validated
+  // against 'he' | 'she' | 'they' inside db.setGender; bots are pinned
+  // via BOT_ROSTER and re-synced on boot, so this path only ever
+  // changes humans' values. Broadcast roster so other clients see
+  // the new pronoun on the next render (the banter LLM context
+  // reads gender from db.listAll()).
+  socket.on('lobby:setGender', ({ gender } = {}, ack) => {
+    const player = socket.data.player;
+    if (!player) return ack?.({ ok: false, error: 'choose a player first' });
+    if (!['he', 'she', 'they'].includes(gender)) {
+      return ack?.({ ok: false, error: 'invalid gender' });
+    }
+    db.setGender(player.player_id, gender);
+    const refreshed = db.getPlayer(player.player_id);
+    socket.data.player = refreshed;
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, gender: refreshed.gender });
+  });
+
   socket.on('lobby:setAvatar', ({ avatarId } = {}, ack) => {
     const player = socket.data.player;
     if (!player) return ack?.({ ok: false, error: 'choose a player first' });

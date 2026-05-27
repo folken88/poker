@@ -73,7 +73,18 @@
 
       <div class="topbar__me">
         <span class="me-avatar" id="meAvatar"></span>
-        <span class="me-nick"   id="meNick">…</span>
+        <span class="me-name-col">
+          <span class="me-nick"   id="meNick">…</span>
+          <!-- Pronoun dropdown: persists per-player via lobby:setGender.
+               Defaults to they/them for new players. The banter LLM
+               reads gender from the roster broadcast and tailors
+               pronouns when referring to characters by name. -->
+          <select class="me-gender" id="meGender" aria-label="Your pronouns">
+            <option value="they">they / them</option>
+            <option value="he">he / him</option>
+            <option value="she">she / her</option>
+          </select>
+        </span>
         <!-- Chips badge doubles as the Abadar-bank hover trigger. The
              popover (#mePursePop) is hidden by default; the .me-purse
              wrapper's :hover (or .is-open on touch) reveals it. -->

@@ -52,6 +52,10 @@ ensureColumn('players', 'swords',     "TEXT NOT NULL DEFAULT '{}'");
 // One slot per gear type, value = enhancement tier (1–5) or null/absent.
 // Players keep one item per slot. Goal: +5 in all five = LOOT LORD.
 ensureColumn('players', 'gear',       "TEXT NOT NULL DEFAULT '{}'");
+// Pronoun set per player: 'he' | 'she' | 'they'. Humans default to
+// 'they' until they pick from the dropdown. Bots are pinned via
+// BOT_ROSTER entries below and re-synced on every boot.
+ensureColumn('players', 'gender',     "TEXT NOT NULL DEFAULT 'they'");
 
 // Champions Board — one row per Loot Lord. Logged when someone hits +5
 // in every slot. The reset-to-default that follows wipes everyone's
@@ -114,67 +118,67 @@ const ROSTER = [
 // baseMode (risk appetite).
 const BOT_ROSTER = [
   // Original 6 bots
-  { name: 'Dinvaya',              avatar: '/tokens/dinvaya.webp',              baseMode: 'cautious', intelligence: 'high'    },
-  { name: 'Vaughan',              avatar: '/tokens/vaughan.webp',              baseMode: 'risky',    intelligence: 'high'    }, // user: high intel + high risk
-  { name: 'Storgrim Thunderbeard', nickname: 'Storgrim', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'cautious', intelligence: 'average' }, // user: avg intel + cautious
-  { name: 'Kate Blackwood',        nickname: 'Kate',     avatar: '/tokens/kate-blackwood.webp',        baseMode: 'cautious', intelligence: 'high'    }, // user: high intel + low risk
-  { name: 'Kovira',               avatar: '/tokens/kovira.webp',               baseMode: 'risky',    intelligence: 'high'    },
-  { name: 'Elfrip',               avatar: '/tokens/elfrip.webp',               baseMode: 'standard', intelligence: 'low'     }, // user: goblin cleric, low intel + normal risk
+  { name: 'Dinvaya',              avatar: '/tokens/dinvaya.webp',              baseMode: 'cautious', intelligence: 'high', gender: 'she'    },
+  { name: 'Vaughan',              avatar: '/tokens/vaughan.webp',              baseMode: 'risky',    intelligence: 'high', gender: 'he'    }, // user: high intel + high risk
+  { name: 'Storgrim Thunderbeard', nickname: 'Storgrim', avatar: '/tokens/storgrim-thunderbeard.webp', baseMode: 'cautious', intelligence: 'average', gender: 'he' }, // user: avg intel + cautious
+  { name: 'Kate Blackwood',        nickname: 'Kate',     avatar: '/tokens/kate-blackwood.webp',        baseMode: 'cautious', intelligence: 'high', gender: 'she'    }, // user: high intel + low risk
+  { name: 'Kovira',               avatar: '/tokens/kovira.webp',               baseMode: 'risky',    intelligence: 'high', gender: 'she'    },
+  { name: 'Elfrip',               avatar: '/tokens/elfrip.webp',               baseMode: 'standard', intelligence: 'low', gender: 'he'     }, // user: goblin cleric, low intel + normal risk
 
   // Round 2 additions
-  { name: 'Taelys',               avatar: '/tokens/taelys-of-starfall.webp',     baseMode: 'risky',    intelligence: 'low'     }, // user: low intel + high risk
-  { name: 'Lirienne',             avatar: '/tokens/lirienne-voss.webp',          baseMode: 'standard', intelligence: 'average' }, // user: avg intel + normal risk
-  { name: 'Kelda',                avatar: '/tokens/kelda-ironglim.webp',         baseMode: 'cautious', intelligence: 'high'    }, // user: cautious + high intel
-  { name: 'Mr. Brow',             avatar: '/tokens/augustus-teabrow.webp',       baseMode: 'risky',    intelligence: 'high'    }, // user: highly intelligent + risky
-  { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'standard', intelligence: 'average' }, // user: avg intel + avg risk
-  { name: 'Ulfred',               avatar: '/tokens/ulfred-stronginthearm.webp',  baseMode: 'standard', intelligence: 'average' },
-  { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard', intelligence: 'average' }, // user: avg intel + avg risk
-  { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky',    intelligence: 'low'     }, // velociraptor — pure instinct, no thinking
-  { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious', intelligence: 'high'    },
-  { name: 'Toni',                 avatar: '/tokens/antoinette-borden.webp',      baseMode: 'risky',    intelligence: 'average' },
-  { name: 'Agu',                  avatar: '/tokens/aguclandos-lem.webp',         baseMode: 'cautious', intelligence: 'high'    },
+  { name: 'Taelys',               avatar: '/tokens/taelys-of-starfall.webp',     baseMode: 'risky',    intelligence: 'low', gender: 'she'     }, // user: low intel + high risk
+  { name: 'Lirienne',             avatar: '/tokens/lirienne-voss.webp',          baseMode: 'standard', intelligence: 'average', gender: 'she' }, // user: avg intel + normal risk
+  { name: 'Kelda',                avatar: '/tokens/kelda-ironglim.webp',         baseMode: 'cautious', intelligence: 'high', gender: 'they'    }, // user: cautious + high intel
+  { name: 'Mr. Brow',             avatar: '/tokens/augustus-teabrow.webp',       baseMode: 'risky',    intelligence: 'high', gender: 'he'    }, // user: highly intelligent + risky
+  { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'standard', intelligence: 'average', gender: 'she' }, // user: avg intel + avg risk
+  { name: 'Ulfred',               avatar: '/tokens/ulfred-stronginthearm.webp',  baseMode: 'standard', intelligence: 'average', gender: 'he' },
+  { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard', intelligence: 'average', gender: 'he' }, // user: avg intel + avg risk
+  { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky',    intelligence: 'low', gender: 'they'     }, // velociraptor — pure instinct, no thinking
+  { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious', intelligence: 'high', gender: 'she'    },
+  { name: 'Toni',                 avatar: '/tokens/antoinette-borden.webp',      baseMode: 'risky',    intelligence: 'average', gender: 'she' },
+  { name: 'Agu',                  avatar: '/tokens/aguclandos-lem.webp',         baseMode: 'cautious', intelligence: 'high', gender: 'he'    },
 
   // Round 3 additions
-  { name: 'Fera',                 avatar: '/tokens/fera.webp',                   baseMode: 'cautious', intelligence: 'high'    }, // user: high intel + low risk
-  { name: 'Gaspar',               avatar: '/tokens/gaspar.webp',                 baseMode: 'standard', intelligence: 'average' }, // user: avg intel + normal risk
-  { name: 'Daramid',              avatar: '/tokens/daramid.webp',                baseMode: 'cautious', intelligence: 'high'    }, // user: high intel + cautious
-  { name: 'Farrah',               avatar: '/tokens/farrah.webp',                 baseMode: 'standard', intelligence: 'low'     },
-  { name: 'Concetta',             avatar: '/tokens/concetta.webp',               baseMode: 'risky',    intelligence: 'high'    }, // user: highly intelligent + risky
-  { name: 'Rissa',                avatar: '/tokens/rissa.webp',                  baseMode: 'risky',    intelligence: 'average' }, // user: avg intel + risky
-  { name: 'Conchobar',            avatar: '/tokens/conchobar.webp',              baseMode: 'risky',    intelligence: 'low'     }, // bard, pure vibes
+  { name: 'Fera',                 avatar: '/tokens/fera.webp',                   baseMode: 'cautious', intelligence: 'high', gender: 'she'    }, // user: high intel + low risk
+  { name: 'Gaspar',               avatar: '/tokens/gaspar.webp',                 baseMode: 'standard', intelligence: 'average', gender: 'he' }, // user: avg intel + normal risk
+  { name: 'Daramid',              avatar: '/tokens/daramid.webp',                baseMode: 'cautious', intelligence: 'high', gender: 'she'    }, // user: high intel + cautious
+  { name: 'Farrah',               avatar: '/tokens/farrah.webp',                 baseMode: 'standard', intelligence: 'low', gender: 'she'     },
+  { name: 'Concetta',             avatar: '/tokens/concetta.webp',               baseMode: 'risky',    intelligence: 'high', gender: 'she'    }, // user: highly intelligent + risky
+  { name: 'Rissa',                avatar: '/tokens/rissa.webp',                  baseMode: 'risky',    intelligence: 'average', gender: 'she' }, // user: avg intel + risky
+  { name: 'Conchobar',            avatar: '/tokens/conchobar.webp',              baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // bard, pure vibes
 
   // Round 4 additions — user-specified with explicit intel + risk:
-  { name: 'Tokala',               avatar: '/tokens/tokala.webp',                 baseMode: 'risky',    intelligence: 'low'     }, // user: high risk + low intel
-  { name: 'Casandalee',           avatar: '/tokens/casandalee.webp',             baseMode: 'cautious', intelligence: 'high'    }, // user: low risk + high intel
-  { name: 'Meyanda',              avatar: '/tokens/meyanda.webp',                baseMode: 'standard', intelligence: 'high'    }, // user: avg risk + high intel
+  { name: 'Tokala',               avatar: '/tokens/tokala.webp',                 baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // user: high risk + low intel
+  { name: 'Casandalee',           avatar: '/tokens/casandalee.webp',             baseMode: 'cautious', intelligence: 'high', gender: 'she'    }, // user: low risk + high intel
+  { name: 'Meyanda',              avatar: '/tokens/meyanda.webp',                baseMode: 'standard', intelligence: 'high', gender: 'she'    }, // user: avg risk + high intel
 
   // Round 5 additions:
-  { name: 'Rhyarca',              avatar: '/tokens/rhyarca-jillyr.webp',         baseMode: 'standard', intelligence: 'average' }, // user: normal risk + normal intel; Oracle of Besmara (drow art)
+  { name: 'Rhyarca',              avatar: '/tokens/rhyarca-jillyr.webp',         baseMode: 'standard', intelligence: 'average', gender: 'she' }, // user: normal risk + normal intel; Oracle of Besmara (drow art)
 
   // Round 6 additions — Carrion Crown villains + Caliphas NPCs + Chef:
-  { name: 'Adimarus',             avatar: '/tokens/adimarus.webp',               baseMode: 'risky',    intelligence: 'high'    }, // Shudderwood werewolf antipaladin of Jezelda; user: high intel + high risk
-  { name: 'Estovion',             avatar: '/tokens/estovion.webp',               baseMode: 'cautious', intelligence: 'high'    }, // Master of Ascanor Lodge; user: high intel + cautious
-  { name: 'Auren Vrood',          avatar: '/tokens/auren-vrood.webp',            baseMode: 'standard', intelligence: 'high'    }, // Whispering Way necromancer; user: high intel + normal risk
-  { name: 'Tar Baphon',           avatar: '/tokens/tar-baphon.webp',             baseMode: 'standard', intelligence: 'high'    }, // The Whispering Tyrant; user: high intel + normal risk
-  { name: 'Farrus Richton',       avatar: '/tokens/farrus-richton.webp',         baseMode: 'risky',    intelligence: 'average' }, // The Butcher of Courtaud (Farrah's grandpa ghost); user: avg intel + high risk
-  { name: 'Vesorianna',           avatar: '/tokens/vesorianna.webp',             baseMode: 'standard', intelligence: 'average' }, // Harrowstone warden's-wife ghost; user: avg intel + avg risk
-  { name: 'Lou Candlebean',       avatar: '/tokens/lou-candlebean.webp',         baseMode: 'standard', intelligence: 'low'     }, // Caliphas gnome cavalier mercenary; user: low intel + avg risk
-  { name: 'Elodie',               avatar: '/tokens/elodie.webp',                 baseMode: 'standard', intelligence: 'average' }, // Caliphas gnome bard / estoc-swashbuckler; user: avg intel + avg risk
-  { name: 'Chef',                 avatar: '/tokens/chef.webp',                   baseMode: 'risky',    intelligence: 'high'    }, // Gordon-Ramsay-but-won't-admit-it; high-intensity host (user: not specified, picking risky/high)
+  { name: 'Adimarus',             avatar: '/tokens/adimarus.webp',               baseMode: 'risky',    intelligence: 'high', gender: 'he'    }, // Shudderwood werewolf antipaladin of Jezelda; user: high intel + high risk
+  { name: 'Estovion',             avatar: '/tokens/estovion.webp',               baseMode: 'cautious', intelligence: 'high', gender: 'he'    }, // Master of Ascanor Lodge; user: high intel + cautious
+  { name: 'Auren Vrood',          avatar: '/tokens/auren-vrood.webp',            baseMode: 'standard', intelligence: 'high', gender: 'he'    }, // Whispering Way necromancer; user: high intel + normal risk
+  { name: 'Tar Baphon',           avatar: '/tokens/tar-baphon.webp',             baseMode: 'standard', intelligence: 'high', gender: 'he'    }, // The Whispering Tyrant; user: high intel + normal risk
+  { name: 'Farrus Richton',       avatar: '/tokens/farrus-richton.webp',         baseMode: 'risky',    intelligence: 'average', gender: 'he' }, // The Butcher of Courtaud (Farrah's grandpa ghost); user: avg intel + high risk
+  { name: 'Vesorianna',           avatar: '/tokens/vesorianna.webp',             baseMode: 'standard', intelligence: 'average', gender: 'she' }, // Harrowstone warden's-wife ghost; user: avg intel + avg risk
+  { name: 'Lou Candlebean',       avatar: '/tokens/lou-candlebean.webp',         baseMode: 'standard', intelligence: 'low', gender: 'she'     }, // Caliphas gnome cavalier mercenary; user: low intel + avg risk
+  { name: 'Elodie',               avatar: '/tokens/elodie.webp',                 baseMode: 'standard', intelligence: 'average', gender: 'she' }, // Caliphas gnome bard / estoc-swashbuckler; user: avg intel + avg risk
+  { name: 'Chef',                 avatar: '/tokens/chef.webp',                   baseMode: 'risky',    intelligence: 'high', gender: 'he'    }, // Gordon-Ramsay-but-won't-admit-it; high-intensity host (user: not specified, picking risky/high)
   // Vorkstag — skinwalker serial killer. avatar field is his TRUE
   // face (skinless butcher art). At seating-time Table.seatBot detects
   // playerId === 'vorkstag' and overlays a random tablemate's avatar
   // onto the seat (Seat.avatarOverride + Seat.impersonatedNick) — so
   // the displayed face AND 11labs voice shift every time he sits.
   // True face only shows when no one else is at the table.
-  { name: 'Vorkstag',             avatar: '/tokens/vorkstag.webp',               baseMode: 'cautious', intelligence: 'high'    }, // user: very intelligent + cautious
+  { name: 'Vorkstag',             avatar: '/tokens/vorkstag.webp',               baseMode: 'cautious', intelligence: 'high', gender: 'he'    }, // user: very intelligent + cautious
 
   // Round 7 additions — characters with user-specified 11labs voices:
-  { name: 'Dismas',               avatar: '/tokens/dismas-aevrett.webp',         baseMode: 'risky',    intelligence: 'average' }, // CC Holy Gun Paladin 11, CP-USS / Daramid Knights; user: normal intel + high risk
-  { name: 'Holden',               avatar: '/tokens/texas-holden.webp',           baseMode: 'risky',    intelligence: 'low'     }, // Texas Holden — Captain / Oblivious Swashbuckler
-  { name: 'Sirona',               avatar: '/tokens/sirona.webp',                 baseMode: 'standard', intelligence: 'average' }, // Paladin of Sarenrae · soldierly; best friends w/ Elfrip; friendly to CP-USS
-  { name: 'Duristan Silvio',      nickname: 'Duristan', avatar: '/tokens/duristan-silvio.webp',        baseMode: 'risky',    intelligence: 'low'     }, // Ustalavian nobleman buffoon — displayed as "Duristan", persistence key stays
-  { name: 'Bujon, Storm of Cheliax', nickname: 'Bujon', avatar: '/tokens/bujon-storm-of-cheliax.webp', baseMode: 'risky',    intelligence: 'low'     }, // Iku-Turso eel-form storm-sorcerer, Kill-Steal helm
+  { name: 'Dismas',               avatar: '/tokens/dismas-aevrett.webp',         baseMode: 'risky',    intelligence: 'average', gender: 'he' }, // CC Holy Gun Paladin 11, CP-USS / Daramid Knights; user: normal intel + high risk
+  { name: 'Holden',               avatar: '/tokens/texas-holden.webp',           baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // Texas Holden — Captain / Oblivious Swashbuckler
+  { name: 'Sirona',               avatar: '/tokens/sirona.webp',                 baseMode: 'standard', intelligence: 'average', gender: 'she' }, // Paladin of Sarenrae · soldierly; best friends w/ Elfrip; friendly to CP-USS
+  { name: 'Duristan Silvio',      nickname: 'Duristan', avatar: '/tokens/duristan-silvio.webp',        baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // Ustalavian nobleman buffoon — displayed as "Duristan", persistence key stays
+  { name: 'Bujon, Storm of Cheliax', nickname: 'Bujon', avatar: '/tokens/bujon-storm-of-cheliax.webp', baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // Iku-Turso eel-form storm-sorcerer, Kill-Steal helm
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
@@ -337,6 +341,10 @@ function seedRoster() {
   // column so the seat label flips to the short form on the next render.
   // Player_id never changes, so chips/gear/history stay attached.
   const updateBotNick   = db.prepare('UPDATE players SET nickname = ? WHERE player_id = ? AND is_bot = 1');
+  // Bot gender is pinned from BOT_ROSTER and re-synced every boot —
+  // the AI characters' pronouns shouldn't drift. Humans' gender is
+  // user-set via the dropdown (lobby:setGender) and never touched here.
+  const updateBotGender = db.prepare('UPDATE players SET gender = ? WHERE player_id = ? AND is_bot = 1');
   const deleteBot       = db.prepare('DELETE FROM players WHERE player_id = ? AND is_bot = 1');
   const listBotIds      = db.prepare('SELECT player_id FROM players WHERE is_bot = 1');
 
@@ -361,6 +369,7 @@ function seedRoster() {
       updateBotAvatar.run(p.avatar, id);
       updateBotMode.run(p.baseMode || 'standard', id);
       updateBotIntel.run(p.intelligence || 'average', id);
+      updateBotGender.run(p.gender || 'they', id);
     }
     // Prune stale bot rows from previous rosters so they don't show up in
     // the "+ Bot" picker. Humans are never pruned (their chip totals matter).
@@ -405,6 +414,14 @@ function addRebuyDebt(playerId, amount) {
 function payRebuyDebt(playerId, amount) {
   if (!Number.isFinite(amount) || amount <= 0) return;
   stmts.payDebt.run(amount, amount, playerId);
+}
+/** Update a player's pronoun set. Validates against the known
+ *  values; silently no-ops otherwise. Bots' genders are pinned
+ *  via seedRoster and shouldn't be set through this path. */
+const _setGenderStmt = db.prepare('UPDATE players SET gender = ? WHERE player_id = ?');
+function setGender(playerId, gender) {
+  if (!['he', 'she', 'they'].includes(gender)) return;
+  _setGenderStmt.run(gender, playerId);
 }
 function getSwords(playerId) {
   const p = stmts.getPlayer.get(playerId);
@@ -490,6 +507,7 @@ module.exports = {
   setChips,
   addRebuyDebt,
   payRebuyDebt,
+  setGender,
   getSwords,
   setSwords,
   recordWin,
