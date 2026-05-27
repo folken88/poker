@@ -64,7 +64,7 @@ const CHARACTER_VOICES = {
   // Numerian / Iron Gods
   'Dinvaya':           'qSeXEcewz7tA0Q0qk9fH', // Victoria — Warm, Trustworthy, Relatable
   'Casandalee':        'XrExE9yKIg1WjnnlVkGX', // Matilda — Knowledgable, Professional — calm AI
-  'Nomkath':           'l4Coq6695JDX9xtLqXDE', // Lauren B — Warm, Humanlike, Conversational
+  'Nomkath':           'ErXwobaYiN019PkySvjV', // Antoni — young American male, well-rounded (catfolk_male rogue)
 
   // Skull & Shackles / pirates
   'Rhyarca':           'cgSgspJ2msm6clMCkdW9', // Jessica — Playful, Bright, Warm — theatrical Besmara oracle

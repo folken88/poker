@@ -29,6 +29,25 @@ if (ENABLED) {
   console.log('[11labs] disabled (no ELEVENLABS_API_KEY in env)');
 }
 
+/** Written → phonetic-spelling pairs for names the 11labs voices
+ *  routinely mispronounce. Applied as case-insensitive word-boundary
+ *  replaces before the text is sent to the API, so character voicelines
+ *  say "Leery in" instead of "Lirry-en" when one bot addresses another.
+ *  Mirror entries in public/js/blindMode.js NAME_PRONUNCIATIONS so the
+ *  browser TTS fallback also benefits.
+ *  Add new pairs as users report butchered pronunciations. */
+const PRONUNCIATIONS = [
+  ['Mandore',  'Man door'],
+  ['Lirienne', 'Leery in'],
+];
+function applyPronunciations(text) {
+  let out = text;
+  for (const [orig, phon] of PRONUNCIATIONS) {
+    out = out.replace(new RegExp(`\\b${orig}\\b`, 'gi'), phon);
+  }
+  return out;
+}
+
 /** Hard ceiling: tokens generated per minute per process, summed across
  *  all tables. Prevents a runaway loop or LLM-spam from blowing up the
  *  monthly bill. ~16k chars/min is generous; lower it if usage spikes. */
@@ -56,7 +75,7 @@ function rateAllowed(textLen) {
 async function synthesize(text, voiceId) {
   if (!ENABLED) return null;
   if (!text || !voiceId) return null;
-  const clean = String(text).trim().slice(0, 300);
+  const clean = applyPronunciations(String(text).trim()).slice(0, 300);
   if (clean.length === 0) return null;
   if (!rateAllowed(clean.length)) {
     console.warn('[11labs] rate-limit hit; dropping line');

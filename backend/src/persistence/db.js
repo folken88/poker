@@ -130,7 +130,7 @@ const BOT_ROSTER = [
   { name: 'Lirienne',             avatar: '/tokens/lirienne-voss.webp',          baseMode: 'standard', intelligence: 'average', gender: 'she' }, // user: avg intel + normal risk
   { name: 'Kelda',                avatar: '/tokens/kelda-ironglim.webp',         baseMode: 'cautious', intelligence: 'high', gender: 'they'    }, // user: cautious + high intel
   { name: 'Mr. Brow',             avatar: '/tokens/augustus-teabrow.webp',       baseMode: 'risky',    intelligence: 'high', gender: 'he'    }, // user: highly intelligent + risky
-  { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'standard', intelligence: 'average', gender: 'she' }, // user: avg intel + avg risk
+  { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'standard', intelligence: 'average', gender: 'he' }, // catfolk_male rogue/scout in Numeria; user: avg intel + avg risk
   { name: 'Ulfred',               avatar: '/tokens/ulfred-stronginthearm.webp',  baseMode: 'standard', intelligence: 'average', gender: 'he' },
   { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard', intelligence: 'average', gender: 'he' }, // user: avg intel + avg risk
   { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky',    intelligence: 'low', gender: 'they'     }, // velociraptor — pure instinct, no thinking
