@@ -37,15 +37,17 @@ const CHARACTER_VOICES = {
   'Holden':            '0exky5u6rYq7ksXZEN5G', // Nick
   'Kate':              '5tQ5OiKpM78sVuxrgC4W', // Phoebe
   'Vaughan':           'CJnd8k7Q0w2Y1HegJ65F', // John 117
-  // FARRAH ─ user wants "young woman with aristocratic British accent"
-  // for the teenage spirit-medium detective. The library has no
-  // young+British+female combination, so this is the closest aristocratic-
-  // British fit available (Velvety Actress, British, middle-aged).
-  // Mimi2 (NmuGDgA7keY3NYIjArX3) was the original pick but returned 403
-  // voice_access_denied / detected_captcha_voice from 11labs — needs
-  // manual verification on the user's dashboard before it can be used
-  // via API. Swap back here once verified.
-  'Farrah':            'pFZP5JQG7iQjIQuC4Bku', // Lily — Velvety Actress, British (aristocratic fallback)
+  // FARRAH ─ user priority order: British > young > aristocratic.
+  // Library has no young+British+female combination. Picking the
+  // youngest-feeling British female available — Alice ("Clear,
+  // Engaging Educator") leans teacherly which fits the sharp-
+  // detective Farrah pictures, and reads younger than Lily/Tamsin.
+  // Original pick was Mimi2 (NmuGDgA7keY3NYIjArX3, age=child) but it
+  // returned 403 voice_access_denied / detected_captcha_voice from
+  // 11labs — needs manual verification on the user's dashboard
+  // before it can be used via API. Swap back here once verified.
+  // (Voice is shared with Kelda — voice IDs aren't exclusive.)
+  'Farrah':            'Xb7hH8MSUJpSbSDYk0k2', // Alice — British, prioritising British+youngish
   'Kai Ginn':          'Yj3XGMd9w2H4C0P0L28M', // Sean
   'Daramid':           'poTX7WPM13yOc28z0sVi', // Shoreh Thing
   'Sirona':            'EXAVITQu4vr4xnSDxMaL', // Sarah — Mature, Reassuring, Confident (paladin barking orders)
