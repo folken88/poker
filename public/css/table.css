@@ -454,17 +454,22 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   user-select: none;
 }
 .topbar__clock-cell {
-  display: flex; flex-direction: column; align-items: center;
+  display: flex; flex-direction: column;
   gap: 2px;
   /* Pin the cell width so the digits stay rock-still regardless of
      the label's length. Long labels like
      "Storgrim Thunderbeard · auto-fold in" used to expand the cell,
-     re-centering the digits and making them jump every few seconds. */
+     re-centering the digits and making them jump every few seconds.
+     Action cell hugs LEFT (it's anchored to the left edge of the
+     clock), so label + digits left-justify within it. */
+  align-items: flex-start;
   min-width: 240px;
 }
 .topbar__clock-cell--hand {
-  /* Hand-timer cell needs much less room — its label is a fixed
-     "HAND TIMER" and the digits are mm:ss. */
+  /* Hand-timer cell hugs RIGHT (anchored to the right edge), so
+     label + digits right-justify within it. Smaller min-width
+     because the label is fixed "HAND TIMER" and the digits are mm:ss. */
+  align-items: flex-end;
   min-width: 96px;
 }
 /* Label truncates rather than expanding the cell. */
@@ -473,7 +478,6 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-align: center;
 }
 /* Lock the digits container width too — without this, the SVG
    group still re-centers slightly when minutes tick over. */
@@ -525,9 +529,11 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .topbar__clock[data-mode="urgent"]  .topbar__clock-hand,
 .topbar__clock[data-mode="next"]    .topbar__clock-hand,
 .topbar__clock[data-mode="idle"]    .topbar__clock-hand { color: var(--brass); }
-/* Mode-driven colors. Style the SVG segments via currentColor below. */
-.topbar__clock[data-mode="action"]  { color: var(--brass-bright); border-color: var(--brass-bright); }
-.topbar__clock[data-mode="action"] .topbar__clock-label { color: var(--brass-bright); }
+/* Mode-driven colors. Style the SVG segments via currentColor below.
+   Action mode = bright blue so it visually contrasts with the always-
+   brass hand-timer cell. Urgent (last 10s) still pulses red. */
+.topbar__clock[data-mode="action"]  { color: #6db4ff; border-color: rgba(109,180,255,0.55); }
+.topbar__clock[data-mode="action"] .topbar__clock-label { color: #6db4ff; }
 .topbar__clock[data-mode="urgent"]  {
   color: #ff8888;
   border-color: var(--danger);
