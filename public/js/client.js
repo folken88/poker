@@ -1195,6 +1195,26 @@
       label.textContent = t?.hand ? 'In hand' : 'Waiting for players';
       renderClockDigits(0);
     }
+
+    // ----- Hand-elapsed display (right of divider) -----
+    // Shows total time the current hand has been live, mm:ss. Hidden
+    // when there's no hand (between deals / waiting). Divider also
+    // hides so the topbar reads cleanly during idle states.
+    const handEl   = document.getElementById('topClockHand');
+    const dividerEl = document.getElementById('topClockDivider');
+    if (handEl && dividerEl) {
+      if (t?.hand?.startedAt) {
+        const elapsedSec = Math.max(0, Math.floor((now - t.hand.startedAt) / 1000));
+        const mm = Math.floor(elapsedSec / 60);
+        const ss = String(elapsedSec % 60).padStart(2, '0');
+        handEl.textContent = `🎴 ${mm}:${ss}`;
+        handEl.hidden = false;
+        dividerEl.hidden = false;
+      } else {
+        handEl.hidden = true;
+        dividerEl.hidden = true;
+      }
+    }
   }
   setInterval(tickTimers, 250);
 

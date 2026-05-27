@@ -534,6 +534,9 @@ class Hand {
       sbIndex: this._sbIndex(),
       bbIndex: this._bbIndex(),
       actor: this.getCurrentActor(),
+      // Wall-clock ms the hand started — client uses it to render the
+      // total-hand elapsed timer alongside the per-turn countdown.
+      startedAt: this.startedAt,
       players: this.players.map(p => ({
         seatIndex: p.seatIndex,
         playerId:  p.playerId,

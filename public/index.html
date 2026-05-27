@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260526au" />
+  <link rel="stylesheet" href="/css/table.css?v=20260526av" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -53,10 +53,18 @@
     <header class="topbar">
       <div class="topbar__brand">Folken Poker</div>
 
-      <!-- ===== Big digital-clock countdown ===== -->
-      <div class="topbar__clock" id="topClock" data-mode="idle" title="Action timer · switches to next-hand countdown between hands">
+      <!-- ===== Big digital-clock countdown =====
+           Top: label ("Your turn", "Next hand in", etc.).
+           Bottom row: [SVG digits]  |  [🎴 hand-elapsed]
+           Divider + hand-elapsed hide when no hand is live. -->
+      <div class="topbar__clock" id="topClock" data-mode="idle"
+           title="Action timer + total hand elapsed">
         <span class="topbar__clock-label" id="topClockLabel">Waiting</span>
-        <span class="topbar__clock-digits" id="topClockDigits" aria-label="countdown"></span>
+        <div class="topbar__clock-row">
+          <span class="topbar__clock-digits" id="topClockDigits" aria-label="countdown"></span>
+          <span class="topbar__clock-divider" id="topClockDivider" aria-hidden="true" hidden></span>
+          <span class="topbar__clock-hand" id="topClockHand" title="Total time this hand has been live" hidden></span>
+        </div>
       </div>
 
       <div class="topbar__me">
@@ -279,8 +287,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260526au"></script>
-  <script src="/js/cards.js?v=20260526au"></script>
-  <script src="/js/client.js?v=20260526au"></script>
+  <script src="/js/avatars.js?v=20260526av"></script>
+  <script src="/js/cards.js?v=20260526av"></script>
+  <script src="/js/client.js?v=20260526av"></script>
 </body>
 </html>

@@ -454,11 +454,31 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   color: var(--ivory-dim);
   font-variant-numeric: tabular-nums;
 }
+/* Row that holds the countdown digits + divider + hand-elapsed. */
+.topbar__clock-row {
+  display: flex; align-items: center;
+  gap: 10px;
+  line-height: 1;
+}
 .topbar__clock-digits {
   display: inline-flex; gap: 6px; align-items: center;
   line-height: 1;
 }
 .topbar__clock-digits svg { display: block; }
+.topbar__clock-divider {
+  width: 1px;
+  align-self: stretch;
+  background: rgba(241,207,131,0.45);
+  margin: 4px 2px;
+}
+.topbar__clock-hand {
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+  color: var(--brass);
+  font-weight: 700;
+  white-space: nowrap;
+}
 /* Mode-driven colors. Style the SVG segments via currentColor below. */
 .topbar__clock[data-mode="action"]  { color: var(--brass-bright); border-color: var(--brass-bright); }
 .topbar__clock[data-mode="action"] .topbar__clock-label { color: var(--brass-bright); }
