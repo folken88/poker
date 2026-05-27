@@ -132,7 +132,7 @@ const CHARACTER_INFLUENCES = {
   'Storgrim':         ['giraldo'],                    // dwarf, gruff
   'Ulfred':           ['giraldo'],                    // dwarf, similar
   'Mr. Brow':         ['giraldo'],                    // enforcer, blunt
-  'Kovira':           ['giraldo'],                    // judgmental warrior-cleric
+  'Kovira':           ['jeff-ross', 'giraldo'],       // warm toastmaster by default; Giraldo brutality ONLY when targeting a bully (see her CHARACTER_FLAVOR — anti-bully exception is the trigger)
   'Rissa':            ['giraldo', 'glaser'],          // assassin, sharp
   'Vaughan':          ['giraldo'],                    // jaded captain
   'Dismas':           ['giraldo'],                    // wry Texan paladin
