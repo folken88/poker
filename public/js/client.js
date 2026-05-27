@@ -143,7 +143,9 @@
   function applyMuteUI() {
     const btn = $('#muteBtn');
     if (btn) btn.textContent = _audioMuted ? '🔇' : '🔊';
-    const m = $('#audioMute'); if (m) m.checked = _audioMuted;
+    // Checkboxes read intuitively: ☑ means "this sound is ON".
+    // `_audioMuted` is the inverse (mute = NOT on), hence the negation.
+    const m = $('#audioMute');         if (m) m.checked = !_audioMuted;
     const v = $('#bannerVoiceToggle'); if (v) v.checked = _bannerVoiceEnabled;
   }
   applyMuteUI();
@@ -229,25 +231,24 @@
   // of the IIFE (socket handlers, render wiring, EVERYTHING below)
   // never runs — chat log freezes, table goes static. Same defensive
   // pattern any new DOM hook in this file should use.
-  const muteBtn = $('#muteBtn');
-  if (muteBtn) {
-    muteBtn.addEventListener('click', (e) => {
-      // Clicking the icon body itself toggles card SFX (legacy behaviour
-      // — preserves the one-click mute pattern). Clicks on the popover
-      // checkboxes are handled below and stop here via stopPropagation.
-      _audioMuted = !_audioMuted;
-      saveAudioSettings();
-      applyMuteUI();
-      if (!_audioMuted) playFromPool(DEAL_POOL);
-    });
-  }
-  // Card-sounds checkbox in the popover mirrors the button.
+  // Speaker icon no longer toggles mute on click — it would collide
+  // with the checkboxes that control the same setting. Clicking the
+  // icon now just opens the audio menu (the wrapper handler below
+  // does the toggle). Mute state is changed exclusively via the
+  // "Card sounds" checkbox to keep the model unambiguous.
+  // (Hover users see the menu automatically; this click handler is
+  // for touch / keyboard.)
+
+  // Card-sounds checkbox — ☑ means "sounds ON" (so _audioMuted is
+  // the INVERSE of checkbox state). Reads correctly off the label.
   const audioMuteCheckbox = $('#audioMute');
   if (audioMuteCheckbox) {
     audioMuteCheckbox.addEventListener('change', (e) => {
-      _audioMuted = !!e.target.checked;
+      _audioMuted = !e.target.checked;
       saveAudioSettings();
       applyMuteUI();
+      // Audible confirmation when toggling sounds back ON.
+      if (!_audioMuted) playFromPool(DEAL_POOL);
     });
   }
   // AI-character-voice checkbox — toggles 11labs banter playback.
@@ -268,12 +269,11 @@
   if (audioMenuPop) {
     audioMenuPop.addEventListener('click', (e) => e.stopPropagation());
   }
-  // Touch / keyboard: tap the wrapper or focus it to reveal the menu.
-  // Outside click closes.
+  // Touch / keyboard: tap anywhere on the wrapper (including the
+  // speaker icon) to reveal the menu. Outside click closes it.
   const audioMenu = $('#audioMenu');
   if (audioMenu) {
     audioMenu.addEventListener('click', (e) => {
-      if (e.target.closest('#muteBtn')) return; // mute toggle handled above
       audioMenu.classList.toggle('is-open');
     });
     document.addEventListener('click', (e) => {
