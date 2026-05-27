@@ -187,15 +187,17 @@ function registerTableHandlers(io, socket, { tables }) {
     const nick = me.nickname || me.player_id;
     table.chat('human', `💬 ${nick}: ${trimmed}`);
 
-    // Let a bot react in voice (if banter is enabled). Cheap fire-
-    // and-forget; cooldown + probability gates inside maybeSpeak
-    // prevent every line from triggering a reply.
+    // Let a bot react in voice (if banter is enabled). 5% reply rate
+    // for chat messages — much lower than the 30% default banter prob
+    // so a chatty player doesn't trigger constant chatter back. The
+    // per-table cooldown still applies on top.
     try {
       const banter = require('../bot/banter');
       banter.maybeSpeak(table, {
         kind: 'human-chat',
         description: `${nick} just said in the chat: "${trimmed}"`,
         actorIds: [me.player_id],
+        prob: 0.05,
       });
     } catch (_) { /* banter optional */ }
 

@@ -95,12 +95,16 @@ const CHARACTER_FLAVOR = {
 
 /** Returns true if banter is enabled, the cooldown has elapsed, and
  *  the probability roll succeeds. Cheap pre-flight so we don't waste
- *  cycles building prompts for events that won't fire. */
-function shouldSpeak(tableId) {
+ *  cycles building prompts for events that won't fire.
+ *
+ *  @param {number} [prob] - override probability for this roll. Used
+ *    when a specific event type wants a different rate than the global
+ *    LLM_BANTER_PROB (e.g. human-chat replies fire at 5%). */
+function shouldSpeak(tableId, prob = PROB) {
   if (!ENABLED) return false;
   const last = _lastSpokenAt.get(tableId) || 0;
   if (Date.now() - last < COOLDOWN_MS) return false;
-  return Math.random() < PROB;
+  return Math.random() < prob;
 }
 
 /** Pick a random eligible speaker:
@@ -198,13 +202,17 @@ async function callLLM(messages) {
  * Fire-and-forget: maybe generate a banter line for the given event.
  *
  * @param {Object} table  the Table instance
- * @param {Object} event  { kind, description, actorIds? }
+ * @param {Object} event  { kind, description, actorIds?, prob? }
  *   kind: short label for the trigger (raise, allin, showdown, win, etc.)
  *   description: what to feed the model (one sentence of what happened)
  *   actorIds: optional playerIds to exclude from speaker pool
+ *   prob: optional 0..1 override for this event's roll probability
+ *         (defaults to LLM_BANTER_PROB). E.g. human chat replies use
+ *         a much lower rate so bots only chime in occasionally.
  */
 function maybeSpeak(table, event) {
-  if (!shouldSpeak(table.id)) return;
+  const prob = (typeof event.prob === 'number') ? event.prob : PROB;
+  if (!shouldSpeak(table.id, prob)) return;
   const speaker = pickSpeaker(table, event.actorIds);
   if (!speaker) return;
   // Optimistically claim the cooldown slot — if the call fails the
