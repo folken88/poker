@@ -34,6 +34,7 @@
 const elevenlabs = require('../util/elevenlabs');
 const { voiceFor } = require('./character_voices');
 const { soundFor } = require('./character_sounds');
+const db = require('../persistence/db');
 
 const ENABLED        = process.env.LLM_BANTER_ENABLED === '1';
 // Use the /api/chat endpoint — it applies the model's chat template
@@ -185,24 +186,51 @@ function buildTableContext(table, speakerSeat) {
     // information naturally instead of having to interpret 'he'/'she'/
     // 'they' codes. Defaults to they/them when unset (legacy rows).
     const PRONOUNS = { he: 'he/him', she: 'she/her', they: 'they/them' };
+    // For each tablemate we pull a richer wealth picture so the LLM
+    // can riff on it: cash on hand (live, in-table), gear market
+    // value, outstanding First-Bank-of-Abadar debt, and the
+    // computed net worth = cash + gear − debt. Pulled FRESH from
+    // the DB on every call so chips/gear bought mid-hand show up.
     const others = table.seats
       .filter(s => !s.isEmpty() && s.playerId !== speakerSeat.playerId)
-      .map(s => ({
-        nick: s.player?.nickname || s.playerId,
-        chips: Number(s.chipsAtTable || 0),
-        isBot: !!s.isBot,
-        pron: PRONOUNS[s.player?.gender] || PRONOUNS.they,
-      }));
+      .map(s => {
+        const fresh = db.getPlayer(s.playerId) || s.player || {};
+        let gearObj = {};
+        try { gearObj = JSON.parse(fresh.gear || '{}') || {}; } catch (_) {}
+        const cash = Number(s.chipsAtTable || 0);
+        const gearVal = db.gearTotalValue ? db.gearTotalValue(gearObj) : 0;
+        const debt = Number(fresh.rebuy_debt || 0);
+        const net = cash + gearVal - debt;
+        return {
+          nick: s.player?.nickname || s.playerId,
+          chips: cash,
+          gearVal,
+          debt,
+          net,
+          isBot: !!s.isBot,
+          pron: PRONOUNS[s.player?.gender] || PRONOUNS.they,
+        };
+      });
     if (others.length === 0) return ''; // alone at the table — no context
 
     const filled = others.length + 1;        // including speaker
     const total  = table.maxSeats || table.seats.length;
     const tableSize = `Table is ${filled}/${total} seated`;
 
-    // "Most impressive" = current chip leader other than the speaker.
-    const leader = others.slice().sort((a, b) => b.chips - a.chips)[0];
+    // "Most impressive" = current NET-WORTH leader (cash + gear − debt).
+    // Different from chip-leader-only because someone with a huge +5
+    // gear set can be richer overall than a player sitting on more
+    // raw chips.
+    const leader = others.slice().sort((a, b) => b.net - a.net)[0];
+    function wealthBlurb(o) {
+      const bits = [`${o.chips.toLocaleString()} cash`];
+      if (o.gearVal > 0) bits.push(`${o.gearVal.toLocaleString()} in gear`);
+      if (o.debt > 0)    bits.push(`${o.debt.toLocaleString()} Abadar debt`);
+      bits.push(`net worth ${o.net.toLocaleString()}`);
+      return bits.join(', ');
+    }
     const leaderLine = leader
-      ? `Chip leader is ${leader.nick} (${leader.pron}, ${leader.chips.toLocaleString()} gp).`
+      ? `Richest tablemate is ${leader.nick} (${leader.pron}) — ${wealthBlurb(leader)}.`
       : '';
 
     if (intel === 'low') {
@@ -213,22 +241,25 @@ function buildTableContext(table, speakerSeat) {
     }
 
     if (intel === 'high') {
-      // Full board awareness — every seated tablemate with stack and
+      // Full board awareness — every seated tablemate with the
+      // complete wealth picture (cash, gear, debt, net). Net-worth
       // deviation from the 5,000-default starting stack as a coarse
       // "this person has been winning / losing lately" signal.
       const roster = others
         .map(o => {
-          const delta = o.chips - 5000;
+          const delta = o.net - 5000;
           const tail  = delta === 0 ? ''
             : delta > 0 ? ` (up ${delta.toLocaleString()})`
             :             ` (down ${(-delta).toLocaleString()})`;
-          return `${o.nick} (${o.pron}) ${o.chips.toLocaleString()} gp${tail}`;
+          return `${o.nick} (${o.pron}) — ${wealthBlurb(o)}${tail}`;
         })
         .join('; ');
       return `\nTABLE: ${tableSize}. ${leaderLine}\nALL SEATS: ${roster}.`;
     }
 
-    // average intel: leader + 2 random other seats.
+    // average intel: leader + 2 random other seats. Show the same
+    // wealth blurb for everyone surfaced so the LLM has consistent
+    // fodder for comparisons / roasts.
     const pool = others.filter(o => o !== leader);
     const sample = [];
     while (sample.length < Math.min(2, pool.length)) {
@@ -236,7 +267,7 @@ function buildTableContext(table, speakerSeat) {
       sample.push(pool.splice(i, 1)[0]);
     }
     const sampleLine = sample.length
-      ? ` Also at the table: ${sample.map(o => `${o.nick} (${o.pron}, ${o.chips.toLocaleString()} gp)`).join(', ')}.`
+      ? ` Also at the table: ${sample.map(o => `${o.nick} (${o.pron}) — ${wealthBlurb(o)}`).join(', ')}.`
       : '';
     return `\nTABLE: ${tableSize}. ${leaderLine}${sampleLine}`;
   } catch (_) {
@@ -281,6 +312,11 @@ function buildMessages(speaker, eventDescription, table) {
         `Modern English profanity is also fine — just keep it in voice. When you LOSE a hand, you may get ` +
         `genuinely angry; cursing the CARDS, the deck, the deal, the dealer, the opponent, or your own ` +
         `deity is fair game. NEVER curse "the dice" — this is poker, there are no dice, only cards. ` +
+        `MONEY TALK is fair game. The table info below shows each player's CASH, GEAR VALUE, ABADAR ` +
+        `DEBT, and NET WORTH — comment freely on any of it when it fits. Roast a broke player ` +
+        `(\"How much do you owe Abadar now, three thousand?\"), appreciate a rich one (\"Rich bitch, ` +
+        `that\\'s a +5 longsword on the felt.\"), mock someone\\'s decked-out gear, sneer at debt, ` +
+        `whatever fits the character. Use names. Don\\'t recite numbers like a balance sheet — react. ` +
         `LENGTH: anywhere from a SINGLE WORD up to 20 words. Short, punchy reactions are great when they ` +
         `fit — "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", "Mine.", ` +
         `"You absolute donkey." — don't pad to a full sentence if a sharp one-word jab lands better. ` +
