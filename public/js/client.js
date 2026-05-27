@@ -132,12 +132,25 @@
       _bannerVoiceEnabled = raw === '1'; // missing → false (voices off)
     } else _bannerVoiceEnabled = false;
     applyMuteUI();
+    // After load, republish to server so a fresh reconnect / new
+    // player login carries the right preference into the listener
+    // count. (Server defaults to false on every connect.)
+    pushVoicePrefToServer();
   }
   function saveAudioSettings() {
     const km = audioSettingsKey('muted');
     const kv = audioSettingsKey('bannerVoice');
     if (km) localStorage.setItem(km, _audioMuted ? '1' : '0');
     if (kv) localStorage.setItem(kv, _bannerVoiceEnabled ? '1' : '0');
+    pushVoicePrefToServer();
+  }
+  // Inform the server whenever the banter-voice setting changes (and
+  // once at boot). The server uses this to skip 11labs synthesis when
+  // NO client at the table has voice on — saves API tokens. Cheap
+  // ack-less emit; reconnects republish on the next loadAudioSettings.
+  function pushVoicePrefToServer() {
+    try { socket.emit('lobby:setVoicePref', { enabled: _bannerVoiceEnabled }); }
+    catch (_) {}
   }
 
   function applyMuteUI() {

@@ -33,6 +33,7 @@ const CHARACTER_VOICES = {
   'Duristan':          'PdgFJYFiU4tFS8jEZkDF', // Berry
   'Mr. Brow':          'UoOL4r5ZefvNkwdKzfLN', // Hank
   'Adimarus':          '5mU8WBEmVJQ3n5J4fkzR', // Okole
+  'Bujon':             '5mU8WBEmVJQ3n5J4fkzR', // Okole — shared with Adimarus; voice IDs aren't exclusive
   'Fera':              'SxrdCBV2iTasBWWDffJ4', // Paris Hilton
   'Holden':            '0exky5u6rYq7ksXZEN5G', // Nick
   'Kate':              '5tQ5OiKpM78sVuxrgC4W', // Phoebe

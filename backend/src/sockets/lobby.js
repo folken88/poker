@@ -40,6 +40,17 @@ function registerLobbyHandlers(io, socket, { tables }) {
     ack?.({ ok: true, bots: db.listBots() });
   });
 
+  // Banter-voice listener flag. Client pushes its current toggle
+  // state here on connect AND on every change so the server can
+  // skip 11labs synthesis when nobody at the table is listening.
+  // Lives on socket.data.voiceOn; Table.anyVoiceListener() walks
+  // the room. No persistence — defaults to false on every reconnect,
+  // client republishes its true preference immediately.
+  socket.on('lobby:setVoicePref', ({ enabled } = {}, ack) => {
+    socket.data.voiceOn = !!enabled;
+    ack?.({ ok: true });
+  });
+
   socket.on('lobby:setAvatar', ({ avatarId } = {}, ack) => {
     const player = socket.data.player;
     if (!player) return ack?.({ ok: false, error: 'choose a player first' });

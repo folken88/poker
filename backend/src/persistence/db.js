@@ -174,6 +174,7 @@ const BOT_ROSTER = [
   { name: 'Holden',               avatar: '/tokens/texas-holden.webp',           baseMode: 'risky',    intelligence: 'low'     }, // Texas Holden — Captain / Oblivious Swashbuckler
   { name: 'Sirona',               avatar: '/tokens/sirona.webp',                 baseMode: 'standard', intelligence: 'average' }, // Paladin of Sarenrae · soldierly; best friends w/ Elfrip; friendly to CP-USS
   { name: 'Duristan Silvio',      nickname: 'Duristan', avatar: '/tokens/duristan-silvio.webp',        baseMode: 'risky',    intelligence: 'low'     }, // Ustalavian nobleman buffoon — displayed as "Duristan", persistence key stays
+  { name: 'Bujon, Storm of Cheliax', nickname: 'Bujon', avatar: '/tokens/bujon-storm-of-cheliax.webp', baseMode: 'risky',    intelligence: 'low'     }, // Iku-Turso eel-form storm-sorcerer, Kill-Steal helm
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);

@@ -140,6 +140,24 @@ class Table {
   setIo(io) { this.io = io; }
   roomName() { return `table:${this.id}`; }
 
+  /** True iff at least one connected socket in this table's room
+   *  has banter-voice enabled (toggle stored on socket.data.voiceOn,
+   *  pushed up by the client whenever the audio menu changes).
+   *  Used by banter.js to skip 11labs synthesis when nobody at the
+   *  table is listening — saves API tokens. Local sound pools (Crisp
+   *  chirps, Elfrip burps) ignore this — those are static files and
+   *  cost nothing to broadcast. */
+  anyVoiceListener() {
+    if (!this.io) return false;
+    const room = this.io.sockets.adapter.rooms.get(this.roomName());
+    if (!room) return false;
+    for (const sid of room) {
+      const s = this.io.sockets.sockets.get(sid);
+      if (s?.data?.voiceOn) return true;
+    }
+    return false;
+  }
+
   // ============================================================
   // Seating
   // ============================================================
