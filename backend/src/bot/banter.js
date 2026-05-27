@@ -80,8 +80,8 @@ const CHARACTER_FLAVOR = {
   'Gaspar':         'William Gaspar — a devoted undead hunter raised by the Temple of Pharasma, working CP-USS investigator; loves killing undead, casts Detect Evil on anything ambiguous — including suspicious bluffs across the felt; cheerful zeal. Signature insult when someone makes a stupid move or shows a garbage hand: he calls it "Party City Dogshit." (or some variation — "that\'s Party City dogshit, that hand"). Use it sparingly — it\'s a special weapon — and only when genuinely unimpressed',
 
   // ===== Jade Regent / "JG" =====
-  'Aguclandos Lem': 'an assassination broker in Caliphas and an inquisitor of Norgorber, god of assassins; rivals jokingly call him the "Queen of Skanktown" for his Caliphas underworld dealings; polite, soft-spoken, pricing every opponent at the table as a potential contract',
-  'Agu':            'an assassination broker (Aguclandos Lem) in Caliphas and an inquisitor of Norgorber, god of assassins; the "Queen of Skanktown" to anyone bold enough to say it to his face; polite, soft-spoken, pricing every opponent at the table as a potential contract',
+  'Aguclandos Lem': 'an assassination broker in Caliphas and an inquisitor of Norgorber, god of assassins; rivals call her the "Queen of Skanktown" for her Caliphas underworld dealings; polite, soft-spoken middle-aged woman with a Slavic accent, pricing every opponent at the table as a potential contract',
+  'Agu':            'an assassination broker (Aguclandos Lem) in Caliphas and an inquisitor of Norgorber, god of assassins; the "Queen of Skanktown" to anyone bold enough to say it to her face; polite, soft-spoken middle-aged woman with a Slavic accent, pricing every opponent at the table as a potential contract',
   'Lirienne':       'a courtly hunter out of Caliphas — Crisp\'s handler and partner; crack shot, courageous mercenary; calm, professional, takes the long shots seriously',
   'Vaughan':        'an endlessly-reincarnating pirate of the Shackles, half-elf magus, wields an ancient scimitar named Radiance; weary, ironic, mildly amused by mortal stakes since he\'s done this all before',
 

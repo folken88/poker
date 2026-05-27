@@ -67,7 +67,7 @@ const CHARACTER_VOICES = {
   'Ulfred':            'bFrjFL4nlpeYNwNRhXxq', // Mossbeard — Scottish, old, raspy ("God of the Wild") — deep dwarf-cleric energy (shared library)
   'Tamsin':            'dAlhI9qAHVIjXuVppzhW', // Tamsin — Engaging British storyteller (name-match!)
   'Toni':              'pFZP5JQG7iQjIQuC4Bku', // Lily — Velvety Actress (British, mid-aged) — vampire velvet
-  'Agu':               'cjVigY5qzO86Huf0OWal', // Eric — Smooth, Trustworthy — polite Norgorber inquisitor
+  'Agu':               'XB0fDUnXU5powFXDhCwa', // Charlotte (11labs default, Swedish-accented mature female — placeholder for "Slavic middle-aged woman"; swap to a specific library voice when one is picked)
   'Tar Baphon':        'UzI1NsMEV3ni5JRkRSls', // Alistair — Cultured and Articulate (shared library) — old aristocratic British, lich-king energy
 
   // Numerian / Iron Gods

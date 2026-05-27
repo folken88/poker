@@ -137,7 +137,7 @@ const BOT_ROSTER = [
   { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky',    intelligence: 'low', gender: 'they'     }, // velociraptor — pure instinct, no thinking
   { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious', intelligence: 'high', gender: 'she'    },
   { name: 'Toni',                 avatar: '/tokens/antoinette-borden.webp',      baseMode: 'risky',    intelligence: 'average', gender: 'she' },
-  { name: 'Agu',                  avatar: '/tokens/aguclandos-lem.webp',         baseMode: 'cautious', intelligence: 'high', gender: 'he'    },
+  { name: 'Agu',                  avatar: '/tokens/aguclandos-lem.webp',         baseMode: 'cautious', intelligence: 'high', gender: 'she'    }, // Aguclandos "Queen of Skanktown" Lem — flipped to she/her per user direction
 
   // Round 3 additions
   { name: 'Fera',                 avatar: '/tokens/fera.webp',                   baseMode: 'cautious', intelligence: 'high', gender: 'she'    }, // user: high intel + low risk
