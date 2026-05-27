@@ -152,13 +152,21 @@
     }
   }
 
-  $('#muteBtn').addEventListener('click', () => {
-    _audioMuted = !_audioMuted;
-    sessionStorage.setItem('audio.muted', _audioMuted ? '1' : '0');
-    applyMuteUI();
-    // Confirmation chirp when un-muting so the user hears it worked.
-    if (!_audioMuted) playFromPool(DEAL_POOL);
-  });
+  // Null-safe: a stale cached index.html may not have the mute button
+  // yet. Without the guard, addEventListener throws here and the rest
+  // of the IIFE (socket handlers, render wiring, EVERYTHING below)
+  // never runs — chat log freezes, table goes static. Same defensive
+  // pattern any new DOM hook in this file should use.
+  const muteBtn = $('#muteBtn');
+  if (muteBtn) {
+    muteBtn.addEventListener('click', () => {
+      _audioMuted = !_audioMuted;
+      sessionStorage.setItem('audio.muted', _audioMuted ? '1' : '0');
+      applyMuteUI();
+      // Confirmation chirp when un-muting so the user hears it worked.
+      if (!_audioMuted) playFromPool(DEAL_POOL);
+    });
+  }
 
   // ===== Help modal — consolidates the side-panel content. Always
   //       available from the topbar "?" button; auto-discoverable on
