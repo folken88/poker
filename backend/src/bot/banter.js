@@ -34,6 +34,7 @@
 const elevenlabs = require('../util/elevenlabs');
 const { voiceFor } = require('./character_voices');
 const { soundFor } = require('./character_sounds');
+const { styleGuideFor } = require('./roast_styles');
 const db = require('../persistence/db');
 
 const ENABLED        = process.env.LLM_BANTER_ENABLED === '1';
@@ -290,6 +291,14 @@ function buildMessages(speaker, eventDescription, table) {
   const flavor = CHARACTER_FLAVOR[nick]
     || `a ${speaker.player?.bot_mode || 'standard'}/${speaker.player?.bot_intelligence || 'average'} poker player`;
   const ctx = table ? buildTableContext(table, speaker) : '';
+  // Per-character roast-craft overlay. Returns an empty string for
+  // characters with no mapped influences — most chars get one or two
+  // (e.g. Hitchens for the scholars, Dracula-flow for the gothic-horror
+  // set, simple-speaker for Elfrip/Crisp). See roast_styles.js.
+  // Vorkstag's overlay stays HIS (his speaker prompt drives his voice);
+  // displayNickname swap only affects how OTHER bots see him in the
+  // table-context block.
+  const styleOverlay = styleGuideFor(nick);
   // Speaker's own pronoun set — maps the db column ('he'|'she'|'they')
   // to a natural phrase the LLM can latch onto. Defaults to they/them
   // if missing so a brand-new row without the column still works.
@@ -338,6 +347,7 @@ function buildMessages(speaker, eventDescription, table) {
         `  • Paladins / clerics (Sirona / Dismas / Kovira / Kate): faithless, lost soul, sinner, wretch. \n` +
         `MATCH the slur to who's saying it and who they're saying it about. Storgrim doesn't call anyone ` +
         `a "bingo player"; Tar-Baphon doesn't call anyone "swab"; pirates don't say "mooncalf." \n` +
+        styleOverlay +
         `LENGTH: anywhere from a SINGLE WORD up to 20 words. Short, punchy reactions are great when they ` +
         `fit — "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", "Mine.", ` +
         `"Fish.", "Pillock.", "Bilge rat." — don't pad to a full sentence if a sharp one-word jab lands ` +
