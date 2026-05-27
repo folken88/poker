@@ -16,6 +16,10 @@ const banter = require('../bot/banter');
 // Override per-table via env var HAND_RESULT_PAUSE_MS if you want it shorter.
 const HAND_RESULT_PAUSE_MS = parseInt(process.env.HAND_RESULT_PAUSE_MS || '15000', 10);
 const HAND_AUTOSTART_DELAY_MS = parseInt(process.env.HAND_AUTOSTART_DELAY_MS || '1500', 10);
+// Extended autostart delay after a seat just vacated, so a watching
+// spectator has time to click the now-empty seat before the next
+// hand begins (otherwise they have to wait another full hand).
+const HAND_GRACE_DELAY_MS     = parseInt(process.env.HAND_GRACE_DELAY_MS    || '5000', 10);
 const ACTION_TIMEOUT_MS = parseInt(process.env.ACTION_TIMEOUT_MS || '120000', 10);
 // Bot "thinking" time is mode-flavored — riskier bots act snappy, cautious
 // ones brood. Each entry = number of d-sides; final delay is 1..N seconds.
@@ -81,6 +85,11 @@ class Table {
      *  a new hand actually starts. Drives the topbar "next hand in N"
      *  countdown. */
     this.nextHandAt = null;
+    /** True if a seat just vacated (kick, auto-yield, voluntary leave,
+     *  bust). _scheduleAutoStart uses this to extend the next-hand
+     *  delay so a watching spectator has time to click in. Cleared
+     *  once consumed. */
+    this._seatVacatedRecently = false;
     /** Loot Lord ceremony state. When non-null, the table is paused on
      *  a celebration screen showing the winner. Frontend renders a
      *  full-screen overlay; the game-state reset is deferred until
@@ -194,6 +203,23 @@ class Table {
     seat.inHand = false;
     seat.chipsAtTable = 0;
     seat.isBot = false;
+    // Signal to _scheduleAutoStart that a seat just opened up — the
+    // next-hand delay should be extended so a spectator has time to
+    // grab it. Also push back an autostart that's already armed but
+    // would fire sooner than the grace window allows.
+    this._seatVacatedRecently = true;
+    if (this._autostartTimer) {
+      const desired = Date.now() + HAND_GRACE_DELAY_MS;
+      if (!this.nextHandAt || this.nextHandAt < desired) {
+        clearTimeout(this._autostartTimer);
+        this._autostartTimer = null;
+        this.nextHandAt = desired;
+        this._autostartTimer = setTimeout(() => {
+          this._autostartTimer = null;
+          this._maybeStartHand();
+        }, HAND_GRACE_DELAY_MS);
+      }
+    }
   }
 
   _foldMidHandAndVacate(playerId, seat) {
@@ -289,14 +315,21 @@ class Table {
   _scheduleAutoStart() {
     if (this.hand) return;
     if (this._autostartTimer) return;
+    // If a seat just opened up, use the longer GRACE delay so a
+    // watching spectator has time to click in before the next hand
+    // starts. Consume the flag so the *next* hand cycles at normal
+    // cadence.
+    const useGrace = this._seatVacatedRecently;
+    this._seatVacatedRecently = false;
+    const delay = useGrace ? HAND_GRACE_DELAY_MS : HAND_AUTOSTART_DELAY_MS;
     // Surface to clients so the topbar clock can count down to it.
     // Don't clobber a later nextHandAt that's already been set by _afterHandComplete.
-    const planned = Date.now() + HAND_AUTOSTART_DELAY_MS;
+    const planned = Date.now() + delay;
     if (!this.nextHandAt || this.nextHandAt < planned) this.nextHandAt = planned;
     this._autostartTimer = setTimeout(() => {
       this._autostartTimer = null;
       this._maybeStartHand();
-    }, HAND_AUTOSTART_DELAY_MS);
+    }, delay);
   }
 
   _maybeStartHand() {
@@ -786,8 +819,14 @@ class Table {
     const finishedHand = this.hand;
     // Tell clients roughly when the next hand will be dealt. Used by the
     // topbar countdown clock to switch from action-deadline mode to
-    // "next hand in N" mode while everyone catches their breath.
-    this.nextHandAt = Date.now() + HAND_RESULT_PAUSE_MS + HAND_AUTOSTART_DELAY_MS;
+    // "next hand in N" mode while everyone catches their breath. If a
+    // seat just vacated (kick / auto-yield / bust), use the longer
+    // grace delay so the displayed countdown is honest from the start
+    // — otherwise the topbar would jump from 1.5s → 5s when the
+    // autostart timer actually fires. The flag is still consumed by
+    // _scheduleAutoStart later; we only read it here.
+    const postPauseDelay = this._seatVacatedRecently ? HAND_GRACE_DELAY_MS : HAND_AUTOSTART_DELAY_MS;
+    this.nextHandAt = Date.now() + HAND_RESULT_PAUSE_MS + postPauseDelay;
     // No broadcast here — applyAction broadcasts AFTER calling us so
     // the client gets one consistent snapshot with nextHandAt set,
     // actionDeadline cleared, and chips synced.
