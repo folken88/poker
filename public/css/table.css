@@ -579,7 +579,12 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   position: relative;
   display: flex; align-items: center; justify-content: center;
   gap: 1rem;
-  padding: 1rem 1rem 120px;  /* room beneath felt for the actpanel popover */
+  /* Zero bottom padding so the chat log butts directly against the
+     bottom edge of the felt. The legacy 120px gap was reserved for the
+     actpanel popover, but bottom-seat panels now flip upward
+     (`.seat--bottom .actpanel { bottom: calc(100% + 6px) }`) so the
+     popover never extends below the felt and the gap is dead space. */
+  padding: 1rem 1rem 0;
   min-height: 0;
 }
 .felt-col { display: contents; }  /* reserved for future grouping */
@@ -1614,9 +1619,12 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 /* ===== Chat / event log panel (bottom strip) ===== */
 .chat-panel {
   flex: 0 0 auto;
-  /* 140 → 168 (+20%) on desktop. Mobile breakpoints further down
-     override back to 80px / 64px so phones stay compact. */
-  height: 168px;
+  /* 168 → 280 on desktop. Combined with the table-wrap 120px bottom-
+     padding removal, the chat log now butts directly against the felt
+     bottom and shows ~6 additional lines without scrolling. Mobile
+     breakpoints further down override back to 80px / 64px so phones
+     stay compact. */
+  height: 280px;
   background: linear-gradient(180deg, rgba(8,16,11,0.95), rgba(5,10,7,0.98));
   border-top: 1px solid rgba(217,176,106,0.25);
   display: flex; flex-direction: column;
