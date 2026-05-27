@@ -40,7 +40,7 @@ const CHARACTER_VOICES = {
   'Farrah':            'NmuGDgA7keY3NYIjArX3', // Mimi2
   'Kai Ginn':          'Yj3XGMd9w2H4C0P0L28M', // Sean
   'Daramid':           'poTX7WPM13yOc28z0sVi', // Shoreh Thing
-  'Sirona':            'mmndVSeLErK7c5SRoKg5', // Tresdin
+  'Sirona':            'EXAVITQu4vr4xnSDxMaL', // Sarah — Mature, Reassuring, Confident (paladin barking orders)
   'Gaspar':            'zmw8ZGHS2l5ZG2v3AQ31', // Ultron
   'Farrus Richton':    'P2tOmMO16sLs34Jodjvk', // Verner Hishog
   'Lirienne':          'hpp4J3VqNfWAUOO0d1Us', // Bella - Professional, Bright, Warm

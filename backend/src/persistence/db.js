@@ -171,7 +171,7 @@ const BOT_ROSTER = [
   // Round 7 additions — characters with user-specified 11labs voices:
   { name: 'Dismas',               avatar: '/tokens/dismas-aevrett.webp',         baseMode: 'risky',    intelligence: 'average' }, // CC Holy Gun Paladin 11, CP-USS / Daramid Knights; user: normal intel + high risk
   { name: 'Holden',               avatar: '/tokens/texas-holden.webp',           baseMode: 'risky',    intelligence: 'low'     }, // Texas Holden — Captain / Oblivious Swashbuckler
-  { name: 'Sirona',               avatar: '/tokens/sirona.webp',                 baseMode: 'cautious', intelligence: 'high'    }, // Deva Paladin · First Circle of the Shining Crusade
+  { name: 'Sirona',               avatar: '/tokens/sirona.webp',                 baseMode: 'standard', intelligence: 'average' }, // Paladin of Sarenrae · soldierly; best friends w/ Elfrip; friendly to CP-USS
   { name: 'Duristan Silvio',      avatar: '/tokens/duristan-silvio.webp',        baseMode: 'standard', intelligence: 'average' }, // Caliphas Noble Ranger
 ];
 
