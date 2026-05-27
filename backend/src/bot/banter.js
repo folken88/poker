@@ -110,19 +110,19 @@ function shouldSpeak(tableId, prob = PROB) {
 /** Pick a random eligible speaker:
  *    - currently seated
  *    - is a bot
- *    - not the actor of the event (no commenting on themselves)
- *    - not folded this hand (folded = not paying attention) */
+ *    - not in the excludeIds (typically: the player who just acted
+ *      and / or the player currently on the clock)
+ *
+ *  Folded players are now ALLOWED — they get to comment on the
+ *  ongoing hand, offer advice, gloat, sulk. They're still at the
+ *  table and watching. Same goes for bots who haven't acted yet
+ *  (waiting their turn). */
 function pickSpeaker(table, excludeIds) {
   const exclude = new Set(excludeIds || []);
   const candidates = [];
   for (const seat of table.seats) {
     if (seat.isEmpty() || !seat.isBot) continue;
     if (exclude.has(seat.playerId)) continue;
-    // Skip folded players if there's a live hand.
-    if (table.hand) {
-      const p = table.hand.players.find(pp => pp.playerId === seat.playerId);
-      if (p?.folded) continue;
-    }
     candidates.push(seat);
   }
   if (candidates.length === 0) return null;

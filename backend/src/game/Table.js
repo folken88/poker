@@ -567,6 +567,30 @@ class Table {
       this._armHumanActionTimer();
     }
     this._broadcast();
+
+    // ---- Banter: spectator advice for the new actor ----
+    // Folded / waiting bots can chime in for the player now on the
+    // clock — "your move", "fold it", "smell a bluff", etc. Excludes
+    // the new actor (no commenting on themselves) AND the player who
+    // just acted (they likely already got a reaction line above).
+    // Fires at 8% per turn so it's flavor-only, not constant chatter.
+    try {
+      const newActor = this.hand?.getCurrentActor?.();
+      if (newActor && newActor !== playerId && this.hand?.state !== STATES.COMPLETE) {
+        const newActorP = this.hand.players.find(p => p.playerId === newActor);
+        const newActorNick = newActorP?.nickname || newActor;
+        const toCall = Math.max(0, this.hand.currentBet - (newActorP?.invested || 0));
+        const desc = toCall > 0
+          ? `${newActorNick} is on the clock — must call ${toCall.toLocaleString()} gp into a ${this.hand.pot.totalSize().toLocaleString()} gp pot.`
+          : `${newActorNick} is on the clock — can check or open.`;
+        banter.maybeSpeak(this, {
+          kind: 'advice',
+          description: desc,
+          actorIds: [newActor, playerId],
+          prob: 0.08,
+        });
+      }
+    } catch (_) { /* never let banter break a hand */ }
     return { ok: true };
   }
 
