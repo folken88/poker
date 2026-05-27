@@ -18,6 +18,15 @@
  *     in Table.js) and ALSO their voices. voiceFor() handles that
  *     by looking up the impersonated character via seat.impersonatedNick.
  */
+/** Fallback voice for Vorkstag when he steals a face whose owner has
+ *  no voice mapped (most humans, occasionally an unmapped bot). Reuses
+ *  the Dracula voice — same one Auren Vrood uses — because (a) the
+ *  skinwalker's true-form menace lines up with it tonally, and (b)
+ *  going silent would tip the table off that something's wrong with
+ *  whoever's seat he's in. Kept as a named constant so the intent is
+ *  obvious at the voiceFor() callsite. */
+const VORKSTAG_FALLBACK_VOICE = 'W7MNPyraMJMDLKLmVax4'; // Dracula
+
 const CHARACTER_VOICES = {
   // ===== User-specified picks (resolved against your 11labs library) =====
   'Meyanda':           'cv1wzQCiuTUODTiqaejJ', // Shephard
@@ -82,8 +91,11 @@ const CHARACTER_VOICES = {
   'Crisp':             null,
 
   // Vorkstag: see voiceFor() — he uses the voice of whoever he's
-  // impersonating, not a fixed voice of his own. Direct lookup
-  // returns null on purpose.
+  // impersonating (Seat.impersonatedNick). When the impersonated
+  // target has no voice in this map (humans / unmapped bots), he
+  // falls back to VORKSTAG_FALLBACK_VOICE below (Dracula) instead
+  // of going silent — silence would be a tell. Direct lookup with
+  // no seat returns null on purpose.
   'Vorkstag':          null,
 };
 
@@ -100,12 +112,14 @@ function voiceFor(nickname, seat) {
   // Vorkstag wears tablemates' faces (Seat.avatarOverride) AND their
   // voices. Table.seatBot sets seat.impersonatedNick alongside the
   // avatar override; here we route lookups to that nickname instead.
-  // If the impersonated character has no voice (e.g. a human player
-  // we stole from), or no map entry, we return null — Vorkstag goes
-  // silent until he picks a face that comes with a voice.
+  // If the impersonated character has no voice in the map (e.g. a
+  // human player we stole from, or a bot whose voice we never set),
+  // we fall back to the Dracula voice — same one Auren Vrood uses,
+  // it suits the skinwalker's true-form menace and means he's never
+  // silent. Going silent would be a tell.
   if (nickname === 'Vorkstag' && seat?.impersonatedNick) {
     const v = CHARACTER_VOICES[seat.impersonatedNick];
-    return v || null;
+    return v || VORKSTAG_FALLBACK_VOICE;
   }
   return CHARACTER_VOICES[nickname] || null;
 }
