@@ -52,7 +52,7 @@
       <defs>
         <clipPath id="${clipId}"><rect x="1" y="1" width="68" height="98" rx="7" ry="7"/></clipPath>
       </defs>
-      <image href="/assets/cards/back-shackles.png" x="1" y="1" width="68" height="98" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
+      <image href="/assets/cards/back-shackles.png?v=2" x="1" y="1" width="68" height="98" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
       <rect x="1" y="1" width="68" height="98" rx="7" ry="7" fill="none" stroke="#1a1a1a" stroke-width="1"/>
     </svg>`;
   }
