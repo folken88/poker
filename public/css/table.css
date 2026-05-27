@@ -1356,7 +1356,9 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 }
 .seat__avatar {
   position: relative;
-  width: 46px; height: 46px;
+  /* Token size bumped +20% (46 → 55) so character art is more legible
+     at a glance. Mobile breakpoints scale proportionally below. */
+  width: 55px; height: 55px;
   border-radius: 50%;
   background: rgba(0,0,0,0.5);
   border: 2px solid rgba(217,176,106,0.4);
@@ -1821,9 +1823,11 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
      suppressed for opponent seats so the table shows who's there at a
      glance. The player's own chips + hole cards live in the bottom
      action bar instead. */
-  .seat { width: 64px; max-height: 96px; }
-  .seat__plate { padding: 3px 3px 4px; max-height: 96px; }
-  .seat__avatar { width: 44px; height: 44px; }
+  /* Avatar +20% on mobile too (44 → 53); seat width + plate height
+     bumped to accommodate so plates still don't overlap on phones. */
+  .seat { width: 72px; max-height: 108px; }
+  .seat__plate { padding: 3px 3px 4px; max-height: 108px; }
+  .seat__avatar { width: 53px; height: 53px; }
   .seat__nick { font-size: 0.7rem; line-height: 1.1; }
   /* Hide secondary detail on every seat */
   .seat__chips,
@@ -1929,8 +1933,9 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   /* Pot smaller still */
   .pot--big { font-size: 1.1rem; padding: 0.2rem 0.6rem; }
   .card-svg { width: 42px; height: 60px; }
-  .seat { width: 56px; max-height: 88px; }
-  .seat__avatar { width: 38px; height: 38px; }
+  /* Phone-portrait: avatar +20% (38 → 46), seat + plate scaled to match. */
+  .seat { width: 62px; max-height: 98px; }
+  .seat__avatar { width: 46px; height: 46px; }
   .seat__nick { font-size: 0.66rem; }
   /* Smaller hand cards in the bottom bar */
   .actpanel__myhand-cards .card-svg { width: 38px; height: 54px; }
