@@ -447,16 +447,31 @@ class Table {
   /**
    * Full game reset: cancel hand, refund, then set every seated player's
    * stack to DEFAULT_STACK and bulk-reset every roster player's chip total.
+   * Also vacates ALL bot seats so the table is humans-only after a reset
+   * — fresh slate, no leftover NPCs filling seats the player wanted clear.
+   * Humans can re-seat bots via the + Bot / Pick AI buttons as they wish.
    */
   resetGame() {
     this.cancelHand();
     const DEFAULT = db.DEFAULT_STACK;
-    // Reset every seated player's table stack
+    // Reset every seated HUMAN's table stack to default. Bots are
+    // about to be vacated, so we skip them here to avoid persisting
+    // a default chip count for a bot that's leaving anyway.
     for (const seat of this.seats) {
-      if (!seat.isEmpty()) {
-        seat.chipsAtTable = DEFAULT;
-        db.setChips(seat.playerId, DEFAULT);
-      }
+      if (seat.isEmpty()) continue;
+      if (seat.isBot) continue;
+      seat.chipsAtTable = DEFAULT;
+      db.setChips(seat.playerId, DEFAULT);
+    }
+    // Vacate every bot seat — humans get a clean room.
+    let vacatedBots = 0;
+    for (const seat of this.seats) {
+      if (seat.isEmpty() || !seat.isBot) continue;
+      this._vacate(seat);
+      vacatedBots++;
+    }
+    if (vacatedBots > 0) {
+      this.chat('leave', `🃏 Game reset — ${vacatedBots} AI player${vacatedBots===1?'':'s'} cleared from the table.`);
     }
     // Reset every roster player's bank too
     for (const p of db.listHumans()) {
@@ -466,7 +481,10 @@ class Table {
     try { db.db.prepare('UPDATE players SET total_won = 0, total_lost = 0, hands_played = 0').run(); } catch (e) { /* fine */ }
     // Reset dealer button so next hand starts fresh
     this.dealerButtonSeatIndex = -1;
-    if (this.io) this.io.emit('roster', { players: db.listHumans(), defaultStack: DEFAULT });
+    // Use listAll() so the leaderboard shows everyone (humans + bots)
+    // with their default stacks — fixes a long-standing bug where the
+    // reset emit dropped bots from the roster.
+    if (this.io) this.io.emit('roster', { players: db.listAll(), defaultStack: DEFAULT });
     this._broadcast();
     this._scheduleAutoStart();
   }
