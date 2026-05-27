@@ -284,6 +284,18 @@ function migrateRemoveAmulet() {
 }
 migrateRemoveAmulet();
 
+// One-shot migration: rebuy-debt tracking removed. Zero out any
+// accumulated debt so the topbar badge stops showing for players
+// with historical debt. The column stays in the schema for back-
+// compat; this just empties it. Idempotent — next boot finds 0 rows.
+function migrateClearRebuyDebt() {
+  const row = db.prepare('SELECT COUNT(*) AS n FROM players WHERE rebuy_debt > 0').get();
+  if (!row || row.n === 0) return;
+  db.prepare('UPDATE players SET rebuy_debt = 0 WHERE rebuy_debt > 0').run();
+  console.log(`[poker] migrated: cleared rebuy_debt on ${row.n} player(s)`);
+}
+migrateClearRebuyDebt();
+
 function seedRoster() {
   const now = Date.now();
   let humans = 0, bots = 0, prunedBots = 0;

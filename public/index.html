@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260526az" />
+  <link rel="stylesheet" href="/css/table.css?v=20260526ba" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -71,13 +71,15 @@
         <span class="me-avatar" id="meAvatar"></span>
         <span class="me-nick"   id="meNick">…</span>
         <span class="me-chips"  id="meChips">—</span>
-        <span class="me-debt"   id="meDebt" title="Long-term debt from past re-buys. Pay it down with winnings." hidden>📜 0</span>
-        <button class="btn btn--ghost btn--sm" id="payDebtBtn" title="Pay down rebuy debt from your stack" hidden>Pay Debt</button>
+        <!-- Rebuy debt tracking removed — embarrassing chat line
+             is the cost. Players with magic items must hock them
+             before they can re-buy. -->
+
         <button class="btn btn--ghost btn--sm" id="muteBtn" title="Mute card-shuffle / deal sound effects">🔊</button>
         <button class="btn btn--ghost btn--sm" id="helpBtn" title="How to play (actions, hand rankings, tips)">?</button>
         <button class="btn btn--ghost btn--sm" id="addBotBtn" title="Add a random AI to an empty seat">+ Bot</button>
         <button class="btn btn--ghost btn--sm" id="pickBotBtn" title="Pick a specific AI character to seat">Pick AI ▾</button>
-        <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Re-buy 5,000 chips (added to your long-term debt)">Re-buy</button>
+        <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Re-buy 5,000 chips. Hock any magic items first.">Re-buy</button>
         <button class="btn btn--ghost btn--sm" id="sitOutBtn" title="Keep your seat but skip upcoming deals. Click Rejoin to come back.">Sit out</button>
         <button class="btn btn--ghost btn--sm" id="switchBtn"     title="Switch to a different player">Switch</button>
         <button class="btn btn--ghost btn--sm" id="leaveBtn"      title="Leave the table entirely (vacate your seat)">Leave</button>
@@ -287,8 +289,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260526az"></script>
-  <script src="/js/cards.js?v=20260526az"></script>
-  <script src="/js/client.js?v=20260526az"></script>
+  <script src="/js/avatars.js?v=20260526ba"></script>
+  <script src="/js/cards.js?v=20260526ba"></script>
+  <script src="/js/client.js?v=20260526ba"></script>
 </body>
 </html>

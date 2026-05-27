@@ -524,19 +524,7 @@
         sitBtn.classList.remove('btn--sit-out-active');
       }
     }
-    // Debt indicator + Pay Debt button. Both hidden when debt is 0.
-    const debt = Number(p.rebuy_debt || 0);
-    const debtEl = $('#meDebt');
-    const payBtn = $('#payDebtBtn');
-    if (debt > 0) {
-      debtEl.textContent = '📜 Debt: ' + formatGp(debt);
-      debtEl.hidden = false;
-      payBtn.hidden = false;
-      payBtn.disabled = (p.chips <= 0);
-    } else {
-      debtEl.hidden = true;
-      payBtn.hidden = true;
-    }
+    // (Rebuy-debt UI removed — the embarrassing chat line is the cost.)
   }
 
   // ===== Table render =====
@@ -1580,32 +1568,9 @@
     });
   });
 
-  // Pay down rebuy debt from your stack.
-  $('#payDebtBtn').addEventListener('click', () => {
-    const chips = Number(state.me?.chips || 0);
-    const debt  = Number(state.me?.rebuy_debt || 0);
-    if (debt <= 0) { toast('No debt to pay.'); return; }
-    if (chips <= 0) { toast('No chips to pay with.', true); return; }
-    const cap = Math.min(chips, debt);
-    const raw = prompt(
-      `Pay down rebuy debt.\n\n`
-      + `Current chips: ${chips.toLocaleString()} gp\n`
-      + `Current debt:  ${debt.toLocaleString()} gp\n\n`
-      + `How many gp to pay? (max ${cap.toLocaleString()})`,
-      String(cap),
-    );
-    if (raw === null) return;
-    const amt = Math.floor(Number(String(raw).replace(/[^0-9]/g, '')));
-    if (!Number.isFinite(amt) || amt < 1) { toast('Enter a positive number', true); return; }
-    if (amt > cap) { toast(`Max you can pay right now is ${cap.toLocaleString()}`, true); return; }
-    socket.emit('lobby:payDebt', { amount: amt }, (resp) => {
-      if (!resp?.ok) { toast(resp?.error || 'Could not pay debt', true); return; }
-      state.me.chips = resp.chips;
-      state.me.rebuy_debt = resp.rebuyDebt;
-      paintMe();
-      toast(`Paid ${amt.toLocaleString()} gp. Debt now ${resp.rebuyDebt.toLocaleString()} gp.`);
-    });
-  });
+  // (Pay-Debt button removed — debt tracking is no longer a thing.
+  // Old client tabs that still have the button just won't see anything
+  // happen because the button no longer exists in the rendered DOM.)
   // ===== Human chat input (trash talk) =====
   // Submit on Enter or Send-button click. Echo is via the normal
   // table:chat broadcast — we don't optimistically render locally,

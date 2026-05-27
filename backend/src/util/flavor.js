@@ -134,17 +134,11 @@ function botRebuyMessage(nickname, amount) {
   return `${nickname} ${pick(VERBS)} their ${pick(ITEMS)} for ${amount.toLocaleString()} gp ${pick(SUFFIXES)}`;
 }
 
-const HUMAN_REBUY = [
-  'is back at the table with a fresh stack of',
-  'tapped the bank for',
-  'put another',
-  'is paying tomorrow-them with',
-  'walked out, walked back in with',
-];
-
-/** Human re-buy line (no flavor items — humans are paying real debt). */
+/** Human re-buy line — uses the same embarrassing pool as bots.
+ *  No more debt tracking; the social cost of admitting they pawned
+ *  their mother's wedding ring IS the cost. */
 function humanRebuyMessage(nickname, amount) {
-  return `${nickname} ${pick(HUMAN_REBUY)} ${amount.toLocaleString()} gp. (debt accrued.)`;
+  return botRebuyMessage(nickname, amount);
 }
 
 const BUST_LINES = [
