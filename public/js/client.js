@@ -167,6 +167,11 @@
   // Bypasses _audioMuted on purpose — card SFX and voice are
   // controlled independently. Caller is responsible for honoring
   // _bannerVoiceEnabled.
+  //
+  // Also notifies BlindMode that a banter clip is in flight so its
+  // TTS queue can hold non-urgent narration until the audio ends
+  // (prevents the screen-reader voice from talking over the
+  // character voice or vice versa).
   function playBase64Mp3(b64, mime = 'audio/mpeg') {
     try {
       const bin = atob(b64);
@@ -178,6 +183,7 @@
       const a = new Audio(url);
       a.volume = 0.85;
       a.addEventListener('ended', () => URL.revokeObjectURL(url));
+      window.BlindMode?.notifyBanterStart?.(a);
       a.play().catch(() => URL.revokeObjectURL(url));
     } catch (_) { /* silent */ }
   }
@@ -381,8 +387,12 @@
       // Both gated by the same banter-voice toggle.
       if (_bannerVoiceEnabled && entry.kind === 'banter') {
         if (entry.audioUrl) {
-          try { const a = new Audio(entry.audioUrl); a.volume = 0.85; a.play().catch(()=>{}); }
-          catch (_) { /* silent */ }
+          try {
+            const a = new Audio(entry.audioUrl);
+            a.volume = 0.85;
+            window.BlindMode?.notifyBanterStart?.(a);
+            a.play().catch(()=>{});
+          } catch (_) { /* silent */ }
         } else if (entry.audio) {
           playBase64Mp3(entry.audio, entry.audioMime || 'audio/mpeg');
         }
@@ -1325,8 +1335,12 @@
       const a = _chatAudioById.get(id);
       if (!a) return;
       if (a.audioUrl) {
-        try { const el = new Audio(a.audioUrl); el.volume = 0.85; el.play().catch(()=>{}); }
-        catch (_) {}
+        try {
+          const el = new Audio(a.audioUrl);
+          el.volume = 0.85;
+          window.BlindMode?.notifyBanterStart?.(el);
+          el.play().catch(()=>{});
+        } catch (_) {}
       } else if (a.audio) {
         playBase64Mp3(a.audio, a.audioMime || 'audio/mpeg');
       }

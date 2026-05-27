@@ -49,6 +49,12 @@
     speaking: false,
     listening: false,
     rec: null,                // active SpeechRecognition instance
+    // True while a banter audio clip is playing on this client (either
+    // 11labs base64 or a local sound-pool URL). Acts as a gate: non-
+    // urgent TTS waits until the audio ends; urgent TTS cancels the
+    // audio so the cues don't overlap. Updated by client.js via the
+    // exposed notifyBanterStart/End hooks.
+    banterAudio: null,        // current Audio element, or null
     pendingConfirm: null,     // { kind:'raise', amount, expiresAt }
     lastEventText: null,      // for "repeat" command
     prevState: null,          // last seen table state, for diffing
@@ -101,13 +107,26 @@
   const PRIO = { urgent: 3, event: 2, ambient: 1 };
   function speak(text, prio = 'event') {
     if (!state.on || !supportsTTS || !text) return;
+    // "GP" / "gp" → "gold" so the synth says "two thousand gold"
+    // instead of "two thousand GP" or letter-spelling "gee pee".
+    // Single substitution boundary — every code path that queues a
+    // chip-amount line flows through here, including the server-
+    // sent action lines ("Kate calls 200 gp.") and our own pot/stack
+    // announcements.
+    text = String(text).replace(/\bgp\b/gi, 'gold');
     const p = PRIO[prio] ?? PRIO.event;
     // ambient: drop if anything else is queued OR currently speaking
     if (p === PRIO.ambient && (state.queue.length > 0 || state.speaking)) return;
-    // urgent: nuke everything queued + cancel in-flight
+    // urgent: nuke everything queued + cancel in-flight + cut any
+    // banter audio currently playing (so the cues never overlap).
     if (p === PRIO.urgent) {
       state.queue.length = 0;
       try { TTS.cancel(); } catch (_) {}
+      if (state.banterAudio) {
+        try { state.banterAudio.pause(); state.banterAudio.currentTime = 0; }
+        catch (_) {}
+        state.banterAudio = null;
+      }
     } else {
       // event: drop in-flight + queued ambients, queue behind any active event
       state.queue = state.queue.filter(it => PRIO[it.prio] >= PRIO.event);
@@ -118,6 +137,12 @@
   }
   function pump() {
     if (state.speaking || !supportsTTS) return;
+    // If a banter clip is currently playing, hold non-urgent TTS
+    // until it finishes — we don't want the screen-reader voice
+    // talking over a character voice (or vice versa). Urgent
+    // utterances bypass this gate (see speak()'s urgent branch,
+    // which cancels the banter audio outright before queuing).
+    if (state.banterAudio && (state.queue[0]?.prio !== 'urgent')) return;
     const next = state.queue.shift();
     if (!next) return;
     const u = new SpeechSynthesisUtterance(next.text);
@@ -294,7 +319,9 @@
     if (actor && actor !== state.prevActor) {
       const mePid = state.deps?.state?.me?.player_id;
       if (actor === mePid) {
-        // YOUR turn — urgent + earcon
+        // YOUR turn — urgent + earcon. Front-load the things you
+        // can't see (your hole cards + the board) before the
+        // numeric context (pot / stack / call amount).
         earcon('turn');
         const mePlayer = hand.players?.find(p => p.playerId === mePid);
         const stack   = mePlayer?.stack ?? '?';
@@ -302,7 +329,17 @@
         const myBet   = mePlayer?.invested ?? 0;
         const toMatch = (hand.currentBet ?? 0) - myBet;
         const toCallText = toMatch > 0 ? `To call ${toMatch.toLocaleString()}.` : 'You can check.';
-        speak(`Your turn. ${toCallText} Pot ${Number(pot).toLocaleString()}. Stack ${Number(stack).toLocaleString()}.`, 'urgent');
+
+        // Hole cards live on this client in state.deps.state.myHole
+        // (private — only emitted to the owning player). Board
+        // is on the public hand state.
+        const hole = state.deps?.state?.myHole;
+        const board = hand.board || [];
+        let line = 'Your turn.';
+        if (hole && hole.length) line += ` Hand: ${cardListWords(hole)}.`;
+        if (board.length)        line += ` Board: ${cardListWords(board)}.`;
+        line += ` ${toCallText} Pot ${Number(pot).toLocaleString()}. Stack ${Number(stack).toLocaleString()}.`;
+        speak(line, 'urgent');
       }
       state.prevActor = actor;
     }
@@ -343,11 +380,20 @@
     const text = entry.text.replace(/^[^\p{L}\p{N}]+/u, '').trim();
     if (!text) return;
 
-    // Per-action lines — MAIN narration for spectators. Previously
-    // dropped on the floor because the original plan was "narrate
-    // via state diff"; that path never landed, so spectators got
-    // silence between board reveals. Now we route them through.
-    if (kind === 'action') { speak(text, 'event'); return; }
+    // Per-action lines — narration for spectators + the seated
+    // player's inter-turn awareness. Filter to the CONSEQUENTIAL
+    // actions only: raises, all-ins, folds. Routine "Kate calls
+    // 200" and "Storgrim checks." lines are dropped — they don't
+    // change the strategic picture and the constant cadence drowns
+    // out the meaningful events. Bust/leave/rebuy/win still get
+    // through via their own kinds below.
+    if (kind === 'action') {
+      const lower = text.toLowerCase();
+      const isConsequential = /\b(raise|all[- ]?in|shove|fold)\b/.test(lower);
+      if (!isConsequential) return;   // skip calls + checks
+      speak(text, 'event');
+      return;
+    }
 
     // Hand-boundary + win lines duplicate onState narration; skip
     // them to avoid double-speak for seated users (who get the
@@ -607,10 +653,33 @@
     return { supportsTTS, supportsSR };
   }
 
+  // Called by client.js when a banter audio clip starts/ends. While
+  // an audio element is registered as the active banter source,
+  // pump() will hold non-urgent TTS — keeps the character voice and
+  // the screen-reader narration from talking over each other. The
+  // hook is a no-op when blind mode is off, but we still track the
+  // current Audio element so urgent toggle-on doesn't double up.
+  function notifyBanterStart(audioEl) {
+    if (!audioEl) return;
+    state.banterAudio = audioEl;
+    // Auto-clear on end / error so we don't deadlock the queue if
+    // the play() call rejected silently.
+    const clear = () => {
+      if (state.banterAudio === audioEl) {
+        state.banterAudio = null;
+        pump();
+      }
+    };
+    audioEl.addEventListener('ended', clear, { once: true });
+    audioEl.addEventListener('error', clear, { once: true });
+    audioEl.addEventListener('pause', clear, { once: true });
+  }
+
   // Expose singleton
   window.BlindMode = {
     init, toggle, isOn, speak,
     onState, onChat, onHole,
     startListening, stopListening,
+    notifyBanterStart,
   };
 })();
