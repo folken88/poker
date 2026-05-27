@@ -106,12 +106,39 @@
   // the current actor. Everyone else is silent for that event.
   const YOUR_TURN_POOL = ['/audio/your-turn.mp3'];
   const AUDIO_VOLUME = 0.45;
-  let _audioMuted = sessionStorage.getItem('audio.muted') === '1';
-  // Banter voice (11labs character TTS): default ON; sticky per tab.
-  // Backend skips synthesis entirely when ELEVENLABS_API_KEY isn't set,
-  // so this only matters when the key is present and the player wants
-  // to silence the spoken banter without losing card SFX.
-  let _bannerVoiceEnabled = sessionStorage.getItem('audio.bannerVoice') !== '0';
+  // Audio prefs are PER-PLAYER (keyed by player_id in localStorage)
+  // so they survive refreshes and tab swaps for as long as the same
+  // player is sitting at this browser, but reset for a new player.
+  // Defaults: card sounds ON, AI character voices OFF. The "off"
+  // default for voice is deliberate — banter chat still shows but
+  // the room stays quiet unless the player opts in via the audio menu.
+  let _audioMuted = false;          // false = sounds ON
+  let _bannerVoiceEnabled = false;  // false = AI voices OFF
+
+  function audioSettingsKey(field) {
+    const pid = state.me?.player_id;
+    return pid ? `audio.${field}.${pid}` : null;
+  }
+  function loadAudioSettings() {
+    const km = audioSettingsKey('muted');
+    const kv = audioSettingsKey('bannerVoice');
+    // No state.me yet? Use defaults (don't read the unscoped keys).
+    if (km) {
+      const raw = localStorage.getItem(km);
+      _audioMuted = raw === '1';   // missing → false (sounds on)
+    } else _audioMuted = false;
+    if (kv) {
+      const raw = localStorage.getItem(kv);
+      _bannerVoiceEnabled = raw === '1'; // missing → false (voices off)
+    } else _bannerVoiceEnabled = false;
+    applyMuteUI();
+  }
+  function saveAudioSettings() {
+    const km = audioSettingsKey('muted');
+    const kv = audioSettingsKey('bannerVoice');
+    if (km) localStorage.setItem(km, _audioMuted ? '1' : '0');
+    if (kv) localStorage.setItem(kv, _bannerVoiceEnabled ? '1' : '0');
+  }
 
   function applyMuteUI() {
     const btn = $('#muteBtn');
@@ -209,7 +236,7 @@
       // — preserves the one-click mute pattern). Clicks on the popover
       // checkboxes are handled below and stop here via stopPropagation.
       _audioMuted = !_audioMuted;
-      sessionStorage.setItem('audio.muted', _audioMuted ? '1' : '0');
+      saveAudioSettings();
       applyMuteUI();
       if (!_audioMuted) playFromPool(DEAL_POOL);
     });
@@ -219,7 +246,7 @@
   if (audioMuteCheckbox) {
     audioMuteCheckbox.addEventListener('change', (e) => {
       _audioMuted = !!e.target.checked;
-      sessionStorage.setItem('audio.muted', _audioMuted ? '1' : '0');
+      saveAudioSettings();
       applyMuteUI();
     });
   }
@@ -231,7 +258,7 @@
   if (voiceCheckbox) {
     voiceCheckbox.addEventListener('change', (e) => {
       _bannerVoiceEnabled = !!e.target.checked;
-      sessionStorage.setItem('audio.bannerVoice', _bannerVoiceEnabled ? '1' : '0');
+      saveAudioSettings();
     });
   }
   // Stop label/checkbox clicks inside the popover from bubbling to the
@@ -334,12 +361,18 @@
     if (entry && typeof entry === 'object') {
       appendChatEntry(entry);
       window.BlindMode?.onChat?.(entry);
-      // 11labs banter audio attached server-side. Gated by the per-tab
-      // voice toggle so users can silence character voices without
-      // affecting card SFX. Other clients in the room all receive the
-      // same payload — each decides individually whether to play.
-      if (entry.audio && _bannerVoiceEnabled && entry.kind === 'banter') {
-        playBase64Mp3(entry.audio, entry.audioMime || 'audio/mpeg');
+      // Banter audio attached server-side. Two flavours:
+      //   - entry.audioUrl  static MP3 from public/audio/ (Crisp's
+      //                     chirps, Elfrip's burps — no 11labs call)
+      //   - entry.audio     base64 MP3 from 11labs synthesis
+      // Both gated by the same banter-voice toggle.
+      if (_bannerVoiceEnabled && entry.kind === 'banter') {
+        if (entry.audioUrl) {
+          try { const a = new Audio(entry.audioUrl); a.volume = 0.85; a.play().catch(()=>{}); }
+          catch (_) { /* silent */ }
+        } else if (entry.audio) {
+          playBase64Mp3(entry.audio, entry.audioMime || 'audio/mpeg');
+        }
       }
     }
   });
@@ -600,6 +633,10 @@
 
   function paintMe() {
     const p = state.me; if (!p) return;
+    // Pull this player's stored audio prefs on every paint — handles
+    // initial login, switch-player, and refresh-with-restored-session.
+    // No-ops cleanly when the keys aren't present yet (defaults kick in).
+    loadAudioSettings();
     $('#meNick').textContent = p.nickname;
     $('#meChips').textContent = '💰 ' + formatChips(p.chips) + ' gp';
     $('#meAvatar').innerHTML = renderAvatar(p.avatar_id);

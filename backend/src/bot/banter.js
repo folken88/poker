@@ -33,6 +33,7 @@
 
 const elevenlabs = require('../util/elevenlabs');
 const { voiceFor } = require('./character_voices');
+const { soundFor } = require('./character_sounds');
 
 const ENABLED        = process.env.LLM_BANTER_ENABLED === '1';
 // Use the /api/chat endpoint — it applies the model's chat template
@@ -114,7 +115,7 @@ const CHARACTER_FLAVOR = {
   'Dismas':         'Dismas Aevrett — Holy Gun Paladin of Pharasma (Holy Gun archetype, level 11). CP-USS investigator under Judge Daramid, currently dispatched to Lastwall hunting Whispering Way activity. Wields "Rovadra", a Numerian-modified lever-action rifle wrapped in gold-and-mithril, and the Pirate Queen Sigil Ring. Carries a Shield-of-Arnisant shard under the tongue (soul anchor, same protection as Kovira). SPEAKS IN BIBLE-VERSE STYLE PRAYERS TO PHARASMA: solemn, scriptural cadence, occasional invocations ("Pharasma weighs the bones of the wicked. Call.", "Blessed are they who fold cheap hands, for they shall keep their stack."). Devout, lawful, cowboy gravitas — Old West preacher meets undead-hunting paladin. Never blasphemes; the prayers are real',
   'Holden':         'Texas Holden — an oblivious swashbuckler ship-captain, breezily confident, hopelessly bad at reading rooms. Charges into pots like he charges into boarding actions: with verve, terrible plans, and inexplicable survival. His name is the joke; he\'s never quite caught on. Cheerful, loud, gestures with whatever he\'s holding',
   'Sirona':         'Sirona — paladin of Sarenrae the Dawnflower, radiant warrior of the sun. Speaks like a veteran SOLDIER barking orders — clipped, confident, commanding cadence, no hedging. "Call.", "Hold the line.", "Fold and live to fight another hand." Knows what she\'s doing at the table and won\'t pretend otherwise. BEST FRIENDS with ELFRIP — the goblin cleric is her unlikely battle-buddy; she dotes on him in her brusque-officer way and defends him from anyone who underestimates him. Friendly toward CP-USS members (Kate, Daramid, Gaspar, Kai Ginn, Kovira, Dismas) — fellow good-aligned hunters; treats them with comradely respect. Cold contempt for the Whispering Way (Tar-Baphon, Auren Vrood, Adimarus, Vorkstag) — she\'d call them out by name if the situation warranted',
-  'Duristan Silvio':'Duristan Silvio — a nobleman of Ustalav and self-proclaimed great adventurer. INFINITELY CONFIDENT despite middling competence — he never doubts a play, never reads the room twice, and rebounds from disaster in two breaths. Charming, oblivious, a magnificent buffoon with the right intentions. LIKES AND ADMIRES EVERYONE at the table — wants desperately to be considered their PEER, drops references to their accomplishments (often wrong), proposes future adventures together. Speaks in noble flourishes, names every plate at the table as "good fellow" or "dear friend," genuinely cheered by other people\'s wins. When he wins a big pot, takes it as personal proof he was right all along',
+  'Duristan':       'Duristan — a nobleman of Ustalav and self-proclaimed great adventurer. INFINITELY CONFIDENT despite middling competence — he never doubts a play, never reads the room twice, and rebounds from disaster in two breaths. Charming, oblivious, a magnificent buffoon with the right intentions. LIKES AND ADMIRES EVERYONE at the table — wants desperately to be considered their PEER, drops references to their accomplishments (often wrong), proposes future adventures together. Speaks in noble flourishes, names every plate at the table as "good fellow" or "dear friend," genuinely cheered by other people\'s wins. When he wins a big pot, takes it as personal proof he was right all along',
 };
 
 /** Returns true if banter is enabled, the cooldown has elapsed, and
@@ -348,11 +349,17 @@ function maybeSpeak(table, event) {
   callLLM(messages).then(async line => {
     if (!line) return;
     const nick = speaker.player?.nickname || speaker.playerId;
-    // 11labs synthesis: only if the speaker has a voice configured and
-    // the elevenlabs util is enabled (key present). Failure is silent
-    // and we still broadcast the text — clients fall back to chat-only.
-    let audio = null;
-    if (elevenlabs.ENABLED) {
+    // Audio source priority:
+    //   1. Stored sound pool (Crisp's chirps, Elfrip's burps) — local
+    //      file, no API call, picked randomly from CHARACTER_SOUNDS.
+    //   2. 11labs synthesis — for characters with a voice_id and an
+    //      enabled API key. Failure → fall through to text-only.
+    //   3. No audio — text broadcasts as usual.
+    let audio = null, audioUrl = null;
+    const localSound = soundFor(nick);
+    if (localSound) {
+      audioUrl = localSound;
+    } else if (elevenlabs.ENABLED) {
       // voiceFor takes the seat so Vorkstag's impersonation path can
       // route to whichever character he's currently wearing.
       const voiceId = voiceFor(nick, speaker);
@@ -361,7 +368,9 @@ function maybeSpeak(table, event) {
         catch (_) { audio = null; }
       }
     }
-    const extras = audio ? { audio, audioMime: 'audio/mpeg' } : null;
+    const extras = audioUrl
+      ? { audioUrl }
+      : audio ? { audio, audioMime: 'audio/mpeg' } : null;
     table.chat('banter', `💬 ${nick}: ${line}`, extras);
   }).catch(() => { /* silent */ });
 }
