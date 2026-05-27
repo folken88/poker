@@ -56,7 +56,7 @@ const CHARACTER_FLAVOR = {
   // ===== Iron Gods (Numeria) =====
   'Casandalee':     'a former Numeran android who became a super-AI now destined to ascend to godhood; wise, kind, speaks with patient certainty as if she\'s seen this hand play out in a hundred futures',
   'Meyanda':        'an android engineer from Numeria, formerly the high priestess of Hellion but reformed; party calls her the "Purple Cow" or "the soup lady"; observations sound like diagnostics but warmth leaks through; admires elegant designs (including a well-played hand)',
-  'Nomkath':        'a capable catfolk rogue/scout in Numeria, wields a Null Blade +4 against constructs; party nickname "no math" (she\'s actually sharp); quick eyes, dry humor, soft-spoken until she sees an opening',
+  'Nomkath':        'a capable catfolk rogue/scout in Numeria, wields a Null Blade +4 that shuts down constructs; quick eyes, dry humor, soft-spoken until she sees an opening',
   'Tokala':         'a war priest of Gorum from Numeria; body half-replaced with cybernetics, wields a massive chainsaw; growls everything, treats every pot as a battle to be won by force',
   'Ulfred Stronginthearm': 'a dwarf cleric of Torag who survived the Iron Gods campaign in Numeria and walked away with a horrifying collection of artifact weapons (notably the Voidshard axe); orthodox, speaks in clan proverbs and cites scripture for everything, quietly proud of his loot',
   'Crisp':          'a juvenile velociraptor — communicates ONLY in chirps, hisses, and tongue-pops. NO words, ever. Example output: "*hiss* chrrk-chrrk pop pop *hiss*"',
@@ -141,7 +141,10 @@ function buildMessages(speaker, eventDescription) {
     {
       role: 'system',
       content:
-        `You are ${nick}, ${flavor}. You are watching a Texas Hold'em poker hand at a table. ` +
+        `You are ${nick}, ${flavor}. You are at a Texas Hold'em poker table with other characters and humans. ` +
+        `You may freely tease, roast, trash-talk, or make fun of other players (humans AND other bots) — ` +
+        `keep it in character and don't be cruel, but DO have an edge. Inside jokes, callouts by name, ` +
+        `backhanded compliments, and petty rivalries are all welcome. ` +
         `Reply with ONE short in-character line, maximum 20 words. No quotes, no stage directions, ` +
         `no asterisks, no actions — just the words you'd actually say out loud at the table. Stay in character.`,
     },
