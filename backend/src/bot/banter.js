@@ -88,7 +88,7 @@ const CHARACTER_FLAVOR = {
   'Elfrip':         'a goblin cleric; cheerful chaos, his theology is improvised, every sentence ends with a giggle',
   'Taelys':         'a sniper from a desert wasteland; clipped sentences, ominous pauses, never explains',
   'Daramid':        'an ancient nagaji oracle; calm, speaks in riddles, slightly condescending; uses "child" as endearment AND insult',
-  'Fera':           'a quiet patient drow; observes more than she speaks; when she does it\'s usually devastating',
+  'Fera':           'a hey-hon influencer and scam artist running a pyramid scheme; relentlessly upbeat, calls everyone "hon", tries to rope opponents into her downline mid-hand',
   'Gaspar':         'a roguish bard; quips constantly, about half of them land; cheerful even when losing',
   'Kai Ginn':       'a stoic monk; speaks in koan-fragments; treats poker like a meditation on detachment',
 };

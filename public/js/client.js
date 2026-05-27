@@ -486,6 +486,11 @@
     $('#meNick').textContent = p.nickname;
     $('#meChips').textContent = '💰 ' + formatChips(p.chips) + ' gp';
     $('#meAvatar').innerHTML = renderAvatar(p.avatar_id);
+    // Chat input becomes available once a character is chosen.
+    const chatInput = $('#chatInput');
+    const chatSend  = $('#chatSendBtn');
+    if (chatInput) { chatInput.disabled = false; chatInput.placeholder = `Say something as ${p.nickname}… (Enter to send)`; }
+    if (chatSend)  chatSend.disabled = false;
     // Sit out / Rejoin button label reflects current seat state.
     const mySeat = state.table?.seats?.find(s => s.playerId === p.player_id);
     const sitBtn = $('#sitOutBtn');
@@ -1031,7 +1036,7 @@
   }
 
   // ===== Chat log (bottom panel) =====
-  const KIND_CLASS = { hand: 'hand', win: 'win', rebuy: 'rebuy', leave: 'leave', join: 'leave', debt: 'debt', info: 'info', action: 'action', lootlord: 'lootlord', banter: 'banter' };
+  const KIND_CLASS = { hand: 'hand', win: 'win', rebuy: 'rebuy', leave: 'leave', join: 'leave', debt: 'debt', info: 'info', action: 'action', lootlord: 'lootlord', banter: 'banter', human: 'human' };
   const _seenChatIds = new Set();
   function fmtClock(ts) {
     const d = new Date(ts);
@@ -1533,6 +1538,25 @@
       toast(`Paid ${amt.toLocaleString()} gp. Debt now ${resp.rebuyDebt.toLocaleString()} gp.`);
     });
   });
+  // ===== Human chat input (trash talk) =====
+  // Submit on Enter or Send-button click. Echo is via the normal
+  // table:chat broadcast — we don't optimistically render locally,
+  // so what you see is what the server actually relayed.
+  const chatForm = $('#chatForm');
+  if (chatForm) {
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = $('#chatInput');
+      if (!input || !state.me) return;
+      const text = input.value.trim();
+      if (!text) return;
+      socket.emit('table:say', { text }, (resp) => {
+        if (resp?.ok) input.value = '';
+        else toast(resp?.error || 'Could not send chat', true);
+      });
+    });
+  }
+
   $('#switchBtn').addEventListener('click', () => {
     socket.emit('table:stand', null, () => {});
     try { sessionStorage.removeItem(PLAYER_KEY); } catch (_) {}

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260526aq" />
+  <link rel="stylesheet" href="/css/table.css?v=20260526ar" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -136,13 +136,22 @@
       </aside>
     </main>
 
-    <!-- ===== Bottom chat / event log ===== -->
+    <!-- ===== Bottom chat / event log =====
+         Trash talk in. Server validates length, rate-limits, escapes
+         the text on every render. Input is disabled until the player
+         has chosen a character (state.me). -->
     <footer class="chat-panel" id="chatPanel" aria-label="Table chat and events">
       <header class="chat-panel__head">
         <h3 class="chat-panel__title">Table log</h3>
         <span class="chat-panel__hint" id="chatHint">events scroll here</span>
       </header>
       <ol class="chat-panel__list" id="chatList"></ol>
+      <form class="chat-panel__input" id="chatForm" autocomplete="off">
+        <input type="text" id="chatInput" maxlength="240"
+               placeholder="Say something… (Enter to send)"
+               aria-label="Chat message" disabled />
+        <button type="submit" class="btn btn--ghost btn--sm" id="chatSendBtn" disabled>Send</button>
+      </form>
     </footer>
   </section>
 
@@ -270,8 +279,8 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260526aq"></script>
-  <script src="/js/cards.js?v=20260526aq"></script>
-  <script src="/js/client.js?v=20260526aq"></script>
+  <script src="/js/avatars.js?v=20260526ar"></script>
+  <script src="/js/cards.js?v=20260526ar"></script>
+  <script src="/js/client.js?v=20260526ar"></script>
 </body>
 </html>

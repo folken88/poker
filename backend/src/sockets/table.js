@@ -164,6 +164,44 @@ function registerTableHandlers(io, socket, { tables }) {
     ack?.({ ok: true });
   });
 
+  /**
+   * Human trash talk. Validates length, escapes nothing here (the
+   * client escapes on render — see KIND_CLASS handling), and posts
+   * via table.chat('human', ...). Per-socket cooldown prevents spam.
+   * Fires a banter trigger so bots can react.
+   */
+  socket.on('table:say', ({ text } = {}, ack) => {
+    const me = meOf(socket);
+    if (!me) return ack?.({ ok: false, error: 'choose a character first' });
+    const table = tables.get(socket.data.tableId);
+    if (!table) return ack?.({ ok: false, error: 'not at a table' });
+    if (typeof text !== 'string') return ack?.({ ok: false, error: 'bad text' });
+    const trimmed = text.trim().slice(0, 240);
+    if (!trimmed) return ack?.({ ok: false, error: 'empty message' });
+    // Cooldown: 1.5s per socket. socket.data.lastChatAt is the floor.
+    const now = Date.now();
+    const last = socket.data.lastChatAt || 0;
+    if (now - last < 1500) return ack?.({ ok: false, error: 'slow down…' });
+    socket.data.lastChatAt = now;
+
+    const nick = me.nickname || me.player_id;
+    table.chat('human', `💬 ${nick}: ${trimmed}`);
+
+    // Let a bot react in voice (if banter is enabled). Cheap fire-
+    // and-forget; cooldown + probability gates inside maybeSpeak
+    // prevent every line from triggering a reply.
+    try {
+      const banter = require('../bot/banter');
+      banter.maybeSpeak(table, {
+        kind: 'human-chat',
+        description: `${nick} just said in the chat: "${trimmed}"`,
+        actorIds: [me.player_id],
+      });
+    } catch (_) { /* banter optional */ }
+
+    ack?.({ ok: true });
+  });
+
   // Legacy alias for old client tabs that haven't refreshed yet.
   // Routes to the same handler logic without the caller/self checks
   // (the old UI only allowed × on bots, not on humans).
