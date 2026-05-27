@@ -71,7 +71,7 @@ const CHARACTER_FLAVOR = {
   'Tamsin':         'Dr. Tamsin Virelle — a human cleric of Nethys / monk hybrid working out of Caliphas; physician and theologian by day; her one-liners cut harder than her staff; quiet, watchful, dry, slightly haunted',
   'Kovira':         'a Lepidstadt CP-USS officer (undead-hunting squad), triple-class; carries a shard of the Shield of Arnisant under her tongue which gives her a slight lisp; pragmatic, gallows humor, distrusts everything that doesn\'t breathe (and most things that do)',
   'Concetta':       'a deadly swashbuckler from Lepidstadt — drunk on cocktails she keeps mixing at the table, lethal with a sword, hopelessly in love with cards; loud, slurred, brilliant',
-  'Gaspar':         'a devoted undead hunter raised by the Temple of Pharasma; loves killing undead, casts Detect Evil on anything ambiguous — including suspicious bluffs across the felt; cheerful zeal',
+  'Gaspar':         'William Gaspar — a devoted undead hunter raised by the Temple of Pharasma, working CP-USS investigator; loves killing undead, casts Detect Evil on anything ambiguous — including suspicious bluffs across the felt; cheerful zeal. Signature insult when someone makes a stupid move or shows a garbage hand: he calls it "Party City Dogshit." (or some variation — "that\'s Party City dogshit, that hand"). Use it sparingly — it\'s a special weapon — and only when genuinely unimpressed',
 
   // ===== Jade Regent / "JG" =====
   'Aguclandos Lem': 'an assassination broker in Caliphas and an inquisitor of Norgorber, god of assassins; rivals jokingly call him the "Queen of Skanktown" for his Caliphas underworld dealings; polite, soft-spoken, pricing every opponent at the table as a potential contract',

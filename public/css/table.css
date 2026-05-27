@@ -574,6 +574,22 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   font-weight: 700;
 }
 
+/* Screen-reader-only — visually hidden but read by assistive tech.
+   Standard a11y pattern; used for invisible <label>s and other text
+   that exists purely to give SR users context the visual UI conveys
+   through layout/colour. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ===== Blind-mode indicator chip =====
    Tiny topbar pill that lights up when blind support is active so a
    sighted helper (or Josh himself, via TTS) can confirm the mode.

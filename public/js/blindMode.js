@@ -307,10 +307,15 @@
     // Drop earlier-spoken types to avoid duplicates with state diff.
     if (kind === 'win') return;
     if (kind === 'hand') return;
-    if (kind === 'banter') {
-      speak(entry.text.replace(/^💬\s*/, ''), 'ambient');
-      return;
-    }
+    // Banter from AI characters is deliberately SKIPPED here. The TTS
+    // pipeline can't do voice acting and the LLM lines deserve real
+    // performance — they'll be brought to life via an 11labs voice
+    // path in a later pass. Until then, Josh just gets a quieter table.
+    if (kind === 'banter') return;
+    // Human chat IS read aloud — those are real players speaking to
+    // the room and Josh needs to hear them. Strip the 💬 emoji prefix
+    // so the speech doesn't say "speech balloon" or whatever the
+    // synthesiser decides emoji means.
     if (kind === 'human') {
       speak(entry.text.replace(/^💬\s*/, ''), 'ambient');
       return;

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260527-blind" />
+  <link rel="stylesheet" href="/css/table.css?v=20260527-a11y" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -83,9 +83,9 @@
           <div class="me-purse__pop" id="mePursePop" role="dialog" aria-label="First Bank of Abadar"></div>
         </span>
 
-        <span class="blind-chip" id="blindModeChip" hidden title="Blind support active. Backtick to toggle. Hold Space for push-to-talk.">🦮 Blind</span>
-        <button class="btn btn--ghost btn--sm" id="muteBtn" title="Mute card-shuffle / deal sound effects">🔊</button>
-        <button class="btn btn--ghost btn--sm" id="helpBtn" title="How to play (actions, hand rankings, tips)">?</button>
+        <span class="blind-chip" id="blindModeChip" hidden role="status" aria-live="polite" title="Blind support active. Backtick to toggle. Hold Space for push-to-talk.">🦮 Blind</span>
+        <button class="btn btn--ghost btn--sm" id="muteBtn" aria-label="Mute card sound effects" title="Mute card-shuffle / deal sound effects">🔊</button>
+        <button class="btn btn--ghost btn--sm" id="helpBtn" aria-label="How to play — open help" title="How to play (actions, hand rankings, tips)">?</button>
         <button class="btn btn--ghost btn--sm" id="addBotBtn" title="Add a random AI to an empty seat">+ Bot</button>
         <button class="btn btn--ghost btn--sm" id="pickBotBtn" title="Pick a specific AI character to seat">Pick AI ▾</button>
         <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Re-buy 5,000 chips. Hock any magic items first.">Re-buy</button>
@@ -159,26 +159,42 @@
          Trash talk in. Server validates length, rate-limits, escapes
          the text on every render. Input is disabled until the player
          has chosen a character (state.me). -->
-    <footer class="chat-panel" id="chatPanel" aria-label="Table chat and events">
+    <footer class="chat-panel" id="chatPanel" role="region" aria-labelledby="chatPanelTitle">
       <header class="chat-panel__head">
-        <h3 class="chat-panel__title">Table log</h3>
+        <h3 class="chat-panel__title" id="chatPanelTitle">Table log</h3>
         <span class="chat-panel__hint" id="chatHint">events scroll here</span>
       </header>
-      <ol class="chat-panel__list" id="chatList"></ol>
-      <form class="chat-panel__input" id="chatForm" autocomplete="off">
+      <!-- role=log + aria-live=polite tells screen readers to announce
+           each new <li> as it's appended without interrupting whatever
+           the user is reading. aria-atomic=false keeps the announcement
+           scoped to the new entry, not the whole list. aria-relevant
+           limits announcements to additions only (chat is append-only;
+           we never edit prior entries). tabindex=0 lets a SR user Tab
+           into the log to explore history with arrow keys. -->
+      <ol class="chat-panel__list" id="chatList"
+          role="log"
+          aria-live="polite"
+          aria-atomic="false"
+          aria-relevant="additions"
+          aria-label="Table events and chat messages, newest at the bottom"
+          tabindex="0"></ol>
+      <form class="chat-panel__input" id="chatForm" autocomplete="off" aria-label="Send a chat message">
+        <label for="chatInput" class="sr-only">Chat message</label>
         <input type="text" id="chatInput" maxlength="240"
                placeholder="Say something… (Enter to send)"
-               aria-label="Chat message" disabled />
-        <button type="submit" class="btn btn--ghost btn--sm" id="chatSendBtn" disabled>Send</button>
+               aria-label="Chat message — type your message and press Enter"
+               aria-describedby="chatHint"
+               disabled />
+        <button type="submit" class="btn btn--ghost btn--sm" id="chatSendBtn" aria-label="Send chat message" disabled>Send</button>
       </form>
     </footer>
   </section>
 
   <!-- ===== Reset confirm modal ===== -->
-  <div class="modal" id="resetModal" hidden>
+  <div class="modal" id="resetModal" hidden role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
     <div class="modal__backdrop"></div>
     <div class="modal__panel">
-      <h2 class="modal__title">Reset the game?</h2>
+      <h2 class="modal__title" id="resetModalTitle">Reset the game?</h2>
       <p class="modal__body">
         Pick what to reset. Both actions affect <strong>every player at the table</strong>.
       </p>
@@ -199,10 +215,10 @@
   </div>
 
   <!-- ===== Help modal (mobile + on-demand) ===== -->
-  <div class="modal" id="helpModal" hidden>
+  <div class="modal" id="helpModal" hidden role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
     <div class="modal__backdrop" data-close-help></div>
     <div class="modal__panel modal__panel--help">
-      <h2 class="modal__title">How to Play</h2>
+      <h2 class="modal__title" id="helpModalTitle">How to Play</h2>
       <div class="help-modal__body">
         <section>
           <h3>Actions</h3>
@@ -267,10 +283,10 @@
   </div>
 
   <!-- ===== + Bot picker modal ===== -->
-  <div class="modal" id="botPickerModal" hidden>
+  <div class="modal" id="botPickerModal" hidden role="dialog" aria-modal="true" aria-labelledby="botPickerTitle">
     <div class="modal__backdrop" data-close-bot-picker></div>
     <div class="modal__panel modal__panel--bot-picker">
-      <h2 class="modal__title">Pick an AI to seat</h2>
+      <h2 class="modal__title" id="botPickerTitle">Pick an AI to seat</h2>
       <p class="modal__body">Choose a specific character, or hit <strong>Random</strong> for the dealer to pick.</p>
       <div class="bot-picker__grid" id="botPickerGrid"></div>
       <div class="modal__actions">
@@ -298,9 +314,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260527-blind"></script>
-  <script src="/js/cards.js?v=20260527-blind"></script>
-  <script src="/js/blindMode.js?v=20260527-blind"></script>
-  <script src="/js/client.js?v=20260527-blind"></script>
+  <script src="/js/avatars.js?v=20260527-a11y"></script>
+  <script src="/js/cards.js?v=20260527-a11y"></script>
+  <script src="/js/blindMode.js?v=20260527-a11y"></script>
+  <script src="/js/client.js?v=20260527-a11y"></script>
 </body>
 </html>
