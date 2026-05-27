@@ -13,6 +13,19 @@
     "campaign": "HV"
   },
   {
+    "id": "adimarus",
+    "name": "Adimarus",
+    "art": "/tokens/adimarus.webp",
+    "sourceFile": "carrion_crown_characters/shudderwood/token_werewolf_hybrid_adimarus_ionacu_warrior_black_jezeldan_demon_wolf.webp",
+    "mtime": "2024-03-09T17:01:08.000Z",
+    "size": 8034,
+    "villain": true,
+    "npc": false,
+    "race": "Skinwalker",
+    "class": "Jezeldan Demon-Wolf Antipaladin",
+    "campaign": "CC"
+  },
+  {
     "id": "token-human-female-adventurer-discoverer-professor-dd-np",
     "name": "Adventurer Discoverer Professor Dd",
     "art": "/tokens/token-human-female-adventurer-discoverer-professor-dd-np.webp",
@@ -143,6 +156,19 @@
     "level": "15",
     "player": "Enrique",
     "campaign": "IG"
+  },
+  {
+    "id": "auren-vrood",
+    "name": "Auren Vrood",
+    "art": "/tokens/auren-vrood.webp",
+    "sourceFile": "carrion_crown_characters/whisperingway/token_human_male_wizard_necromancer_evil_whispering.webp",
+    "mtime": "2024-06-09T18:56:44.000Z",
+    "size": 13722,
+    "villain": true,
+    "npc": false,
+    "race": "Human",
+    "class": "Necromancer · Whispering Way headman",
+    "campaign": "CC"
   },
   {
     "id": "barzillai-thrune",
@@ -562,6 +588,32 @@
     "size": 442720
   },
   {
+    "id": "elodie",
+    "name": "Elodie",
+    "art": "/tokens/elodie.webp",
+    "sourceFile": "gnome/token_gnome_female_with_sky-blue_hair_and_golden_.webp",
+    "mtime": "2024-11-30T14:15:24.000Z",
+    "size": 11730,
+    "villain": false,
+    "npc": true,
+    "race": "Gnome",
+    "class": "Bard · Estoc Swashbuckler",
+    "campaign": "HR"
+  },
+  {
+    "id": "estovion",
+    "name": "Estovion",
+    "art": "/tokens/estovion.webp",
+    "sourceFile": "carrion_crown_characters/shudderwood/token_human_male_older_noble_estovion_wizard.webp",
+    "mtime": "2024-03-23T22:36:56.000Z",
+    "size": 10982,
+    "villain": true,
+    "npc": false,
+    "race": "Human",
+    "class": "Spiritualist · Master of Ascanor Lodge",
+    "campaign": "CC"
+  },
+  {
     "id": "token-fairwell-guard",
     "name": "Fairwell Guard",
     "art": "/tokens/token-fairwell-guard.webp",
@@ -596,6 +648,19 @@
     "npc": false,
     "race": "Human",
     "class": "Teenage Heir (Richton)",
+    "campaign": "CC"
+  },
+  {
+    "id": "farrus-richton",
+    "name": "Farrus Richton",
+    "art": "/tokens/farrus-richton.webp",
+    "sourceFile": "carrion_crown_characters/token_human_male_dark_red_hair_farrus_richton_butcher_of_courtaud.webp",
+    "mtime": "2024-03-17T00:35:00.000Z",
+    "size": 9364,
+    "villain": true,
+    "npc": false,
+    "race": "Ghost",
+    "class": "The Butcher of Courtaud",
     "campaign": "CC"
   },
   {
@@ -1009,6 +1074,19 @@
     "class": "Hunter",
     "level": "5",
     "player": "Anna",
+    "campaign": "JG"
+  },
+  {
+    "id": "lou-candlebean",
+    "name": "Lou Candlebean",
+    "art": "/tokens/lou-candlebean.webp",
+    "sourceFile": "gnome/token_gnome_female_bish_sarah_knight.png.webp",
+    "mtime": "2025-01-25T01:57:56.000Z",
+    "size": 16096,
+    "villain": false,
+    "npc": true,
+    "race": "Gnome",
+    "class": "Cavalier · Caliphas Mercenary",
     "campaign": "JG"
   },
   {
@@ -1448,6 +1526,19 @@
     "level": "5",
     "player": "Tim",
     "campaign": "SS"
+  },
+  {
+    "id": "vesorianna",
+    "name": "Vesorianna",
+    "art": "/tokens/vesorianna.webp",
+    "sourceFile": "carrion_crown_characters/token_undead_ghost_vesorianna.webp",
+    "mtime": "2024-01-10T15:44:36.000Z",
+    "size": 7674,
+    "villain": false,
+    "npc": true,
+    "race": "Ghost",
+    "class": "Warden Hawkrun's Wife (Harrowstone)",
+    "campaign": "CC"
   },
   {
     "id": "vorkstag",

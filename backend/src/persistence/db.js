@@ -149,6 +149,17 @@ const BOT_ROSTER = [
 
   // Round 5 additions:
   { name: 'Rhyarca',              avatar: '/tokens/rhyarca-jillyr.webp',         baseMode: 'standard', intelligence: 'average' }, // user: normal risk + normal intel; Oracle of Besmara (drow art)
+
+  // Round 6 additions — Carrion Crown villains + Caliphas NPCs + Chef:
+  { name: 'Adimarus',             avatar: '/tokens/adimarus.webp',               baseMode: 'risky',    intelligence: 'high'    }, // Shudderwood werewolf antipaladin of Jezelda; user: high intel + high risk
+  { name: 'Estovion',             avatar: '/tokens/estovion.webp',               baseMode: 'cautious', intelligence: 'high'    }, // Master of Ascanor Lodge; user: high intel + cautious
+  { name: 'Auren Vrood',          avatar: '/tokens/auren-vrood.webp',            baseMode: 'standard', intelligence: 'high'    }, // Whispering Way necromancer; user: high intel + normal risk
+  { name: 'Tar Baphon',           avatar: '/tokens/tar-baphon.webp',             baseMode: 'standard', intelligence: 'high'    }, // The Whispering Tyrant; user: high intel + normal risk
+  { name: 'Farrus Richton',       avatar: '/tokens/farrus-richton.webp',         baseMode: 'risky',    intelligence: 'average' }, // The Butcher of Courtaud (Farrah's grandpa ghost); user: avg intel + high risk
+  { name: 'Vesorianna',           avatar: '/tokens/vesorianna.webp',             baseMode: 'standard', intelligence: 'average' }, // Harrowstone warden's-wife ghost; user: avg intel + avg risk
+  { name: 'Lou Candlebean',       avatar: '/tokens/lou-candlebean.webp',         baseMode: 'standard', intelligence: 'low'     }, // Caliphas gnome cavalier mercenary; user: low intel + avg risk
+  { name: 'Elodie',               avatar: '/tokens/elodie.webp',                 baseMode: 'standard', intelligence: 'average' }, // Caliphas gnome bard / estoc-swashbuckler; user: avg intel + avg risk
+  { name: 'Chef',                 avatar: '/tokens/chef.webp',                   baseMode: 'risky',    intelligence: 'high'    }, // Gordon-Ramsay-but-won't-admit-it; high-intensity host (user: not specified, picking risky/high)
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);

@@ -941,8 +941,14 @@
       total -= Number(p.rebuy_debt || 0);
       return total;
     }
+    // Hide players sitting at exactly 5,000 net worth — that's the
+    // default starting stack, so a flat 5,000 almost always means
+    // "never played this game". Keeping them off the board makes the
+    // leaderboard reflect actual results. Anyone above OR below 5,000
+    // shows up.
     const ranked = all
       .map(p => ({ p, wealth: wealthOf(p) }))
+      .filter(({ wealth }) => wealth !== 5000)
       .sort((a, b) => b.wealth - a.wealth)
       .slice(0, 10);
 
@@ -994,8 +1000,12 @@
       total -= Number(p.rebuy_debt || 0);
       return total;
     }
+    // Same 5,000-flat filter as the popup leaderboard — hide players
+    // sitting at the default starting stack with zero gear/debt; that
+    // signature means "never played."
     const ranked = all
       .map(p => ({ p, wealth: wealthOf(p) }))
+      .filter(({ wealth }) => wealth !== 5000)
       .sort((a, b) => b.wealth - a.wealth);
     el.innerHTML = ranked.map((row, i) => {
       const p = row.p;
