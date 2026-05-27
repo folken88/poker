@@ -9,7 +9,12 @@
     c: 'M50 12 C 60 12, 66 22, 60 32 C 70 24, 84 32, 82 46 C 80 60, 64 60, 56 54 C 60 60, 60 70, 56 76 L 60 88 L 40 88 L 44 76 C 40 70, 40 60, 44 54 C 36 60, 20 60, 18 46 C 16 32, 30 24, 40 32 C 34 22, 40 12, 50 12 Z',
   };
   const SUIT_COLOR = { s: '#101418', c: '#101418', h: '#d83a3a', d: '#d83a3a' };
-  const RANK_LABEL = { T: '10' };  // display "10" but card code uses T
+  // T → 10 for display. '1' → A because pokersolver represents the
+  // low Ace in a wheel straight (A-2-3-4-5) as '1h' / '1s' / etc.
+  // Internally we keep the '1' code so wheel cards sort correctly
+  // (RANK_ORDER['1']||0 = 0 puts the Ace before the 2 in low→high
+  // displays); only the rendered glyph swaps back to 'A'.
+  const RANK_LABEL = { T: '10', '1': 'A' };
 
   function rankDisplay(r) { return RANK_LABEL[r] || r; }
 

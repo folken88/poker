@@ -184,6 +184,10 @@
   const RANK_WORD = {
     '2':'two','3':'three','4':'four','5':'five','6':'six','7':'seven','8':'eight','9':'nine',
     'T':'ten','J':'jack','Q':'queen','K':'king','A':'ace',
+    // pokersolver represents the low Ace in a wheel straight (A-2-3-4-5)
+    // as '1h' / '1s' / etc. Keep it speaking as "ace" so Josh hears
+    // the correct card instead of "one of hearts".
+    '1':'ace',
   };
   const SUIT_WORD = { s:'spades', h:'hearts', d:'diamonds', c:'clubs' };
   function cardWords(code) {
