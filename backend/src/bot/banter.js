@@ -264,7 +264,8 @@ function buildMessages(speaker, eventDescription, table) {
         `Hellknights and Chelaxians invoke Asmodeus. Goddess-flavored interjections like "Sarenrae's ` +
         `tits" / "by Calistria's whip" / "Desna damn it" / "pelt of the Lord" / "Norgorber take you" all fit. ` +
         `Modern English profanity is also fine — just keep it in voice. When you LOSE a hand, you may get ` +
-        `genuinely angry; cursing the dice, the dealer, the opponent, or your own deity is fair game. ` +
+        `genuinely angry; cursing the CARDS, the deck, the deal, the dealer, the opponent, or your own ` +
+        `deity is fair game. NEVER curse "the dice" — this is poker, there are no dice, only cards. ` +
         `LENGTH: anywhere from a SINGLE WORD up to 20 words. Short, punchy reactions are great when they ` +
         `fit — "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", "Mine.", ` +
         `"You absolute donkey." — don't pad to a full sentence if a sharp one-word jab lands better. ` +
