@@ -9,6 +9,7 @@ const { Bot } = require('../bot/Bot');
 const { logHand, logBotDecision } = require('../persistence/logger');
 const { strengthOf } = require('../bot/strength');
 const { botRebuyMessage, humanRebuyMessage, bustMessage } = require('../util/flavor');
+const banter = require('../bot/banter');
 
 // Showdown pause — how long the final hand stays on screen before clearing.
 // 15 s by default so everyone can read winners, hole cards, and the board.
@@ -484,6 +485,22 @@ class Table {
           line = `${tag}${nick} ${action}`;
       }
       if (line) this.chat('action', line);
+
+      // ---- Banter trigger (LLM-driven ambient chat) ----
+      // Fire-and-forget; banter.maybeSpeak no-ops if LLM is disabled.
+      // Triggered on the more noteworthy actions: raises, all-ins, and
+      // any committed chips > big blind. The acting player is excluded
+      // from the speaker pool (no commenting on themselves).
+      try {
+        if (action === 'allin' || action === 'raise' || (action === 'call' && committed > this.bigBlind * 3)) {
+          const desc = action === 'allin'
+            ? `${nick} just shoved all-in (${committed.toLocaleString()} gp).`
+            : action === 'raise'
+              ? `${nick} raised to ${(actorAfter?.invested ?? amount).toLocaleString()} gp.`
+              : `${nick} called a big ${committed.toLocaleString()} gp bet.`;
+          banter.maybeSpeak(this, { kind: action, description: desc, actorIds: [playerId] });
+        }
+      } catch (_) { /* never let banter break a hand */ }
     } catch (_) { /* never let chat logging break a hand */ }
 
     // Set up all state changes (timers, next-hand bookkeeping) BEFORE
@@ -650,6 +667,18 @@ class Table {
         const amt  = (w.amount || 0).toLocaleString();
         const hand = w.handDesc ? ` with ${w.handDesc}` : '';
         this.chat('win', `🏆 ${nick} wins ${amt} gp${hand}.`);
+      }
+      // Banter trigger on the winner — bluffs especially make for
+      // great in-character reactions. Speaker pool excludes the
+      // winner so we get an opponent's reaction, not a victory lap.
+      if (ws.length > 0) {
+        const top = ws[0];
+        const nick = nickById.get(top.playerId) || top.playerId;
+        const isBluff = (top.handDesc || '').includes('bluff');
+        const desc = isBluff
+          ? `${nick} just won ${top.amount.toLocaleString()} gp on a bluff (${top.handDesc}).`
+          : `${nick} just won ${top.amount.toLocaleString()} gp${top.handDesc ? ' with ' + top.handDesc : ''}.`;
+        banter.maybeSpeak(this, { kind: isBluff ? 'bluff-win' : 'win', description: desc, actorIds: [top.playerId] });
       }
     } catch (e) { /* never let logging break a hand */ }
 

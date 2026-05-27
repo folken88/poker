@@ -132,6 +132,32 @@ The 27-bot roster lives in `backend/src/persistence/db.js` (`BOT_ROSTER`). Each 
 
 Every decision is appended to `backend/logs/bot-decisions.jsonl` for later analysis.
 
+### Optional: LLM banter (Gemma + Ollama)
+
+Decisions stay heuristic, but a local LLM can generate **ambient in-character
+chat** when something interesting happens (big raise, all-in, bluff revealed,
+big win). The acting player is excluded from the speaker pool, so you hear
+opponents reacting — not the player narrating themselves.
+
+Disabled by default. To enable, set these env vars on the backend container
+(via `docker-compose.yml` or a `.env`):
+
+```
+LLM_BANTER_ENABLED=1
+LLM_ENDPOINT=http://host.docker.internal:11434/api/generate
+LLM_MODEL=gemma2:9b
+LLM_BANTER_COOLDOWN_MS=18000   # min gap per-table between lines
+LLM_BANTER_PROB=0.30           # roll per trigger event
+LLM_BANTER_TIMEOUT_MS=6000     # hard timeout on the HTTP call
+```
+
+Bring up an Ollama server on the host (`ollama serve` + `ollama pull gemma2:9b`),
+then restart the backend container. If the LLM is unreachable for any reason,
+the banter system silently no-ops — no breakage, no game-state impact.
+
+Character flavor lives in `backend/src/bot/banter.js` (`CHARACTER_FLAVOR` map).
+Add a short bio per bot for stronger in-character voice.
+
 ### Roster sample
 
 | Bot                     | Mode      | Intel    | Source              |

@@ -1495,6 +1495,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .chat-entry--info   .chat-entry__text { color: var(--ivory); }
 .chat-entry--action .chat-entry__text { color: var(--ivory-dim); }
 .chat-entry--lootlord .chat-entry__text { color: var(--brass-bright); font-weight: 700; letter-spacing: 0.04em; }
+.chat-entry--banter .chat-entry__text { color: #cfe2b8; font-style: italic; }
 
 /* ===== Action timer countdown under acting seat ===== */
 .seat__timer {

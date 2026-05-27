@@ -952,7 +952,7 @@
   }
 
   // ===== Chat log (bottom panel) =====
-  const KIND_CLASS = { hand: 'hand', win: 'win', rebuy: 'rebuy', leave: 'leave', join: 'leave', debt: 'debt', info: 'info', action: 'action', lootlord: 'lootlord' };
+  const KIND_CLASS = { hand: 'hand', win: 'win', rebuy: 'rebuy', leave: 'leave', join: 'leave', debt: 'debt', info: 'info', action: 'action', lootlord: 'lootlord', banter: 'banter' };
   const _seenChatIds = new Set();
   function fmtClock(ts) {
     const d = new Date(ts);
