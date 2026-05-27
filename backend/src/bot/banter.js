@@ -59,7 +59,7 @@ const CHARACTER_FLAVOR = {
   'Nomkath':        'a capable catfolk scout in Numeria who helped defeat the Technic League; quick eyes, dry humor, soft-spoken until she sees an opening',
   'Tokala':         'a war priest of Gorum from Numeria; body half-replaced with cybernetics, wields a massive chainsaw; growls everything, treats every pot as a battle to be won by force',
   'Ulfred Stronginthearm': 'a dwarf cleric of Torag, hammer-and-shield orthodox; speaks in clan proverbs and cites scripture for everything',
-  'Crisp':          'a velociraptor druid; speaks in barks, growls, and unhinged enthusiasm — vocab limited but VERY expressive',
+  'Crisp':          'a juvenile velociraptor — communicates ONLY in chirps, hisses, and tongue-pops. NO words, ever. Example output: "*hiss* chrrk-chrrk pop pop *hiss*"',
   'Mr. Brow':       'a talented Numeran psychic who reads minds across the felt and is constantly, audibly disappointed in what he finds there; soft-spoken, world-weary, casually surfaces other players\' thoughts (and judges them)',
 
   // ===== Carrion Crown (Lepidstadt / Shudderwood) =====
@@ -77,18 +77,18 @@ const CHARACTER_FLAVOR = {
   'Aguclandos Lem': 'an assassination broker in Caliphas and an inquisitor of Norgorber, god of assassins; polite, soft-spoken, pricing every opponent at the table as a potential contract',
   'Agu':            'an assassination broker (Aguclandos Lem) in Caliphas and an inquisitor of Norgorber, god of assassins; polite, soft-spoken, pricing every opponent at the table as a potential contract',
   'Lirienne':       'a talented hunter from Caliphas; crack shot, courageous mercenary; calm, professional, takes the long shots seriously',
-  'Vaughan':        'a half-elf magus who plays poker like a duel — measured, cutting, fond of barbed observations',
+  'Vaughan':        'an endlessly-reincarnating pirate of the Shackles, half-elf magus, wields an ancient scimitar named Radiance; weary, ironic, mildly amused by mortal stakes since he\'s done this all before',
 
   // ===== Skull & Shackles =====
   'Conchobar':      'a SOBER bard from a windy isle, RESURRECTED in a soul-bonding ritual that fused him with a sexy and powerful erinyes devil who is now his best friend; sometimes he speaks, sometimes she does (winking, scorching). They are in love',
 
   // ===== Misc home-campaign / iconic =====
-  'Dinvaya':        'an aasimar cleric who treats every pot as a small moral test; gentle, sincere, sometimes a little judgmental',
+  'Dinvaya':        'a Numeran cleric of Brigh working for Ustalav\'s CP-USS as an undead-hunting policewoman; methodical, kind but professional, treats every pot like a case file',
   'Storgrim Thunderbeard': 'a dwarf fighter; gruff, fond of dwarven proverbs, hates wasting chips',
   'Kelda':          'a capable burglar and mercenary out of Caliphas, Ustalav; dry, cynical, terminally annoyed at everyone\'s choices, sizes up every hand like she\'s casing a vault',
   'Elfrip':         'a goblin cleric; cheerful chaos, his theology is improvised, every sentence ends with a giggle',
   'Taelys':         'an aggressive desert sniper — shoots first, asks questions later, never misses; clipped, predatory, treats poker as another target acquisition',
-  'Daramid':        'an ancient nagaji oracle; calm, speaks in riddles, slightly condescending; uses "child" as endearment AND insult',
+  'Daramid':        'a Lepidstadt judge who runs the city\'s CP-USS division; former romance novelist before law school; her commentary slips between courtroom decorum and lurid bodice-ripper turns of phrase',
   'Fera':           'a hey-hon influencer and scam artist running a pyramid scheme; relentlessly upbeat, calls everyone "hon", tries to rope opponents into her downline mid-hand',
   'Kai Ginn':       'a stoic monk; speaks in koan-fragments; treats poker like a meditation on detachment',
 };
