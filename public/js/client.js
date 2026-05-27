@@ -1761,12 +1761,13 @@
     const grid  = $('#botPickerGrid');
     if (!modal || !grid) return;
     const seatedIds = new Set((state.table?.seats || []).filter(s => s.playerId).map(s => s.playerId));
-    const bots = (state.roster || [])
-      .filter(p => p.is_bot && !seatedIds.has(p.player_id))
+    const allBots = (state.roster || []).filter(p => p.is_bot);
+    const bots = allBots
+      .filter(p => !seatedIds.has(p.player_id))
       .map(p => ({ p, w: rosterWealth(p) }))
       .sort((a, b) => b.w - a.w);
     if (bots.length === 0) {
-      toast('All 24 AI characters are already seated.', true);
+      toast(`All ${allBots.length} AI characters are already seated.`, true);
       return;
     }
     grid.innerHTML = bots.map(({ p, w }) => `
