@@ -39,6 +39,7 @@ if (ENABLED) {
 const PRONUNCIATIONS = [
   ['Mandore',  'Man door'],
   ['Lirienne', 'Leery in'],
+  ['Bujon',    'Boo han'],
 ];
 function applyPronunciations(text) {
   let out = text;

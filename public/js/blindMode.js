@@ -46,6 +46,7 @@
   const NAME_PRONUNCIATIONS = [
     ['Mandore',  'Man door'],
     ['Lirienne', 'Leery in'],
+    ['Bujon',    'Boo han'],
   ];
 
   // ---------- State ----------
