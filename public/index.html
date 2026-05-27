@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260527-a11y" />
+  <link rel="stylesheet" href="/css/table.css?v=20260527-voice" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -84,7 +84,22 @@
         </span>
 
         <span class="blind-chip" id="blindModeChip" hidden role="status" aria-live="polite" title="Blind support active. Backtick to toggle. Hold Space for push-to-talk.">🦮 Blind</span>
-        <button class="btn btn--ghost btn--sm" id="muteBtn" aria-label="Mute card sound effects" title="Mute card-shuffle / deal sound effects">🔊</button>
+        <!-- Audio settings: button toggles card SFX mute on click; hover
+             reveals a popover with finer-grained toggles (incl. the 11labs
+             AI-character-voice playback). Wrapper has tabindex=0 so
+             keyboard users can also Tab in. -->
+        <span class="audio-menu" id="audioMenu" tabindex="0">
+          <button class="btn btn--ghost btn--sm" id="muteBtn" aria-label="Toggle card sound effects" aria-haspopup="true" title="Click: mute card SFX · Hover: more audio options">🔊</button>
+          <div class="audio-menu__pop" id="audioMenuPop" role="menu" aria-label="Audio settings">
+            <label class="audio-menu__row">
+              <input type="checkbox" id="audioMute" /> Card sounds
+            </label>
+            <label class="audio-menu__row">
+              <input type="checkbox" id="bannerVoiceToggle" checked /> AI character voices
+            </label>
+            <p class="audio-menu__foot">AI voices stream from 11labs server-side. Toggle off if you want quiet chat.</p>
+          </div>
+        </span>
         <button class="btn btn--ghost btn--sm" id="helpBtn" aria-label="How to play — open help" title="How to play (actions, hand rankings, tips)">?</button>
         <button class="btn btn--ghost btn--sm" id="addBotBtn" title="Add a random AI to an empty seat">+ Bot</button>
         <button class="btn btn--ghost btn--sm" id="pickBotBtn" title="Pick a specific AI character to seat">Pick AI ▾</button>
@@ -314,9 +329,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260527-a11y"></script>
-  <script src="/js/cards.js?v=20260527-a11y"></script>
-  <script src="/js/blindMode.js?v=20260527-a11y"></script>
-  <script src="/js/client.js?v=20260527-a11y"></script>
+  <script src="/js/avatars.js?v=20260527-voice"></script>
+  <script src="/js/cards.js?v=20260527-voice"></script>
+  <script src="/js/blindMode.js?v=20260527-voice"></script>
+  <script src="/js/client.js?v=20260527-voice"></script>
 </body>
 </html>

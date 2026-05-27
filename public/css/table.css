@@ -590,6 +590,67 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   border: 0;
 }
 
+/* ===== Audio settings hover popover (off the volume button) =====
+   Same pattern as the .me-purse Abadar popover. Wrapper is a span
+   that contains both the visible mute button and a hidden popover
+   div; :hover / :focus-within / .is-open reveal the popover. */
+.audio-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  outline: none;
+}
+.audio-menu__pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 240px;
+  max-width: 300px;
+  background: linear-gradient(180deg, rgba(20,24,18,0.97), rgba(10,14,10,0.99));
+  border: 1px solid rgba(217,176,106,0.4);
+  border-radius: 10px;
+  padding: 10px 12px 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 50;
+  color: var(--ivory);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  text-align: left;
+}
+.audio-menu:hover .audio-menu__pop,
+.audio-menu:focus-within .audio-menu__pop,
+.audio-menu.is-open .audio-menu__pop {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.audio-menu__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+  user-select: none;
+}
+.audio-menu__row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--brass);
+}
+.audio-menu__foot {
+  font-size: 0.72rem;
+  color: var(--ivory-dim);
+  margin: 8px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid rgba(217,176,106,0.12);
+  line-height: 1.35;
+}
+
 /* ===== Blind-mode indicator chip =====
    Tiny topbar pill that lights up when blind support is active so a
    sighted helper (or Josh himself, via TTS) can confirm the mode.

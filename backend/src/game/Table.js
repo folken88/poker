@@ -114,14 +114,21 @@ class Table {
 
   static MAX_CHAT_LOG = 200;
   /** Append an event line and broadcast it. `kind` is one of:
-   *  hand, win, rebuy, leave, join, info, debt. */
-  chat(kind, text) {
+   *  hand, win, rebuy, leave, join, info, debt, banter, human, action.
+   *  Optional `extras` is merged into the emitted event but NOT stored
+   *  in the persisted chatLog — used for one-shot per-broadcast payloads
+   *  like 11labs base64 audio that would otherwise blow up memory and
+   *  re-broadcast every time a fresh state snapshot ships. */
+  chat(kind, text, extras) {
     const entry = { id: ++this._chatId, ts: Date.now(), kind, text };
     this.chatLog.push(entry);
     if (this.chatLog.length > Table.MAX_CHAT_LOG) {
       this.chatLog.splice(0, this.chatLog.length - Table.MAX_CHAT_LOG);
     }
-    if (this.io) this.io.to(this.roomName()).emit('table:chat', entry);
+    // Build the emitted payload separately from the persisted entry so
+    // ephemeral extras (audio, etc.) don't end up in the ring buffer.
+    const payload = extras ? { ...entry, ...extras } : entry;
+    if (this.io) this.io.to(this.roomName()).emit('table:chat', payload);
     return entry;
   }
 

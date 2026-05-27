@@ -16,6 +16,13 @@ services:
       - LLM_BANTER_COOLDOWN_MS=18000
       - LLM_BANTER_PROB=0.30
       - LLM_BANTER_TIMEOUT_MS=8000
+      # ---- 11labs TTS (voice the AI banter aloud) ----
+      # Key is loaded from .env (gitignored) via docker-compose
+      # interpolation. NEVER hardcode it here. The :- syntax means
+      # "empty if unset" — backend gracefully no-ops without a key.
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - ELEVENLABS_MODEL=eleven_flash_v2_5
+      - ELEVENLABS_TIMEOUT_MS=8000
     extra_hosts:
       # Required on Linux Docker so host.docker.internal resolves
       # (Docker Desktop on Windows/Mac maps it automatically; harmless

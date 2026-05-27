@@ -31,6 +31,9 @@
  *                         Default 6000.
  */
 
+const elevenlabs = require('../util/elevenlabs');
+const { voiceFor } = require('./character_voices');
+
 const ENABLED        = process.env.LLM_BANTER_ENABLED === '1';
 // Use the /api/chat endpoint — it applies the model's chat template
 // (system + user messages) correctly. /api/generate skips templating
@@ -336,10 +339,22 @@ function maybeSpeak(table, event) {
   // of parallel calls if multiple events fire in quick succession.
   _lastSpokenAt.set(table.id, Date.now());
   const messages = buildMessages(speaker, event.description, table);
-  callLLM(messages).then(line => {
+  callLLM(messages).then(async line => {
     if (!line) return;
     const nick = speaker.player?.nickname || speaker.playerId;
-    table.chat('banter', `💬 ${nick}: ${line}`);
+    // 11labs synthesis: only if the speaker has a voice configured and
+    // the elevenlabs util is enabled (key present). Failure is silent
+    // and we still broadcast the text — clients fall back to chat-only.
+    let audio = null;
+    if (elevenlabs.ENABLED) {
+      const voiceId = voiceFor(nick);
+      if (voiceId) {
+        try { audio = await elevenlabs.synthesize(line, voiceId); }
+        catch (_) { audio = null; }
+      }
+    }
+    const extras = audio ? { audio, audioMime: 'audio/mpeg' } : null;
+    table.chat('banter', `💬 ${nick}: ${line}`, extras);
   }).catch(() => { /* silent */ });
 }
 

@@ -107,12 +107,38 @@
   const YOUR_TURN_POOL = ['/audio/your-turn.mp3'];
   const AUDIO_VOLUME = 0.45;
   let _audioMuted = sessionStorage.getItem('audio.muted') === '1';
+  // Banter voice (11labs character TTS): default ON; sticky per tab.
+  // Backend skips synthesis entirely when ELEVENLABS_API_KEY isn't set,
+  // so this only matters when the key is present and the player wants
+  // to silence the spoken banter without losing card SFX.
+  let _bannerVoiceEnabled = sessionStorage.getItem('audio.bannerVoice') !== '0';
 
   function applyMuteUI() {
     const btn = $('#muteBtn');
     if (btn) btn.textContent = _audioMuted ? '🔇' : '🔊';
+    const m = $('#audioMute'); if (m) m.checked = _audioMuted;
+    const v = $('#bannerVoiceToggle'); if (v) v.checked = _bannerVoiceEnabled;
   }
   applyMuteUI();
+
+  // Play a base64-encoded MP3 (from the 11labs synthesis path).
+  // Bypasses _audioMuted on purpose — card SFX and voice are
+  // controlled independently. Caller is responsible for honoring
+  // _bannerVoiceEnabled.
+  function playBase64Mp3(b64, mime = 'audio/mpeg') {
+    try {
+      const bin = atob(b64);
+      const len = bin.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = new Audio(url);
+      a.volume = 0.85;
+      a.addEventListener('ended', () => URL.revokeObjectURL(url));
+      a.play().catch(() => URL.revokeObjectURL(url));
+    } catch (_) { /* silent */ }
+  }
 
   // Warm up the cache so the first deal isn't a noticeable buffer
   // delay. Browsers will fetch lazily otherwise.
@@ -178,12 +204,54 @@
   // pattern any new DOM hook in this file should use.
   const muteBtn = $('#muteBtn');
   if (muteBtn) {
-    muteBtn.addEventListener('click', () => {
+    muteBtn.addEventListener('click', (e) => {
+      // Clicking the icon body itself toggles card SFX (legacy behaviour
+      // — preserves the one-click mute pattern). Clicks on the popover
+      // checkboxes are handled below and stop here via stopPropagation.
       _audioMuted = !_audioMuted;
       sessionStorage.setItem('audio.muted', _audioMuted ? '1' : '0');
       applyMuteUI();
-      // Confirmation chirp when un-muting so the user hears it worked.
       if (!_audioMuted) playFromPool(DEAL_POOL);
+    });
+  }
+  // Card-sounds checkbox in the popover mirrors the button.
+  const audioMuteCheckbox = $('#audioMute');
+  if (audioMuteCheckbox) {
+    audioMuteCheckbox.addEventListener('change', (e) => {
+      _audioMuted = !!e.target.checked;
+      sessionStorage.setItem('audio.muted', _audioMuted ? '1' : '0');
+      applyMuteUI();
+    });
+  }
+  // AI-character-voice checkbox — toggles 11labs banter playback.
+  // Doesn't affect the server (banter audio still streams in); we just
+  // skip playback on this client. Stop propagation so clicking the
+  // checkbox doesn't also toggle the mute button via bubble.
+  const voiceCheckbox = $('#bannerVoiceToggle');
+  if (voiceCheckbox) {
+    voiceCheckbox.addEventListener('change', (e) => {
+      _bannerVoiceEnabled = !!e.target.checked;
+      sessionStorage.setItem('audio.bannerVoice', _bannerVoiceEnabled ? '1' : '0');
+    });
+  }
+  // Stop label/checkbox clicks inside the popover from bubbling to the
+  // mute button (which would toggle SFX every time the user changed a
+  // voice setting — surprising and annoying).
+  const audioMenuPop = $('#audioMenuPop');
+  if (audioMenuPop) {
+    audioMenuPop.addEventListener('click', (e) => e.stopPropagation());
+  }
+  // Touch / keyboard: tap the wrapper or focus it to reveal the menu.
+  // Outside click closes.
+  const audioMenu = $('#audioMenu');
+  if (audioMenu) {
+    audioMenu.addEventListener('click', (e) => {
+      if (e.target.closest('#muteBtn')) return; // mute toggle handled above
+      audioMenu.classList.toggle('is-open');
+    });
+    document.addEventListener('click', (e) => {
+      if (audioMenu.contains(e.target)) return;
+      audioMenu.classList.remove('is-open');
     });
   }
 
@@ -266,6 +334,13 @@
     if (entry && typeof entry === 'object') {
       appendChatEntry(entry);
       window.BlindMode?.onChat?.(entry);
+      // 11labs banter audio attached server-side. Gated by the per-tab
+      // voice toggle so users can silence character voices without
+      // affecting card SFX. Other clients in the room all receive the
+      // same payload — each decides individually whether to play.
+      if (entry.audio && _bannerVoiceEnabled && entry.kind === 'banter') {
+        playBase64Mp3(entry.audio, entry.audioMime || 'audio/mpeg');
+      }
     }
   });
 
