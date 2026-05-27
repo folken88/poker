@@ -430,6 +430,31 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .topbar__me    { flex: 0 0 auto; }
 /* The clock sits in the middle and absorbs slack. */
 .topbar__clock { flex: 1 1 auto; max-width: 420px; margin: 0 auto; }
+/* Spectator list sits immediately right of the clock, before the
+   per-player .topbar__me block. flex:0 0 auto so it shrinks to its
+   content; max-width caps it so a busy room can't push everything else
+   off the bar — overflowed names are revealed via the title tooltip. */
+.topbar__spectators {
+  flex: 0 0 auto;
+  max-width: 260px;
+  margin-left: 6px;
+  padding: 4px 10px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0.55));
+  border: 1px solid rgba(241,207,131,0.18);
+  border-radius: 8px;
+  color: var(--ivory-dim);
+  font-size: 0.78rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+.topbar__spectators::before {
+  content: '👁 ';
+  margin-right: 4px;
+  opacity: 0.7;
+}
 .topbar__brand {
   font-family: var(--font-display);
   letter-spacing: 0.22em;

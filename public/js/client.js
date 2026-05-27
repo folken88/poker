@@ -1019,6 +1019,26 @@
     const stage = hand ? hand.state : 'WAITING';
     $('#stageBanner').textContent = stageLabel(stage, seated, t.spectatorCount);
 
+    // Spectator chip in the top bar — list of connected players who
+    // aren't seated. Hidden when nobody is watching. Backend ships
+    // t.spectators as [{playerId, nickname}]; old server snapshots
+    // before this field shipped fall back to spectatorCount-only.
+    const specEl = document.getElementById('topSpectators');
+    if (specEl) {
+      const list = Array.isArray(t.spectators) ? t.spectators : [];
+      if (list.length === 0) {
+        specEl.hidden = true;
+        specEl.textContent = '';
+        specEl.removeAttribute('title');
+      } else {
+        const names = list.map(s => s.nickname || s.playerId);
+        specEl.hidden = false;
+        specEl.textContent = names.join(', ');
+        // Full list in title for hover when names overflow the chip.
+        specEl.title = `Watching (${names.length}): ${names.join(', ')}`;
+      }
+    }
+
     // Winner banner
     renderWinnerBanner(hand);
 

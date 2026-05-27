@@ -1242,6 +1242,14 @@ class Table {
         gearValue: s.isEmpty() ? 0 : db.gearTotalValue(db.getGear(s.playerId)),
       })),
       spectatorCount: this.spectators.size,
+      // Concise list of spectators (connected clients NOT seated). One
+      // entry per playerId — the Map is already keyed by playerId so a
+      // single user with multiple tabs counts once. Used by the topbar
+      // chip; the count above is kept for the stage banner.
+      spectators: Array.from(this.spectators.entries()).map(([playerId, entry]) => ({
+        playerId,
+        nickname: entry.player?.nickname || playerId,
+      })),
       hand,
       // Wall-clock ms when the current human actor will be auto-folded.
       // Null when no human is on the clock (waiting, bot turn, between hands).
