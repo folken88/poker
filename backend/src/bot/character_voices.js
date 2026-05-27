@@ -58,7 +58,7 @@ const CHARACTER_VOICES = {
   'Daramid':           'poTX7WPM13yOc28z0sVi', // Shoreh Thing
   'Sirona':            'EXAVITQu4vr4xnSDxMaL', // Sarah — Mature, Reassuring, Confident (paladin barking orders)
   'Gaspar':            'zmw8ZGHS2l5ZG2v3AQ31', // Ultron
-  'Farrus Richton':    'P2tOmMO16sLs34Jodjvk', // Verner Hishog
+  'Farrus Richton':    'JBFqnCBsd6RMkjVDRZzb', // George (11labs default, warm mature British male, late 60s — placeholder until a specific Irish/Scottish/Welsh library voice is picked)
   'Lirienne':          'hpp4J3VqNfWAUOO0d1Us', // Bella - Professional, Bright, Warm
 
   // ===== Defaults picked from your 11labs library — adjust as desired =====
