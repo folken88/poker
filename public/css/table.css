@@ -424,7 +424,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .topbar__brand { flex: 0 0 auto; }
 .topbar__me    { flex: 0 0 auto; }
 /* The clock sits in the middle and absorbs slack. */
-.topbar__clock { flex: 1 1 auto; max-width: 360px; margin: 0 auto; }
+.topbar__clock { flex: 1 1 auto; max-width: 480px; margin: 0 auto; }
 .topbar__brand {
   font-family: var(--font-display);
   letter-spacing: 0.22em;
@@ -438,9 +438,13 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 
 /* ===== Topbar digital countdown clock ===== */
 /* Topbar clock is now a horizontal row of cells (action + divider +
-   hand-timer). Each cell stacks its own label above its digits. */
+   hand-timer). Each cell stacks its own label above its digits.
+   `justify-content: space-between` anchors the action cell to the
+   left edge and the hand-timer cell to the right edge of the
+   clock window; the divider floats in the middle gap. */
 .topbar__clock {
   display: flex; flex-direction: row; align-items: stretch;
+  justify-content: space-between;
   gap: 10px;
   padding: 4px 14px;
   background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.7));
