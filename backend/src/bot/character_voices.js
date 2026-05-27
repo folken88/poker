@@ -54,7 +54,7 @@ const CHARACTER_VOICES = {
 
   // ===== Defaults picked from your 11labs library — adjust as desired =====
   // Carrion Crown / Caliphas crowd
-  'Storgrim':          'JBFqnCBsd6RMkjVDRZzb', // George — Warm, Captivating Storyteller (British, mid-aged)
+  'Storgrim':          'oCXdm5WkYoKVEdlbPLev', // Paul — Deep & Warm Yorkshire (shared library) — northern English dwarf captain
   'Ulfred':            'bFrjFL4nlpeYNwNRhXxq', // Mossbeard — Scottish, old, raspy ("God of the Wild") — deep dwarf-cleric energy (shared library)
   'Tamsin':            'dAlhI9qAHVIjXuVppzhW', // Tamsin — Engaging British storyteller (name-match!)
   'Toni':              'pFZP5JQG7iQjIQuC4Bku', // Lily — Velvety Actress (British, mid-aged) — vampire velvet
