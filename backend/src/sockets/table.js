@@ -42,6 +42,35 @@ function registerTableHandlers(io, socket, { tables }) {
       }
     } else {
       table.addSpectator({ playerId: me.player_id, socketId: socket.id, player: me });
+
+      // ---- Yield-a-seat for a newly-arrived human ----
+      // If a human joins and every seat is full but at least one is an
+      // AI, pick a random bot to leave at the end of the current hand
+      // so the human can sit next deal. Skip if someone's already
+      // pending-leave (kick or queued auto-yield) — those will free a
+      // seat soon enough.
+      const humanArriving = !me.is_bot;
+      const tableFull = !table.firstOpenSeat();
+      const yieldPending = table.seats.some(s => s._standAfterHand);
+      if (humanArriving && tableFull && !yieldPending) {
+        const botSeats = table.seats.filter(s => !s.isEmpty() && s.isBot);
+        if (botSeats.length > 0) {
+          const victim = botSeats[Math.floor(Math.random() * botSeats.length)];
+          const victimNick = victim.player?.nickname || victim.playerId;
+          if (table.hand) {
+            // Mid-hand: queue the yield. _afterHandComplete's vacate
+            // loop will free the seat when the hand resolves.
+            victim._standAfterHand = true;
+            table.chat('info', `🪑 ${me.nickname} just arrived — ${victimNick} (AI) will yield their seat after this hand.`);
+          } else {
+            // Between hands: free the seat immediately so the human can
+            // sit on the next deal without waiting.
+            table._vacate(victim);
+            table.chat('info', `🪑 ${me.nickname} just arrived — ${victimNick} (AI) yielded their seat.`);
+            io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+          }
+        }
+      }
     }
 
     // Replay private hole cards if we're seated in the active hand.
