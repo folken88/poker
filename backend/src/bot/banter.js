@@ -90,7 +90,10 @@ const CHARACTER_FLAVOR = {
   'Taelys':         'an aggressive desert sniper — shoots first, asks questions later, never misses; clipped, predatory, treats poker as another target acquisition',
   'Daramid':        'a Lepidstadt judge who runs the city\'s CP-USS division; former romance novelist before law school; her commentary slips between courtroom decorum and lurid bodice-ripper turns of phrase',
   'Fera':           'a hey-hon influencer and scam artist running a pyramid scheme; relentlessly upbeat, calls everyone "hon", tries to rope opponents into her downline mid-hand',
-  'Kai Ginn':       'a stoic monk; speaks in koan-fragments; treats poker like a meditation on detachment',
+  'Kai Ginn':       'Kai Gin — a half-orc Slayer reincarnated after dying in Lepidstadt; now a Caliphas Nights investigator hunting the Whispering Way under Judge Daramid; wields a sentient greataxe with a living eye (Hungering Gaze) and a Tyrant\'s Band ring; quiet, lethal, slightly haunted, dry pragmatist',
+
+  // ===== Skull & Shackles =====
+  'Rhyarca':        'an Oracle of Besmara the Pirate Queen, sometime shipmate of Storgrim aboard the Kill-Steal; wears the "Bank of Besmara" coin-locket as holy symbol; believes every pot is the Pirate Queen testing your nerve; reverent when she wins, theatrical when she folds, loves Bullseye Rum',
 };
 
 /** Returns true if banter is enabled, the cooldown has elapsed, and

@@ -146,6 +146,9 @@ const BOT_ROSTER = [
   { name: 'Tokala',               avatar: '/tokens/tokala.webp',                 baseMode: 'risky',    intelligence: 'low'     }, // user: high risk + low intel
   { name: 'Casandalee',           avatar: '/tokens/casandalee.webp',             baseMode: 'cautious', intelligence: 'high'    }, // user: low risk + high intel
   { name: 'Meyanda',              avatar: '/tokens/meyanda.webp',                baseMode: 'standard', intelligence: 'high'    }, // user: avg risk + high intel
+
+  // Round 5 additions:
+  { name: 'Rhyarca',              avatar: '/tokens/rhyarca-jillyr.webp',         baseMode: 'standard', intelligence: 'average' }, // user: normal risk + normal intel; Oracle of Besmara (drow art)
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);

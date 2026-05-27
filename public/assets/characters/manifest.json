@@ -118,7 +118,7 @@
     "player": "Anna",
     "campaign": "CC",
     "art": "/assets/characters/elfrip.webp",
-    "sourceFile": "carrion_crown_characters/token_dinvaya_grumpy_elfrip_art.webp"
+    "sourceFile": "goblin/token_goblin_cleric.webp"
   },
   {
     "slug": "femmik-embersword",
@@ -217,7 +217,7 @@
     "player": "Graham",
     "campaign": "CC",
     "art": "/assets/characters/kai-gin.webp",
-    "sourceFile": "carrion_crown_characters/token_orc_half_male_kai_gin_graham_detective_elf_ears.webp"
+    "sourceFile": "orc/token_orc_male_half_kai_gin_slayer_polearm_staff.webp"
   },
   {
     "slug": "kate-blackwood",
@@ -349,7 +349,7 @@
     "player": "Mandi",
     "campaign": "SS",
     "art": "/assets/characters/rhyarca-jillyr.webp",
-    "sourceFile": "deathcourt/token_catfolk_female_rhyarca_cleric_angel.webp"
+    "sourceFile": "elf/token_elf_female_drow_rhyarca_crown_gold.webp"
   },
   {
     "slug": "rodney-danger-smith",

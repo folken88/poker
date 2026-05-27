@@ -14,5 +14,7 @@
   "Kovira":                        "tiefling/token_tiefling_female_red_kovira_mj7.webp",
   "Taelys of Starfall":            "tiefling/token_human_female_sniper_woman_of_30_from_a_desert_wasteland_expert.webp",
   "Kelda Ironglim":                "dwarf/token_dwarf_female_rogue_redhair_glasses_ustalav.webp",
-  "Elfrip":                        "goblin/token_goblin_cleric.webp"
+  "Elfrip":                        "goblin/token_goblin_cleric.webp",
+  "Kai Gin":                       "orc/token_orc_male_half_kai_gin_slayer_polearm_staff.webp",
+  "Rhyarca Jillyr":                "elf/token_elf_female_drow_rhyarca_crown_gold.webp"
 }
