@@ -61,6 +61,12 @@
     prevBoardLen: 0,          // last board card count
     prevActor: null,          // last actor playerId
     prevWinners: null,        // last winners snapshot id
+    // Hand.startedAt for which we've already announced hole cards.
+    // table:hole can fire multiple times per hand (initial deal,
+    // state-rerender re-requests, reconnect re-emit) — dedup here
+    // so the player only hears their cards ONCE at deal time, and
+    // again later via the your-turn cue when the action's on them.
+    spokenHoleHandStartedAt: null,
     deps: null,               // injected by init: {state, socket, toast, $}
     chipEl: null,             // topbar visual indicator
   };
@@ -297,6 +303,10 @@
       state.prevBoardLen = 0;
       state.prevActor = null;
       state.prevWinners = null;
+      // Reset the spoken-hole tracker so the NEXT table:hole emit
+      // (which carries the new deal's hole cards) speaks once and
+      // only once for this fresh hand.
+      state.spokenHoleHandStartedAt = null;
     }
 
     // --- Board reveal ---
@@ -360,9 +370,17 @@
     }
   }
 
-  /** Speak my own hole cards privately (only this client). */
+  /** Speak my own hole cards privately (only this client). Dedup
+   *  per hand — the server can fire table:hole multiple times
+   *  (initial deal, requestHole re-emits, reconnect path) and the
+   *  player should only hear their cards once at deal time, not
+   *  every time the state machine re-syncs. The your-turn cue
+   *  re-announces hole + board when the action lands on them. */
   function onHole(cards) {
     if (!state.on || !cards || cards.length === 0) return;
+    const startedAt = state.deps?.state?.table?.hand?.startedAt;
+    if (startedAt && state.spokenHoleHandStartedAt === startedAt) return;
+    state.spokenHoleHandStartedAt = startedAt || -1;
     speak(`Your hole cards: ${cardListWords(cards)}.`, 'event');
   }
 
