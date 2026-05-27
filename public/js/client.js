@@ -92,6 +92,74 @@
   window.addEventListener('resize', syncMobileClass);
   window.addEventListener('orientationchange', syncMobileClass);
 
+  // ===== Card sound effects =====
+  // Two pools:
+  //   SHUFFLE_POOL — plays once when a NEW hand begins (between rounds).
+  //   DEAL_POOL    — plays each time the community board grows (flop,
+  //                  turn, river — flop is the loudest event).
+  // Random choice within pool gives audible variety. Each play creates
+  // a fresh Audio so overlapping events don't cut each other off.
+  // Mute toggle persists per tab in sessionStorage.
+  const SHUFFLE_POOL = ['/audio/shuffle_01.mp3', '/audio/shuffle_03.mp3'];
+  const DEAL_POOL    = ['/audio/shuffle_02_deal.mp3', '/audio/shuffle_04_deal_short.mp3', '/audio/shuffle_05_deal_again.mp3'];
+  const AUDIO_VOLUME = 0.45;
+  let _audioMuted = sessionStorage.getItem('audio.muted') === '1';
+
+  function applyMuteUI() {
+    const btn = $('#muteBtn');
+    if (btn) btn.textContent = _audioMuted ? '🔇' : '🔊';
+  }
+  applyMuteUI();
+
+  // Warm up the cache so the first deal isn't a noticeable buffer
+  // delay. Browsers will fetch lazily otherwise.
+  for (const url of [...SHUFFLE_POOL, ...DEAL_POOL]) {
+    try { new Audio(url).preload = 'auto'; } catch (_) {}
+  }
+
+  function playFromPool(pool) {
+    if (_audioMuted || !pool.length) return;
+    const url = pool[Math.floor(Math.random() * pool.length)];
+    try {
+      const a = new Audio(url);
+      a.volume = AUDIO_VOLUME;
+      // Autoplay can be blocked until the user interacts with the page.
+      // We don't care — silent rejection just means no SFX that round.
+      a.play().catch(() => {});
+    } catch (_) { /* silent */ }
+  }
+
+  // Trigger state — closed over by maybePlayCardSounds, reset between hands.
+  let _audLastHandStartedAt = null;
+  let _audLastBoardLen = 0;
+  function maybePlayCardSounds(hand) {
+    if (!hand) {
+      _audLastHandStartedAt = null;
+      _audLastBoardLen = 0;
+      return;
+    }
+    // New hand → shuffle. startedAt is unique-per-hand on the server.
+    if (hand.startedAt && hand.startedAt !== _audLastHandStartedAt) {
+      _audLastHandStartedAt = hand.startedAt;
+      _audLastBoardLen = 0;
+      playFromPool(SHUFFLE_POOL);
+    }
+    // Board grew → deal sound (flop/turn/river all trigger).
+    const len = hand.board?.length || 0;
+    if (len > _audLastBoardLen) {
+      _audLastBoardLen = len;
+      playFromPool(DEAL_POOL);
+    }
+  }
+
+  $('#muteBtn').addEventListener('click', () => {
+    _audioMuted = !_audioMuted;
+    sessionStorage.setItem('audio.muted', _audioMuted ? '1' : '0');
+    applyMuteUI();
+    // Confirmation chirp when un-muting so the user hears it worked.
+    if (!_audioMuted) playFromPool(DEAL_POOL);
+  });
+
   // ===== Help modal — consolidates the side-panel content. Always
   //       available from the topbar "?" button; auto-discoverable on
   //       mobile where the side panels are hidden. =====
@@ -443,6 +511,9 @@
   function renderTable() {
     const t = state.table; if (!t) return;
     const hand = t.hand;
+    // Fire shuffle/deal SFX based on hand + board transitions. Cheap
+    // no-op when nothing changed (compares cached timestamps).
+    maybePlayCardSounds(hand);
     const ring = $('#seatRing');
     ring.innerHTML = '';
     const n = t.seats.length;
