@@ -828,11 +828,12 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   min-height: 150px;
   pointer-events: auto;
 }
-/* Card aspect ratio = 70 / 111 (matches the Shackles back-art PNG).
-   We set width and let aspect-ratio derive the height so every card
-   slot stays in sync without us having to edit a dozen pixel pairs.
-   Re-aspect the whole deck by tweaking --card-aspect in one place. */
-:root { --card-aspect: 70 / 111; }
+/* Card aspect ratio = 70 / 106 (matches the Shackles back-art PNG —
+   v3 at 929×1409 = 0.659). We set width and let aspect-ratio derive
+   the height so every card slot stays in sync without us having to
+   edit a dozen pixel pairs. Re-aspect the whole deck by tweaking
+   --card-aspect in one place. */
+:root { --card-aspect: 70 / 106; }
 .card-svg { width: 92px; aspect-ratio: var(--card-aspect); display: block; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5)); transition: transform .25s; }
 .card-svg--back { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }
 .card-svg--empty { opacity: 0.5; }
