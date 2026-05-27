@@ -102,6 +102,9 @@
   // Mute toggle persists per tab in sessionStorage.
   const SHUFFLE_POOL = ['/audio/shuffle_01.mp3', '/audio/shuffle_03.mp3'];
   const DEAL_POOL    = ['/audio/shuffle_02_deal.mp3', '/audio/shuffle_04_deal_short.mp3', '/audio/shuffle_05_deal_again.mp3'];
+  // Solo chime — only this client plays it, only when state.me becomes
+  // the current actor. Everyone else is silent for that event.
+  const YOUR_TURN_POOL = ['/audio/your-turn.mp3'];
   const AUDIO_VOLUME = 0.45;
   let _audioMuted = sessionStorage.getItem('audio.muted') === '1';
 
@@ -113,7 +116,7 @@
 
   // Warm up the cache so the first deal isn't a noticeable buffer
   // delay. Browsers will fetch lazily otherwise.
-  for (const url of [...SHUFFLE_POOL, ...DEAL_POOL]) {
+  for (const url of [...SHUFFLE_POOL, ...DEAL_POOL, ...YOUR_TURN_POOL]) {
     try { new Audio(url).preload = 'auto'; } catch (_) {}
   }
 
@@ -132,16 +135,23 @@
   // Trigger state — closed over by maybePlayCardSounds, reset between hands.
   let _audLastHandStartedAt = null;
   let _audLastBoardLen = 0;
+  // Tracks whether THIS client was the actor on the previous render.
+  // The your-turn chime fires only on the transition false → true so
+  // we don't re-chime every render while the player is sitting on
+  // their decision.
+  let _audWasMyTurn = false;
   function maybePlayCardSounds(hand) {
     if (!hand) {
       _audLastHandStartedAt = null;
       _audLastBoardLen = 0;
+      _audWasMyTurn = false;
       return;
     }
     // New hand → shuffle. startedAt is unique-per-hand on the server.
     if (hand.startedAt && hand.startedAt !== _audLastHandStartedAt) {
       _audLastHandStartedAt = hand.startedAt;
       _audLastBoardLen = 0;
+      _audWasMyTurn = false;
       playFromPool(SHUFFLE_POOL);
     }
     // Board grew → deal sound (flop/turn/river all trigger).
@@ -150,6 +160,15 @@
       _audLastBoardLen = len;
       playFromPool(DEAL_POOL);
     }
+    // Solo your-turn chime — only this client, only on the edge.
+    // hand.actor is the playerId currently on the clock. Other
+    // clients won't satisfy `actor === state.me.player_id` so they
+    // hear nothing — exactly what we want.
+    const isMyTurn = !!(state.me && hand.actor && hand.actor === state.me.player_id);
+    if (isMyTurn && !_audWasMyTurn) {
+      playFromPool(YOUR_TURN_POOL);
+    }
+    _audWasMyTurn = isMyTurn;
   }
 
   // Null-safe: a stale cached index.html may not have the mute button
