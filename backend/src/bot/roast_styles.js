@@ -38,13 +38,12 @@
 // (insult-vocab block, currency block, profanity block, etc.).
 const STYLE_GUIDES = {
   'dracula-flow':
-    `DRACULA-FLOW MENACE: speak in dense, surreal, self-mythologizing flexes. ` +
+    `DRACULA-FLOW MENACE: short, surreal, self-mythologizing flexes. ONE LINE, not a bar. ` +
     `Stack incongruous referents in one phrase ("Moving like Dracula — we get it back in blood"). ` +
-    `Use hyperbolic comparisons against famous specific things ("My money longer than James Cameron"). ` +
+    `Hyperbolic comparison ("My money longer than James Cameron."). ` +
     `Treat your own mythology LITERALLY — if you're an undead lich, blood and bones are job ` +
-    `descriptions, not metaphors. Drop occasional cosmic-scale specificity ("I was flipping ` +
-    `bricks for Mansa Musa before you became a type one civilization"). Cold, declarative, ` +
-    `never explain. Shrug at any escalation — "this shit ain't nothing to me" energy.`,
+    `descriptions, not metaphors. Cold, declarative, never explain. Shrug at escalation — ` +
+    `"this shit ain't nothing to me" energy. Max 12 words.`,
 
   'hitchens':
     `HITCHENS-STYLE INTELLECTUAL EVISCERATION: cold, formal, scholarly cruelty. Use feigned ` +
@@ -104,69 +103,40 @@ const STYLE_GUIDES = {
 };
 
 // Nickname → array of influence keys (matches STYLE_GUIDES keys above).
-// IMPORTANT: keep the user's hard rules — dracula-flow only on three;
-// hitchens only on canonically intellectual high-intel chars;
-// simple-speaker only on Elfrip + Crisp.
 //
-// Picks are based on each character's CHARACTER_FLAVOR description in
-// banter.js, the bot_intelligence value in db.js BOT_ROSTER, and what
-// roast register would actually fit the persona's voice. Most chars
-// get 1-2 styles; some get none and use the default prompt behavior.
+// TARGETED APPLICATION (post-rollback from broad assignment): the
+// previous version mapped influences onto ~28 characters and made
+// banter feel uniformly "comedian-styled" + verbose. User rolled
+// it back to a SMALL curated set tied to specific hard-rule
+// characters. All others get no overlay and rely on CHARACTER_FLAVOR
+// alone — that keeps each character's voice rooted in their own
+// persona rather than overwritten by a comedic register.
+//
+// The STYLE_GUIDES menu above is intentionally preserved in full
+// so additional characters can be added back one-at-a-time when a
+// specific style demonstrably fits them.
 const CHARACTER_INFLUENCES = {
-  // ─── Gothic horror set — ONLY these three get dracula-flow ───
-  'Tar Baphon':       ['dracula-flow', 'hitchens'],   // ancient lich + aristocratic British
-  'Auren Vrood':      ['dracula-flow', 'hitchens'],   // Whispering Way necromancer
-  'Vorkstag':         ['dracula-flow', 'hitchens'],   // skinwalker serial killer
+  // ─── User hard rule: dracula-flow EXCLUSIVELY for the gothic-horror trio ───
+  'Tar Baphon':       ['dracula-flow'],
+  'Auren Vrood':      ['dracula-flow'],
+  'Vorkstag':         ['dracula-flow'],
 
-  // ─── Hitchens — scholarly/intellectual cruelty (all intelligence:'high') ───
-  'Daramid':          ['hitchens'],                   // Judge, lawful debater
-  'Kate':             ['hitchens', 'leggero'],        // Pharasma cleric / investigator
-  'Casandalee':       ['hitchens'],                   // AI philosopher
-  'Estovion':         ['hitchens', 'leggero'],        // Master of Ascanor Lodge — scholar
-  'Adimarus':         ['hitchens', 'giraldo'],        // Whispering Way antipaladin
-  'Dinvaya':          ['hitchens'],                   // Brigh scholar
-  'Kelda':            ['hitchens', 'glaser'],         // they/them, sharp tinkerer
-  'Meyanda':          ['hitchens'],                   // android engineer-leader
+  // ─── User hard rule: simple-speaker EXCLUSIVELY for Elfrip + Crisp ───
+  'Elfrip':           ['simple-speaker'],   // goblin cleric — not smart
+  'Crisp':            ['simple-speaker'],   // velociraptor — chirps + occasional zinger
 
-  // ─── Giraldo — brutal compression (gruff / soldierly / enforcer types) ───
-  'Storgrim':         ['giraldo'],                    // dwarf, gruff
-  'Ulfred':           ['giraldo'],                    // dwarf, similar
-  'Mr. Brow':         ['giraldo'],                    // enforcer, blunt
-  'Kovira':           ['jeff-ross', 'giraldo'],       // warm toastmaster by default; Giraldo brutality ONLY when targeting a bully (see her CHARACTER_FLAVOR — anti-bully exception is the trigger)
-  'Rissa':            ['giraldo', 'glaser'],          // assassin, sharp
-  'Vaughan':          ['giraldo'],                    // jaded captain
-  'Dismas':           ['giraldo'],                    // wry Texan paladin
-  'Chef':             ['giraldo'],                    // Gordon-Ramsay register
-  'Lou Candlebean':   ['giraldo'],                    // dirty-mouth gnome
+  // ─── Kovira keeps her two-mode setup (warm default + anti-bully mode) ───
+  // Her CHARACTER_FLAVOR explicitly gates the giraldo register to
+  // bullying triggers; jeff-ross is the warm toastmaster default.
+  'Kovira':           ['jeff-ross', 'giraldo'],
 
-  // ─── Jeff Ross — toastmaster (gregarious / friendly with edge) ───
-  'Elodie':           ['jeff-ross', 'leggero'],       // friendly bard with quips
-  'Duristan':         ['jeff-ross'],                  // noble flourishes
-  'Conchobar':        ['jeff-ross', 'giraldo'],       // pirate captain, gregarious
-
-  // ─── Katt Williams — pun cascades / streetwise / dramatic ───
-  'Bujon':            ['katt-williams'],              // storm-sorcerer, theatrical
-  'Toni':             ['katt-williams', 'glaser'],
-  'Kai Ginn':         ['katt-williams'],
-
-  // ─── Leggero — twee cruelty (refined / cruel / socialite) ───
-  'Fera':             ['leggero'],                    // Paris-Hilton socialite voice
-  'Concetta':         ['leggero'],                    // raspy elderly mountain witch
-
-  // ─── Glaser — pause-pivots / sharp younger / clipped pro ───
-  'Lirienne':         ['glaser'],                     // courtly hunter, calm pro
-  'Farrah':           ['glaser'],
-  'Nomkath':          ['glaser'],                     // catfolk rogue, dry humor
-  'Sirona':           ['glaser', 'giraldo'],          // clipped officer cadence
-  'Tamsin':           ['leggero', 'glaser'],
-
-  // ─── Simple-speaker — per user instruction, ONLY these two ───
-  'Elfrip':           ['simple-speaker'],             // goblin cleric — not smart
-  'Crisp':            ['simple-speaker'],             // velociraptor — chirps + occasional zinger
-
-  // Characters NOT listed get no style overlay — default prompt only.
-  // (Texas Holden, Taelys, Agu, Tokala, Gaspar, Vesorianna are the
-  // current omissions; either oblivious / generic / not yet a fit.)
+  // EVERYONE ELSE: no overlay, default prompt only. Daramid (grumpy
+  // mannered judge), Kate, Casandalee, Estovion, Adimarus, Dinvaya,
+  // Storgrim, Mr. Brow, Rissa, Vaughan, Dismas, Chef, Lou, Elodie,
+  // Duristan, Conchobar, Bujon, Toni, Kai Ginn, Fera, Concetta,
+  // Lirienne, Farrah, Nomkath, Sirona, Tamsin, Kelda, Meyanda,
+  // Texas Holden, Taelys, Agu, Tokala, Gaspar, Vesorianna, Ulfred —
+  // all carry their voice through CHARACTER_FLAVOR alone now.
 };
 
 /** Build the style-guide block for a speaker's prompt. Returns either

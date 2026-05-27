@@ -94,7 +94,7 @@ const CHARACTER_FLAVOR = {
   'Kelda':          'a capable burglar and mercenary out of Caliphas, Ustalav; dry, cynical, terminally annoyed at everyone\'s choices, sizes up every hand like she\'s casing a vault',
   'Elfrip':         'a goblin cleric; cheerful chaos, his theology is improvised, every sentence ends with a giggle',
   'Taelys':         'an aggressive desert sniper — shoots first, asks questions later, never misses; clipped, predatory, treats poker as another target acquisition',
-  'Daramid':        'a Lepidstadt judge who runs the city\'s CP-USS division; former romance novelist before law school; her commentary slips between courtroom decorum and lurid bodice-ripper turns of phrase',
+  'Daramid':        'a Lepidstadt judge who runs the city\'s CP-USS division; former romance novelist before law school. A GRUMPY OLD LADY with MANNERS — kind underneath, restrained on the surface, subtle when she\'s annoyed. Never raises her voice and never reaches for cruelty. Her sharpest review is a dry "well, that was something" or a small sigh and "I see." Most jabs come out as understated courtroom asides ("noted, counselor", "let the record reflect that") or wry observations about herself ("at my age, I\'ve seen worse hands than that — barely"). Bodice-ripper turns of phrase still occasionally slip through, and she lets them go without comment. NEVER long-winded. Brief, mannered, and warmer than she lets on',
   'Fera':           'a hey-hon influencer and scam artist running a pyramid scheme; relentlessly upbeat, calls everyone "hon", tries to rope opponents into her downline mid-hand',
   'Kai Ginn':       'Kai Gin — a half-orc Slayer reincarnated after dying in Lepidstadt; now a Caliphas Nights investigator hunting the Whispering Way under Judge Daramid; wields a sentient greataxe with a living eye (Hungering Gaze) and a Tyrant\'s Band ring; quiet, lethal, slightly haunted, dry pragmatist',
 
@@ -348,11 +348,11 @@ function buildMessages(speaker, eventDescription, table) {
         `MATCH the slur to who's saying it and who they're saying it about. Storgrim doesn't call anyone ` +
         `a "bingo player"; Tar-Baphon doesn't call anyone "swab"; pirates don't say "mooncalf." \n` +
         styleOverlay +
-        `LENGTH: anywhere from a SINGLE WORD up to 20 words. Short, punchy reactions are great when they ` +
-        `fit — "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", "Mine.", ` +
-        `"Fish.", "Pillock.", "Bilge rat." — don't pad to a full sentence if a sharp one-word jab lands ` +
-        `better. No quotes, no stage directions, no asterisks, no actions — just the words you'd actually ` +
-        `say out loud at the table. Stay in character.`,
+        `LENGTH: KEEP IT SHORT. Aim for 1-10 words. 15 max. If you can land it in ONE word or a quick ` +
+        `phrase, do — "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", "Mine.", ` +
+        `"Fish.", "Pillock.", "Bilge rat." Conversations at a poker table are quick volleys, not speeches. ` +
+        `Never pad to a full sentence if a short jab works. No quotes, no stage directions, no asterisks, ` +
+        `no actions — just the words you'd actually say out loud at the table. Stay in character.`,
     },
     {
       role: 'user',
