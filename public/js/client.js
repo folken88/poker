@@ -247,18 +247,26 @@
       // Keep topbar / sit-out button label in sync with seat state.
       if (state.me) paintMe();
     }
+    // Forward to blind-mode for TTS narration of state deltas. Module
+    // no-ops when mode is off, so this is safe to call unconditionally.
+    window.BlindMode?.onState?.(st);
   });
 
   socket.on('table:hole', ({ playerId, hole }) => {
     if (state.me && playerId === state.me.player_id) {
       state.myHole = hole;
       if (document.body.dataset.screen === 'table') renderTable();
+      // Speak my hole cards (only to me — the emit is private already).
+      window.BlindMode?.onHole?.(hole);
     }
   });
 
   // Incremental chat events (in addition to the snapshot in table:state).
   socket.on('table:chat', (entry) => {
-    if (entry && typeof entry === 'object') appendChatEntry(entry);
+    if (entry && typeof entry === 'object') {
+      appendChatEntry(entry);
+      window.BlindMode?.onChat?.(entry);
+    }
   });
 
   // ===== Roster picker =====
@@ -1857,6 +1865,44 @@
       });
     } else { setScreen('roster'); renderRoster(); }
   });
+
+  // ===== Blind-mode accessibility wiring =====
+  // Backtick toggles the mode. Space (held) is push-to-talk while the
+  // mode is on — non-blind tabs never trigger speech recognition.
+  // Both shortcuts ignore presses originating from typeable elements
+  // so the existing chat box / raise input still work normally.
+  (function wireBlindMode() {
+    if (!window.BlindMode?.init) return;
+    window.BlindMode.init({ state, socket, toast, $ });
+    const isTypingTarget = (el) => {
+      if (!el) return false;
+      const tag = el.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+      return el.isContentEditable === true;
+    };
+    document.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      if (e.code === 'Backquote' && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        window.BlindMode.toggle();
+        return;
+      }
+      if (e.code === 'Space' && window.BlindMode.isOn() && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        const chip = $('#blindModeChip');
+        if (chip) chip.classList.add('is-listening');
+        window.BlindMode.startListening();
+      }
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' && window.BlindMode.isOn() && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        const chip = $('#blindModeChip');
+        if (chip) chip.classList.remove('is-listening');
+        window.BlindMode.stopListening();
+      }
+    });
+  })();
 
   socket.connect();
 })();
