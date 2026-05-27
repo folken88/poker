@@ -424,7 +424,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .topbar__brand { flex: 0 0 auto; }
 .topbar__me    { flex: 0 0 auto; }
 /* The clock sits in the middle and absorbs slack. */
-.topbar__clock { flex: 1 1 auto; max-width: 480px; margin: 0 auto; }
+.topbar__clock { flex: 1 1 auto; max-width: 420px; margin: 0 auto; }
 .topbar__brand {
   font-family: var(--font-display);
   letter-spacing: 0.22em;
@@ -445,8 +445,8 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .topbar__clock {
   display: flex; flex-direction: row; align-items: stretch;
   justify-content: space-between;
-  gap: 10px;
-  padding: 4px 14px;
+  gap: 8px;
+  padding: 4px 11px;
   background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.7));
   border: 1px solid rgba(241,207,131,0.25);
   border-radius: 10px;
@@ -463,14 +463,14 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
      Action cell hugs LEFT (it's anchored to the left edge of the
      clock), so label + digits left-justify within it. */
   align-items: flex-start;
-  min-width: 240px;
+  min-width: 212px;
 }
 .topbar__clock-cell--hand {
   /* Hand-timer cell hugs RIGHT (anchored to the right edge), so
      label + digits right-justify within it. Smaller min-width
      because the label is fixed "HAND TIMER" and the digits are mm:ss. */
   align-items: flex-end;
-  min-width: 96px;
+  min-width: 84px;
 }
 /* Label truncates rather than expanding the cell. */
 .topbar__clock-label {
