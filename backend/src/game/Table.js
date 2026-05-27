@@ -760,6 +760,30 @@ class Table {
           : `${nick} just won ${top.amount.toLocaleString()} gp${top.handDesc ? ' with ' + top.handDesc : ''}.`;
         banter.maybeSpeak(this, { kind: isBluff ? 'bluff-win' : 'win', description: desc, actorIds: [top.playerId] });
       }
+      // Loser-reaction trigger — pick one random bot who DIDN'T win
+      // and let them react to losing the hand. The system prompt
+      // explicitly permits character-flavored cursing; pirates curse
+      // like sailors, dwarves invoke Torag, Farrah swears for shock
+      // value. Per-table cooldown gates this against the win banter
+      // so we get at most one chat line per hand-complete pause.
+      const winnerIds = new Set(ws.map(w => w.playerId));
+      const loserBots = this.hand.players.filter(p => {
+        if (winnerIds.has(p.playerId)) return false;
+        const seat = this.seats[p.seatIndex];
+        return seat && !seat.isEmpty() && seat.isBot && seat.playerId === p.playerId;
+      });
+      if (loserBots.length > 0) {
+        const lp = loserBots[Math.floor(Math.random() * loserBots.length)];
+        const lnick = nickById.get(lp.playerId) || lp.playerId;
+        const winnerNick = ws.length > 0 ? (nickById.get(ws[0].playerId) || ws[0].playerId) : 'someone';
+        const desc = `You (${lnick}) JUST LOST this hand to ${winnerNick}. React with frustration — cursing in character is encouraged.`;
+        banter.maybeSpeak(this, {
+          kind: 'lose',
+          description: desc,
+          speakerHint: lp.playerId,
+          prob: 0.22,
+        });
+      }
     } catch (e) { /* never let logging break a hand */ }
 
     // Sync seat chips from hand state + persist to DB.

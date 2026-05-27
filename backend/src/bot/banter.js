@@ -67,7 +67,7 @@ const CHARACTER_FLAVOR = {
   'Rissa':          'formerly the Beast of Lepidstadt — a Promethean flesh-golem barbarian, now a young woman re-learning society after Kate Blackwood exonerated her; wields the Black Anvil; raw, blunt, sometimes cruel, often kind by accident',
   'Antoinette Borden': 'Toni — a vampire who only cares about herself; cold, hungry, charming when it suits her; everyone at the table is either food or in the way',
   'Toni':           'a vampire (Antoinette "Toni" Borden) who only cares about herself; cold, hungry, charming when it suits her; everyone at the table is either food or in the way',
-  'Farrah':         'Farrah Delilah Richton — a genius spirit medium and proud Lepidstadt detective, haunted (sometimes literally) by her grandfather\'s ghost who chimes in uninvited; precise, analytical, occasionally relays unsolicited opinions from beyond',
+  'Farrah':         'Farrah Delilah Richton — youngest at the table, a teenage genius spirit medium and proud Lepidstadt detective, haunted (sometimes literally) by her grandfather\'s ghost who chimes in uninvited. PARTICULARLY enjoys shocking her elders with off-color language and creative profanity — leans into it whenever the older characters can hear. Precise, analytical, occasionally relays unsolicited opinions from beyond (Grandpa Richton is mortified)',
   'Tamsin':         'Dr. Tamsin Virelle — a human cleric of Nethys / monk hybrid working out of Caliphas; physician and theologian by day; her one-liners cut harder than her staff; quiet, watchful, dry, slightly haunted',
   'Kovira':         'a Lepidstadt CP-USS officer (undead-hunting squad), triple-class; carries a shard of the Shield of Arnisant under her tongue which gives her a slight lisp; pragmatic, gallows humor, distrusts everything that doesn\'t breathe (and most things that do)',
   'Concetta':       'a deadly swashbuckler from Lepidstadt — drunk on cocktails she keeps mixing at the table, lethal with a sword, hopelessly in love with cards; loud, slurred, brilliant',
@@ -120,7 +120,16 @@ function shouldSpeak(tableId, prob = PROB) {
  *  ongoing hand, offer advice, gloat, sulk. They're still at the
  *  table and watching. Same goes for bots who haven't acted yet
  *  (waiting their turn). */
-function pickSpeaker(table, excludeIds) {
+function pickSpeaker(table, excludeIds, speakerHint) {
+  // When a specific bot is hinted (e.g. the loser of a hand reacting
+  // to their own loss), prefer them — but only if they're seated as
+  // an active bot. Falls through to the normal random-pool selection
+  // if the hint isn't seatable, so we don't silently produce nothing.
+  if (speakerHint) {
+    for (const seat of table.seats) {
+      if (!seat.isEmpty() && seat.isBot && seat.playerId === speakerHint) return seat;
+    }
+  }
   const exclude = new Set(excludeIds || []);
   const candidates = [];
   for (const seat of table.seats) {
@@ -148,6 +157,14 @@ function buildMessages(speaker, eventDescription) {
         `You may freely tease, roast, trash-talk, or make fun of other players (humans AND other bots) — ` +
         `keep it in character and don't be cruel, but DO have an edge. Inside jokes, callouts by name, ` +
         `backhanded compliments, and petty rivalries are all welcome. ` +
+        `CURSING IS ALLOWED and encouraged when it fits your character. Tailor the profanity to your ` +
+        `persona and origin — this is the Pathfinder setting of Golarion. Pirates (Skull & Shackles) ` +
+        `swear like sailors. Dwarves invoke Torag's beard or Droskar's furnace. Carrion Crown / Ustalavians ` +
+        `swear on Pharasma's grave or call something "ghoul-shit." Numerians blaspheme by Brigh or Casandalee. ` +
+        `Hellknights and Chelaxians invoke Asmodeus. Goddess-flavored interjections like "Sarenrae's ` +
+        `tits" / "by Calistria's whip" / "Desna damn it" / "pelt of the Lord" / "Norgorber take you" all fit. ` +
+        `Modern English profanity is also fine — just keep it in voice. When you LOSE a hand, you may get ` +
+        `genuinely angry; cursing the dice, the dealer, the opponent, or your own deity is fair game. ` +
         `Reply with ONE short in-character line, maximum 20 words. No quotes, no stage directions, ` +
         `no asterisks, no actions — just the words you'd actually say out loud at the table. Stay in character.`,
     },
@@ -208,18 +225,22 @@ async function callLLM(messages) {
  * Fire-and-forget: maybe generate a banter line for the given event.
  *
  * @param {Object} table  the Table instance
- * @param {Object} event  { kind, description, actorIds?, prob? }
+ * @param {Object} event  { kind, description, actorIds?, prob?, speakerHint? }
  *   kind: short label for the trigger (raise, allin, showdown, win, etc.)
  *   description: what to feed the model (one sentence of what happened)
  *   actorIds: optional playerIds to exclude from speaker pool
  *   prob: optional 0..1 override for this event's roll probability
  *         (defaults to LLM_BANTER_PROB). E.g. human chat replies use
  *         a much lower rate so bots only chime in occasionally.
+ *   speakerHint: optional playerId to FORCE as the speaker (overrides
+ *         random pick from the pool). Used for "you lost the hand,
+ *         react to it" events where we want the loser's voice
+ *         specifically, not a random tablemate's commentary.
  */
 function maybeSpeak(table, event) {
   const prob = (typeof event.prob === 'number') ? event.prob : PROB;
   if (!shouldSpeak(table.id, prob)) return;
-  const speaker = pickSpeaker(table, event.actorIds);
+  const speaker = pickSpeaker(table, event.actorIds, event.speakerHint);
   if (!speaker) return;
   // Optimistically claim the cooldown slot — if the call fails the
   // cooldown still elapses naturally, and we avoid a thundering herd
