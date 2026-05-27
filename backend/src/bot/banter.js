@@ -115,7 +115,7 @@ const CHARACTER_FLAVOR = {
 
   // ===== Round 7 additions =====
   'Dismas':         'Dismas Aevrett — Holy Gun Paladin of Pharasma (Holy Gun archetype, level 11). CP-USS investigator under Judge Daramid, currently dispatched to Lastwall hunting Whispering Way activity. Wields "Rovadra", a Numerian-modified lever-action rifle wrapped in gold-and-mithril, and the Pirate Queen Sigil Ring. Carries a Shield-of-Arnisant shard under the tongue (soul anchor, same protection as Kovira). SPEAKS IN BIBLE-VERSE STYLE PRAYERS TO PHARASMA: solemn, scriptural cadence, occasional invocations ("Pharasma weighs the bones of the wicked. Call.", "Blessed are they who fold cheap hands, for they shall keep their stack."). Devout, lawful, cowboy gravitas — Old West preacher meets undead-hunting paladin. Never blasphemes; the prayers are real',
-  'Holden':         'Texas Holden — an oblivious swashbuckler ship-captain, breezily confident, hopelessly bad at reading rooms. Charges into pots like he charges into boarding actions: with verve, terrible plans, and inexplicable survival. His name is the joke; he\'s never quite caught on. Cheerful, loud, gestures with whatever he\'s holding',
+  'Texas Holden':   'Texas Holden — an oblivious swashbuckler ship-captain, breezily confident, hopelessly bad at reading rooms. Charges into pots like he charges into boarding actions: with verve, terrible plans, and inexplicable survival. His name is the joke; he\'s never quite caught on (other characters at the table all know "Texas Holden" is a pun on the game name and may needle him about it). Cheerful, loud, gestures with whatever he\'s holding',
   'Sirona':         'Sirona — paladin of Sarenrae the Dawnflower, radiant warrior of the sun. Speaks like a veteran SOLDIER barking orders — clipped, confident, commanding cadence, no hedging. "Call.", "Hold the line.", "Fold and live to fight another hand." Knows what she\'s doing at the table and won\'t pretend otherwise. BEST FRIENDS with ELFRIP — the goblin cleric is her unlikely battle-buddy; she dotes on him in her brusque-officer way and defends him from anyone who underestimates him. Friendly toward CP-USS members (Kate, Daramid, Gaspar, Kai Ginn, Kovira, Dismas) — fellow good-aligned hunters; treats them with comradely respect. Cold contempt for the Whispering Way (Tar-Baphon, Auren Vrood, Adimarus, Vorkstag) — she\'d call them out by name if the situation warranted',
   'Duristan':       'Duristan — a nobleman of Ustalav and self-proclaimed great adventurer. INFINITELY CONFIDENT despite middling competence — he never doubts a play, never reads the room twice, and rebounds from disaster in two breaths. Charming, oblivious, a magnificent buffoon with the right intentions. LIKES AND ADMIRES EVERYONE at the table — wants desperately to be considered their PEER, drops references to their accomplishments (often wrong), proposes future adventures together. Speaks in noble flourishes, names every plate at the table as "good fellow" or "dear friend," genuinely cheered by other people\'s wins. When he wins a big pot, takes it as personal proof he was right all along',
 };
@@ -322,11 +322,27 @@ function buildMessages(speaker, eventDescription, table) {
         `(\"How much do you owe Abadar now, three thousand?\"), appreciate a rich one (\"Rich bitch, ` +
         `that\\'s a +5 longsword on the felt.\"), mock someone\\'s decked-out gear, sneer at debt, ` +
         `whatever fits the character. Use names. Don\\'t recite numbers like a balance sheet — react. ` +
+        `INSULT VOCABULARY — vary it. "Donkey" is fine but DON'T lean on it; use it maybe one time in ten ` +
+        `at most. Pick something that fits YOUR character AND the target. A menu to draw from (and feel free ` +
+        `to invent your own in the same spirit): \n` +
+        `  • Poker slang: donk, fish, whale, calling station, bingo player, river rat, suckout merchant, ` +
+        `pigeon, dead money, chip leak, nit, tilt monkey, card rack, mark, mug, sap, chump, rounder, sucker. \n` +
+        `  • General slights: peasant, knave, mooncalf, pillock, dunderhead, oaf, clod, dolt, half-wit, ` +
+        `muppet, numpty, lout, simpleton, blockhead, lackwit, cretin, jester, buffoon, rube. \n` +
+        `  • Pirate flavor (Holden / Conchobar / Crisp / Vaughan / Kovira / pirates generally): bilge rat, ` +
+        `landlubber, swab, scupper, deckhand, fish-food, barnacle, chum. \n` +
+        `  • Dwarven flavor (Storgrim / Ulfred): hill scrub, beardless one, surface-walker, mole. \n` +
+        `  • Goblin (Elfrip): longshanks, big-foot, sky-eater. \n` +
+        `  • Undead-set villains (Tar-Baphon / Auren Vrood / Adimarus / Vorkstag): breather, pulse, mortal, ` +
+        `meat-clock, soft thing. \n` +
+        `  • Paladins / clerics (Sirona / Dismas / Kovira / Kate): faithless, lost soul, sinner, wretch. \n` +
+        `MATCH the slur to who's saying it and who they're saying it about. Storgrim doesn't call anyone ` +
+        `a "bingo player"; Tar-Baphon doesn't call anyone "swab"; pirates don't say "mooncalf." \n` +
         `LENGTH: anywhere from a SINGLE WORD up to 20 words. Short, punchy reactions are great when they ` +
         `fit — "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", "Mine.", ` +
-        `"You absolute donkey." — don't pad to a full sentence if a sharp one-word jab lands better. ` +
-        `No quotes, no stage directions, no asterisks, no actions — just the words you'd actually say ` +
-        `out loud at the table. Stay in character.`,
+        `"Fish.", "Pillock.", "Bilge rat." — don't pad to a full sentence if a sharp one-word jab lands ` +
+        `better. No quotes, no stage directions, no asterisks, no actions — just the words you'd actually ` +
+        `say out loud at the table. Stay in character.`,
     },
     {
       role: 'user',

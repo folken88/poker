@@ -175,7 +175,7 @@ const BOT_ROSTER = [
 
   // Round 7 additions — characters with user-specified 11labs voices:
   { name: 'Dismas',               avatar: '/tokens/dismas-aevrett.webp',         baseMode: 'risky',    intelligence: 'average', gender: 'he' }, // CC Holy Gun Paladin 11, CP-USS / Daramid Knights; user: normal intel + high risk
-  { name: 'Holden',               avatar: '/tokens/texas-holden.webp',           baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // Texas Holden — Captain / Oblivious Swashbuckler
+  { name: 'Holden',               nickname: 'Texas Holden', avatar: '/tokens/texas-holden.webp', baseMode: 'risky', intelligence: 'low', gender: 'he' }, // displayed as "Texas Holden" (poker pun, his own name is the joke he never caught onto); player_id stays 'holden'
   { name: 'Sirona',               avatar: '/tokens/sirona.webp',                 baseMode: 'standard', intelligence: 'average', gender: 'she' }, // Paladin of Sarenrae · soldierly; best friends w/ Elfrip; friendly to CP-USS
   { name: 'Duristan Silvio',      nickname: 'Duristan', avatar: '/tokens/duristan-silvio.webp',        baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // Ustalavian nobleman buffoon — displayed as "Duristan", persistence key stays
   { name: 'Bujon, Storm of Cheliax', nickname: 'Bujon', avatar: '/tokens/bujon-storm-of-cheliax.webp', baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // Iku-Turso eel-form storm-sorcerer, Kill-Steal helm

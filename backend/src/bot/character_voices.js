@@ -35,7 +35,7 @@ const CHARACTER_VOICES = {
   'Adimarus':          '5mU8WBEmVJQ3n5J4fkzR', // Okole
   'Bujon':             '5mU8WBEmVJQ3n5J4fkzR', // Okole — shared with Adimarus; voice IDs aren't exclusive
   'Fera':              'SxrdCBV2iTasBWWDffJ4', // Paris Hilton
-  'Holden':            '0exky5u6rYq7ksXZEN5G', // Nick
+  'Texas Holden':      '0exky5u6rYq7ksXZEN5G', // Nick (display name is "Texas Holden" — the poker pun he never caught)
   'Kate':              '5tQ5OiKpM78sVuxrgC4W', // Phoebe
   'Vaughan':           'CJnd8k7Q0w2Y1HegJ65F', // John 117
   // FARRAH ─ Mimi (Vnqlgu3fdiFwisAye1qH, Swedish, young, "cute").
