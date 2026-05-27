@@ -35,16 +35,25 @@
     </svg>`;
   }
 
+  // Card back uses a single PNG (Shackles-themed art) clipped to the
+  // standard rounded-rect card silhouette. The PNG is ~2:3 native;
+  // preserveAspectRatio "slice" crops it to fit the 70×100 viewbox so
+  // it fills the card edge-to-edge with the corners rounded by the clip
+  // path. A thin dark stroke around the rect ties it to the face cards.
+  //
+  // Each call uses a unique clipPath ID — the page can have many
+  // face-down cards (every opponent's hole cards × 8 seats) and SVG
+  // IDs are document-global, so a collision would route every clip
+  // ref to whichever <defs> was parsed first.
+  let _backClipSeq = 0;
   function faceDown() {
+    const clipId = `cardBackClip_${++_backClipSeq}`;
     return `<svg viewBox="0 0 70 100" xmlns="http://www.w3.org/2000/svg" class="card-svg card-svg--back" aria-hidden="true">
-      <rect x="1" y="1" width="68" height="98" rx="7" ry="7" fill="#0f2a1c" stroke="#1a1a1a" stroke-width="1"/>
-      <rect x="5" y="5" width="60" height="90" rx="5" ry="5" fill="none" stroke="#d9b06a" stroke-width="1.5" opacity="0.5"/>
-      <g stroke="#d9b06a" stroke-width="0.8" opacity="0.5" fill="none">
-        <path d="M5 5 L65 95 M65 5 L5 95"/>
-        <circle cx="35" cy="50" r="10"/>
-        <circle cx="35" cy="50" r="18"/>
-      </g>
-      <text x="35" y="56" text-anchor="middle" font-family="Bebas Neue, sans-serif" font-size="14" fill="#d9b06a" letter-spacing="0.2em" opacity="0.7">FP</text>
+      <defs>
+        <clipPath id="${clipId}"><rect x="1" y="1" width="68" height="98" rx="7" ry="7"/></clipPath>
+      </defs>
+      <image href="/assets/cards/back-shackles.png" x="1" y="1" width="68" height="98" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
+      <rect x="1" y="1" width="68" height="98" rx="7" ry="7" fill="none" stroke="#1a1a1a" stroke-width="1"/>
     </svg>`;
   }
 
