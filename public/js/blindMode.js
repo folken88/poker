@@ -153,12 +153,40 @@
     updateChip();
     if (state.on) {
       earcon('ack');
-      // Fresh state snapshot so subsequent diffs don't dump the whole table.
-      state.prevState  = state.deps?.state?.table || null;
-      state.prevBoardLen = state.prevState?.hand?.board?.length || 0;
-      state.prevActor    = currentActorId(state.prevState);
-      state.prevWinners  = null;
       speak('Blind support on.', 'urgent');
+      // If a hand is in progress, narrate where things stand RIGHT
+      // NOW — the diff path only fires when something changes, so
+      // without this a spectator who just turned on blind mode
+      // would hear nothing until the next action. Then snapshot
+      // current state so the normal diff doesn't re-announce the
+      // same things on the next state event.
+      const st = state.deps?.state?.table;
+      const hand = st?.hand;
+      if (hand && hand.state !== 'COMPLETE') {
+        const seated = (st.seats || []).filter(s => s.occupied).length;
+        speak(`Hand in progress. ${seated} players.`, 'event');
+        const board = hand.board || [];
+        if (board.length > 0) {
+          const street = streetName(board.length);
+          speak(`${street.charAt(0).toUpperCase() + street.slice(1)}: ${cardListWords(board)}.`, 'event');
+        }
+        const actor = currentActorId(st);
+        if (actor) {
+          const mePid = state.deps?.state?.me?.player_id;
+          if (actor === mePid) {
+            earcon('turn');
+            speak('Your turn.', 'urgent');
+          } else {
+            speak(`${nickOf(st, actor)} to act.`, 'event');
+          }
+        }
+      }
+      // Snapshot AFTER announcing so the natural diff suppresses
+      // duplicates next state event.
+      state.prevState     = st || null;
+      state.prevBoardLen  = hand?.board?.length || 0;
+      state.prevActor     = currentActorId(st);
+      state.prevWinners   = null;
     } else {
       // speak() short-circuits on state.on=false, so emit the goodbye
       // announcement directly. Then drain the queue + close mic.
@@ -301,31 +329,43 @@
     speak(`Your hole cards: ${cardListWords(cards)}.`, 'event');
   }
 
-  /** Filter chat entries by kind — speak only the meaningful ones. */
+  /** Filter chat entries by kind — speak only the meaningful ones.
+   *  This is the main "play-by-play" path for blind users, ESPECIALLY
+   *  spectators who never get the personal-turn cue. Server already
+   *  formats each line concisely ("Kate calls 200.") — we just strip
+   *  any leading emoji + prefix garbage so the TTS engine doesn't
+   *  pronounce icons. */
   function onChat(entry) {
     if (!state.on || !entry || !entry.text) return;
     const kind = entry.kind || 'info';
-    // Per-action lines are already narrated via state diff (we'll add
-    // that next), so skip generic 'action' chat to avoid double-speak.
-    if (kind === 'action') return;
-    // Drop earlier-spoken types to avoid duplicates with state diff.
-    if (kind === 'win') return;
+    // Strip leading emoji / symbols / spaces so spoken output doesn't
+    // start with "playing-cards black-joker" or similar nonsense.
+    const text = entry.text.replace(/^[^\p{L}\p{N}]+/u, '').trim();
+    if (!text) return;
+
+    // Per-action lines — MAIN narration for spectators. Previously
+    // dropped on the floor because the original plan was "narrate
+    // via state diff"; that path never landed, so spectators got
+    // silence between board reveals. Now we route them through.
+    if (kind === 'action') { speak(text, 'event'); return; }
+
+    // Hand-boundary + win lines duplicate onState narration; skip
+    // them to avoid double-speak for seated users (who get the
+    // hand-start and winner announcements via the diff path).
     if (kind === 'hand') return;
-    // Banter from AI characters is deliberately SKIPPED here. The TTS
-    // pipeline can't do voice acting and the LLM lines deserve real
-    // performance — they'll be brought to life via an 11labs voice
-    // path in a later pass. Until then, Josh just gets a quieter table.
+    if (kind === 'win')  return;
+
+    // Banter is voiced separately via the 11labs/audio attachment
+    // on the chat broadcast (or local sound pool for Crisp/Elfrip).
+    // Don't TTS the text again.
     if (kind === 'banter') return;
-    // Human chat IS read aloud — those are real players speaking to
-    // the room and Josh needs to hear them. Strip the 💬 emoji prefix
-    // so the speech doesn't say "speech balloon" or whatever the
-    // synthesiser decides emoji means.
-    if (kind === 'human') {
-      speak(entry.text.replace(/^💬\s*/, ''), 'ambient');
-      return;
-    }
+
+    // Real-human chat at ambient priority — auto-drops if anything
+    // higher-priority is queued.
+    if (kind === 'human') { speak(text, 'ambient'); return; }
+
     // Everything else (rebuy, leave, debt, info, lootlord) is an event.
-    speak(entry.text.replace(/^[^\w]*\s*/, ''), 'event');
+    speak(text, 'event');
   }
 
   // ---------- Speech recognition (PTT) ----------
