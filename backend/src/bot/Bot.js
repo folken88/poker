@@ -272,7 +272,13 @@ class Bot {
       this.mode === 'cautious' ? 0.42 :
       this.mode === 'risky'    ? 0.22 :
                                  0.32;
-    const foldThreshold = clamp01(baseFold + potOdds * 0.40 + tuning.foldBias + wealthFoldAdj + aggCredAdj + bluffAdj);
+    // Preflop discount: calling pre is cheap (forced blinds, five more
+    // cards coming, multiway gives implicit drawing odds). Without this
+    // the fold threshold + potOdds inflation makes cautious bots wait
+    // for AA/KK before they'll even see a flop. -0.10 = "call one more
+    // street of hands you wouldn't call postflop."
+    const preflopDiscount = (board?.length || 0) === 0 ? 0.10 : 0;
+    const foldThreshold = clamp01(baseFold + potOdds * 0.40 + tuning.foldBias + wealthFoldAdj + aggCredAdj + bluffAdj - preflopDiscount);
 
     if (v < foldThreshold) {
       return { action: 'fold', reason: `fold v=${v.toFixed(2)} fT=${foldThreshold.toFixed(2)} ${tag}` };
