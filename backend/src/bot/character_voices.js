@@ -59,7 +59,7 @@ const CHARACTER_VOICES = {
   'Tamsin':            'dAlhI9qAHVIjXuVppzhW', // Tamsin — Engaging British storyteller (name-match!)
   'Toni':              'pFZP5JQG7iQjIQuC4Bku', // Lily — Velvety Actress (British, mid-aged) — vampire velvet
   'Agu':               'cjVigY5qzO86Huf0OWal', // Eric — Smooth, Trustworthy — polite Norgorber inquisitor
-  'Tar Baphon':        'Hjzqw9NR0xFMYU9Us0DL', // Reginald — labelled "evil" — fits an ancient lich-king
+  'Tar Baphon':        'UzI1NsMEV3ni5JRkRSls', // Alistair — Cultured and Articulate (shared library) — old aristocratic British, lich-king energy
 
   // Numerian / Iron Gods
   'Dinvaya':           'qSeXEcewz7tA0Q0qk9fH', // Victoria — Warm, Trustworthy, Relatable
