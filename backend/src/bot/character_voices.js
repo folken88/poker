@@ -37,17 +37,13 @@ const CHARACTER_VOICES = {
   'Holden':            '0exky5u6rYq7ksXZEN5G', // Nick
   'Kate':              '5tQ5OiKpM78sVuxrgC4W', // Phoebe
   'Vaughan':           'CJnd8k7Q0w2Y1HegJ65F', // John 117
-  // FARRAH ─ user priority order: British > young > aristocratic.
-  // Library has no young+British+female combination. Picking the
-  // youngest-feeling British female available — Alice ("Clear,
-  // Engaging Educator") leans teacherly which fits the sharp-
-  // detective Farrah pictures, and reads younger than Lily/Tamsin.
-  // Original pick was Mimi2 (NmuGDgA7keY3NYIjArX3, age=child) but it
-  // returned 403 voice_access_denied / detected_captcha_voice from
-  // 11labs — needs manual verification on the user's dashboard
-  // before it can be used via API. Swap back here once verified.
-  // (Voice is shared with Kelda — voice IDs aren't exclusive.)
-  'Farrah':            'Xb7hH8MSUJpSbSDYk0k2', // Alice — British, prioritising British+youngish
+  // FARRAH ─ Mimi (Vnqlgu3fdiFwisAye1qH, Swedish, young, "cute").
+  // Probed clean (HTTP 200, ~14kB) so it works straight through the
+  // current model. NOT British — but the original Mimi2 (English
+  // child) returned 403 voice_access_denied / detected_captcha_voice
+  // and needs manual verification on the 11labs dashboard before
+  // API use. User picked Mimi explicitly knowing the trade-off.
+  'Farrah':            'Vnqlgu3fdiFwisAye1qH', // Mimi — young female, Swedish accent
   'Kai Ginn':          'Yj3XGMd9w2H4C0P0L28M', // Sean
   'Daramid':           'poTX7WPM13yOc28z0sVi', // Shoreh Thing
   'Sirona':            'EXAVITQu4vr4xnSDxMaL', // Sarah — Mature, Reassuring, Confident (paladin barking orders)
