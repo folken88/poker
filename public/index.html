@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260527-leeryin" />
+  <link rel="stylesheet" href="/css/table.css?v=20260527-volume" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -103,11 +103,19 @@
           <button class="btn btn--ghost btn--sm" id="muteBtn" aria-label="Open audio settings" aria-haspopup="true" title="Audio settings — card sounds and AI character voices">🔊</button>
           <div class="audio-menu__pop" id="audioMenuPop" role="menu" aria-label="Audio settings">
             <label class="audio-menu__row">
-              <input type="checkbox" id="audioMute" /> Card sounds
+              <input type="checkbox" id="audioMute" /> <span>Card sounds</span>
             </label>
+            <div class="audio-menu__slider">
+              <input type="range" id="cardVolume" min="0" max="100" step="1" aria-label="Card sound volume" />
+              <span class="audio-menu__val" id="cardVolumeVal">45%</span>
+            </div>
             <label class="audio-menu__row">
-              <input type="checkbox" id="bannerVoiceToggle" /> AI character voices
+              <input type="checkbox" id="bannerVoiceToggle" /> <span>AI character voices</span>
             </label>
+            <div class="audio-menu__slider">
+              <input type="range" id="voiceVolume" min="0" max="100" step="1" aria-label="AI voice volume" />
+              <span class="audio-menu__val" id="voiceVolumeVal">85%</span>
+            </div>
             <p class="audio-menu__foot">AI voices stream from 11labs server-side. Toggle off if you want quiet chat.</p>
           </div>
         </span>
@@ -340,9 +348,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260527-leeryin"></script>
-  <script src="/js/cards.js?v=20260527-leeryin"></script>
-  <script src="/js/blindMode.js?v=20260527-leeryin"></script>
-  <script src="/js/client.js?v=20260527-leeryin"></script>
+  <script src="/js/avatars.js?v=20260527-volume"></script>
+  <script src="/js/cards.js?v=20260527-volume"></script>
+  <script src="/js/blindMode.js?v=20260527-volume"></script>
+  <script src="/js/client.js?v=20260527-volume"></script>
 </body>
 </html>

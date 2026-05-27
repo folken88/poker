@@ -666,6 +666,30 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   cursor: pointer;
   accent-color: var(--brass);
 }
+/* Volume slider row sits just under the matching checkbox. The range
+   input fills the available width; the percentage chip on the right
+   provides numeric feedback so the user can tell exactly where they've
+   set the level even on a small slider. */
+.audio-menu__slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0 6px 22px; /* indent under the checkbox column */
+}
+.audio-menu__slider input[type="range"] {
+  flex: 1 1 auto;
+  height: 4px;
+  accent-color: var(--brass);
+  cursor: pointer;
+}
+.audio-menu__val {
+  flex: 0 0 auto;
+  width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  color: var(--ivory-dim);
+}
 .audio-menu__foot {
   font-size: 0.72rem;
   color: var(--ivory-dim);

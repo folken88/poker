@@ -105,7 +105,15 @@
   // Solo chime — only this client plays it, only when state.me becomes
   // the current actor. Everyone else is silent for that event.
   const YOUR_TURN_POOL = ['/audio/your-turn.mp3'];
-  const AUDIO_VOLUME = 0.45;
+  // Soft tick — plays for EVERYONE every time the actor advances to
+  // the next player (bot or human). Subtler than the SHUFFLE / DEAL
+  // hits so it doesn't fatigue across long hands.
+  const TURN_TICK_POOL = ['/audio/card_slip_once.mp3'];
+  // Default volumes — overridden per-player by loadAudioSettings().
+  // _cardVolume drives all card SFX (shuffle/deal/your-turn/tick).
+  // _voiceVolume drives the 11labs MP3 playback (playBase64Mp3).
+  let _cardVolume  = 0.45;
+  let _voiceVolume = 0.85;
   // Audio prefs are PER-PLAYER (keyed by player_id in localStorage)
   // so they survive refreshes and tab swaps for as long as the same
   // player is sitting at this browser, but reset for a new player.
@@ -122,6 +130,8 @@
   function loadAudioSettings() {
     const km = audioSettingsKey('muted');
     const kv = audioSettingsKey('bannerVoice');
+    const kcv = audioSettingsKey('cardVol');
+    const kvv = audioSettingsKey('voiceVol');
     // No state.me yet? Use defaults (don't read the unscoped keys).
     if (km) {
       const raw = localStorage.getItem(km);
@@ -131,6 +141,17 @@
       const raw = localStorage.getItem(kv);
       _bannerVoiceEnabled = raw === '1'; // missing → false (voices off)
     } else _bannerVoiceEnabled = false;
+    // Volumes stored as integer percent 0..100; convert to 0..1 for
+    // <audio>.volume. Missing → defaults defined at the top of the
+    // SFX block so a brand-new player still gets sensible levels.
+    if (kcv) {
+      const raw = parseInt(localStorage.getItem(kcv), 10);
+      _cardVolume = Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) / 100 : 0.45;
+    } else _cardVolume = 0.45;
+    if (kvv) {
+      const raw = parseInt(localStorage.getItem(kvv), 10);
+      _voiceVolume = Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) / 100 : 0.85;
+    } else _voiceVolume = 0.85;
     applyMuteUI();
     // After load, republish to server so a fresh reconnect / new
     // player login carries the right preference into the listener
@@ -140,8 +161,12 @@
   function saveAudioSettings() {
     const km = audioSettingsKey('muted');
     const kv = audioSettingsKey('bannerVoice');
+    const kcv = audioSettingsKey('cardVol');
+    const kvv = audioSettingsKey('voiceVol');
     if (km) localStorage.setItem(km, _audioMuted ? '1' : '0');
     if (kv) localStorage.setItem(kv, _bannerVoiceEnabled ? '1' : '0');
+    if (kcv) localStorage.setItem(kcv, String(Math.round(_cardVolume  * 100)));
+    if (kvv) localStorage.setItem(kvv, String(Math.round(_voiceVolume * 100)));
     pushVoicePrefToServer();
   }
   // Inform the server whenever the banter-voice setting changes (and
@@ -160,6 +185,14 @@
     // `_audioMuted` is the inverse (mute = NOT on), hence the negation.
     const m = $('#audioMute');         if (m) m.checked = !_audioMuted;
     const v = $('#bannerVoiceToggle'); if (v) v.checked = _bannerVoiceEnabled;
+    // Volume sliders — render the 0..1 internal value back as an 0..100
+    // integer so the slider position and the % label both reflect the
+    // persisted setting. Guarded null-safe because old cached
+    // index.html may not have these elements yet.
+    const cv  = $('#cardVolume');     if (cv)  cv.value  = String(Math.round(_cardVolume  * 100));
+    const cvl = $('#cardVolumeVal');  if (cvl) cvl.textContent = `${Math.round(_cardVolume  * 100)}%`;
+    const vv  = $('#voiceVolume');    if (vv)  vv.value  = String(Math.round(_voiceVolume * 100));
+    const vvl = $('#voiceVolumeVal'); if (vvl) vvl.textContent = `${Math.round(_voiceVolume * 100)}%`;
   }
   applyMuteUI();
 
@@ -181,7 +214,7 @@
       const blob = new Blob([bytes], { type: mime });
       const url = URL.createObjectURL(blob);
       const a = new Audio(url);
-      a.volume = 0.85;
+      a.volume = _voiceVolume;
       a.addEventListener('ended', () => URL.revokeObjectURL(url));
       window.BlindMode?.notifyBanterStart?.(a);
       a.play().catch(() => URL.revokeObjectURL(url));
@@ -190,16 +223,19 @@
 
   // Warm up the cache so the first deal isn't a noticeable buffer
   // delay. Browsers will fetch lazily otherwise.
-  for (const url of [...SHUFFLE_POOL, ...DEAL_POOL, ...YOUR_TURN_POOL]) {
+  for (const url of [...SHUFFLE_POOL, ...DEAL_POOL, ...YOUR_TURN_POOL, ...TURN_TICK_POOL]) {
     try { new Audio(url).preload = 'auto'; } catch (_) {}
   }
 
-  function playFromPool(pool) {
+  // Per-pool volume scalar — turn-tick is half the master volume so the
+  // every-action tick doesn't drown out the bigger shuffle/deal hits.
+  // Other pools use the master card-volume 1:1.
+  function playFromPool(pool, scale = 1) {
     if (_audioMuted || !pool.length) return;
     const url = pool[Math.floor(Math.random() * pool.length)];
     try {
       const a = new Audio(url);
-      a.volume = AUDIO_VOLUME;
+      a.volume = Math.max(0, Math.min(1, _cardVolume * scale));
       // Autoplay can be blocked until the user interacts with the page.
       // We don't care — silent rejection just means no SFX that round.
       a.play().catch(() => {});
@@ -214,11 +250,18 @@
   // we don't re-chime every render while the player is sitting on
   // their decision.
   let _audWasMyTurn = false;
+  // Tracks the previous hand.actor playerId. The turn-tick fires
+  // every time this changes to a different non-null actor — so every
+  // player (bot or human) gets a soft "card slip" cue as the action
+  // moves to them. Reset on hand-start so the first actor of a new
+  // hand still triggers a tick (previous value would be stale).
+  let _audLastActor = null;
   function maybePlayCardSounds(hand) {
     if (!hand) {
       _audLastHandStartedAt = null;
       _audLastBoardLen = 0;
       _audWasMyTurn = false;
+      _audLastActor = null;
       return;
     }
     // New hand → shuffle. startedAt is unique-per-hand on the server.
@@ -226,6 +269,7 @@
       _audLastHandStartedAt = hand.startedAt;
       _audLastBoardLen = 0;
       _audWasMyTurn = false;
+      _audLastActor = null;
       playFromPool(SHUFFLE_POOL);
     }
     // Board grew → deal sound (flop/turn/river all trigger).
@@ -233,6 +277,16 @@
     if (len > _audLastBoardLen) {
       _audLastBoardLen = len;
       playFromPool(DEAL_POOL);
+    }
+    // Turn-tick — fires for every actor change (bot or human). Soft
+    // 0.5× scale so the every-action tick stays under the deal hit.
+    // Skipped if the actor cleared (hand.actor went null between
+    // betting rounds) so we only tick on a real next-player edge.
+    if (hand.actor && hand.actor !== _audLastActor) {
+      _audLastActor = hand.actor;
+      playFromPool(TURN_TICK_POOL, 0.5);
+    } else if (!hand.actor) {
+      _audLastActor = null;
     }
     // Solo your-turn chime — only this client, only on the edge.
     // hand.actor is the playerId currently on the clock. Other
@@ -278,6 +332,34 @@
   if (voiceCheckbox) {
     voiceCheckbox.addEventListener('change', (e) => {
       _bannerVoiceEnabled = !!e.target.checked;
+      saveAudioSettings();
+    });
+  }
+  // Volume sliders — 0..100 integer percent. `input` event fires on
+  // every drag tick for live feedback (the % label updates in real
+  // time); `change` would only fire on release. Saving on every tick
+  // is fine — localStorage writes are cheap and the saveAudioSettings
+  // server roundtrip only fires for the AI-voice toggle, not volume.
+  const cardVolSlider = $('#cardVolume');
+  if (cardVolSlider) {
+    cardVolSlider.addEventListener('input', (e) => {
+      const pct = parseInt(e.target.value, 10) || 0;
+      _cardVolume = Math.max(0, Math.min(100, pct)) / 100;
+      const lbl = $('#cardVolumeVal'); if (lbl) lbl.textContent = `${pct}%`;
+      saveAudioSettings();
+    });
+    // Audible preview on release so the player can hear the level they
+    // just picked. `change` (not `input`) so we don't fire every tick.
+    cardVolSlider.addEventListener('change', () => {
+      if (!_audioMuted) playFromPool(TURN_TICK_POOL, 0.5);
+    });
+  }
+  const voiceVolSlider = $('#voiceVolume');
+  if (voiceVolSlider) {
+    voiceVolSlider.addEventListener('input', (e) => {
+      const pct = parseInt(e.target.value, 10) || 0;
+      _voiceVolume = Math.max(0, Math.min(100, pct)) / 100;
+      const lbl = $('#voiceVolumeVal'); if (lbl) lbl.textContent = `${pct}%`;
       saveAudioSettings();
     });
   }
@@ -389,7 +471,7 @@
         if (entry.audioUrl) {
           try {
             const a = new Audio(entry.audioUrl);
-            a.volume = 0.85;
+            a.volume = _voiceVolume;
             window.BlindMode?.notifyBanterStart?.(a);
             a.play().catch(()=>{});
           } catch (_) { /* silent */ }
@@ -1341,7 +1423,7 @@
       if (a.audioUrl) {
         try {
           const el = new Audio(a.audioUrl);
-          el.volume = 0.85;
+          el.volume = _voiceVolume;
           window.BlindMode?.notifyBanterStart?.(el);
           el.play().catch(()=>{});
         } catch (_) {}
