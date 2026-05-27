@@ -230,7 +230,12 @@ for (const v of villains) {
     sourceFile: path.relative(FOUNDRY_DIR, v.path).replace(/\\/g, '/'),
     mtime: new Date(v.mtimeMs).toISOString(),
     size: v.size,
-    villain: true,
+    // Entries flagged `npc: true` in villains.json are non-antagonist
+    // NPCs (innkeepers, judges, allied nobles, etc.). They get their
+    // own gallery tier + brass badge instead of the crimson villain
+    // badge. Everything else from villains.json is treated as villain.
+    villain: !v.villain.npc,
+    npc: !!v.villain.npc,
     race: v.villain.race || null,
     class: v.villain.class || null,
     campaign: v.villain.campaign || null,

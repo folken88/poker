@@ -7,6 +7,7 @@
     "mtime": "2024-01-10T15:44:08.000Z",
     "size": 8692,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Queen of Cheliax",
     "campaign": "HV"
@@ -18,6 +19,19 @@
     "sourceFile": "human/token_human_female_adventurer_discoverer_professor_dd_np.webp",
     "mtime": "2026-03-26T23:22:52.709Z",
     "size": 21016
+  },
+  {
+    "id": "agasta-smythee",
+    "name": "Agasta Smythee",
+    "art": "/tokens/agasta-smythee.webp",
+    "sourceFile": "human/human_female_agasta-smythee-(2).webp",
+    "mtime": "2024-01-10T15:19:14.000Z",
+    "size": 17862,
+    "villain": false,
+    "npc": true,
+    "race": "Human",
+    "class": "Lepidstadt Innkeeper",
+    "campaign": "CC"
   },
   {
     "id": "aguclandos-lem",
@@ -71,6 +85,7 @@
     "mtime": "2024-05-24T04:00:30.000Z",
     "size": 7560,
     "villain": true,
+    "npc": false,
     "race": "Demigod",
     "class": "Aroden's Herald (fallen)",
     "campaign": "TG"
@@ -137,6 +152,7 @@
     "mtime": "2024-01-10T15:44:06.000Z",
     "size": 9298,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Lord-Mayor of Kintargo",
     "campaign": "HR"
@@ -149,6 +165,7 @@
     "mtime": "2026-05-25T15:59:17.975Z",
     "size": 323084,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Paladin (Dead-White)",
     "campaign": null
@@ -177,6 +194,7 @@
     "mtime": "2024-01-10T15:44:34.000Z",
     "size": 8982,
     "villain": true,
+    "npc": false,
     "race": "Flesh Golem",
     "class": "Innocent Monster",
     "campaign": "CC"
@@ -189,6 +207,7 @@
     "mtime": "2025-05-19T00:36:00.000Z",
     "size": 8728,
     "villain": true,
+    "npc": false,
     "race": "Half-Elf",
     "class": "Witch · Priestess of the Pirate God",
     "campaign": "CC"
@@ -229,6 +248,7 @@
     "mtime": "2026-02-08T02:53:51.143Z",
     "size": 26132,
     "villain": true,
+    "npc": false,
     "race": "AI",
     "class": "Ascended Goddess",
     "campaign": "IG"
@@ -311,6 +331,7 @@
     "mtime": "2024-03-03T18:50:16.000Z",
     "size": 8306,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Expert / Barbarian (Chef Ramsay)",
     "campaign": "IG"
@@ -323,6 +344,7 @@
     "mtime": "2024-02-12T21:56:36.000Z",
     "size": 8902,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Master Chief (Gothic Fantasy)",
     "campaign": null
@@ -335,6 +357,7 @@
     "mtime": "2024-01-10T15:47:22.000Z",
     "size": 7664,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Brawler",
     "campaign": null
@@ -347,6 +370,7 @@
     "mtime": "2024-01-10T15:44:00.000Z",
     "size": 10268,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Swashbuckler",
     "campaign": "CC"
@@ -359,6 +383,7 @@
     "mtime": "2026-01-23T01:00:51.171Z",
     "size": 39862,
     "villain": true,
+    "npc": false,
     "race": "Gnome",
     "class": "Bard (Shackles)",
     "campaign": "SS"
@@ -395,6 +420,7 @@
     "mtime": "2025-02-08T21:45:00.000Z",
     "size": 11886,
     "villain": true,
+    "npc": false,
     "race": "Velociraptor",
     "class": "Animal Companion · Loyal Reptile",
     "campaign": "JG"
@@ -415,6 +441,7 @@
     "mtime": "2024-01-10T15:44:34.000Z",
     "size": 13230,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Judge of Lepidstadt",
     "campaign": "CC"
@@ -484,6 +511,19 @@
     "sourceFile": "elf/token_elf_female_drow_rhyarca_crown_gold.webp",
     "mtime": "2026-03-06T03:56:50.337Z",
     "size": 22814
+  },
+  {
+    "id": "duristan-silvio",
+    "name": "Duristan Silvio",
+    "art": "/tokens/duristan-silvio.webp",
+    "sourceFile": "carrion_crown_characters/caliphas/token_human_male_ranger_duristan_silvio_caliphas_noble.webp",
+    "mtime": "2025-03-01T15:34:34.000Z",
+    "size": 8904,
+    "villain": false,
+    "npc": true,
+    "race": "Human",
+    "class": "Caliphas Noble Ranger",
+    "campaign": "CC"
   },
   {
     "id": "token-elf-male-eldarion-fighter-alt",
@@ -561,6 +601,7 @@
     "mtime": "2024-03-02T17:02:02.000Z",
     "size": 8430,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Teenage Heir (Richton)",
     "campaign": "CC"
@@ -587,6 +628,7 @@
     "mtime": "2024-01-10T15:44:26.000Z",
     "size": 10016,
     "villain": true,
+    "npc": false,
     "race": "Halfling",
     "class": "Redhead",
     "campaign": "CC"
@@ -643,6 +685,7 @@
     "mtime": "2024-01-10T15:44:34.000Z",
     "size": 11804,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Inquisitor (Cowboy Plate)",
     "campaign": "CC"
@@ -685,6 +728,7 @@
     "mtime": "2026-02-27T01:03:40.186Z",
     "size": 32330,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Witch (Pirate's Grandma)",
     "campaign": "SS"
@@ -713,6 +757,7 @@
     "mtime": "2024-01-10T15:48:44.000Z",
     "size": 13202,
     "villain": true,
+    "npc": false,
     "race": "Construct",
     "class": "Scorpion-Robot Iron God",
     "campaign": "IG"
@@ -791,6 +836,7 @@
     "mtime": "2025-03-25T14:28:38.000Z",
     "size": 13118,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Wizard (Biker Gang)",
     "campaign": null
@@ -1017,6 +1063,7 @@
     "mtime": "2024-01-10T15:48:42.000Z",
     "size": 9072,
     "villain": true,
+    "npc": false,
     "race": "Android",
     "class": "Priestess of Hellion",
     "campaign": "IG"
@@ -1028,6 +1075,19 @@
     "sourceFile": "giant/token_monster_swamp_monster_villain_scary.webp",
     "mtime": "2026-03-19T20:55:24.153Z",
     "size": 24794
+  },
+  {
+    "id": "muffin-topslapper",
+    "name": "Muffin Topslapper",
+    "art": "/tokens/muffin-topslapper.webp",
+    "sourceFile": "halfling/token_halfling_male_beard_muffin_miklos_stanek_judge_robes.webp",
+    "mtime": "2024-09-08T22:21:46.000Z",
+    "size": 14764,
+    "villain": false,
+    "npc": true,
+    "race": "Halfling",
+    "class": "Lepidstadt Judge",
+    "campaign": "CC"
   },
   {
     "id": "nigel",
@@ -1131,6 +1191,7 @@
     "mtime": "2024-08-10T13:50:28.000Z",
     "size": 9810,
     "villain": true,
+    "npc": false,
     "race": "Wood Golem",
     "class": "Druid",
     "campaign": "CC"
@@ -1197,6 +1258,7 @@
     "mtime": "2026-02-17T18:24:54.282Z",
     "size": 15998,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Cleric of Besmara",
     "campaign": "SS"
@@ -1239,6 +1301,7 @@
     "mtime": "2024-08-07T20:03:26.000Z",
     "size": 13280,
     "villain": true,
+    "npc": false,
     "race": "Deva",
     "class": "Paladin · Deva of the First Circle",
     "campaign": "CC"
@@ -1295,6 +1358,7 @@
     "mtime": "2025-12-07T00:53:04.000Z",
     "size": 9268,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Underworld Doctor",
     "campaign": null
@@ -1307,6 +1371,7 @@
     "mtime": "2024-03-17T02:29:48.000Z",
     "size": 10978,
     "villain": true,
+    "npc": false,
     "race": "Lich",
     "class": "The Whispering Tyrant",
     "campaign": "TG"
@@ -1319,6 +1384,7 @@
     "mtime": "2024-12-23T17:52:08.000Z",
     "size": 11586,
     "villain": true,
+    "npc": false,
     "race": "Skinwalker",
     "class": "Arms Dealer (Numeria)",
     "campaign": "IG"
@@ -1331,6 +1397,7 @@
     "mtime": "2026-02-27T00:06:30.398Z",
     "size": 22520,
     "villain": true,
+    "npc": false,
     "race": "Human",
     "class": "Captain · Oblivious Swashbuckler",
     "campaign": null
@@ -1371,6 +1438,7 @@
     "mtime": "2024-01-10T15:48:46.000Z",
     "size": 15280,
     "villain": true,
+    "npc": false,
     "race": "AI",
     "class": "Iron God",
     "campaign": "IG"
@@ -1397,6 +1465,7 @@
     "mtime": "2024-01-10T15:44:34.000Z",
     "size": 6898,
     "villain": true,
+    "npc": false,
     "race": "Skinwalker",
     "class": "Skinless Butcher",
     "campaign": "CC"

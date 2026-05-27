@@ -366,8 +366,9 @@
       const data = await r.json();
       if (!Array.isArray(data)) throw new Error('bad manifest shape');
       // Sort order: PCs first (most-pickable), then iconic villains,
-      // then generic recent tokens. Inside each tier, alphabetical.
-      const rank = t => t.pc ? 0 : (t.villain ? 1 : 2);
+      // then NPCs (allied / non-antagonist named characters), then
+      // generic recent tokens. Inside each tier, alphabetical.
+      const rank = t => t.pc ? 0 : (t.villain ? 1 : (t.npc ? 2 : 3));
       data.sort((a, b) => {
         const r = rank(a) - rank(b);
         if (r) return r;
@@ -400,9 +401,21 @@
     if (counter) counter.textContent =
       q ? `${matched.length} of ${tokens.length} match "${query}"` : `${tokens.length} tokens`;
     grid.innerHTML = '';
+    // Pin the player's currently-selected token (= last-used, since we
+    // initialise pendingAvatar from their persisted avatar_id when the
+    // confirm screen opens) to the very top of the visible list, no
+    // matter where it falls alphabetically or in the tier ranking.
+    // Makes re-selecting the same avatar a one-tap operation.
+    let ordered = matched;
+    if (state.pendingAvatar) {
+      const pinIdx = matched.findIndex(t => t.art === state.pendingAvatar);
+      if (pinIdx > 0) {
+        ordered = [matched[pinIdx], ...matched.slice(0, pinIdx), ...matched.slice(pinIdx + 1)];
+      }
+    }
     // Cap rendered items at 200 to keep the DOM snappy; if filter narrows it,
     // they all show.
-    const slice = matched.slice(0, 200);
+    const slice = ordered.slice(0, 200);
     for (const tok of slice) {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -423,7 +436,9 @@
       const campaignName = tok.campaign ? (CAMPAIGN_NAMES[tok.campaign] || tok.campaign) : '';
       let pcBadge = '';
       if (tok.villain) {
-        pcBadge = `<span class="avatar-pick__pcbadge avatar-pick__pcbadge--villain" title="${escapeAttr([campaignName, 'Iconic NPC / Villain'].filter(Boolean).join(' · '))}">${escapeText(tok.campaign || 'NPC')}</span>`;
+        pcBadge = `<span class="avatar-pick__pcbadge avatar-pick__pcbadge--villain" title="${escapeAttr([campaignName, 'Villain'].filter(Boolean).join(' · '))}">${escapeText(tok.campaign || 'V')}</span>`;
+      } else if (tok.npc) {
+        pcBadge = `<span class="avatar-pick__pcbadge avatar-pick__pcbadge--npc" title="${escapeAttr([campaignName, 'Named NPC'].filter(Boolean).join(' · '))}">${escapeText(tok.campaign || 'NPC')}</span>`;
       } else if (tok.pc) {
         pcBadge = `<span class="avatar-pick__pcbadge" title="${escapeAttr([campaignName, tok.player ? 'Player: ' + tok.player : ''].filter(Boolean).join(' · '))}">${escapeText(tok.campaign || 'PC')}</span>`;
       }

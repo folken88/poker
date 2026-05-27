@@ -1,7 +1,10 @@
 {
-  "_comment": "Hand-picked iconic villains and major NPCs from Cassbot's campaigns. Each entry is added to public/tokens/manifest.json with a `villain: true` flag so the gallery can badge them differently. Path is relative to FOUNDRY_DIR. Add more or remove any — re-run scripts/import-token-gallery.js to apply.",
+  "_comment": "Hand-picked iconic villains and major NPCs from Cassbot's campaigns. Each entry is added to public/tokens/manifest.json with a `villain: true` flag so the gallery can badge them differently. Path is relative to FOUNDRY_DIR. Add more or remove any — re-run scripts/import-token-gallery.js to apply. Set `npc: true` on entries that aren't antagonists — they'll get a brass NPC badge instead of the crimson villain badge.",
 
   "villains": [
+    { "name": "Duristan Silvio",      "campaign": "CC", "race": "Human",       "class": "Caliphas Noble Ranger",              "npc": true,  "source": "carrion_crown_characters/caliphas/token_human_male_ranger_duristan_silvio_caliphas_noble.webp" },
+    { "name": "Agasta Smythee",       "campaign": "CC", "race": "Human",       "class": "Lepidstadt Innkeeper",               "npc": true,  "source": "human/human_female_agasta-smythee-(2).webp" },
+    { "name": "Muffin Topslapper",    "campaign": "CC", "race": "Halfling",    "class": "Lepidstadt Judge",                    "npc": true,  "source": "halfling/token_halfling_male_beard_muffin_miklos_stanek_judge_robes.webp" },
     { "name": "Tar Baphon",           "campaign": "TG", "race": "Lich",       "class": "The Whispering Tyrant", "source": "carrion_crown_characters/whisperingway/token_undead_king_gold_tar_baphon_whispering_tyrant.webp" },
     { "name": "Arazni",               "campaign": "TG", "race": "Demigod",    "class": "Aroden's Herald (fallen)", "source": "undead/token_undead_arazni_lich_angel_wizard_demigod.webp" },
     { "name": "Beast of Lepidstadt",  "campaign": "CC", "race": "Flesh Golem","class": "Innocent Monster",      "source": "carrion_crown_characters/token_monster_beast_of_lepidstadt_golem.webp" },
