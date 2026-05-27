@@ -445,12 +445,26 @@ class Hand {
       handDesc = `showing ${describeHoleCards(winner.hole)}`;
     }
 
+    // Pick the cards the client should display on the winner banner.
+    // Preflop fold-win: just the hole. Postflop: the best-5 from
+    // pokersolver. Always sorted low → high so the card row reads
+    // ascending (2♣ … A♠).
+    let winningCards = winner.hole.slice();
+    try {
+      if (this.board.length >= 3) {
+        const solver = SolverHand.solve([...winner.hole, ...this.board]);
+        winningCards = solver.cards.map(c => c.toString());
+      }
+    } catch (_) { /* fall back to hole-only */ }
+    winningCards.sort((a, b) => (RANK_ORDER[a[0]] || 0) - (RANK_ORDER[b[0]] || 0));
+
     this.winners = [{
       playerId: winner.playerId,
       amount: total,
       pot: 0,
       handDesc,
       cards: winner.hole.slice(),
+      winningCards,
     }];
     this.events.push({ type: 'win-fold', player: winner.playerId, amount: total });
     return this._complete();
@@ -466,9 +480,20 @@ class Hand {
       if (contenders.length === 1) {
         const w = contenders[0];
         w.stack += pot.amount;
+        // Same winningCards selection as fold-win: best-5 from solver
+        // if the board's out, otherwise just the hole. Sort low → high.
+        let winningCards = w.hole.slice();
+        try {
+          if (this.board.length >= 3) {
+            const solver = SolverHand.solve([...w.hole, ...this.board]);
+            winningCards = solver.cards.map(c => c.toString());
+          }
+        } catch (_) { /* fall back to hole-only */ }
+        winningCards.sort((a, b) => (RANK_ORDER[a[0]] || 0) - (RANK_ORDER[b[0]] || 0));
         this.winners.push({
           playerId: w.playerId, amount: pot.amount, pot: potIdx,
           handDesc: 'uncontested side pot', cards: w.hole,
+          winningCards,
         });
         this.events.push({ type: 'win-pot', player: w.playerId, amount: pot.amount, pot: potIdx });
         return;
@@ -497,15 +522,19 @@ class Hand {
         let amt = share;
         if (remainder > 0) { amt += 1; remainder--; }
         w.stack += amt;
-        const sIdx = winnerPlayers.indexOf(w);
+        const solver = solverHands[contenders.indexOf(w)];
+        // Pull the best-5 cards from the solver result and sort low → high.
+        const winningCards = (solver?.cards || []).map(c => c.toString())
+          .sort((a, b) => (RANK_ORDER[a[0]] || 0) - (RANK_ORDER[b[0]] || 0));
         this.winners.push({
           playerId: w.playerId,
           amount: amt,
           pot: potIdx,
-          handDesc: describeWinningHand(solverHands[contenders.indexOf(w)]),
+          handDesc: describeWinningHand(solver),
           cards: w.hole,
+          winningCards,
         });
-        this.events.push({ type: 'win-pot', player: w.playerId, amount: amt, pot: potIdx, hand: describeWinningHand(solverHands[contenders.indexOf(w)]) });
+        this.events.push({ type: 'win-pot', player: w.playerId, amount: amt, pot: potIdx, hand: describeWinningHand(solver) });
       }
     });
 

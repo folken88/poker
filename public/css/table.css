@@ -854,6 +854,17 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   margin-top: 2px;
   max-width: 380px;
 }
+/* Winning-cards row, low→high. Card SVGs are 92×132 native; we scale
+   them down via CSS so 5 cards fit comfortably under the text. */
+.hand-banner__cards {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+.hand-banner__cards .card-svg {
+  width: 50px; height: 72px;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
+}
 @keyframes winnerFadeIn {
   from { opacity: 0; transform: scale(0.92); }
   to   { opacity: 1; transform: scale(1); }
@@ -865,6 +876,8 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   .hand-banner__nick { font-size: 1.1rem; }
   .hand-banner__amount { font-size: 1.1rem; }
   .hand-banner__hand { font-size: 0.72rem; max-width: 240px; }
+  .hand-banner__cards .card-svg { width: 34px; height: 50px; }
+  .hand-banner__cards { gap: 3px; margin-top: 5px; }
 }
 
 /* ===== Reset modal ===== */

@@ -1251,6 +1251,13 @@
       const nick = seat?.nickname || w.playerId;
       const avatar = seat?.avatarId ? renderAvatar(seat.avatarId) : '';
       const desc = w.handDesc || '';
+      // The cards that won, low→high. Backend sends 2-5 cards depending
+      // on whether the board was out — we just render whatever's there.
+      const cardsHtml = (w.winningCards || []).length
+        ? `<div class="hand-banner__cards">${
+            w.winningCards.map(c => window.FolkenCards.card(c)).join('')
+          }</div>`
+        : '';
       return `
         <div class="hand-banner__win">
           <div class="hand-banner__avatar">${avatar}</div>
@@ -1258,6 +1265,7 @@
             <div class="hand-banner__nick">${escapeText(nick)}</div>
             <div class="hand-banner__amount">+ ${formatGp(w.amount)}</div>
             ${desc ? `<div class="hand-banner__hand">${escapeText(desc)}</div>` : ''}
+            ${cardsHtml}
           </div>
         </div>`;
     }).join('');
