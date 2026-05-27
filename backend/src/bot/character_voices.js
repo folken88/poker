@@ -55,7 +55,7 @@ const CHARACTER_VOICES = {
   // ===== Defaults picked from your 11labs library — adjust as desired =====
   // Carrion Crown / Caliphas crowd
   'Storgrim':          'JBFqnCBsd6RMkjVDRZzb', // George — Warm, Captivating Storyteller (British, mid-aged)
-  'Ulfred':            'pqHfZKP75CvOlQylNhV4', // Bill — Wise, Mature, Balanced (old, male) — orthodox dwarf cleric
+  'Ulfred':            'bFrjFL4nlpeYNwNRhXxq', // Mossbeard — Scottish, old, raspy ("God of the Wild") — deep dwarf-cleric energy (shared library)
   'Tamsin':            'dAlhI9qAHVIjXuVppzhW', // Tamsin — Engaging British storyteller (name-match!)
   'Toni':              'pFZP5JQG7iQjIQuC4Bku', // Lily — Velvety Actress (British, mid-aged) — vampire velvet
   'Agu':               'cjVigY5qzO86Huf0OWal', // Eric — Smooth, Trustworthy — polite Norgorber inquisitor
@@ -73,7 +73,7 @@ const CHARACTER_VOICES = {
   'Taelys':            'RILOU7YmBhvwJGDGjNmP', // Jane — Professional Audiobook Reader (British, old) — gravitas
   'Kelda':             'Xb7hH8MSUJpSbSDYk0k2', // Alice — Clear, Engaging Educator (British) — dry cynic
   'Vesorianna':        'Ir1QNHvhaJXbAGhT50w3', // Sara Martin — Light, Intimate and Tender — ethereal ghost
-  'Lou Candlebean':    'gHu9GtaHOXcSqFTK06ux', // Anjali — Warm, Cheerful and Clear — cheerful gnome
+  'Lou Candlebean':    'FGY2WhTYpPnrIDTdsKH5', // Laura — Enthusiast, Quirky Attitude (young, American, sassy) — hip gnome
   'Elodie':            'CKfuQaJKfvUG2Wtrda3Y', // Lison — French (shared library), young + soft
   'Chef':              'SOYHLrjzK2X1ezoPC6cr', // Harry — Fierce Warrior — shouty Ramsay
 
