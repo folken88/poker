@@ -156,7 +156,9 @@ function registerTableHandlers(io, socket, { tables }) {
     if (targetSeat.pendingStand) return ack?.({ ok: false, error: 'already leaving after this hand' });
 
     const callerNick = me.nickname || me.player_id;
-    const targetNick = targetSeat.player?.nickname || playerId;
+    // displayNickname() preserves Vorkstag's disguise — chat says
+    // "kicked Kate" even if Kate is actually the skinwalker.
+    const targetNick = targetSeat.displayNickname();
     const verb = targetSeat.isBot ? 'kicked the bot' : 'kicked';
     table.chat('leave', `🚪 ${callerNick} ${verb} ${targetNick} — leaves after this hand.`);
     table.stand(playerId);
@@ -219,7 +221,7 @@ function registerTableHandlers(io, socket, { tables }) {
     const me = meOf(socket);
     const callerNick = me?.nickname || 'A player';
     const target = table.findSeat(playerId);
-    const targetNick = target?.player?.nickname || playerId;
+    const targetNick = target ? target.displayNickname() : playerId;
     table.chat('leave', `🚪 ${callerNick} kicked ${targetNick} — leaves after this hand.`);
     table.stand(playerId);
     io.to(table.roomName()).emit('table:state', table.publicState());

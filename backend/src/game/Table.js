@@ -65,6 +65,15 @@ class Seat {
   effectiveAvatar() {
     return this.avatarOverride || this.player?.avatar_id || null;
   }
+  /** Display name to show OTHER players + record in chat lines.
+   *  For Vorkstag the impersonatedNick replaces his real one so
+   *  the table can't see who he actually is — the deception covers
+   *  visual avatar AND text label. Cash, gear, and debt amounts
+   *  stay accurate (the Church of Abadar can't be fooled), so a
+   *  careful observer can still spot an anomaly. */
+  displayNickname() {
+    return this.impersonatedNick || this.player?.nickname || this.playerId;
+  }
 }
 
 class Table {
@@ -902,7 +911,7 @@ class Table {
       db.setGear(seat.playerId, gear);
       seat.chipsAtTable -= cost;
       db.setChips(seat.playerId, seat.chipsAtTable);
-      const nick = seat.player?.nickname || seat.playerId;
+      const nick = seat.displayNickname();
       const itemName = db.GEAR_BY_KEY[slot].label;
       const verb = prev > 0 ? `upgraded to +${target}` : `picked up a +${target}`;
       this.chat('rebuy', `🛒 ${nick} ${verb} ${itemName} for ${cost.toLocaleString()} gp.`);
@@ -924,7 +933,7 @@ class Table {
         const overflow = seat.chipsAtTable - CASH_CAP;
         seat.chipsAtTable = CASH_CAP;
         db.setChips(seat.playerId, CASH_CAP);
-        const nick = seat.player?.nickname || seat.playerId;
+        const nick = seat.displayNickname();
         this.chat('debt', `💸 ${nick} hit the ${CASH_CAP.toLocaleString()} gp cash cap — ${overflow.toLocaleString()} gp lost (buy magic items to keep your winnings!).`);
       }
     }
@@ -994,13 +1003,13 @@ class Table {
       for (const seat of this.seats) {
         if (seat.isEmpty() || seat.chipsAtTable > 0) continue;
         if (seat.isBot) {
-          const nick = seat.player?.nickname || seat.playerId;
+          const nick = seat.displayNickname();
           seat.chipsAtTable = db.DEFAULT_STACK;
           db.setChips(seat.playerId, db.DEFAULT_STACK);
           this.chat('rebuy', botRebuyMessage(nick, db.DEFAULT_STACK));
           rebought++;
         } else {
-          const nick = seat.player?.nickname || seat.playerId;
+          const nick = seat.displayNickname();
           this.chat('leave', bustMessage(nick));
           this._vacate(seat);
           vacated++;
@@ -1210,11 +1219,12 @@ class Table {
         index: s.index,
         occupied: !s.isEmpty(),
         playerId: s.playerId,
-        nickname: s.player?.nickname || null,
-        // effectiveAvatar() returns seat.avatarOverride when set
-        // (Vorkstag's stolen face), otherwise the player's stored
-        // avatar_id. Lets the skinwalker wear someone else's portrait
-        // without polluting the DB record.
+        // displayNickname() returns the impersonated name when
+        // Vorkstag is wearing it, real nickname otherwise. Pairs
+        // with effectiveAvatar() so the whole identity (face + name)
+        // is disguised in the broadcast. Cash, gear, debt stay
+        // accurate — the Church of Abadar can't be fooled.
+        nickname: s.displayNickname(),
         avatarId: s.effectiveAvatar(),
         chips: s.chipsAtTable,
         inHand: s.inHand,

@@ -202,7 +202,12 @@ function buildTableContext(table, speakerSeat) {
         const debt = Number(fresh.rebuy_debt || 0);
         const net = cash + gearVal - debt;
         return {
-          nick: s.player?.nickname || s.playerId,
+          // displayNickname → Vorkstag's seat shows up as whoever he's
+          // wearing, so OTHER bots' LLM context lists "Kate (she/her, …)"
+          // not "Vorkstag (he/him, …)". His own system prompt still uses
+          // the real persona via the CHARACTER_FLAVOR lookup in
+          // buildMessages — that path doesn't touch this map.
+          nick: (typeof s.displayNickname === 'function') ? s.displayNickname() : (s.player?.nickname || s.playerId),
           chips: cash,
           gearVal,
           debt,
@@ -404,7 +409,19 @@ function maybeSpeak(table, event) {
   const messages = buildMessages(speaker, event.description, table);
   callLLM(messages).then(async line => {
     if (!line) return;
+    // Two different names matter here:
+    //   nick      the speaker's TRUE nickname — drives voice + sound
+    //             lookup and matches CHARACTER_FLAVOR keys.
+    //   chatNick  what we LABEL the chat broadcast with — disguised
+    //             (Seat.displayNickname → impersonatedNick) when
+    //             Vorkstag is wearing someone's face. The broadcast
+    //             reads "💬 Kate: …" so the table can't tell it's
+    //             Vorkstag underneath. Wealth amounts in the line
+    //             itself stay accurate to the real player.
     const nick = speaker.player?.nickname || speaker.playerId;
+    const chatNick = (typeof speaker.displayNickname === 'function')
+      ? speaker.displayNickname()
+      : nick;
     // Audio source priority:
     //   1. Stored sound pool (Crisp's chirps, Elfrip's burps) — local
     //      file, no API call, picked randomly from CHARACTER_SOUNDS.
@@ -431,7 +448,7 @@ function maybeSpeak(table, event) {
     const extras = audioUrl
       ? { audioUrl }
       : audio ? { audio, audioMime: 'audio/mpeg' } : null;
-    table.chat('banter', `💬 ${nick}: ${line}`, extras);
+    table.chat('banter', `💬 ${chatNick}: ${line}`, extras);
   }).catch(() => { /* silent */ });
 }
 
