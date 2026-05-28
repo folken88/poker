@@ -395,6 +395,40 @@
     }
   });
 
+  // ===== Topbar overflow menu (mobile) — hamburger toggles the
+  //       management-button row that's collapsed into a dropdown on
+  //       narrow viewports. Desktop CSS keeps the row inline and
+  //       hides the toggle, so these handlers are inert there. =====
+  const topbarMenu       = $('#topbarMenu');
+  const topbarMenuToggle = $('#topbarMenuToggle');
+  if (topbarMenu && topbarMenuToggle) {
+    const closeMenu = () => {
+      topbarMenu.classList.remove('is-open');
+      topbarMenuToggle.setAttribute('aria-expanded', 'false');
+    };
+    topbarMenuToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = !topbarMenu.classList.contains('is-open');
+      topbarMenu.classList.toggle('is-open', open);
+      topbarMenuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    // Tap a menu item → close the menu. Use capture so the close runs
+    // before the item's own handler (which often opens a modal that
+    // would otherwise be hidden underneath the still-open menu).
+    topbarMenu.addEventListener('click', (e) => {
+      if (e.target.closest('button')) closeMenu();
+    });
+    // Tap outside the menu (and not the toggle) → close.
+    document.addEventListener('click', (e) => {
+      if (topbarMenu.contains(e.target) || topbarMenuToggle.contains(e.target)) return;
+      if (topbarMenu.classList.contains('is-open')) closeMenu();
+    });
+    // Escape closes it for keyboard users.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && topbarMenu.classList.contains('is-open')) closeMenu();
+    });
+  }
+
   function setScreen(name) { document.body.dataset.screen = name; }
   function toast(msg, isError = false) {
     const t = $('#toast');

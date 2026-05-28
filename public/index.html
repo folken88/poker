@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260527-cancelkicks" />
+  <link rel="stylesheet" href="/css/table.css?v=20260527-mobile-menu" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -128,13 +128,22 @@
           </div>
         </span>
         <button class="btn btn--ghost btn--sm" id="helpBtn" aria-label="How to play — open help" title="How to play (actions, hand rankings, tips)">?</button>
-        <button class="btn btn--ghost btn--sm" id="addBotBtn" title="Add a random AI to an empty seat">+ Bot</button>
-        <button class="btn btn--ghost btn--sm" id="pickBotBtn" title="Pick a specific AI character to seat">Pick AI ▾</button>
-        <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Re-buy 5,000 chips. Hock any magic items first.">Re-buy</button>
-        <button class="btn btn--ghost btn--sm" id="sitOutBtn" title="Keep your seat but skip upcoming deals. Click Rejoin to come back.">Sit out</button>
-        <button class="btn btn--ghost btn--sm" id="switchBtn"     title="Switch to a different player">Switch</button>
-        <button class="btn btn--ghost btn--sm" id="leaveBtn"      title="Leave the table entirely (vacate your seat)">Leave</button>
-        <button class="btn btn--danger btn--sm" id="resetGameBtn" title="Reset EVERYONE's chips + cancel hand">Reset</button>
+        <!-- Mobile-only hamburger that collapses the management-button
+             row below into a slide-down menu. Hidden on desktop. The
+             row itself stays inline on desktop (default flex) and
+             becomes hidden-unless-toggled on mobile via .is-open. -->
+        <button class="btn btn--ghost btn--sm topbar__menu-toggle" id="topbarMenuToggle"
+                aria-label="Open menu" aria-haspopup="true" aria-expanded="false"
+                aria-controls="topbarMenu">≡</button>
+        <div class="topbar__menu" id="topbarMenu">
+          <button class="btn btn--ghost btn--sm" id="addBotBtn" title="Add a random AI to an empty seat">+ Bot</button>
+          <button class="btn btn--ghost btn--sm" id="pickBotBtn" title="Pick a specific AI character to seat">Pick AI ▾</button>
+          <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Re-buy 5,000 chips. Hock any magic items first.">Re-buy</button>
+          <button class="btn btn--ghost btn--sm" id="sitOutBtn" title="Keep your seat but skip upcoming deals. Click Rejoin to come back.">Sit out</button>
+          <button class="btn btn--ghost btn--sm" id="switchBtn"     title="Switch to a different player">Switch</button>
+          <button class="btn btn--ghost btn--sm" id="leaveBtn"      title="Leave the table entirely (vacate your seat)">Leave</button>
+          <button class="btn btn--danger btn--sm" id="resetGameBtn" title="Reset EVERYONE's chips + cancel hand">Reset</button>
+        </div>
       </div>
     </header>
 
@@ -356,9 +365,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260527-cancelkicks"></script>
-  <script src="/js/cards.js?v=20260527-cancelkicks"></script>
-  <script src="/js/blindMode.js?v=20260527-cancelkicks"></script>
-  <script src="/js/client.js?v=20260527-cancelkicks"></script>
+  <script src="/js/avatars.js?v=20260527-mobile-menu"></script>
+  <script src="/js/cards.js?v=20260527-mobile-menu"></script>
+  <script src="/js/blindMode.js?v=20260527-mobile-menu"></script>
+  <script src="/js/client.js?v=20260527-mobile-menu"></script>
 </body>
 </html>

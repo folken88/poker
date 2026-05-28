@@ -428,6 +428,17 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 }
 .topbar__brand { flex: 0 0 auto; }
 .topbar__me    { flex: 0 0 auto; }
+/* Management-button row inside the topbar. On desktop this is just
+   an inline flex container that flows alongside the other .topbar__me
+   items. On mobile (≤720px) it collapses into a slide-down menu
+   triggered by .topbar__menu-toggle (which itself is hidden on desktop). */
+.topbar__menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.topbar__menu-toggle { display: none; } /* desktop default */
 /* The clock sits in the middle and absorbs slack. */
 .topbar__clock { flex: 1 1 auto; max-width: 420px; margin: 0 auto; }
 /* Spectator list sits immediately right of the clock, before the
@@ -2319,13 +2330,39 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   /* Hide the side help panels — content moves into the Help modal. */
   .help-panel { display: none; }
   /* Topbar: drop brand text, tighten everything */
-  .topbar { padding: 0.35rem 0.5rem; gap: 0.35rem; flex-wrap: wrap; }
+  .topbar { padding: 0.35rem 0.5rem; gap: 0.35rem; flex-wrap: wrap; position: relative; }
   .topbar__brand { display: none; }
   .topbar__clock { min-width: 110px; padding: 2px 8px; }
   .topbar__clock-digits svg { width: 16px; height: 28px; }
   .topbar__me { font-size: 0.75rem; gap: 0.3rem; flex-wrap: wrap; }
   .me-debt, .me-chips { font-size: 0.75rem; }
   .topbar__me .btn { padding: 4px 8px; font-size: 0.75rem; min-height: 32px; }
+
+  /* ===== Topbar overflow menu (mobile) =====
+     The management buttons (+Bot, Pick AI, Re-buy, Sit out, Switch,
+     Leave, Reset) would otherwise wrap into 2-3 extra rows on a phone
+     and eat the felt height. Collapsed into a slide-down panel
+     anchored to the topbar's bottom edge so it stays reachable
+     regardless of viewport width. The .≡ toggle button stays inline. */
+  .topbar__menu-toggle { display: inline-flex; }
+  .topbar__menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0.5rem;
+    z-index: 70;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3rem;
+    padding: 0.5rem;
+    background: linear-gradient(180deg, rgba(20,24,18,0.97), rgba(10,14,10,0.99));
+    border: 1px solid rgba(217,176,106,0.4);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+    min-width: 160px;
+  }
+  .topbar__menu.is-open { display: flex; }
+  .topbar__menu .btn { width: 100%; min-height: 36px; text-align: left; }
 
   /* Felt: leave room for the fixed bottom action bar. */
   .felt { aspect-ratio: 1 / 1; }
