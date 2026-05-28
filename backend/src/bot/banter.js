@@ -33,7 +33,7 @@
 
 const elevenlabs = require('../util/elevenlabs');
 const { voiceFor } = require('./character_voices');
-const { soundFor } = require('./character_sounds');
+const { soundFor, randomElfripBurp } = require('./character_sounds');
 const { styleGuideFor } = require('./roast_styles');
 const db = require('../persistence/db');
 
@@ -92,7 +92,7 @@ const CHARACTER_FLAVOR = {
   'Dinvaya':        'a Numeran cleric of Brigh working for Ustalav\'s CP-USS as an undead-hunting policewoman; ALSO a master blacksmith / armorsmith / weaponsmith. Methodical, professional, gets visibly grumpy when others are distracted or sloppy — she takes her work seriously. Treats every pot like a case file or a forge order.',
   'Storgrim':       'Storgrim Thunderbeard — dwarf fighter, Captain of the mercenary company "Kill-Steal" and Lord of Tidewater Rock by marriage to Lady Augusta; wields a clan axe soul-bound to his dead brother Brogan, whose grumbling voice he sometimes answers mid-sentence; gruff, fond of dwarven proverbs, hates wasting chips',
   'Kelda':          'a capable burglar and mercenary out of Caliphas, Ustalav; dry, cynical, terminally annoyed at everyone\'s choices, sizes up every hand like she\'s casing a vault',
-  'Elfrip':         'a goblin cleric; cheerful chaos, his theology is improvised, every sentence ends with a giggle',
+  'Elfrip':         'a goblin cleric with a CHILDLIKE INTELLECT. Speaks ONLY in third person and ALWAYS with flawed grammar — never says "I", always says "Elfrip". Drops articles ("a", "the"), uses present tense for everything, gets words wrong. Examples: "Elfrip like shiny." / "Elfrip win?" / "Card not good for Elfrip." / "Big man scary." / "Elfrip want chips. Many chip." Every sentence ends with a giggle (hee, heh, ehehe). Cheerful chaos, his theology is improvised; he just burped a lot more often than he talked',
   'Taelys':         'an aggressive desert sniper — shoots first, asks questions later, never misses; clipped, predatory, treats poker as another target acquisition',
   'Daramid':        'a Lepidstadt judge who runs the city\'s CP-USS division; former romance novelist before law school. A GRUMPY OLD LADY with MANNERS — kind underneath, restrained on the surface, subtle when she\'s annoyed. Never raises her voice and never reaches for cruelty. Her sharpest review is a dry "well, that was something" or a small sigh and "I see." Most jabs come out as understated courtroom asides ("noted, counselor", "let the record reflect that") or wry observations about herself ("at my age, I\'ve seen worse hands than that — barely"). Bodice-ripper turns of phrase still occasionally slip through, and she lets them go without comment. NEVER long-winded. Brief, mannered, and warmer than she lets on',
   'Fera':           'a hey-hon influencer and scam artist running a pyramid scheme; relentlessly upbeat, calls everyone "hon", tries to rope opponents into her downline mid-hand',
@@ -318,11 +318,27 @@ function buildMessages(speaker, eventDescription, table) {
         `keep it in character and don't be cruel, but DO have an edge. Inside jokes, callouts by name, ` +
         `backhanded compliments, and petty rivalries are all welcome. ` +
         `CURSING IS ALLOWED and encouraged when it fits your character. Tailor the profanity to your ` +
-        `persona and origin — this is the Pathfinder setting of Golarion. Pirates (Skull & Shackles) ` +
-        `swear like sailors. Dwarves invoke Torag's beard or Droskar's furnace. Carrion Crown / Ustalavians ` +
-        `swear on Pharasma's grave or call something "ghoul-shit." Numerians blaspheme by Brigh or Casandalee. ` +
-        `Hellknights and Chelaxians invoke Asmodeus. Goddess-flavored interjections like "Sarenrae's ` +
-        `tits" / "by Calistria's whip" / "Desna damn it" / "pelt of the Lord" / "Norgorber take you" all fit. ` +
+        `persona and origin — this is the Pathfinder setting of Golarion. The pantheon is wide; invoke the ` +
+        `god whose domain fits the moment. Some go-to deity blasphemies (mix and match freely): \n` +
+        `  • Sarenrae (sun, healing) — "Sarenrae's tits!", "Sarenrae Fucking Christ", "Dawnflower's mercy", ` +
+        `"by the Sunlord's nuts" \n` +
+        `  • Cayden Cailean (drink, freedom) — "Cayden's cup!", "Cayden Fucking Cailean", "drunkard's luck" \n` +
+        `  • Gorum (war) — "Gorum's iron balls", "Lord in Iron", "Gorum Fucking damn it", "rust take you" \n` +
+        `  • Shelyn (beauty, love) — "sweet Shelyn", "Shelyn weep", "Eternal Rose preserve me" \n` +
+        `  • Pharasma (death, judgment) — "Pharasma's grave", "the Lady's spiral", "Pharasma Fucking Christ" \n` +
+        `  • Desna (luck, travel) — "Desna damn it", "Song's mercy", "by the Tender's wings" \n` +
+        `  • Iomedae (justice) — "Iomedae's blade", "Inheritor's witness" \n` +
+        `  • Calistria (revenge, lust) — "by Calistria's whip", "Savored Sting take you", "wasp-bitch luck" \n` +
+        `  • Torag / Droskar (dwarves) — "Torag's beard", "by Droskar's furnace", "anvil-take me" \n` +
+        `  • Brigh / Casandalee (Numerians) — "by Brigh's gears", "Casandalee fucking witness this" \n` +
+        `  • Asmodeus (Hellknights, Chelaxians) — "Asmodeus take you", "Prince of Lies", "by the Pit" \n` +
+        `  • Norgorber (assassins) — "Norgorber take you", "Reaper's eye", "Father Skinsaw" \n` +
+        `  • Nethys (magic) — "Nethys split me", "All-Seeing Eye" \n` +
+        `  • Rovagug (destruction) — "Rovagug's maw", "Worm-that-walks take this hand" \n` +
+        `  • Lamashtu (madness, monsters — goblins use her) — "Lamashtu's tit", "Mother of Monsters" \n` +
+        `Pattern "[Deity] Fucking [Christ / damn it / witness this]" works for any of them — mixes the ` +
+        `Pathfinder god with modern English expletive cadence. Pirates and goblins skew vulgar; paladins and ` +
+        `clerics swear by their own deity, never a rival's (a paladin of Sarenrae would never invoke Asmodeus). ` +
         `Modern English profanity is also fine — just keep it in voice. When you LOSE a hand, you may get ` +
         `genuinely angry; cursing the CARDS, the deck, the deal, the dealer, the opponent, or your own ` +
         `deity is fair game. NEVER curse "the dice" — this is poker, there are no dice, only cards. ` +
@@ -334,10 +350,15 @@ function buildMessages(speaker, eventDescription, table) {
         `INSULT VOCABULARY — vary it. "Donkey" is fine but DON'T lean on it; use it maybe one time in ten ` +
         `at most. Pick something that fits YOUR character AND the target. A menu to draw from (and feel free ` +
         `to invent your own in the same spirit): \n` +
+        `  • Quick one-word jabs (use these LIBERALLY — they keep the table moving): "Rat.", "Worm.", ` +
+        `"Trash.", "Garbage.", "Loser.", "Sad.", "Yikes.", "Cope.", "Pathetic.", "Embarrassing.", ` +
+        `"Cringe.", "Mid.", "Cheap.", "Tragic.", "Lame.", "Reject.", "Bless.", "Sure.", "Wow.", ` +
+        `"Hilarious.", "Adorable.", "Coward.", "Sus.", "Stink.", "Bust." \n` +
         `  • Poker slang: donk, fish, whale, calling station, bingo player, river rat, suckout merchant, ` +
         `pigeon, dead money, chip leak, nit, tilt monkey, card rack, mark, mug, sap, chump, rounder, sucker. \n` +
         `  • General slights: peasant, knave, mooncalf, pillock, dunderhead, oaf, clod, dolt, half-wit, ` +
-        `muppet, numpty, lout, simpleton, blockhead, lackwit, cretin, jester, buffoon, rube. \n` +
+        `muppet, numpty, lout, simpleton, blockhead, lackwit, cretin, jester, buffoon, rube, dweeb, hack, ` +
+        `mark, dolt, ninny, twit, dork. \n` +
         `  • Pirate flavor (Holden / Conchobar / Crisp / Vaughan / Kovira / pirates generally): bilge rat, ` +
         `landlubber, swab, scupper, deckhand, fish-food, barnacle, chum. \n` +
         `  • Dwarven flavor (Storgrim / Ulfred): hill scrub, beardless one, surface-walker, mole. \n` +
@@ -346,7 +367,8 @@ function buildMessages(speaker, eventDescription, table) {
         `meat-clock, soft thing. \n` +
         `  • Paladins / clerics (Sirona / Dismas / Kovira / Kate): faithless, lost soul, sinner, wretch. \n` +
         `MATCH the slur to who's saying it and who they're saying it about. Storgrim doesn't call anyone ` +
-        `a "bingo player"; Tar-Baphon doesn't call anyone "swab"; pirates don't say "mooncalf." \n` +
+        `a "bingo player"; Tar-Baphon doesn't call anyone "swab"; pirates don't say "mooncalf." A goblin ` +
+        `or a pirate cracking off "Cringe." is FUNNY — Cassandalee saying "Sus." less so. \n` +
         styleOverlay +
         `LENGTH — SUCCINCT IS THE DEFAULT: most of your reactions should be 1-6 words. A grunt, a single ` +
         `word, a quick phrase. "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", ` +
@@ -434,6 +456,39 @@ function maybeSpeak(table, event) {
   // cooldown still elapses naturally, and we avoid a thundering herd
   // of parallel calls if multiple events fire in quick succession.
   _lastSpokenAt.set(table.id, Date.now());
+
+  // ─── Elfrip special case ─────────────────────────────────────────────
+  // Elfrip burps ~75% of the time (no LLM call, canned onomatopoeia text
+  // + a random burp clip) and actually speaks ~25% of the time (LLM
+  // call with his usual childlike-3rd-person flavor + his 11labs voice).
+  // The burp branch short-circuits before the LLM so we don't waste a
+  // model call generating English when we're just going to broadcast a
+  // belch. The talk branch falls through to the normal flow below — his
+  // CHARACTER_SOUNDS entry was removed so soundFor() returns null and
+  // the 11labs synthesis path is taken.
+  const speakerNick = speaker.player?.nickname || speaker.playerId;
+  if (speakerNick === 'Elfrip' && Math.random() < 0.75) {
+    const burpTexts = [
+      '*BRRUUUAAHHHHHRP*',
+      '*BLEEEAAAAARGH*',
+      '*HRRAAAAARRGH*',
+      '*BRRRRRRRP!*',
+      '*BLLAAAAAAARP*',
+      '*BUUUURRRRRP*',
+      '*BREEERRRP*',
+      '*GUH-RRRRPH*',
+      '*BWAAARP-pf*',
+      '*HRRP!*',
+    ];
+    const burpText = burpTexts[Math.floor(Math.random() * burpTexts.length)];
+    const burpUrl = randomElfripBurp();
+    const chatLabel = (typeof speaker.displayNickname === 'function')
+      ? speaker.displayNickname()
+      : speakerNick;
+    table.chat('banter', `💬 ${chatLabel}: ${burpText}`, { audioUrl: burpUrl });
+    return;
+  }
+
   const messages = buildMessages(speaker, event.description, table);
   callLLM(messages).then(async line => {
     if (!line) return;

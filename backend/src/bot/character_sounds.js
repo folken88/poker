@@ -28,13 +28,25 @@ const CHARACTER_SOUNDS = {
     '/audio/crisp_03.mp3',  // velociraptor_snuffle_snarl
     '/audio/crisp_04.mp3',  // a_dinosaur_activatin
   ],
-  // Elfrip the goblin cleric — all-belch all-the-time.
-  'Elfrip': [
-    '/audio/elfrip_01.mp3', // beer_drink_grunt_belch_burp
-    '/audio/elfrip_02.mp3', // belch_huge
-    '/audio/elfrip_03.mp3', // Burp sound effect
-  ],
+  // Elfrip the goblin cleric — handled specially in banter.js
+  // (75% burp-only path, 25% LLM-spoken-line path with his 11labs
+  // voice). The burp clips live in this module under the special
+  // BURP_POOL export below so banter.js can grab one for the burp
+  // path without invoking the normal soundFor route — keeps his
+  // talk path clean for the 11labs synthesis call.
 };
+
+/** Elfrip-specific burp pool. Not part of CHARACTER_SOUNDS because
+ *  the burp / talk decision is made by banter.js, not by the generic
+ *  soundFor() lookup. */
+const ELFRIP_BURPS = [
+  '/audio/elfrip_01.mp3', // beer_drink_grunt_belch_burp
+  '/audio/elfrip_02.mp3', // belch_huge
+  '/audio/elfrip_03.mp3', // Burp sound effect
+];
+function randomElfripBurp() {
+  return ELFRIP_BURPS[Math.floor(Math.random() * ELFRIP_BURPS.length)];
+}
 
 /** Pick a random sound URL for a character, or null if no pool. */
 function soundFor(nickname) {
@@ -44,4 +56,4 @@ function soundFor(nickname) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-module.exports = { CHARACTER_SOUNDS, soundFor };
+module.exports = { CHARACTER_SOUNDS, soundFor, ELFRIP_BURPS, randomElfripBurp };
