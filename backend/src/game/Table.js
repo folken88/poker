@@ -279,6 +279,14 @@ class Table {
     seat.isBot = false;
     seat.avatarOverride = null;   // strip any Vorkstag-style disguise
     seat.impersonatedNick = null; // and the matching voice override
+    // Reset PER-SEAT flags that would otherwise be inherited by whoever
+    // lands here next. Without this, a player who clicked "Sit out" and
+    // then left would leave sittingOut=true on the empty seat — and any
+    // bot the user added next would silently inherit the sit-out flag
+    // and be skipped at deal time ("called in a bot, why is it sitting
+    // out?"). Same idea for _standAfterHand.
+    seat.sittingOut = false;
+    delete seat._standAfterHand;
     // Signal to _scheduleAutoStart that a seat just opened up — the
     // next-hand delay should be extended so a spectator has time to
     // grab it. Also push back an autostart that's already armed but
