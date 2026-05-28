@@ -107,6 +107,8 @@ const ROSTER = [
   { name: 'Rique',     avatar: 'raccoon' },
   { name: 'Ash',       avatar: 'lion'    },
   { name: 'Kayla',     avatar: 'owl'     },
+  { name: 'Serra',     avatar: 'frog'    },
+  { name: 'Lid',       avatar: 'cat'     },
 ];
 
 // AI players — pre-seeded, available via "Add bot" button. Humans can
