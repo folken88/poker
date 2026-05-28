@@ -475,6 +475,41 @@ function maybeSpeak(table, event) {
   // CHARACTER_SOUNDS entry was removed so soundFor() returns null and
   // the 11labs synthesis path is taken.
   const speakerNick = speaker.player?.nickname || speaker.playerId;
+
+  // ─── Crisp special case ──────────────────────────────────────────────
+  // Crisp is a juvenile velociraptor — he has no English. ALWAYS short-
+  // circuits to a raptor-onomatopoeia text + one of his stored chirp /
+  // hiss / snarl audio clips. The LLM is never called for him. Text is
+  // randomized so the chat log shows variety instead of the same noise
+  // repeated, but no entry is ever an actual word he "said".
+  if (speakerNick === 'Crisp') {
+    const raptorNoises = [
+      '*SKREEEEK!*',
+      '*hiss-hiss-hiss*',
+      '*click-click-click*',
+      '*KRRRRR*',
+      '*chrr-chrr*',
+      '*snarl*',
+      '*RRAAAAAAH*',
+      '*chitter*',
+      '*snnnff snnnff*',
+      '*tilts head*',
+      '*low growl*',
+      '*tooth-clack*',
+      '*claws-the-felt*',
+      '*KEK-KEK-KEK*',
+      '*long hiss*',
+    ];
+    const noiseText = raptorNoises[Math.floor(Math.random() * raptorNoises.length)];
+    const chirpUrl = soundFor('Crisp');
+    const chatLabel = (typeof speaker.displayNickname === 'function')
+      ? speaker.displayNickname()
+      : speakerNick;
+    const extras = chirpUrl ? { audioUrl: chirpUrl } : null;
+    table.chat('banter', `💬 ${chatLabel}: ${noiseText}`, extras);
+    return;
+  }
+
   if (speakerNick === 'Elfrip' && Math.random() < 0.75) {
     const burpTexts = [
       '*BRRUUUAAHHHHHRP*',
