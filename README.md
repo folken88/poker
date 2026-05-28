@@ -2,7 +2,7 @@
 
 Multiplayer Texas Hold'em for me and friends. Hosted at <https://poker.folkengames.com>.
 
-One persistent table. Whoever shows up sits down. A roster of named **AI bots** (27 of them, each with a personality + intelligence tier) fills empty seats and plays. Bots wear the faces of PCs and villains from my long-running Pathfinder campaigns — tokens are copied permanently into the project so the poker game has no runtime dependency on FoundryVTT.
+One persistent table. Whoever shows up sits down. A roster of named **AI bots** (43 of them, each with a personality + intelligence tier + optional 11labs voice) fills empty seats and plays. Bots wear the faces of PCs and villains from my long-running Pathfinder campaigns — tokens are copied permanently into the project so the poker game has no runtime dependency on FoundryVTT. When the LLM banter system is enabled, each bot speaks in their own voice using ElevenLabs synthesis (or stored sound clips for non-speech characters — Crisp's velociraptor chirps, Elfrip's burps).
 
 ## Stack
 
@@ -35,18 +35,33 @@ poker-game/
 │   │   │   └── actions.js         # action validator (fold/check/call/raise/all-in)
 │   │   ├── bot/
 │   │   │   ├── Bot.js             # heuristic decision engine — risk (mode) × intelligence,
-│   │   │   │                      #   wealth-aware ctx, per-opponent bluff memory
-│   │   │   └── strength.js        # Bill Chen preflop + pokersolver rank/10 postflop
+│   │   │   │                      #   wealth-aware ctx, per-opponent bluff memory,
+│   │   │   │                      #   high-intel slow-play of monsters on early streets
+│   │   │   ├── strength.js        # Bill Chen preflop + pokersolver rank/10 postflop
+│   │   │   ├── banter.js          # LLM-driven ambient chat (system prompt assembly,
+│   │   │   │                      #   pantheon profanity menu, insult vocab,
+│   │   │   │                      #   Elfrip burp/talk split, length cap)
+│   │   │   ├── character_voices.js # nickname → 11labs voice_id map + voiceFor() with
+│   │   │   │                      #   Vorkstag's impersonation routing + Dracula fallback
+│   │   │   ├── character_sounds.js # stored sound pools (Crisp chirps, Elfrip burps)
+│   │   │   │                      #   used in place of TTS for non-speech characters
+│   │   │   └── roast_styles.js    # targeted comedic-influence overlays (dracula-flow
+│   │   │                          #   for the gothic-horror trio, simple-speaker for
+│   │   │                          #   Elfrip/Crisp, jeff-ross+giraldo for Kovira)
 │   │   ├── persistence/
-│   │   │   ├── db.js              # SQLite, roster + bot roster seeding, chip + gear
-│   │   │   │                      #   persistence, one-shot migrations (legacy swords,
-│   │   │   │                      #   amulet removal)
+│   │   │   ├── db.js              # SQLite, roster + bot roster seeding, chip + gear +
+│   │   │   │                      #   gender persistence, one-shot migrations
 │   │   │   ├── schema.sql
 │   │   │   └── logger.js          # JSONL hand history + bot-decision logs
+│   │   ├── util/
+│   │   │   └── elevenlabs.js      # 11labs TTS client (server-side only; API key in .env,
+│   │   │                          #   never client-bound; rate-limited; pronunciation
+│   │   │                          #   overrides applied before API call)
 │   │   └── sockets/
-│   │       ├── lobby.js           # choose player, set avatar, gear buy/sell, reset, debt
-│   │       └── table.js           # join, action, request-hole, add/pick/remove bot,
-│   │                              #   sit-out / rejoin
+│   │       ├── lobby.js           # choose player, set avatar, set pronouns, gear buy/sell,
+│   │       │                      #   audio prefs broadcast, reset, debt
+│   │       └── table.js           # join, action, request-hole, add/pick/kick bot or human,
+│   │                              #   sit-out / rejoin, human chat input
 │   ├── data/                      # SQLite file (mounted volume; gitignored)
 │   ├── logs/                      # JSONL append-only logs (gitignored)
 │   ├── Dockerfile
@@ -80,22 +95,29 @@ poker-game/
 - **Persistent table** — newcomers wait for the current hand to end, then are dealt in.
 - **Seats survive disconnects**. Your chips + position are reserved; refresh and you're back where you sat.
 - **AFK detection** — players who haven't acted are skipped at deal time and don't pay blinds.
-- **120-second action timer** for humans. Time out = auto-fold (or auto-check when free). Bots have their own mode-flavored thinking delays (risky 1d4s, standard 1d10s, cautious 1d15s).
+- **120-second action timer** for humans. Time out = auto-fold (or auto-check when free). Bots have their own mode-flavored thinking delays (risky 1d4s, standard 1d10s, cautious 1d15s, hard-capped at 30s).
+- **Bot driver safety** — `bot.decide()` is wrapped in try/catch and `applyAction`'s result is checked. On throw or rejection (invalid action e.g. `check` when `toCall>0`), the bot force-folds and the full state context (action, toCall, currentBet, minRaise, stack) is error-logged so the broken decision branch is debuggable. Previously a bad decision would silently strand the table with no recovery.
 - **Side pots** when someone is all-in. Showdown awards each pot independently.
 - **Fold-win reveal** — even when everyone else folds, the winner's hole cards flip face-up so opponents can see if it was a bluff. Description auto-tags obvious bluffs ("Ten-Two off — total bluff").
 - **Sit out / Rejoin** — keep your seat but skip deals until you're ready.
-- **Reset modal** — cancel current hand (refund bets) or full reset (everyone back to 5,000).
+- **Reset modal** — two options, BOTH kick every AI from the table:
+  - *Cancel current hand* — refunds all bets, vacates every bot, human stacks unchanged, new hand auto-starts.
+  - *Full reset* — same as above PLUS resets every player's chips to 5,000 and wipes gear.
+- **× kick from spectator seat** — kicking a bot no longer requires the caller to be seated. Spectators can clear stale bots before sitting down. (Kicking a human still requires you to share the felt — has political weight.)
 - **Per-action chat log** — one line per turn (fold/check/call/raise/all-in) with chip amounts, plus winner announcements with revealed hand descriptions.
 - **Human chat input** — type below the table log, Enter to send. Posts as `💬 Nick: text`. 240-char cap, 1.5s per-socket cooldown. Triggers an LLM banter reply ~5% of the time so AI characters can clap back.
 - **× kick button** on every non-self seat — any seated player can boot any other (human or bot). Takes effect at end of current hand; chat announces who kicked whom (`🚪 Tobis kicked Mr. Brow — leaves after this hand.`).
 - **Auto-yield seat** — when a human spectator joins a full AI table, a random bot is flagged to leave at hand-end so the human can sit on the next deal without waiting.
 - **Vacate grace window** — when a seat opens up (kick / auto-yield / bust), the next-hand autostart pause extends from 1.5s → 5s so a watching spectator has time to click in. Topbar countdown reflects the longer wait.
-- **Card sound effects** — shuffle between hands (randomized), deal on flop/turn/river, plus a solo your-turn chime that fires only on your own client when the action lands on you. 🔊 mute toggle in the topbar; preference persists per tab.
+- **Card sound effects** — shuffle between hands (randomized), deal on flop/turn/river, a soft per-turn tick on every actor change, plus a solo your-turn chime that fires only on your own client when the action lands on you. All SFX are volume-normalized.
+- **Audio settings popover** (🔊 in the topbar) — per-player checkboxes for "card sounds" + "AI character voices" with matching **volume sliders** (0-100%). Settings persist per player in localStorage. Defaults: card sounds 45%, voices off.
+- **Spectator chip** in the topbar — comma-joined nicknames of connected players who aren't seated (👁 prefix). Hidden when nobody's watching; capped at 260px width with full list on hover.
+- **Pronouns dropdown** under your nickname — they/he/she. Persists via `lobby:setGender`; the LLM banter system reads gender from the roster broadcast and tailors pronouns when referring to characters by name. Bot pronouns are pinned in `BOT_ROSTER` and re-synced every boot.
+- **Blind support mode** — toggle with backtick. Web Speech API narrates state changes (your turn cue with hole + board, action lines, banter text), with push-to-talk speech recognition (hold Space) to issue commands. Cooperates with 11labs character voicelines so the two don't talk over each other.
 - **Dual-cell topbar clock** — the timer pill is split into two side-by-side cells. Left cell (blue) shows the action clock and its label ("action timer" / "next hand in"). Right cell (brass) shows the hand clock running total. Each cell has a fixed min-width so digits don't jitter when labels swap.
 - **Winner banner (center stage)** — between rounds, the felt center shows the winner's avatar at 2× size, the chips awarded, and the winning 5-card combo sorted low → high using PF1e rank order. Doubled token size for this display only; box auto-fits.
 - **Cash cap (20,000 gp)** — at hand-end, any seat over the cap is clipped back to 20k and the overflow is announced in chat. Forces wealth into gear instead of stockpiled chips.
 - **Hock-required rebuy** — busted players can no longer accrue debt. To re-buy after going broke you must first sell off your magic items in the Loot Bank. The legacy `rebuy_debt` column is migrated to zero on boot. Each forced rebuy gets an embarrassing flavor line (pocket squirrel, slightly-used lute, etc.).
-- **Reset evicts bots** — the reset-hand button (full reset path) vacates every bot at the table along with refunding bets, so a human cleanup ritual doesn't leave AI sitting on huge stacks.
 - **Folded bots can banter + give advice** — bots who have folded or are waiting their turn are eligible speakers for the LLM banter system. A dedicated `advice` event fires at ~8% probability whenever the action moves to a new actor, letting tablemates kibitz on the live decision.
 
 ## Goal: LOOT LORD
@@ -117,7 +139,7 @@ Mid-game gear purchases happen via the **left-sidebar Loot Bank**. Each purchase
 
 ## Bots — risk × intelligence
 
-The 27-bot roster lives in `backend/src/persistence/db.js` (`BOT_ROSTER`). Each bot has two orthogonal traits:
+The 43-bot roster lives in `backend/src/persistence/db.js` (`BOT_ROSTER`). Each bot has two orthogonal traits:
 
 **Risk appetite** (`baseMode`):
 - **cautious** — small sizing, high fold floor, doesn't shove except on near-nut hands (v ≥ 0.92).
@@ -138,6 +160,7 @@ The 27-bot roster lives in `backend/src/persistence/db.js` (`BOT_ROSTER`). Each 
 - **Deliberate bluffs** — non-low intel bots gated on cheap-bluff conditions; risky 1.8× rate, standard 1.0×, cautious 0.3×.
 - **Wealth-aware risk** — bots see opponents' chips + gear value. Richer bots size up; poorer tighten. Rich aggressors discounted (presumed bluff); poor aggressors respected. Weighted by intel.
 - **Bluff memory** — per-opponent samples of revealed bluffs vs value bets. After every showdown / fold-win reveal, every bot at the table updates its memory of who committed ≥4 BB with what strength. At decision time, the aggressor's smoothed bluff ratio shifts the fold threshold up to ±0.12 (high intel uses fully; low intel barely uses it).
+- **High-intel slow-play** — high-intelligence bots holding a true monster (v ≥ monsterThresh) on preflop/flop don't slam-shove like they used to. They check (60%) or small-probe at 0.35× pot (40%) when they can open, and flat-call when facing a bet — letting the pot build and opponents stay committed. On turn/river the existing monster-shove / patience-pays branches fire and they slam-dunk. Only triggers for `intelligence === 'high'` and only with true monsters; medium-strong hands play normally.
 - **Mode drift** — at end of hand, 18% chance to shift mode; tends to drift back toward baseMode.
 - **Bot gear auto-invest** — at end of every hand, bots spend excess chips (keeping ≥5,000 reserve) breadth-first: every slot at +1 before any +2, every slot at +2 before any +3, etc. Cheapest-affordable-first.
 
@@ -181,6 +204,57 @@ Each entry is a short bio injected into the system prompt. Add new
 entries by exact nickname match; missing characters fall back to a
 generic `${mode}/${intelligence}` template.
 
+**System prompt structure** (assembled per speaker in `buildMessages`):
+- Speaker identity (`You are X, [flavor]`) + pronoun line driven by the gender column
+- Pantheon profanity menu — Golarion deities ONLY (Sarenrae, Cayden Cailean, Gorum,
+  Shelyn, Pharasma, Desna, Iomedae, Calistria, Torag, Droskar, Brigh, Casandalee,
+  Asmodeus, Norgorber, Nethys, Rovagug, Lamashtu) with go-to blasphemies per deity.
+  Paladins / clerics constrained to their own deity, never a rival's. Earth profanity
+  is fine standalone (`fuck/shit/damn`) but Earth deities are forbidden (no
+  "Christ", "Jesus", etc.). Setting-flavored curses (`ghoul-shit`, `Worldwound take you`,
+  `by Aroden's bones`, `Tar-Baphon's teeth`) also enumerated as deity-free oaths.
+- Money-talk allowance — opponents' cash + gear value + Abadar debt + net worth are
+  in the table context, free to comment on (`How much do you owe Abadar now?`).
+- Insult vocab — short modern one-word jabs first (Rat / Worm / Cope / Cringe / Mid),
+  then poker slang, general slights, and character-specific menus (pirate /
+  dwarven / goblin / undead-villain / paladin). Explicit speaker-target matching
+  rule — pirates don't say "mooncalf"; Tar-Baphon doesn't say "swab".
+- Per-character roast-craft overlay (see `roast_styles.js` below) — only fires
+  for the small curated set; everyone else carries voice through CHARACTER_FLAVOR alone.
+- Length cap — most reactions 1-6 words, occasional fuller jab up to ~12, never
+  speeches. "If you can't land it in a short phrase, you probably shouldn't say it."
+
+**Roast styles** (`backend/src/bot/roast_styles.js`) — a tagged taxonomy of comedic
+mechanics distilled from a real roast corpus (Greg Giraldo, Jeff Ross, Katt Williams,
+Natasha Leggero, Nikki Glaser, Christopher Hitchens debate clips, PLUMMCORP's
+"Dracula Flow" trap saga). Eight style guides:
+
+| Style              | Mechanic                                                |
+|--------------------|---------------------------------------------------------|
+| `dracula-flow`     | Surreal self-mythologizing menace                       |
+| `hitchens`         | Intellectual evisceration via argument-disqualification |
+| `giraldo`          | Brutal compression, category-shift escalation           |
+| `jeff-ross`        | Literal name-puns, composite-job descriptions           |
+| `katt-williams`    | Pun cascades, courtroom-register subversion             |
+| `leggero`          | Twee cruelty, warm-idiom payload swap                   |
+| `glaser`           | Pause-pivots, pronoun-reversal mortality                |
+| `simple-speaker`   | 1-4 word grunts + occasional dumb-zinger                |
+
+Application is intentionally narrow (tried broad earlier, felt uniform & verbose):
+- `dracula-flow` ONLY on the gothic-horror trio (Tar Baphon, Auren Vrood, Vorkstag)
+- `simple-speaker` ONLY on Elfrip + Crisp
+- `hitchens` only on canonically scholarly `intelligence:'high'` characters when used
+- `jeff-ross + giraldo` on Kovira (warm default with anti-bully escalation mode)
+- Everyone else uses CHARACTER_FLAVOR alone; the full guide menu stays in the module
+  so we can add chars one-at-a-time when a style demonstrably fits.
+
+**Elfrip burp/talk split** — Elfrip's banter routing is special-cased: 75% he just
+burps (canned onomatopoeia text like `*BRRUUUAAHHHHHRP*` + a random burp clip from
+`ELFRIP_BURPS`, NO LLM call, NO 11labs synthesis), 25% he actually speaks (LLM call
+with his childlike-3rd-person flavor — `"Elfrip win?"`, `"Card not good for Elfrip"` —
+plus his 11labs voice). The burp path short-circuits before the LLM so we don't
+waste a model call generating English when we're about to broadcast a belch.
+
 **Per-event probability override.** Different trigger kinds use different
 fire rates so noisy events (a chatty human) don't flood the table:
 
@@ -194,6 +268,48 @@ fire rates so noisy events (a chatty human) don't flood the table:
 
 The per-table cooldown (`LLM_BANTER_COOLDOWN_MS`, default 18s) still
 applies on top of every roll.
+
+### Character voices (ElevenLabs TTS)
+
+When a bot speaks via the LLM banter system, the line is voiced through ElevenLabs
+synthesis. Two modules drive the routing:
+
+- **`backend/src/bot/character_voices.js`** — `nickname → voice_id` map plus
+  `voiceFor(nickname, seat)`. Most characters use voices picked from the user's
+  11labs library (Sam, Anika, Chloe, Dracula, Felix, Hannah, Sean, Verner Hishog,
+  Mossbeard, Paul, Antoni, etc.); a handful use default 11labs voices when no
+  custom voice is set.
+- **`backend/src/bot/character_sounds.js`** — for characters whose "voice" isn't
+  speech: Crisp the velociraptor (4 chirp/hiss/snarl clips), with Elfrip's burp
+  pool exported separately so `banter.js` can pick the burp/talk path explicitly.
+
+**Vorkstag's impersonation** — the skinwalker steals a tablemate's face AND voice
+on sit-down. `Table.seatBot` picks a random other seat at sit-time, sets
+`seat.avatarOverride` (visual disguise) + `seat.impersonatedNick` (voice/name
+disguise). `voiceFor()` routes Vorkstag's lookup through `seat.impersonatedNick`
+so he sounds like whoever he's wearing. If the impersonated target has no voice
+mapped (humans / unmapped bots), he falls back to the Dracula voice rather than
+going silent — silence would be a tell. Cash + gear values stay accurate on the
+seat ("there is no fooling the church of Abadar").
+
+**Pronunciation overrides** — names that 11labs and the browser Web Speech API
+routinely butcher get phonetic spellings applied before synthesis:
+
+- Server-side: `backend/src/util/elevenlabs.js` `PRONUNCIATIONS` table — applied
+  in `applyPronunciations()` before the API call.
+- Client-side: `public/js/blindMode.js` `NAME_PRONUNCIATIONS` — applied in the
+  TTS speak path for blind-mode narration.
+
+Both are kept in sync by hand. Current overrides: Mandore → "Man door",
+Lirienne → "Leery in", Bujon → "Boo han", Casandalee → "Cah san dah lee".
+
+**Listener gate** — `Table.anyVoiceListener()` walks the room's connected sockets
+and checks `socket.data.voiceOn`. If nobody at the table has voice enabled, the
+11labs API call is skipped entirely to save credits — text banter still ships.
+
+**API key handling** — `ELEVENLABS_API_KEY` lives in `.env` (gitignored). Never
+appears in any client payload, log line, URL, error message, or socket emission.
+All synthesis happens server-side; clients only see resulting audio bytes.
 
 ### Roster sample
 
@@ -216,7 +332,7 @@ Full list in `BOT_ROSTER` (db.js). Configuration is re-applied to every existing
 
 ### Reserved humans (never used by AI)
 
-A subset of human-roster names (Tobis, Timmy, Sydness, BRION, Zachariah, Harry, Banana, Fred, Leesa, etc.) is treated as **human-only**. The `+ Bot` button and the bot picker modal both filter on `is_bot = 1`, so AI never plays these names.
+The human ROSTER (`ROSTER` in `db.js`) is treated as **human-only** — names like Tobis, Fred, Timmay, LEEESA, Sydness, BRION, Zachariah, Harry, Banana, Cram, Mandore, Kayla, Ash, etc. The `+ Bot` button and the bot picker modal both filter on `is_bot = 1`, so AI never plays these names.
 
 ## UI layout (desktop)
 
