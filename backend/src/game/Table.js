@@ -513,6 +513,21 @@ class Table {
       this.hand = null;
     }
     for (const s of this.seats) s.inHand = false;
+    // Round-reset also kicks every bot so the human has a clean slate to
+    // re-pick whoever they actually want at the table for the next hand.
+    // Mirrors resetGame's bot-vacate loop — the round-reset modal advertises
+    // this behavior too. Refunds for those bots are already applied above
+    // via the per-player refund loop; _vacate then persists their chip
+    // total back to the DB before clearing the seat.
+    let vacatedBots = 0;
+    for (const seat of this.seats) {
+      if (seat.isEmpty() || !seat.isBot) continue;
+      this._vacate(seat);
+      vacatedBots++;
+    }
+    if (vacatedBots > 0) {
+      this.chat('leave', `🃏 Round reset — ${vacatedBots} AI player${vacatedBots===1?'':'s'} cleared from the table.`);
+    }
     if (this.io) {
       this.io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     }
