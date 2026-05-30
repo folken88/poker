@@ -255,6 +255,12 @@ with his childlike-3rd-person flavor — `"Elfrip win?"`, `"Card not good for El
 plus his 11labs voice). The burp path short-circuits before the LLM so we don't
 waste a model call generating English when we're about to broadcast a belch.
 
+**Crisp noise-only path** — Crisp the juvenile velociraptor has no English at all.
+100% short-circuits in `maybeSpeak` before the LLM: picks a random raptor onomatopoeia
+(`*SKREEEEK!*`, `*hiss-hiss-hiss*`, `*KEK-KEK-KEK*`, `*tilts head*`, etc.) and pairs
+it with one of his stored chirp / hiss / snarl clips from `soundFor('Crisp')`. The LLM
+is never called for him so an English line can't leak into chat alongside the audio.
+
 **Per-event probability override.** Different trigger kinds use different
 fire rates so noisy events (a chatty human) don't flood the table:
 
@@ -361,6 +367,7 @@ The human ROSTER (`ROSTER` in `db.js`) is treated as **human-only** — names li
 - Seats collapse to **token + name only** (64×96 px). Chips, gear, hole cards, timer (on non-actors), and AFK/sit-out tags are suppressed. The acting seat still shows its countdown.
 - Action panel becomes a **fixed bottom toolbar**: Fold / Call / Raise / All-in in one wide row, raise input + preset chips. Drag handle, presets, bank/leaderboard toggles all hidden — they live in the perimeter on desktop, which is sufficient.
 - A "my hand" strip in the toolbar shows your hole cards + chips + current bet.
+- **Topbar overflow `≡` menu** — the management buttons (+ Bot, Pick AI, Re-buy, Sit out, Switch, Leave, Reset) collapse into a slide-down dropdown anchored to the topbar's bottom-right edge. Brass-bordered panel, 36px-tall tap targets, closes on outside-click / Escape / item-tap. Without this they wrap into 2-3 extra rows and the rightmost ones become unreachable. Desktop keeps the row inline.
 
 ## Character art import (one-time)
 
