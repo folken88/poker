@@ -42,7 +42,7 @@ const CHARACTER_VOICES = {
   'Duristan':          'PdgFJYFiU4tFS8jEZkDF', // Berry
   'Mr. Brow':          'UoOL4r5ZefvNkwdKzfLN', // Hank
   'Adimarus':          '5mU8WBEmVJQ3n5J4fkzR', // Okole
-  'Bujon':             '5mU8WBEmVJQ3n5J4fkzR', // Okole — shared with Adimarus; voice IDs aren't exclusive
+  'Bujon':             'KLs0efvyfWnIfXc9u1Jk', // Sanjay - profound and deep
   'Fera':              'SxrdCBV2iTasBWWDffJ4', // Paris Hilton
   'Texas Holden':      '0exky5u6rYq7ksXZEN5G', // Nick (display name is "Texas Holden" — the poker pun he never caught)
   'Kate':              '5tQ5OiKpM78sVuxrgC4W', // Phoebe
@@ -64,7 +64,7 @@ const CHARACTER_VOICES = {
   // ===== Defaults picked from your 11labs library — adjust as desired =====
   // Carrion Crown / Caliphas crowd
   'Storgrim':          'oCXdm5WkYoKVEdlbPLev', // Paul — Deep & Warm Yorkshire (shared library) — northern English dwarf captain
-  'Ulfred':            'bFrjFL4nlpeYNwNRhXxq', // Mossbeard — Scottish, old, raspy ("God of the Wild") — deep dwarf-cleric energy (shared library)
+  'Ulfred':            'U5UjeJMsOvyhYhXfZdvZ', // Adam — Classic Scottish Storyteller (deep, old, CRISP) — replaced Mossbeard, which read too slow
   'Tamsin':            'dAlhI9qAHVIjXuVppzhW', // Tamsin — Engaging British storyteller (name-match!)
   'Toni':              'pFZP5JQG7iQjIQuC4Bku', // Lily — Velvety Actress (British, mid-aged) — vampire velvet
   'Agu':               'XB0fDUnXU5powFXDhCwa', // Charlotte (11labs default, Swedish-accented mature female — placeholder for "Slavic middle-aged woman"; swap to a specific library voice when one is picked)
@@ -99,6 +99,32 @@ const CHARACTER_VOICES = {
   'Vorkstag':          null,
 };
 
+/** Per-character voice_settings overrides. Each entry is a PARTIAL —
+ *  only the keys listed here override the global defaults in
+ *  elevenlabs.js (stability 0.45 / similarity_boost 0.75 / style 0.40 /
+ *  use_speaker_boost true / speed 1.0). Everything unspecified inherits
+ *  the default.
+ *
+ *  Why: with the global defaults a few voices read too "hot" — they
+ *  rush and pitch up. 11labs has no real pitch knob, so the fix is to
+ *  raise `stability`, drop `style` (less exaggeration), and set `speed`
+ *  below 1.0 (valid range 0.7–1.2). Add an entry here when a character's
+ *  delivery needs taming or a distinct tempo.
+ *
+ *  Routed through settingsFor() below, which (like voiceFor) follows
+ *  Vorkstag's impersonation so a stolen voice also gets its owner's
+ *  settings. */
+const VOICE_SETTINGS = {
+  // Gaspar (Pharasmin zealot, voice "Ultron") still reads a touch hot —
+  // nudge him steadier and a hair slower than the (already calm) default.
+  'Gaspar':   { stability: 0.60, speed: 0.88 },
+  // Ulfred — the global 0.90 plus an old voice dragged; speed him back up.
+  'Ulfred':   { speed: 1.05 },
+  // Duristan — languid, posh, low-energy register (Lazlo from "What We Do
+  // in the Shadows"): extra-steady and notably unhurried.
+  'Duristan': { stability: 0.65, similarity_boost: 0.80, speed: 0.82 },
+};
+
 /** Look up the voice_id for a speaker.
  *  @param {string} nickname  The speaker's display nickname.
  *  @param {object} [seat]    Optional seat reference. Required for
@@ -124,4 +150,19 @@ function voiceFor(nickname, seat) {
   return CHARACTER_VOICES[nickname] || null;
 }
 
-module.exports = { CHARACTER_VOICES, voiceFor };
+/** Look up the per-character voice_settings override for a speaker, or
+ *  null to use the global defaults. Mirrors voiceFor's Vorkstag routing
+ *  so an impersonated voice also adopts the impersonated character's
+ *  settings.
+ *  @param {string} nickname  The speaker's display nickname.
+ *  @param {object} [seat]    Optional seat (for Vorkstag impersonation).
+ *  @returns {object|null}    Partial voice_settings, or null. */
+function settingsFor(nickname, seat) {
+  if (!nickname) return null;
+  if (nickname === 'Vorkstag' && seat?.impersonatedNick) {
+    return VOICE_SETTINGS[seat.impersonatedNick] || null;
+  }
+  return VOICE_SETTINGS[nickname] || null;
+}
+
+module.exports = { CHARACTER_VOICES, voiceFor, settingsFor };

@@ -27,6 +27,18 @@ app.get('/api/roster', (_req, res) => {
   res.json({ players: db.listPlayers(), defaultStack: db.DEFAULT_STACK });
 });
 
+// Lightweight live status per table — used by the deploy watcher to tell
+// whether anyone is seated. If nobody is, the watcher can recreate the
+// container immediately instead of waiting for a between-hands window.
+app.get('/api/tables', (_req, res) => {
+  res.json([...tables.values()].map(t => ({
+    id: t.id,
+    seated: t.seats.filter(s => !s.isEmpty()).length,
+    humans: t.seats.filter(s => !s.isEmpty() && !s.isBot).length,
+    handActive: !!t.hand,
+  })));
+});
+
 if (process.env.SERVE_STATIC === '1') {
   app.use(express.static(path.join(__dirname, '..', '..', 'public')));
 }
@@ -54,6 +66,17 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[poker] v3 listening on :${PORT}  defaultStack=${db.DEFAULT_STACK}  roster=${db.ROSTER.length}`);
+  // If this deploy carried a feature note (DEPLOY_NOTE env, set on the
+  // `docker compose up`), drop a short "what changed" line into the table
+  // chat. It lands in the chat log, so whoever is connected or joins after
+  // the restart sees it.
+  const note = (process.env.DEPLOY_NOTE || '').trim();
+  if (note) {
+    for (const t of tables.values()) {
+      try { t.chat('info', `🔧 Update: ${note.slice(0, 160)}`); } catch (_) {}
+    }
+    console.log(`[poker] deploy note posted: ${note.slice(0, 160)}`);
+  }
 });
 
 function shutdown(sig) {

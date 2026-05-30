@@ -513,6 +513,11 @@
           playBase64Mp3(entry.audio, entry.audioMime || 'audio/mpeg');
         }
       }
+      // Fight-gag SFX play for EVERYONE at the table, independent of the
+      // banter-voice toggle — it's a shared event, like a card sound.
+      if (entry.kind === 'fight' && entry.audioUrl) {
+        try { const fx = new Audio(entry.audioUrl); fx.volume = _voiceVolume; fx.play().catch(()=>{}); } catch (_) {}
+      }
     }
   });
 
@@ -656,6 +661,30 @@
     if (counter) counter.textContent =
       q ? `${matched.length} of ${tokens.length} match "${query}"` : `${tokens.length} tokens`;
     grid.innerHTML = '';
+
+    // ALWAYS render the simple preset avatars first. They need no gallery
+    // fetch, so the picker is never empty (even if the token manifest fails
+    // to load), and they give a short, easy list for quick or blind picks.
+    const presetClick = (id) => () => {
+      state.pendingAvatar = id;
+      $('#confirmAvatarBig').innerHTML = renderAvatar(id);
+      $$('#confirmAvatarGrid .avatar-pick').forEach(el =>
+        el.setAttribute('aria-checked', el.dataset.avatar === id ? 'true' : 'false'));
+    };
+    const presetIds = q ? ALL_AVATARS.filter(a => a.includes(q)) : ALL_AVATARS;
+    for (const id of presetIds) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'avatar-pick avatar-pick--preset';
+      b.setAttribute('role', 'radio');
+      b.dataset.avatar = id;
+      const label = id.charAt(0).toUpperCase() + id.slice(1);
+      b.title = label;
+      b.setAttribute('aria-checked', id === state.pendingAvatar ? 'true' : 'false');
+      b.innerHTML = renderAvatar(id) + `<span class="avatar-pick__label">${label}</span>`;
+      b.addEventListener('click', presetClick(id));
+      grid.appendChild(b);
+    }
     // Pin the player's currently-selected token (= last-used, since we
     // initialise pendingAvatar from their persisted avatar_id when the
     // confirm screen opens) to the very top of the visible list, no
@@ -757,6 +786,16 @@
         });
       } else enter();
     });
+  });
+  // Keyboard shortcut: ENTER on the confirm screen takes the seat right away
+  // with the current avatar — no need to scroll the gallery. Great for quick
+  // picks and blind users (the avatar search is type-ahead, so Enter there
+  // has no other purpose).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    if (document.body.dataset.screen !== 'confirm') return;
+    e.preventDefault();
+    $('#confirmGoBtn')?.click();
   });
 
   // ===== Enter table =====
@@ -935,6 +974,23 @@
               ? `<span class="seat__leaving" title="Leaves at end of current hand">leaving after hand</span>`
               : `<button type="button" class="seat__remove" data-kick-player="${escapeAttr(seat.playerId)}" title="Kick ${escapeAttr(seat.nickname)} — takes effect at end of this hand">×</button>`)
           : '';
+        // Per-seat FIGHT button (cosmetic gag). Only when I'm seated and the
+        // target is someone else — hover the seat to reveal the ⚔️. Purely
+        // flavor: it never affects chips or the hand.
+        const canFight = state.me && seat.playerId !== state.me.player_id
+          && t.seats.some(s => s.occupied && s.playerId === state.me.player_id);
+        const pid = escapeAttr(seat.playerId);
+        const tnick = escapeAttr(seat.nickname);
+        const fightBtnHtml = canFight
+          ? `<div class="seat__attacks">`
+            + `<button type="button" class="seat__fight" data-fight-player="${pid}" data-attack="melee" title="Melee — swing your weapon at ${tnick}">⚔️</button>`
+            + `<button type="button" class="seat__fight seat__fight--bolt" data-fight-player="${pid}" data-attack="lightning" title="Lightning Bolt at ${tnick} (Reflex save)">⚡</button>`
+            + `<button type="button" class="seat__fight seat__fight--stink" data-fight-player="${pid}" data-attack="stinking" title="Stinking Cloud on ${tnick} (Fort save)">💨</button>`
+            + `</div>`
+          : '';
+        const sickenedHtml = (seat.sickenedUntil && seat.sickenedUntil > Date.now())
+          ? `<span class="seat__sickened" title="Sickened — failed a Stinking Cloud save">🤢</span>`
+          : '';
         // Action timer countdown — shown on ANY acting seat now (human
         // OR bot). Tag with data-seat-timer-bot so tickTimers can label
         // it differently for bots ("thinking…") vs humans ("⏱ 0:42").
@@ -962,6 +1018,8 @@
         // up below the plate on hover; badges anchor at the corners.
         el.innerHTML = `
           ${removeBotHtml}
+          ${fightBtnHtml}
+          ${sickenedHtml}
           ${badgeHtml}
           ${swordsHtml}
           <div class="seat__plate ${myTurn ? 'seat__plate--acting' : ''}">
@@ -975,11 +1033,25 @@
             ${actionPanelHtml}
           </div>`;
       } else {
+        // Empty seat = a real, focusable button so a screen reader can
+        // land on it and announce "Sit down in seat N, button". A bare
+        // clickable <div> (the old markup) is invisible to AT and was
+        // hard for blind players to select. role/tabindex/aria + Enter
+        // and Space activation give full keyboard + SR operability.
         el.innerHTML = `
-          <div class="seat__plate" title="Sit here">
+          <div class="seat__plate seat__plate--empty" role="button" tabindex="0"
+               aria-label="Sit down in seat ${seat.index + 1}" title="Sit here">
             <div class="seat__empty">Sit ${seat.index + 1}</div>
           </div>`;
-        el.addEventListener('click', () => sitDown(seat.index));
+        const plate = el.querySelector('.seat__plate');
+        const sit = () => sitDown(seat.index);
+        plate.addEventListener('click', sit);
+        plate.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter' || ev.key === ' ' || ev.code === 'Space') {
+            ev.preventDefault();
+            sit();
+          }
+        });
       }
       ring.appendChild(el);
     });
@@ -1053,25 +1125,10 @@
     const stage = hand ? hand.state : 'WAITING';
     $('#stageBanner').textContent = stageLabel(stage, seated, t.spectatorCount);
 
-    // Spectator chip in the top bar — list of connected players who
-    // aren't seated. Hidden when nobody is watching. Backend ships
-    // t.spectators as [{playerId, nickname}]; old server snapshots
-    // before this field shipped fall back to spectatorCount-only.
-    const specEl = document.getElementById('topSpectators');
-    if (specEl) {
-      const list = Array.isArray(t.spectators) ? t.spectators : [];
-      if (list.length === 0) {
-        specEl.hidden = true;
-        specEl.textContent = '';
-        specEl.removeAttribute('title');
-      } else {
-        const names = list.map(s => s.nickname || s.playerId);
-        specEl.hidden = false;
-        specEl.textContent = names.join(', ');
-        // Full list in title for hover when names overflow the chip.
-        specEl.title = `Watching (${names.length}): ${names.join(', ')}`;
-      }
-    }
+    // Spectators (connected but not seated) in the top bar, between the
+    // clock and the user profile — rendered as tokens, falling back to
+    // comma-joined names when the tokens don't fit the slot.
+    renderSpectators(t.spectators);
 
     // Winner banner
     renderWinnerBanner(hand);
@@ -1400,6 +1457,9 @@
   }
 
   // ===== Action panel host (permanent — never destroyed) =====
+  // Tracks whether it was my turn on the previous render, so we only
+  // move focus on the false→true transition (not every state tick).
+  let _actpanelPrevCanAct = false;
   function renderActionPanel() {
     const host = $('#actpanelHost');
     const panel = $('#actionPanel');
@@ -1417,10 +1477,23 @@
                      && hand.state !== 'SHOWDOWN' && hand.state !== 'COMPLETE');
     panel.classList.toggle('actpanel--idle', !canAct);
     panel.innerHTML = buildActionPanelInner(hand, meInHand, canAct);
+    // Blind support: when it becomes MY turn, move keyboard focus onto
+    // the action controls so a screen reader lands on Check/Call (and the
+    // player can Tab to Fold/Raise) without hunting. Only on the
+    // false→true edge — re-focusing every tick would fight the user.
+    // The push-to-talk keydown handler calls preventDefault on the talk
+    // key, so holding Space here won't accidentally click this button.
+    if (window.BlindMode?.isOn?.() && canAct && !_actpanelPrevCanAct) {
+      // Land on Check/Call specifically — NOT the Fold button (which is
+      // first in DOM order), so an accidental Enter doesn't fold the hand.
+      const primary = panel.querySelector('.actpanel__btn[data-act="check"], .actpanel__btn[data-act="call"]');
+      if (primary) { try { primary.focus(); } catch (_) {} }
+    }
+    _actpanelPrevCanAct = canAct;
   }
 
   // ===== Chat log (bottom panel) =====
-  const KIND_CLASS = { hand: 'hand', win: 'win', rebuy: 'rebuy', leave: 'leave', join: 'leave', debt: 'debt', info: 'info', action: 'action', lootlord: 'lootlord', banter: 'banter', human: 'human' };
+  const KIND_CLASS = { hand: 'hand', win: 'win', rebuy: 'rebuy', leave: 'leave', join: 'leave', debt: 'debt', info: 'info', action: 'action', lootlord: 'lootlord', banter: 'banter', human: 'human', fight: 'fight' };
   const _seenChatIds = new Set();
   function fmtClock(ts) {
     const d = new Date(ts);
@@ -1470,8 +1543,10 @@
     _chatList.addEventListener('click', (e) => {
       const li = e.target.closest('li.chat-entry');
       if (!li) return;
-      const id = Number(li.dataset.chatId);
-      if (!Number.isFinite(id)) return;
+      // Chat ids are unique STRINGS (e.g. "c<tag>-main-5"), not numbers —
+      // look them up as-is (a stray Number() here used to NaN-out replay).
+      const id = li.dataset.chatId;
+      if (!id) return;
       const a = _chatAudioById.get(id);
       if (!a) return;
       if (a.audioUrl) {
@@ -1492,6 +1567,39 @@
     // Only render entries we haven't already seen (e.g. on a state snapshot,
     // many will already be there from earlier events).
     for (const e of entries) appendChatEntry(e);
+  }
+
+  // ===== Spectators (top bar, between the clock and the user profile) =====
+  // Connected-but-not-seated watchers as a row of small tokens. If the tokens
+  // don't fit the slot, fall back to compact comma-joined names. The topbar is
+  // a single short row, so tokens carry the name in a tooltip (no label under).
+  function renderSpectators(specs) {
+    const el = document.getElementById('topSpectators');
+    if (!el) return;
+    const list = Array.isArray(specs) ? specs : [];
+    if (list.length === 0) {
+      el.hidden = true;
+      el.innerHTML = '';
+      el.removeAttribute('title');
+      el.classList.remove('topbar__spectators--names');
+      return;
+    }
+    el.hidden = false;
+    const names = list.map(s => s.nickname || s.playerId);
+    el.title = `Watching (${names.length}): ${names.join(', ')}`;
+    // Token + name chips first.
+    el.classList.remove('topbar__spectators--names');
+    el.innerHTML = list.map(s =>
+      `<span class="topbar__spec-chip" title="${escapeAttr(s.nickname || '')}">`
+      + `<span class="topbar__spec-token">${renderAvatar(s.avatarId)}</span>`
+      + `<span class="topbar__spec-name">${escapeText(s.nickname || s.playerId)}</span>`
+      + `</span>`
+    ).join('');
+    // If the chips overflow the slot, drop to compact comma-joined names.
+    if (el.scrollWidth > el.clientWidth + 2) {
+      el.classList.add('topbar__spectators--names');
+      el.textContent = names.join(', ');
+    }
   }
 
   // ===== SVG 7-segment digit renderer for the big topbar clock =====
@@ -1906,6 +2014,17 @@
       });
       return;
     }
+    // Attack buttons — cosmetic combat gag (melee / lightning / stinking cloud).
+    const fightBtn = e.target.closest('button[data-fight-player]');
+    if (fightBtn) {
+      e.stopPropagation();
+      const targetPlayerId = fightBtn.dataset.fightPlayer;
+      const attack = fightBtn.dataset.attack || 'melee';
+      socket.emit('table:fight', { targetPlayerId, attack }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Cannot attack right now', true); return; }
+      });
+      return;
+    }
   });
 
   // Action panel clicks (now OUTSIDE the seat ring — delegate on document).
@@ -2132,11 +2251,20 @@
     });
     closeBotPicker();
   }
+  // Fill every empty seat with random AI in one request.
+  function emitFillBots() {
+    socket.emit('table:fillBots', null, (resp) => {
+      if (!resp?.ok) { toast(resp?.error || 'Could not fill seats', true); return; }
+      toast(`Filled ${resp.seated} seat${resp.seated === 1 ? '' : 's'} with AI`);
+    });
+    closeBotPicker();
+  }
   // "+ Bot" = random AI (fast path), "Pick AI ▾" opens the modal picker.
   $('#addBotBtn').addEventListener('click', () => emitAddBot(null));
   $('#pickBotBtn').addEventListener('click', openBotPicker);
   $('#botPickerModal').addEventListener('click', (e) => {
     if (e.target.closest('[data-close-bot-picker]')) { closeBotPicker(); return; }
+    if (e.target.closest('#botPickerFill')) { emitFillBots(); return; }
     if (e.target.closest('#botPickerRandom')) { emitAddBot(null); return; }
     const card = e.target.closest('[data-bot-id]');
     if (card) emitAddBot(card.dataset.botId);
@@ -2206,29 +2334,47 @@
   // so the existing chat box / raise input still work normally.
   (function wireBlindMode() {
     if (!window.BlindMode?.init) return;
-    window.BlindMode.init({ state, socket, toast, $ });
+    // sit() lets blind mode seat the player by voice ("sit" / "sit seat 3").
+    window.BlindMode.init({ state, socket, toast, $, sit: (idx) => sitDown(idx) });
     const isTypingTarget = (el) => {
       if (!el) return false;
       const tag = el.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
       return el.isContentEditable === true;
     };
+    const pttCode = () => window.BlindMode.getPttCode?.() || 'Space';
     document.addEventListener('keydown', (e) => {
+      // PTT rebind capture takes priority: the very next key (other than
+      // a modifier) becomes the new push-to-talk binding. Runs even over
+      // typing targets so the user can pick any key. Escape cancels.
+      if (window.BlindMode.isRebinding?.()) {
+        if (window.BlindMode.consumeRebind(e.code)) { e.preventDefault(); return; }
+      }
       if (e.repeat) return;
       if (e.code === 'Backquote' && !isTypingTarget(e.target)) {
         e.preventDefault();
         window.BlindMode.toggle();
         return;
       }
-      if (e.code === 'Space' && window.BlindMode.isOn() && !isTypingTarget(e.target)) {
+      if (!window.BlindMode.isOn() || isTypingTarget(e.target)) return;
+      // Push-to-talk (configurable key; default Space). Checked before H
+      // so a player who rebinds PTT to H still gets the mic, not a re-read.
+      if (e.code === pttCode()) {
         e.preventDefault();
         const chip = $('#blindModeChip');
         if (chip) chip.classList.add('is-listening');
         window.BlindMode.startListening();
+        return;
+      }
+      // H — re-read my hand (hole cards + board) any time.
+      if (e.code === 'KeyH') {
+        e.preventDefault();
+        window.BlindMode.readHand?.();
       }
     });
     document.addEventListener('keyup', (e) => {
-      if (e.code === 'Space' && window.BlindMode.isOn() && !isTypingTarget(e.target)) {
+      if (!window.BlindMode.isOn() || isTypingTarget(e.target)) return;
+      if (e.code === pttCode()) {
         e.preventDefault();
         const chip = $('#blindModeChip');
         if (chip) chip.classList.remove('is-listening');

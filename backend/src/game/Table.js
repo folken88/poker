@@ -6,7 +6,8 @@
 const db = require('../persistence/db');
 const { Hand, STATES } = require('./Hand');
 const { Bot } = require('../bot/Bot');
-const { logHand, logBotDecision } = require('../persistence/logger');
+const { logHand, logBotDecision, logChat } = require('../persistence/logger');
+const { gold } = require('../util/numwords');
 const { strengthOf } = require('../bot/strength');
 const { botRebuyMessage, humanRebuyMessage, bustMessage } = require('../util/flavor');
 const banter = require('../bot/banter');
@@ -21,6 +22,14 @@ const HAND_AUTOSTART_DELAY_MS = parseInt(process.env.HAND_AUTOSTART_DELAY_MS || 
 // hand begins (otherwise they have to wait another full hand).
 const HAND_GRACE_DELAY_MS     = parseInt(process.env.HAND_GRACE_DELAY_MS    || '5000', 10);
 const ACTION_TIMEOUT_MS = parseInt(process.env.ACTION_TIMEOUT_MS || '120000', 10);
+
+// Unique-per-process tag for chat entry ids. The client dedups chat lines by
+// id; a bare ++counter resets to 1 on every server restart, so the client's
+// already-seen set would silently DROP the new lines (chat appears frozen
+// until a manual refresh). Tagging every id with a fresh per-process token
+// makes ids collision-free across restarts — the real fix for "chat stopped
+// updating after a deploy".
+const CHAT_ID_TAG = 'c' + Date.now().toString(36) + Math.floor(Math.random() * 1e9).toString(36);
 // Bot "thinking" time is mode-flavored — riskier bots act snappy, cautious
 // ones brood. Each entry = number of d-sides; final delay is 1..N seconds.
 // Hard cap 30s (cautious 1d29 already enforces this).
@@ -134,11 +143,15 @@ class Table {
    *  like 11labs base64 audio that would otherwise blow up memory and
    *  re-broadcast every time a fresh state snapshot ships. */
   chat(kind, text, extras) {
-    const entry = { id: ++this._chatId, ts: Date.now(), kind, text };
+    const entry = { id: `${CHAT_ID_TAG}-${this.id}-${++this._chatId}`, ts: Date.now(), kind, text };
     this.chatLog.push(entry);
     if (this.chatLog.length > Table.MAX_CHAT_LOG) {
       this.chatLog.splice(0, this.chatLog.length - Table.MAX_CHAT_LOG);
     }
+    // Persist to conversation.jsonl: the full timestamped transcript of
+    // banter + human chat + gameplay narration. Never let logging break
+    // a broadcast.
+    try { logChat({ tableId: this.id, entry, extras }); } catch (_) {}
     // Build the emitted payload separately from the persisted entry so
     // ephemeral extras (audio, etc.) don't end up in the ring buffer.
     const payload = extras ? { ...entry, ...extras } : entry;
@@ -163,6 +176,30 @@ class Table {
     for (const sid of room) {
       const s = this.io.sockets.sockets.get(sid);
       if (s?.data?.voiceOn) return true;
+    }
+    return false;
+  }
+
+  /** True if any human client is LIVE-connected to this table's room —
+   *  whether seated-and-watching or just spectating. Bots are driven
+   *  server-side and never hold a socket, so any socket in the room is a
+   *  human browser actually at the table. Used to send all bots home when
+   *  nobody is present, so we don't burn LLM / 11labs / CPU dealing hands
+   *  no one will see.
+   *
+   *  NOTE: we deliberately use LIVE connections, not seat occupancy.
+   *  Disconnected humans keep their seat reserved (handleDisconnect's
+   *  PERSISTENT SEAT), so a seat-based check would keep bots grinding
+   *  forever after someone simply closes their tab — the opposite of the
+   *  resource-saving intent. Their reserved seat is preserved regardless;
+   *  the bots just leave, and the human re-adds them on reconnect. */
+  anyHumanPresent() {
+    if (!this.io) return false;
+    const room = this.io.sockets.adapter.rooms.get(this.roomName());
+    if (!room) return false;
+    for (const sid of room) {
+      const s = this.io.sockets.sockets.get(sid);
+      if (!s?.data?.player?.is_bot) return true; // any non-bot socket = human at the table
     }
     return false;
   }
@@ -286,6 +323,7 @@ class Table {
     // and be skipped at deal time ("called in a bot, why is it sitting
     // out?"). Same idea for _standAfterHand.
     seat.sittingOut = false;
+    seat.sickenedUntil = null;
     delete seat._standAfterHand;
     // Signal to _scheduleAutoStart that a seat just opened up — the
     // next-hand delay should be extended so a spectator has time to
@@ -643,12 +681,28 @@ class Table {
       // from the speaker pool (no commenting on themselves).
       try {
         if (action === 'allin' || action === 'raise' || (action === 'call' && committed > this.bigBlind * 3)) {
+          // Amounts spelled out as words for the LLM (numwords.gold) so the
+          // small model can't misread digit strings ("152" → "fifteen two").
+          // The exact value also rides along in `amounts` so a {amount}
+          // token in the model's line gets the precise figure substituted in.
+          const amtVal = action === 'raise' ? (actorAfter?.invested ?? amount) : committed;
           const desc = action === 'allin'
-            ? `${nick} just shoved all-in (${committed.toLocaleString()} gp).`
+            ? `${nick} just shoved all-in (${gold(committed)}).`
             : action === 'raise'
-              ? `${nick} raised to ${(actorAfter?.invested ?? amount).toLocaleString()} gp.`
-              : `${nick} called a big ${committed.toLocaleString()} gp bet.`;
-          banter.maybeSpeak(this, { kind: action, description: desc, actorIds: [playerId] });
+              ? `${nick} raised to ${gold(actorAfter?.invested ?? amount)}.`
+              : `${nick} called a big ${gold(committed)} bet.`;
+          banter.maybeSpeak(this, { kind: action, description: desc, actorIds: [playerId], amounts: { amount: amtVal } });
+        } else if (action === 'check' && this.findSeat(playerId)?.isBot) {
+          // The actual checker (a bot) may announce their OWN check — never a
+          // bystander, and folded players never reach this action branch. The
+          // per-table banter cooldown keeps it occasional, not every check.
+          banter.maybeSpeak(this, {
+            kind: 'check',
+            description: `You (${nick}) just CHECKED — tapped the table, no bet, staying in the hand for free. You may simply say "check", or a brief in-character line as you do it. One short line.`,
+            speakerHint: playerId,
+            actorIds: [],
+            prob: 0.25,
+          });
         }
       } catch (_) { /* never let banter break a hand */ }
     } catch (_) { /* never let chat logging break a hand */ }
@@ -679,14 +733,16 @@ class Table {
         const newActorP = this.hand.players.find(p => p.playerId === newActor);
         const newActorNick = newActorP?.nickname || newActor;
         const toCall = Math.max(0, this.hand.currentBet - (newActorP?.invested || 0));
+        const potSize = this.hand.pot.totalSize();
         const desc = toCall > 0
-          ? `${newActorNick} is on the clock — must call ${toCall.toLocaleString()} gp into a ${this.hand.pot.totalSize().toLocaleString()} gp pot.`
-          : `${newActorNick} is on the clock — can check or open.`;
+          ? `${newActorNick} is on the clock, facing a call of ${gold(toCall)} into a ${gold(potSize)} pot. You are a SPECTATOR watching THEM decide — heckle, predict, or needle them; do NOT announce an action yourself.`
+          : `${newActorNick} is on the clock and can check or open. You are a SPECTATOR watching THEM decide — heckle, predict, or needle them; do NOT say "check"/"call" yourself.`;
         banter.maybeSpeak(this, {
           kind: 'advice',
           description: desc,
           actorIds: [newActor, playerId],
           prob: 0.08,
+          amounts: toCall > 0 ? { call: toCall, pot: potSize } : null,
         });
       }
     } catch (_) { /* never let banter break a hand */ }
@@ -875,17 +931,28 @@ class Table {
         const hand = w.handDesc ? ` with ${w.handDesc}` : '';
         this.chat('win', `🏆 ${nick} wins ${amt} gp${hand}.`);
       }
-      // Banter trigger on the winner — bluffs especially make for
-      // great in-character reactions. Speaker pool excludes the
-      // winner so we get an opponent's reaction, not a victory lap.
+      // Banter trigger on the win. If the WINNER is a bot, THEY gloat —
+      // a smug, self-aggrandizing victory lap about their own win (not a
+      // line that reads as chiding someone else). If a human won, fall
+      // back to an opponent bot reacting to it.
       if (ws.length > 0) {
         const top = ws[0];
         const nick = nickById.get(top.playerId) || top.playerId;
         const isBluff = (top.handDesc || '').includes('bluff');
-        const desc = isBluff
-          ? `${nick} just won ${top.amount.toLocaleString()} gp on a bluff (${top.handDesc}).`
-          : `${nick} just won ${top.amount.toLocaleString()} gp${top.handDesc ? ' with ' + top.handDesc : ''}.`;
-        banter.maybeSpeak(this, { kind: isBluff ? 'bluff-win' : 'win', description: desc, actorIds: [top.playerId] });
+        const amt = gold(top.amount);
+        const handTail = top.handDesc ? ` with ${top.handDesc}` : '';
+        const winnerIsBot = this.seats.some(s => !s.isEmpty() && s.isBot && s.playerId === top.playerId);
+        if (winnerIsBot) {
+          const desc = isBluff
+            ? `You (${nick}) JUST WON ${amt} on a BLUFF (${top.handDesc})! This is YOUR victory — GLOAT: be smug and self-aggrandizing about your OWN win, in character (you may relish that it was a bluff). Brag about yourself; do NOT chide or scold someone else.`
+            : `You (${nick}) JUST WON ${amt}${handTail}! This is YOUR victory — GLOAT: be smug and self-aggrandizing about your OWN win, in character. Brag about yourself; do NOT chide or scold someone else.`;
+          banter.maybeSpeak(this, { kind: isBluff ? 'bluff-win' : 'win', description: desc, speakerHint: top.playerId, actorIds: [], amounts: { amount: top.amount, pot: top.amount } });
+        } else {
+          const desc = isBluff
+            ? `${nick} just won ${amt} on a bluff (${top.handDesc}). React as an opponent who just lost the pot to them.`
+            : `${nick} just won ${amt}${handTail}. React as an opponent who just lost the pot to them.`;
+          banter.maybeSpeak(this, { kind: isBluff ? 'bluff-win' : 'win', description: desc, actorIds: [top.playerId], amounts: { amount: top.amount, pot: top.amount } });
+        }
       }
       // Loser-reaction trigger — pick one random bot who DIDN'T win
       // and let them react to losing the hand. The system prompt
@@ -984,7 +1051,10 @@ class Table {
     // win condition instead of just stockpiling cash to bully with.
     // (Bots already drain to a ~5k reserve via the auto-invest loop
     // above, so this almost never fires on AI seats.)
-    const CASH_CAP = 20000;
+    // Cap = the most expensive single item (+5 Longsword, 50,315 gp) so a
+    // player can always save up for the priciest piece of gear. Computed
+    // from the price table so it tracks any future price changes.
+    const CASH_CAP = Math.max(...Object.keys(db.GEAR_BY_KEY).map(k => db.gearPrice(k, 5)));
     for (const seat of this.seats) {
       if (seat.isEmpty()) continue;
       if (seat.chipsAtTable > CASH_CAP) {
@@ -1054,6 +1124,28 @@ class Table {
       this._completeTimer = null;
       // Clear hand only after pause so clients can render showdown via the COMPLETE snapshot.
       if (this.hand === finishedHand) this.hand = null;
+
+      // Resource saver: if nobody is seated or watching, send every bot
+      // home instead of auto-rebuying them. With no humans and no bots,
+      // nothing schedules a hand and the table simply idles until someone
+      // shows up — no LLM banter, no 11labs synthesis, no bot-only hands
+      // dealt to an empty room.
+      if (!this.anyHumanPresent()) {
+        let sentHome = 0;
+        for (const seat of this.seats) {
+          if (seat.isEmpty() || !seat.isBot) continue;
+          this._vacate(seat);
+          sentHome++;
+        }
+        if (sentHome > 0) {
+          console.log(`[poker] table=${this.id} idle — sent ${sentHome} bot(s) home (no humans present)`);
+          if (this.io) this.io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+        }
+        this.nextHandAt = null;
+        this._broadcast();
+        return; // no autostart — nothing to play for
+      }
+
       // Handle broke seats. Humans vacate; bots auto-rebuy back to the
       // default stack and stay seated (we want a persistent house roster
       // of NPCs, not seats that drain to zero and disappear).
@@ -1298,6 +1390,9 @@ class Table {
         // Gear inventory (PF1e). Map of slot → tier (1..5) or null.
         gear: s.isEmpty() ? null : db.getGear(s.playerId),
         gearValue: s.isEmpty() ? 0 : db.gearTotalValue(db.getGear(s.playerId)),
+        // Cosmetic "sickened" status from a failed Stinking Cloud save —
+        // wall-clock ms until it wears off. Pure flavor, no poker effect.
+        sickenedUntil: (!s.isEmpty() && s.sickenedUntil && s.sickenedUntil > Date.now()) ? s.sickenedUntil : null,
       })),
       spectatorCount: this.spectators.size,
       // Concise list of spectators (connected clients NOT seated). One
@@ -1307,6 +1402,7 @@ class Table {
       spectators: Array.from(this.spectators.entries()).map(([playerId, entry]) => ({
         playerId,
         nickname: entry.player?.nickname || playerId,
+        avatarId: entry.player?.avatar_id ?? null,
       })),
       hand,
       // Wall-clock ms when the current human actor will be auto-folded.

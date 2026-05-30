@@ -446,13 +446,16 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
    content; max-width caps it so a busy room can't push everything else
    off the bar — overflowed names are revealed via the title tooltip. */
 .topbar__spectators {
-  flex: 0 0 auto;
-  max-width: 260px;
-  margin-left: 6px;
-  padding: 4px 10px;
+  flex: 0 1 auto;
+  max-width: 320px;
+  margin: 0 8px;
+  padding: 3px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   background: linear-gradient(180deg, rgba(0,0,0,0.4), rgba(0,0,0,0.55));
   border: 1px solid rgba(241,207,131,0.18);
-  border-radius: 8px;
+  border-radius: 999px;
   color: var(--ivory-dim);
   font-size: 0.78rem;
   line-height: 1.2;
@@ -462,10 +465,31 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   user-select: none;
 }
 .topbar__spectators::before {
-  content: '👁 ';
-  margin-right: 4px;
+  content: '👁';
+  margin-right: 2px;
   opacity: 0.7;
+  flex: 0 0 auto;
 }
+/* Each watcher = a small token + their name. */
+.topbar__spec-chip {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 7px 1px 1px;
+  background: rgba(241,207,131,0.10);
+  border: 1px solid rgba(241,207,131,0.18);
+  border-radius: 999px;
+}
+.topbar__spec-token { flex: 0 0 auto; width: 22px; height: 22px; display: inline-flex; }
+.topbar__spec-token svg, .topbar__spec-token img {
+  width: 22px; height: 22px; border-radius: 50%; object-fit: cover;
+  border: 1px solid rgba(241,207,131,0.3);
+}
+.topbar__spec-name {
+  font-size: 0.72rem; color: var(--ivory-dim);
+  max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Names-only fallback when the chips don't fit — plain comma-joined text. */
+.topbar__spectators--names { display: block; }
 .topbar__brand {
   font-family: var(--font-display);
   letter-spacing: 0.22em;
@@ -1122,6 +1146,49 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   border-color: #ffb3b3;
   transform: scale(1.1);
 }
+/* Attack buttons (cosmetic combat gag) — a vertical stack on the seat's
+   top-right corner, hidden until the seat is hovered. */
+.seat__attacks {
+  position: absolute;
+  top: -8px; right: -8px;
+  display: flex; flex-direction: column; gap: 3px;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 6;
+}
+.seat:hover .seat__attacks { opacity: 1; transform: scale(1); }
+.seat__fight {
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, rgba(40,46,60,0.95), rgba(24,28,40,0.96));
+  color: #cfe0ff;
+  border: 1px solid rgba(150,180,230,0.5);
+  border-radius: 50%;
+  font-size: 0.8rem; line-height: 1;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.1s ease, border-color 0.1s ease;
+}
+.seat__fight:hover {
+  background: linear-gradient(180deg, rgba(120,150,210,0.95), rgba(70,95,160,0.97));
+  color: #fff; border-color: #dce8ff;
+  transform: scale(1.18);
+}
+.seat__fight--bolt { color: #ffe27a; border-color: rgba(240,210,90,0.55); }
+.seat__fight--bolt:hover { background: linear-gradient(180deg, rgba(240,210,90,0.97), rgba(190,150,30,0.97)); color: #1a1400; border-color: #fff0b0; }
+.seat__fight--stink { color: #b6e39a; border-color: rgba(150,210,120,0.5); }
+.seat__fight--stink:hover { background: linear-gradient(180deg, rgba(150,210,120,0.97), rgba(90,150,60,0.97)); color: #0c1a06; border-color: #d6f5c0; }
+/* "Sickened" badge (failed a Stinking Cloud save) — pure flavor. */
+.seat__sickened {
+  position: absolute;
+  bottom: -6px; left: -6px;
+  font-size: 0.9rem; line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+  animation: sickenedBob 1.6s ease-in-out infinite;
+  z-index: 6;
+}
+@keyframes sickenedBob { 0%,100% { transform: translateY(0) rotate(-6deg);} 50% { transform: translateY(-2px) rotate(6deg);} }
+
 .seat__leaving {
   display: inline-block;
   font-size: 0.6rem;
@@ -1855,6 +1922,17 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   background: rgba(217,176,106,0.15);
   border-color: var(--brass-bright);
 }
+/* Empty seats are now role=button tabindex=0 (keyboard + screen-reader
+   reachable). Give the focused seat the same highlight as hover plus a
+   clear focus ring so sighted keyboard users and low-vision players can
+   see which seat they're about to take. */
+.seat.is-empty .seat__plate--empty:focus-visible,
+.seat.is-empty .seat__plate--empty:focus {
+  outline: 3px solid var(--brass-bright);
+  outline-offset: 2px;
+  background: rgba(217,176,106,0.15);
+  border-color: var(--brass-bright);
+}
 .seat.is-me .seat__plate {
   border-color: var(--brass-bright);
   box-shadow: 0 0 0 2px rgba(241,207,131,0.25), var(--shadow-soft);
@@ -2019,6 +2097,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .chat-entry--lootlord .chat-entry__text { color: var(--brass-bright); font-weight: 700; letter-spacing: 0.04em; }
 .chat-entry--banter .chat-entry__text { color: #cfe2b8; font-style: italic; }
 .chat-entry--human  .chat-entry__text { color: #d9e9f7; font-weight: 600; }
+.chat-entry--fight  .chat-entry__text { color: #e6c79a; }
 /* Banter or local-SFX lines carry replayable audio (Crisp/Elfrip
    sound pools, or 11labs banter MP3). Make them visibly clickable
    — a subtle hover highlight + speaker glyph cues that there's

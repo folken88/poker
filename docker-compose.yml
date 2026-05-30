@@ -6,6 +6,12 @@ services:
       - PORT=3000
       - DATA_DIR=/app/data
       - DEFAULT_STACK=5000
+      # Between-hands showdown pause — how long the winner/board stays on
+      # screen before the next hand. Code default is 15s; trimmed to 10s.
+      - HAND_RESULT_PAUSE_MS=10000
+      # Optional one-line "what changed" note posted to table chat on boot.
+      # Set per-deploy: DEPLOY_NOTE="winner gloat lines" docker compose up -d backend
+      - DEPLOY_NOTE=${DEPLOY_NOTE:-}
       # ---- LLM banter (in-character chat from Ollama) ----
       # Set ENABLED=0 to silence. Model name must match `ollama list`
       # output on the host. host.docker.internal points at the host
@@ -21,8 +27,12 @@ services:
       # interpolation. NEVER hardcode it here. The :- syntax means
       # "empty if unset" — backend gracefully no-ops without a key.
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
-      - ELEVENLABS_MODEL=eleven_flash_v2_5
-      - ELEVENLABS_TIMEOUT_MS=8000
+      # Quality model: richer, more consistent prosody (fixes the rushed/
+      # pitched-up delivery the flash model gave on short banter lines).
+      # ~1s slower per line than eleven_flash_v2_5 — fine for ambient chat.
+      # Bump ELEVENLABS_TIMEOUT_MS if lines start getting dropped on timeout.
+      - ELEVENLABS_MODEL=eleven_multilingual_v2
+      - ELEVENLABS_TIMEOUT_MS=12000
     extra_hosts:
       # Required on Linux Docker so host.docker.internal resolves
       # (Docker Desktop on Windows/Mac maps it automatically; harmless

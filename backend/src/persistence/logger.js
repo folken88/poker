@@ -2,6 +2,13 @@
  * Append-only JSONL loggers for offline analysis.
  *   - hands.jsonl         — one row per completed hand (board, players, actions, winners)
  *   - bot-decisions.jsonl — one row per bot decision (context + chosen action + reason)
+ *   - conversation.jsonl  — one row per chat-funnel line: every banter line,
+ *                           human chat, AND gameplay narration (actions, wins,
+ *                           hand markers, rebuys, etc.) in chronological order,
+ *                           each timestamped. The single transcript that shows
+ *                           "how things are going" — what was said and done, in
+ *                           sequence — for verifying banter quality (e.g. a bot
+ *                           misreading a bet) against the surrounding gameplay.
  *
  * Files live in /app/logs which is bind-mounted to backend/logs on the host so
  * we can tail/read them without entering the container.
@@ -15,6 +22,7 @@ if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 
 const HAND_LOG = path.join(LOG_DIR, 'hands.jsonl');
 const BOT_LOG  = path.join(LOG_DIR, 'bot-decisions.jsonl');
+const CHAT_LOG = path.join(LOG_DIR, 'conversation.jsonl');
 
 function appendLine(file, obj) {
   try {
@@ -76,4 +84,29 @@ function logBotDecision({ tableId, playerId, mode, baseMode, decision, context }
   appendLine(BOT_LOG, row);
 }
 
-module.exports = { logHand, logBotDecision, HAND_LOG, BOT_LOG, LOG_DIR };
+/** Append one chat-funnel line to conversation.jsonl. Receives the entry
+ *  object Table.chat() builds ({ id, ts(ms), kind, text }) plus the
+ *  optional `extras` (which may carry 11labs audio). Conversational lines
+ *  are broadcast as "💬 Speaker: message"; we split the speaker out for
+ *  easy filtering, while gameplay-narration kinds (action/win/hand/…)
+ *  just log their text with speaker = null. `hasAudio` records whether a
+ *  voice clip rode along, without bloating the log with the audio bytes. */
+function logChat({ tableId, entry, extras }) {
+  let speaker = null;
+  let message = entry.text;
+  const m = /^💬\s*([^:]+):\s*([\s\S]*)$/.exec(entry.text || '');
+  if (m) { speaker = m[1].trim(); message = m[2]; }
+  const row = {
+    ts: new Date(entry.ts || Date.now()).toISOString(),
+    tsMs: entry.ts,
+    table: tableId,
+    id: entry.id,
+    kind: entry.kind,
+    speaker,
+    text: message,
+    hasAudio: !!(extras && (extras.audio || extras.audioUrl)),
+  };
+  appendLine(CHAT_LOG, row);
+}
+
+module.exports = { logHand, logBotDecision, logChat, HAND_LOG, BOT_LOG, CHAT_LOG, LOG_DIR };

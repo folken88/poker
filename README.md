@@ -45,6 +45,8 @@ poker-game/
 │   │   │   │                      #   Vorkstag's impersonation routing + Dracula fallback
 │   │   │   ├── character_sounds.js # stored sound pools (Crisp chirps, Elfrip burps)
 │   │   │   │                      #   used in place of TTS for non-speech characters
+│   │   │   ├── voiceIntent.js     # LLM fallback that maps unclear blind-mode speech
+│   │   │   │                      #   to a poker action (blind:interpret socket event)
 │   │   │   └── roast_styles.js    # targeted comedic-influence overlays (dracula-flow
 │   │   │                          #   for the gothic-horror trio, simple-speaker for
 │   │   │                          #   Elfrip/Crisp, jeff-ross+giraldo for Kovira)
@@ -70,6 +72,7 @@ poker-game/
 │   ├── index.html
 │   ├── css/table.css
 │   ├── js/{client,cards,avatars}.js
+│   ├── js/blindMode.js          # screen-reader narration + push-to-talk voice control
 │   ├── tokens/                    # all character art (140+ webp files)
 │   └── assets/avatars/            # 12 preset SVG avatars for humans
 ├── nginx/nginx.conf
@@ -113,7 +116,7 @@ poker-game/
 - **Audio settings popover** (🔊 in the topbar) — per-player checkboxes for "card sounds" + "AI character voices" with matching **volume sliders** (0-100%). Settings persist per player in localStorage. Defaults: card sounds 45%, voices off.
 - **Spectator chip** in the topbar — comma-joined nicknames of connected players who aren't seated (👁 prefix). Hidden when nobody's watching; capped at 260px width with full list on hover.
 - **Pronouns dropdown** under your nickname — they/he/she. Persists via `lobby:setGender`; the LLM banter system reads gender from the roster broadcast and tailors pronouns when referring to characters by name. Bot pronouns are pinned in `BOT_ROSTER` and re-synced every boot.
-- **Blind support mode** — toggle with backtick. Web Speech API narrates state changes (your turn cue with hole + board, action lines, banter text), with push-to-talk speech recognition (hold Space) to issue commands. Cooperates with 11labs character voicelines so the two don't talk over each other.
+- **Blind support mode** — a full screen-reader / voice play experience, toggled with backtick (`` ` ``). The Web Speech API narrates state tersely: a your-turn cue (hole cards + board + to-call + pot), a compact running play-by-play of every opponent action ("Kate folded.", "Nomkath called 50."), board reveals, and winners. Money is read as bare numbers; press **H** any time to re-hear your hand; say "cash" for your chips on demand. **Push-to-talk** (hold a rebindable key, default Space) runs speech-to-text commands — "fold" / "call" / "raise 500" / "all in", plus "sit" / "sit seat 3" — and holding the key **barges in**, silencing narration so you can interrupt mid-sentence. Every raise reads its amount back for a yes/no confirm. Anything the routine parser can't place is sent to the local LLM (`blind:interpret`), which maps loose phrasing to an action (also confirmed before it acts). Empty seats are real focusable buttons, and your action controls auto-focus on your turn. Cooperates with 11labs character voicelines so the two never talk over each other. **NB:** the browser mic only works in a secure context — use `https://poker.folkengames.com`, not the raw host:port.
 - **Dual-cell topbar clock** — the timer pill is split into two side-by-side cells. Left cell (blue) shows the action clock and its label ("action timer" / "next hand in"). Right cell (brass) shows the hand clock running total. Each cell has a fixed min-width so digits don't jitter when labels swap.
 - **Winner banner (center stage)** — between rounds, the felt center shows the winner's avatar at 2× size, the chips awarded, and the winning 5-card combo sorted low → high using PF1e rank order. Doubled token size for this display only; box auto-fits.
 - **Cash cap (20,000 gp)** — at hand-end, any seat over the cap is clipped back to 20k and the overflow is announced in chat. Forces wealth into gear instead of stockpiled chips.
@@ -409,9 +412,16 @@ docker compose build backend
 docker logs -f --since 1s folken-poker-backend 2>&1 \
   | grep --line-buffered -m1 'hand-complete'
 
-# 3. Recreate — we're guaranteed to be in the post-hand pause (~20s window)
+# 3. Recreate — we're guaranteed to be in the post-hand pause (~15s window:
+#    10s showdown pause + autostart delay; HAND_RESULT_PAUSE_MS=10000)
 docker compose up -d backend
 ```
+
+An **empty table needs no wait** — if `GET /api/tables` reports `seated: 0`,
+recreate immediately. The live deploy uses a small watcher that polls
+`/api/tables`: deploy now if nobody's seated, otherwise wait for the next
+completed hand (`hands.jsonl` grows) before recreating, always passing
+`DEPLOY_NOTE="…"` so the boot posts a "🔧 Update: …" line to table chat.
 
 The marker is `[poker] hand-complete table=<id> #<handCount>`, emitted
 from `Table._afterHandComplete()`. Don't use a quiet-gap heuristic —

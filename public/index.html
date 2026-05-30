@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260527-mobile-menu" />
+  <link rel="stylesheet" href="/css/table.css?v=20260530-blind-raisefix" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -71,10 +71,11 @@
         </div>
       </div>
 
-      <!-- ===== Spectator list =====
-           Comma-joined names of connected players who aren't seated.
-           Hidden when nobody is watching. Title attribute lists the
-           full set for hover so the visible label can stay compact. -->
+      <!-- ===== Spectators (between the clock and the user profile) =====
+           Connected players who aren't seated, shown as small avatar tokens
+           (renderSpectators), collapsing to comma-joined names when the
+           tokens don't fit. Hidden when nobody is watching; the title lists
+           everyone for hover. -->
       <div class="topbar__spectators" id="topSpectators" hidden
            role="status" aria-live="polite"
            title="People watching the table"></div>
@@ -338,10 +339,11 @@
     <div class="modal__backdrop" data-close-bot-picker></div>
     <div class="modal__panel modal__panel--bot-picker">
       <h2 class="modal__title" id="botPickerTitle">Pick an AI to seat</h2>
-      <p class="modal__body">Choose a specific character, or hit <strong>Random</strong> for the dealer to pick.</p>
+      <p class="modal__body">Choose a specific character, hit <strong>Random</strong> for one, or <strong>Fill empty seats</strong> to pack the table.</p>
       <div class="bot-picker__grid" id="botPickerGrid"></div>
       <div class="modal__actions">
         <button class="btn btn--ghost"   data-close-bot-picker>Cancel</button>
+        <button class="btn btn--ghost"   id="botPickerFill" title="Seat a random AI in every empty seat">🪑 Fill empty seats</button>
         <button class="btn btn--primary" id="botPickerRandom">🎲 Random</button>
       </div>
     </div>
@@ -365,9 +367,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260527-mobile-menu"></script>
-  <script src="/js/cards.js?v=20260527-mobile-menu"></script>
-  <script src="/js/blindMode.js?v=20260527-mobile-menu"></script>
-  <script src="/js/client.js?v=20260527-mobile-menu"></script>
+  <script src="/js/avatars.js?v=20260530-blind-raisefix"></script>
+  <script src="/js/cards.js?v=20260530-blind-raisefix"></script>
+  <script src="/js/blindMode.js?v=20260530-blind-raisefix"></script>
+  <script src="/js/client.js?v=20260530-blind-raisefix"></script>
 </body>
 </html>

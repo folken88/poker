@@ -5,10 +5,14 @@
  *
  * Entry points (wired from client.js):
  *   - Press `        toggle blind mode on/off (announced)
- *   - Hold Space     PTT mic — release to dispatch command
+ *   - Press H        re-read my hand (hole cards + board)
+ *   - Hold PTT key   push-to-talk mic — release to dispatch command
+ *                    (default Space; rebindable — say "change push to talk")
  *   - Speak "fold" / "check" / "call" / "raise 500" / "all in"
+ *   - Speak "sit" / "sit seat 3"  to take a seat hands-free
  *   - Voice queries  "what's the pot" / "what's my stack" / "what's the board"
- *                    "who's acting" / "repeat" / "faster" / "slower" / "blind off"
+ *                    "who's acting" / "hand" / "repeat" / "faster" / "slower"
+ *                    "change push to talk" / "blind off"
  *
  * Design notes:
  *  - All state stays on this client (sessionStorage). Server is unaware.
@@ -47,8 +51,24 @@
     ['Mandore',    'Man door'],
     ['Lirienne',   'Leery in'],
     ['Bujon',      'Boo han'],
-    ['Casandalee', 'Cah san dah lee'],
+    ['Casandalee', 'Cassan dah-lee'],
+    ['Tobis',      'Toe biss'],
+    ['Adimarus',   'Add ih mare us'],
   ];
+
+  // ---------- Divine-oath pauses ----------
+  // "By Rovagug, those damn cards!" — the comma after an oath clause
+  // barely pauses, so the line runs together. Upgrade that comma to an
+  // ellipsis for a longer beat. Scoped to deity keywords so ordinary
+  // commas are untouched. Mirror of backend/src/util/elevenlabs.js.
+  const DIVINE_OATH_WORDS = [
+    'Sarenrae', 'Dawnflower', 'Sunlord', 'Cayden', 'Gorum', 'Shelyn',
+    'Pharasma', 'Desna', 'Iomedae', 'Inheritor', 'Calistria', 'Torag',
+    'Droskar', 'Brigh', 'Casandalee', 'Asmodeus', 'Norgorber', 'Nethys',
+    'Rovagug', 'Lamashtu', 'Aroden', 'Tar-Baphon', 'Abadar', 'Jezelda',
+    'Zon-Kuthon', 'Erastil', 'Urgathoa', 'Gozreh',
+  ];
+  const OATH_RE = new RegExp(`\\b(${DIVINE_OATH_WORDS.join('|')})([\\w\\s'-]*?),`, 'gi');
 
   // ---------- State ----------
   const state = {
@@ -80,6 +100,14 @@
     spokenHoleHandStartedAt: null,
     deps: null,               // injected by init: {state, socket, toast, $}
     chipEl: null,             // topbar visual indicator
+    // Push-to-talk key. Default is Space; a screen-reader user can
+    // rebind it (some prefer to keep Space for their AT). Stored as a
+    // KeyboardEvent.code so it's layout-independent. Persisted to
+    // localStorage (survives reloads, unlike the sessionStorage mode flag).
+    pttCode: 'Space',
+    rebinding: false,         // true while capturing the next key as the new PTT
+    rebindTimer: null,        // auto-cancel timer for a rebind that never completes
+    announcedControls: false, // spoke the one-time "how to act" hint this session
   };
 
   // ---------- Earcons (WebAudio, no external assets) ----------
@@ -125,9 +153,13 @@
   function speak(text, prio = 'event') {
     if (!state.on || !supportsTTS || !text) return;
     text = String(text);
-    // "GP" / "gp" → "gold" so the synth says "two thousand gold"
-    // instead of "two thousand GP" or letter-spelling "gee pee".
-    text = text.replace(/\bgp\b/gi, 'gold');
+    // Drop the currency word entirely. Josh asked for the bare number
+    // ("call fifty", not "call fifty gold") to keep the cadence quick —
+    // the unit is always gold at this table, so it's dead weight on the
+    // ear. Strips "gp" AND "gold" (the latter in case a line already
+    // spelled it out), eating the space before it so "50 gp." → "50."
+    // The trailing period (sentence beat) is preserved.
+    text = text.replace(/\s*\bg(?:p|old)\b/gi, '');
     // Pronunciation fixes — written names the TTS engine routinely
     // mangles get spelled phonetically here so the screen-reader
     // voice says them correctly. Add new pairs as they surface.
@@ -135,6 +167,8 @@
     for (const [orig, phon] of NAME_PRONUNCIATIONS) {
       text = text.replace(new RegExp(`\\b${orig}\\b`, 'gi'), phon);
     }
+    // Lengthen the pause after a divine-oath clause (see OATH_RE above).
+    text = text.replace(OATH_RE, '$1$2...');
     const p = PRIO[prio] ?? PRIO.event;
     // ambient: drop if anything else is queued OR currently speaking
     if (p === PRIO.ambient && (state.queue.length > 0 || state.speaking)) return;
@@ -349,7 +383,6 @@
         // numeric context (pot / stack / call amount).
         earcon('turn');
         const mePlayer = hand.players?.find(p => p.playerId === mePid);
-        const stack   = mePlayer?.stack ?? '?';
         const pot     = hand.potTotal ?? 0;
         const myBet   = mePlayer?.invested ?? 0;
         const toMatch = (hand.currentBet ?? 0) - myBet;
@@ -363,7 +396,15 @@
         let line = 'Your turn.';
         if (hole && hole.length) line += ` Hand: ${cardListWords(hole)}.`;
         if (board.length)        line += ` Board: ${cardListWords(board)}.`;
-        line += ` ${toCallText} Pot ${Number(pot).toLocaleString()}. Stack ${Number(stack).toLocaleString()}.`;
+        // Cash is NOT read every turn (say "cash" to hear it on demand).
+        line += ` ${toCallText} Pot ${Number(pot).toLocaleString()}.`;
+        // One-time-per-session reminder of HOW to act — appended to the
+        // first your-turn cue so a new blind player isn't left guessing.
+        // Suppressed thereafter to keep the per-turn cue snappy.
+        if (!state.announcedControls) {
+          state.announcedControls = true;
+          line += ` Hold ${pttLabel()} and say fold, call, or raise; press H to hear your hand again.`;
+        }
         speak(line, 'urgent');
       }
       state.prevActor = actor;
@@ -413,18 +454,19 @@
     const text = entry.text.replace(/^[^\p{L}\p{N}]+/u, '').trim();
     if (!text) return;
 
-    // Per-action lines — narration for spectators + the seated
-    // player's inter-turn awareness. Filter to the CONSEQUENTIAL
-    // actions only: raises, all-ins, folds. Routine "Kate calls
-    // 200" and "Storgrim checks." lines are dropped — they don't
-    // change the strategic picture and the constant cadence drowns
-    // out the meaningful events. Bust/leave/rebuy/win still get
-    // through via their own kinds below.
+    // Per-action lines — the running play-by-play. A blind player can't
+    // watch the felt, so EVERY action is narrated: "Kate folded.",
+    // "Nomkath called 50 gold.", "Mr. Brow raised to 400 gold." The
+    // server already formats these tersely; we just compact them a hair
+    // more for the ear (drop the "to" in "raised to", collapse the
+    // all-in parenthetical) and drop the bot tag word so the cadence
+    // stays quick. Spoken at 'event' so a fresh action supersedes a
+    // stale queued one but never cuts off the urgent your-turn cue.
     if (kind === 'action') {
-      const lower = text.toLowerCase();
-      const isConsequential = /\b(raise|all[- ]?in|shove|fold)\b/.test(lower);
-      if (!isConsequential) return;   // skip calls + checks
-      speak(text, 'event');
+      const compact = text
+        .replace(/\braised to\b/i, 'raised')          // "raised to 400" → "raised 400"
+        .replace(/\bwent ALL-IN\s*\(([^)]*)\)/i, 'all in $1'); // "went ALL-IN (400 gp)" → "all in 400 gp"
+      speak(compact, 'event');
       return;
     }
 
@@ -448,17 +490,48 @@
   }
 
   // ---------- Speech recognition (PTT) ----------
+  // Marks a transcript as a likely command, so we can pick the best of
+  // several speech-recognition alternatives instead of blindly trusting
+  // the top guess. Covers actions, queries, and confirm words.
+  const COMMAND_HINT = /\b(fold|check|call|raise|bet|all\s*in|shove|jam|min|pot|stack|cash|board|hand|cards|hole|repeat|sit|seat|faster|slower|confirm|yes|no|cancel|change|push)\b/;
   function startListening() {
     if (!state.on || !supportsSR || state.listening) return;
+    // BARGE-IN: silence our own narration the instant the mic opens, so
+    // the player can talk OVER a long cue ("Your turn. Hand... Board...
+    // Pot... Cash...") and interrupt with "check". Essential because:
+    //   1) otherwise the recognizer picks up the TTS voice bleeding from
+    //      the speakers and mis-hears — or worse, a play-by-play line like
+    //      "Kate checked" gets recognized as a command; and
+    //   2) a blind player shouldn't have to wait out a sentence to act.
+    // We clear the queue too, so nothing resumes after they've spoken.
+    try { TTS.cancel(); } catch (_) {}
+    state.queue.length = 0;
+    state.speaking = false;
+    if (state.banterAudio) {
+      try { state.banterAudio.pause(); state.banterAudio.currentTime = 0; } catch (_) {}
+      state.banterAudio = null;
+    }
     try {
       const rec = new SR();
       rec.lang = 'en-US';
       rec.continuous = false;
       rec.interimResults = false;
-      rec.maxAlternatives = 1;
+      // Ask for several guesses, not just the top one. Speech-to-text
+      // frequently misranks short utterances — especially numbers — so we
+      // prefer the highest-confidence alternative that actually looks like
+      // a command ("raise 500") over a junk top guess ("phrase 500").
+      rec.maxAlternatives = 4;
       rec.onresult = (e) => {
-        const txt = (e.results?.[0]?.[0]?.transcript || '').trim();
-        if (txt) processCommand(txt);
+        const res = e.results?.[0];
+        if (!res) return;
+        const alts = [];
+        for (let i = 0; i < res.length; i++) {
+          const tr = (res[i]?.transcript || '').trim();
+          if (tr) alts.push(tr);
+        }
+        if (!alts.length) return;
+        const chosen = alts.find(a => COMMAND_HINT.test(a.toLowerCase())) || alts[0];
+        processCommand(chosen);
       };
       rec.onerror = (e) => {
         if (e.error === 'no-speech' || e.error === 'aborted') return;
@@ -481,34 +554,45 @@
   const ONES  = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9 };
   const TEENS = { ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19 };
   const TENS  = { twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90 };
-  /** Pull a positive integer out of natural speech.
-   *  Supports digits ("500", "1500", "1k"), words ("five hundred",
-   *  "two thousand five hundred"), and mixed ("2 thousand"). Returns
-   *  null if nothing parseable found. */
+  /** Pull a positive integer out of natural speech. Handles a SINGLE
+   *  unified token stream so digits and multiplier words combine correctly:
+   *    "500"                  → 500
+   *    "five hundred"         → 500
+   *    "5 hundred"            → 500   (speech-to-text loves this form)
+   *    "2 thousand"           → 2000
+   *    "fifteen hundred"      → 1500
+   *    "two thousand five hundred" → 2500
+   *    "1k" / "2.5k" / "1m"   → 1000 / 2500 / 1000000
+   *    "500 gold" / "to 500"  → 500  (filler words ignored)
+   *  The old version had a digit shortcut that returned on the first
+   *  number and dropped a trailing "hundred"/"thousand" — so "5 hundred"
+   *  parsed as 5. Returns null if nothing parseable is found. */
   function parseAmount(text) {
     if (!text) return null;
-    const t = String(text).toLowerCase().replace(/[,$]/g, '').trim();
-    // Digit form, optionally with k/K suffix
-    const digit = t.match(/(\d+(?:\.\d+)?)\s*([km])?/);
-    if (digit) {
-      const n = parseFloat(digit[1]);
-      const mult = digit[2] === 'k' ? 1000 : digit[2] === 'm' ? 1_000_000 : 1;
-      const v = Math.round(n * mult);
-      if (Number.isFinite(v) && v > 0) return v;
+    const t = String(text).toLowerCase().replace(/[,$]/g, ' ').replace(/-+/g, ' ').trim();
+    if (!t) return null;
+    const tokens = t.split(/\s+/).filter(Boolean);
+    let total = 0, current = 0, sawValue = false;
+    for (const tok of tokens) {
+      // Plain digits with an optional k/m magnitude suffix.
+      const dm = tok.match(/^(\d+(?:\.\d+)?)(k|m)?$/);
+      if (dm) {
+        let v = parseFloat(dm[1]);
+        if (dm[2] === 'k') v *= 1000;
+        else if (dm[2] === 'm') v *= 1_000_000;
+        current += v; sawValue = true;
+        continue;
+      }
+      if (ONES[tok]  != null) { current += ONES[tok];  sawValue = true; continue; }
+      if (TEENS[tok] != null) { current += TEENS[tok]; sawValue = true; continue; }
+      if (TENS[tok]  != null) { current += TENS[tok];  sawValue = true; continue; }
+      if (tok === 'hundred') { current = (current || 1) * 100; sawValue = true; continue; }
+      if (tok === 'thousand' || tok === 'k') { total += (current || 1) * 1000;      current = 0; sawValue = true; continue; }
+      if (tok === 'million'  || tok === 'm') { total += (current || 1) * 1_000_000; current = 0; sawValue = true; continue; }
+      // Unknown token (to, by, gold, chips, and, please…) → ignore.
     }
-    // Word form
-    const tokens = t.split(/[\s-]+/);
-    let total = 0, current = 0, sawWord = false;
-    for (const w of tokens) {
-      if (ONES[w] != null)  { current += ONES[w]; sawWord = true; }
-      else if (TEENS[w] != null) { current += TEENS[w]; sawWord = true; }
-      else if (TENS[w] != null)  { current += TENS[w]; sawWord = true; }
-      else if (w === 'hundred')  { current = (current || 1) * 100; sawWord = true; }
-      else if (w === 'thousand') { total += (current || 1) * 1000; current = 0; sawWord = true; }
-      else if (w === 'k')        { total += (current || 1) * 1000; current = 0; sawWord = true; }
-    }
-    const v = total + current;
-    return (sawWord && v > 0) ? v : null;
+    const v = Math.round(total + current);
+    return (sawValue && v > 0) ? v : null;
   }
 
   // ---------- Command parsing & dispatch ----------
@@ -533,19 +617,21 @@
     if (/^blind\s+off$/.test(raw)) { toggle(); return; }
     if (/^(faster|speed up)$/.test(raw)) { state.rate = Math.min(2.5, state.rate + 0.2); speak(`Rate ${state.rate.toFixed(1)}.`, 'urgent'); return; }
     if (/^(slower|slow down)$/.test(raw)) { state.rate = Math.max(0.8, state.rate - 0.2); speak(`Rate ${state.rate.toFixed(1)}.`, 'urgent'); return; }
+    // Rebind the push-to-talk key by voice.
+    if (/^(change|set|rebind)\s+(my\s+)?(push[\s-]?to[\s-]?talk|talk|mic|ptt)(\s+key)?$/.test(raw)) { beginRebind(); return; }
+
+    // Seating — "sit", "sit down", "take a seat", or "sit seat 3".
+    const sitSeat = raw.match(/^(?:sit|take)\s+(?:in\s+)?seat\s+(\d+)$/);
+    if (sitSeat) { sit(parseInt(sitSeat[1], 10) - 1); return; }
+    if (/^(sit|sit down|take a seat|sit me down)$/.test(raw)) { sit(); return; }
 
     // Read-only queries
     if (/^repeat$/.test(raw)) { if (state.lastEventText) speak(state.lastEventText, 'urgent'); return; }
     if (/what.?s the pot|^pot$/i.test(raw)) { announcePot(); return; }
-    if (/what.?s my stack|^stack$/i.test(raw)) { announceStack(); return; }
+    if (/what.?s my (stack|cash)|^stack$|^cash$/i.test(raw)) { announceStack(); return; }
     if (/what.?s the board|^board$/i.test(raw)) { announceBoard(); return; }
     if (/who.?s acting|^actor$/i.test(raw)) { announceActor(); return; }
-    if (/what.?s my hand|^hand$|^cards$|^hole$/i.test(raw)) {
-      const hole = state.deps?.state?.myHole;
-      if (hole && hole.length) speak(`Hole cards: ${cardListWords(hole)}.`, 'urgent');
-      else speak('You have no hole cards right now.', 'urgent');
-      return;
-    }
+    if (/what.?s my hand|^hand$|^cards$|^hole$/i.test(raw)) { readHand(); return; }
 
     // Game actions
     if (/^fold$/.test(raw)) { dispatchAction('fold'); return; }
@@ -587,23 +673,74 @@
       return;
     }
 
-    earcon('error');
-    speak("Didn't catch that. Say fold, check, call, raise, or all in.", 'urgent');
+    // Routine regexes didn't match. Before giving up, hand the raw phrase
+    // to the server-side LLM interpreter, which maps loose / unclear speech
+    // ("I'm out", "bump it to five hundred", "see the bet") to a concrete
+    // action. The result is always CONFIRMED aloud before it's dispatched.
+    interpretViaLLM(raw);
+  }
+
+  /** Last-resort: ask the backend (Ollama) to interpret an unparsed phrase,
+   *  then stage the guessed action behind an explicit yes/no confirm so an
+   *  LLM mistake can't act on its own. Falls back to a spoken error if the
+   *  model is unreachable, slow, or returns nothing usable. */
+  function interpretViaLLM(transcript) {
+    const socket = state.deps?.socket;
+    if (!socket || !transcript) {
+      earcon('error');
+      speak("Didn't catch that. Say fold, check, call, raise, or all in.", 'urgent');
+      return;
+    }
+    speak('One moment.', 'urgent');
+    let done = false;
+    const fail = () => {
+      if (done) return; done = true;
+      earcon('error');
+      speak("Sorry, I couldn't work that out. Try fold, call, raise, or all in.", 'urgent');
+    };
+    // Safety net: blind:interpret has no server ack if the handler is
+    // missing (old backend) or the model hangs past its own timeout.
+    const guard = setTimeout(fail, 10000);
+    socket.emit('blind:interpret', { transcript }, (resp) => {
+      if (done) return; done = true;
+      clearTimeout(guard);
+      const action = resp?.action;
+      if (!resp?.ok || !action || action === 'none') { fail(); return; }
+      const amount = resp.amount;
+      const label = action === 'raise'
+        ? `raise to ${Number(amount).toLocaleString()}`
+        : action === 'allin' ? 'all in'
+        : action;
+      // Stage behind the existing pendingConfirm gate (checked at the top
+      // of processCommand): the player's next "yes" dispatches it, "no"
+      // cancels. Generous window — they must re-engage push-to-talk first.
+      state.pendingConfirm = {
+        kind: action,
+        amount: action === 'raise' ? amount : null,
+        expiresAt: Date.now() + 10000,
+      };
+      earcon('turn');
+      speak(`I heard ${label}. Say yes to do it, or no to cancel.`, 'urgent');
+    });
   }
 
   function confirmThenDispatch(kind, amount) {
-    // Soft-confirm raises ≥ half our stack; always confirm all-in.
+    // ALWAYS read a raise/all-in back and wait for "yes" before committing
+    // chips. Speech-to-text mishears numbers ("five hundred" → "5 hundred",
+    // "500" → "5,000"), so the read-back is the safety net that lets the
+    // player catch a wrong amount — and disambiguates raise-TO vs raise-BY,
+    // since they hear the resulting total. Fold / check / call don't pass
+    // through here; they dispatch directly (cheap, no number to mishear).
     const mePid = state.deps?.state?.me?.player_id;
     const hand  = state.deps?.state?.table?.hand;
     const myStack = hand?.players?.find(p => p.playerId === mePid)?.stack ?? 0;
-    const half = myStack / 2;
-    const needsConfirm = kind === 'allin' || (kind === 'raise' && amount >= half && half > 0);
-    if (!needsConfirm) { dispatchAction(kind, amount); return; }
-    state.pendingConfirm = { kind, amount, expiresAt: Date.now() + 4500 };
+    // Generous window — with barge-in the player must re-press push-to-talk
+    // and say "yes", which takes a few seconds.
+    state.pendingConfirm = { kind, amount, expiresAt: Date.now() + 12000 };
     if (kind === 'allin') {
-      speak(`All in for ${Number(myStack).toLocaleString()}. Say confirm to commit.`, 'urgent');
+      speak(`All in for ${Number(myStack).toLocaleString()}. Say yes to commit, or no to cancel.`, 'urgent');
     } else {
-      speak(`Raise ${Number(amount).toLocaleString()}. Say confirm to commit.`, 'urgent');
+      speak(`Raise to ${Number(amount).toLocaleString()}. Say yes to commit, or no to cancel.`, 'urgent');
     }
   }
   function dispatchAction(kind, amount) {
@@ -639,10 +776,10 @@
     const mePid = state.deps?.state?.me?.player_id;
     const hand  = state.deps?.state?.table?.hand;
     const inHand = hand?.players?.find(p => p.playerId === mePid)?.stack;
-    if (Number.isFinite(inHand)) { speak(`Stack ${Number(inHand).toLocaleString()}.`, 'urgent'); return; }
+    if (Number.isFinite(inHand)) { speak(`Cash ${Number(inHand).toLocaleString()}.`, 'urgent'); return; }
     const seat = state.deps?.state?.table?.seats?.find(s => s.playerId === mePid);
     const chips = Number(seat?.chips || state.deps?.state?.me?.chips || 0);
-    speak(`Stack ${chips.toLocaleString()}.`, 'urgent');
+    speak(`Cash ${chips.toLocaleString()}.`, 'urgent');
   }
   function announceBoard() {
     const board = state.deps?.state?.table?.hand?.board || [];
@@ -658,10 +795,113 @@
     else speak(`${nickOf(st, a)} is acting.`, 'urgent');
   }
 
+  /** Re-read the player's current hole cards on demand. Bound to the H
+   *  key and the "hand"/"cards" voice query — the answer to "wait, what
+   *  was I holding?" without waiting for the next turn cue. */
+  function readHand() {
+    if (!state.on) return;
+    const hole = state.deps?.state?.myHole;
+    if (hole && hole.length) {
+      const board = state.deps?.state?.table?.hand?.board || [];
+      let line = `Your hand: ${cardListWords(hole)}.`;
+      if (board.length) line += ` Board: ${cardListWords(board)}.`;
+      speak(line, 'urgent');
+    } else {
+      speak('You have no cards right now.', 'urgent');
+    }
+  }
+
+  /** Sit the player into a seat by voice/command. With no index, takes
+   *  the lowest-numbered open seat. Routes through the sit() callback
+   *  injected by client.js (which owns the socket join flow). */
+  function sit(seatIndex) {
+    if (!state.on) return;
+    const doSit = state.deps?.sit;
+    if (typeof doSit !== 'function') { earcon('error'); return; }
+    const seats = state.deps?.state?.table?.seats || [];
+    let idx = seatIndex;
+    if (idx == null) {
+      const open = seats.find(s => !s.occupied);
+      if (!open) { speak('No open seats.', 'urgent'); return; }
+      idx = open.index;
+    } else {
+      const target = seats.find(s => s.index === idx);
+      if (!target) { speak(`No seat ${idx + 1}.`, 'urgent'); return; }
+      if (target.occupied) { speak(`Seat ${idx + 1} is taken.`, 'urgent'); return; }
+    }
+    speak(`Taking seat ${idx + 1}.`, 'urgent');
+    doSit(idx);
+  }
+
+  // ---------- Push-to-talk key (configurable) ----------
+  /** Human-readable name for a KeyboardEvent.code, for spoken prompts. */
+  function codeLabel(code) {
+    if (!code) return 'that key';
+    if (code === 'Space') return 'the space bar';
+    if (code.startsWith('Key')) return code.slice(3);            // KeyT → "T"
+    if (code.startsWith('Digit')) return code.slice(5);          // Digit4 → "4"
+    if (code.startsWith('Numpad')) return 'numpad ' + code.slice(6);
+    const named = {
+      Enter: 'enter', Tab: 'tab', Backslash: 'backslash', Slash: 'slash',
+      Semicolon: 'semicolon', Quote: 'quote', Period: 'period', Comma: 'comma',
+      ShiftRight: 'right shift', ShiftLeft: 'left shift', ControlRight: 'right control',
+      AltRight: 'right alt', Backquote: 'backtick',
+    };
+    return named[code] || code;
+  }
+  function pttLabel() { return codeLabel(state.pttCode); }
+  function getPttCode() { return state.pttCode || 'Space'; }
+  function isRebinding() { return state.rebinding; }
+  /** Start capturing the next keypress as the new PTT key. The keydown
+   *  handler in client.js funnels the very next key here via consumeRebind. */
+  function beginRebind() {
+    if (!state.on) return;
+    state.rebinding = true;
+    earcon('open');
+    speak('Press the key you want to hold to talk. Press escape to cancel.', 'urgent');
+    clearTimeout(state.rebindTimer);
+    state.rebindTimer = setTimeout(() => {
+      if (state.rebinding) { state.rebinding = false; speak('Push to talk unchanged.', 'urgent'); }
+    }, 8000);
+  }
+  /** Consume a captured key as the new PTT binding. Returns true if it
+   *  was handled (so the caller can preventDefault + swallow it). Rejects
+   *  modifier-only keys and the backtick toggle so the bind stays usable. */
+  function consumeRebind(code) {
+    if (!state.rebinding) return false;
+    clearTimeout(state.rebindTimer);
+    if (code === 'Escape') {
+      state.rebinding = false;
+      speak('Cancelled. Push to talk unchanged.', 'urgent');
+      return true;
+    }
+    const isModifier = /^(Shift|Control|Alt|Meta)(Left|Right)$/.test(code);
+    if (!code || isModifier || code === 'Backquote') {
+      speak('That key is reserved. Pick another.', 'urgent');
+      // stay in rebind mode, reset the timeout
+      state.rebindTimer = setTimeout(() => {
+        if (state.rebinding) { state.rebinding = false; }
+      }, 8000);
+      return true;
+    }
+    state.rebinding = false;
+    state.pttCode = code;
+    try { localStorage.setItem('blindPttCode', code); } catch (_) {}
+    earcon('ack');
+    speak(`Push to talk set to ${codeLabel(code)}.`, 'urgent');
+    return true;
+  }
+
   // ---------- Init ----------
   function init(deps) {
     state.deps = deps;
     state.chipEl = deps.$('#blindModeChip');
+    // Restore the custom push-to-talk key (localStorage — persists across
+    // reloads). Falls back to Space when unset or storage is blocked.
+    try {
+      const savedPtt = localStorage.getItem('blindPttCode');
+      if (savedPtt) state.pttCode = savedPtt;
+    } catch (_) {}
     // Restore mode from sessionStorage
     try {
       const stored = sessionStorage.getItem('blindMode');
@@ -714,5 +954,9 @@
     onState, onChat, onHole,
     startListening, stopListening,
     notifyBanterStart,
+    // Turn-controls + seating helpers (bound to keys in client.js)
+    readHand, sit,
+    // Configurable push-to-talk binding
+    getPttCode, isRebinding, beginRebind, consumeRebind, pttLabel,
   };
 })();
