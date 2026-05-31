@@ -226,18 +226,39 @@ function registerTableHandlers(io, socket, { tables }) {
     const nick = me.nickname || me.player_id;
     table.chat('human', `💬 ${nick}: ${trimmed}`);
 
-    // Let a bot react in voice (if banter is enabled). 5% reply rate
-    // for chat messages — much lower than the 30% default banter prob
-    // so a chatty player doesn't trigger constant chatter back. The
-    // per-table cooldown still applies on top.
+    // Bot reactions (if banter is enabled). PRIORITY: if the player named a
+    // currently-seated bot, THAT bot answers — directly to the message on an
+    // exact name, or with a "did you say my name?" on a close-but-uncertain
+    // match. Only when no seated bot is named do we fall back to the sparse
+    // 5% random clap-back, so we're not replying to everything.
     try {
       const banter = require('../bot/banter');
-      banter.maybeSpeak(table, {
-        kind: 'human-chat',
-        description: `${nick} just said in the chat: "${trimmed}"`,
-        actorIds: [me.player_id],
-        prob: 0.05,
-      });
+      const mention = banter.detectAddressedBot(table, trimmed);
+      if (mention && mention.exact) {
+        banter.maybeSpeak(table, {
+          kind: 'human-chat',
+          description: `${nick} addressed YOU (${mention.nick}) BY NAME in the table chat: "${trimmed}". You were spoken to directly — reply IN CHARACTER to what they actually said (answer the question, take the bait, or fire back). One short line.`,
+          speakerHint: mention.playerId,
+          actorIds: [me.player_id],
+          prob: 0.95,
+          bypassCooldown: true,
+        });
+      } else if (mention) {
+        banter.maybeSpeak(table, {
+          kind: 'human-chat',
+          description: `${nick} said something in the table chat that sounded a lot like your name (${mention.nick}) but you're not certain they meant you: "${trimmed}". Respond with a brief, in-character "did you say my name?" — curious / mishearing, not committal. One short line.`,
+          speakerHint: mention.playerId,
+          actorIds: [me.player_id],
+          prob: 0.9,
+        });
+      } else {
+        banter.maybeSpeak(table, {
+          kind: 'human-chat',
+          description: `${nick} just said in the chat: "${trimmed}"`,
+          actorIds: [me.player_id],
+          prob: 0.05,
+        });
+      }
     } catch (_) { /* banter optional */ }
 
     ack?.({ ok: true });

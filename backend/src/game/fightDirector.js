@@ -24,24 +24,23 @@ const enemies = require('../bot/enemies');
 
 // ----- Narration helpers (cosmetic only) -----
 const FLESH_VERBS = ['slashes', 'carves', 'cuts', 'eviscerates', 'opens up', 'runs through', 'guts', 'skewers'];
+// Narrative-only fight lines: the d20 / AC / confirmation-roll breakdowns are
+// gone now that the system is proven out — just the result, with the damage
+// number as the only number on a hit.
 function fightLine(attacker, defender, s, isCounter) {
   const lead = isCounter ? '↩️ ' : '⚔️ ';
-  const roll = ` (d20 ${s.roll}${s.weapon.toHit ? '+' + s.weapon.toHit : ''}=${s.total} vs AC ${s.ac})`;
   if (s.outcome === 'flesh') {
     const v = FLESH_VERBS[Math.floor(Math.random() * FLESH_VERBS.length)];
-    const cb = s.weapon.toHit ? '+' + s.weapon.toHit : '';
-    let tail = '';
-    if (s.crit) tail = ` 💥 CRIT ×${s.weapon.critMult}! (threat on ${s.roll}, confirmed ${s.confirmRoll}${cb}=${s.confirmTotal} vs AC ${s.ac})`;
-    else if (s.threat) tail = ` (threatened on ${s.roll} — failed to confirm: ${s.confirmRoll}${cb}=${s.confirmTotal} vs AC ${s.ac})`;
-    return `${lead}${attacker} ${v} ${defender} with a ${s.weapon.name} for ${s.damage} damage!${tail}${roll}`;
+    const tail = s.crit ? ' 💥 CRIT!' : '';
+    return `${lead}${attacker} ${v} ${defender} with a ${s.weapon.name} for ${s.damage} damage!${tail}`;
   }
   if (s.outcome === 'blocked') {
-    return `${lead}${attacker}'s ${s.weapon.name} clangs off ${defender}'s armor — blocked!${roll}`;
+    return `${lead}${attacker}'s ${s.weapon.name} clangs off ${defender}'s armor — blocked!`;
   }
   if (s.outcome === 'fumble') {
-    return `${lead}${attacker} FUMBLES — trips over their own ${s.weapon.name} and eats dirt! 💀 oof${roll}`;
+    return `${lead}${attacker} FUMBLES — trips over their own ${s.weapon.name} and eats dirt! 💀 oof`;
   }
-  return `${lead}${attacker} swings a ${s.weapon.name} at ${defender} and whiffs.${roll}`;
+  return `${lead}${attacker} swings a ${s.weapon.name} at ${defender} and whiffs.`;
 }
 function swingSummary(s) {
   if (s.outcome === 'flesh') return `a clean hit for ${s.damage} damage${s.crit ? ' (a CRIT!)' : ''}`;
@@ -49,19 +48,20 @@ function swingSummary(s) {
   if (s.outcome === 'fumble') return `a clumsy fumble — they tripped over their own weapon (0 damage)`;
   return `a total whiff (0 damage)`;
 }
+// Narrative-only spell lines: no DC, no save-roll breakdown — just the
+// outcome, with the damage number (lightning only) as the only number.
 function spellLine(caster, target, s) {
-  const saveInfo = ` (${s.save} ${s.saveRoll}${s.cloak ? '+' + s.cloak : ''}=${s.saveTotal} vs DC ${s.dc})`;
   if (s.type === 'lightning') {
     if (s.power === 0) {
       return `⚡ ${caster} points dramatically at ${target}… and nothing happens — no magic items, the bolt fizzles. 💀 oof`;
     }
     return s.saved
-      ? `⚡ ${caster} hurls a Lightning Bolt at ${target} — DC ${s.dc}! ${target} dives aside (saved) — half of ${s.fullDamage} = ${s.damage} lightning.${saveInfo}`
-      : `⚡ ${caster} hurls a Lightning Bolt at ${target} — DC ${s.dc}! ${target} is FRIED for ${s.damage} lightning damage!${saveInfo}`;
+      ? `⚡ ${caster} hurls a Lightning Bolt at ${target} — ${target} dives aside, taking ${s.damage} lightning.`
+      : `⚡ ${caster} hurls a Lightning Bolt at ${target} — ${target} is FRIED for ${s.damage} lightning damage!`;
   }
   return s.saved
-    ? `💨 ${caster} conjures a Stinking Cloud around ${target} — DC ${s.dc}! ${target} holds their breath (saved).${saveInfo}`
-    : `💨 ${caster} conjures a Stinking Cloud around ${target} — DC ${s.dc}! ${target} gags and is SICKENED! 🤢${saveInfo}`;
+    ? `💨 ${caster} conjures a Stinking Cloud around ${target} — ${target} holds their breath (saved).`
+    : `💨 ${caster} conjures a Stinking Cloud around ${target} — ${target} gags and is SICKENED! 🤢`;
 }
 function spellReactionDesc(caster, target, s) {
   let what;

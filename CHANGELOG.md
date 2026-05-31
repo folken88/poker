@@ -21,6 +21,30 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-05-31
 
+### 🧠 Smarter AI
+- **High-intelligence bots rebalanced toward value.** A log study (13.7k
+  decisions / 1.5k hands) confirmed the intelligence tiers work — high-intel is
+  the only net-winning tier — but it was *over-bluffing* at a ~6.5:1 bluff-to-
+  value ratio, the most exploitable leak there is. High-intel now **bluffs less,
+  value-bets thinner, and won't bluff into a multiway crowd**, bringing the ratio
+  to roughly balanced. It plays smarter, not just louder. (Average/low tiers
+  unchanged.)
+
+### 🗣️ Banter & chat
+- **Bots answer to their name.** Mention a seated AI by name in chat ("nice hand,
+  Vaughan") and *that* bot replies directly. A close-but-unsure match ("vaughn")
+  gets a "did you say my name?" from the nearest bot. No name = no reply, so it's
+  not chiming in on everything. (Short names need an exact match, so "late" won't
+  wake up Kate.)
+- **Wider poker vocabulary.** Bots now rotate through many ways to say each poker
+  concept (busted draw, bluff, the nuts, bad beat, tilt, …) instead of leaning on
+  one phrase, for more conversational variety.
+
+### ⚔️ Combat
+- **Cleaner fight lines.** Now that the system's proven out, the d20 / save / DC
+  roll breakdowns are gone from chat — just the narrative result with the damage
+  number (the dice still roll under the hood).
+
 ### 🔊 Audio
 - **Separate combat-sound toggles** in the 🔊 audio menu — **⚔️ Sword & dagger**,
   **⚡ Lightning bolts**, and **💨 Farts** can each be turned off independently

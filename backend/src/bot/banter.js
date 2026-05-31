@@ -192,10 +192,15 @@ const CHARACTER_FLAVOR = {
  *  @param {number} [prob] - override probability for this roll. Used
  *    when a specific event type wants a different rate than the global
  *    LLM_BANTER_PROB (e.g. human-chat replies fire at 5%). */
-function shouldSpeak(tableId, prob = PROB) {
+function shouldSpeak(tableId, prob = PROB, bypassCooldown = false) {
   if (!ENABLED) return false;
-  const last = _lastSpokenAt.get(tableId) || 0;
-  if (Date.now() - last < COOLDOWN_MS) return false;
+  // A direct address (player named a seated bot) bypasses the per-table
+  // cooldown so the named bot reliably answers — otherwise "Vaughan!" would
+  // be silently dropped if any bot happened to speak in the last 18s.
+  if (!bypassCooldown) {
+    const last = _lastSpokenAt.get(tableId) || 0;
+    if (Date.now() - last < COOLDOWN_MS) return false;
+  }
   return Math.random() < prob;
 }
 
@@ -228,6 +233,84 @@ function pickSpeaker(table, excludeIds, speakerHint) {
   }
   if (candidates.length === 0) return null;
   return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+// Honorifics / particles ignored when matching a bot's display name to a
+// word in chat, so "Mr. Brow" matches on "brow" and "Judge Daramid" on
+// "daramid" — not "mr" / "judge".
+const NAME_STOPWORDS = new Set([
+  'mr', 'mrs', 'ms', 'dr', 'sir', 'the', 'of', 'von', 'da', 'de', 'la',
+  'lord', 'lady', 'captain', 'judge', 'st',
+]);
+
+/** Levenshtein edit distance (iterative, two-row). Small inputs only. */
+function _levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++) {
+    const cur = new Array(n + 1);
+    cur[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+/**
+ * Detect whether a chat message names a CURRENTLY SEATED bot, so that bot
+ * (not a random one) can answer. Returns { playerId, nick, exact } for the
+ * best match, or null when nothing is close — we deliberately stay quiet
+ * rather than reply to everything.
+ *
+ *   exact === true   the player addressed the bot by name → respond to what
+ *                    they said.
+ *   exact === false  a word was CLOSE to the name but uncertain → the bot
+ *                    answers with a "did you say my name?".
+ *
+ * Short name tokens (≤5 chars) require an EXACT word match to avoid false
+ * positives ("late" ≠ "Kate"); 6–8 chars allow 1 edit, ≥9 allow 2 — enough
+ * to catch typos on longer names like "Vaughan" / "Casandalee".
+ */
+function detectAddressedBot(table, text) {
+  if (!text || !table || !Array.isArray(table.seats)) return null;
+  const words = String(text).toLowerCase().match(/[a-z']{2,}/g) || [];
+  if (!words.length) return null;
+
+  const seated = table.seats
+    .filter(s => !s.isEmpty() && s.isBot)
+    .map(s => ({
+      playerId: s.playerId,
+      nick: (typeof s.displayNickname === 'function')
+        ? s.displayNickname()
+        : (s.player?.nickname || s.playerId),
+    }));
+  if (!seated.length) return null;
+
+  let best = null; // { playerId, nick, dist }
+  for (const bot of seated) {
+    const tokens = (bot.nick.toLowerCase().match(/[a-z']{2,}/g) || [])
+      .filter(t => t.length >= 3 && !NAME_STOPWORDS.has(t));
+    for (const nt of tokens) {
+      const budget = nt.length >= 9 ? 2 : (nt.length >= 6 ? 1 : 0);
+      for (const w of words) {
+        if (Math.abs(w.length - nt.length) > budget) continue; // can't be within budget
+        const d = _levenshtein(w, nt);
+        if (d <= budget && (!best || d < best.dist)) {
+          best = { playerId: bot.playerId, nick: bot.nick, dist: d };
+          if (d === 0) break;
+        }
+      }
+      if (best && best.dist === 0) break;
+    }
+  }
+  if (!best) return null;
+  return { playerId: best.playerId, nick: best.nick, exact: best.dist === 0 };
 }
 
 /** Snapshot the current table situation for the speaker, scaled by
@@ -493,6 +576,30 @@ function buildMessages(speaker, eventDescription, table) {
         `MATCH the slur to who's saying it and who they're saying it about. Storgrim doesn't call anyone ` +
         `a "bingo player"; Tar-Baphon doesn't call anyone "swab"; pirates don't say "mooncalf." A goblin ` +
         `or a pirate cracking off "Cringe." is FUNNY — Cassandalee saying "Sus." less so. \n` +
+        `POKER VOCABULARY — VARY YOUR JARGON. Don't reach for the same phrase every time; rotate the slang ` +
+        `for whatever you're describing (and invent your own in the same spirit). NEVER say "busted draw" ` +
+        `twice in a session if you can help it: \n` +
+        `  • Missed / busted draw: "busted draw", "you bricked it", "brick, brick, brick", "the river ` +
+        `blanked", "your flush never came", "drew dead", "whiffed the turn", "chasing a ghost", "needed a ` +
+        `miracle, got a brick", "your draw died on the river", "no help, no hope", "ran clean out of outs", ` +
+        `"the cards said no", "air on the river", "your gutshot went hungry". \n` +
+        `  • Bluff / nothing: "stone-cold bluff", "all hat, no cattle", "firing blanks", "you're holding ` +
+        `air", "selling a story nobody's buying", "repping a hand you don't have", "naked bluff", "betting ` +
+        `a prayer", "smoke and mirrors", "pure air", "bluffing into a brick wall". \n` +
+        `  • Monster / the nuts: "the nuts", "stone-cold nuts", "an absolute monster", "a lock", "you're ` +
+        `drawing dead to it", "the nut hand", "unbeatable", "a cooler in the making", "crushed". \n` +
+        `  • Bad beat / suckout: "bad beat", "got coolered", "sucked out on", "rivered", "two-outered", ` +
+        `"ran into the nuts", "the poker gods robbed you", "one-outer special", "set over set, brutal". \n` +
+        `  • Weak / trash hand: "rags", "junk", "a hand full of air", "nine-high nothing", "the worst of ` +
+        `it", "garbage off-suit", "a busted nothing", "the cold deck". \n` +
+        `  • Tilt / spew: "on tilt", "steaming", "melting down", "spewing chips", "tilted into orbit", ` +
+        `"punting it off". \n` +
+        `  • All-in / commitment: "shove", "jam", "ship it", "stacking off", "in for it all", "putting it ` +
+        `all in the middle", "the whole stack". \n` +
+        `  • Fold it: "muck it", "lay it down", "ditch it", "let it go", "fold like a lawn chair", "into ` +
+        `the muck", "tap out". \n` +
+        `  • The pot / felt: "the pot", "the middle", "the felt", "the chips in the center", "table ` +
+        `stakes", "the whole pile". \n` +
         styleOverlay +
         `LENGTH — SUCCINCT IS THE DEFAULT: most of your reactions should be 1-6 words. A grunt, a single ` +
         `word, a quick phrase. "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", ` +
@@ -573,7 +680,7 @@ async function callLLM(messages) {
  */
 function maybeSpeak(table, event) {
   const prob = (typeof event.prob === 'number') ? event.prob : PROB;
-  if (!shouldSpeak(table.id, prob)) return;
+  if (!shouldSpeak(table.id, prob, !!event.bypassCooldown)) return;
   const speaker = pickSpeaker(table, event.actorIds, event.speakerHint);
   if (!speaker) return;
   // Optimistically claim the cooldown slot — if the call fails the
@@ -701,4 +808,4 @@ function maybeSpeak(table, event) {
   }).catch(() => { /* silent */ });
 }
 
-module.exports = { maybeSpeak };
+module.exports = { maybeSpeak, detectAddressedBot };

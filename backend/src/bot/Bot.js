@@ -51,7 +51,12 @@ const INTEL_TIERS = ['low', 'average', 'high'];
 const INTEL_TUNING = {
   low:     { noise: 0.28, mistakeProb: 0.20, bluffProb: 0.02 },
   average: { noise: 0.10, mistakeProb: 0.10, bluffProb: 0.05 },
-  high:    { noise: 0.03, mistakeProb: 0.02, bluffProb: 0.12 },
+  // High-intel was 0.12 — the bluffiest tier — which the decision logs showed
+  // producing a ~6.5:1 bluff:value ratio. Over-bluffing is the most exploitable
+  // leak there is (the opposite of "intelligent"), so we rebalance toward value:
+  // a lower bluff frequency here, plus a thin-value gate and a "don't bluff into
+  // a crowd" filter in decide(). Re-check the logs after a few hundred hands.
+  high:    { noise: 0.03, mistakeProb: 0.02, bluffProb: 0.08 },
 };
 
 class Bot {
@@ -139,6 +144,15 @@ class Bot {
     const trueStrength = strengthOf(hole, board);
     const v = this._perceivedStrength(trueStrength);
     const tag = `${this.mode}/${this.intelligence}`;
+
+    // VALUE-OVER-BLUFF REBALANCE (high-intel only). A skilled player extracts
+    // THIN value: because it reads hands accurately (low noise), it can
+    // profitably bet a touch weaker than its mode's base raiseThresh when it
+    // gets to open. Lifts the value side of the bluff:value ratio to pair with
+    // the reduced bluffProb above. Floor keeps it from value-betting junk.
+    const valueThresh = this.intelligence === 'high'
+      ? Math.max(0.42, tuning.raiseThresh - 0.06)
+      : tuning.raiseThresh;
 
     // ─── Wealth context (chips + magic items) ────────────────────────────────
     // High-intel bots use this accurately; low-intel ones mostly ignore it
@@ -229,10 +243,15 @@ class Bot {
     // this; cautious almost never bluffs; low-intel never deliberately bluffs.
     const bluffMul = this.mode === 'risky' ? 1.8 : this.mode === 'standard' ? 1.0 : 0.3;
     const cheapBluff = toCall < Math.max(bigBlind * 2, stack * 0.20);
+    // High-intel doesn't bluff into a crowd — a bluff only gets through when few
+    // opponents are still live (heads-up to ~4-handed). Firing into a multiway
+    // pot is spew: someone usually has a hand. Other tiers keep prior behavior.
+    const bluffCrowdOk = this.intelligence !== 'high' || oppsLive.length <= 3;
     if (
       this.intelligence !== 'low' &&
       v < 0.45 &&
       cheapBluff &&
+      bluffCrowdOk &&
       rng() < intel.bluffProb * bluffMul
     ) {
       return buildRaise(1.05, 'bluff');
@@ -275,7 +294,7 @@ class Bot {
 
     // ─── No bet to call (we can check or open) ───────────────────────────────
     if (toCall === 0) {
-      if (v > tuning.raiseThresh) {
+      if (v > valueThresh) {   // high-intel opens thinner value; others use raiseThresh
         // Risky + high-intel sometimes "traps" with a probe bet to induce raises.
         if (this.mode === 'risky' && this.intelligence === 'high' && v < 0.86 && rng() < 0.30) {
           return buildRaise(0.55, 'probe');
