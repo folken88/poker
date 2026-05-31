@@ -107,6 +107,7 @@ poker-game/
   - *Cancel current hand* — refunds all bets, vacates every bot, human stacks unchanged, new hand auto-starts.
   - *Full reset* — same as above PLUS resets every player's chips to 5,000 and wipes gear.
 - **× kick from spectator seat** — kicking a bot no longer requires the caller to be seated. Spectators can clear stale bots before sitting down. (Kicking a human still requires you to share the felt — has political weight.)
+- **Pick AI picker** — the `+ Bot` / Pick AI modal lists every unseated AI (alphabetized, with current wealth) and has a search box (auto-focused, live-filtered, match count). Enter seats the first match, Escape closes. Plus **Random** and **Fill empty seats**.
 - **Per-action chat log** — one line per turn (fold/check/call/raise/all-in) with chip amounts, plus winner announcements with revealed hand descriptions.
 - **Human chat input** — type below the table log, Enter to send. Posts as `💬 Nick: text`. 240-char cap, 1.5s per-socket cooldown. Triggers an LLM banter reply ~5% of the time so AI characters can clap back.
 - **× kick button** on every non-self seat — any seated player can boot any other (human or bot). Takes effect at end of current hand; chat announces who kicked whom (`🚪 Tobis kicked Mr. Brow — leaves after this hand.`).

@@ -2216,28 +2216,60 @@
   // + Bot opens a picker modal. The user can pick a specific AI or
   // hit Random. table:addBot accepts either an explicit playerId or
   // null (server-side random).
+  //
+  // The bot list is kept in a module-scoped variable so the search input
+  // can re-filter without re-fetching from state.roster. Sort is
+  // alphabetical by nickname for ease of finding a known character.
+  let _botPickerData = []; // Array<{p, w}>, alphabetized
+
+  function renderBotPickerGrid(query = '') {
+    const grid = $('#botPickerGrid');
+    const count = $('#botPickerCount');
+    if (!grid) return;
+    const q = query.trim().toLowerCase();
+    const matches = q
+      ? _botPickerData.filter(({ p }) => (p.nickname || '').toLowerCase().includes(q))
+      : _botPickerData;
+    if (matches.length === 0) {
+      grid.innerHTML = `<div class="bot-picker__empty">No AI characters match "${escapeText(query)}".</div>`;
+    } else {
+      grid.innerHTML = matches.map(({ p, w }) => `
+        <button type="button" class="bot-picker__card" data-bot-id="${escapeAttr(p.player_id)}" title="${escapeAttr(p.nickname)} · ${formatChips(w)} gp current wealth">
+          <div class="bot-picker__avatar">${renderAvatar(p.avatar_id)}</div>
+          <div class="bot-picker__nick">${escapeText(p.nickname)}</div>
+          <div class="bot-picker__worth">💰 ${formatChips(w)} gp</div>
+        </button>
+      `).join('');
+    }
+    if (count) {
+      count.textContent = q
+        ? `${matches.length} of ${_botPickerData.length}`
+        : `${_botPickerData.length} available`;
+    }
+  }
+
   function openBotPicker() {
     const modal = $('#botPickerModal');
     const grid  = $('#botPickerGrid');
     if (!modal || !grid) return;
     const seatedIds = new Set((state.table?.seats || []).filter(s => s.playerId).map(s => s.playerId));
     const allBots = (state.roster || []).filter(p => p.is_bot);
-    const bots = allBots
+    _botPickerData = allBots
       .filter(p => !seatedIds.has(p.player_id))
       .map(p => ({ p, w: rosterWealth(p) }))
-      .sort((a, b) => b.w - a.w);
-    if (bots.length === 0) {
+      // Alphabetize by nickname (case-insensitive, locale-aware for accented chars).
+      .sort((a, b) => (a.p.nickname || '').localeCompare(b.p.nickname || '', undefined, { sensitivity: 'base' }));
+    if (_botPickerData.length === 0) {
       toast(`All ${allBots.length} AI characters are already seated.`, true);
       return;
     }
-    grid.innerHTML = bots.map(({ p, w }) => `
-      <button type="button" class="bot-picker__card" data-bot-id="${escapeAttr(p.player_id)}" title="${escapeAttr(p.nickname)} · ${formatChips(w)} gp current wealth">
-        <div class="bot-picker__avatar">${renderAvatar(p.avatar_id)}</div>
-        <div class="bot-picker__nick">${escapeText(p.nickname)}</div>
-        <div class="bot-picker__worth">💰 ${formatChips(w)} gp</div>
-      </button>
-    `).join('');
+    // Reset search input on each open so the picker is always pristine.
+    const searchInput = $('#botPickerSearch');
+    if (searchInput) searchInput.value = '';
+    renderBotPickerGrid('');
     modal.hidden = false;
+    // Focus the search input so the user can immediately start typing.
+    if (searchInput) setTimeout(() => searchInput.focus(), 50);
   }
   function closeBotPicker() {
     const m = $('#botPickerModal');
@@ -2268,6 +2300,24 @@
     if (e.target.closest('#botPickerRandom')) { emitAddBot(null); return; }
     const card = e.target.closest('[data-bot-id]');
     if (card) emitAddBot(card.dataset.botId);
+  });
+  // Live search-filter for the bot picker grid. `input` fires on every
+  // keystroke (including paste / clear), so the grid stays in sync.
+  // Enter on the search input picks the first match (quick keyboard flow).
+  $('#botPickerSearch')?.addEventListener('input', (e) => {
+    renderBotPickerGrid(e.target.value || '');
+  });
+  $('#botPickerSearch')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const first = $('#botPickerGrid [data-bot-id]');
+      if (first) {
+        e.preventDefault();
+        emitAddBot(first.dataset.botId);
+      }
+    } else if (e.key === 'Escape') {
+      // Let Escape close the modal even when focus is in the search box.
+      closeBotPicker();
+    }
   });
   // (Per-bot × buttons handle removal — wired in the seatRing delegate above.)
 

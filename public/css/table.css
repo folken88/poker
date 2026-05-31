@@ -2187,6 +2187,43 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 
 /* ===== + Bot picker modal ===== */
 .modal__panel--bot-picker { width: min(720px, 96vw); }
+
+/* Search bar above the grid — sticky-feeling, easy keyboard target. */
+.bot-picker__search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0 0.55rem;
+}
+.bot-picker__search-input {
+  flex: 1;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--brass-dim, #6b5328);
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  outline: none;
+}
+.bot-picker__search-input:focus {
+  border-color: var(--brass-bright, #d6b15c);
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 2px rgba(214, 177, 92, 0.18);
+}
+.bot-picker__count {
+  font-size: 0.75rem;
+  color: var(--brass-bright, #d6b15c);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.bot-picker__empty {
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0.75;
+  grid-column: 1 / -1;
+}
+
 .bot-picker__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));

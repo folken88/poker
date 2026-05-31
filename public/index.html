@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260530-pronounce-shared" />
+  <link rel="stylesheet" href="/css/table.css?v=20260531-botpicker-search" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -340,6 +340,10 @@
     <div class="modal__panel modal__panel--bot-picker">
       <h2 class="modal__title" id="botPickerTitle">Pick an AI to seat</h2>
       <p class="modal__body">Choose a specific character, hit <strong>Random</strong> for one, or <strong>Fill empty seats</strong> to pack the table.</p>
+      <div class="bot-picker__search">
+        <input type="search" id="botPickerSearch" class="bot-picker__search-input" placeholder="Search by name…" autocomplete="off" spellcheck="false" />
+        <span class="bot-picker__count" id="botPickerCount" aria-live="polite"></span>
+      </div>
       <div class="bot-picker__grid" id="botPickerGrid"></div>
       <div class="modal__actions">
         <button class="btn btn--ghost"   data-close-bot-picker>Cancel</button>
@@ -367,9 +371,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260530-pronounce-shared"></script>
-  <script src="/js/cards.js?v=20260530-pronounce-shared"></script>
-  <script src="/js/blindMode.js?v=20260530-pronounce-shared"></script>
-  <script src="/js/client.js?v=20260530-pronounce-shared"></script>
+  <script src="/js/avatars.js?v=20260531-botpicker-search"></script>
+  <script src="/js/cards.js?v=20260531-botpicker-search"></script>
+  <script src="/js/blindMode.js?v=20260531-botpicker-search"></script>
+  <script src="/js/client.js?v=20260531-botpicker-search"></script>
 </body>
 </html>

@@ -100,6 +100,10 @@ Thanks to the regulars whose suggestions made it into the game:
   many to fit, the row collapses to just names.
 - **"Fill empty seats"** option in the Pick AI menu — packs every open seat with a
   random AI in one click.
+- **Searchable Pick AI menu** — the bot picker now has a **search box** (auto-focused
+  on open) that live-filters the now-**alphabetized** roster by name, with a running
+  match count. **Enter** seats the first match, **Escape** closes — fast keyboard flow
+  for finding a specific character among 40+.
 - **Fixed: chat sometimes froze (or never started) until a refresh.** Chat line IDs
   reset on every server restart, so the client's "already seen" list silently
   dropped the new lines. IDs are now unique per server run, so chat keeps flowing
