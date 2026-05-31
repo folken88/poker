@@ -1017,6 +1017,21 @@ class Table {
           for (const r of revealedThisHand) bot.noteOpponentReveal(r.playerId, r.isBluff);
         }
       }
+
+      // ---- Cosmetic bot revenge (pure flavor; see fightDirector.js) ----
+      // A seated bot MAY take a petty swing at someone who beat them this
+      // hand, bluffed them (took a pot with weak cards), or is a lore enemy
+      // (random revenge). Heavily gated — rare, human-present-only. Never
+      // touches chips/pots/seating.
+      const _winnerIds = new Set((this.hand.winners || []).map(w => w.playerId));
+      const _bluffers = new Set();
+      for (const w of (this.hand.winners || [])) {
+        if ((w.handDesc || '').includes('bluff')) _bluffers.add(w.playerId);
+      }
+      for (const r of revealedThisHand) {
+        if (r.isBluff && _winnerIds.has(r.playerId)) _bluffers.add(r.playerId);
+      }
+      require('./fightDirector').maybeBotRevenge(this, { winnerIds: _winnerIds, bluffers: _bluffers });
     } catch (_) { /* never let memory updates break a hand */ }
 
     // ---- Bot auto-invest in gear (breadth-first) ----

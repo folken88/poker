@@ -49,21 +49,12 @@ if (ENABLED) {
   console.log('[11labs] disabled (no ELEVENLABS_API_KEY in env)');
 }
 
-/** Written → phonetic-spelling pairs for names the 11labs voices
- *  routinely mispronounce. Applied as case-insensitive word-boundary
- *  replaces before the text is sent to the API, so character voicelines
- *  say "Leery in" instead of "Lirry-en" when one bot addresses another.
- *  Mirror entries in public/js/blindMode.js NAME_PRONUNCIATIONS so the
- *  browser TTS fallback also benefits.
- *  Add new pairs as users report butchered pronunciations. */
-const PRONUNCIATIONS = [
-  ['Mandore',    'Man door'],
-  ['Lirienne',   'Leery in'],
-  ['Bujon',      'Boo han'],
-  ['Casandalee', 'Cassan dah-lee'],
-  ['Tobis',      'Toe biss'],
-  ['Adimarus',   'Add ih mare us'],
-];
+// Written → phonetic-spelling pairs for names the TTS engines mispronounce.
+// Single source of truth lives in util/pronunciations.js and is ALSO served
+// to the browser (blindMode.js) via GET /api/pronunciations — add a name in
+// ONE place and both TTS paths get it. Applied as case-insensitive word-
+// boundary replaces before the text is sent to the 11labs API.
+const { PRONUNCIATIONS } = require('./pronunciations');
 function applyPronunciations(text) {
   let out = text;
   for (const [orig, phon] of PRONUNCIATIONS) {

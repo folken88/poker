@@ -44,17 +44,14 @@
   const supportsSR  = !!SR;
 
   // ---------- Pronunciation overrides ----------
-  // Written → phonetic spelling for names the TTS voice mispronounces.
-  // Applied as a word-boundary case-insensitive replace in speak().
-  // Add new entries when a screen-reader user reports a butchered name.
-  const NAME_PRONUNCIATIONS = [
-    ['Mandore',    'Man door'],
-    ['Lirienne',   'Leery in'],
-    ['Bujon',      'Boo han'],
-    ['Casandalee', 'Cassan dah-lee'],
-    ['Tobis',      'Toe biss'],
-    ['Adimarus',   'Add ih mare us'],
-  ];
+  // Written → phonetic spelling for names the TTS voice mispronounces,
+  // applied as a word-boundary case-insensitive replace in speak().
+  // SINGLE SOURCE OF TRUTH: this list is fetched from the backend on init
+  // (GET /api/pronunciations), the SAME list the 11labs TTS uses — so a new
+  // name is added in exactly one place (backend/src/util/pronunciations.js).
+  // Starts empty; populated by the fetch in init(). If the fetch fails, names
+  // just read literally (no crash).
+  let NAME_PRONUNCIATIONS = [];
 
   // ---------- Divine-oath pauses ----------
   // "By Rovagug, those damn cards!" — the comma after an oath clause
@@ -896,6 +893,15 @@
   function init(deps) {
     state.deps = deps;
     state.chipEl = deps.$('#blindModeChip');
+    // Pull the canonical name-pronunciation list from the backend (the same
+    // list the 11labs voices use). Best-effort — names read literally on
+    // failure. Same origin as the page, so it's as reliable as the game.
+    try {
+      fetch('/api/pronunciations')
+        .then(r => (r.ok ? r.json() : null))
+        .then(list => { if (Array.isArray(list)) NAME_PRONUNCIATIONS = list; })
+        .catch(() => {});
+    } catch (_) {}
     // Restore the custom push-to-talk key (localStorage — persists across
     // reloads). Falls back to Space when unset or storage is blocked.
     try {

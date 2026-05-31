@@ -9,6 +9,7 @@ const { Server: SocketServer } = require('socket.io');
 const path = require('path');
 
 const db = require('./persistence/db');
+const { PRONUNCIATIONS } = require('./util/pronunciations');
 const { registerLobbyHandlers } = require('./sockets/lobby');
 const { registerTableHandlers } = require('./sockets/table');
 const { Table } = require('./game/Table');
@@ -25,6 +26,14 @@ app.get('/api/health', (_req, res) => {
 
 app.get('/api/roster', (_req, res) => {
   res.json({ players: db.listPlayers(), defaultStack: db.DEFAULT_STACK });
+});
+
+// Name-pronunciation overrides — the SAME list the 11labs TTS uses, served
+// to the browser so blind-mode Web Speech narration shares one source of
+// truth (see util/pronunciations.js). Cached briefly; it changes rarely.
+app.get('/api/pronunciations', (_req, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json(PRONUNCIATIONS);
 });
 
 // Lightweight live status per table — used by the deploy watcher to tell

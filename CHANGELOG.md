@@ -68,6 +68,11 @@ Thanks to the regulars whose suggestions made it into the game:
 - **Fight gag:** hover another player's seat and click ⚔️ to swing your weapon at
   them. The target swings back, and AI players react in character (gloating if they
   out-hit you, indignant if they came off worse).
+- **AI revenge swings:** bots now occasionally start fights themselves — a petty,
+  cosmetic swing (or spell) at someone who **beat them** that hand, **bluffed them**
+  out of a pot, or is a **lore enemy** (random old grudge). They taunt as they do it.
+  Rare and human-present-only; tunable via `BOT_REVENGE_PROB` / `BOT_REVENGE_COOLDOWN_MS`
+  / `BOT_REVENGE_ENABLED`. Lore grudges live in `backend/src/bot/enemies.js`.
 - **D&D-style resolution:** d20 + weapon to-hit vs Armor Class
   (10 + Full Plate + Heavy Shield + Ring of Protection, from your purchased gear).
 - **Weapons:** everyone starts with a **Masterwork Dagger** (1d4) until they buy a

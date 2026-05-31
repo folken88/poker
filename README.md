@@ -304,13 +304,11 @@ seat ("there is no fooling the church of Abadar").
 **Pronunciation overrides** — names that 11labs and the browser Web Speech API
 routinely butcher get phonetic spellings applied before synthesis:
 
-- Server-side: `backend/src/util/elevenlabs.js` `PRONUNCIATIONS` table — applied
-  in `applyPronunciations()` before the API call.
-- Client-side: `public/js/blindMode.js` `NAME_PRONUNCIATIONS` — applied in the
-  TTS speak path for blind-mode narration.
-
-Both are kept in sync by hand. Current overrides: Mandore → "Man door",
-Lirienne → "Leery in", Bujon → "Boo han", Casandalee → "Cah san dah lee".
+**One source of truth:** `backend/src/util/pronunciations.js` holds the single
+`PRONUNCIATIONS` list. The 11labs path (`elevenlabs.js` `applyPronunciations()`)
+imports it directly; the browser blind-mode path (`public/js/blindMode.js`)
+**fetches** it via `GET /api/pronunciations` on init. Add a name in that one
+file and both TTS engines pick it up — no hand-syncing.
 
 **Listener gate** — `Table.anyVoiceListener()` walks the room's connected sockets
 and checks `socket.data.voiceOn`. If nobody at the table has voice enabled, the

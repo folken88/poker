@@ -10,68 +10,12 @@
 
 const db = require('../persistence/db');
 const { interpretVoiceCommand } = require('../bot/voiceIntent');
+const fightDirector = require('../game/fightDirector');
 
 function meOf(socket) { return socket.data.player; }
 
-// ----- "Useless fight" narration helpers (cosmetic only) -----
-const FLESH_VERBS = ['slashes', 'carves', 'cuts', 'eviscerates', 'opens up', 'runs through', 'guts', 'skewers'];
-function fightLine(attacker, defender, s, isCounter) {
-  const lead = isCounter ? '↩️ ' : '⚔️ ';
-  const roll = ` (d20 ${s.roll}${s.weapon.toHit ? '+' + s.weapon.toHit : ''}=${s.total} vs AC ${s.ac})`;
-  if (s.outcome === 'flesh') {
-    const v = FLESH_VERBS[Math.floor(Math.random() * FLESH_VERBS.length)];
-    const cb = s.weapon.toHit ? '+' + s.weapon.toHit : '';
-    let tail = '';
-    if (s.crit) tail = ` 💥 CRIT ×${s.weapon.critMult}! (threat on ${s.roll}, confirmed ${s.confirmRoll}${cb}=${s.confirmTotal} vs AC ${s.ac})`;
-    else if (s.threat) tail = ` (threatened on ${s.roll} — failed to confirm: ${s.confirmRoll}${cb}=${s.confirmTotal} vs AC ${s.ac})`;
-    return `${lead}${attacker} ${v} ${defender} with a ${s.weapon.name} for ${s.damage} damage!${tail}${roll}`;
-  }
-  if (s.outcome === 'blocked') {
-    return `${lead}${attacker}'s ${s.weapon.name} clangs off ${defender}'s armor — blocked!${roll}`;
-  }
-  if (s.outcome === 'fumble') {
-    return `${lead}${attacker} FUMBLES — trips over their own ${s.weapon.name} and eats dirt! 💀 oof${roll}`;
-  }
-  return `${lead}${attacker} swings a ${s.weapon.name} at ${defender} and whiffs.${roll}`;
-}
-function swingSummary(s) {
-  if (s.outcome === 'flesh') return `a clean hit for ${s.damage} damage${s.crit ? ' (a CRIT!)' : ''}`;
-  if (s.outcome === 'blocked') return `blocked by armor (0 damage)`;
-  if (s.outcome === 'fumble') return `a clumsy fumble — they tripped over their own weapon (0 damage)`;
-  return `a total whiff (0 damage)`;
-}
-
-// ----- Spell narration (Lightning Bolt / Stinking Cloud), cosmetic only -----
-function spellLine(caster, target, s) {
-  const saveInfo = ` (${s.save} ${s.saveRoll}${s.cloak ? '+' + s.cloak : ''}=${s.saveTotal} vs DC ${s.dc})`;
-  if (s.type === 'lightning') {
-    if (s.power === 0) {
-      return `⚡ ${caster} points dramatically at ${target}… and nothing happens — no magic items, the bolt fizzles. 💀 oof`;
-    }
-    return s.saved
-      ? `⚡ ${caster} hurls a Lightning Bolt at ${target} — DC ${s.dc}! ${target} dives aside (saved) — half of ${s.fullDamage} = ${s.damage} lightning.${saveInfo}`
-      : `⚡ ${caster} hurls a Lightning Bolt at ${target} — DC ${s.dc}! ${target} is FRIED for ${s.damage} lightning damage!${saveInfo}`;
-  }
-  // stinking cloud
-  return s.saved
-    ? `💨 ${caster} conjures a Stinking Cloud around ${target} — DC ${s.dc}! ${target} holds their breath (saved).${saveInfo}`
-    : `💨 ${caster} conjures a Stinking Cloud around ${target} — DC ${s.dc}! ${target} gags and is SICKENED! 🤢${saveInfo}`;
-}
-function spellReactionDesc(caster, target, s) {
-  let what;
-  if (s.type === 'lightning') {
-    what = s.power === 0
-      ? `${caster} tried to zap you with a Lightning Bolt but owns NO magic items, so it fizzled into nothing — RIDICULE their non-existent spell mastery ("your mastery of spells is non-existent", "you call that magic?").`
-      : s.saved
-        ? `${caster} threw a Lightning Bolt at you but it barely tickled — you shrugged off all but ${s.damage}. RIDICULE their FEEBLE spellcraft and poor spell mastery; mock the WEAK magic, NOT dodging.`
-        : `${caster} FRIED you with a Lightning Bolt for ${s.damage} lightning — react (indignant, or grudging respect for real power).`;
-  } else {
-    what = s.saved
-      ? `${caster} tried to gag you with a Stinking Cloud but you held your breath — mock their feeble little conjuration.`
-      : `${caster} hit you with a Stinking Cloud and you are SICKENED, gagging on the stench — react with disgust ("ugh", "gross", "rude").`;
-  }
-  return `${what} This is a silly cosmetic spell, NOT poker — one short in-character line.`;
-}
+// Fight narration + execution lives in game/fightDirector.js (shared with
+// bot-initiated revenge swings). This handler just validates + delegates.
 
 function registerTableHandlers(io, socket, { tables }) {
 
@@ -326,68 +270,8 @@ function registerTableHandlers(io, socket, { tables }) {
     socket.data.lastFightAt = now;
 
     const mode = (attack === 'lightning' || attack === 'stinking') ? attack : 'melee';
-    const combat = require('../game/combat');
-    const aNick = mySeat.displayNickname ? mySeat.displayNickname() : (me.nickname || me.player_id);
-    const dNick = targetSeat.displayNickname ? targetSeat.displayNickname() : (targetSeat.player?.nickname || targetPlayerId);
-    const aGear = db.getGear(me.player_id);
-    const dGear = db.getGear(targetPlayerId);
-
-    if (mode === 'melee') {
-      // Attacker's swing — broadcast line + sound to everyone.
-      const a = combat.resolveSwing(aGear, dGear);
-      table.chat('fight', fightLine(aNick, dNick, a), { audioUrl: a.sound });
-
-      // Target's counter-swing, delayed so the two sounds don't collide.
-      setTimeout(() => {
-        try {
-          const c = combat.resolveSwing(dGear, aGear);
-          table.chat('fight', fightLine(dNick, aNick, c, true), { audioUrl: c.sound });
-          if (targetSeat.isBot) {
-            const banter = require('../bot/banter');
-            const dealtMore = c.damage > a.damage;
-            const tookMore  = a.damage > c.damage;
-            const mood = dealtMore
-              ? 'You hit them HARDER than they hit you — GLOAT briefly ("have any regrets?", "oops.", "whoops, was that your face?").'
-              : tookMore
-                ? 'They got you worse than you got them — be INDIGNANT but brief ("rude.", "excuse you.", "ow — seriously?").'
-                : 'An even, petty exchange — react however fits your character, briefly.';
-            banter.maybeSpeak(table, {
-              kind: 'fight',
-              description: `${aNick} just swung a ${a.weapon.name} at you (${dNick}) — ${swingSummary(a)}. ` +
-                `You swung back with your ${c.weapon.name} — ${swingSummary(c)}. ${mood} ` +
-                `This is a silly bar-brawl side-gag, NOT poker — one short in-character line.`,
-              speakerHint: targetPlayerId,
-              actorIds: [me.player_id],
-              prob: 0.9,
-            });
-          }
-        } catch (_) { /* fight is pure flavor; never let it throw */ }
-      }, 900);
-    } else {
-      // Ranged spell: Lightning Bolt (Reflex) or Stinking Cloud (Fort). No
-      // counter-attack — the target just saves (or doesn't).
-      const s = combat.resolveSpell(mode, aGear, dGear);
-      // Stinking Cloud sickens on a failed Fort save — a cosmetic ~30s status.
-      if (mode === 'stinking' && s.sickened) {
-        targetSeat.sickenedUntil = Date.now() + 30000;
-      }
-      table.chat('fight', spellLine(aNick, dNick, s), { audioUrl: s.sound });
-      table._broadcast(); // push the (maybe) new sickened status to clients
-      if (targetSeat.isBot) {
-        setTimeout(() => {
-          try {
-            const banter = require('../bot/banter');
-            banter.maybeSpeak(table, {
-              kind: 'fight',
-              description: spellReactionDesc(aNick, dNick, s),
-              speakerHint: targetPlayerId,
-              actorIds: [me.player_id],
-              prob: 0.9,
-            });
-          } catch (_) {}
-        }, 900);
-      }
-    }
+    // Human-initiated swing — same resolution + reactions as bot revenge.
+    fightDirector.executeFight(table, mySeat, targetSeat, mode);
 
     ack?.({ ok: true });
   });
