@@ -610,12 +610,19 @@ class Table {
     if (vacatedBots > 0) {
       this.chat('leave', `🃏 Game reset — ${vacatedBots} AI player${vacatedBots===1?'':'s'} cleared from the table.`);
     }
-    // Reset every roster player's bank too
-    for (const p of db.listHumans()) {
-      db.setChips(p.player_id, DEFAULT);
-    }
-    // Wipe stats — db has no bulk-reset helper; do it via raw query
-    try { db.db.prepare('UPDATE players SET total_won = 0, total_lost = 0, hands_played = 0').run(); } catch (e) { /* fine */ }
+    // Reset EVERY player's bank — humans AND bots — to the default stack,
+    // wipe all gear (current `gear` slots + legacy `swords`), clear any
+    // rebuy debt, and zero lifetime stats. One bulk query so the
+    // leaderboard (which lists humans + bots) truly shows everyone at the
+    // default stack with no gear. BUGFIX: this previously reset only
+    // listHumans() and never touched gear, so bots kept their accumulated
+    // wealth and geared players still showed gear value on the board.
+    try {
+      db.db.prepare(
+        "UPDATE players SET chips = ?, swords = '{}', gear = '{}', rebuy_debt = 0, " +
+        "total_won = 0, total_lost = 0, hands_played = 0"
+      ).run(DEFAULT);
+    } catch (e) { console.error('[resetGame] bulk reset failed', e); }
     // Reset dealer button so next hand starts fresh
     this.dealerButtonSeatIndex = -1;
     // Use listAll() so the leaderboard shows everyone (humans + bots)

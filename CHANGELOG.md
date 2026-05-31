@@ -19,6 +19,20 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-05-31
+
+### 🐛 Fixes
+- **Full Reset now resets everyone.** "Full reset" was only zeroing *humans'*
+  banks and never wiping gear, so the leaderboard still showed bots (and geared
+  players) with their old wealth. It now resets **every** player — humans and
+  bots — to the default 5,000 gp, clears all gear, zeroes rebuy debt, and wipes
+  lifetime stats, so the whole board flattens to 5k.
+
+### 🧑 Roster
+- Added human players **Pinkey** and **Punkers**.
+
+---
+
 ## 2026-05-30
 
 ### ♿ Blind-support overhaul (accessibility)
