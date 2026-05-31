@@ -122,6 +122,12 @@
   // the room stays quiet unless the player opts in via the audio menu.
   let _audioMuted = false;          // false = sounds ON
   let _bannerVoiceEnabled = false;  // false = AI voices OFF
+  // Combat-gag SFX — three INDEPENDENT on/off switches so a player can
+  // silence farts and/or swords without touching the others. All default
+  // ON for a new player; persisted per-player like the rest.
+  let _meleeSoundEnabled     = true;  // ⚔️ sword/dagger swings, blocks, hits, fumbles
+  let _lightningSoundEnabled = true;  // ⚡ Lightning Bolt
+  let _fartSoundEnabled      = true;  // 💨 Stinking Cloud
 
   function audioSettingsKey(field) {
     const pid = state.me?.player_id;
@@ -152,6 +158,14 @@
       const raw = parseInt(localStorage.getItem(kvv), 10);
       _voiceVolume = Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) / 100 : 0.85;
     } else _voiceVolume = 0.85;
+    // Combat toggles — stored as '1'/'0'. Anything other than the explicit
+    // '0' (including a missing key for a brand-new player) means ON.
+    const kcm = audioSettingsKey('combatMelee');
+    const kcl = audioSettingsKey('combatLightning');
+    const kcf = audioSettingsKey('combatFart');
+    _meleeSoundEnabled     = kcm ? localStorage.getItem(kcm) !== '0' : true;
+    _lightningSoundEnabled = kcl ? localStorage.getItem(kcl) !== '0' : true;
+    _fartSoundEnabled      = kcf ? localStorage.getItem(kcf) !== '0' : true;
     applyMuteUI();
     // After load, republish to server so a fresh reconnect / new
     // player login carries the right preference into the listener
@@ -167,6 +181,12 @@
     if (kv) localStorage.setItem(kv, _bannerVoiceEnabled ? '1' : '0');
     if (kcv) localStorage.setItem(kcv, String(Math.round(_cardVolume  * 100)));
     if (kvv) localStorage.setItem(kvv, String(Math.round(_voiceVolume * 100)));
+    const kcm = audioSettingsKey('combatMelee');
+    const kcl = audioSettingsKey('combatLightning');
+    const kcf = audioSettingsKey('combatFart');
+    if (kcm) localStorage.setItem(kcm, _meleeSoundEnabled     ? '1' : '0');
+    if (kcl) localStorage.setItem(kcl, _lightningSoundEnabled ? '1' : '0');
+    if (kcf) localStorage.setItem(kcf, _fartSoundEnabled      ? '1' : '0');
     pushVoicePrefToServer();
   }
   // Inform the server whenever the banter-voice setting changes (and
@@ -176,6 +196,17 @@
   function pushVoicePrefToServer() {
     try { socket.emit('lobby:setVoicePref', { enabled: _bannerVoiceEnabled }); }
     catch (_) {}
+  }
+
+  // Map a fight-gag SFX URL to its combat category, and return whether that
+  // category is currently enabled. melee covers every sword/dagger sound
+  // (whiff / block / flesh / fumble); lightning and stink each have their own
+  // switch. Unknown URLs default to playing (fail-open).
+  function combatSoundEnabled(url) {
+    if (!url) return true;
+    if (/fight_lightning/i.test(url)) return _lightningSoundEnabled;
+    if (/fight_stink/i.test(url))     return _fartSoundEnabled;
+    return _meleeSoundEnabled;
   }
 
   function applyMuteUI() {
@@ -193,6 +224,9 @@
     const cvl = $('#cardVolumeVal');  if (cvl) cvl.textContent = `${Math.round(_cardVolume  * 100)}%`;
     const vv  = $('#voiceVolume');    if (vv)  vv.value  = String(Math.round(_voiceVolume * 100));
     const vvl = $('#voiceVolumeVal'); if (vvl) vvl.textContent = `${Math.round(_voiceVolume * 100)}%`;
+    const cmt = $('#combatMeleeToggle');     if (cmt) cmt.checked = _meleeSoundEnabled;
+    const clt = $('#combatLightningToggle'); if (clt) clt.checked = _lightningSoundEnabled;
+    const cft = $('#combatFartToggle');      if (cft) cft.checked = _fartSoundEnabled;
   }
   applyMuteUI();
 
@@ -334,6 +368,16 @@
       _bannerVoiceEnabled = !!e.target.checked;
       saveAudioSettings();
     });
+  }
+  // Three independent combat-sound toggles.
+  const combatToggles = [
+    ['#combatMeleeToggle',     (v) => { _meleeSoundEnabled     = v; }],
+    ['#combatLightningToggle', (v) => { _lightningSoundEnabled = v; }],
+    ['#combatFartToggle',      (v) => { _fartSoundEnabled      = v; }],
+  ];
+  for (const [sel, set] of combatToggles) {
+    const el = $(sel);
+    if (el) el.addEventListener('change', (e) => { set(!!e.target.checked); saveAudioSettings(); });
   }
   // Volume sliders — 0..100 integer percent. `input` event fires on
   // every drag tick for live feedback (the % label updates in real
@@ -514,8 +558,9 @@
         }
       }
       // Fight-gag SFX play for EVERYONE at the table, independent of the
-      // banter-voice toggle — it's a shared event, like a card sound.
-      if (entry.kind === 'fight' && entry.audioUrl) {
+      // banter-voice toggle — it's a shared event, like a card sound. Gated
+      // by the per-category combat toggle (sword / lightning / fart).
+      if (entry.kind === 'fight' && entry.audioUrl && combatSoundEnabled(entry.audioUrl)) {
         try { const fx = new Audio(entry.audioUrl); fx.volume = _voiceVolume; fx.play().catch(()=>{}); } catch (_) {}
       }
     }

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260531-botpicker-search" />
+  <link rel="stylesheet" href="/css/table.css?v=20260531-combat-audio" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -125,6 +125,16 @@
               <input type="range" id="voiceVolume" min="0" max="100" step="1" aria-label="AI voice volume" />
               <span class="audio-menu__val" id="voiceVolumeVal">85%</span>
             </div>
+            <div class="audio-menu__grouphdr">Combat sounds</div>
+            <label class="audio-menu__row">
+              <input type="checkbox" id="combatMeleeToggle" /> <span>⚔️ Sword &amp; dagger</span>
+            </label>
+            <label class="audio-menu__row">
+              <input type="checkbox" id="combatLightningToggle" /> <span>⚡ Lightning bolts</span>
+            </label>
+            <label class="audio-menu__row">
+              <input type="checkbox" id="combatFartToggle" /> <span>💨 Farts (stinking cloud)</span>
+            </label>
             <p class="audio-menu__foot">AI voices stream from 11labs server-side. Toggle off if you want quiet chat.</p>
           </div>
         </span>
@@ -371,9 +381,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260531-botpicker-search"></script>
-  <script src="/js/cards.js?v=20260531-botpicker-search"></script>
-  <script src="/js/blindMode.js?v=20260531-botpicker-search"></script>
-  <script src="/js/client.js?v=20260531-botpicker-search"></script>
+  <script src="/js/avatars.js?v=20260531-combat-audio"></script>
+  <script src="/js/cards.js?v=20260531-combat-audio"></script>
+  <script src="/js/blindMode.js?v=20260531-combat-audio"></script>
+  <script src="/js/client.js?v=20260531-combat-audio"></script>
 </body>
 </html>

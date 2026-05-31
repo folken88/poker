@@ -771,18 +771,39 @@ class Table {
    */
   _armHumanActionTimer() {
     if (!this.hand) return;
+    // ROOT-CAUSE FIX: cancel any prior human auto-fold timer FIRST — even when
+    // the new actor is a bot or there's no actor. The old code returned early
+    // (below) before clearing, so a human's auto-fold timer could outlive its
+    // turn: e.g. human acts → next actor is a bot → this returned without
+    // clearing, leaving the human's 120s timer scheduled. When that stale
+    // timer later fired, its callback ran `this.actionDeadline = null`,
+    // wiping out whatever actor was on the clock by then, and bailed at the
+    // guard with no re-broadcast — the table sat with a dead clock. We clear
+    // only the TIMER here, NOT actionDeadline: when the next actor is a bot,
+    // _maybeDriveBot (called just before us) already set the bot's deadline.
+    if (this._humanActionTimer) {
+      clearTimeout(this._humanActionTimer);
+      this._humanActionTimer = null;
+    }
     const actor = this.hand.getCurrentActor();
-    // Bot's turn — _maybeDriveBot owns actionDeadline + the
-    // thinking-delay setTimeout. Don't touch either.
+    // Bot's turn / no actor — _maybeDriveBot owns actionDeadline + the
+    // thinking-delay setTimeout. Leave the deadline it set intact.
     if (!actor || this.bots.has(actor)) return;
-    this._clearHumanActionTimer();
     this.actionDeadline = Date.now() + ACTION_TIMEOUT_MS;
     this._humanActionTimer = setTimeout(() => {
       this._humanActionTimer = null;
       this.actionDeadline = null;
-      if (!this.hand || this.hand.getCurrentActor() !== actor) return;
+      const cur = this.hand && this.hand.getCurrentActor();
+      if (!this.hand || cur !== actor) {
+        // Defensive: the actor moved on without this timer being cleared.
+        // With the early-clear above this should no longer happen; log it
+        // if it ever does so the real path is visible (no silent stall).
+        if (this.hand) console.warn('[poker] auto-fold skipped — actor changed', { armedFor: actor, current: cur });
+        return;
+      }
       console.log('[poker] action timeout — auto-folding', actor);
-      this.applyAction({ playerId: actor, action: 'fold' });
+      const r = this.applyAction({ playerId: actor, action: 'fold' });
+      if (!r || !r.ok) console.error('[poker] auto-fold rejected', actor, r && r.error);
     }, ACTION_TIMEOUT_MS);
   }
 

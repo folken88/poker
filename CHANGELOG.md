@@ -21,12 +21,22 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-05-31
 
+### 🔊 Audio
+- **Separate combat-sound toggles** in the 🔊 audio menu — **⚔️ Sword & dagger**,
+  **⚡ Lightning bolts**, and **💨 Farts** can each be turned off independently
+  (so you can mute the farts without losing the swordfights, etc.). All three
+  default ON and persist per-player.
+
 ### 🐛 Fixes
 - **Full Reset now resets everyone.** "Full reset" was only zeroing *humans'*
   banks and never wiping gear, so the leaderboard still showed bots (and geared
   players) with their old wealth. It now resets **every** player — humans and
   bots — to the default 5,000 gp, clears all gear, zeroes rebuy debt, and wipes
   lifetime stats, so the whole board flattens to 5k.
+- **Auto-fold timer no longer strands the table.** Fixed a bug where a human's
+  120-second auto-fold timer could outlive its turn (when the next actor was a
+  bot) and later null out the wrong player's clock — leaving the table "stuck at
+  0 seconds." The timer is now always cancelled before the turn moves on.
 
 ### 🧑 Roster
 - Added human players **Pinkey** and **Punkers**.
