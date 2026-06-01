@@ -15,6 +15,7 @@
 
 const db = require('../persistence/db');
 const { weaponOf, acOf, totalMagicBonus, SND, dRoll, pick } = require('./combat');
+const { logDungeon } = require('../persistence/logger');
 
 // ── Tuning knobs (all easily adjustable) ────────────────────────────────────
 const BASE_HP        = 30;     // gearless player hp
@@ -94,10 +95,15 @@ class Dungeon {
       cooldown: { lightning: 0, stinking: 0 },   // round number when next available
     }];
     this._note(`🗡️ ${this.party[0].nickname} descends into the dungeon. (${maxHp} HP)`);
+    this._log('start', { maxHp, party: this.party.length });
   }
 
   roomName() { return `dungeon:${this.id}`; }
   _note(text, sound) { this.log.push({ t: ++this._logSeq, text, sound: sound || null }); if (this.log.length > 60) this.log.shift(); }
+  // Persist a dungeon event to dungeon.jsonl for troubleshooting + tuning.
+  _log(type, extra) {
+    try { logDungeon({ type, run: this.id, leader: this.leaderId, depth: this.depth, round: this.round, ...(extra || {}) }); } catch (_) {}
+  }
   leader() { return this.party[0]; }
   livingParty() { return this.party.filter(m => m.hp > 0); }
   livingEnemies() { return this.enemies.filter(e => e.hp > 0); }
@@ -160,6 +166,7 @@ class Dungeon {
     this.round = 1;
     this._rollInitiative();
     this._note(`🚪 Door creaks open — room ${this.depth}. ${this._enemySummary()}`);
+    this._log('room', { boss: this.enemies.some(e => e.boss), enemies: this.enemies.map(e => ({ name: e.name, hp: e.maxHp, ac: e.ac })) });
     this._beginTurnCycle();
     return { ok: true };
   }
@@ -272,20 +279,36 @@ class Dungeon {
     const gold = this.enemies.reduce((s, e) => s + (e.gold || 0), 0);
     this.runGold += gold;
     this._note(`✨ Room cleared! +${gold} gp (run total ${this.runGold} gp).`);
+    this._log('clear', { gold, runGold: this.runGold });
     this._maybeDropLoot();
     this._broadcast();
   }
   _maybeDropLoot() {
-    const chance = Math.min(0.25, 0.06 + this.depth * 0.015);
+    // Magic loot is RARE and slow. Early rooms almost never drop one, and the
+    // tier you can find is capped by depth so +2/+3 items only appear deeper.
+    const chance = this.depth <= 3 ? 0.015 : Math.min(0.12, 0.02 + (this.depth - 3) * 0.011);
     if (Math.random() >= chance) return;
-    // Improve a random slot the leader can still upgrade (tier < 5).
-    const gear = this.leader().gear;
-    const options = db.GEAR_SLOT_KEYS.filter(k => (Number(gear[k]) || 0) < 5);
+    const maxTier = Math.min(5, 1 + Math.floor(this.depth / 4));   // +1 @1-3, +2 @4-7, +3 @8-11 …
+    // Slot the winner can still upgrade within the depth cap.
+    const baseGear = this.leader().gear;
+    const options = db.GEAR_SLOT_KEYS.filter(k => (Number(baseGear[k]) || 0) < maxTier);
     if (!options.length) return;
     const slot = pick(options);
-    const tier = (Number(gear[slot]) || 0) + 1;
-    this.pendingLoot.push({ slot, tier });
-    this._note(`💎 Found a +${tier} ${db.GEAR_BY_KEY[slot]?.label || slot}! Equip it or hock it.`);
+    // ONE character claims the drop. Solo → the leader. With a party, eligible
+    // members roll off (highest d20), even if the winner just plans to hock it.
+    const winner = this._rollLootWinner();
+    const tier = (Number((winner.gear || {})[slot]) || 0) + 1;
+    if (tier > maxTier) return;
+    this.pendingLoot.push({ slot, tier, owner: winner.playerId });
+    this._note(`💎 ${winner.nickname}${winner.rolled ? ' won the roll-off and' : ''} found a +${tier} ${db.GEAR_BY_KEY[slot]?.label || slot}!`);
+    this._log('loot', { slot, tier, owner: winner.playerId, rolled: !!winner.rolled });
+  }
+  _rollLootWinner() {
+    const eligible = this.party.filter(m => m.hp > 0);
+    if (eligible.length <= 1) { const m = this.leader(); return { playerId: m.playerId, nickname: m.nickname, gear: m.gear, rolled: false }; }
+    let best = eligible[0], bestRoll = -1;
+    for (const m of eligible) { const r = dRoll(20); if (r > bestRoll) { bestRoll = r; best = m; } }
+    return { playerId: best.playerId, nickname: best.nickname, gear: best.gear, rolled: true };
   }
 
   // ── Combat resolution ────────────────────────────────────────────────────
@@ -355,6 +378,7 @@ class Dungeon {
     if (!this._isLeaderTurn()) return { ok: false, error: 'not your turn' };
     clearTimeout(this._turnTimer);
     const m = this.leader();
+    this._log('action', { kind, partyHp: m.hp, enemiesAlive: this.livingEnemies().length });
     let handled = true;
     if (kind === 'attack')        this._playerAttack(m, payload.targetUid);
     else if (kind === 'lightning') this._castLightning(m, payload.targetUids || []);
@@ -457,6 +481,7 @@ class Dungeon {
       if (p) db.setChips(m.playerId, p.chips + share);
     }
     this._note(`🪜 Climbed out with ${this.runGold} gp${this.party.length > 1 ? ` (split ${share} each)` : ''}.`);
+    this._log('bail', { gold: this.runGold, share });
     this._finish({ reason: 'bailed', goldBanked: this.runGold });
     return { ok: true, goldBanked: this.runGold };
   }
@@ -464,6 +489,7 @@ class Dungeon {
     clearTimeout(this._turnTimer); clearTimeout(this._stepTimer);
     this.status = 'dead';
     this._note(`☠️ ${this.leader().nickname} falls! The run's gold and unbanked loot are lost.`);
+    this._log('death', { depthReached: this.depth, lostGold: this.runGold });
     this.runGold = 0;
     this.pendingLoot = [];
     this._finish({ reason: 'dead', goldBanked: 0 });

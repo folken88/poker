@@ -26,6 +26,7 @@ if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 const HAND_LOG = path.join(LOG_DIR, 'hands.jsonl');
 const BOT_LOG  = path.join(LOG_DIR, 'bot-decisions.jsonl');
 const CHAT_LOG = path.join(LOG_DIR, 'conversation.jsonl');
+const DUNGEON_LOG = path.join(LOG_DIR, 'dungeon.jsonl');
 
 function appendLine(file, obj) {
   try {
@@ -253,4 +254,10 @@ function logChat({ tableId, entry, extras }) {
   appendLine(CHAT_LOG, row);
 }
 
-module.exports = { logHand, logBotDecision, logChat, getRecords, resetRecords, HAND_LOG, BOT_LOG, CHAT_LOG, LOG_DIR };
+/** Append one dungeon event to dungeon.jsonl (run start/room/action/clear/
+ *  loot/bail/death). Timestamped; for offline troubleshooting + tuning. */
+function logDungeon(event) {
+  appendLine(DUNGEON_LOG, { ts: new Date().toISOString(), ...event });
+}
+
+module.exports = { logHand, logBotDecision, logChat, logDungeon, getRecords, resetRecords, HAND_LOG, BOT_LOG, CHAT_LOG, DUNGEON_LOG, LOG_DIR };

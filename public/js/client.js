@@ -513,7 +513,7 @@
         const on = !!(window.BlindMode && window.BlindMode.isOn && window.BlindMode.isOn());
         blindBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
         blindBtn.classList.toggle('is-active', on);
-        blindBtn.textContent = on ? '🦮 Blind Mode: On' : '🦮 Blind Mode';
+        blindBtn.textContent = on ? '👂 Blind Mode: On' : '👂 Blind Mode';
       };
       blindBtn.addEventListener('click', () => {
         if (window.BlindMode && window.BlindMode.toggle) window.BlindMode.toggle();
