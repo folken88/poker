@@ -275,17 +275,47 @@
   // Per-pool volume scalar — turn-tick is half the master volume so the
   // every-action tick doesn't drown out the bigger shuffle/deal hits.
   // Other pools use the master card-volume 1:1.
+  // ── Web Audio "through the floor" muffle ────────────────────────────────
+  // A LOW-PASS filter passes the bass and cuts the highs — a real muffled
+  // sound, not just quieter. Used for poker SFX heard from down in the dungeon
+  // and dungeon combat thumps heard back up at the table. Falls back to a plain
+  // <audio> element if the Web Audio API is unavailable or errors.
+  let _ac = null;
+  function audioCtx() {
+    if (_ac === null) { try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { _ac = false; } }
+    if (_ac && _ac.state === 'suspended') { try { _ac.resume(); } catch (_) {} }
+    return _ac || null;
+  }
+  /** Play a URL at `volume` (0..1). If `muffle`, route through a low-pass
+   *  biquad at `cutoff` Hz so it sounds distant/through-a-wall. */
+  function playUrl(url, volume, muffle, cutoff = 460) {
+    volume = Math.max(0, Math.min(1, volume));
+    if (!url || volume <= 0) return;
+    if (muffle) {
+      const ctx = audioCtx();
+      if (ctx) {
+        try {
+          const a = new Audio(url);
+          const src = ctx.createMediaElementSource(a);
+          const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = cutoff; lp.Q.value = 0.7;
+          const g = ctx.createGain(); g.gain.value = volume;
+          src.connect(lp); lp.connect(g); g.connect(ctx.destination);
+          a.addEventListener('ended', () => { try { src.disconnect(); lp.disconnect(); g.disconnect(); } catch (_) {} });
+          a.play().catch(() => {});
+          return;
+        } catch (_) { /* fall through to plain playback */ }
+      }
+    }
+    try { const a = new Audio(url); a.volume = volume; a.play().catch(() => {}); } catch (_) {}
+  }
+
   function playFromPool(pool, scale = 1) {
     if (_audioMuted || !pool.length) return;
     const url = pool[Math.floor(Math.random() * pool.length)];
-    try {
-      const a = new Audio(url);
-      // Muffle poker SFX to 0.3× while down in the dungeon (heard through the floor).
-      a.volume = Math.max(0, Math.min(1, _cardVolume * scale * (_inDungeon ? 0.3 : 1)));
-      // Autoplay can be blocked until the user interacts with the page.
-      // We don't care — silent rejection just means no SFX that round.
-      a.play().catch(() => {});
-    } catch (_) { /* silent */ }
+    // Down in the dungeon, poker SFX are heard MUFFLED through the floor
+    // (low-pass), and a touch quieter; otherwise plain at full clarity.
+    if (_inDungeon) playUrl(url, _cardVolume * scale * 0.6, true);
+    else playUrl(url, _cardVolume * scale, false);
   }
 
   // Trigger state — closed over by maybePlayCardSounds, reset between hands.
@@ -642,8 +672,8 @@
   socket.on('dungeon:echo', ({ sound } = {}) => {
     // Muffled basement thumps for players still at the table. The dungeon
     // player hears full combat via dungeon:state, so they skip this.
-    if (_inDungeon || !sound) return;
-    playDungeonSound(sound, _combatVolume * 0.35);
+    if (_inDungeon || !sound || !combatSoundEnabled(sound)) return;
+    playUrl(sound, _combatVolume * 0.5, true, 420);   // low-pass: distant, through the floor
   });
 
   socket.on('dungeon:exit', (exit) => {
