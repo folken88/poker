@@ -2278,6 +2278,19 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 /* ===== + Bot picker modal ===== */
 .modal__panel--bot-picker { width: min(720px, 96vw); }
 
+/* Bot-picker actions relocated ABOVE the grid — a quick toolbar so Random /
+   Fill / Cancel are one click away the moment the picker opens. Left-aligned
+   (primary first), wraps on narrow screens, divider rule separates it from
+   the character list below. */
+.modal__actions--top {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.6rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(217,176,106,0.18);
+}
+
 /* Search bar above the grid — sticky-feeling, easy keyboard target. */
 .bot-picker__search {
   display: flex;
@@ -2321,7 +2334,7 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   max-height: 60vh;
   overflow-y: auto;
   padding: 0.25rem 0.25rem 0.5rem 0;
-  margin-bottom: 1rem;
+  margin-bottom: 0.25rem;
 }
 .bot-picker__card {
   background: rgba(0,0,0,0.4);

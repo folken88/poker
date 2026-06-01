@@ -21,6 +21,12 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### ⚡ Faster "Pick AI" picker
+- Moved the picker's action buttons (**🎲 Random**, **🪑 Fill empty seats**,
+  Cancel) from the footer up to a toolbar **above the character grid**, with
+  Random first — so the common picks are one click away the moment it opens,
+  no scrolling past the list.
+
 ### 🎴 Card-dealing animation
 - At the start of each hand, card-backs now **pitch out from the dealer's seat to
   every player in the hand** — real-dealer order (one card to each going

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260601-deal2" />
+  <link rel="stylesheet" href="/css/table.css?v=20260601-aitop" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -372,12 +372,15 @@
         <input type="search" id="botPickerSearch" class="bot-picker__search-input" placeholder="Search by name…" autocomplete="off" spellcheck="false" />
         <span class="bot-picker__count" id="botPickerCount" aria-live="polite"></span>
       </div>
-      <div class="bot-picker__grid" id="botPickerGrid"></div>
-      <div class="modal__actions">
-        <button class="btn btn--ghost"   data-close-bot-picker>Cancel</button>
-        <button class="btn btn--ghost"   id="botPickerFill" title="Seat a random AI in every empty seat">🪑 Fill empty seats</button>
+      <!-- Action buttons live ABOVE the grid so the common picks (Random /
+           Fill) are reachable the instant the picker opens, without scrolling
+           or scanning past the character list. Random is first for speed. -->
+      <div class="modal__actions modal__actions--top">
         <button class="btn btn--primary" id="botPickerRandom">🎲 Random</button>
+        <button class="btn btn--ghost"   id="botPickerFill" title="Seat a random AI in every empty seat">🪑 Fill empty seats</button>
+        <button class="btn btn--ghost"   data-close-bot-picker>Cancel</button>
       </div>
+      <div class="bot-picker__grid" id="botPickerGrid"></div>
     </div>
   </div>
 
@@ -399,9 +402,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260601-deal2"></script>
-  <script src="/js/cards.js?v=20260601-deal2"></script>
-  <script src="/js/blindMode.js?v=20260601-deal2"></script>
-  <script src="/js/client.js?v=20260601-deal2"></script>
+  <script src="/js/avatars.js?v=20260601-aitop"></script>
+  <script src="/js/cards.js?v=20260601-aitop"></script>
+  <script src="/js/blindMode.js?v=20260601-aitop"></script>
+  <script src="/js/client.js?v=20260601-aitop"></script>
 </body>
 </html>
