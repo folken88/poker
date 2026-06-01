@@ -65,6 +65,12 @@ button, input { font: inherit; color: inherit; }
 .dmon.is-boss { border-color: rgba(220,170,60,0.9); background: rgba(40,28,10,0.5); }
 .dmon.is-dead { opacity: 0.32; filter: grayscale(1); cursor: default; }
 .dmon__glyph { font-size: 2rem; line-height: 1; }
+.dmon__art { position: relative; width: 64px; height: 64px; border-radius: 50%; background-size: cover; background-position: center; border: 1px solid rgba(0,0,0,0.4); }
+.dmon.is-boss .dmon__art { border-color: rgba(220,170,60,0.9); box-shadow: 0 0 0 2px rgba(220,170,60,0.5); }
+.dmon__crown { position: absolute; top: -8px; right: -4px; font-size: 0.95rem; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6)); }
+.dpc__avatar { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; margin: 0 auto 0.15rem; }
+.dpc__avatar img, .dpc__avatar svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dpc { align-items: center; text-align: center; }
 .dmon__name { font-size: 0.72rem; text-align: center; }
 .dmon__hpbar, .dpc__hpbar { width: 100%; height: 6px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; }
 .dmon__hpbar span { display: block; height: 100%; background: linear-gradient(90deg,#c84a4a,#e87b5b); }
@@ -104,10 +110,11 @@ button, input { font: inherit; color: inherit; }
   border: 1px solid rgba(217,176,106,0.4); border-radius: 10px;
   padding: 0.5rem 0.6rem;
   box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+  max-height: 52vh; overflow-y: auto;          /* scroll when there are many bots */
 }
 .dungeon__recruit-pop.is-open { display: block; }
-.dungeon__recruit-head { font-size: 0.78rem; color: var(--brass-bright); letter-spacing: 0.04em; margin-bottom: 0.4rem; }
-.bot-picker__grid--dungeon { max-height: 200px; }
+.dungeon__recruit-head { font-size: 0.78rem; color: var(--brass-bright); letter-spacing: 0.04em; margin-bottom: 0.4rem; position: sticky; top: -0.5rem; background: rgba(14,12,18,0.98); padding: 0.25rem 0; }
+.bot-picker__grid--dungeon { max-height: none; overflow: visible; }   /* the popover scrolls instead */
 .dungeon__log { list-style: none; margin: 0; padding: 0.5rem 0.8rem; flex: 1; min-height: 70px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(217,176,106,0.15); border-radius: 8px; font-size: 0.82rem; line-height: 1.4; color: var(--ivory-dim); }
 .dungeon__log li { padding: 1px 0; }
 body[data-screen="loading"] .screen[data-show-on="loading"],

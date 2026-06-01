@@ -52,6 +52,16 @@ const MON = {
   ogre:              { name: 'Ogre',              glyph: '👹', hp: 34, ac: 16, toHit: 8, dmgDie: 10, dmgBonus: 6, fort: 7, reflex: 2, gold: [50, 110] },
   ettin:             { name: 'Ettin',             glyph: '👹', hp: 48, ac: 16, toHit: 9, dmgDie: 10, dmgBonus: 7, fort: 8, reflex: 2, gold: [80, 160] },
 };
+// Real token art from the Foundry library (public/dungeon/monsters/). dire_rat
+// has no token in the library, so it falls back to its emoji glyph.
+const MON_ART = {
+  giant_centipede: 'centipede', goblin: 'goblin', kobold: 'kobold', skeleton: 'skeleton',
+  giant_spider: 'spider', zombie: 'zombie', ghoul: 'ghoul', cultist: 'cultist',
+  gray_ooze: 'ooze', skeletal_champion: 'skeletal_champion', shadow: 'shadow', wight: 'wight',
+  ghast: 'ghast', gibbering_mouther: 'gibbering_mouther', ogre: 'ogre', ettin: 'ettin',
+};
+for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
+
 const BANDS = {
   shallow: ['dire_rat', 'giant_centipede', 'goblin', 'kobold', 'skeleton', 'giant_spider'],
   mid:     ['skeleton', 'giant_spider', 'zombie', 'ghoul', 'cultist', 'gray_ooze', 'skeletal_champion'],
@@ -145,7 +155,7 @@ class Dungeon {
         lightningReady: !m.usedLightning, stinkingReady: !m.usedStinking,
       })),
       enemies: this.enemies.map(e => ({
-        uid: e.uid, name: e.name, glyph: e.glyph, boss: !!e.boss,
+        uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss,
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
       })),
       turn: this._currentTurn(),
@@ -214,7 +224,7 @@ class Dungeon {
       this.enemies.push({
         uid: `e${++_uidSeq}`,
         name: boss ? `Boss: ${base.name}` : base.name,
-        glyph: boss ? '👑' : base.glyph, boss,
+        glyph: base.glyph, art: base.art || null, boss,
         hp, maxHp: hp,
         ac: base.ac + acBump + (boss ? 2 : 0),
         toHit: base.toHit + MON_TOHIT_BUFF + (boss ? 2 : 0),
@@ -405,9 +415,12 @@ class Dungeon {
     return { hit: true, damage: Math.max(1, dRoll(e.dmgDie) + e.dmgBonus - sick), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
   }
   _enemyAct(e) {
-    const targets = this.livingParty();
-    if (!targets.length) return;
-    const target = pick(targets);
+    const all = this.livingParty();
+    if (!all.length) return;
+    // Switch off helpless prey — prefer a non-paralyzed target (a paralyzed
+    // victim is left alone; the monster moves to a fresh fighter).
+    const fresh = all.filter(m => !(m.paralyzed > 0));
+    const target = pick(fresh.length ? fresh : all);
     const r = this._monsterSwing(e, acOf(target.gear).ac);
     if (r.hit) {
       target.hp -= r.damage;

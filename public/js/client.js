@@ -714,8 +714,11 @@
           const dead = !e.alive;
           const sel = !dead && _dungeonSel.includes(e.uid);
           const pct = e.maxHp ? Math.max(0, Math.round(100 * e.hp / e.maxHp)) : 0;
+          const portrait = e.art
+            ? `<div class="dmon__art" style="background-image:url('${escapeAttr(e.art)}')">${e.boss ? '<span class="dmon__crown">👑</span>' : ''}</div>`
+            : `<div class="dmon__glyph">${e.glyph || '❓'}${e.boss ? ' 👑' : ''}</div>`;
           return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''}" data-enemy="${escapeAttr(e.uid)}" ${dead ? 'disabled' : ''}>
-            <div class="dmon__glyph">${e.glyph || '❓'}</div>
+            ${portrait}
             <div class="dmon__name">${escapeText(e.name)}${e.sickened ? ' 🤢' : ''}</div>
             <div class="dmon__hpbar"><span style="width:${pct}%"></span></div>
             <div class="dmon__hp">${dead ? '☠️' : `${e.hp}/${e.maxHp}`}</div>
@@ -731,6 +734,7 @@
       const cls = ['dpc']; if (pct <= 30) cls.push('is-low'); if (m.dead || m.left) cls.push('is-out'); if (isMe) cls.push('is-me'); if (isTurn) cls.push('is-turn');
       const tag = m.dead ? ' ☠️' : m.left ? ' 🪜' : `${m.sickened ? ' 🤢' : ''}${m.paralyzed ? ' 🥶' : ''}`;
       return `<div class="${cls.join(' ')}">
+        <div class="dpc__avatar">${renderAvatar(m.avatarId)}</div>
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${tag}</div>
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
         <div class="dpc__hp">${Math.max(0, m.hp)}/${m.maxHp} HP</div>
