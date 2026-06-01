@@ -28,6 +28,11 @@ Thanks to the regulars whose suggestions made it into the game:
   hidden while you're already at the bottom, and gently bobs when new chat lands
   while you're scrolled away. Thanks to **Tobias** for the request.
 
+### 🔊 Card-deal animation — single composite deal sound
+- The per-card flicks overlapped and sounded cluttered, so the deal now plays
+  **one composite dealing sound** with the animation (kept the visual). Per-card
+  audio is retained in the code, off for now, in case we revisit it.
+
 ### 🎴 Card-deal animation — cards land in position
 - The hole cards no longer pop into each seat at the start of the hand and sit
   under the animation — they now **stay hidden until the flying card reaches the

@@ -1015,10 +1015,10 @@
       // No Web Animations API — just drop the card at the target.
       card.style.transform = `translate(${dx}px, ${dy}px)`; card.style.opacity = '1';
     }
-    // Flick fires as the card LEAVES the dealer's hand (start of its flight).
-    // Only ONE card per player carries the sound (withSound) — two flicks per
-    // player was aurally cluttered. Honors card mute.
-    if (_dealAnimEnabled && withSound) setTimeout(() => playFromPool(DEAL_CARD_POOL, 0.6), delay);
+    // (Per-card flicks were aurally cluttered even at one-per-player; the deal
+    // now uses a single composite sound played once in maybeDealAnimation.
+    // `withSound` is retained so per-card audio can be re-enabled later.)
+    void withSound;
     const cleanup = () => {
       try {
         const fade = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: 'ease-out', fill: 'forwards' });
@@ -1041,6 +1041,10 @@
     const ring = $('#seatRing');
     const players = hand.players || [];
     if (!overlay || !ring || !players.length) return;
+
+    // One composite deal sound for the whole pitch (honors the card mute) —
+    // cleaner than per-card flicks overlapping.
+    playFromPool(DEAL_POOL);
 
     // Defer one frame so the collision-avoidance rAF (queued just above)
     // has nudged seats into their final positions before we measure.
