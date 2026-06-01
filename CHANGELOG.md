@@ -21,6 +21,12 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-05-31 (later)
 
+### 🎵 Gaspar quotes "The Gambler"
+- Gaspar now deploys lines from the old gambler's ballad during play —
+  *"know when to hold 'em, know when to fold 'em,"* *"know when to walk away,
+  and know when to run,"* and the rest — deadpan, as folksy table wisdom, where
+  the moment fits. Used sparingly so it stays a treat, not a tic.
+
 ### 🏆 Hall of Records — clearer "Gain" vs "Pot"
 - Renamed **Win → Gain** and made it track **net profit** (chips gained after
   your own contribution), so it's clearly distinct from **Pot**, which is the
