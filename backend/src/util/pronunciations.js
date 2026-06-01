@@ -19,6 +19,7 @@ const PRONUNCIATIONS = [
   ['Adimarus',   'Add ih mare us'],
   ['Mylez',      'Miles'],
   ['Taelys',     'Tay liss'],
+  ['Rhyarca',    'Ree ark ah'],
 ];
 
 module.exports = { PRONUNCIATIONS };

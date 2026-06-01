@@ -166,21 +166,37 @@ function _applyHandRecords(h) {
   }
 }
 
-/** Snapshot of the all-time records, broadcast in Table.publicState(). */
+/** Snapshot of the records (only counts hands since the last reset). */
 function getRecords() {
   const out = {};
   for (const k of Object.keys(_records)) out[k] = _records[k] ? { ..._records[k] } : null;
   return out;
 }
 
-// Seed from the existing hand log once at boot (best-effort, sync — the file is
-// small and this only runs at startup).
+function _clearRecords() { for (const k of Object.keys(_records)) _records[k] = null; }
+
+/** Start a fresh records era. Called on a Full Reset / Loot Lord win: wipes the
+ *  current records AND writes a boundary marker to the hand log, so the board
+ *  only ever counts hands AFTER the most recent big reset — even across restarts
+ *  (the seed below clears its accumulator whenever it hits a marker). */
+function resetRecords() {
+  _clearRecords();
+  appendLine(HAND_LOG, { type: 'reset', ts: new Date().toISOString() });
+}
+
+// Seed from the hand log once at boot (best-effort, sync — small file). A
+// `{type:'reset'}` marker line clears the accumulator, so only hands after the
+// last reset survive.
 (function seedRecords() {
   try {
     if (!fs.existsSync(HAND_LOG)) return;
     for (const line of fs.readFileSync(HAND_LOG, 'utf8').split('\n')) {
       if (!line.trim()) continue;
-      try { _applyHandRecords(JSON.parse(line)); } catch (_) {}
+      try {
+        const h = JSON.parse(line);
+        if (h && h.type === 'reset') { _clearRecords(); continue; }
+        _applyHandRecords(h);
+      } catch (_) {}
     }
   } catch (_) { /* best-effort */ }
 })();
@@ -232,4 +248,4 @@ function logChat({ tableId, entry, extras }) {
   appendLine(CHAT_LOG, row);
 }
 
-module.exports = { logHand, logBotDecision, logChat, getRecords, HAND_LOG, BOT_LOG, CHAT_LOG, LOG_DIR };
+module.exports = { logHand, logBotDecision, logChat, getRecords, resetRecords, HAND_LOG, BOT_LOG, CHAT_LOG, LOG_DIR };

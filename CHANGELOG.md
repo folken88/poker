@@ -19,6 +19,19 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-05-31 (later)
+
+### 🏆 Hall of Records — records since the last reset
+- The Hall of Records now counts **only hands played since the most recent big
+  reset**, not all-time. Every Full Reset and Loot Lord win writes a boundary into
+  the hand log and clears the board, so old records (e.g. a giant pot from a
+  previous game) no longer linger. Thanks to **Tobias** for catching a stale pot
+  record that predated the last reset.
+
+### 🗣️ Pronunciation
+- **Rhyarca** is now spoken as *"ree ark ah"* by the AI voices and the blind-mode
+  narrator.
+
 ## 2026-05-31
 
 ### 💸 11labs token savings — TTS audio cache
@@ -34,7 +47,8 @@ Thanks to the regulars whose suggestions made it into the game:
   **🥇 Biggest Win**, **💀 Biggest Loss**, **💰 Biggest Pot**, **⚔️ Longest War**
   (most raises in a hand), **🃏 Biggest Bluff** (biggest pot stolen with junk), and
   **🐟 Ugliest Winner** (weakest hand to win a showdown — e.g. winning on Ace-high).
-  Tracks current roster players only, and survives Full Resets (it's historical).
+  Tracks current roster players only, and counts **only the current game** — every
+  big reset (Full Reset or a Loot Lord win) starts the records fresh.
 
 ### 🧠 AI tells
 - **Intelligence rings on AI tokens** — a subtle bronze / silver / gold ring around

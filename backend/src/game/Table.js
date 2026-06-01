@@ -6,7 +6,7 @@
 const db = require('../persistence/db');
 const { Hand, STATES } = require('./Hand');
 const { Bot } = require('../bot/Bot');
-const { logHand, logBotDecision, logChat, getRecords } = require('../persistence/logger');
+const { logHand, logBotDecision, logChat, getRecords, resetRecords } = require('../persistence/logger');
 const { gold } = require('../util/numwords');
 const { strengthOf } = require('../bot/strength');
 const { botRebuyMessage, humanRebuyMessage, bustMessage } = require('../util/flavor');
@@ -590,6 +590,7 @@ class Table {
    */
   resetGame() {
     this.cancelHand();
+    resetRecords();   // Hall of Records starts fresh — only count hands after this reset
     const DEFAULT = db.DEFAULT_STACK;
     // Reset every seated HUMAN's table stack to default. Bots are
     // about to be vacated, so we skip them here to avoid persisting
@@ -1337,6 +1338,7 @@ class Table {
    *  state. Sends fresh roster + state so clients drop the overlay
    *  and resume normal play. Called after LOOT_LORD_CEREMONY_MS. */
   _resetForNextRun() {
+    resetRecords();   // new game after a Loot Lord win — Hall of Records starts fresh
     const resetAll = db.db.prepare(`
       UPDATE players SET chips = ?, gear = '{}', swords = '{}', rebuy_debt = 0
     `);
