@@ -1382,7 +1382,7 @@
     const r = (state.table && state.table.records) || {};
     // id, label, record, value-formatter, optional color class
     const ROWS = [
-      ['#recordBiggestWin',   '🥇 Win',    r.biggestWin,    (x) => '+' + formatChips(x.amount), 'is-win'],
+      ['#recordBiggestWin',   '🥇 Gain',   r.biggestWin,    (x) => '+' + formatChips(x.amount), 'is-win'],
       ['#recordBiggestLoss',  '💀 Loss',   r.biggestLoss,   (x) => '−' + formatChips(x.amount), 'is-loss'],
       ['#recordBiggestPot',   '💰 Pot',    r.biggestPot,    (x) => formatChips(x.amount), ''],
       ['#recordLongestWar',   '⚔️ War',    r.longestWar,    (x) => x.count + ' raises', ''],

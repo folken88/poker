@@ -69,8 +69,8 @@ function winningsFor(winners, playerId) {
 // ── All-time "Hall of Records" — fun per-hand extremes ──────────────────────
 // Persisted implicitly through hands.jsonl: seeded by scanning the log at boot
 // (below), then updated as each hand is logged. NOT cleared by Full Reset.
-//   biggestWin      : largest GROSS pot a player raked in one hand (full
-//                     winnings, regardless of their own contribution)
+//   biggestWin      : most chips a player NET gained in one hand ("Gain" —
+//                     profit after their own contribution; cf. biggestPot)
 //   biggestLoss     : most chips a player NET lost in one hand
 //   biggestPot      : largest total pot fought over (attributed to its winner)
 //   longestWar      : most raises/all-ins in one hand (a betting slugfest)
@@ -105,27 +105,18 @@ function _applyHandRecords(h) {
 
   const nickById = new Map(players.map(p => [p.playerId, p.nickname || p.playerId]));
 
-  // 1a) Biggest single-hand LOSS — most chips a current player NET lost.
+  // 1) Biggest single-hand GAIN / LOSS — most chips a current player NET
+  //    gained / lost in one hand (stack delta, i.e. after subtracting their
+  //    own contribution). "Gain" is profit, distinct from the gross "Pot".
   for (const p of players) {
     if (!_isCurrent(p.playerId)) continue;
     const net = (p.stackEnd || 0) - (p.stackStart || 0);
-    if (!Number.isFinite(net) || net >= 0) continue;
-    if (!_records.biggestLoss || -net > _records.biggestLoss.amount) {
-      _records.biggestLoss = { nick: p.nickname || p.playerId, amount: -net, ts };
-    }
-  }
-
-  // 1b) Biggest WIN — the largest GROSS pot a current player raked in one hand
-  //     (their full winnings, summed across side pots), regardless of how much
-  //     of that pot was their own chips. "I won a huge pot", not net profit.
-  const grossByWinner = new Map();
-  for (const w of h.winners || []) {
-    if (!_isCurrent(w.playerId)) continue;
-    grossByWinner.set(w.playerId, (grossByWinner.get(w.playerId) || 0) + (w.amount || 0));
-  }
-  for (const [pid, gross] of grossByWinner) {
-    if (gross > 0 && (!_records.biggestWin || gross > _records.biggestWin.amount)) {
-      _records.biggestWin = { nick: nickById.get(pid) || pid, amount: gross, ts };
+    if (!Number.isFinite(net) || net === 0) continue;
+    const who = { nick: p.nickname || p.playerId, amount: Math.abs(net), ts };
+    if (net > 0) {
+      if (!_records.biggestWin || net > _records.biggestWin.amount) _records.biggestWin = who;
+    } else if (!_records.biggestLoss || -net > _records.biggestLoss.amount) {
+      _records.biggestLoss = who;
     }
   }
 
