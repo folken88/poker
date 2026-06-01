@@ -21,6 +21,12 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-05-31 (later)
 
+### 🏆 Hall of Records — "Biggest Win" now counts the full pot
+- **Biggest Win** now records the **largest pot a player raked in one hand**
+  (their full winnings), not net profit. So winning an 11k pot reads as *11k*
+  even if half of it was your own chips you put in to win the showdown. Biggest
+  Loss still tracks net chips lost. Thanks to **Tobias** for the nudge.
+
 ### 🏆 Hall of Records — records since the last reset
 - The Hall of Records now counts **only hands played since the most recent big
   reset**, not all-time. Every Full Reset and Loot Lord win writes a boundary into

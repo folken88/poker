@@ -69,7 +69,9 @@ function winningsFor(winners, playerId) {
 // ── All-time "Hall of Records" — fun per-hand extremes ──────────────────────
 // Persisted implicitly through hands.jsonl: seeded by scanning the log at boot
 // (below), then updated as each hand is logged. NOT cleared by Full Reset.
-//   biggestWin/Loss : most chips netted / lost by a player in one hand
+//   biggestWin      : largest GROSS pot a player raked in one hand (full
+//                     winnings, regardless of their own contribution)
+//   biggestLoss     : most chips a player NET lost in one hand
 //   biggestPot      : largest total pot fought over (attributed to its winner)
 //   longestWar      : most raises/all-ins in one hand (a betting slugfest)
 //   biggestBluff    : biggest pot stolen uncontested with a weak hand
@@ -101,22 +103,34 @@ function _applyHandRecords(h) {
   const players = h.players || [];
   const board = h.board || [];
 
-  // 1) Biggest single-hand WIN / LOSS (per current player's net).
+  const nickById = new Map(players.map(p => [p.playerId, p.nickname || p.playerId]));
+
+  // 1a) Biggest single-hand LOSS — most chips a current player NET lost.
   for (const p of players) {
     if (!_isCurrent(p.playerId)) continue;
     const net = (p.stackEnd || 0) - (p.stackStart || 0);
-    if (!Number.isFinite(net) || net === 0) continue;
-    const who = { nick: p.nickname || p.playerId, amount: Math.abs(net), ts };
-    if (net > 0) {
-      if (!_records.biggestWin || net > _records.biggestWin.amount) _records.biggestWin = who;
-    } else if (!_records.biggestLoss || -net > _records.biggestLoss.amount) {
-      _records.biggestLoss = who;
+    if (!Number.isFinite(net) || net >= 0) continue;
+    if (!_records.biggestLoss || -net > _records.biggestLoss.amount) {
+      _records.biggestLoss = { nick: p.nickname || p.playerId, amount: -net, ts };
+    }
+  }
+
+  // 1b) Biggest WIN — the largest GROSS pot a current player raked in one hand
+  //     (their full winnings, summed across side pots), regardless of how much
+  //     of that pot was their own chips. "I won a huge pot", not net profit.
+  const grossByWinner = new Map();
+  for (const w of h.winners || []) {
+    if (!_isCurrent(w.playerId)) continue;
+    grossByWinner.set(w.playerId, (grossByWinner.get(w.playerId) || 0) + (w.amount || 0));
+  }
+  for (const [pid, gross] of grossByWinner) {
+    if (gross > 0 && (!_records.biggestWin || gross > _records.biggestWin.amount)) {
+      _records.biggestWin = { nick: nickById.get(pid) || pid, amount: gross, ts };
     }
   }
 
   // Everything below attributes to the hand's WINNER — find the top
   // current-player winner (skip the hand for these if none is current).
-  const nickById = new Map(players.map(p => [p.playerId, p.nickname || p.playerId]));
   let win = null;
   for (const w of h.winners || []) {
     if (!_isCurrent(w.playerId)) continue;
