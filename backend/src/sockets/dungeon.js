@@ -45,6 +45,7 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
         try {
           if (exit.reason === 'dead') t.chat('info', `☠️ ${nickname} has died in the dungeon.`);
           else if (exit.fled) t.chat('info', `🏃 ${nickname} ran away from the dungeon${exit.goldBanked ? ` with ${exit.goldBanked}g` : ' empty-handed'}.`);
+          else if (exit.ai) t.chat('info', `🤖 ${nickname} earned ${exit.goldBanked || 0}g in the dungeon.`);
           else if (exit.goldBanked) t.chat('info', `🪜 ${nickname} returned from the dungeon with ${exit.goldBanked}g.`);
           else t.chat('info', `🪜 ${nickname} returned from the dungeon empty-handed.`);
         } catch (_) {}

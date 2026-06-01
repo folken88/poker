@@ -291,11 +291,28 @@ class Dungeon {
   }
 
   // ── Resolution / run-over ────────────────────────────────────────────────
+  _anyHumanFighting() { return this.party.some(m => !m.isBot && !m.left && m.hp > 0); }
   _endIfResolved() {
     if (this.status !== 'combat') return true;
-    if (this.alivePresent().length === 0) { this._runOver(); return true; }
+    // The run belongs to the humans — once none are standing, cash out the AI
+    // allies (their even share of the pool) and end.
+    if (!this._anyHumanFighting()) { this._wrapUp(); return true; }
     if (this.livingEnemies().length === 0) { this._clearRoom(); return true; }
     return false;
+  }
+  // Pay surviving AI allies an even share of what's left, announce it, then end.
+  _wrapUp() {
+    if (this.status === 'over') return;
+    const allies = this.party.filter(m => m.isBot && !m.left && m.hp > 0);
+    const share = allies.length ? Math.floor(this.runGold / allies.length) : 0;
+    for (const m of allies) {
+      if (share > 0) { const p = db.getPlayer(m.playerId); if (p) db.setChips(m.playerId, p.chips + share); this.runGold -= share; }
+      m.left = true;
+      this._note(`🤖 ${m.nickname} returns from the dungeon with ${share} gp.`);
+      this._log('ally_payout', { who: m.playerId, share });
+      this._emitMemberExit(m, { reason: 'bailed', goldBanked: share, ai: true });
+    }
+    this._runOver();
   }
   _clearRoom() {
     clearTimeout(this._turnTimer); clearTimeout(this._stepTimer);
@@ -561,7 +578,8 @@ class Dungeon {
     this._note(`${fled ? '🏃' : '🪜'} ${m.nickname} ${fled ? 'flees the fight and climbs out' : 'climbed out'} with ${share} gp.`);
     this._log('bail', { who: playerId, share, poolLeft: this.runGold, fled });
     this._emitMemberExit(m, { reason: 'bailed', goldBanked: share, fled });
-    if (this.alivePresent().length === 0) { this._runOver(); return { ok: true, goldBanked: share }; }
+    // Last human out (only AI allies left) → cash them out and end the run.
+    if (!this._anyHumanFighting()) { this._wrapUp(); return { ok: true, goldBanked: share }; }
     // Only nudge the turn cycle if the bailer was the one we were waiting on.
     if (this.status === 'combat' && wasActor) { clearTimeout(this._turnTimer); this._nextTurn(); }
     else this._broadcast();
