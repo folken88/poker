@@ -744,7 +744,7 @@
         <div class="dpc__avatar">${renderAvatar(m.avatarId)}</div>
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${tag}</div>
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
-        <div class="dpc__hp">${Math.max(0, m.hp)}/${m.maxHp} HP</div>
+        <div class="dpc__hp">${Math.max(0, m.hp)}/${m.maxHp} HP${m.level ? ` · Lv ${m.level}` : ''}</div>
       </div>`;
     }).join('');
 

@@ -21,8 +21,10 @@ const { logDungeon } = require('../persistence/logger');
 const banter = require('../bot/banter');
 
 // ── Tuning knobs ────────────────────────────────────────────────────────────
-const BASE_HP        = 30;     // gearless player hp
-const HP_PER_BONUS   = 10;     // +per ring tier and per cloak tier
+// LEVEL = 1 + sum of all gear bonuses (min 1). Level drives HP (10/level),
+// to-hit, and saves — for humans AND AI allies.
+const HP_PER_LEVEL   = 10;
+function levelOf(gear) { return Math.max(1, 1 + totalMagicBonus(gear)); }
 const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
 const SICKENED_PENALTY = 2;
@@ -144,13 +146,14 @@ class Dungeon {
     if (idx >= 0 && !this.party[idx].left && this.party[idx].hp > 0) return this.party[idx];  // already active
     if (idx >= 0) this.party.splice(idx, 1);   // drop a stale (downed/bailed) entry → rejoin fresh
     const gear = db.getGear(playerId);
-    const maxHp = BASE_HP + HP_PER_BONUS * ((Number(gear.ring) || 0) + (Number(gear.cloak) || 0));
+    const level = levelOf(gear);
+    const maxHp = HP_PER_LEVEL * level;
     const m = {
       playerId,
       nickname: player.nickname || playerId,
       avatarId: player.avatar_id || null,
       isBot: !!isBot,
-      gear,
+      gear, level,
       hp: maxHp, maxHp,
       sickened: 0, paralyzed: 0,
       usedLightning: false, usedStinking: false,
@@ -164,8 +167,8 @@ class Dungeon {
       if (victims.length) { const v = pick(victims); m.trueNick = m.nickname; m.nickname = v.nickname; m.avatarId = v.avatarId; }
     }
     this.party.push(m);
-    this._note(`🚪 ${m.nickname} joins the delve. (${maxHp} HP)`);
-    this._log('join', { who: playerId, maxHp, party: this.present().length });
+    this._note(`🚪 ${m.nickname} joins the delve. (Lv ${level} · ${maxHp} HP)`);
+    this._log('join', { who: playerId, level, maxHp, party: this.present().length });
     // Mid-combat join → add to the current turn order so they act this round.
     if (this.status === 'combat') this.turnOrder.push({ kind: 'party', id: playerId, init: dRoll(20) + 2 });
     this._broadcast();
@@ -182,7 +185,7 @@ class Dungeon {
       runGold: this.runGold,
       party: this.party.map(m => ({
         playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot,
-        hp: Math.max(0, m.hp), maxHp: m.maxHp,
+        level: m.level, hp: Math.max(0, m.hp), maxHp: m.maxHp,
         dead: m.hp <= 0, left: !!m.left,
         sickened: m.sickened > 0, paralyzed: m.paralyzed > 0,
         lightningReady: !m.usedLightning, stinkingReady: !m.usedStinking,
@@ -432,8 +435,8 @@ class Dungeon {
       // AI: equip if it's a real upgrade (needs it), else hock for the pool.
       if (cur < tier) {
         gear[slot] = tier; db.setGear(playerId, gear); m.gear = gear;
-        if (slot === 'ring' || slot === 'cloak') { m.maxHp += HP_PER_BONUS; m.hp += HP_PER_BONUS; }
-        this._note(`🛡️ ${m.nickname} equips the +${tier} ${db.GEAR_BY_KEY[slot]?.label || slot}.`);
+        this._relevel(m);   // any upgrade raises level → +10 max HP, +to-hit, +to-save
+        this._note(`🛡️ ${m.nickname} equips the +${tier} ${db.GEAR_BY_KEY[slot]?.label || slot}. (Lv ${m.level})`);
       } else {
         const v = db.gearHockValue(slot, tier); this.runGold += v;
         this._note(`💰 ${m.nickname} doesn't need it — hocks it for ${v} gp (into the pool).`);
@@ -447,18 +450,26 @@ class Dungeon {
 
   // ── Combat math (rolls shown in the log) ─────────────────────────────────
   _fmtBonus(n) { return (n >= 0 ? '+' : '') + n; }
-  _partySaveMod(m) { return (Number(m.gear?.ring) || 0) + (Number(m.gear?.cloak) || 0); }
+  // Recompute a member's level + HP from current gear (level = 1 + gear bonuses).
+  _relevel(m) {
+    const nl = levelOf(m.gear);
+    const gain = HP_PER_LEVEL * nl - m.maxHp;
+    m.level = nl; m.maxHp = HP_PER_LEVEL * nl;
+    if (gain > 0) m.hp += gain;   // leveling up heals the new HP; never drains current HP
+  }
+  _partySaveMod(m) { return m.level || 1; }   // saves scale with level
   _atkStr(r) { return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`; }
   _swingVsAC(attacker, ac) {
     const weapon = attacker.weapon;
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
-    const toHit = weapon.toHit - sick;
+    const lvl = attacker.level || 1;        // to-hit scales with level, not weapon tier
+    const toHit = lvl - sick;
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
     let dmg = dRoll(weapon.dmgDie) + weapon.dmgBonus - sick, crit = false;
-    if (roll >= weapon.critRange) { const conf = dRoll(20) + weapon.toHit; if (conf === 20 || conf >= ac) { crit = true; dmg += dRoll(weapon.dmgDie) + weapon.dmgBonus; } }
+    if (roll >= weapon.critRange) { const conf = dRoll(20) + lvl; if (conf === 20 || conf >= ac) { crit = true; dmg += dRoll(weapon.dmgDie) + weapon.dmgBonus; } }
     return { hit: true, crit, damage: Math.max(1, dmg), roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
   _monsterSwing(e, targetAC) {
@@ -584,9 +595,9 @@ class Dungeon {
     gear[loot.slot] = loot.tier;
     db.setGear(playerId, gear);
     m.gear = gear;
-    if (loot.slot === 'ring' || loot.slot === 'cloak') { m.maxHp += HP_PER_BONUS; m.hp += HP_PER_BONUS; }
+    this._relevel(m);   // any upgrade raises level → +10 max HP, +to-hit, +to-save
     this.pendingLoot.splice(idx, 1);
-    this._note(`🛡️ ${m.nickname} equipped the +${loot.tier} ${db.GEAR_BY_KEY[loot.slot]?.label || loot.slot}.`);
+    this._note(`🛡️ ${m.nickname} equipped the +${loot.tier} ${db.GEAR_BY_KEY[loot.slot]?.label || loot.slot}. (Lv ${m.level})`);
     return { ok: true };
   }
   hockLoot(playerId, idx) {
