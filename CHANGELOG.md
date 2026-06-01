@@ -21,6 +21,21 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🤠 New AI — Rodney "Danger" Smith
+- Added **Danger** (Rodney "Danger" Smith), a CP-USS ranger / tracker / archer
+  out of Courtaud — the marksman who put Auren Vrood in the ground at the Battle
+  of Feldgrau. Works under Judge Daramid, runs with the CP-USS crew, and plays
+  like a patient sniper (cautious): a good-natured redneck with a backwoods drawl
+  and hunting metaphors for everything. Uses the "Nick" voice.
+
+### 🐸 Elfrip — simpler, kid-like grammar (not stupid)
+- Refined Elfrip's voice: he's **bright and good-hearted**, but speaks with the
+  **simple, broken grammar of a small child / second-language speaker** — short
+  plain sentences, dropped articles, present tense, third-person only. The ideas
+  are sound; just the grammar is little-kid-ish. He also now openly **loves his
+  friends** Kovira, Kate, Danger, Gaspar, Dismas, and Rissa (on top of big-sister
+  Sirona) and cheers them on.
+
 ### 🗣️ Elfrip talks more, burps less
 - Flipped Elfrip's chatter ratio: he now **speaks ~60%** of the time and **burps
   ~40%** (was burp-heavy at 75%). You'll hear more of his childlike goblin banter
