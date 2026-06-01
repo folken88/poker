@@ -21,6 +21,13 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 💬 Chat — "jump to present" arrow
+- Scroll up to read history and the chat now **stays put** instead of snapping
+  back when new lines arrive (already the case), and a **▼ jump-to-present arrow**
+  appears at the bottom of the chat. Click it to snap to the newest message. It's
+  hidden while you're already at the bottom, and gently bobs when new chat lands
+  while you're scrolled away. Thanks to **Tobias** for the request.
+
 ### 🎴 Card-deal animation — tuned pace + real card sounds
 - **Slowed the deal ~30%** for a more deliberate, readable pitch.
 - The per-card flick now **fires as each card leaves the dealer's hand** (was on

@@ -2118,8 +2118,40 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   background: linear-gradient(180deg, rgba(8,16,11,0.95), rgba(5,10,7,0.98));
   border-top: 1px solid rgba(217,176,106,0.25);
   display: flex; flex-direction: column;
+  position: relative;   /* anchor for the jump-to-present button */
   z-index: 6;
 }
+/* "Jump to present" arrow — floats at the bottom of the chat scroll area.
+   Hidden while you're at the bottom (already on the latest); appears the
+   moment you scroll up to read history, and bobs when new chat arrives
+   while you're scrolled away. Click to snap back to the newest message. */
+.chat-jump {
+  position: absolute;
+  right: 1.1rem;
+  bottom: 3.6rem;       /* clears the input form below */
+  z-index: 8;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(241,207,131,0.5);
+  background: linear-gradient(180deg, rgba(30,40,28,0.95), rgba(14,20,14,0.98));
+  color: var(--brass-bright, #d6b15c);
+  font-size: 1rem; line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  transition: transform .12s, background .12s, border-color .12s, opacity .15s;
+}
+.chat-jump[hidden] { display: none; }   /* beats the base display:flex */
+.chat-jump:hover {
+  transform: translateY(1px);
+  border-color: var(--brass-bright);
+  background: linear-gradient(180deg, rgba(40,52,36,0.97), rgba(20,28,18,0.99));
+}
+.chat-jump--new {
+  border-color: rgba(241,207,131,0.95);
+  animation: chatJumpBob 1s ease-in-out infinite;
+}
+@keyframes chatJumpBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
 .chat-panel__head {
   display: flex; align-items: baseline; justify-content: space-between;
   padding: 0.35rem 1rem 0.25rem;

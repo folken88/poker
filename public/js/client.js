@@ -1778,7 +1778,39 @@
     // back if they've scrolled up to read history.
     const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
     if (nearBottom) list.scrollTop = list.scrollHeight;
+    else {
+      // New chat arrived while they're reading history — flag the jump arrow.
+      const jb = $('#chatJump');
+      if (jb) jb.classList.add('chat-jump--new');
+    }
+    updateChatJump();
   }
+  // ── Chat "jump to present" arrow ────────────────────────────────────
+  // Visible only when scrolled up; click snaps to the newest message.
+  function updateChatJump() {
+    const list = $('#chatList');
+    const jb = $('#chatJump');
+    if (!list || !jb) return;
+    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+    jb.hidden = nearBottom;
+    if (nearBottom) jb.classList.remove('chat-jump--new');
+  }
+  (function wireChatJump() {
+    const list = $('#chatList');
+    const jb = $('#chatJump');
+    if (!list || !jb) return;
+    jb.addEventListener('click', () => {
+      list.scrollTop = list.scrollHeight;   // smooth via CSS scroll-behavior
+      jb.classList.remove('chat-jump--new');
+      updateChatJump();
+    });
+    let raf = 0;
+    list.addEventListener('scroll', () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; updateChatJump(); });
+    }, { passive: true });
+    updateChatJump();
+  })();
   // Click-to-replay: any chat entry with stored audio re-plays on
   // click. Ignores the voice-toggle gate on the assumption that an
   // explicit user click overrides the global preference — they're

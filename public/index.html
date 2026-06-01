@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260601-dealslow2" />
+  <link rel="stylesheet" href="/css/table.css?v=20260601-chatjump" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -258,6 +258,9 @@
           aria-relevant="additions"
           aria-label="Table events and chat messages, newest at the bottom"
           tabindex="0"></ol>
+      <!-- Jump-to-present: appears when scrolled up; snaps to newest on click. -->
+      <button type="button" class="chat-jump" id="chatJump" hidden
+              aria-label="Jump to latest messages" title="Jump to present">▼</button>
       <form class="chat-panel__input" id="chatForm" autocomplete="off" aria-label="Send a chat message">
         <label for="chatInput" class="sr-only">Chat message</label>
         <input type="text" id="chatInput" maxlength="240"
@@ -402,9 +405,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260601-dealslow2"></script>
-  <script src="/js/cards.js?v=20260601-dealslow2"></script>
-  <script src="/js/blindMode.js?v=20260601-dealslow2"></script>
-  <script src="/js/client.js?v=20260601-dealslow2"></script>
+  <script src="/js/avatars.js?v=20260601-chatjump"></script>
+  <script src="/js/cards.js?v=20260601-chatjump"></script>
+  <script src="/js/blindMode.js?v=20260601-chatjump"></script>
+  <script src="/js/client.js?v=20260601-chatjump"></script>
 </body>
 </html>
