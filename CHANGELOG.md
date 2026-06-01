@@ -28,7 +28,9 @@ Thanks to the regulars whose suggestions made it into the game:
   per card. Purely cosmetic (the real hole cards render underneath and the flying
   backs fade on landing). Auto-skips under `prefers-reduced-motion`, and there's a
   remembered **🃏 Card-deal animation** toggle in the audio settings menu (default
-  on). Thanks to **Tobias** for the idea.
+  on). The per-card flick uses **four purpose-built single-card SFX** generated via
+  the 11labs sound-generation API (variety so the rapid deal doesn't sound looped).
+  Thanks to **Tobias** for the idea.
 
 ### 🗣️ Pronunciation — "bilge"
 - The AI voices and blind-mode narrator now say **"bilge"** correctly (rhymes

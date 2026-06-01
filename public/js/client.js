@@ -109,6 +109,14 @@
   // the next player (bot or human). Subtler than the SHUFFLE / DEAL
   // hits so it doesn't fatigue across long hands.
   const TURN_TICK_POOL = ['/audio/card_slip_once.mp3'];
+  // Single-card "flick / pitch" SFX — one plays per card during the
+  // dealer-pitch animation at the start of a hand. Purpose-built via the
+  // 11labs sound-generation API (see scripts history); 4 variants so the
+  // rapid stagger doesn't sound like one looped click.
+  const DEAL_CARD_POOL = [
+    '/audio/deal_card_01.mp3', '/audio/deal_card_02.mp3',
+    '/audio/deal_card_03.mp3', '/audio/deal_card_04.mp3',
+  ];
   // Default volumes — overridden per-player by loadAudioSettings().
   // _cardVolume drives all card SFX (shuffle/deal/your-turn/tick).
   // _voiceVolume drives the 11labs MP3 playback (playBase64Mp3).
@@ -265,7 +273,7 @@
 
   // Warm up the cache so the first deal isn't a noticeable buffer
   // delay. Browsers will fetch lazily otherwise.
-  for (const url of [...SHUFFLE_POOL, ...DEAL_POOL, ...YOUR_TURN_POOL, ...TURN_TICK_POOL]) {
+  for (const url of [...SHUFFLE_POOL, ...DEAL_POOL, ...YOUR_TURN_POOL, ...TURN_TICK_POOL, ...DEAL_CARD_POOL]) {
     try { new Audio(url).preload = 'auto'; } catch (_) {}
   }
 
@@ -998,8 +1006,8 @@
       // No Web Animations API — just drop the card at the target.
       card.style.transform = `translate(${dx}px, ${dy}px)`; card.style.opacity = '1';
     }
-    // Soft flick as the card nears the seat (honors the card-sound mute).
-    if (_dealAnimEnabled) setTimeout(() => playFromPool(TURN_TICK_POOL, 0.3), delay + flight * 0.6);
+    // Single-card flick as the card nears the seat (honors the card-sound mute).
+    if (_dealAnimEnabled) setTimeout(() => playFromPool(DEAL_CARD_POOL, 0.6), delay + flight * 0.6);
     const cleanup = () => {
       try {
         const fade = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: 'ease-out', fill: 'forwards' });
