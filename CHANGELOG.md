@@ -65,9 +65,10 @@ Thanks to the regulars whose suggestions made it into the game:
   the 11labs sound-generation API (variety so the rapid deal doesn't sound looped).
   Thanks to **Tobias** for the idea.
 
-### 🗣️ Pronunciation — Kovira
-- **Kovira** is now spoken as *"koh vee rah"* by the AI voices and blind-mode
-  narrator.
+### 🗣️ Pronunciation — Kovira, Kai Ginn, Gaspar, Fera
+- The AI voices and blind-mode narrator now say these correctly:
+  **Kovira** → *"koh vee rah"*, **Kai Ginn** → *"kai jinn"*, **Gaspar** →
+  *"gas par"*, **Fera** → *"fear-ah"*.
 
 ### 🗣️ Pronunciation — "bilge"
 - The AI voices and blind-mode narrator now say **"bilge"** correctly (rhymes

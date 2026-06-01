@@ -21,6 +21,10 @@ const PRONUNCIATIONS = [
   ['Taelys',     'Tay liss'],
   ['Rhyarca',    'Ree ark ah'],
   ['Kovira',     'Koh vee rah'],
+  ['Kai Ginn',   'Kai Jinn'],
+  ['Kai Gin',    'Kai Jinn'],      // bio sometimes spells it "Kai Gin"
+  ['Gaspar',     'Gas par'],
+  ['Fera',       'Fear ah'],
   ['bilge',      'bilj'],          // rhymes-ish with "build"; NOT "bill-jah" (common in pirate "bilge rat")
 ];
 
