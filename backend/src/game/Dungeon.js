@@ -1,38 +1,37 @@
 /**
- * "Hit the Dungeon" — a push-your-luck side-game (Phase 1: solo MVP).
+ * "Hit the Dungeon" — a push-your-luck co-op side-game.
  *
- * A player leaves their poker seat and descends into the basement beneath the
- * poker hall to fight PF1e-flavored monsters on a simplified VTT, hauling gold
- * back up to the felt. This NEVER affects poker mechanics except to ADD gold to
- * a player's stack on a successful bail (gold = chips = gp, 1:1).
+ * Players leave their poker seat and descend into the basement beneath the poker
+ * hall to fight PF1e-flavored monsters, hauling gold back up to the felt. ONE
+ * shared run per table — players can dungeon TOGETHER as a party. The poker table
+ * keeps playing without them. This NEVER affects poker mechanics except to ADD
+ * gold to a player's stack on a successful bail (gold = chips = gp, 1:1).
  *
- * Combat reuses the cosmetic combat helpers (weaponOf / acOf / totalMagicBonus
- * + the fight sound pools) but tracks REAL hp here in the Dungeon instance —
- * chips are only ever touched at the very end (bail = credit; death = nothing).
+ * Everyone (human or bot) takes one turn per round in initiative order. A human
+ * who idles on their turn auto-PASSES after 10s (the party plays on). Each member
+ * bails individually for an even share of the current pool; a downed member is
+ * out with nothing. The run ends when no one's left fighting.
  *
- * See docs/DUNGEON_DESIGN.md for the full design.
+ * See docs/DUNGEON_DESIGN.md.
  */
 
 const db = require('../persistence/db');
 const { weaponOf, acOf, totalMagicBonus, SND, dRoll, pick } = require('./combat');
 const { logDungeon } = require('../persistence/logger');
 
-// ── Tuning knobs (all easily adjustable) ────────────────────────────────────
+// ── Tuning knobs ────────────────────────────────────────────────────────────
 const BASE_HP        = 30;     // gearless player hp
 const HP_PER_BONUS   = 10;     // +per ring tier and per cloak tier
 const LIGHTNING_MAX_TARGETS = 2;
-const SICKENED_ROUNDS = 3;     // duration applied by stinking cloud
-const SICKENED_PENALTY = 2;    // -2 to-hit and damage while sickened
-const PARALYZE_DC = 14;        // ghoul/ghast paralysis save DC
-// Monsters were missing too often and failing Reflex (lightning) saves too
-// much — buff their to-hit + saves. Tunable from dungeon.jsonl data.
+const SICKENED_ROUNDS = 3;
+const SICKENED_PENALTY = 2;
+const PARALYZE_DC = 14;
 const MON_TOHIT_BUFF = 3, MON_FORT_BUFF = 3, MON_REFLEX_BUFF = 4;
-const TURN_TIMER_MS  = 90_000; // AFK auto-bail after this on the player's turn
-const ENEMY_STEP_MS  = 750;    // pacing between auto-resolved enemy turns
-const BOSS_EVERY     = 5;      // every Nth room is a boss
+const AFK_PASS_MS    = 10_000; // idle on your turn → auto-pass after 10s
+const ENEMY_STEP_MS  = 750;    // pacing between auto-resolved enemy/ally turns
+const BOSS_EVERY     = 5;
 
-// ── Monster bestiary (placeholder art = emoji glyphs; swap for Foundry art) ──
-// hp is a base average; ac/toHit/dmg are PF1e-ish. fort/reflex are save mods.
+// ── Monster bestiary (placeholder art = emoji glyphs) ───────────────────────
 const MON = {
   dire_rat:          { name: 'Dire Rat',          glyph: '🐀', hp: 6,  ac: 13, toHit: 2, dmgDie: 4,  dmgBonus: 0, fort: 2, reflex: 3, gold: [4, 14] },
   giant_centipede:   { name: 'Giant Centipede',   glyph: '🐛', hp: 5,  ac: 14, toHit: 3, dmgDie: 4,  dmgBonus: 0, fort: 1, reflex: 4, gold: [4, 12] },
@@ -63,122 +62,124 @@ function rint(min, max) { return min + Math.floor(Math.random() * (max - min + 1
 let _uidSeq = 0;
 
 class Dungeon {
-  constructor({ leaderId, tableId, io, onExit }) {
-    this.id = leaderId;          // one run per leader (Phase 1)
-    this.leaderId = leaderId;
+  constructor({ tableId, io, onMemberExit, onEmpty }) {
+    this.id = tableId;           // one shared run per table
     this.tableId = tableId;
     this.io = io;
-    this._onExit = onExit;       // callback(dungeon) when the run ends
+    this._onMemberExit = onMemberExit;   // (playerId, nickname, exit) — chat + roster
+    this._onEmpty = onEmpty;             // () — run fully over, drop the instance
     this.depth = 0;
     this.round = 0;
     this.runGold = 0;
-    this.pendingLoot = [];       // [{ slot, tier }]
+    this.pendingLoot = [];       // [{ slot, tier, owner }]
     this.enemies = [];
+    this.party = [];             // members (see addMember)
     this.turnOrder = [];
     this.turnIdx = 0;
-    this.status = 'exploring';   // exploring | combat | victory | dead | bailed
+    this.status = 'exploring';   // exploring | combat | over
     this.log = [];
     this._logSeq = 0;
     this._turnTimer = null;
     this._stepTimer = null;
-
-    const p = db.getPlayer(leaderId) || { player_id: leaderId, nickname: leaderId };
-    const gear = db.getGear(leaderId);
-    const maxHp = BASE_HP + HP_PER_BONUS * ((Number(gear.ring) || 0) + (Number(gear.cloak) || 0));
-    this.party = [{
-      playerId: leaderId,
-      nickname: p.nickname || leaderId,
-      avatarId: p.avatar_id || null,
-      isBot: false,
-      isLeader: true,
-      gear,
-      hp: maxHp,
-      maxHp,
-      sickened: 0,
-      paralyzed: 0,
-      usedLightning: false,   // ONE lightning + ONE stinking per room
-      usedStinking: false,
-    }];
-    this._note(`🗡️ ${this.party[0].nickname} descends into the dungeon. (${maxHp} HP)`);
-    this._log('start', { maxHp, party: this.party.length });
   }
 
   roomName() { return `dungeon:${this.id}`; }
   _note(text, sound) { this.log.push({ t: ++this._logSeq, text, sound: sound || null }); if (this.log.length > 150) this.log.shift(); }
-  // Persist a dungeon event to dungeon.jsonl for troubleshooting + tuning.
   _log(type, extra) {
-    try { logDungeon({ type, run: this.id, leader: this.leaderId, depth: this.depth, round: this.round, ...(extra || {}) }); } catch (_) {}
+    try { logDungeon({ type, run: this.id, depth: this.depth, round: this.round, ...(extra || {}) }); } catch (_) {}
   }
-  leader() { return this.party[0]; }
-  livingParty() { return this.party.filter(m => m.hp > 0); }
+
+  // ── Party membership ──────────────────────────────────────────────────────
+  member(playerId) { return this.party.find(m => m.playerId === playerId); }
+  present() { return this.party.filter(m => !m.left); }                 // still in the run (alive or downed-this-tick)
+  alivePresent() { return this.party.filter(m => !m.left && m.hp > 0); }
+  livingParty() { return this.alivePresent(); }
   livingEnemies() { return this.enemies.filter(e => e.hp > 0); }
+
+  hasMember(playerId) { const m = this.member(playerId); return !!(m && !m.left && m.hp > 0); }
+
+  addMember(player, isBot = false) {
+    const playerId = player.player_id;
+    const idx = this.party.findIndex(m => m.playerId === playerId);
+    if (idx >= 0 && !this.party[idx].left && this.party[idx].hp > 0) return this.party[idx];  // already active
+    if (idx >= 0) this.party.splice(idx, 1);   // drop a stale (downed/bailed) entry → rejoin fresh
+    const gear = db.getGear(playerId);
+    const maxHp = BASE_HP + HP_PER_BONUS * ((Number(gear.ring) || 0) + (Number(gear.cloak) || 0));
+    const m = {
+      playerId,
+      nickname: player.nickname || playerId,
+      avatarId: player.avatar_id || null,
+      isBot: !!isBot,
+      gear,
+      hp: maxHp, maxHp,
+      sickened: 0, paralyzed: 0,
+      usedLightning: false, usedStinking: false,
+      left: false, dead: false,
+    };
+    this.party.push(m);
+    this._note(`🚪 ${m.nickname} joins the delve. (${maxHp} HP)`);
+    this._log('join', { who: playerId, maxHp, party: this.present().length });
+    // Mid-combat join → add to the current turn order so they act this round.
+    if (this.status === 'combat') this.turnOrder.push({ kind: 'party', id: playerId, init: dRoll(20) + 2 });
+    this._broadcast();
+    return m;
+  }
 
   // ── Broadcasting ──────────────────────────────────────────────────────────
   publicState() {
     return {
       id: this.id,
-      leaderId: this.leaderId,
       depth: this.depth,
       round: this.round,
       status: this.status,
       runGold: this.runGold,
       party: this.party.map(m => ({
-        playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId,
-        isBot: m.isBot, isLeader: m.isLeader, hp: Math.max(0, m.hp), maxHp: m.maxHp,
-        sickened: m.sickened > 0,
-        paralyzed: m.paralyzed > 0,
-        lightningReady: !m.usedLightning,
-        stinkingReady: !m.usedStinking,
+        playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot,
+        hp: Math.max(0, m.hp), maxHp: m.maxHp,
+        dead: m.hp <= 0, left: !!m.left,
+        sickened: m.sickened > 0, paralyzed: m.paralyzed > 0,
+        lightningReady: !m.usedLightning, stinkingReady: !m.usedStinking,
       })),
       enemies: this.enemies.map(e => ({
         uid: e.uid, name: e.name, glyph: e.glyph, boss: !!e.boss,
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
       })),
-      turn: this._currentTurn(),       // { kind:'party'|'enemy', id }
+      turn: this._currentTurn(),
       pendingLoot: this.pendingLoot.map((l, i) => ({
-        idx: i, slot: l.slot, tier: l.tier,
+        idx: i, slot: l.slot, tier: l.tier, owner: l.owner,
         label: (db.GEAR_BY_KEY[l.slot]?.label || l.slot),
         hockValue: db.gearHockValue(l.slot, l.tier),
       })),
       log: this.log.slice(-60),
     };
   }
-  _broadcast() {
-    if (this.io) this.io.to(this.roomName()).emit('dungeon:state', this.publicState());
-  }
-  // Echo a combat sound to the poker table so seated players hear muffled
-  // thumps from the basement.
+  _broadcast() { if (this.io) this.io.to(this.roomName()).emit('dungeon:state', this.publicState()); }
   _echoToTable(sound) {
     if (sound && this.io && this.tableId) this.io.to(`table:${this.tableId}`).emit('dungeon:echo', { sound });
   }
 
-  // ── Turn order helpers ──────────────────────────────────────────────────
+  // ── Turn helpers ──────────────────────────────────────────────────────────
   _currentTurn() {
     if (this.status !== 'combat') return null;
     const ent = this.turnOrder[this.turnIdx];
     return ent ? { kind: ent.kind, id: ent.id } : null;
   }
-  _isLeaderTurn() {
-    const t = this._currentTurn();
-    return !!(t && t.kind === 'party' && t.id === this.leaderId);
-  }
+  _currentActorId() { const t = this._currentTurn(); return t && t.kind === 'party' ? t.id : null; }
 
   // ── Exploration: open the next door → roll an encounter ──────────────────
   openDoor() {
     if (this.status !== 'exploring') return { ok: false, error: 'not exploring' };
     this.depth += 1;
     this._spawnRoom();
-    // Fresh spell charges each room: 1 lightning + 1 stinking per room.
-    for (const m of this.party) { m.usedLightning = false; m.usedStinking = false; }
+    for (const m of this.present()) { m.usedLightning = false; m.usedStinking = false; }  // 1 of each per room
     this.status = 'combat';
     this.round = 1;
     this._rollInitiative();
     this._note(`🚪 Door creaks open — room ${this.depth}. ${this._enemySummary()}`);
-    this._log('room', { boss: this.enemies.some(e => e.boss), enemies: this.enemies.map(e => ({ name: e.name, hp: e.maxHp, ac: e.ac })) });
+    this._log('room', { boss: this.enemies.some(e => e.boss), party: this.present().length, enemies: this.enemies.map(e => ({ name: e.name, hp: e.maxHp, ac: e.ac })) });
     this._beginTurnCycle();
     return { ok: true };
   }
-
   _spawnRoom() {
     this.enemies = [];
     const boss = this.depth % BOSS_EVERY === 0;
@@ -186,25 +187,25 @@ class Dungeon {
     const hpScale = 1 + Math.max(0, this.depth - 1) * 0.06;
     const acBump = Math.floor(this.depth / 4);
     const goldScale = 1 + this.depth * 0.05;
-    const count = boss ? 1 : rint(this.depth <= 3 ? 1 : 2, this.depth <= 3 ? 3 : 4);
+    // Scale enemy count up a little with party size so groups aren't trivial.
+    const partyN = Math.max(1, this.alivePresent().length);
+    const lo = this.depth <= 3 ? 1 : 2, hi = (this.depth <= 3 ? 3 : 4) + (partyN - 1);
+    const count = boss ? 1 : rint(lo, hi);
     for (let i = 0; i < count; i++) {
-      const key = pick(BANDS[band]);
-      const base = MON[key];
+      const base = MON[pick(BANDS[band])];
       const hp = Math.max(3, Math.round(base.hp * hpScale * (boss ? 1.8 : 1)));
       const goldLo = Math.round(base.gold[0] * goldScale * (boss ? 3 : 1));
       const goldHi = Math.round(base.gold[1] * goldScale * (boss ? 3 : 1));
       this.enemies.push({
         uid: `e${++_uidSeq}`,
         name: boss ? `Boss: ${base.name}` : base.name,
-        glyph: boss ? '👑' : base.glyph,
-        boss,
+        glyph: boss ? '👑' : base.glyph, boss,
         hp, maxHp: hp,
         ac: base.ac + acBump + (boss ? 2 : 0),
         toHit: base.toHit + MON_TOHIT_BUFF + (boss ? 2 : 0),
         dmgDie: base.dmgDie, dmgBonus: base.dmgBonus + (boss ? 2 : 0),
         fort: base.fort + MON_FORT_BUFF, reflex: base.reflex + MON_REFLEX_BUFF,
-        paralyze: !!base.paralyze,
-        sickened: 0,
+        paralyze: !!base.paralyze, sickened: 0,
         gold: rint(goldLo, goldHi),
       });
     }
@@ -214,85 +215,56 @@ class Dungeon {
     for (const e of this.enemies) counts[e.name] = (counts[e.name] || 0) + 1;
     return Object.entries(counts).map(([n, c]) => (c > 1 ? `${c}× ${n}` : n)).join(', ') + '.';
   }
-
   _rollInitiative() {
     const order = [];
-    for (const m of this.party) if (m.hp > 0) order.push({ kind: 'party', id: m.playerId, init: dRoll(20) + 2 });
+    for (const m of this.alivePresent()) order.push({ kind: 'party', id: m.playerId, init: dRoll(20) + 2 });
     for (const e of this.enemies) order.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });
     order.sort((a, b) => b.init - a.init);
     this.turnOrder = order;
     this.turnIdx = 0;
   }
 
-  // ── Turn loop: auto-resolve enemy turns; pause for the player ────────────
-  _beginTurnCycle() {
-    clearTimeout(this._stepTimer);
-    this._advanceToActor();
-  }
+  // ── Turn loop ─────────────────────────────────────────────────────────────
+  _beginTurnCycle() { clearTimeout(this._stepTimer); this._advanceToActor(); }
   _advanceToActor() {
     if (this._endIfResolved()) return;
     const t = this._currentTurn();
     if (!t) return;
-    // Skip dead actors.
     if (t.kind === 'enemy') {
       const e = this.enemies.find(x => x.uid === t.id);
       if (!e || e.hp <= 0) return this._nextTurn();
-      // Sickened (Stinking Cloud): the creature LOSES its turn entirely (and is
-      // +2 to be hit while sickened — applied in _playerAttack).
-      if (e.sickened > 0) {
-        e.sickened -= 1;
-        this._note(`${e.glyph} ${e.name} retches in the cloud — loses its turn.`);
-        this._broadcast();
-        return this._nextTurn();
-      }
+      if (e.sickened > 0) { e.sickened -= 1; this._note(`${e.glyph} ${e.name} retches in the cloud — loses its turn.`); this._broadcast(); return this._nextTurn(); }
       this._stepTimer = setTimeout(() => { this._enemyAct(e); this._nextTurn(); }, ENEMY_STEP_MS);
       this._broadcast();
       return;
     }
     // party member
-    const m = this.party.find(x => x.playerId === t.id);
-    if (!m || m.hp <= 0) return this._nextTurn();
-    // Paralysis (ghoul/ghast) — lose the turn.
-    if (m.paralyzed > 0) {
-      m.paralyzed -= 1;
-      this._note(`🥶 ${m.nickname} is paralyzed — loses the turn.`);
-      this._broadcast();
-      return this._nextTurn();
-    }
-    this._tickSickened(m);
-    if (m.isLeader) {
-      // Human leader — wait for input; arm the AFK auto-bail.
-      this._armTurnTimer();
-      this._broadcast();
-    } else {
-      // (Phase 2) AI ally auto-acts. For MVP there are no allies.
-      this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, ENEMY_STEP_MS);
-      this._broadcast();
-    }
+    const m = this.member(t.id);
+    if (!m || m.left || m.hp <= 0) return this._nextTurn();
+    if (m.paralyzed > 0) { m.paralyzed -= 1; this._note(`🥶 ${m.nickname} is paralyzed — loses the turn.`); this._broadcast(); return this._nextTurn(); }
+    if (m.sickened > 0) m.sickened -= 1;
+    if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, ENEMY_STEP_MS); this._broadcast(); }
+    else { this._armAfkTimer(m); this._broadcast(); }   // human — wait for input
   }
   _nextTurn() {
     if (this._endIfResolved()) return;
     this.turnIdx += 1;
-    if (this.turnIdx >= this.turnOrder.length) {
-      this.turnIdx = 0;
-      this.round += 1;
-    }
+    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; }
     this._advanceToActor();
   }
-  _tickSickened(actor) { if (actor.sickened > 0) actor.sickened -= 1; }
-
-  _armTurnTimer() {
+  _armAfkTimer(m) {
     clearTimeout(this._turnTimer);
     this._turnTimer = setTimeout(() => {
-      this._note('💤 Idle too long — auto-bailing with your gold.');
-      this.bail();
-    }, TURN_TIMER_MS);
+      this._note(`💤 ${m.nickname} is idle — passes.`);
+      this._broadcast();
+      this._nextTurn();
+    }, AFK_PASS_MS);
   }
 
-  // ── End-of-combat / run checks ───────────────────────────────────────────
+  // ── Resolution / run-over ────────────────────────────────────────────────
   _endIfResolved() {
     if (this.status !== 'combat') return true;
-    if (this.leader().hp <= 0) { this._die(); return true; }
+    if (this.alivePresent().length === 0) { this._runOver(); return true; }
     if (this.livingEnemies().length === 0) { this._clearRoom(); return true; }
     return false;
   }
@@ -301,87 +273,77 @@ class Dungeon {
     this.status = 'exploring';
     const gold = this.enemies.reduce((s, e) => s + (e.gold || 0), 0);
     this.runGold += gold;
-    this._note(`✨ Room cleared! +${gold} gp (run total ${this.runGold} gp).`);
+    this._note(`✨ Room cleared! +${gold} gp (pool ${this.runGold} gp).`);
     this._log('clear', { gold, runGold: this.runGold });
     this._maybeDropLoot();
     this._broadcast();
   }
+  _runOver() {
+    clearTimeout(this._turnTimer); clearTimeout(this._stepTimer);
+    this.status = 'over';
+    this._broadcast();
+    if (this._onEmpty) try { this._onEmpty(); } catch (_) {}
+  }
   _maybeDropLoot() {
-    // Magic loot is RARE and slow. Early rooms almost never drop one, and the
-    // tier you can find is capped by depth so +2/+3 items only appear deeper.
     const chance = this.depth <= 3 ? 0.015 : Math.min(0.12, 0.02 + (this.depth - 3) * 0.011);
     if (Math.random() >= chance) return;
-    const maxTier = Math.min(5, 1 + Math.floor(this.depth / 4));   // +1 @1-3, +2 @4-7, +3 @8-11 …
-    // Slot the winner can still upgrade within the depth cap.
-    const baseGear = this.leader().gear;
-    const options = db.GEAR_SLOT_KEYS.filter(k => (Number(baseGear[k]) || 0) < maxTier);
+    const maxTier = Math.min(5, 1 + Math.floor(this.depth / 4));
+    const winner = this._rollLootWinner();
+    if (!winner) return;
+    const options = db.GEAR_SLOT_KEYS.filter(k => (Number(winner.gear[k]) || 0) < maxTier);
     if (!options.length) return;
     const slot = pick(options);
-    // ONE character claims the drop. Solo → the leader. With a party, eligible
-    // members roll off (highest d20), even if the winner just plans to hock it.
-    const winner = this._rollLootWinner();
-    const tier = (Number((winner.gear || {})[slot]) || 0) + 1;
+    const tier = (Number(winner.gear[slot]) || 0) + 1;
     if (tier > maxTier) return;
     this.pendingLoot.push({ slot, tier, owner: winner.playerId });
     this._note(`💎 ${winner.nickname}${winner.rolled ? ' won the roll-off and' : ''} found a +${tier} ${db.GEAR_BY_KEY[slot]?.label || slot}!`);
     this._log('loot', { slot, tier, owner: winner.playerId, rolled: !!winner.rolled });
   }
   _rollLootWinner() {
-    const eligible = this.party.filter(m => m.hp > 0);
-    if (eligible.length <= 1) { const m = this.leader(); return { playerId: m.playerId, nickname: m.nickname, gear: m.gear, rolled: false }; }
+    const eligible = this.alivePresent();
+    if (!eligible.length) return null;
+    if (eligible.length === 1) return { ...eligible[0], rolled: false };
     let best = eligible[0], bestRoll = -1;
     for (const m of eligible) { const r = dRoll(20); if (r > bestRoll) { bestRoll = r; best = m; } }
-    return { playerId: best.playerId, nickname: best.nickname, gear: best.gear, rolled: true };
+    return { ...best, rolled: true };
   }
 
-  // ── Combat resolution (rolls shown in the dungeon log) ───────────────────
+  // ── Combat math (rolls shown in the log) ─────────────────────────────────
   _fmtBonus(n) { return (n >= 0 ? '+' : '') + n; }
   _partySaveMod(m) { return (Number(m.gear?.ring) || 0) + (Number(m.gear?.cloak) || 0); }
   _atkStr(r) { return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`; }
-
   _swingVsAC(attacker, ac) {
     const weapon = attacker.weapon;
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
     const toHit = weapon.toHit - sick;
-    const roll = dRoll(20);
-    const total = roll + toHit;
+    const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
-    let dmg = dRoll(weapon.dmgDie) + weapon.dmgBonus - sick;
-    let crit = false;
-    if (roll >= weapon.critRange) {
-      const conf = dRoll(20) + weapon.toHit;
-      if (conf === 20 || conf >= ac) { crit = true; dmg += dRoll(weapon.dmgDie) + weapon.dmgBonus; }
-    }
+    let dmg = dRoll(weapon.dmgDie) + weapon.dmgBonus - sick, crit = false;
+    if (roll >= weapon.critRange) { const conf = dRoll(20) + weapon.toHit; if (conf === 20 || conf >= ac) { crit = true; dmg += dRoll(weapon.dmgDie) + weapon.dmgBonus; } }
     return { hit: true, crit, damage: Math.max(1, dmg), roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
-  // Generic d20 attack used by monsters (no gear object).
   _monsterSwing(e, targetAC) {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const toHit = e.toHit - sick;
-    const roll = dRoll(20);
-    const total = roll + toHit;
+    const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
     if (!hit) return { hit: false, roll, toHit, total, ac: targetAC, sound: pick(SND.whiffSword) };
-    let dmg = dRoll(e.dmgDie) + e.dmgBonus - sick;
-    return { hit: true, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
+    return { hit: true, damage: Math.max(1, dRoll(e.dmgDie) + e.dmgBonus - sick), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
   }
-
   _enemyAct(e) {
     const targets = this.livingParty();
     if (!targets.length) return;
     const target = pick(targets);
-    const ac = acOf(target.gear).ac;
-    const r = this._monsterSwing(e, ac);
+    const r = this._monsterSwing(e, acOf(target.gear).ac);
     if (r.hit) {
       target.hp -= r.damage;
       this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${r.damage}. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
-      // Ghoul/ghast paralysis: the victim saves or loses their next turn.
-      if (e.paralyze && target.hp > 0) {
-        const sm = this._partySaveMod(target);
-        const sroll = dRoll(20), stot = sroll + sm;
+      if (target.hp <= 0) this._memberDown(target);
+      else if (e.paralyze) {
+        const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
         const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= PARALYZE_DC;
         if (!saved) { target.paralyzed = 1; this._note(`🥶 ${target.nickname} fails the paralysis save [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${PARALYZE_DC}] — paralyzed!`); }
         else this._note(`${target.nickname} resists paralysis [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${PARALYZE_DC}].`);
@@ -391,40 +353,37 @@ class Dungeon {
     }
     this._echoToTable(r.sound);
   }
-  _allyAct(m) {  // Phase 2 — simple auto-attack
-    const foes = this.livingEnemies();
-    if (!foes.length) return;
-    const target = foes[0];
-    this._playerAttack(m, target.uid, true);
+  _allyAct(m) { const foes = this.livingEnemies(); if (foes.length) this._playerAttack(m, foes[0].uid); }
+  _memberDown(m) {
+    if (m.dead) return;
+    m.dead = true;   // hp<=0 already; the turn loop skips them, run ends in _endIfResolved
+    this._note(`☠️ ${m.nickname} falls in the dungeon — out of the run.`);
+    this._log('death', { who: m.playerId, depthReached: this.depth });
+    this._emitMemberExit(m, { reason: 'dead', goldBanked: 0 });
   }
 
   // ── Player actions (from dungeon:action) ─────────────────────────────────
   action(playerId, kind, payload = {}) {
-    if (playerId !== this.leaderId) return { ok: false, error: 'not your run' };
+    const m = this.member(playerId);
+    if (!m || m.left) return { ok: false, error: 'not in this run' };
+
+    // Bail + loot management are allowed any time (not just on your turn).
+    if (kind === 'bail') return this.bail(playerId);
+    if (kind === 'equip') { const r = this.equipLoot(playerId, payload.idx); this._broadcast(); return r; }
+    if (kind === 'hock')  { const r = this.hockLoot(playerId, payload.idx); this._broadcast(); return r; }
+
     if (this.status === 'exploring') {
       if (kind === 'door') return this.openDoor();
-      if (kind === 'bail') return this.bail();
-      let r;
-      if (kind === 'equip') r = this.equipLoot(payload.idx);
-      else if (kind === 'hock') r = this.hockLoot(payload.idx);
-      else return { ok: false, error: 'invalid while exploring' };
-      this._broadcast();
-      return r;
+      return { ok: false, error: 'invalid while exploring' };
     }
     if (this.status !== 'combat') return { ok: false, error: 'run is over' };
-    if (!this._isLeaderTurn()) return { ok: false, error: 'not your turn' };
+    if (this._currentActorId() !== playerId) return { ok: false, error: 'not your turn' };
     clearTimeout(this._turnTimer);
-    const m = this.leader();
-    this._log('action', { kind, partyHp: m.hp, enemiesAlive: this.livingEnemies().length });
-    let handled = true;
-    if (kind === 'attack')        this._playerAttack(m, payload.targetUid);
-    else if (kind === 'lightning') { if (m.usedLightning) { this._armTurnTimer(); return { ok: false, error: 'lightning already used this room' }; } this._castLightning(m, payload.targetUids || []); }
-    else if (kind === 'stinking')  { if (m.usedStinking) { this._armTurnTimer(); return { ok: false, error: 'stinking already used this room' }; } this._castStinking(m); }
-    else if (kind === 'bail')      { return this.bail(); }
-    else if (kind === 'equip')     { this.equipLoot(payload.idx); this._armTurnTimer(); this._broadcast(); return { ok: true }; }
-    else if (kind === 'hock')      { this.hockLoot(payload.idx); this._armTurnTimer(); this._broadcast(); return { ok: true }; }
-    else handled = false;
-    if (!handled) { this._armTurnTimer(); return { ok: false, error: 'unknown action' }; }
+    this._log('action', { who: playerId, kind, hp: m.hp, enemiesAlive: this.livingEnemies().length });
+    if (kind === 'attack')         this._playerAttack(m, payload.targetUid);
+    else if (kind === 'lightning') { if (m.usedLightning) { this._armAfkTimer(m); return { ok: false, error: 'lightning already used this room' }; } this._castLightning(m, payload.targetUids || []); }
+    else if (kind === 'stinking')  { if (m.usedStinking) { this._armAfkTimer(m); return { ok: false, error: 'stinking already used this room' }; } this._castStinking(m); }
+    else { this._armAfkTimer(m); return { ok: false, error: 'unknown action' }; }
     this._nextTurn();
     return { ok: true };
   }
@@ -433,23 +392,19 @@ class Dungeon {
     const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
     if (!e) return;
     m.weapon = weaponOf(m.gear);
-    // Sickened creatures are +2 to be hit (effectively -2 AC).
-    const r = this._swingVsAC(m, e.sickened > 0 ? e.ac - 2 : e.ac);
+    const r = this._swingVsAC(m, e.sickened > 0 ? e.ac - 2 : e.ac);   // sickened: +2 to be hit
     if (r.fumble) this._note(`${m.nickname} fumbles the attack! ${this._atkStr(r)}`, r.sound);
     else if (r.hit) { e.hp -= r.damage; this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${e.name} for ${r.damage}. ${this._atkStr(r)}${e.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, e.hp)}/${e.maxHp})`}`, r.sound); }
     else this._note(`${m.nickname} misses ${e.name}. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
   }
   _castLightning(m, targetUids) {
-    if (m.usedLightning) { this._note('⚡ Lightning Bolt already used this room.'); return; }
     m.usedLightning = true;
-    const power = Math.max(2, totalMagicBonus(m.gear));
-    const dc = 10 + power;
+    const power = Math.max(2, totalMagicBonus(m.gear)), dc = 10 + power;
     let chosen = (targetUids || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0)).filter(Boolean);
     if (!chosen.length) chosen = this.livingEnemies().slice(0, LIGHTNING_MAX_TARGETS);
     chosen = chosen.slice(0, LIGHTNING_MAX_TARGETS);
-    const sound = pick(SND.lightning);
-    const parts = [];
+    const sound = pick(SND.lightning), parts = [];
     for (const e of chosen) {
       let full = 0; for (let i = 0; i < power; i++) full += dRoll(6);
       const sroll = dRoll(20), stot = sroll + e.reflex;
@@ -462,12 +417,9 @@ class Dungeon {
     this._echoToTable(sound);
   }
   _castStinking(m) {
-    if (m.usedStinking) { this._note('💨 Stinking Cloud already used this room.'); return; }
     m.usedStinking = true;
-    const power = Math.max(2, totalMagicBonus(m.gear));
-    const dc = 10 + power;
-    const sound = pick(SND.stink);
-    const parts = [];
+    const power = Math.max(2, totalMagicBonus(m.gear)), dc = 10 + power;
+    const sound = pick(SND.stink), parts = [];
     for (const e of this.livingEnemies()) {
       const sroll = dRoll(20), stot = sroll + e.fort;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
@@ -478,64 +430,56 @@ class Dungeon {
     this._echoToTable(sound);
   }
 
-  // ── Loot management ──────────────────────────────────────────────────────
-  equipLoot(idx) {
+  // ── Loot (per owner) ──────────────────────────────────────────────────────
+  equipLoot(playerId, idx) {
     const loot = this.pendingLoot[idx];
-    if (!loot) return { ok: false, error: 'no such loot' };
-    const gear = db.getGear(this.leaderId);
+    if (!loot || loot.owner !== playerId) return { ok: false, error: 'not your loot' };
+    const m = this.member(playerId); if (!m) return { ok: false, error: 'gone' };
+    const gear = db.getGear(playerId);
     if ((Number(gear[loot.slot]) || 0) >= loot.tier) { this.pendingLoot.splice(idx, 1); return { ok: false, error: 'already better' }; }
     gear[loot.slot] = loot.tier;
-    db.setGear(this.leaderId, gear);
-    this.leader().gear = gear;
-    // Ring / cloak raise max HP mid-run; grant the new headroom + heal it.
-    if (loot.slot === 'ring' || loot.slot === 'cloak') {
-      const m = this.leader();
-      m.maxHp += HP_PER_BONUS; m.hp += HP_PER_BONUS;
-    }
+    db.setGear(playerId, gear);
+    m.gear = gear;
+    if (loot.slot === 'ring' || loot.slot === 'cloak') { m.maxHp += HP_PER_BONUS; m.hp += HP_PER_BONUS; }
     this.pendingLoot.splice(idx, 1);
-    this._note(`🛡️ Equipped the +${loot.tier} ${db.GEAR_BY_KEY[loot.slot]?.label || loot.slot}.`);
+    this._note(`🛡️ ${m.nickname} equipped the +${loot.tier} ${db.GEAR_BY_KEY[loot.slot]?.label || loot.slot}.`);
     return { ok: true };
   }
-  hockLoot(idx) {
+  hockLoot(playerId, idx) {
     const loot = this.pendingLoot[idx];
-    if (!loot) return { ok: false, error: 'no such loot' };
+    if (!loot || loot.owner !== playerId) return { ok: false, error: 'not your loot' };
     const v = db.gearHockValue(loot.slot, loot.tier);
     this.runGold += v;
     this.pendingLoot.splice(idx, 1);
-    this._note(`💰 Hocked the +${loot.tier} ${db.GEAR_BY_KEY[loot.slot]?.label || loot.slot} for ${v} gp.`);
+    this._note(`💰 ${this.member(playerId)?.nickname || playerId} hocked a +${loot.tier} ${db.GEAR_BY_KEY[loot.slot]?.label || loot.slot} for ${v} gp (into the pool).`);
     return { ok: true };
   }
 
-  // ── Run end ──────────────────────────────────────────────────────────────
-  bail() {
-    if (this.status === 'dead' || this.status === 'bailed') return { ok: false, error: 'run over' };
-    clearTimeout(this._turnTimer); clearTimeout(this._stepTimer);
-    this.status = 'bailed';
-    // Even split across the party (solo = all to leader). Phase 2 pays allies.
-    const share = Math.floor(this.runGold / this.party.length);
-    for (const m of this.party) {
-      const p = db.getPlayer(m.playerId);
-      if (p) db.setChips(m.playerId, p.chips + share);
-    }
-    this._note(`🪜 Climbed out with ${this.runGold} gp${this.party.length > 1 ? ` (split ${share} each)` : ''}.`);
-    this._log('bail', { gold: this.runGold, share });
-    this._finish({ reason: 'bailed', goldBanked: this.runGold });
-    return { ok: true, goldBanked: this.runGold };
+  // ── Exits ─────────────────────────────────────────────────────────────────
+  // One member climbs out with an even share of the current pool.
+  bail(playerId) {
+    const m = this.member(playerId);
+    if (!m || m.left) return { ok: false, error: 'not in this run' };
+    const wasActor = this._currentActorId() === playerId;
+    const denom = Math.max(1, this.alivePresent().length);
+    const share = Math.floor(this.runGold / denom);
+    this.runGold -= share;
+    const p = db.getPlayer(playerId);
+    if (p) db.setChips(playerId, p.chips + share);
+    m.left = true;   // turn loop skips left members; entry stays for index integrity
+    this._note(`🪜 ${m.nickname} climbed out with ${share} gp.`);
+    this._log('bail', { who: playerId, share, poolLeft: this.runGold });
+    this._emitMemberExit(m, { reason: 'bailed', goldBanked: share });
+    if (this.alivePresent().length === 0) { this._runOver(); return { ok: true, goldBanked: share }; }
+    // Only nudge the turn cycle if the bailer was the one we were waiting on.
+    if (this.status === 'combat' && wasActor) { clearTimeout(this._turnTimer); this._nextTurn(); }
+    else this._broadcast();
+    return { ok: true, goldBanked: share };
   }
-  _die() {
-    clearTimeout(this._turnTimer); clearTimeout(this._stepTimer);
-    this.status = 'dead';
-    this._note(`☠️ ${this.leader().nickname} falls! The run's gold and unbanked loot are lost.`);
-    this._log('death', { depthReached: this.depth, lostGold: this.runGold });
-    this.runGold = 0;
-    this.pendingLoot = [];
-    this._finish({ reason: 'dead', goldBanked: 0 });
-  }
-  _finish(exit) {
-    this.exit = exit;
-    this._broadcast();
-    if (this.io) this.io.to(this.roomName()).emit('dungeon:exit', exit);
-    if (this._onExit) try { this._onExit(this); } catch (_) {}
+  // Tell THIS player's client to surface back to the table; notify the table.
+  _emitMemberExit(m, exit) {
+    if (this.io) this.io.to(this.roomName()).emit('dungeon:exit', { playerId: m.playerId, ...exit });
+    if (this._onMemberExit) try { this._onMemberExit(m.playerId, m.nickname, exit); } catch (_) {}
   }
   destroy() { clearTimeout(this._turnTimer); clearTimeout(this._stepTimer); }
 }

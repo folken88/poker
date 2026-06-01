@@ -74,6 +74,9 @@ button, input { font: inherit; color: inherit; }
 .dungeon__party { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; }
 .dpc { width: 190px; background: rgba(0,0,0,0.4); border: 1px solid rgba(217,176,106,0.3); border-radius: 10px; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
 .dpc.is-low { border-color: rgba(220,80,80,0.7); }
+.dpc.is-me { border-color: rgba(241,207,131,0.7); }
+.dpc.is-turn { box-shadow: 0 0 0 2px rgba(241,207,131,0.55); }
+.dpc.is-out { opacity: 0.4; filter: grayscale(0.8); }
 .dpc__name { font-size: 0.82rem; font-weight: 600; }
 .dpc__hpbar span { display: block; height: 100%; background: linear-gradient(90deg,#3fa34d,#7bd06a); }
 .dpc.is-low .dpc__hpbar span { background: linear-gradient(90deg,#c84a4a,#e8a15b); }

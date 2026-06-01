@@ -984,7 +984,7 @@
     return `${alive.length} enemies. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${e.hp}${e.sickened ? ', sickened' : ''}`).join('. ') + '.';
   }
   function _dunNarrateFull(d) {
-    const me = (d.party || []).find(m => m.isLeader) || {};
+    const me = (d.party||[]).find(m => m.playerId === (state.deps?.state?.me?.player_id)) || {};
     const bits = [`Depth ${d.depth}.`, `You have ${me.hp} of ${me.maxHp} hit points.`, _dunEnemyPhrase(d), `${d.runGold} gold this run.`];
     if (d.status === 'exploring') bits.push('Say open to descend, or bail to leave.');
     else if (d.status === 'combat') bits.push('Say attack, lightning, stink, or bail. Add a number to target, like attack two.');
@@ -1015,7 +1015,7 @@
     if (turnKey !== _dun.turnKey) {
       _dun.turnKey = turnKey;
       if (st.status === 'combat' && st.turn && st.turn.kind === 'party' && st.turn.id === meId) {
-        const me = (st.party || []).find(m => m.isLeader) || {};
+        const me = (st.party||[]).find(m => m.playerId === meId) || {};
         speak(`Your turn. ${me.hp} hit points. ${_dunEnemyPhrase(st)} Attack, lightning, stink, or bail.`, 'urgent');
       } else if (st.status === 'exploring' && _dun.status === 'combat') {
         speak('Room clear. Open the next door, or bail with your gold.', 'event');
@@ -1040,7 +1040,7 @@
     // Queries
     if (/^(read|status|state|where am i|situation)$/.test(raw)) { _dunNarrateFull(d); return true; }
     if (/^(enemies|targets|who.?s here)$/.test(raw)) { speak(_dunEnemyPhrase(d), 'urgent'); return true; }
-    if (/^(hp|health|my health|my hp)$/.test(raw)) { const me = (d.party || []).find(m => m.isLeader) || {}; speak(`${me.hp} of ${me.maxHp} hit points.`, 'urgent'); return true; }
+    if (/^(hp|health|my health|my hp)$/.test(raw)) { const me = (d.party||[]).find(m => m.playerId === (state.deps?.state?.me?.player_id)) || {}; speak(`${me.hp} of ${me.maxHp} hit points.`, 'urgent'); return true; }
     if (/^(gold|my gold|loot)$/.test(raw)) { speak(`${d.runGold} gold this run.`, 'urgent'); return true; }
     // Actions
     if (/^(open|door|next|deeper|descend|go down|go deeper)$/.test(raw)) { emit('door'); return true; }

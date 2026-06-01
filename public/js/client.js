@@ -647,25 +647,28 @@
   });
 
   socket.on('dungeon:exit', (exit) => {
-    state.dungeonExit = exit || null;
+    // Per-player now: only surface back to the table if this exit is MINE.
+    if (!exit || exit.playerId !== state.me?.player_id) return;
+    state.dungeonExit = exit;
     if (document.body.dataset.screen === 'dungeon') renderDungeon();
-    // Brief pause so the player reads the final log line, then surface back up.
     setTimeout(() => {
-      const dead = exit?.reason === 'dead';
-      toast(dead ? '☠️ You fell in the dungeon — the run\'s gold is lost.'
-                 : `🪜 Back at the table with ${formatChips(exit?.goldBanked || 0)} gp.`, dead);
+      const dead = exit.reason === 'dead';
+      toast(dead ? '☠️ You fell in the dungeon — your share is lost.'
+                 : `🪜 Back at the table with ${formatChips(exit.goldBanked || 0)} gp.`, dead);
       returnFromDungeon();
-    }, 1600);
+    }, 1400);
   });
 
   function renderDungeon() {
     const d = state.dungeon;
     if (!d) return;
     const meId = state.me?.player_id;
-    const isLeaderTurn = !!(d.turn && d.turn.kind === 'party' && d.turn.id === meId);
+    const turnId = (d.turn && d.turn.kind === 'party') ? d.turn.id : null;
+    const isMyTurn = turnId === meId;
+    const turnName = turnId ? ((d.party || []).find(m => m.playerId === turnId)?.nickname || 'someone') : null;
 
     const meta = $('#dungeonMeta');
-    if (meta) meta.textContent = `Depth ${d.depth} · Round ${d.round || 0} · 💰 ${formatChips(d.runGold)} gp`;
+    if (meta) meta.textContent = `Depth ${d.depth} · Round ${d.round || 0} · 💰 ${formatChips(d.runGold)} gp pool`;
 
     const ene = $('#dungeonEnemies');
     if (ene) ene.innerHTML = (d.enemies || []).length
@@ -685,8 +688,12 @@
     const party = $('#dungeonParty');
     if (party) party.innerHTML = (d.party || []).map(m => {
       const pct = m.maxHp ? Math.max(0, Math.round(100 * m.hp / m.maxHp)) : 0;
-      return `<div class="dpc ${pct <= 30 ? 'is-low' : ''}">
-        <div class="dpc__name">${escapeText(m.nickname)}${m.isLeader ? ' (you)' : ''}${m.sickened ? ' 🤢' : ''}${m.paralyzed ? ' 🥶' : ''}</div>
+      const isMe = m.playerId === meId;
+      const isTurn = m.playerId === turnId;
+      const cls = ['dpc']; if (pct <= 30) cls.push('is-low'); if (m.dead || m.left) cls.push('is-out'); if (isMe) cls.push('is-me'); if (isTurn) cls.push('is-turn');
+      const tag = m.dead ? ' ☠️' : m.left ? ' 🪜' : `${m.sickened ? ' 🤢' : ''}${m.paralyzed ? ' 🥶' : ''}`;
+      return `<div class="${cls.join(' ')}">
+        <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${tag}</div>
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
         <div class="dpc__hp">${Math.max(0, m.hp)}/${m.maxHp} HP</div>
       </div>`;
@@ -695,15 +702,14 @@
     const turn = $('#dungeonTurn');
     if (turn) {
       turn.textContent =
-        d.status === 'exploring' ? '🚪 The way deeper is clear — open the next door, or bail with your gold.'
-        : d.status === 'combat'  ? (isLeaderTurn ? '⚔️ Your turn — select a target, then act.' : '… the enemies are acting …')
-        : d.status === 'bailed'  ? '🪜 You climbed out.'
-        : d.status === 'dead'    ? '☠️ You have fallen.'
-        : '';
+        d.status === 'exploring' ? '🚪 The way deeper is clear — open the next door (anyone), or bail with your share.'
+        : d.status === 'combat'  ? (isMyTurn ? '⚔️ Your turn — select a target, then act.' : `… ${turnName || 'the enemies'}'s turn …`)
+        : '🪜 The run is over.';
     }
 
     const loot = $('#dungeonLoot');
-    if (loot) loot.innerHTML = (d.pendingLoot || []).map(l => `
+    // Only your own loot drops are yours to equip/hock.
+    if (loot) loot.innerHTML = (d.pendingLoot || []).filter(l => l.owner === meId).map(l => `
       <div class="dloot">
         <span class="dloot__name">💎 +${l.tier} ${escapeText(l.label)}</span>
         <button class="btn btn--ghost btn--sm" data-loot-equip="${l.idx}">Equip</button>
@@ -712,19 +718,21 @@
 
     const acts = $('#dungeonActions');
     if (acts) {
+      const me = (d.party || []).find(m => m.playerId === meId) || {};
       let html = '';
       if (d.status === 'exploring') {
         html += `<button class="btn btn--primary" data-dact="door">🚪 Open next door</button>`;
-        html += `<button class="btn btn--ghost" data-dact="bail">🏃 Bail · bank ${formatChips(d.runGold)} gp</button>`;
-      } else if (d.status === 'combat' && isLeaderTurn) {
-        const me = (d.party || []).find(m => m.isLeader) || {};
-        const lr = me.lightningReady, sr = me.stinkingReady;
-        html += `<button class="btn btn--primary" data-dact="attack">⚔️ Attack</button>`;
-        html += `<button class="btn btn--ghost ${lr ? '' : 'is-cooling'}" data-dact="lightning" ${lr ? '' : 'disabled'}>⚡ Lightning${lr ? '' : ' (used)'}</button>`;
-        html += `<button class="btn btn--ghost ${sr ? '' : 'is-cooling'}" data-dact="stinking" ${sr ? '' : 'disabled'}>💨 Stinking Cloud${sr ? '' : ' (used)'}</button>`;
-        html += `<button class="btn btn--ghost" data-dact="bail">🏃 Bail</button>`;
+        html += `<button class="btn btn--ghost" data-dact="bail">🏃 Bail · bank my share</button>`;
       } else if (d.status === 'combat') {
-        html += `<span class="dwait">Waiting…</span>`;
+        if (isMyTurn) {
+          const lr = me.lightningReady, sr = me.stinkingReady;
+          html += `<button class="btn btn--primary" data-dact="attack">⚔️ Attack</button>`;
+          html += `<button class="btn btn--ghost ${lr ? '' : 'is-cooling'}" data-dact="lightning" ${lr ? '' : 'disabled'}>⚡ Lightning${lr ? '' : ' (used)'}</button>`;
+          html += `<button class="btn btn--ghost ${sr ? '' : 'is-cooling'}" data-dact="stinking" ${sr ? '' : 'disabled'}>💨 Stinking Cloud${sr ? '' : ' (used)'}</button>`;
+        } else {
+          html += `<span class="dwait">${turnName ? escapeText(turnName) + ' is acting…' : 'Enemies acting…'}</span>`;
+        }
+        html += `<button class="btn btn--ghost" data-dact="bail">🏃 Bail</button>`;
       } else {
         html += `<button class="btn btn--primary" data-dact="leave">↩ Back to the table</button>`;
       }

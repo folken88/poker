@@ -21,6 +21,18 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🗡️ Dungeon is co-op now
+- **Party up:** one shared run per table — anyone who hits the dungeon joins the
+  same delve. **Everyone takes one turn per round** in initiative order; you act
+  on your turn, others act on theirs.
+- **The poker table keeps running** the whole time (you just vacate your seat).
+- **10-second AFK auto-pass:** idle on your turn and you simply pass — the party
+  plays on (no more auto-bail).
+- **Per-member exits:** each player **bails individually** for an even share of
+  the current gold pool; a downed player is out with nothing while the rest fight
+  on. The run ends only when nobody's left. (Loot drops still go to one roll-off
+  winner.)
+
 ### 🗡️ Dungeon — combat tuning + UX
 - **Spells are per-room now:** 1 Lightning Bolt + 1 Stinking Cloud each room
   (refilled when you open a door), attacks unlimited — replaces the fiddly

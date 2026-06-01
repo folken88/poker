@@ -1,90 +1,86 @@
 /**
- * Dungeon socket handlers (Phase 1: solo MVP).
+ * Dungeon socket handlers — ONE shared co-op run per table.
  *
- *   dungeon:enter  -> leave poker seat, create/join a run, get dungeon:state
+ *   dungeon:enter  -> leave poker seat, join (or start) the table's run
  *   dungeon:action -> { kind, ...payload }  (attack/lightning/stinking/door/bail/equip/hock)
- *   dungeon:leave  -> clean up after a finished run (or auto-bail if still active)
+ *   dungeon:leave  -> bail out (bank your share) + leave the room
  *
- * Broadcasts dungeon:state / dungeon:exit to the `dungeon:<leaderId>` room, and
- * dungeon:echo (muffled combat sounds) to the poker table room.
+ * dungeon:state / dungeon:exit broadcast to the `dungeon:<tableId>` room
+ * (dungeon:exit carries playerId — only that client surfaces back to the table).
+ * dungeon:echo carries muffled combat sounds to the poker table.
  */
 const db = require('../persistence/db');
 const { Dungeon } = require('../game/Dungeon');
 
 function registerDungeonHandlers(io, socket, { tables, dungeons }) {
   const meOf = () => socket.data.player;
+  const tableIdOf = () => socket.data.tableId || 'main';
+
+  function getOrCreateDungeon(tableId) {
+    let d = dungeons.get(tableId);
+    if (d && d.status !== 'over') return d;
+    d = new Dungeon({
+      tableId, io,
+      onMemberExit: (playerId, nickname, exit) => {
+        io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+        const t = tables.get(tableId);
+        if (!t) return;
+        try { t._broadcast(); } catch (_) {}
+        try {
+          if (exit.reason === 'dead') t.chat('info', `☠️ ${nickname} has died in the dungeon.`);
+          else if (exit.goldBanked) t.chat('info', `🪜 ${nickname} returned from the dungeon with ${exit.goldBanked}g.`);
+          else t.chat('info', `🪜 ${nickname} returned from the dungeon empty-handed.`);
+        } catch (_) {}
+      },
+      onEmpty: () => { dungeons.delete(tableId); },
+    });
+    dungeons.set(tableId, d);
+    return d;
+  }
 
   socket.on('dungeon:enter', (_p, ack) => {
     const me = meOf();
     if (!me) return ack?.({ ok: false, error: 'choose a player first' });
     if (me.is_bot) return ack?.({ ok: false, error: 'bots cannot enter the dungeon directly' });
+    const tableId = tableIdOf();
+    const table = tables.get(tableId);
 
-    // Already running? just re-attach + resend.
-    const existing = dungeons.get(me.player_id);
-    if (existing && existing.status !== 'dead' && existing.status !== 'bailed') {
-      socket.join(existing.roomName());
-      socket.emit('dungeon:state', existing.publicState());
-      return ack?.({ ok: true, state: existing.publicState() });
-    }
-
-    const table = tables.get(socket.data.tableId || 'main');
-    // Leave the poker seat if currently seated (humans only — a human can't be
-    // sitting as a bot here). Spectators just stay spectators.
+    const d = getOrCreateDungeon(tableId);
+    // Leave the poker seat (humans only). The table keeps playing without us.
     if (table) {
       const seat = table.findSeat(me.player_id);
       if (seat && !seat.isBot) { try { table.stand(me.player_id); } catch (_) {} }
       try { table._broadcast(); } catch (_) {}
       io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
-      try { table.chat('info', `🗡️ ${me.nickname} has entered the dungeon.`); } catch (_) {}
     }
-
-    const dungeon = new Dungeon({
-      leaderId: me.player_id,
-      tableId: (table && table.id) || 'main',
-      io,
-      onExit: (d) => {
-        // Gold was already credited in bail(); refresh chip totals everywhere.
-        io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
-        const t = tables.get(d.tableId);
-        try { if (t) t._broadcast(); } catch (_) {}
-        // Only the simplest summary lines surface in the poker chat.
-        try {
-          if (t) {
-            if (d.exit?.reason === 'dead') t.chat('info', `☠️ ${me.nickname} has died in the dungeon.`);
-            else if (d.exit?.goldBanked) t.chat('info', `🪜 ${me.nickname} returned from the dungeon with ${d.exit.goldBanked}g.`);
-            else t.chat('info', `🪜 ${me.nickname} returned from the dungeon empty-handed.`);
-          }
-        } catch (_) {}
-        dungeons.delete(d.leaderId);
-      },
-    });
-    dungeons.set(me.player_id, dungeon);
-    socket.join(dungeon.roomName());
-    socket.emit('dungeon:state', dungeon.publicState());
-    ack?.({ ok: true, state: dungeon.publicState() });
+    socket.join(d.roomName());
+    const fresh = db.getPlayer(me.player_id) || me;
+    const already = d.hasMember(me.player_id);
+    if (!already) {
+      d.addMember(fresh);
+      try { if (table) table.chat('info', `🗡️ ${me.nickname} has entered the dungeon.`); } catch (_) {}
+    }
+    socket.emit('dungeon:state', d.publicState());
+    ack?.({ ok: true, state: d.publicState() });
   });
 
   socket.on('dungeon:action', ({ kind, ...payload } = {}, ack) => {
     const me = meOf();
     if (!me) return ack?.({ ok: false, error: 'no player' });
-    const dungeon = dungeons.get(me.player_id);
-    if (!dungeon) return ack?.({ ok: false, error: 'not in a dungeon' });
+    const d = dungeons.get(tableIdOf());
+    if (!d) return ack?.({ ok: false, error: 'no dungeon' });
     let res;
-    try { res = dungeon.action(me.player_id, kind, payload); }
+    try { res = d.action(me.player_id, kind, payload); }
     catch (e) { res = { ok: false, error: e.message }; }
     ack?.(res || { ok: true });
   });
 
   socket.on('dungeon:leave', (_p, ack) => {
     const me = meOf();
-    if (!me) return ack?.({ ok: true });
-    const dungeon = dungeons.get(me.player_id);
-    if (dungeon) {
-      // Leaving while still alive banks the gold (treated as a bail).
-      if (dungeon.status === 'combat' || dungeon.status === 'exploring') {
-        try { dungeon.bail(); } catch (_) {}
-      }
-      socket.leave(dungeon.roomName());
+    if (me) {
+      const d = dungeons.get(tableIdOf());
+      if (d && d.hasMember(me.player_id)) { try { d.bail(me.player_id); } catch (_) {} }
+      if (d) socket.leave(d.roomName());
     }
     ack?.({ ok: true });
   });
@@ -92,10 +88,8 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
   socket.on('disconnect', () => {
     const me = meOf();
     if (!me) return;
-    const dungeon = dungeons.get(me.player_id);
-    if (dungeon && (dungeon.status === 'combat' || dungeon.status === 'exploring')) {
-      try { dungeon.bail(); } catch (_) {}   // auto-bail so they keep their gold
-    }
+    const d = dungeons.get(tableIdOf());
+    if (d && d.hasMember(me.player_id)) { try { d.bail(me.player_id); } catch (_) {} }  // auto-bail keeps their gold
   });
 }
 
