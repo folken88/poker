@@ -21,6 +21,11 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🗣️ Elfrip talks more, burps less
+- Flipped Elfrip's chatter ratio: he now **speaks ~60%** of the time and **burps
+  ~40%** (was burp-heavy at 75%). You'll hear more of his childlike goblin banter
+  and fewer belches — the wet burp is now an occasional treat, not his default.
+
 ### 🦮 Blind Mode toggle in the options menu (mobile)
 - You can now turn **Blind Mode** on/off from the **≡ options menu** (the one with
   + Bot / Pick AI / Re-buy / etc.), so phone and tablet players — who have no
