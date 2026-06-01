@@ -21,6 +21,19 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🗡️ NEW: "Hit the Dungeon" side-game (beta — solo MVP)
+- A push-your-luck dungeon crawl beneath the poker hall. Hit **🗡️ Hit the Dungeon**
+  in the ≡ menu to leave your seat and descend: an endless room-crawl where you
+  fight PF1e Ustalav monsters (menu combat — **Attack / ⚡ Lightning Bolt / 💨
+  Stinking Cloud**), grab **gold** and the occasional **+1 magic item** (hock it
+  or equip it), and **Bail** on your turn to climb out and bank your winnings.
+  HP = 30 + 10 per ring/cloak bonus; deeper rooms are riskier and richer, with
+  occasional bosses. Fall to 0 HP and you lose the run's gold + unbanked loot
+  (but keep your chips and anything you equipped). Muffled poker drifts down while
+  you're below; the table hears muffled thumps from the basement. It only ever
+  *adds* gold to your stack — zero poker-mechanics impact. (Allies, AI mini-bosses,
+  and real Foundry art/maps come in later phases — see docs/DUNGEON_DESIGN.md.)
+
 ### 💬 Chat — "jump to present" arrow
 - Scroll up to read history and the chat now **stays put** instead of snapping
   back when new lines arrive (already the case), and a **▼ jump-to-present arrow**

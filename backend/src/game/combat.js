@@ -161,4 +161,4 @@ function resolveSpell(type, casterGear, targetGear) {
   return { type, save: 'Fortitude', dc, power, cloak, saveRoll, saveTotal, saved, sickened: !saved, sound: pick(SND.stink) };
 }
 
-module.exports = { resolveSwing, resolveSpell, weaponOf, acOf, totalMagicBonus };
+module.exports = { resolveSwing, resolveSpell, weaponOf, acOf, totalMagicBonus, SND, dRoll, pick };

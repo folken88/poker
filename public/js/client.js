@@ -140,6 +140,9 @@
   // 🃏 Card-deal animation — cards pitched from the dealer to each seat at
   // the start of a hand. Cosmetic; default ON, persisted per-player.
   let _dealAnimEnabled       = true;
+  // True while this client is down in the dungeon side-game — poker SFX play
+  // muffled (0.3×) as if heard through the floor.
+  let _inDungeon = false;
 
   function audioSettingsKey(field) {
     const pid = state.me?.player_id;
@@ -286,7 +289,8 @@
     const url = pool[Math.floor(Math.random() * pool.length)];
     try {
       const a = new Audio(url);
-      a.volume = Math.max(0, Math.min(1, _cardVolume * scale));
+      // Muffle poker SFX to 0.3× while down in the dungeon (heard through the floor).
+      a.volume = Math.max(0, Math.min(1, _cardVolume * scale * (_inDungeon ? 0.3 : 1)));
       // Autoplay can be blocked until the user interacts with the page.
       // We don't care — silent rejection just means no SFX that round.
       a.play().catch(() => {});
@@ -574,6 +578,10 @@
       renderTable();
       // Keep topbar / sit-out button label in sync with seat state.
       if (state.me) paintMe();
+    } else if (_inDungeon) {
+      // Down in the dungeon: don't render the felt, but still fire the poker
+      // SFX so they drift down muffled (playFromPool damps them to 0.3×).
+      maybePlayCardSounds(st.hand);
     }
     // Forward to blind-mode for TTS narration of state deltas. Module
     // no-ops when mode is off, so this is safe to call unconditionally.
@@ -587,6 +595,176 @@
       // Speak my hole cards (only to me — the emit is private already).
       window.BlindMode?.onHole?.(hole);
     }
+  });
+
+  // ===== 🗡️ Dungeon side-game =====
+  let _dungeonSel = [];        // selected enemy uids (combat targeting)
+  let _dungeonSoundSeen = 0;   // highest dungeon-log id whose sound we've played
+
+  function playDungeonSound(url, vol) {
+    if (!url || !combatSoundEnabled(url)) return;   // honors the combat-sound toggles
+    try { const a = new Audio(url); a.volume = Math.max(0, Math.min(1, vol)); a.play().catch(() => {}); } catch (_) {}
+  }
+  function enterDungeon() {
+    socket.emit('dungeon:enter', null, (resp) => {
+      if (!resp?.ok) { toast(resp?.error || 'Could not enter the dungeon.', true); return; }
+      _inDungeon = true; _dungeonSel = []; _dungeonSoundSeen = 0;
+      state.dungeon = resp.state || null;
+      setScreen('dungeon');
+      renderDungeon();
+    });
+  }
+  function dungeonAction(kind, payload) {
+    socket.emit('dungeon:action', { kind, ...(payload || {}) }, (resp) => {
+      if (resp && resp.ok === false && resp.error) toast(resp.error, true);
+    });
+  }
+  function returnFromDungeon() {
+    _inDungeon = false;
+    socket.emit('dungeon:leave', null, () => {});      // banks gold if still active
+    socket.emit('table:join', { tableId: 'main' }, () => {});
+    setScreen('table');
+  }
+
+  socket.on('dungeon:state', (st) => {
+    state.dungeon = st;
+    // Play the single newest log sound at full volume (this client is IN the
+    // dungeon, so it hears combat clearly — the table hears the muffled echo).
+    if (st.log && st.log.length) {
+      let topT = _dungeonSoundSeen, topSound = null, maxT = _dungeonSoundSeen;
+      for (const e of st.log) {
+        if (e.t > maxT) maxT = e.t;
+        if (e.t > _dungeonSoundSeen && e.sound && e.t >= topT) { topT = e.t; topSound = e.sound; }
+      }
+      if (topSound) playDungeonSound(topSound, Math.min(1, _cardVolume * 1.6 + 0.2));
+      _dungeonSoundSeen = maxT;
+    }
+    if (document.body.dataset.screen === 'dungeon') renderDungeon();
+  });
+
+  socket.on('dungeon:echo', ({ sound } = {}) => {
+    // Muffled basement thumps for players still at the table. The dungeon
+    // player hears full combat via dungeon:state, so they skip this.
+    if (_inDungeon || !sound) return;
+    playDungeonSound(sound, Math.min(0.35, _cardVolume * 0.4));
+  });
+
+  socket.on('dungeon:exit', (exit) => {
+    state.dungeonExit = exit || null;
+    if (document.body.dataset.screen === 'dungeon') renderDungeon();
+    // Brief pause so the player reads the final log line, then surface back up.
+    setTimeout(() => {
+      const dead = exit?.reason === 'dead';
+      toast(dead ? '☠️ You fell in the dungeon — the run\'s gold is lost.'
+                 : `🪜 Back at the table with ${formatChips(exit?.goldBanked || 0)} gp.`, dead);
+      returnFromDungeon();
+    }, 1600);
+  });
+
+  function renderDungeon() {
+    const d = state.dungeon;
+    if (!d) return;
+    const meId = state.me?.player_id;
+    const isLeaderTurn = !!(d.turn && d.turn.kind === 'party' && d.turn.id === meId);
+
+    const meta = $('#dungeonMeta');
+    if (meta) meta.textContent = `Depth ${d.depth} · Round ${d.round || 0} · 💰 ${formatChips(d.runGold)} gp`;
+
+    const ene = $('#dungeonEnemies');
+    if (ene) ene.innerHTML = (d.enemies || []).length
+      ? d.enemies.map(e => {
+          const dead = !e.alive;
+          const sel = !dead && _dungeonSel.includes(e.uid);
+          const pct = e.maxHp ? Math.max(0, Math.round(100 * e.hp / e.maxHp)) : 0;
+          return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''}" data-enemy="${escapeAttr(e.uid)}" ${dead ? 'disabled' : ''}>
+            <div class="dmon__glyph">${e.glyph || '❓'}</div>
+            <div class="dmon__name">${escapeText(e.name)}${e.sickened ? ' 🤢' : ''}</div>
+            <div class="dmon__hpbar"><span style="width:${pct}%"></span></div>
+            <div class="dmon__hp">${dead ? '☠️' : `${e.hp}/${e.maxHp}`}</div>
+          </button>`;
+        }).join('')
+      : '<div class="dmon__none">— the room is quiet —</div>';
+
+    const party = $('#dungeonParty');
+    if (party) party.innerHTML = (d.party || []).map(m => {
+      const pct = m.maxHp ? Math.max(0, Math.round(100 * m.hp / m.maxHp)) : 0;
+      return `<div class="dpc ${pct <= 30 ? 'is-low' : ''}">
+        <div class="dpc__name">${escapeText(m.nickname)}${m.isLeader ? ' (you)' : ''}${m.sickened ? ' 🤢' : ''}</div>
+        <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
+        <div class="dpc__hp">${Math.max(0, m.hp)}/${m.maxHp} HP</div>
+      </div>`;
+    }).join('');
+
+    const turn = $('#dungeonTurn');
+    if (turn) {
+      turn.textContent =
+        d.status === 'exploring' ? '🚪 The way deeper is clear — open the next door, or bail with your gold.'
+        : d.status === 'combat'  ? (isLeaderTurn ? '⚔️ Your turn — select a target, then act.' : '… the enemies are acting …')
+        : d.status === 'bailed'  ? '🪜 You climbed out.'
+        : d.status === 'dead'    ? '☠️ You have fallen.'
+        : '';
+    }
+
+    const loot = $('#dungeonLoot');
+    if (loot) loot.innerHTML = (d.pendingLoot || []).map(l => `
+      <div class="dloot">
+        <span class="dloot__name">💎 +${l.tier} ${escapeText(l.label)}</span>
+        <button class="btn btn--ghost btn--sm" data-loot-equip="${l.idx}">Equip</button>
+        <button class="btn btn--ghost btn--sm" data-loot-hock="${l.idx}">Hock ${formatChips(l.hockValue)} gp</button>
+      </div>`).join('');
+
+    const acts = $('#dungeonActions');
+    if (acts) {
+      let html = '';
+      if (d.status === 'exploring') {
+        html += `<button class="btn btn--primary" data-dact="door">🚪 Open next door</button>`;
+        html += `<button class="btn btn--ghost" data-dact="bail">🏃 Bail · bank ${formatChips(d.runGold)} gp</button>`;
+      } else if (d.status === 'combat' && isLeaderTurn) {
+        const me = (d.party || []).find(m => m.isLeader) || {};
+        const lr = me.lightningReady, sr = me.stinkingReady;
+        html += `<button class="btn btn--primary" data-dact="attack">⚔️ Attack</button>`;
+        html += `<button class="btn btn--ghost ${lr ? '' : 'is-cooling'}" data-dact="lightning" ${lr ? '' : 'disabled'}>⚡ Lightning${lr ? '' : ' (cooldown)'}</button>`;
+        html += `<button class="btn btn--ghost ${sr ? '' : 'is-cooling'}" data-dact="stinking" ${sr ? '' : 'disabled'}>💨 Stinking Cloud${sr ? '' : ' (cooldown)'}</button>`;
+        html += `<button class="btn btn--ghost" data-dact="bail">🏃 Bail</button>`;
+      } else if (d.status === 'combat') {
+        html += `<span class="dwait">Waiting…</span>`;
+      } else {
+        html += `<button class="btn btn--primary" data-dact="leave">↩ Back to the table</button>`;
+      }
+      acts.innerHTML = html;
+    }
+
+    const log = $('#dungeonLog');
+    if (log) { log.innerHTML = (d.log || []).map(e => `<li>${escapeText(e.text)}</li>`).join(''); log.scrollTop = log.scrollHeight; }
+  }
+
+  // ---- Dungeon UI wiring (delegated; elements are static in index.html) ----
+  $('#dungeonBtn')?.addEventListener('click', enterDungeon);
+  $('#dungeonLeaveBtn')?.addEventListener('click', returnFromDungeon);
+  $('#dungeonEnemies')?.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-enemy]'); if (!b) return;
+    const uid = b.dataset.enemy;
+    const i = _dungeonSel.indexOf(uid);
+    if (i >= 0) _dungeonSel.splice(i, 1);
+    else { _dungeonSel.push(uid); if (_dungeonSel.length > 2) _dungeonSel.shift(); }
+    renderDungeon();
+  });
+  $('#dungeonActions')?.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-dact]'); if (!b) return;
+    const act = b.dataset.dact;
+    if (act === 'attack')         dungeonAction('attack', { targetUid: _dungeonSel[0] });
+    else if (act === 'lightning') dungeonAction('lightning', { targetUids: _dungeonSel.slice(0, 2) });
+    else if (act === 'stinking')  dungeonAction('stinking');
+    else if (act === 'door')      dungeonAction('door');
+    else if (act === 'bail')      dungeonAction('bail');
+    else if (act === 'leave')     returnFromDungeon();
+    if (act === 'attack' || act === 'lightning') _dungeonSel = [];
+  });
+  $('#dungeonLoot')?.addEventListener('click', (ev) => {
+    const eq = ev.target.closest('[data-loot-equip]');
+    const ho = ev.target.closest('[data-loot-hock]');
+    if (eq) dungeonAction('equip', { idx: Number(eq.dataset.lootEquip) });
+    else if (ho) dungeonAction('hock', { idx: Number(ho.dataset.lootHock) });
   });
 
   // Incremental chat events (in addition to the snapshot in table:state).

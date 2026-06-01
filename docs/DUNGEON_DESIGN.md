@@ -1,0 +1,152 @@
+# 🗡️ "Hit the Dungeon" — side-game design
+
+A silly, D&D-styled push-your-luck side-game inside Folken Poker. Broke or bored
+players descend into the basement *beneath the poker hall* to fight PF1e monsters
+on a simplified VTT and haul gold back up to the felt.
+
+**Prime directive:** this NEVER affects poker mechanics. The only thing it does
+to the poker economy is *add* gold to a player's stack (chips = gold = gp, 1:1).
+
+---
+
+## Player decisions (locked)
+
+| Decision | Choice |
+|---|---|
+| Map / combat | **Room-crawl, menu combat.** Node-map of rooms; click a door to enter the next; tokens shown but combat is menu-driven (pick target + action), no square-by-square movement. |
+| Build approach | **Lean MVP first** (solo runs), then layer in allies + richer maps/audio. |
+| Party loot | **Even split** of total gold across all party members. |
+| Spells | **Attack:** unlimited, single target. **Lightning Bolt:** up to **2 enemies**, **3-round cooldown**. **Stinking Cloud:** **all enemies** (each rolls a save), **3-round cooldown**. |
+| Death (0 HP) | **Forfeit this run's gold AND any unbanked/unequipped loot.** Keep all existing chips, and any loot you equipped during the run. Risk = the unbanked winnings. |
+| Run structure | **Endless descent**, bail anytime on your turn. Each deeper room is riskier + richer. **Occasional bosses / AI-character mini-bosses** (the best-geared bots) block the way down. |
+| Reward size | **Modest & grindy** (~50–200g/room; solid run = a few hundred; deep run ~1–2k). Numbers exposed for easy tuning. |
+| Foundry assets | **Placeholders now**, swap in real Foundry creatures/art/maps once the MCP bridge is reconnected. |
+
+---
+
+## Player flow
+
+1. **Enter:** On the poker table there's a **🗡️ Hit the Dungeon** button. Clicking it
+   vacates your seat (`table.stand`) and drops you into the dungeon screen. (You
+   become a table spectator for audio purposes.)
+2. **Descend:** You start in an entry room. Click a **door** to enter the next room
+   → an encounter rolls from the table for the current **depth**.
+3. **Fight:** Initiative is rolled. On your turn pick **Attack / Lightning Bolt /
+   Stinking Cloud / Open next door / Bail**. Enemies (and later, AI allies) act on
+   their turns automatically. Real PF1e-ish math: d20 + to-hit vs AC, damage rolls,
+   crits/fumbles — reusing the existing `combat.js` resolvers.
+4. **Loot:** Clearing a room drops **gold** (added to your run total, not yet banked)
+   and occasionally a **+1 magic item**, which you can **Hock** (instant sell value)
+   or **Equip** (wear it — upgrades that gear slot via `db.setGear`).
+5. **Bail:** On your turn, **Bail** to climb out and **bank your run gold** (+keep
+   equipped loot). You return to the table as a spectator with your richer stack.
+6. **Death:** Drop to 0 HP → carried out. **Forfeit the run's gold + unbanked loot.**
+   Existing chips/gear untouched.
+
+**HP** = `30 + 10×(ring bonus) + 10×(cloak bonus)` (read from `db.getGear`). So a
+gearless player has 30 HP; a +5 ring & +5 cloak player has 130 HP.
+
+---
+
+## Combat model (MVP)
+
+- **Stats from gear** (reuse `combat.js`): weapon tier → to-hit/damage; armor+shield+ring → AC.
+- **Attack:** d20 + weapon to-hit vs target AC; on hit roll weapon damage (crit on threat-confirm). Unlimited, single target.
+- **Lightning Bolt:** auto-hits up to 2 chosen enemies; each takes `power`d6 (power = magic bonus, floor 2), Reflex save for half. **3-round cooldown.**
+- **Stinking Cloud:** all enemies roll Fortitude; failures are **sickened** (–to-hit/damage) for a few rounds. No HP damage. **3-round cooldown.**
+- **Enemy AI:** simple — pick a random living party member, attack (or use the
+  creature's signature attack). Bosses hit harder / may have a special.
+- **Initiative:** d20 + small dex-ish modifier; party + enemies in one order.
+- Sounds reuse the existing fight pools (`fight_flesh/block/whiff/lightning/stink`).
+
+## Encounter table (Ustalav underground — placeholder, swap with Foundry later)
+
+Tiered by **depth band**; deeper = higher CR, more gold. Lore-fit = undead-heavy.
+
+- **Shallow (depth 1–3):** dire rats, giant centipedes, goblins, kobolds, skeletons, giant spiders.
+- **Mid (4–7):** zombies, ghouls, cultists (Whispering Way), skeletal champions, gray oozes, animated armor.
+- **Deep (8+):** wights, shadows, ghasts, ogres, ettins, gibbering mouther, cult fanatics of Urgathoa.
+- **Bosses (every ~5 rooms):** a beefed creature OR an **AI-character mini-boss** —
+  one of the *best-geared bots* (highest `gearValue`) appears with stats derived
+  from their gear, their token + name. Flavor: "the rich come down to protect their
+  vein of gold." (Boss defeat = a fat loot drop. **Open Q:** does it also skim some
+  of that bot's chips, or purely dungeon loot? Default: **dungeon loot only**, to
+  keep zero poker-economy impact.)
+
+**Loot:** mostly raw gold (modest curve). Small chance per room of a **+1 item** in a
+random slot you don't already have at that tier → Hock (sell value from
+`GEAR_SLOTS` pricing) or Equip.
+
+---
+
+## Party play (Phase 2)
+
+- **Recruit up to 3 allies**, human or AI, before/at the start of a run.
+- **AI ally:** pay **50g** from your pocket → that bot **leaves its poker seat**
+  (`table.stand`) and joins, auto-fighting on its turns. Mercenary: takes part in
+  the **even split**.
+- **Human ally:** invite a seated/spectating human → they accept, leave their seat,
+  and join. (Recruitment UI flow TBD in Phase 2.)
+- **Loot:** total run gold is **split evenly** among all surviving party members on bail/victory.
+- All recruited members vacate their seats and return to spectator when the run ends.
+
+---
+
+## Audio (muffled cross-feed)
+
+- **In the dungeon:** poker SFX play at ~0.3× (distant, through the floor).
+- **At the table:** dungeon combat SFX broadcast to the table room at low volume,
+  so seated/spectating players hear muffled thumps from the basement.
+- Built on the existing `playFromPool` volume scaling + a per-context damp factor.
+- MVP: one-way (muffled poker heard in the dungeon) + a simple low-volume dungeon
+  ambient; full bidirectional cross-feed in a later phase.
+
+---
+
+## Architecture / integration
+
+- **`backend/src/game/Dungeon.js`** — one instance per active run (party). Tracks
+  party, enemies, HP, turn order, depth, room state, run gold/loot, status. Mirrors
+  `Table`: a `publicState()` + a `_broadcast()` to a `dungeon:<id>` Socket.IO room.
+- **`backend/src/sockets/dungeon.js`** — `dungeon:enter`, `dungeon:action`
+  (attack/spell/door/bail/equip/hock), `dungeon:recruit` (Phase 2), `dungeon:leave`.
+- **Enter/leave seat** via existing `table.stand` / spectator handling. **Credit
+  gold** via `db.setChips`; **loot** via `db.getGear`/`db.setGear`.
+- **Combat** = new resolver reusing `combat.js` `resolveSwing`/`resolveSpell`, with
+  real HP pools held in the Dungeon instance (never touching chips mid-run).
+- **Frontend:** new `data-show-on="dungeon"` screen + `renderDungeon()` drawing a
+  simplified Foundry-style overhead room (background tile, party + enemy tokens,
+  the enemy's art), a combat log, and the action buttons. `setScreen('dungeon')`.
+- **Concurrency:** each leader spawns their own Dungeon instance; multiple runs
+  coexist. A human ally joins the leader's instance.
+
+---
+
+## Phased roadmap
+
+**Phase 1 — Solo MVP (the build target now)**
+- 🗡️ Hit the Dungeon button on the table → leave seat → dungeon screen.
+- Endless room-crawl, menu combat (Attack / Lightning / Stinking / Open door / Bail).
+- HP from gear; PF1e-ish to-hit/AC/damage via `combat.js`; spell cooldowns.
+- Placeholder Ustalav encounter table + simple tile/token art.
+- Gold (modest curve) + +1 loot (hock/equip); bail banks gold; death forfeits run gold + unbanked loot.
+- Simplified VTT render + combat log; muffled poker audio one-way.
+
+**Phase 2 — Party + bosses**
+- Recruit AI allies (50g, leave seat, auto-fight, even split).
+- AI-character mini-bosses (best-geared bots) as impeding bosses.
+
+**Phase 3 — Polish**
+- Human ally recruitment (invite/accept).
+- Bidirectional muffled audio; richer/varied maps.
+- Swap placeholders for real Foundry creatures, art, and dungeon maps.
+
+---
+
+## Confirmed micro-decisions
+
+1. **AI-boss chips:** beating a best-geared AI mini-boss gives **dungeon loot only**
+   — their actual poker chips are untouched (strict zero poker-economy impact).
+2. **AFK / turn timer:** a generous per-turn timer; on timeout it **auto-Bails**
+   (banks gold and exits safely) rather than risk an AFK death.
+3. **Name:** button **"🗡️ Hit the Dungeon"**, screen titled **"The Dungeon."**

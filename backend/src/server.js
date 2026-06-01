@@ -13,6 +13,7 @@ const { PRONUNCIATIONS } = require('./util/pronunciations');
 const ttsCache = require('./util/ttsCache');
 const { registerLobbyHandlers } = require('./sockets/lobby');
 const { registerTableHandlers } = require('./sockets/table');
+const { registerDungeonHandlers } = require('./sockets/dungeon');
 const { Table } = require('./game/Table');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -69,9 +70,13 @@ const tables = new Map();
 const defaultTable = new Table({ id: 'main', maxSeats: 9, smallBlind: 25, bigBlind: 50, io });
 tables.set(defaultTable.id, defaultTable);
 
+// Active dungeon runs, keyed by leader player_id (one run per leader).
+const dungeons = new Map();
+
 io.on('connection', (socket) => {
   registerLobbyHandlers(io, socket, { tables });
   registerTableHandlers(io, socket, { tables });
+  registerDungeonHandlers(io, socket, { tables, dungeons });
   socket.on('disconnect', () => {
     const pid = socket.data.player?.player_id;
     if (!pid) return;
