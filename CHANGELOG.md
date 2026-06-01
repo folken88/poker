@@ -21,6 +21,14 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🎴 Card-deal animation — tuned pace + real card sounds
+- **Slowed the deal ~30%** for a more deliberate, readable pitch.
+- The per-card flick now **fires as each card leaves the dealer's hand** (was on
+  landing), so the sound lines up with the cards launching.
+- Replaced the synthesized flicks with **six individual card hits cut (via ffmpeg)
+  from the real deal recording**, level-matched — so the pitch sound is the actual
+  cards. Played one per launched card.
+
 ### ⚡ Faster "Pick AI" picker
 - Moved the picker's action buttons (**🎲 Random**, **🪑 Fill empty seats**,
   Cancel) from the footer up to a toolbar **above the character grid**, with

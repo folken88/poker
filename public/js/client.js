@@ -110,12 +110,13 @@
   // hits so it doesn't fatigue across long hands.
   const TURN_TICK_POOL = ['/audio/card_slip_once.mp3'];
   // Single-card "flick / pitch" SFX — one plays per card during the
-  // dealer-pitch animation at the start of a hand. Purpose-built via the
-  // 11labs sound-generation API (see scripts history); 4 variants so the
-  // rapid stagger doesn't sound like one looped click.
+  // dealer-pitch animation, fired as the card LEAVES the dealer's hand.
+  // Cut from the real deal recording (shuffle_05_deal_again) with ffmpeg —
+  // six individual card hits, level-matched, so the pitch matches the
+  // actual cards and the rapid stagger doesn't sound looped.
   const DEAL_CARD_POOL = [
-    '/audio/deal_card_01.mp3', '/audio/deal_card_02.mp3',
-    '/audio/deal_card_03.mp3', '/audio/deal_card_04.mp3',
+    '/audio/deal_pitch_01.mp3', '/audio/deal_pitch_02.mp3', '/audio/deal_pitch_03.mp3',
+    '/audio/deal_pitch_04.mp3', '/audio/deal_pitch_05.mp3', '/audio/deal_pitch_06.mp3',
   ];
   // Default volumes — overridden per-player by loadAudioSettings().
   // _cardVolume drives all card SFX (shuffle/deal/your-turn/tick).
@@ -1006,8 +1007,9 @@
       // No Web Animations API — just drop the card at the target.
       card.style.transform = `translate(${dx}px, ${dy}px)`; card.style.opacity = '1';
     }
-    // Single-card flick as the card nears the seat (honors the card-sound mute).
-    if (_dealAnimEnabled) setTimeout(() => playFromPool(DEAL_CARD_POOL, 0.6), delay + flight * 0.6);
+    // Flick fires as the card LEAVES the dealer's hand (start of its flight),
+    // so each pitch sound lines up with a card launching. Honors card mute.
+    if (_dealAnimEnabled) setTimeout(() => playFromPool(DEAL_CARD_POOL, 0.6), delay);
     const cleanup = () => {
       try {
         const fade = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: 'ease-out', fill: 'forwards' });
@@ -1059,7 +1061,8 @@
         if (hole) order.push(hole);
       }
       if (!order.length) return;
-      const STAGGER = 70, FLIGHT = 360, W = 34;
+      // Slowed 30% from the original (70/360) for a more deliberate pitch.
+      const STAGGER = 91, FLIGHT = 468, W = 34;
       let idx = 0;
       // Two passes — one card to each, then the second card.
       for (let pass = 0; pass < 2; pass++) {
