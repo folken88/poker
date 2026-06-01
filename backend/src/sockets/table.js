@@ -19,7 +19,7 @@ function meOf(socket) { return socket.data.player; }
 
 function registerTableHandlers(io, socket, { tables }) {
 
-  socket.on('table:join', ({ tableId } = {}, ack) => {
+  socket.on('table:join', ({ tableId, fromDungeon } = {}, ack) => {
     const me = meOf(socket);
     if (!me) return ack?.({ ok: false, error: 'choose a player first' });
     const table = tables.get(tableId || 'main');
@@ -54,7 +54,9 @@ function registerTableHandlers(io, socket, { tables }) {
       // so the human can sit next deal. Skip if someone's already
       // pending-leave (kick or queued auto-yield) — those will free a
       // seat soon enough.
-      const humanArriving = !me.is_bot;
+      // Returning from the dungeon comes back as a spectator — DON'T evict a
+      // bot for them; they'll take a seat themselves if they want one.
+      const humanArriving = !me.is_bot && !fromDungeon;
       const tableFull = !table.firstOpenSeat();
       const yieldPending = table.seats.some(s => s._standAfterHand);
       if (humanArriving && tableFull && !yieldPending) {

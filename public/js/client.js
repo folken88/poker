@@ -648,7 +648,8 @@
   function returnFromDungeon() {
     _inDungeon = false;
     socket.emit('dungeon:leave', null, () => {});      // banks gold if still active
-    socket.emit('table:join', { tableId: 'main' }, () => {});
+    // fromDungeon: come back as a spectator without evicting an AI from its seat.
+    socket.emit('table:join', { tableId: 'main', fromDungeon: true }, () => {});
     setScreen('table');
   }
 
