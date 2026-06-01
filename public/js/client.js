@@ -625,6 +625,7 @@
   // ===== 🗡️ Dungeon side-game =====
   let _dungeonSel = [];        // selected enemy uids (combat targeting)
   let _dungeonSoundSeen = 0;   // highest dungeon-log id whose sound we've played
+  let _recruitOpen = false;    // dungeon "Recruit AI ▾" dropdown open/closed
 
   function playDungeonSound(url, vol) {
     if (!url || !combatSoundEnabled(url)) return;   // honors the combat-sound toggles
@@ -798,15 +799,18 @@
     if (recruit) {
       const list = d.recruitable || [];
       const full = (d.botCount || 0) >= 3;
-      if (d.status === 'over' || !list.length) recruit.innerHTML = '';
+      if (d.status === 'over' || !list.length) { recruit.innerHTML = ''; _recruitOpen = false; }
       else recruit.innerHTML =
-        `<div class="dungeon__recruit-head">🤝 Recruit AI allies — 50g each${full ? ' · party full' : ''}</div>` +
-        `<div class="bot-picker__grid bot-picker__grid--dungeon">` +
-        list.map(b => `<button type="button" class="bot-picker__card" data-recruit="${escapeAttr(b.playerId)}" ${full ? 'disabled' : ''} title="Recruit ${escapeAttr(b.nickname)} for ${b.fee}g">
-            <div class="bot-picker__avatar">${renderAvatar(b.avatarId)}</div>
-            <div class="bot-picker__nick">${escapeText(b.nickname)}</div>
-            <div class="bot-picker__worth">🤝 ${b.fee}g</div>
-          </button>`).join('') +
+        `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-toggle" data-recruit-toggle aria-expanded="${_recruitOpen}">🤝 Recruit AI ▾ <span class="dungeon__recruit-count">${list.length}</span></button>` +
+        `<div class="dungeon__recruit-pop ${_recruitOpen ? 'is-open' : ''}">` +
+          `<div class="dungeon__recruit-head">Unseated allies — 50g each${full ? ' · party full' : ''}</div>` +
+          `<div class="bot-picker__grid bot-picker__grid--dungeon">` +
+          list.map(b => `<button type="button" class="bot-picker__card" data-recruit="${escapeAttr(b.playerId)}" ${full ? 'disabled' : ''} title="Recruit ${escapeAttr(b.nickname)} for ${b.fee}g">
+              <div class="bot-picker__avatar">${renderAvatar(b.avatarId)}</div>
+              <div class="bot-picker__nick">${escapeText(b.nickname)}</div>
+              <div class="bot-picker__worth">🤝 ${b.fee}g</div>
+            </button>`).join('') +
+          `</div>` +
         `</div>`;
     }
 
@@ -842,6 +846,14 @@
     if (act === 'attack' || act === 'lightning') _dungeonSel = [];
   });
   $('#dungeonRecruit')?.addEventListener('click', (ev) => {
+    if (ev.target.closest('[data-recruit-toggle]')) {
+      _recruitOpen = !_recruitOpen;
+      const pop = $('#dungeonRecruit')?.querySelector('.dungeon__recruit-pop');
+      if (pop) pop.classList.toggle('is-open', _recruitOpen);
+      const tog = $('#dungeonRecruit')?.querySelector('[data-recruit-toggle]');
+      if (tog) tog.setAttribute('aria-expanded', String(_recruitOpen));
+      return;
+    }
     const b = ev.target.closest('[data-recruit]'); if (!b) return;
     socket.emit('dungeon:recruit', { botId: b.dataset.recruit }, (resp) => {
       if (resp && resp.ok === false) toast(resp.error || 'Could not recruit', true);

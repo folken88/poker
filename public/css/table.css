@@ -90,10 +90,24 @@ button, input { font: inherit; color: inherit; }
 .dungeon__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
 .dungeon__actions .is-cooling { opacity: 0.5; }
 .dwait { color: var(--ivory-dim); font-style: italic; align-self: center; }
-.dungeon__recruit { display: flex; flex-direction: column; gap: 0.4rem; }
+.dungeon__recruit { position: relative; }
 .dungeon__recruit:empty { display: none; }
-.dungeon__recruit-head { font-size: 0.78rem; color: var(--brass-bright); letter-spacing: 0.04em; }
-.bot-picker__grid--dungeon { max-height: 168px; }
+.dungeon__recruit-toggle { align-self: flex-start; }
+.dungeon__recruit-count { opacity: 0.7; font-variant-numeric: tabular-nums; }
+/* Collapsed by default — a dropdown popover (doesn't eat screen space) that
+   overlays just above the log when opened, like the poker Pick AI picker. */
+.dungeon__recruit-pop {
+  display: none;
+  position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 0.35rem;
+  z-index: 12;
+  background: linear-gradient(180deg, rgba(20,18,26,0.98), rgba(10,10,14,0.99));
+  border: 1px solid rgba(217,176,106,0.4); border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+}
+.dungeon__recruit-pop.is-open { display: block; }
+.dungeon__recruit-head { font-size: 0.78rem; color: var(--brass-bright); letter-spacing: 0.04em; margin-bottom: 0.4rem; }
+.bot-picker__grid--dungeon { max-height: 200px; }
 .dungeon__log { list-style: none; margin: 0; padding: 0.5rem 0.8rem; flex: 1; min-height: 70px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(217,176,106,0.15); border-radius: 8px; font-size: 0.82rem; line-height: 1.4; color: var(--ivory-dim); }
 .dungeon__log li { padding: 1px 0; }
 body[data-screen="loading"] .screen[data-show-on="loading"],
