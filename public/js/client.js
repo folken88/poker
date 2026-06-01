@@ -932,6 +932,7 @@
   // ===== Table render =====
   function renderTable() {
     const t = state.table; if (!t) return;
+    renderRecords();   // sidebar "Hall of Records" (biggest single-hand win/loss)
     const hand = t.hand;
     // Fire shuffle/deal SFX based on hand + board transitions. Cheap
     // no-op when nothing changed (compares cached timestamps).
@@ -1009,6 +1010,18 @@
         const avatarBadge = seat.isBot
           ? `<span class="seat__avatar-ai" title="AI player">AI</span>`
           : '';
+        // Subtle intelligence-tier ring on AI tokens — bronze = low,
+        // silver = average, gold = high. Intelligence comes from the roster
+        // broadcast (state.roster carries bot_intelligence). Humans keep the
+        // default brass frame.
+        let intelClass = '';
+        if (seat.isBot) {
+          const rp = (state.roster || []).find(r => r.player_id === seat.playerId);
+          const it = rp && rp.bot_intelligence;
+          if (it === 'high')         intelClass = ' seat__avatar--intel-high';
+          else if (it === 'average') intelClass = ' seat__avatar--intel-avg';
+          else if (it === 'low')     intelClass = ' seat__avatar--intel-low';
+        }
         // Per-seat kick button. Any seated player can click × on any OTHER
         // occupied seat (human or bot) to kick them — takes effect at end
         // of the current hand, and posts a chat line naming who kicked
@@ -1068,7 +1081,7 @@
           ${badgeHtml}
           ${swordsHtml}
           <div class="seat__plate ${myTurn ? 'seat__plate--acting' : ''}">
-            <div class="seat__avatar">${renderAvatar(seat.avatarId)}${avatarBadge}</div>
+            <div class="seat__avatar${intelClass}">${renderAvatar(seat.avatarId)}${avatarBadge}</div>
             <div class="seat__nick" title="${escapeAttr(seat.nickname)}">${escapeText(seat.nickname)}${isAllIn ? ' · ALL-IN' : ''}</div>
             ${botTag}
             <div class="seat__chips">💰 ${formatChips(handPlayer ? handPlayer.stack : seat.chips)} gp</div>
@@ -1363,6 +1376,34 @@
 
   /** Refresh the right-side perimeter leaderboard. Same data as the
    *  in-actpanel leaderboard but always visible. */
+  // "Hall of Records" under the leaderboard — all-time per-hand extremes
+  // (server-tracked in state.table.records). Each row: label · who · value.
+  function renderRecords() {
+    const r = (state.table && state.table.records) || {};
+    // id, label, record, value-formatter, optional color class
+    const ROWS = [
+      ['#recordBiggestWin',   '🥇 Win',    r.biggestWin,    (x) => '+' + formatChips(x.amount), 'is-win'],
+      ['#recordBiggestLoss',  '💀 Loss',   r.biggestLoss,   (x) => '−' + formatChips(x.amount), 'is-loss'],
+      ['#recordBiggestPot',   '💰 Pot',    r.biggestPot,    (x) => formatChips(x.amount), ''],
+      ['#recordLongestWar',   '⚔️ War',    r.longestWar,    (x) => x.count + ' raises', ''],
+      ['#recordBiggestBluff', '🃏 Bluff',  r.biggestBluff,  (x) => formatChips(x.amount), 'is-win'],
+      ['#recordUgliestWin',   '🐟 Ugliest', r.ugliestWinner, (x) => escapeText(String(x.hand || '').split(',')[0]), ''],
+    ];
+    for (const [id, label, rec, valFn, cls] of ROWS) {
+      const el = $(id);
+      if (!el) continue;
+      if (!rec) {
+        el.innerHTML = `<span class="lb-records__label">${label}</span><span class="lb-records__empty">—</span>`;
+        continue;
+      }
+      const when = rec.ts ? new Date(rec.ts).toLocaleDateString() : '';
+      const tip = `${rec.nick}${rec.hand ? ' · ' + rec.hand : ''}${when ? ' · ' + when : ''}`;
+      el.innerHTML = `<span class="lb-records__label">${label}</span>`
+        + `<span class="lb-records__who" title="${escapeAttr(tip)}">${escapeText(rec.nick)}</span>`
+        + `<span class="lb-records__amt ${cls}">${valFn(rec)}</span>`;
+    }
+  }
+
   function renderSidebarLeaderboard() {
     const el = $('#sidebarLeaderboard');
     if (!el) return;

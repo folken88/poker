@@ -16,6 +16,9 @@
 
 const fs = require('fs');
 const path = require('path');
+const db = require('./db');
+const { strengthOf } = require('../bot/strength');
+const { Hand: SolverHand } = require('pokersolver');
 
 const LOG_DIR = process.env.LOG_DIR || path.join(__dirname, '..', '..', 'logs');
 if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -56,11 +59,131 @@ function logHand({ tableId, hand, durationMs }) {
     events: hand.events,
   };
   appendLine(HAND_LOG, row);
+  _applyHandRecords(row);
 }
 
 function winningsFor(winners, playerId) {
   return winners.filter(w => w.playerId === playerId).reduce((s, w) => s + w.amount, 0);
 }
+
+// ── All-time "Hall of Records" — fun per-hand extremes ──────────────────────
+// Persisted implicitly through hands.jsonl: seeded by scanning the log at boot
+// (below), then updated as each hand is logged. NOT cleared by Full Reset.
+//   biggestWin/Loss : most chips netted / lost by a player in one hand
+//   biggestPot      : largest total pot fought over (attributed to its winner)
+//   longestWar      : most raises/all-ins in one hand (a betting slugfest)
+//   biggestBluff    : biggest pot stolen uncontested with a weak hand
+//   ugliestWinner   : weakest made hand to win a shown-down pot
+const _records = {
+  biggestWin: null, biggestLoss: null, biggestPot: null,
+  longestWar: null, biggestBluff: null, ugliestWinner: null,
+};
+
+// Only players in the CURRENT roster (code-defined ROSTER + BOT_ROSTER) count —
+// so a long-gone test player (e.g. "OldOwl") who still lives in hands.jsonl
+// can't hold the board. Built lazily + cached; the roster only changes at boot.
+let _currentIds = null;
+function _currentSet() {
+  if (_currentIds) return _currentIds;
+  try {
+    _currentIds = new Set([
+      ...(db.ROSTER || []).map(p => String(p.name).toLowerCase()),
+      ...(db.BOT_ROSTER || []).map(p => String(p.name).toLowerCase()),
+    ]);
+  } catch (_) { _currentIds = new Set(); }
+  return _currentIds;
+}
+const _isCurrent = (pid) => _currentSet().has(String(pid || '').toLowerCase());
+
+function _applyHandRecords(h) {
+  if (!h) return;
+  const ts = h.ts;
+  const players = h.players || [];
+  const board = h.board || [];
+
+  // 1) Biggest single-hand WIN / LOSS (per current player's net).
+  for (const p of players) {
+    if (!_isCurrent(p.playerId)) continue;
+    const net = (p.stackEnd || 0) - (p.stackStart || 0);
+    if (!Number.isFinite(net) || net === 0) continue;
+    const who = { nick: p.nickname || p.playerId, amount: Math.abs(net), ts };
+    if (net > 0) {
+      if (!_records.biggestWin || net > _records.biggestWin.amount) _records.biggestWin = who;
+    } else if (!_records.biggestLoss || -net > _records.biggestLoss.amount) {
+      _records.biggestLoss = who;
+    }
+  }
+
+  // Everything below attributes to the hand's WINNER — find the top
+  // current-player winner (skip the hand for these if none is current).
+  const nickById = new Map(players.map(p => [p.playerId, p.nickname || p.playerId]));
+  let win = null;
+  for (const w of h.winners || []) {
+    if (!_isCurrent(w.playerId)) continue;
+    if (!win || (w.amount || 0) > win.amount) {
+      win = { playerId: w.playerId, nick: nickById.get(w.playerId) || w.playerId, amount: w.amount || 0 };
+    }
+  }
+  if (!win) return;
+  const winnerHole = (players.find(p => p.playerId === win.playerId) || {}).hole;
+
+  // 2) Biggest POT (everyone's chips committed).
+  const pot = players.reduce((s, p) => s + (p.totalIn || 0), 0);
+  if (pot > 0 && (!_records.biggestPot || pot > _records.biggestPot.amount)) {
+    _records.biggestPot = { nick: win.nick, amount: pot, ts };
+  }
+
+  // 3) Longest WAR (raises + all-ins in the action log).
+  let raises = 0;
+  for (const e of h.events || []) {
+    if (e && e.type === 'action' && (e.action === 'raise' || e.action === 'allin')) raises++;
+  }
+  if (raises > 0 && (!_records.longestWar || raises > _records.longestWar.count)) {
+    _records.longestWar = { nick: win.nick, count: raises, ts };
+  }
+
+  // 4) Biggest BLUFF — pot won UNCONTESTED (everyone else folded) with a weak
+  //    hand. strengthOf < 0.40 ≈ junk; the bigger the stolen pot, the better.
+  const live = players.filter(p => !p.folded);
+  if (live.length === 1 && live[0].playerId === win.playerId && winnerHole && winnerHole.length === 2) {
+    let str = 1;
+    try { str = strengthOf(winnerHole, board); } catch (_) {}
+    if (str < 0.40 && (!_records.biggestBluff || pot > _records.biggestBluff.amount)) {
+      _records.biggestBluff = { nick: win.nick, amount: pot, ts };
+    }
+  }
+
+  // 5) Ugliest WINNER — weakest made hand to win a CONTESTED showdown (river
+  //    dealt, ≥2 players standing). pokersolver rank: lower = worse.
+  if (board.length === 5 && live.length >= 2 && winnerHole && winnerHole.length === 2) {
+    try {
+      const solved = SolverHand.solve([...winnerHole, ...board]);
+      const rank = solved && solved.rank;
+      if (Number.isFinite(rank) && (!_records.ugliestWinner || rank < _records.ugliestWinner.rank)) {
+        _records.ugliestWinner = { nick: win.nick, hand: solved.descr || 'a hand', rank, ts };
+      }
+    } catch (_) {}
+  }
+}
+
+/** Snapshot of the all-time records, broadcast in Table.publicState(). */
+function getRecords() {
+  const out = {};
+  for (const k of Object.keys(_records)) out[k] = _records[k] ? { ..._records[k] } : null;
+  return out;
+}
+
+// Seed from the existing hand log once at boot (best-effort, sync — the file is
+// small and this only runs at startup).
+(function seedRecords() {
+  try {
+    if (!fs.existsSync(HAND_LOG)) return;
+    for (const line of fs.readFileSync(HAND_LOG, 'utf8').split('\n')) {
+      if (!line.trim()) continue;
+      try { _applyHandRecords(JSON.parse(line)); } catch (_) {}
+    }
+  } catch (_) { /* best-effort */ }
+})();
 
 function logBotDecision({ tableId, playerId, mode, baseMode, decision, context }) {
   const row = {
@@ -109,4 +232,4 @@ function logChat({ tableId, entry, extras }) {
   appendLine(CHAT_LOG, row);
 }
 
-module.exports = { logHand, logBotDecision, logChat, HAND_LOG, BOT_LOG, CHAT_LOG, LOG_DIR };
+module.exports = { logHand, logBotDecision, logChat, getRecords, HAND_LOG, BOT_LOG, CHAT_LOG, LOG_DIR };

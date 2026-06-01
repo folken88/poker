@@ -16,6 +16,7 @@
  * `{ ok: false }` and the caller falls back to text-only chat.
  */
 
+const ttsCache     = require('./ttsCache');
 const API_KEY      = process.env.ELEVENLABS_API_KEY || '';
 // Default to the quality model (richer, more consistent prosody than the
 // flash model, which rushed/pitched-up on short banter lines). Overridable
@@ -117,6 +118,18 @@ async function synthesize(text, voiceId, settings) {
   if (!text || !voiceId) return null;
   const clean = lengthenDivinePauses(applyPronunciations(String(text).trim())).slice(0, 300);
   if (clean.length === 0) return null;
+
+  // ── Cache check (before rate-limit + API) ──────────────────────────────────
+  // The final merged settings are what's actually sent to 11labs, so they're
+  // part of the key. A hit returns the saved MP3 and costs ZERO 11labs
+  // characters; it also doesn't count against our rate window.
+  const mergedSettings = { ...DEFAULT_VOICE_SETTINGS, ...(settings || {}) };
+  const cacheKey = ttsCache.keyFor(voiceId, MODEL, mergedSettings, clean);
+  if (cacheKey) {
+    const hit = await ttsCache.get(voiceId, cacheKey);
+    if (hit) return hit;
+  }
+
   if (!rateAllowed(clean.length)) {
     console.warn('[11labs] rate-limit hit; dropping line');
     return null;
@@ -136,9 +149,9 @@ async function synthesize(text, voiceId, settings) {
       body: JSON.stringify({
         text: clean,
         model_id: MODEL,
-        // Per-character overrides (if any) merge over the global defaults,
-        // so a caller need only specify the keys it wants to change.
-        voice_settings: { ...DEFAULT_VOICE_SETTINGS, ...(settings || {}) },
+        // Per-character overrides already merged over the global defaults
+        // above (and folded into the cache key).
+        voice_settings: mergedSettings,
       }),
       signal: ctrl.signal,
     });
@@ -150,7 +163,9 @@ async function synthesize(text, voiceId, settings) {
     }
     const buf = await res.arrayBuffer();
     if (!buf || buf.byteLength === 0) return null;
-    return Buffer.from(buf).toString('base64');
+    const b64 = Buffer.from(buf).toString('base64');
+    if (cacheKey) ttsCache.put(voiceId, cacheKey, b64); // save for reuse (fire-and-forget)
+    return b64;
   } catch (e) {
     // AbortError, network failure — never bubble to caller.
     if (e?.name !== 'AbortError') {

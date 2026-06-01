@@ -808,4 +808,4 @@ function maybeSpeak(table, event) {
   }).catch(() => { /* silent */ });
 }
 
-module.exports = { maybeSpeak, detectAddressedBot };
+module.exports = { maybeSpeak, detectAddressedBot, CHARACTER_FLAVOR };

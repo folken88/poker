@@ -140,7 +140,11 @@ function resolveSwing(attackerGear, defenderGear) {
  *  @param {'lightning'|'stinking'} type
  */
 function resolveSpell(type, casterGear, targetGear) {
-  const power = totalMagicBonus(casterGear);
+  // Spell power scales with the caster's total magic bonus, but never below a
+  // floor — a spell should ALWAYS cast (the target saves or doesn't); it should
+  // never "fizzle" just because the caster owns no magic items. Floor 2 = a
+  // modest 2d6 bolt / DC 12 cloud for a gearless caster.
+  const power = Math.max(2, totalMagicBonus(casterGear));
   const dc = 10 + power;
   const cloak = (targetGear && Number(targetGear.cloak)) || 0;
   const saveRoll = dRoll(20);

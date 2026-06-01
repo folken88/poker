@@ -1,6 +1,7 @@
 node_modules/
 backend/data/*.db
 backend/data/*.db-*
+backend/data/tts-cache/
 backend/logs/
 *.log
 .env

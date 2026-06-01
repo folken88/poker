@@ -52,9 +52,6 @@ function swingSummary(s) {
 // outcome, with the damage number (lightning only) as the only number.
 function spellLine(caster, target, s) {
   if (s.type === 'lightning') {
-    if (s.power === 0) {
-      return `⚡ ${caster} points dramatically at ${target}… and nothing happens — no magic items, the bolt fizzles. 💀 oof`;
-    }
     return s.saved
       ? `⚡ ${caster} hurls a Lightning Bolt at ${target} — ${target} dives aside, taking ${s.damage} lightning.`
       : `⚡ ${caster} hurls a Lightning Bolt at ${target} — ${target} is FRIED for ${s.damage} lightning damage!`;
@@ -66,11 +63,9 @@ function spellLine(caster, target, s) {
 function spellReactionDesc(caster, target, s) {
   let what;
   if (s.type === 'lightning') {
-    what = s.power === 0
-      ? `${caster} tried to zap you with a Lightning Bolt but owns NO magic items, so it fizzled into nothing — RIDICULE their non-existent spell mastery ("your mastery of spells is non-existent", "you call that magic?").`
-      : s.saved
-        ? `${caster} threw a Lightning Bolt at you but it barely tickled — you shrugged off all but ${s.damage}. RIDICULE their FEEBLE spellcraft and poor spell mastery; mock the WEAK magic, NOT dodging.`
-        : `${caster} FRIED you with a Lightning Bolt for ${s.damage} lightning — react (indignant, or grudging respect for real power).`;
+    what = s.saved
+      ? `${caster} threw a Lightning Bolt at you but it barely tickled — you shrugged off all but ${s.damage}. RIDICULE their FEEBLE spellcraft and poor spell mastery; mock the WEAK magic, NOT dodging.`
+      : `${caster} FRIED you with a Lightning Bolt for ${s.damage} lightning — react (indignant, or grudging respect for real power).`;
   } else {
     what = s.saved
       ? `${caster} tried to gag you with a Stinking Cloud but you held your breath — mock their feeble little conjuration.`

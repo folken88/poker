@@ -6,7 +6,7 @@
 const db = require('../persistence/db');
 const { Hand, STATES } = require('./Hand');
 const { Bot } = require('../bot/Bot');
-const { logHand, logBotDecision, logChat } = require('../persistence/logger');
+const { logHand, logBotDecision, logChat, getRecords } = require('../persistence/logger');
 const { gold } = require('../util/numwords');
 const { strengthOf } = require('../bot/strength');
 const { botRebuyMessage, humanRebuyMessage, bustMessage } = require('../util/flavor');
@@ -1454,6 +1454,9 @@ class Table {
       // Wall-clock ms when the next hand is scheduled to start (only set
       // between hands or while autostart is pending; null during a live hand).
       nextHandAt: this.nextHandAt,
+      // All-time biggest single-hand win / loss for the sidebar "Hall of
+      // Records". { biggestWin, biggestLoss } each { nick, amount, ts } | null.
+      records: getRecords(),
       // Last 60 chat-log entries so newly-joined / refreshed clients
       // see context, not an empty panel.
       chatLog: this.chatLog.slice(-60),

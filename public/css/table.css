@@ -1730,11 +1730,51 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
   line-height: 1.3;
 }
 .lb--sidebar {
-  flex: 1 1 auto;
+  /* Was flex:1 1 auto (filled the whole panel). Now shares the panel ~50/50
+     with the Hall of Records below it (both flex:1 1 0). */
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   gap: 2px;
   padding-right: 2px;
 }
+/* ===== Hall of Records (under the leaderboard) ===== */
+.lb-records {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(245, 236, 214, 0.12);
+  overflow-y: auto;   /* 6 rows; scrolls in its half if the panel is short */
+}
+.lb-records__title { flex: 0 0 auto; }
+.lb-records__row { flex: 0 0 auto; }
+.lb-records__title {
+  margin: 0 0 2px;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ivory-dim);
+}
+.lb-records__row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  padding: 3px 5px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+}
+.lb-records__label { white-space: nowrap; opacity: 0.85; }
+.lb-records__who   { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-records__amt   { font-variant-numeric: tabular-nums; font-weight: 600; }
+.lb-records__amt.is-win  { color: #7ddb8a; }
+.lb-records__amt.is-loss { color: #e08a8a; }
+.lb-records__empty { opacity: 0.5; }
 .lb--sidebar .lb__row {
   grid-template-columns: 20px 22px 1fr auto;
   gap: 5px;
@@ -1960,6 +2000,13 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 }
 .seat__avatar > svg,
 .seat__avatar > .avatar-img { border-radius: 50%; overflow: hidden; }
+/* AI intelligence-tier ring — recolors the token's existing thin frame so the
+   tier reads at a glance without adding a second border. Kept low-opacity and
+   subtle on purpose: bronze = low, silver = average, gold = high. Humans keep
+   the default brass frame above. */
+.seat__avatar--intel-low  { border-color: rgba(176, 112, 58, 0.60); }   /* bronze */
+.seat__avatar--intel-avg  { border-color: rgba(196, 202, 212, 0.55); }  /* silver */
+.seat__avatar--intel-high { border-color: rgba(226, 184, 88, 0.70); }   /* gold   */
 .seat__avatar-ai {
   position: absolute;
   top: -4px; right: -6px;

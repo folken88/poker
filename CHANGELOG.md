@@ -21,6 +21,30 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-05-31
 
+### 💸 11labs token savings — TTS audio cache
+- **Reused voice lines are now free.** Every synthesized line is cached to disk
+  (keyed by voice + settings + exact text); when a character says something they've
+  said before — "Fold.", "Mine.", a victory line — we replay the saved MP3 instead
+  of calling 11labs. Saves characters/tokens, plays instantly, and self-prunes via
+  an 80 MB-per-voice LRU so one-off conversational lines age out. Hit-rate at
+  `/api/tts-cache`; optional one-time pre-warm script seeds the common lines.
+
+### 🏆 Hall of Records (right panel)
+- The leaderboard now shares its panel with an all-time **Hall of Records**:
+  **🥇 Biggest Win**, **💀 Biggest Loss**, **💰 Biggest Pot**, **⚔️ Longest War**
+  (most raises in a hand), **🃏 Biggest Bluff** (biggest pot stolen with junk), and
+  **🐟 Ugliest Winner** (weakest hand to win a showdown — e.g. winning on Ace-high).
+  Tracks current roster players only, and survives Full Resets (it's historical).
+
+### 🧠 AI tells
+- **Intelligence rings on AI tokens** — a subtle bronze / silver / gold ring around
+  each bot's token shows its skill tier (low / average / high) at a glance.
+
+### 🔮 Spells & 🎙️ voices
+- **Spells no longer fizzle.** A gearless caster's bolt used to do nothing; spells
+  now always cast (minimum power) — only the target's save varies.
+- **Ulfred** is now voiced by **Sean**.
+
 ### 🧠 Smarter AI
 - **High-intelligence bots rebalanced toward value.** A log study (13.7k
   decisions / 1.5k hands) confirmed the intelligence tiers work — high-intel is

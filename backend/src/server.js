@@ -10,6 +10,7 @@ const path = require('path');
 
 const db = require('./persistence/db');
 const { PRONUNCIATIONS } = require('./util/pronunciations');
+const ttsCache = require('./util/ttsCache');
 const { registerLobbyHandlers } = require('./sockets/lobby');
 const { registerTableHandlers } = require('./sockets/table');
 const { Table } = require('./game/Table');
@@ -34,6 +35,11 @@ app.get('/api/roster', (_req, res) => {
 app.get('/api/pronunciations', (_req, res) => {
   res.set('Cache-Control', 'public, max-age=300');
   res.json(PRONUNCIATIONS);
+});
+
+// TTS cache hit-rate — how many 11labs calls we're saving by reusing audio.
+app.get('/api/tts-cache', (_req, res) => {
+  res.json(ttsCache.getStats());
 });
 
 // Lightweight live status per table — used by the deploy watcher to tell

@@ -315,6 +315,15 @@ file and both TTS engines pick it up — no hand-syncing.
 and checks `socket.data.voiceOn`. If nobody at the table has voice enabled, the
 11labs API call is skipped entirely to save credits — text banter still ships.
 
+**TTS audio cache** (`backend/src/util/ttsCache.js`) — `synthesize()` checks an
+on-disk cache before calling 11labs, keyed by `sha1(voiceId + model + voice
+settings + exact cleaned text)`. A hit replays the saved MP3 for **zero** 11labs
+characters (and skips the rate limit). Caches every line, bounded by an 80 MB
+per-voice LRU (`TTS_CACHE_MAX_MB_PER_VOICE`) — frequently-reused stock lines stay
+hot, one-off conversational lines age out. Lives in the persistent `data/`
+volume; hit-rate at `GET /api/tts-cache`. Seed it from day one with
+`node scripts/warm-tts-cache.js --go` (dry-run without `--go`).
+
 **API key handling** — `ELEVENLABS_API_KEY` lives in `.env` (gitignored). Never
 appears in any client payload, log line, URL, error message, or socket emission.
 All synthesis happens server-side; clients only see resulting audio bytes.

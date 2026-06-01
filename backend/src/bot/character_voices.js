@@ -64,7 +64,7 @@ const CHARACTER_VOICES = {
   // ===== Defaults picked from your 11labs library — adjust as desired =====
   // Carrion Crown / Caliphas crowd
   'Storgrim':          'oCXdm5WkYoKVEdlbPLev', // Paul — Deep & Warm Yorkshire (shared library) — northern English dwarf captain
-  'Ulfred':            'U5UjeJMsOvyhYhXfZdvZ', // Adam — Classic Scottish Storyteller (deep, old, CRISP) — replaced Mossbeard, which read too slow
+  'Ulfred':            'Yj3XGMd9w2H4C0P0L28M', // Sean (user pick; also Kai Ginn's voice) — replaced Adam
   'Tamsin':            'dAlhI9qAHVIjXuVppzhW', // Tamsin — Engaging British storyteller (name-match!)
   'Toni':              'pFZP5JQG7iQjIQuC4Bku', // Lily — Velvety Actress (British, mid-aged) — vampire velvet
   'Agu':               'XB0fDUnXU5powFXDhCwa', // Charlotte (11labs default, Swedish-accented mature female — placeholder for "Slavic middle-aged woman"; swap to a specific library voice when one is picked)
@@ -118,8 +118,8 @@ const VOICE_SETTINGS = {
   // Gaspar (Pharasmin zealot, voice "Ultron") still reads a touch hot —
   // nudge him steadier and a hair slower than the (already calm) default.
   'Gaspar':   { stability: 0.60, speed: 0.88 },
-  // Ulfred — the global 0.90 plus an old voice dragged; speed him back up.
-  'Ulfred':   { speed: 1.05 },
+  // (Ulfred's old speed:1.05 override is gone — it was tuned for the previous
+  //  slow voice; Sean uses the global defaults. Re-add a tweak if he needs it.)
   // Duristan — languid, posh, low-energy register (Lazlo from "What We Do
   // in the Shadows"): extra-steady and notably unhurried.
   'Duristan': { stability: 0.65, similarity_boost: 0.80, speed: 0.82 },

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260531-combat-audio" />
+  <link rel="stylesheet" href="/css/table.css?v=20260531-records-6" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -214,6 +214,15 @@
         <h3 class="help-panel__title">🏆 Leaderboard</h3>
         <p class="help-panel__sub">Chips + magic-item value, updated in real time. Goal: full +5 set = LOOT LORD.</p>
         <ol class="lb lb--sidebar" id="sidebarLeaderboard"></ol>
+        <div class="lb-records" id="sidebarRecords">
+          <h4 class="lb-records__title">📜 Hall of Records</h4>
+          <div class="lb-records__row" id="recordBiggestWin"></div>
+          <div class="lb-records__row" id="recordBiggestLoss"></div>
+          <div class="lb-records__row" id="recordBiggestPot"></div>
+          <div class="lb-records__row" id="recordLongestWar"></div>
+          <div class="lb-records__row" id="recordBiggestBluff"></div>
+          <div class="lb-records__row" id="recordUgliestWin"></div>
+        </div>
       </aside>
     </main>
 
@@ -381,9 +390,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260531-combat-audio"></script>
-  <script src="/js/cards.js?v=20260531-combat-audio"></script>
-  <script src="/js/blindMode.js?v=20260531-combat-audio"></script>
-  <script src="/js/client.js?v=20260531-combat-audio"></script>
+  <script src="/js/avatars.js?v=20260531-records-6"></script>
+  <script src="/js/cards.js?v=20260531-records-6"></script>
+  <script src="/js/blindMode.js?v=20260531-records-6"></script>
+  <script src="/js/client.js?v=20260531-records-6"></script>
 </body>
 </html>
