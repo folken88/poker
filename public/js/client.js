@@ -1061,8 +1061,10 @@
         if (hole) order.push(hole);
       }
       if (!order.length) return;
-      // Slowed 30% from the original (70/360) for a more deliberate pitch.
-      const STAGGER = 91, FLIGHT = 468, W = 34;
+      // Slowed twice by 30% from the original 70/360 (→91/468→118/608) for a
+      // deliberate, readable pitch. Per-card sound is keyed off `delay`, so it
+      // stays synced to each card's launch automatically.
+      const STAGGER = 118, FLIGHT = 608, W = 34;
       let idx = 0;
       // Two passes — one card to each, then the second card.
       for (let pass = 0; pass < 2; pass++) {
