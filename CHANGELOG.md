@@ -21,6 +21,12 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🦮 Blind Mode toggle in the options menu (mobile)
+- You can now turn **Blind Mode** on/off from the **≡ options menu** (the one with
+  + Bot / Pick AI / Re-buy / etc.), so phone and tablet players — who have no
+  backtick key — can engage spoken play-by-play with a tap. The button shows its
+  on/off state and stays in sync with the backtick shortcut and voice command.
+
 ### 🧑 New player
 - Added **LeJeanBec** as a human player login.
 

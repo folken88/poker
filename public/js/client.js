@@ -471,6 +471,27 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && topbarMenu.classList.contains('is-open')) closeMenu();
     });
+
+    // ── Blind-mode toggle living inside this options menu — a tap-friendly
+    //    equivalent of the backtick keyboard shortcut, so phone/tablet users
+    //    (who have no backtick key) can engage spoken play-by-play. ──
+    const blindBtn = $('#blindModeBtn');
+    if (blindBtn) {
+      const syncBlindBtn = () => {
+        const on = !!(window.BlindMode && window.BlindMode.isOn && window.BlindMode.isOn());
+        blindBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        blindBtn.classList.toggle('is-active', on);
+        blindBtn.textContent = on ? '🦮 Blind Mode: On' : '🦮 Blind Mode';
+      };
+      blindBtn.addEventListener('click', () => {
+        if (window.BlindMode && window.BlindMode.toggle) window.BlindMode.toggle();
+        syncBlindBtn();
+      });
+      // Re-sync the label each time the menu opens, so it stays honest even if
+      // blind mode was toggled elsewhere (backtick key, voice command).
+      topbarMenuToggle.addEventListener('click', syncBlindBtn);
+      syncBlindBtn();
+    }
   }
 
   function setScreen(name) { document.body.dataset.screen = name; }

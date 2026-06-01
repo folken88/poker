@@ -773,6 +773,14 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
    Tiny topbar pill that lights up when blind support is active so a
    sighted helper (or Josh himself, via TTS) can confirm the mode.
    .is-listening pulses while the PTT mic is open. */
+/* Blind-mode toggle button (in the mobile options menu) — lit amber when on,
+   matching the 🦮 Blind status chip so its active state reads at a glance. */
+#blindModeBtn.is-active {
+  color: #ffe9a8;
+  background: linear-gradient(180deg, rgba(180,120,30,0.55), rgba(120,70,10,0.65));
+  border-color: rgba(241,207,131,0.7);
+}
+
 .blind-chip {
   display: inline-flex;
   align-items: center;

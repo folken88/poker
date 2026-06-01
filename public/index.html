@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260531-gain" />
+  <link rel="stylesheet" href="/css/table.css?v=20260601-blindbtn" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -147,6 +147,7 @@
                 aria-label="Open menu" aria-haspopup="true" aria-expanded="false"
                 aria-controls="topbarMenu">≡</button>
         <div class="topbar__menu" id="topbarMenu">
+          <button class="btn btn--ghost btn--sm" id="blindModeBtn" aria-pressed="false" title="Spoken play-by-play for blind / low-vision players. Toggles blind support (same as the backtick key).">🦮 Blind Mode</button>
           <button class="btn btn--ghost btn--sm" id="addBotBtn" title="Add a random AI to an empty seat">+ Bot</button>
           <button class="btn btn--ghost btn--sm" id="pickBotBtn" title="Pick a specific AI character to seat">Pick AI ▾</button>
           <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Re-buy 5,000 chips. Hock any magic items first.">Re-buy</button>
@@ -390,9 +391,9 @@
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/avatars.js?v=20260531-gain"></script>
-  <script src="/js/cards.js?v=20260531-gain"></script>
-  <script src="/js/blindMode.js?v=20260531-gain"></script>
-  <script src="/js/client.js?v=20260531-gain"></script>
+  <script src="/js/avatars.js?v=20260601-blindbtn"></script>
+  <script src="/js/cards.js?v=20260601-blindbtn"></script>
+  <script src="/js/blindMode.js?v=20260601-blindbtn"></script>
+  <script src="/js/client.js?v=20260601-blindbtn"></script>
 </body>
 </html>
