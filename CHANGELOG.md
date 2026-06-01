@@ -19,6 +19,16 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-06-01
+
+### 👨‍👧 Farrah's adoptive aunts — Kate & Daramid
+- Farrah (the orphan) now treats **Kate Blackwood** and **Judge Daramid** as her
+  adoptive aunts — the closest thing she has to family. Her gleeful profanity
+  softens into real affection around them; she calls them **"Aunty Kate"** and
+  **"Aunt Judge,"** beams when they win, and defends them at the felt. Kate plays
+  the indulgent, protective aunt; Daramid pretends to disapprove of the kid's
+  mouth ("language, child") but is plainly proud of her.
+
 ## 2026-05-31 (later)
 
 ### 🎵 Gaspar quotes "The Gambler"
