@@ -985,7 +985,7 @@
   function _prefersReducedMotion() {
     try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; }
   }
-  function spawnDealCard(overlay, ox, oy, tx, ty, delay, flight) {
+  function spawnDealCard(overlay, ox, oy, tx, ty, delay, flight, withSound) {
     const W = 34, H = W * 106 / 70;
     const card = document.createElement('div');
     card.className = 'deal-card';
@@ -1007,9 +1007,10 @@
       // No Web Animations API — just drop the card at the target.
       card.style.transform = `translate(${dx}px, ${dy}px)`; card.style.opacity = '1';
     }
-    // Flick fires as the card LEAVES the dealer's hand (start of its flight),
-    // so each pitch sound lines up with a card launching. Honors card mute.
-    if (_dealAnimEnabled) setTimeout(() => playFromPool(DEAL_CARD_POOL, 0.6), delay);
+    // Flick fires as the card LEAVES the dealer's hand (start of its flight).
+    // Only ONE card per player carries the sound (withSound) — two flicks per
+    // player was aurally cluttered. Honors card mute.
+    if (_dealAnimEnabled && withSound) setTimeout(() => playFromPool(DEAL_CARD_POOL, 0.6), delay);
     const cleanup = () => {
       try {
         const fade = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: 'ease-out', fill: 'forwards' });
@@ -1075,7 +1076,8 @@
           const offset = (pass === 0 ? -W * 0.33 : W * 0.33);
           const tx = r.left + r.width / 2 - overlayRect.left + offset;
           const ty = r.top  + r.height / 2 - overlayRect.top;
-          spawnDealCard(overlay, ox, oy, tx, ty, idx * STAGGER, FLIGHT);
+          // One sound per player: only the first card (pass 0) plays a flick.
+          spawnDealCard(overlay, ox, oy, tx, ty, idx * STAGGER, FLIGHT, pass === 0);
           idx++;
         }
       }
