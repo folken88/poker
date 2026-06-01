@@ -274,11 +274,9 @@ class Dungeon {
   _nextTurn() {
     if (this._endIfResolved()) return;
     this.turnIdx += 1;
-    if (this.turnIdx >= this.turnOrder.length) {
-      this.round += 1;
-      this._rollInitiative();   // fresh initiative every round (sets turnIdx = 0)
-      this._note(`🎲 Round ${this.round} — initiative re-rolled.`);
-    }
+    // Initiative is rolled ONCE per combat (per room, in openDoor) — Pathfinder
+    // keeps the same order each round; we just wrap back to the top.
+    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; }
     this._advanceToActor();
   }
   _armAfkTimer(m) {
