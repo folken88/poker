@@ -1070,6 +1070,31 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .card-svg--empty { opacity: 0.5; }
 .board .card-svg { animation: dealIn .35s ease-out both; }
 @keyframes dealIn { from { opacity: 0; transform: translateY(-12px) rotate(-6deg); } to { opacity: 1; transform: none; } }
+/* ── Card-dealing animation overlay ──────────────────────────────────
+   Full-felt layer that hosts the in-flight card backs pitched from the
+   dealer to each seat at the start of a hand. Sits above the seat plates
+   (z 1–4) but below banners/modals. pointer-events:none so it's purely
+   visual and never intercepts clicks. Cards are positioned + animated in
+   JS (Web Animations API) from client.js. */
+.deal-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 6;
+}
+.deal-card {
+  position: absolute;
+  width: 34px;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.55));
+}
+.deal-card .card-svg { width: 100%; height: auto; display: block; }
+@media (prefers-reduced-motion: reduce) {
+  /* JS already skips the animation; this is belt-and-suspenders so any
+     stray flying card can't linger or move for motion-sensitive users. */
+  .deal-overlay { display: none; }
+}
+
 .seat__hole {
   display: flex; gap: 3px; margin-top: 4px; justify-content: center;
 }

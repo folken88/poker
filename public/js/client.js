@@ -128,6 +128,9 @@
   let _meleeSoundEnabled     = true;  // ⚔️ sword/dagger swings, blocks, hits, fumbles
   let _lightningSoundEnabled = true;  // ⚡ Lightning Bolt
   let _fartSoundEnabled      = true;  // 💨 Stinking Cloud
+  // 🃏 Card-deal animation — cards pitched from the dealer to each seat at
+  // the start of a hand. Cosmetic; default ON, persisted per-player.
+  let _dealAnimEnabled       = true;
 
   function audioSettingsKey(field) {
     const pid = state.me?.player_id;
@@ -166,6 +169,8 @@
     _meleeSoundEnabled     = kcm ? localStorage.getItem(kcm) !== '0' : true;
     _lightningSoundEnabled = kcl ? localStorage.getItem(kcl) !== '0' : true;
     _fartSoundEnabled      = kcf ? localStorage.getItem(kcf) !== '0' : true;
+    const kda = audioSettingsKey('dealAnim');
+    _dealAnimEnabled       = kda ? localStorage.getItem(kda) !== '0' : true;
     applyMuteUI();
     // After load, republish to server so a fresh reconnect / new
     // player login carries the right preference into the listener
@@ -187,6 +192,8 @@
     if (kcm) localStorage.setItem(kcm, _meleeSoundEnabled     ? '1' : '0');
     if (kcl) localStorage.setItem(kcl, _lightningSoundEnabled ? '1' : '0');
     if (kcf) localStorage.setItem(kcf, _fartSoundEnabled      ? '1' : '0');
+    const kda = audioSettingsKey('dealAnim');
+    if (kda) localStorage.setItem(kda, _dealAnimEnabled ? '1' : '0');
     pushVoicePrefToServer();
   }
   // Inform the server whenever the banter-voice setting changes (and
@@ -227,6 +234,7 @@
     const cmt = $('#combatMeleeToggle');     if (cmt) cmt.checked = _meleeSoundEnabled;
     const clt = $('#combatLightningToggle'); if (clt) clt.checked = _lightningSoundEnabled;
     const cft = $('#combatFartToggle');      if (cft) cft.checked = _fartSoundEnabled;
+    const dat = $('#dealAnimToggle');        if (dat) dat.checked = _dealAnimEnabled;
   }
   applyMuteUI();
 
@@ -290,6 +298,9 @@
   // moves to them. Reset on hand-start so the first actor of a new
   // hand still triggers a tick (previous value would be stale).
   let _audLastActor = null;
+  // Card-deal animation fires once per hand on the fresh PREFLOP edge.
+  // Tracks the last hand.startedAt we animated (or chose to skip).
+  let _dealAnimLastHand = null;
   function maybePlayCardSounds(hand) {
     if (!hand) {
       _audLastHandStartedAt = null;
@@ -378,6 +389,11 @@
   for (const [sel, set] of combatToggles) {
     const el = $(sel);
     if (el) el.addEventListener('change', (e) => { set(!!e.target.checked); saveAudioSettings(); });
+  }
+  // 🃏 Card-deal animation toggle.
+  const dealAnimToggle = $('#dealAnimToggle');
+  if (dealAnimToggle) {
+    dealAnimToggle.addEventListener('change', (e) => { _dealAnimEnabled = !!e.target.checked; saveAudioSettings(); });
   }
   // Volume sliders — 0..100 integer percent. `input` event fires on
   // every drag tick for live feedback (the % label updates in real
@@ -951,6 +967,107 @@
   }
 
   // ===== Table render =====
+  // ── Card-dealing animation ───────────────────────────────────────────
+  // On the fresh PREFLOP deal, pitch two card-backs from the dealer's seat
+  // out to every player in the hand — real-dealer order (one card to each
+  // clockwise from the dealer's left, then a second pass), with a soft
+  // flick per card. Purely cosmetic: the real face-down hole cards render
+  // normally underneath and the flying backs fade out on landing.
+  function _prefersReducedMotion() {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; }
+  }
+  function spawnDealCard(overlay, ox, oy, tx, ty, delay, flight) {
+    const W = 34, H = W * 106 / 70;
+    const card = document.createElement('div');
+    card.className = 'deal-card';
+    card.innerHTML = window.FolkenCards.faceDown();
+    card.style.left = (ox - W / 2) + 'px';
+    card.style.top  = (oy - H / 2) + 'px';
+    card.style.opacity = '0';
+    overlay.appendChild(card);
+    const dx = tx - ox, dy = ty - oy;
+    const spin = (Math.random() * 36 - 18);  // a little flip/tumble
+    let anim;
+    try {
+      anim = card.animate([
+        { transform: 'translate(0,0) rotate(0deg) scale(.66)', opacity: 0.15 },
+        { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 16}px) rotate(${spin * 0.6}deg) scale(1.06)`, opacity: 1, offset: 0.55 },
+        { transform: `translate(${dx}px, ${dy}px) rotate(${spin}deg) scale(1)`, opacity: 1 },
+      ], { duration: flight, delay, easing: 'cubic-bezier(.25,.6,.3,1)', fill: 'forwards' });
+    } catch (_) {
+      // No Web Animations API — just drop the card at the target.
+      card.style.transform = `translate(${dx}px, ${dy}px)`; card.style.opacity = '1';
+    }
+    // Soft flick as the card nears the seat (honors the card-sound mute).
+    if (_dealAnimEnabled) setTimeout(() => playFromPool(TURN_TICK_POOL, 0.3), delay + flight * 0.6);
+    const cleanup = () => {
+      try {
+        const fade = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: 'ease-out', fill: 'forwards' });
+        fade.onfinish = () => card.remove();
+      } catch (_) { card.remove(); }
+      setTimeout(() => card.remove(), 320);  // safety
+    };
+    if (anim) anim.onfinish = cleanup; else setTimeout(cleanup, delay + flight);
+  }
+  function maybeDealAnimation(hand) {
+    if (!hand || !hand.startedAt) return;
+    if (hand.startedAt === _dealAnimLastHand) return;   // already handled this hand
+    const boardLen = hand.board?.length || 0;
+    const isPreflopDeal = (hand.state === 'PREFLOP') || boardLen === 0;
+    // Mark as seen regardless, so a mid-hand reconnect doesn't animate late.
+    _dealAnimLastHand = hand.startedAt;
+    if (!isPreflopDeal) return;
+    if (!_dealAnimEnabled || _prefersReducedMotion()) return;
+    const overlay = $('#dealOverlay');
+    const ring = $('#seatRing');
+    const players = hand.players || [];
+    if (!overlay || !ring || !players.length) return;
+
+    // Defer one frame so the collision-avoidance rAF (queued just above)
+    // has nudged seats into their final positions before we measure.
+    requestAnimationFrame(() => {
+      const overlayRect = overlay.getBoundingClientRect();
+      if (!overlayRect.width) return;
+      // Map rendered seat elements by player id.
+      const seatByPid = {};
+      for (const el of ring.children) {
+        const pid = el.dataset && el.dataset.playerId;
+        if (pid) seatByPid[pid] = el;
+      }
+      const N = players.length;
+      const btn = Number.isInteger(hand.dealerButton) ? hand.dealerButton : 0;
+      // Origin = the dealer's seat (fallback: ring center).
+      const dealerEl = seatByPid[players[btn]?.playerId];
+      const oRect = (dealerEl || ring).getBoundingClientRect();
+      const ox = oRect.left + oRect.width / 2 - overlayRect.left;
+      const oy = oRect.top  + oRect.height / 2 - overlayRect.top;
+      // Deal order: player to the dealer's left (SB) first, clockwise,
+      // dealer last — exactly how a live dealer pitches.
+      const order = [];
+      for (let k = 1; k <= N; k++) {
+        const p = players[(btn + k) % N];
+        const el = p && seatByPid[p.playerId];
+        const hole = el && (el.querySelector('.seat__hole') || el.querySelector('.seat__plate') || el);
+        if (hole) order.push(hole);
+      }
+      if (!order.length) return;
+      const STAGGER = 70, FLIGHT = 360, W = 34;
+      let idx = 0;
+      // Two passes — one card to each, then the second card.
+      for (let pass = 0; pass < 2; pass++) {
+        for (const hole of order) {
+          const r = hole.getBoundingClientRect();
+          // Nudge the two cards apart so they land side-by-side, not stacked.
+          const offset = (pass === 0 ? -W * 0.33 : W * 0.33);
+          const tx = r.left + r.width / 2 - overlayRect.left + offset;
+          const ty = r.top  + r.height / 2 - overlayRect.top;
+          spawnDealCard(overlay, ox, oy, tx, ty, idx * STAGGER, FLIGHT);
+          idx++;
+        }
+      }
+    });
+  }
+
   function renderTable() {
     const t = state.table; if (!t) return;
     renderRecords();   // sidebar "Hall of Records" (biggest single-hand win/loss)
@@ -988,6 +1105,9 @@
       if (isBottomHalf) classes.push('seat--bottom');
       el.className = classes.join(' ');
       el.style.left = cx + '%'; el.style.top = cy + '%';
+      // Tag occupied seats with their player id so the deal animation can
+      // locate the dealer seat (origin) and each target hole after render.
+      if (seat.occupied && seat.playerId) el.dataset.playerId = seat.playerId;
 
       if (seat.occupied) {
         // Determine hole-card display
@@ -1184,6 +1304,11 @@
         if (!anyMoved) break;
       }
     });
+
+    // Card-dealing animation — fires once on the fresh PREFLOP deal. Runs
+    // after the collision pass (queued later) so it reads settled seat
+    // positions. Reads `hand` + the just-rendered seat DOM.
+    maybeDealAnimation(hand);
 
     // Community board
     const board = $('#board');

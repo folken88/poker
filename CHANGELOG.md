@@ -21,6 +21,15 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🎴 Card-dealing animation
+- At the start of each hand, card-backs now **pitch out from the dealer's seat to
+  every player in the hand** — real-dealer order (one card to each going
+  clockwise from the dealer's left, then a second pass), with a soft flick sound
+  per card. Purely cosmetic (the real hole cards render underneath and the flying
+  backs fade on landing). Auto-skips under `prefers-reduced-motion`, and there's a
+  remembered **🃏 Card-deal animation** toggle in the audio settings menu (default
+  on). Thanks to **Tobias** for the idea.
+
 ### 🗣️ Pronunciation — "bilge"
 - The AI voices and blind-mode narrator now say **"bilge"** correctly (rhymes
   with the "-ilge" in *build* → "bilj"), instead of mangling it into "bill-jah."
