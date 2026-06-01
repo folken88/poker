@@ -65,6 +65,13 @@ Thanks to the regulars whose suggestions made it into the game:
   the 11labs sound-generation API (variety so the rapid deal doesn't sound looped).
   Thanks to **Tobias** for the idea.
 
+### 👻 Farrah lore — Farrus Richton, the malevolent ghost
+- Fixed Farrah's full name to **Farrah Delila Richton** and corrected her
+  ancestry: Farrus Richton (the Butcher of Courtaud) is her **great-grandfather**.
+  He's long dead but **haunts Ustalav as a malevolent ghost who hates everyone
+  alive — except Farrah**, the one soul he dotes on. Added **Richton → "rick ton"**
+  to the pronunciation list (applies to Farrah and Farrus).
+
 ### 🗣️ Pronunciation — Kovira, Kai Ginn, Gaspar, Fera
 - The AI voices and blind-mode narrator now say these correctly:
   **Kovira** → *"koh vee rah"*, **Kai Ginn** → *"kai jinn"*, **Gaspar** →

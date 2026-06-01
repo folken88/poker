@@ -25,6 +25,7 @@ const PRONUNCIATIONS = [
   ['Kai Gin',    'Kai Jinn'],      // bio sometimes spells it "Kai Gin"
   ['Gaspar',     'Gas par'],
   ['Fera',       'Fear ah'],
+  ['Richton',    'Rick ton'],     // Farrah & her great-grandfather Farrus Richton
   ['bilge',      'bilj'],          // rhymes-ish with "build"; NOT "bill-jah" (common in pirate "bilge rat")
 ];
 
