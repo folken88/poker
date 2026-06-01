@@ -417,11 +417,11 @@ class Dungeon {
   _enemyAct(e) {
     const all = this.livingParty();
     if (!all.length) return;
-    // Switch off helpless prey — prefer a non-paralyzed target (a paralyzed
-    // victim is left alone; the monster moves to a fresh fighter).
-    const fresh = all.filter(m => !(m.paralyzed > 0));
-    const target = pick(fresh.length ? fresh : all);
-    const r = this._monsterSwing(e, acOf(target.gear).ac);
+    // Focus the helpless — prefer a paralyzed target, who is also +4 to be hit.
+    const helpless = all.filter(m => m.paralyzed > 0);
+    const target = pick(helpless.length ? helpless : all);
+    const effAC = acOf(target.gear).ac - (target.paralyzed > 0 ? 4 : 0);
+    const r = this._monsterSwing(e, effAC);
     if (r.hit) {
       target.hp -= r.damage;
       this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${r.damage}. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
