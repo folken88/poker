@@ -310,6 +310,14 @@
   // Card-deal animation fires once per hand on the fresh PREFLOP edge.
   // Tracks the last hand.startedAt we animated (or chose to skip).
   let _dealAnimLastHand = null;
+  // Deal pitch timing (ms): gap between cards + per-card flight. Shared by the
+  // flying-card visual AND the "hold the hole card hidden until it lands" logic
+  // so the two stay perfectly in step.
+  const DEAL_STAGGER = 153, DEAL_FLIGHT = 790;
+  // Reveal schedule: while a deal is animating, each in-hand seat's hole cards
+  // start hidden and fade in as their flying card lands. _dealRevealMap maps
+  // playerId -> [card0LandMs, card1LandMs] (absolute Date.now() timestamps).
+  let _dealRevealPrepHand = null, _dealRevealHand = null, _dealRevealMap = null, _dealRevealUntil = 0;
   function maybePlayCardSounds(hand) {
     if (!hand) {
       _audLastHandStartedAt = null;
@@ -1062,13 +1070,10 @@
         if (hole) order.push(hole);
       }
       if (!order.length) return;
-      // Slowed three times by 30% from the original 70/360
-      // (→91/468→118/608→153/790) so the deal reads as a deliberate pitch, not
-      // a flurry. Per-card sound is keyed off `delay`, so it stays synced to
-      // each card's launch automatically.
-      const STAGGER = 153, FLIGHT = 790, W = 34;
+      const W = 34;
       let idx = 0;
-      // Two passes — one card to each, then the second card.
+      // Two passes — one card to each, then the second card. Timing constants
+      // (DEAL_STAGGER/DEAL_FLIGHT) are shared with the hole-reveal schedule.
       for (let pass = 0; pass < 2; pass++) {
         for (const hole of order) {
           const r = hole.getBoundingClientRect();
@@ -1077,11 +1082,77 @@
           const tx = r.left + r.width / 2 - overlayRect.left + offset;
           const ty = r.top  + r.height / 2 - overlayRect.top;
           // One sound per player: only the first card (pass 0) plays a flick.
-          spawnDealCard(overlay, ox, oy, tx, ty, idx * STAGGER, FLIGHT, pass === 0);
+          spawnDealCard(overlay, ox, oy, tx, ty, idx * DEAL_STAGGER, DEAL_FLIGHT, pass === 0);
           idx++;
         }
       }
     });
+  }
+
+  // Build the reveal schedule at the START of a hand so renderTable can hide
+  // each in-hand seat's hole cards until their flying card lands. Runs synchronously
+  // (no DOM needed) so the first render of the new hand already hides them — no flash.
+  function prepareDealReveal(hand) {
+    if (!hand || !hand.startedAt) return;
+    if (hand.startedAt === _dealRevealPrepHand) return;   // prepped this hand already
+    _dealRevealPrepHand = hand.startedAt;
+    _dealRevealMap = null; _dealRevealHand = null; _dealRevealUntil = 0;
+    const boardLen = hand.board?.length || 0;
+    const isPreflopDeal = (hand.state === 'PREFLOP') || boardLen === 0;
+    if (!isPreflopDeal) return;
+    if (!_dealAnimEnabled || _prefersReducedMotion()) return;
+    const players = hand.players || [];
+    const N = players.length;
+    if (!N) return;
+    const btn = Number.isInteger(hand.dealerButton) ? hand.dealerButton : 0;
+    const order = [];
+    for (let k = 1; k <= N; k++) {
+      const p = players[(btn + k) % N];
+      if (p && p.playerId) order.push(p.playerId);
+    }
+    if (!order.length) return;
+    const base = Date.now();
+    const map = new Map();
+    order.forEach((pid, k) => {
+      map.set(pid, [
+        base + (k) * DEAL_STAGGER + DEAL_FLIGHT,                 // first card lands
+        base + (order.length + k) * DEAL_STAGGER + DEAL_FLIGHT,  // second card lands
+      ]);
+    });
+    _dealRevealMap = map;
+    _dealRevealHand = hand.startedAt;
+    _dealRevealUntil = base + order.length * 2 * DEAL_STAGGER + DEAL_FLIGHT + 300;
+    // Timed reveals so cards appear on schedule even without a state event
+    // between renders. revealDealtCard re-queries the live DOM each time.
+    for (const [pid, lands] of map) {
+      lands.forEach((t, ci) => setTimeout(() => revealDealtCard(pid, ci), Math.max(0, t - Date.now())));
+    }
+    // Safety net: clear the schedule + un-hide anything still hidden.
+    setTimeout(() => {
+      if (_dealRevealHand === hand.startedAt) { _dealRevealMap = null; _dealRevealHand = null; }
+      document.querySelectorAll('.seat__hole .card-svg.card--predeal').forEach(el => el.classList.remove('card--predeal'));
+    }, (_dealRevealUntil - base) + 150);
+  }
+  function revealDealtCard(pid, cardIdx) {
+    const ring = $('#seatRing');
+    if (!ring) return;
+    const seat = [...ring.children].find(el => el.dataset && el.dataset.playerId === pid);
+    if (!seat) return;
+    const cards = seat.querySelectorAll('.seat__hole .card-svg');
+    if (cards[cardIdx]) cards[cardIdx].classList.remove('card--predeal');
+  }
+  // Given a seat's two card HTML strings, hide (card--predeal) any whose flying
+  // card hasn't landed yet, so they fade in on landing. No-op when no deal is
+  // animating for the current hand.
+  function applyDealPredeal(pid, cardArr, hand) {
+    const predeal = (_dealRevealMap && hand && _dealRevealHand === hand.startedAt) ? _dealRevealMap.get(pid) : null;
+    if (!predeal) return cardArr.join('');
+    const now = Date.now();
+    return cardArr.map((h, i) =>
+      (i < predeal.length && now < predeal[i])
+        ? h.replace('class="card-svg', 'class="card-svg card--predeal')
+        : h
+    ).join('');
   }
 
   function renderTable() {
@@ -1091,6 +1162,9 @@
     // Fire shuffle/deal SFX based on hand + board transitions. Cheap
     // no-op when nothing changed (compares cached timestamps).
     maybePlayCardSounds(hand);
+    // Build the deal-reveal schedule BEFORE seats render, so in-hand hole
+    // cards start hidden and fade in as their flying card lands.
+    prepareDealReveal(hand);
     const ring = $('#seatRing');
     ring.innerHTML = '';
     const n = t.seats.length;
@@ -1133,9 +1207,11 @@
           if (isMe && state.myHole) cards = state.myHole;
           else if (handPlayer.hole) cards = handPlayer.hole;  // exposed at showdown
           if (cards) {
-            holeHtml = `<div class="seat__hole">${cards.map(c => window.FolkenCards.card(c).replace('class="card-svg"', 'class="card-svg ' + (isMe ? 'card-svg--mine' : '') + '"')).join('')}</div>`;
+            const cardArr = cards.map(c => window.FolkenCards.card(c).replace('class="card-svg"', 'class="card-svg ' + (isMe ? 'card-svg--mine' : '') + '"'));
+            holeHtml = `<div class="seat__hole">${applyDealPredeal(seat.playerId, cardArr, hand)}</div>`;
           } else if (!isFolded) {
-            holeHtml = `<div class="seat__hole">${window.FolkenCards.faceDown()}${window.FolkenCards.faceDown()}</div>`;
+            const cardArr = [window.FolkenCards.faceDown(), window.FolkenCards.faceDown()];
+            holeHtml = `<div class="seat__hole">${applyDealPredeal(seat.playerId, cardArr, hand)}</div>`;
           }
         } else if (hand) {
           // Seated but NOT in the current hand (joined mid-hand). Make this

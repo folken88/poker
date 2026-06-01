@@ -1098,6 +1098,11 @@ body[data-screen="table"]   .screen[data-show-on="table"] { display: flex; }
 .seat__hole {
   display: flex; gap: 3px; margin-top: 4px; justify-content: center;
 }
+/* During the deal, an in-hand seat's hole cards start hidden (card--predeal)
+   and fade in the moment their flying card lands — so they "land in position"
+   rather than being there the whole time under the animation. */
+.seat__hole .card-svg { transition: transform .25s, opacity .22s ease-out; }
+.seat__hole .card-svg.card--predeal { opacity: 0; }
 /* Default = OPPONENT cards (smaller so adjacent seats don't fight for space). */
 .seat__hole .card-svg { width: 34px; height: auto; }
 /* My own cards stay big and gold-bordered so I can read them at a glance. */

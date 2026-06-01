@@ -28,6 +28,13 @@ Thanks to the regulars whose suggestions made it into the game:
   hidden while you're already at the bottom, and gently bobs when new chat lands
   while you're scrolled away. Thanks to **Tobias** for the request.
 
+### 🎴 Card-deal animation — cards land in position
+- The hole cards no longer pop into each seat at the start of the hand and sit
+  under the animation — they now **stay hidden until the flying card reaches the
+  seat, then fade in as it lands.** So each player's cards appear to be dealt into
+  place. (Reveal schedule is shared with the flight timing so they stay in step,
+  even across the re-renders that happen mid-deal.)
+
 ### 🎴 Card-deal animation — tuned pace + real card sounds
 - **Slowed the deal ~30%** for a more deliberate, readable pitch.
 - The per-card flick now **fires as each card leaves the dealer's hand** (was on
