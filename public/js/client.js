@@ -827,7 +827,8 @@
 
     const log = $('#dungeonLog');
     // Most recent first; player can scroll DOWN to review earlier events.
-    if (log) { log.innerHTML = (d.log || []).slice().reverse().map(e => `<li>${escapeText(e.text)}</li>`).join(''); log.scrollTop = 0; }
+    // Bold the raw d20 die roll inside each "[d20 N …]" breakdown so it pops.
+    if (log) { log.innerHTML = (d.log || []).slice().reverse().map(e => `<li>${escapeText(e.text).replace(/d20 (\d+)/g, 'd20 <b class="droll">$1</b>')}</li>`).join(''); log.scrollTop = 0; }
   }
 
   // ---- Dungeon UI wiring (delegated; elements are static in index.html) ----
