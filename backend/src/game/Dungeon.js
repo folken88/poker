@@ -30,6 +30,7 @@ const MON_TOHIT_BUFF = 3, MON_FORT_BUFF = 3, MON_REFLEX_BUFF = 4;
 const AFK_PASS_MS    = 10_000; // idle on your turn → auto-pass after 10s
 const ENEMY_STEP_MS  = 750;    // pacing between auto-resolved enemy/ally turns
 const BOSS_EVERY     = 5;
+const LOOT_ROLL_MS   = 20_000; // window to roll/pass on a dropped magic item
 
 // ── Monster bestiary (placeholder art = emoji glyphs) ───────────────────────
 const MON = {
@@ -72,6 +73,8 @@ class Dungeon {
     this.round = 0;
     this.runGold = 0;
     this.pendingLoot = [];       // [{ slot, tier, owner }]
+    this.lootRoll = null;        // active roll-off for a dropped item (see _startLootRoll)
+    this._lootTimer = null;
     this.enemies = [];
     this.party = [];             // members (see addMember)
     this.turnOrder = [];
@@ -145,6 +148,14 @@ class Dungeon {
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
       })),
       turn: this._currentTurn(),
+      lootRoll: this.lootRoll ? {
+        slot: this.lootRoll.slot, tier: this.lootRoll.tier,
+        label: db.GEAR_BY_KEY[this.lootRoll.slot]?.label || this.lootRoll.slot,
+        hockValue: db.gearHockValue(this.lootRoll.slot, this.lootRoll.tier),
+        decided: this.lootRoll.decided,
+        pending: this.lootRoll.eligible.filter(id => !(id in this.lootRoll.decided)),
+        eligible: this.lootRoll.eligible,
+      } : null,
       pendingLoot: this.pendingLoot.map((l, i) => ({
         idx: i, slot: l.slot, tier: l.tier, owner: l.owner,
         label: (db.GEAR_BY_KEY[l.slot]?.label || l.slot),
@@ -169,6 +180,7 @@ class Dungeon {
   // ── Exploration: open the next door → roll an encounter ──────────────────
   openDoor() {
     if (this.status !== 'exploring') return { ok: false, error: 'not exploring' };
+    if (this.lootRoll) return { ok: false, error: 'finish the loot roll first' };
     this.depth += 1;
     this._spawnRoom();
     for (const m of this.present()) { m.usedLightning = false; m.usedStinking = false; }  // 1 of each per room
@@ -279,7 +291,8 @@ class Dungeon {
     this._broadcast();
   }
   _runOver() {
-    clearTimeout(this._turnTimer); clearTimeout(this._stepTimer);
+    clearTimeout(this._turnTimer); clearTimeout(this._stepTimer); clearTimeout(this._lootTimer);
+    this.lootRoll = null;
     this.status = 'over';
     this._broadcast();
     if (this._onEmpty) try { this._onEmpty(); } catch (_) {}
@@ -287,25 +300,77 @@ class Dungeon {
   _maybeDropLoot() {
     const chance = this.depth <= 3 ? 0.015 : Math.min(0.12, 0.02 + (this.depth - 3) * 0.011);
     if (Math.random() >= chance) return;
-    const maxTier = Math.min(5, 1 + Math.floor(this.depth / 4));
-    const winner = this._rollLootWinner();
-    if (!winner) return;
-    const options = db.GEAR_SLOT_KEYS.filter(k => (Number(winner.gear[k]) || 0) < maxTier);
-    if (!options.length) return;
-    const slot = pick(options);
-    const tier = (Number(winner.gear[slot]) || 0) + 1;
-    if (tier > maxTier) return;
-    this.pendingLoot.push({ slot, tier, owner: winner.playerId });
-    this._note(`💎 ${winner.nickname}${winner.rolled ? ' won the roll-off and' : ''} found a +${tier} ${db.GEAR_BY_KEY[slot]?.label || slot}!`);
-    this._log('loot', { slot, tier, owner: winner.playerId, rolled: !!winner.rolled });
-  }
-  _rollLootWinner() {
     const eligible = this.alivePresent();
-    if (!eligible.length) return null;
-    if (eligible.length === 1) return { ...eligible[0], rolled: false };
-    let best = eligible[0], bestRoll = -1;
-    for (const m of eligible) { const r = dRoll(20); if (r > bestRoll) { bestRoll = r; best = m; } }
-    return { ...best, rolled: true };
+    if (!eligible.length) return;
+    const tier = Math.min(5, 1 + Math.floor(this.depth / 4));   // depth-capped: +1 @1-3, +2 @4-7 …
+    const slot = pick(db.GEAR_SLOT_KEYS);
+    this._startLootRoll(slot, tier, eligible.map(m => m.playerId));
+  }
+  // Everyone present rolls 1d20 or passes; highest roll claims the item. AI
+  // ALWAYS rolls (and auto-equips an upgrade, else hocks it for the pool).
+  _startLootRoll(slot, tier, eligibleIds) {
+    this.lootRoll = { slot, tier, eligible: eligibleIds, decided: {} };
+    const label = db.GEAR_BY_KEY[slot]?.label || slot;
+    this._note(`💎 A +${tier} ${label} drops! Roll a d20 for it, or pass.`);
+    this._log('lootdrop', { slot, tier, eligible: eligibleIds.length });
+    // Bots decide immediately (always roll).
+    for (const id of eligibleIds) { const m = this.member(id); if (m && m.isBot) this._lootDecide(id, true); }
+    // Idle humans auto-pass after the window.
+    clearTimeout(this._lootTimer);
+    this._lootTimer = setTimeout(() => {
+      if (!this.lootRoll) return;
+      for (const id of this.lootRoll.eligible) if (!(id in this.lootRoll.decided)) this._lootDecide(id, false, true);
+    }, LOOT_ROLL_MS);
+    this._broadcast();
+  }
+  _lootDecide(playerId, roll, byTimeout) {
+    if (!this.lootRoll) return { ok: false, error: 'no loot roll' };
+    if (!this.lootRoll.eligible.includes(playerId)) return { ok: false, error: 'not eligible for this loot' };
+    if (playerId in this.lootRoll.decided) return { ok: false, error: 'already decided' };
+    const m = this.member(playerId);
+    if (roll) { const r = dRoll(20); this.lootRoll.decided[playerId] = r; this._note(`🎲 ${m?.nickname || playerId} rolls ${r} for the loot.`); }
+    else { this.lootRoll.decided[playerId] = 'pass'; this._note(`🚫 ${m?.nickname || playerId} passes on the loot${byTimeout ? ' (idle)' : ''}.`); }
+    if (this.lootRoll.eligible.every(id => id in this.lootRoll.decided)) this._resolveLootRoll();
+    else this._broadcast();
+    return { ok: true };
+  }
+  _resolveLootRoll() {
+    clearTimeout(this._lootTimer);
+    const lr = this.lootRoll; this.lootRoll = null;
+    if (!lr) return;
+    const rollers = lr.eligible.filter(id => typeof lr.decided[id] === 'number');
+    if (!rollers.length) {
+      this._note('🚫 Everyone passed — the loot is left behind.');
+      this._log('lootpass', { slot: lr.slot, tier: lr.tier });
+      this._broadcast(); return;
+    }
+    let bestRoll = -1; for (const id of rollers) if (lr.decided[id] > bestRoll) bestRoll = lr.decided[id];
+    const tied = rollers.filter(id => lr.decided[id] === bestRoll);
+    const winnerId = tied.length > 1 ? pick(tied) : tied[0];
+    const winner = this.member(winnerId);
+    this._note(`🏆 ${winner?.nickname || winnerId} wins the +${lr.tier} ${db.GEAR_BY_KEY[lr.slot]?.label || lr.slot} with a ${bestRoll}${tied.length > 1 ? ' (tie-break)' : ''}.`);
+    this._log('lootwin', { slot: lr.slot, tier: lr.tier, who: winnerId, roll: bestRoll });
+    this._awardLoot(winnerId, lr.slot, lr.tier);
+    this._broadcast();
+  }
+  _awardLoot(playerId, slot, tier) {
+    const m = this.member(playerId);
+    const gear = db.getGear(playerId);
+    const cur = Number(gear[slot]) || 0;
+    if (m && m.isBot) {
+      // AI: equip if it's a real upgrade (needs it), else hock for the pool.
+      if (cur < tier) {
+        gear[slot] = tier; db.setGear(playerId, gear); m.gear = gear;
+        if (slot === 'ring' || slot === 'cloak') { m.maxHp += HP_PER_BONUS; m.hp += HP_PER_BONUS; }
+        this._note(`🛡️ ${m.nickname} equips the +${tier} ${db.GEAR_BY_KEY[slot]?.label || slot}.`);
+      } else {
+        const v = db.gearHockValue(slot, tier); this.runGold += v;
+        this._note(`💰 ${m.nickname} doesn't need it — hocks it for ${v} gp (into the pool).`);
+      }
+      return;
+    }
+    // Human: lands in their pending loot to equip or hock as they choose.
+    this.pendingLoot.push({ slot, tier, owner: playerId });
   }
 
   // ── Combat math (rolls shown in the log) ─────────────────────────────────
@@ -367,8 +432,9 @@ class Dungeon {
     const m = this.member(playerId);
     if (!m || m.left) return { ok: false, error: 'not in this run' };
 
-    // Bail + loot management are allowed any time (not just on your turn).
+    // Bail, loot rolls, and loot management are allowed any time (not on-turn).
     if (kind === 'bail') return this.bail(playerId);
+    if (kind === 'lootroll') return this._lootDecide(playerId, !!payload.roll);
     if (kind === 'equip') { const r = this.equipLoot(playerId, payload.idx); this._broadcast(); return r; }
     if (kind === 'hock')  { const r = this.hockLoot(playerId, payload.idx); this._broadcast(); return r; }
 
@@ -481,7 +547,7 @@ class Dungeon {
     if (this.io) this.io.to(this.roomName()).emit('dungeon:exit', { playerId: m.playerId, ...exit });
     if (this._onMemberExit) try { this._onMemberExit(m.playerId, m.nickname, exit); } catch (_) {}
   }
-  destroy() { clearTimeout(this._turnTimer); clearTimeout(this._stepTimer); }
+  destroy() { clearTimeout(this._turnTimer); clearTimeout(this._stepTimer); clearTimeout(this._lootTimer); }
 }
 
 module.exports = { Dungeon };

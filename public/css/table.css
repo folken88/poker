@@ -84,6 +84,9 @@ button, input { font: inherit; color: inherit; }
 .dungeon__loot { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
 .dloot { display: flex; align-items: center; gap: 0.5rem; background: rgba(40,30,10,0.5); border: 1px solid rgba(217,176,106,0.4); border-radius: 8px; padding: 0.3rem 0.6rem; }
 .dloot__name { color: #ffe9a8; font-size: 0.85rem; }
+.dlootroll { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; background: rgba(60,45,12,0.6); border: 1px solid rgba(241,207,131,0.65); border-radius: 8px; padding: 0.4rem 0.7rem; }
+.dlootroll__head { color: #ffe9a8; font-weight: 600; font-size: 0.88rem; }
+.dlootroll--wait { color: var(--ivory-dim); font-style: italic; }
 .dungeon__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
 .dungeon__actions .is-cooling { opacity: 0.5; }
 .dwait { color: var(--ivory-dim); font-style: italic; align-self: center; }

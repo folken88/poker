@@ -969,7 +969,7 @@
   // Lets a blind player follow and play the dungeon entirely by ear + voice.
   // Narration fires from onDungeonState (wired in client.js); voice commands
   // are dispatched from processCommand's dungeon branch above.
-  const _dun = { depth: -1, logT: 0, turnKey: '', status: '' };
+  const _dun = { depth: -1, logT: 0, turnKey: '', status: '', lootKey: '' };
 
   function _stripGlyphs(s) {
     // Drop bracketed roll math ([d20 14 +3 = 17 vs AC 15]) and emoji so the
@@ -1027,6 +1027,14 @@
       if (st.status === 'dead') speak('You have fallen in the dungeon. The run is lost.', 'urgent');
       else if (st.status === 'bailed' && prev) speak(`You climbed out with ${st.runGold} gold.`, 'urgent');
     }
+    // Loot roll prompt (only when it's mine to decide).
+    const lr = st.lootRoll, lrKey = lr ? `${lr.slot}:${lr.tier}` : '';
+    if (lrKey !== _dun.lootKey) {
+      _dun.lootKey = lrKey;
+      if (lr && (lr.eligible || []).includes(meId) && (lr.decided || {})[meId] === undefined) {
+        speak(`A plus ${lr.tier} ${lr.label} dropped. Say roll to roll a d20 for it, or pass.`, 'urgent');
+      }
+    }
   }
 
   // Voice command set while on the dungeon screen. Returns true if handled.
@@ -1036,6 +1044,13 @@
     if (!d || !socket) return false;
     const alive = (d.enemies || []).filter(e => e.alive);
     const emit = (kind, payload) => socket.emit('dungeon:action', { kind, ...(payload || {}) }, () => {});
+    const meId = state.deps?.state?.me?.player_id;
+
+    // Loot roll-off (only my decision is routed here).
+    if (d.lootRoll && (d.lootRoll.eligible || []).includes(meId) && (d.lootRoll.decided || {})[meId] === undefined) {
+      if (/^(roll|roll for it|roll loot|roll the loot|roll a d20|i roll)$/.test(raw)) { emit('lootroll', { roll: true }); return true; }
+      if (/^(pass|pass on it|pass loot|skip loot|i pass)$/.test(raw)) { emit('lootroll', { roll: false }); return true; }
+    }
 
     // Queries
     if (/^(read|status|state|where am i|situation)$/.test(raw)) { _dunNarrateFull(d); return true; }

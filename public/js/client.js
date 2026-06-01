@@ -708,20 +708,43 @@
     }
 
     const loot = $('#dungeonLoot');
-    // Only your own loot drops are yours to equip/hock.
-    if (loot) loot.innerHTML = (d.pendingLoot || []).filter(l => l.owner === meId).map(l => `
-      <div class="dloot">
-        <span class="dloot__name">💎 +${l.tier} ${escapeText(l.label)}</span>
-        <button class="btn btn--ghost btn--sm" data-loot-equip="${l.idx}">Equip</button>
-        <button class="btn btn--ghost btn--sm" data-loot-hock="${l.idx}">Hock ${formatChips(l.hockValue)} gp</button>
-      </div>`).join('');
+    if (loot) {
+      let html = '';
+      // Active roll-off for a freshly-dropped magic item.
+      const lr = d.lootRoll;
+      if (lr) {
+        const decided = lr.decided || {};
+        const amEligible = (lr.eligible || []).includes(meId);
+        const mine = decided[meId];
+        if (amEligible && mine === undefined) {
+          html += `<div class="dlootroll">
+            <span class="dlootroll__head">💎 +${lr.tier} ${escapeText(lr.label)} dropped — roll for it?</span>
+            <button class="btn btn--primary btn--sm" data-dact="roll">🎲 Roll d20</button>
+            <button class="btn btn--ghost btn--sm" data-dact="pass">Pass</button>
+          </div>`;
+        } else {
+          const waiting = (lr.pending || []).length;
+          const mineTxt = mine === undefined ? '' : (mine === 'pass' ? ' · you passed' : ` · you rolled ${mine}`);
+          html += `<div class="dlootroll dlootroll--wait">💎 +${lr.tier} ${escapeText(lr.label)} — rolling…${waiting ? ` waiting on ${waiting}` : ' resolving'}${mineTxt}</div>`;
+        }
+      }
+      // Your own won loot drops to equip / hock.
+      html += (d.pendingLoot || []).filter(l => l.owner === meId).map(l => `
+        <div class="dloot">
+          <span class="dloot__name">💎 +${l.tier} ${escapeText(l.label)}</span>
+          <button class="btn btn--ghost btn--sm" data-loot-equip="${l.idx}">Equip</button>
+          <button class="btn btn--ghost btn--sm" data-loot-hock="${l.idx}">Hock ${formatChips(l.hockValue)} gp</button>
+        </div>`).join('');
+      loot.innerHTML = html;
+    }
 
     const acts = $('#dungeonActions');
     if (acts) {
       const me = (d.party || []).find(m => m.playerId === meId) || {};
       let html = '';
       if (d.status === 'exploring') {
-        html += `<button class="btn btn--primary" data-dact="door">🚪 Open next door</button>`;
+        const rolling = !!d.lootRoll;
+        html += `<button class="btn btn--primary" data-dact="door" ${rolling ? 'disabled' : ''}>🚪 Open next door${rolling ? ' (loot roll…)' : ''}</button>`;
         html += `<button class="btn btn--ghost" data-dact="bail">🏃 Bail · bank my share</button>`;
       } else if (d.status === 'combat') {
         if (isMyTurn) {
@@ -771,6 +794,8 @@
     if (act === 'attack' || act === 'lightning') _dungeonSel = [];
   });
   $('#dungeonLoot')?.addEventListener('click', (ev) => {
+    const dr = ev.target.closest('[data-dact]');
+    if (dr) { const a = dr.dataset.dact; if (a === 'roll') dungeonAction('lootroll', { roll: true }); else if (a === 'pass') dungeonAction('lootroll', { roll: false }); return; }
     const eq = ev.target.closest('[data-loot-equip]');
     const ho = ev.target.closest('[data-loot-hock]');
     if (eq) dungeonAction('equip', { idx: Number(eq.dataset.lootEquip) });
@@ -785,6 +810,15 @@
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const d = state.dungeon; if (!d) return;
     const k = (e.key || '').toLowerCase();
+    // Loot roll: R = roll d20, P = pass (only when it's mine to decide).
+    if (d.lootRoll) {
+      const mine = (d.lootRoll.decided || {})[state.me?.player_id];
+      const elig = (d.lootRoll.eligible || []).includes(state.me?.player_id);
+      if (elig && mine === undefined) {
+        if (k === 'r') { e.preventDefault(); dungeonAction('lootroll', { roll: true }); return; }
+        if (k === 'p') { e.preventDefault(); dungeonAction('lootroll', { roll: false }); return; }
+      }
+    }
     if (/^[1-9]$/.test(k)) {
       const alive = (d.enemies || []).filter(x => x.alive);
       const uid = alive[parseInt(k, 10) - 1]?.uid;

@@ -21,6 +21,14 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🗡️ Dungeon — magic-item loot roll-off
+- When a magic item drops, the party now **rolls for it**: each member chooses
+  **🎲 Roll d20** or **Pass**, highest roll wins (ties re-break). Idle players
+  auto-pass after 20s; if everyone passes, the item's left behind. **AI players
+  always roll** and **auto-hock** anything they don't need (equip only a real
+  upgrade), with the gold going into the shared pool. Works by voice too
+  ("roll" / "pass") and keyboard (R / P) for blind players.
+
 ### 🗡️ Dungeon is co-op now
 - **Party up:** one shared run per table — anyone who hits the dungeon joins the
   same delve. **Everyone takes one turn per round** in initiative order; you act
