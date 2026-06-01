@@ -21,6 +21,9 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🧑 New player
+- Added **LeJeanBec** as a human player login.
+
 ### 👨‍👧 Farrah's adoptive aunts — Kate & Daramid
 - Farrah (the orphan) now treats **Kate Blackwood** and **Judge Daramid** as her
   adoptive aunts — the closest thing she has to family. Her gleeful profanity
