@@ -504,6 +504,9 @@ body[data-screen="dungeon"] .screen[data-show-on="dungeon"] { display: flex; }
   z-index: 5;
 }
 .topbar__brand { flex: 0 0 auto; }
+/* Blind-support toggle pinned beside the title (first tab stop). */
+.topbar__blind { flex: 0 0 auto; margin-left: 0.5rem; white-space: nowrap; }
+.topbar__blind.is-active { color: #ffe9a8; background: linear-gradient(180deg, rgba(180,120,30,0.55), rgba(120,70,10,0.65)); border-color: rgba(241,207,131,0.7); }
 .topbar__me    { flex: 0 0 auto; }
 /* Management-button row inside the topbar. On desktop this is just
    an inline flex container that flows alongside the other .topbar__me
