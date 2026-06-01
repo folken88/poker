@@ -26,9 +26,9 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 // public/audio/ (served by nginx at /audio/...).
 const SND = {
   whiffDagger: '/audio/fight_whiff_dagger.mp3',
-  whiffSword: ['/audio/fight_whiff_sword_1.mp3', '/audio/fight_whiff_sword_2.mp3', '/audio/fight_whiff_sword_3.mp3', '/audio/fight_whiff_sword_4.mp3', '/audio/fight_whiff_sword_5.mp3'],
-  block: ['/audio/fight_block_1.mp3', '/audio/fight_block_2.mp3', '/audio/fight_block_3.mp3', '/audio/fight_block_4.mp3', '/audio/fight_block_5.mp3', '/audio/fight_block_6.mp3', '/audio/fight_block_7.mp3', '/audio/fight_block_8.mp3'],
-  flesh: ['/audio/fight_flesh_1.mp3', '/audio/fight_flesh_2.mp3', '/audio/fight_flesh_3.mp3', '/audio/fight_flesh_4.mp3', '/audio/fight_flesh_5.mp3', '/audio/fight_flesh_6.mp3', '/audio/fight_flesh_7.mp3', '/audio/fight_flesh_8.mp3', '/audio/fight_flesh_9.mp3', '/audio/fight_flesh_10.mp3', '/audio/fight_flesh_11.mp3', '/audio/fight_flesh_12.mp3'],
+  whiffSword: ['/audio/fight_whiff_sword_1.mp3', '/audio/fight_whiff_sword_2.mp3', '/audio/fight_whiff_sword_3.mp3', '/audio/fight_whiff_sword_4.mp3', '/audio/fight_whiff_sword_5.mp3', '/audio/fight_whiff_sword_6.mp3', '/audio/fight_whiff_sword_7.mp3'],
+  block: ['/audio/fight_block_1.mp3', '/audio/fight_block_2.mp3', '/audio/fight_block_3.mp3', '/audio/fight_block_4.mp3', '/audio/fight_block_5.mp3', '/audio/fight_block_6.mp3', '/audio/fight_block_7.mp3', '/audio/fight_block_8.mp3', '/audio/fight_block_9.mp3', '/audio/fight_block_10.mp3', '/audio/fight_block_11.mp3'],
+  flesh: ['/audio/fight_flesh_1.mp3', '/audio/fight_flesh_2.mp3', '/audio/fight_flesh_3.mp3', '/audio/fight_flesh_4.mp3', '/audio/fight_flesh_5.mp3', '/audio/fight_flesh_6.mp3', '/audio/fight_flesh_7.mp3', '/audio/fight_flesh_8.mp3', '/audio/fight_flesh_9.mp3', '/audio/fight_flesh_10.mp3', '/audio/fight_flesh_11.mp3', '/audio/fight_flesh_12.mp3', '/audio/fight_flesh_13.mp3', '/audio/fight_flesh_14.mp3', '/audio/fight_flesh_15.mp3', '/audio/fight_flesh_16.mp3', '/audio/fight_flesh_17.mp3', '/audio/fight_flesh_18.mp3', '/audio/fight_flesh_19.mp3', '/audio/fight_flesh_20.mp3', '/audio/fight_flesh_21.mp3', '/audio/fight_flesh_22.mp3'],
   fumble: '/audio/fight_fumble.mp3', // natural 1 — Roblox "oof" death sound
   // Lightning Bolt — a pool of thunderclaps / zaps / charge-ups so the
   // spell doesn't sound the same every cast. One is picked at random.
