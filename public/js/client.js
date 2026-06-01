@@ -671,6 +671,12 @@
     window.BlindMode?.onDungeonState?.(st);
   });
 
+  socket.on('dungeon:say', ({ audio, audioMime } = {}) => {
+    // AI ally trash-talk voice clip — the line itself is already in the dungeon
+    // log; this just voices it (gated by the AI-character-voice toggle).
+    if (_bannerVoiceEnabled && audio) playBase64Mp3(audio, audioMime || 'audio/mpeg');
+  });
+
   socket.on('dungeon:echo', ({ sound } = {}) => {
     // Muffled basement thumps for players still at the table. The dungeon
     // player hears full combat via dungeon:state, so they skip this.
@@ -829,7 +835,7 @@
     const log = $('#dungeonLog');
     // Most recent first; player can scroll DOWN to review earlier events.
     // Bold the raw d20 die roll inside each "[d20 N …]" breakdown so it pops.
-    if (log) { log.innerHTML = (d.log || []).slice().reverse().map(e => `<li>${escapeText(e.text).replace(/d20 (\d+)/g, 'd20 <b class="droll">$1</b>')}</li>`).join(''); log.scrollTop = 0; }
+    if (log) { log.innerHTML = (d.log || []).slice().reverse().map(e => { const say = (e.text || '').startsWith('💬'); return `<li class="${say ? 'dlog-say' : ''}">${escapeText(e.text).replace(/d20 (\d+)/g, 'd20 <b class="droll">$1</b>')}</li>`; }).join(''); log.scrollTop = 0; }
   }
 
   // ---- Dungeon UI wiring (delegated; elements are static in index.html) ----

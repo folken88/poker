@@ -18,6 +18,7 @@
 const db = require('../persistence/db');
 const { weaponOf, acOf, totalMagicBonus, SND, dRoll, pick } = require('./combat');
 const { logDungeon } = require('../persistence/logger');
+const banter = require('../bot/banter');
 
 // ── Tuning knobs ────────────────────────────────────────────────────────────
 const BASE_HP        = 30;     // gearless player hp
@@ -94,6 +95,30 @@ class Dungeon {
     this._logSeq = 0;
     this._turnTimer = null;
     this._stepTimer = null;
+    this._bantRound = -1;        // last combat round an AI ally reacted (1 per round)
+  }
+
+  // ── AI ally trash-talk ────────────────────────────────────────────────────
+  // At most ONE AI reaction per combat round (a chance each round); loot
+  // reactions (between rooms) get their own occasional chance.
+  _tryBanter(member, eventType, ctx) {
+    if (!member || !member.isBot) return;
+    if (!banter.CHARACTER_FLAVOR[member.nickname]) return;
+    if (this.status === 'combat') {
+      if (this.round === this._bantRound) return;   // round already used its one chance
+      this._bantRound = this.round;
+      if (Math.random() > 0.45) return;
+    } else if (Math.random() > 0.5) return;
+    this._emitBanter(member, eventType, ctx);
+  }
+  _emitBanter(member, eventType, ctx) {
+    const nick = member.nickname;
+    Promise.resolve(banter.dungeonLine(nick, eventType, ctx)).then(res => {
+      if (!res || !res.line) return;
+      this._note(`💬 ${nick}: ${res.line}`);
+      if (this.io && res.audio) this.io.to(this.roomName()).emit('dungeon:say', { nick, audio: res.audio, audioMime: res.audioMime });
+      this._broadcast();
+    }).catch(() => {});
   }
 
   roomName() { return `dungeon:${this.id}`; }
@@ -386,6 +411,9 @@ class Dungeon {
     this._note(`🏆 ${winner?.nickname || winnerId} wins the +${lr.tier} ${db.GEAR_BY_KEY[lr.slot]?.label || lr.slot} with a ${bestRoll}${tied.length > 1 ? ' (tie-break)' : ''}.`);
     this._log('lootwin', { slot: lr.slot, tier: lr.tier, who: winnerId, roll: bestRoll });
     this._awardLoot(winnerId, lr.slot, lr.tier);
+    // An AI who lost the roll might gripe about it.
+    const aiLosers = rollers.filter(id => id !== winnerId).map(id => this.member(id)).filter(x => x && x.isBot);
+    if (aiLosers.length) this._tryBanter(pick(aiLosers), 'loot_lose', { tier: lr.tier, item: db.GEAR_BY_KEY[lr.slot]?.label || lr.slot, winner: winner?.nickname });
     this._broadcast();
   }
   _awardLoot(playerId, slot, tier) {
@@ -402,6 +430,7 @@ class Dungeon {
         const v = db.gearHockValue(slot, tier); this.runGold += v;
         this._note(`💰 ${m.nickname} doesn't need it — hocks it for ${v} gp (into the pool).`);
       }
+      this._tryBanter(m, 'loot_win', { tier, item: db.GEAR_BY_KEY[slot]?.label || slot });
       return;
     }
     // Human: lands in their pending loot to equip or hock as they choose.
@@ -451,6 +480,7 @@ class Dungeon {
         if (!saved) { target.paralyzed = 1; this._note(`🥶 ${target.nickname} fails the paralysis save [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${PARALYZE_DC}] — paralyzed!`); }
         else this._note(`${target.nickname} resists paralysis [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${PARALYZE_DC}].`);
       }
+      if (target.hp > 0 && target.isBot) this._tryBanter(target, 'damage', { enemy: e.name, dmg: r.damage });
     } else {
       this._note(`${e.glyph} ${e.name} misses ${target.nickname}. ${this._atkStr(r)}`, r.sound);
     }
@@ -500,6 +530,7 @@ class Dungeon {
     if (r.fumble) this._note(`${m.nickname} fumbles the attack! ${this._atkStr(r)}`, r.sound);
     else if (r.hit) { e.hp -= r.damage; this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${e.name} for ${r.damage}. ${this._atkStr(r)}${e.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, e.hp)}/${e.maxHp})`}`, r.sound); }
     else this._note(`${m.nickname} misses ${e.name}. ${this._atkStr(r)}`, r.sound);
+    if (r.hit && e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(r.sound);
   }
   _castLightning(m, targetUids) {

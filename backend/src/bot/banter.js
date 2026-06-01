@@ -829,4 +829,36 @@ function maybeSpeak(table, event) {
   }).catch(() => { /* silent */ });
 }
 
-module.exports = { maybeSpeak, detectAddressedBot, CHARACTER_FLAVOR };
+// ── Dungeon side-game trash-talk ────────────────────────────────────────────
+// Generate ONE short in-character reaction line for an AI party member to a
+// dungeon event (downing a monster, loot win/loss, taking a hit), plus an
+// optional 11labs voice clip. Returns { line, audio, audioMime } or null.
+async function dungeonLine(nick, eventType, ctx = {}) {
+  const flavor = CHARACTER_FLAVOR[nick];
+  if (!flavor) return null;
+  const ev = ({
+    down:      `you just cut down a ${ctx.enemy || 'monster'}`,
+    damage:    `a ${ctx.enemy || 'monster'} just hit you for ${ctx.dmg || 'some'} damage`,
+    loot_win:  `you won the party roll for a +${ctx.tier} ${ctx.item} you all found`,
+    loot_lose: `you LOST the roll for a +${ctx.tier} ${ctx.item} — ${ctx.winner || 'someone else'} grabbed it`,
+  })[eventType] || 'something just happened down here';
+  const messages = [
+    { role: 'system', content:
+      `You are ${nick}, ${flavor} RIGHT NOW you are crawling a monster-infested dungeon with a party (NOT at the poker table). ` +
+      `Bark ONE short, in-character reaction / trash-talk line (MAX ~14 words) — cocky, funny, or pissed off, true to your personality. ` +
+      `No quotes, no stage directions, no emoji — just the spoken line. Golarion only (no Earth gods; "god" filler is banned).` },
+    { role: 'user', content: `React to this: ${ev}.` },
+  ];
+  let line = await callLLM(messages);
+  if (!line) return null;
+  line = scrubEarthGod(String(line)).replace(/^["']+|["']+$/g, '').trim();
+  if (!line) return null;
+  let audio = null;
+  if (elevenlabs.ENABLED) {
+    const voiceId = voiceFor(nick);
+    if (voiceId) { try { audio = await elevenlabs.synthesize(line, voiceId, settingsFor(nick)); } catch (_) {} }
+  }
+  return { line, audio, audioMime: 'audio/mpeg' };
+}
+
+module.exports = { maybeSpeak, detectAddressedBot, dungeonLine, CHARACTER_FLAVOR };
