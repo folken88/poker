@@ -20,6 +20,7 @@ const PRONUNCIATIONS = [
   ['Mylez',      'Miles'],
   ['Taelys',     'Tay liss'],
   ['Rhyarca',    'Ree ark ah'],
+  ['bilge',      'bilj'],          // rhymes-ish with "build"; NOT "bill-jah" (common in pirate "bilge rat")
 ];
 
 module.exports = { PRONUNCIATIONS };

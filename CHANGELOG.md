@@ -21,6 +21,12 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🗣️ Pronunciation — "bilge"
+- The AI voices and blind-mode narrator now say **"bilge"** correctly (rhymes
+  with the "-ilge" in *build* → "bilj"), instead of mangling it into "bill-jah."
+  Shows up often in the pirates' "bilge rat" insults. (Self-invalidates the TTS
+  cache for any line containing the word, so old clips re-synthesize.)
+
 ### 🤠 New AI — Rodney "Danger" Smith
 - Added **Danger** (Rodney "Danger" Smith), a CP-USS ranger / tracker / archer
   out of Courtaud — the marksman who put Auren Vrood in the ground at the Battle
