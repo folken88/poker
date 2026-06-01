@@ -243,7 +243,7 @@ class Dungeon {
   _rollInitiative() {
     const order = [];
     for (const m of this.alivePresent()) order.push({ kind: 'party', id: m.playerId, init: dRoll(20) + 2 });
-    for (const e of this.enemies) order.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });
+    for (const e of this.livingEnemies()) order.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });
     order.sort((a, b) => b.init - a.init);
     this.turnOrder = order;
     this.turnIdx = 0;
@@ -274,7 +274,11 @@ class Dungeon {
   _nextTurn() {
     if (this._endIfResolved()) return;
     this.turnIdx += 1;
-    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; }
+    if (this.turnIdx >= this.turnOrder.length) {
+      this.round += 1;
+      this._rollInitiative();   // fresh initiative every round (sets turnIdx = 0)
+      this._note(`🎲 Round ${this.round} — initiative re-rolled.`);
+    }
     this._advanceToActor();
   }
   _armAfkTimer(m) {
