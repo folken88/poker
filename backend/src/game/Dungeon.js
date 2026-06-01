@@ -534,15 +534,16 @@ class Dungeon {
     const m = this.member(playerId);
     if (!m || m.left) return { ok: false, error: 'not in this run' };
     const wasActor = this._currentActorId() === playerId;
+    const fled = this.status === 'combat';   // bailing mid-fight = running away
     const denom = Math.max(1, this.alivePresent().length);
     const share = Math.floor(this.runGold / denom);
     this.runGold -= share;
     const p = db.getPlayer(playerId);
     if (p) db.setChips(playerId, p.chips + share);
     m.left = true;   // turn loop skips left members; entry stays for index integrity
-    this._note(`🪜 ${m.nickname} climbed out with ${share} gp.`);
-    this._log('bail', { who: playerId, share, poolLeft: this.runGold });
-    this._emitMemberExit(m, { reason: 'bailed', goldBanked: share });
+    this._note(`${fled ? '🏃' : '🪜'} ${m.nickname} ${fled ? 'flees the fight and climbs out' : 'climbed out'} with ${share} gp.`);
+    this._log('bail', { who: playerId, share, poolLeft: this.runGold, fled });
+    this._emitMemberExit(m, { reason: 'bailed', goldBanked: share, fled });
     if (this.alivePresent().length === 0) { this._runOver(); return { ok: true, goldBanked: share }; }
     // Only nudge the turn cycle if the bailer was the one we were waiting on.
     if (this.status === 'combat' && wasActor) { clearTimeout(this._turnTimer); this._nextTurn(); }

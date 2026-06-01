@@ -27,7 +27,7 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     const inParty = new Set(d.party.filter(m => !m.left).map(m => m.playerId));
     return db.listBots()
       .filter(b => !seated.has(b.player_id) && !inParty.has(b.player_id))
-      .map(b => ({ playerId: b.player_id, nickname: b.nickname, avatarId: b.avatar_id, wealth: b.chips, fee: RECRUIT_FEE }))
+      .map(b => ({ playerId: b.player_id, nickname: b.nickname, avatarId: b.avatar_id, wealth: b.chips, gear: db.getGear(b.player_id), fee: RECRUIT_FEE }))
       .sort((a, b) => String(a.nickname).localeCompare(String(b.nickname)));
   }
   const isSeatedAnywhere = (botId) => [...tables.values()].some(t => !!t.findSeat(botId));
@@ -44,6 +44,7 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
         try { t._broadcast(); } catch (_) {}
         try {
           if (exit.reason === 'dead') t.chat('info', `☠️ ${nickname} has died in the dungeon.`);
+          else if (exit.fled) t.chat('info', `🏃 ${nickname} ran away from the dungeon${exit.goldBanked ? ` with ${exit.goldBanked}g` : ' empty-handed'}.`);
           else if (exit.goldBanked) t.chat('info', `🪜 ${nickname} returned from the dungeon with ${exit.goldBanked}g.`);
           else t.chat('info', `🪜 ${nickname} returned from the dungeon empty-handed.`);
         } catch (_) {}

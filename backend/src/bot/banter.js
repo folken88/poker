@@ -81,6 +81,20 @@ function scrubStrayMoney(line, amounts) {
  *  don't have a value for is stripped (never shown), and leftover double
  *  spaces / dangling separators are tidied. `amounts` is an optional
  *  { amount?, pot?, call? } map from the event. */
+// Keep the table in-setting and cut the LLM's overused "god," filler. Golarion
+// is polytheistic, so a bare "god" reads wrong; drop a leading "god,"/"oh god,"
+// interjection and pluralize the rest to "gods".
+function scrubEarthGod(line) {
+  if (!line) return line;
+  let out = line;
+  out = out.replace(/^\s*(?:oh[\s,]+)?(?:my[\s,]+)?gods?\s*[,!.]+\s*/i, '');  // strip leading "god,"/"oh my god," filler
+  out = out.replace(/\bgod(\s*damn)/gi, 'gods$1');
+  out = out.replace(/\boh my god\b/gi, 'oh my gods');
+  out = out.replace(/\bGod\b/g, 'Gods').replace(/\bgod\b/g, 'gods');
+  out = out.trim();
+  return out || line;   // never blank a line out
+}
+
 function fillAmounts(line, amounts) {
   if (!line) return line;
   let out = scrubStrayMoney(line, amounts);
@@ -471,6 +485,7 @@ function buildMessages(speaker, eventDescription, table) {
         `Pathfinder deities exist. NEVER invoke Earth deities (no "Christ", "Jesus", "God", "Allah", "Buddha", ` +
         `"Mary", "saints", etc.) — EXCEPT the single sanctioned Sirona/Elfrip gag noted below. Generic Earth profanity (fuck, shit, damn, hell, ass, piss, bitch, bastard) ` +
         `is FINE as raw modifier — just don't pair it with an Earth god. \n` +
+        `Do NOT lean on "god," / "oh god" / "my god" as a filler interjection — it's an Earth reference AND it's overused. Vary your openings; if you want an oath, use a Golarion deity from the list below. \n` +
         `Some go-to deity blasphemies — invoke the god whose domain fits the moment: \n` +
         `  • Sarenrae (sun, healing; SIRONA's patron) — "Sarenrae's tits!", "Sarenrae fucking damn it", ` +
         `"Hotter than Dawnflower's farts!", "Dawnflower's mercy", "by the Sunlord's nuts" \n` +
@@ -757,6 +772,10 @@ function maybeSpeak(table, event) {
   }
 
   const messages = buildMessages(speaker, event.description, table);
+  // Capture a good name NOW — by the time the async LLM reply lands the speaker
+  // may have left their seat (e.g. wandered into the dungeon), making
+  // displayNickname() return null and the line post as "null: …".
+  const safeNick = ((typeof speaker.displayNickname === 'function' && speaker.displayNickname()) || speaker.player?.nickname || speakerNick);
   callLLM(messages).then(async line => {
     if (!line) return;
     // Substitute exact gp figures the model marked with {amount}/{pot}/
@@ -764,8 +783,11 @@ function maybeSpeak(table, event) {
     // the model's job to render — and any stray/unfilled token is stripped
     // so it can't reach the table. (Belt-and-suspenders with the spelled-
     // out amounts already in the prompt for magnitude.)
-    line = fillAmounts(line, event.amounts);
+    line = scrubEarthGod(fillAmounts(line, event.amounts));
     if (!line) return;
+    // If the speaker has since left the table (e.g. went down to the dungeon),
+    // drop the line — a departed character shouldn't suddenly pipe up at the felt.
+    if (typeof table.findSeat === 'function' && !table.findSeat(speaker.playerId)) return;
     // Two different names matter here:
     //   nick      the speaker's TRUE nickname — drives voice + sound
     //             lookup and matches CHARACTER_FLAVOR keys.
@@ -776,9 +798,7 @@ function maybeSpeak(table, event) {
     //             Vorkstag underneath. Wealth amounts in the line
     //             itself stay accurate to the real player.
     const nick = speaker.player?.nickname || speaker.playerId;
-    const chatNick = (typeof speaker.displayNickname === 'function')
-      ? speaker.displayNickname()
-      : nick;
+    const chatNick = ((typeof speaker.displayNickname === 'function' && speaker.displayNickname()) || safeNick);
     // Audio source priority:
     //   1. Stored sound pool (Crisp's chirps, Elfrip's burps) — local
     //      file, no API call, picked randomly from CHARACTER_SOUNDS.
