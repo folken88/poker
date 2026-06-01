@@ -340,8 +340,11 @@ class Dungeon {
     if (!lr) return;
     const rollers = lr.eligible.filter(id => typeof lr.decided[id] === 'number');
     if (!rollers.length) {
-      this._note('🚫 Everyone passed — the loot is left behind.');
-      this._log('lootpass', { slot: lr.slot, tier: lr.tier });
+      // Nobody wanted it → hock it into the shared pool (split evenly on bail).
+      const v = db.gearHockValue(lr.slot, lr.tier);
+      this.runGold += v;
+      this._note(`🚫 Everyone passed — the +${lr.tier} ${db.GEAR_BY_KEY[lr.slot]?.label || lr.slot} is hocked for ${v} gp into the pool.`);
+      this._log('lootpass', { slot: lr.slot, tier: lr.tier, hocked: v });
       this._broadcast(); return;
     }
     let bestRoll = -1; for (const id of rollers) if (lr.decided[id] > bestRoll) bestRoll = lr.decided[id];
