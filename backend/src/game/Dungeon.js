@@ -470,19 +470,20 @@ class Dungeon {
   _castLightning(m, targetUids) {
     m.usedLightning = true;
     const power = Math.max(2, totalMagicBonus(m.gear)), dc = 10 + power;
+    const dice = Math.max(1, Math.floor(power / 2));   // 1d6 per 2 "levels" of magic power, rounded down
     let chosen = (targetUids || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0)).filter(Boolean);
     if (!chosen.length) chosen = this.livingEnemies().slice(0, LIGHTNING_MAX_TARGETS);
     chosen = chosen.slice(0, LIGHTNING_MAX_TARGETS);
     const sound = pick(SND.lightning), parts = [];
     for (const e of chosen) {
-      let full = 0; for (let i = 0; i < power; i++) full += dRoll(6);
+      let full = 0; for (let i = 0; i < dice; i++) full += dRoll(6);
       const sroll = dRoll(20), stot = sroll + e.reflex;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
       const dmg = saved ? Math.floor(full / 2) : full;
       e.hp -= dmg;
       parts.push(`${e.name}: Ref [d20 ${sroll} ${this._fmtBonus(e.reflex)} = ${stot} vs DC ${dc}] ${saved ? 'save, half' : 'fail'} ${dmg}${e.hp <= 0 ? ' ☠️' : ''}`);
     }
-    this._note(`⚡ ${m.nickname} Lightning Bolt (${power}d6) — ${parts.join('; ')}.`, sound);
+    this._note(`⚡ ${m.nickname} Lightning Bolt (${dice}d6) — ${parts.join('; ')}.`, sound);
     this._echoToTable(sound);
   }
   _castStinking(m) {
