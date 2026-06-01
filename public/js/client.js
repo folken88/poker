@@ -134,9 +134,10 @@
   // Combat-gag SFX — three INDEPENDENT on/off switches so a player can
   // silence farts and/or swords without touching the others. All default
   // ON for a new player; persisted per-player like the rest.
-  let _meleeSoundEnabled     = true;  // ⚔️ sword/dagger swings, blocks, hits, fumbles
-  let _lightningSoundEnabled = true;  // ⚡ Lightning Bolt
-  let _fartSoundEnabled      = true;  // 💨 Stinking Cloud
+  // Combat sounds — ONE channel now (sword + lightning + fart + dungeon),
+  // with its own on/off + volume, mirroring the card-sound / voice channels.
+  let _combatSoundEnabled = true;
+  let _combatVolume       = 0.6;
   // 🃏 Card-deal animation — cards pitched from the dealer to each seat at
   // the start of a hand. Cosmetic; default ON, persisted per-player.
   let _dealAnimEnabled       = true;
@@ -175,12 +176,11 @@
     } else _voiceVolume = 0.85;
     // Combat toggles — stored as '1'/'0'. Anything other than the explicit
     // '0' (including a missing key for a brand-new player) means ON.
-    const kcm = audioSettingsKey('combatMelee');
-    const kcl = audioSettingsKey('combatLightning');
-    const kcf = audioSettingsKey('combatFart');
-    _meleeSoundEnabled     = kcm ? localStorage.getItem(kcm) !== '0' : true;
-    _lightningSoundEnabled = kcl ? localStorage.getItem(kcl) !== '0' : true;
-    _fartSoundEnabled      = kcf ? localStorage.getItem(kcf) !== '0' : true;
+    const kce = audioSettingsKey('combatEnabled');
+    _combatSoundEnabled = kce ? localStorage.getItem(kce) !== '0' : true;
+    const kcvv = audioSettingsKey('combatVol');
+    if (kcvv) { const raw = parseInt(localStorage.getItem(kcvv), 10); _combatVolume = Number.isFinite(raw) ? Math.max(0, Math.min(100, raw)) / 100 : 0.6; }
+    else _combatVolume = 0.6;
     const kda = audioSettingsKey('dealAnim');
     _dealAnimEnabled       = kda ? localStorage.getItem(kda) !== '0' : true;
     applyMuteUI();
@@ -198,12 +198,10 @@
     if (kv) localStorage.setItem(kv, _bannerVoiceEnabled ? '1' : '0');
     if (kcv) localStorage.setItem(kcv, String(Math.round(_cardVolume  * 100)));
     if (kvv) localStorage.setItem(kvv, String(Math.round(_voiceVolume * 100)));
-    const kcm = audioSettingsKey('combatMelee');
-    const kcl = audioSettingsKey('combatLightning');
-    const kcf = audioSettingsKey('combatFart');
-    if (kcm) localStorage.setItem(kcm, _meleeSoundEnabled     ? '1' : '0');
-    if (kcl) localStorage.setItem(kcl, _lightningSoundEnabled ? '1' : '0');
-    if (kcf) localStorage.setItem(kcf, _fartSoundEnabled      ? '1' : '0');
+    const kce = audioSettingsKey('combatEnabled');
+    const kcvv = audioSettingsKey('combatVol');
+    if (kce) localStorage.setItem(kce, _combatSoundEnabled ? '1' : '0');
+    if (kcvv) localStorage.setItem(kcvv, String(Math.round(_combatVolume * 100)));
     const kda = audioSettingsKey('dealAnim');
     if (kda) localStorage.setItem(kda, _dealAnimEnabled ? '1' : '0');
     pushVoicePrefToServer();
@@ -217,16 +215,9 @@
     catch (_) {}
   }
 
-  // Map a fight-gag SFX URL to its combat category, and return whether that
-  // category is currently enabled. melee covers every sword/dagger sound
-  // (whiff / block / flesh / fumble); lightning and stink each have their own
-  // switch. Unknown URLs default to playing (fail-open).
-  function combatSoundEnabled(url) {
-    if (!url) return true;
-    if (/fight_lightning/i.test(url)) return _lightningSoundEnabled;
-    if (/fight_stink/i.test(url))     return _fartSoundEnabled;
-    return _meleeSoundEnabled;
-  }
+  // Single combat-sound switch — covers all fight SFX (sword / lightning /
+  // fart) and dungeon combat. (`url` param kept for callsite compatibility.)
+  function combatSoundEnabled(_url) { return _combatSoundEnabled; }
 
   function applyMuteUI() {
     const btn = $('#muteBtn');
@@ -243,10 +234,10 @@
     const cvl = $('#cardVolumeVal');  if (cvl) cvl.textContent = `${Math.round(_cardVolume  * 100)}%`;
     const vv  = $('#voiceVolume');    if (vv)  vv.value  = String(Math.round(_voiceVolume * 100));
     const vvl = $('#voiceVolumeVal'); if (vvl) vvl.textContent = `${Math.round(_voiceVolume * 100)}%`;
-    const cmt = $('#combatMeleeToggle');     if (cmt) cmt.checked = _meleeSoundEnabled;
-    const clt = $('#combatLightningToggle'); if (clt) clt.checked = _lightningSoundEnabled;
-    const cft = $('#combatFartToggle');      if (cft) cft.checked = _fartSoundEnabled;
-    const dat = $('#dealAnimToggle');        if (dat) dat.checked = _dealAnimEnabled;
+    const cbt = $('#combatToggle');     if (cbt) cbt.checked = _combatSoundEnabled;
+    const cbv = $('#combatVolume');     if (cbv) cbv.value = String(Math.round(_combatVolume * 100));
+    const cbvl = $('#combatVolumeVal'); if (cbvl) cbvl.textContent = `${Math.round(_combatVolume * 100)}%`;
+    const dat = $('#dealAnimToggle');   if (dat) dat.checked = _dealAnimEnabled;
   }
   applyMuteUI();
 
@@ -311,6 +302,9 @@
   // moves to them. Reset on hand-start so the first actor of a new
   // hand still triggers a tick (previous value would be stale).
   let _audLastActor = null;
+  // Tracks whether a hand was live last tick, to fire the shuffle once on the
+  // round's end (live → not-live transition).
+  let _audWasLive = false;
   // Card-deal animation fires once per hand on the fresh PREFLOP edge.
   // Tracks the last hand.startedAt we animated (or chose to skip).
   let _dealAnimLastHand = null;
@@ -323,34 +317,33 @@
   // playerId -> [card0LandMs, card1LandMs] (absolute Date.now() timestamps).
   let _dealRevealPrepHand = null, _dealRevealHand = null, _dealRevealMap = null, _dealRevealUntil = 0;
   function maybePlayCardSounds(hand) {
+    // Card audio is deliberately sparse: SHUFFLE at the END of a round, ONE
+    // DEAL sound at the START, and a single card slip as the action reaches
+    // each player. No more sound on every flop/turn/river card.
+    const live = !!(hand && hand.state !== 'COMPLETE');
+    // End of round → shuffle (deck gathered up at showdown / hand end).
+    if (_audWasLive && !live) playFromPool(SHUFFLE_POOL);
+    _audWasLive = live;
+
     if (!hand) {
       _audLastHandStartedAt = null;
-      _audLastBoardLen = 0;
       _audWasMyTurn = false;
       _audLastActor = null;
       return;
     }
-    // New hand → shuffle. startedAt is unique-per-hand on the server.
+    // Start of round → ONE deal sound. When the card-deal animation is on it
+    // already plays its own composite deal sound, so only play here when the
+    // animation is off (avoids a double).
     if (hand.startedAt && hand.startedAt !== _audLastHandStartedAt) {
       _audLastHandStartedAt = hand.startedAt;
-      _audLastBoardLen = 0;
       _audWasMyTurn = false;
       _audLastActor = null;
-      playFromPool(SHUFFLE_POOL);
+      if (!_dealAnimEnabled) playFromPool(DEAL_POOL);
     }
-    // Board grew → deal sound (flop/turn/river all trigger).
-    const len = hand.board?.length || 0;
-    if (len > _audLastBoardLen) {
-      _audLastBoardLen = len;
-      playFromPool(DEAL_POOL);
-    }
-    // Turn-tick — fires for every actor change (bot or human). Soft
-    // 0.5× scale so the every-action tick stays under the deal hit.
-    // Skipped if the actor cleared (hand.actor went null between
-    // betting rounds) so we only tick on a real next-player edge.
+    // Single card slip as the action moves to a new player (bot or human).
     if (hand.actor && hand.actor !== _audLastActor) {
       _audLastActor = hand.actor;
-      playFromPool(TURN_TICK_POOL, 0.5);
+      playFromPool(TURN_TICK_POOL, 0.7);
     } else if (!hand.actor) {
       _audLastActor = null;
     }
@@ -401,15 +394,17 @@
       saveAudioSettings();
     });
   }
-  // Three independent combat-sound toggles.
-  const combatToggles = [
-    ['#combatMeleeToggle',     (v) => { _meleeSoundEnabled     = v; }],
-    ['#combatLightningToggle', (v) => { _lightningSoundEnabled = v; }],
-    ['#combatFartToggle',      (v) => { _fartSoundEnabled      = v; }],
-  ];
-  for (const [sel, set] of combatToggles) {
-    const el = $(sel);
-    if (el) el.addEventListener('change', (e) => { set(!!e.target.checked); saveAudioSettings(); });
+  // Combat-sound channel — one on/off toggle + a volume slider.
+  const combatToggle = $('#combatToggle');
+  if (combatToggle) combatToggle.addEventListener('change', (e) => { _combatSoundEnabled = !!e.target.checked; saveAudioSettings(); });
+  const combatVolSlider = $('#combatVolume');
+  if (combatVolSlider) {
+    combatVolSlider.addEventListener('input', (e) => {
+      const pct = parseInt(e.target.value, 10) || 0;
+      _combatVolume = Math.max(0, Math.min(100, pct)) / 100;
+      const lbl = $('#combatVolumeVal'); if (lbl) lbl.textContent = `${pct}%`;
+      saveAudioSettings();
+    });
   }
   // 🃏 Card-deal animation toggle.
   const dealAnimToggle = $('#dealAnimToggle');
@@ -636,7 +631,7 @@
         if (e.t > maxT) maxT = e.t;
         if (e.t > _dungeonSoundSeen && e.sound && e.t >= topT) { topT = e.t; topSound = e.sound; }
       }
-      if (topSound) playDungeonSound(topSound, Math.min(1, _cardVolume * 1.6 + 0.2));
+      if (topSound) playDungeonSound(topSound, _combatVolume);
       _dungeonSoundSeen = maxT;
     }
     if (document.body.dataset.screen === 'dungeon') renderDungeon();
@@ -646,7 +641,7 @@
     // Muffled basement thumps for players still at the table. The dungeon
     // player hears full combat via dungeon:state, so they skip this.
     if (_inDungeon || !sound) return;
-    playDungeonSound(sound, Math.min(0.35, _cardVolume * 0.4));
+    playDungeonSound(sound, _combatVolume * 0.35);
   });
 
   socket.on('dungeon:exit', (exit) => {
@@ -739,7 +734,11 @@
   }
 
   // ---- Dungeon UI wiring (delegated; elements are static in index.html) ----
-  $('#dungeonBtn')?.addEventListener('click', enterDungeon);
+  // "Hit the Dungeon" lives in the money dropdown (#mePursePop), which is
+  // re-rendered each paintMe — so delegate the click.
+  $('#mePursePop')?.addEventListener('click', (ev) => {
+    if (ev.target.closest('[data-enter-dungeon]')) enterDungeon();
+  });
   $('#dungeonLeaveBtn')?.addEventListener('click', returnFromDungeon);
   $('#dungeonEnemies')?.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-enemy]'); if (!b) return;
@@ -793,7 +792,7 @@
       // banter-voice toggle — it's a shared event, like a card sound. Gated
       // by the per-category combat toggle (sword / lightning / fart).
       if (entry.kind === 'fight' && entry.audioUrl && combatSoundEnabled(entry.audioUrl)) {
-        try { const fx = new Audio(entry.audioUrl); fx.volume = _voiceVolume; fx.play().catch(()=>{}); } catch (_) {}
+        try { const fx = new Audio(entry.audioUrl); fx.volume = _combatVolume; fx.play().catch(()=>{}); } catch (_) {}
       }
     }
   });
@@ -1127,6 +1126,9 @@
     if (pop) {
       const debt = Number(p.rebuy_debt || 0);
       const chips = Number(p.chips || 0);
+      // 🏋️ "Hit the Dungeon" lives tucked inside the money dropdown (a play on
+      // "hit the gym"). Clicking it leaves your seat and descends.
+      const dungeonRow = `<div class="purse__actions"><button type="button" class="purse__btn purse__btn--dungeon" data-enter-dungeon title="Leave the table and descend into the dungeon to fight monsters for gold">🏋️ Hit the Dungeon</button></div>`;
       if (debt > 0) {
         const maxAffordable = Math.min(debt, chips);
         const smallPayment = Math.min(maxAffordable, 1000);
@@ -1147,6 +1149,7 @@
           <div class="purse__row purse__row--debt"><span>Outstanding loan</span><span>${formatChips(debt)} gp</span></div>
           ${payBlock}
           <div class="purse__foot">Pay it down to clear the red dot from the leaderboard. Full settlement happens automatically on the next Loot Lord reset.</div>
+          ${dungeonRow}
         `;
         pop.classList.add('has-content');
       } else {
@@ -1155,6 +1158,7 @@
           <div class="purse__row"><span>Chips on hand</span><span>${formatChips(chips)} gp</span></div>
           <div class="purse__row purse__row--clear"><span>Loan balance</span><span>—</span></div>
           <div class="purse__foot">You owe nothing. Abadar approves.</div>
+          ${dungeonRow}
         `;
         pop.classList.add('has-content');
       }

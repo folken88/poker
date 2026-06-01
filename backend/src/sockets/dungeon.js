@@ -35,7 +35,7 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
       if (seat && !seat.isBot) { try { table.stand(me.player_id); } catch (_) {} }
       try { table._broadcast(); } catch (_) {}
       io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
-      try { table.chat('info', `🗡️ ${me.nickname} slipped down to the dungeon.`); } catch (_) {}
+      try { table.chat('info', `🗡️ ${me.nickname} has entered the dungeon.`); } catch (_) {}
     }
 
     const dungeon = new Dungeon({
@@ -47,8 +47,13 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
         io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
         const t = tables.get(d.tableId);
         try { if (t) t._broadcast(); } catch (_) {}
+        // Only the simplest summary lines surface in the poker chat.
         try {
-          if (t) t.chat('info', `🪜 ${me.nickname} climbed out of the dungeon${d.exit?.goldBanked ? ` with ${d.exit.goldBanked} gp` : ' empty-handed'}.`);
+          if (t) {
+            if (d.exit?.reason === 'dead') t.chat('info', `☠️ ${me.nickname} has died in the dungeon.`);
+            else if (d.exit?.goldBanked) t.chat('info', `🪜 ${me.nickname} returned from the dungeon with ${d.exit.goldBanked}g.`);
+            else t.chat('info', `🪜 ${me.nickname} returned from the dungeon empty-handed.`);
+          }
         } catch (_) {}
         dungeons.delete(d.leaderId);
       },

@@ -80,7 +80,7 @@ const CHARACTER_VOICES = {
   'Rhyarca':           'cgSgspJ2msm6clMCkdW9', // Jessica — Playful, Bright, Warm — theatrical Besmara oracle
 
   // Hell's Rebels / desert / odds
-  'Taelys':            'RILOU7YmBhvwJGDGjNmP', // Jane — Professional Audiobook Reader (British, old) — gravitas
+  'Taelys':            'AZnzlk1XvdvUeBnXmlld', // Domi — young American woman, confident/snarky (stand-in; swap to a named voice on request)
   'Kelda':             'Xb7hH8MSUJpSbSDYk0k2', // Alice — Clear, Engaging Educator (British) — dry cynic
   'Vesorianna':        'Ir1QNHvhaJXbAGhT50w3', // Sara Martin — Light, Intimate and Tender — ethereal ghost
   'Lou Candlebean':    'FGY2WhTYpPnrIDTdsKH5', // Laura — Enthusiast, Quirky Attitude (young, American, sassy) — hip gnome
