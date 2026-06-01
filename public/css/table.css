@@ -51,7 +51,13 @@ button, input { font: inherit; color: inherit; }
 .dungeon__title { font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0.12em; color: var(--brass-bright); }
 .dungeon__meta { flex: 1; color: var(--ivory-dim); font-variant-numeric: tabular-nums; }
 .dungeon__ambient { margin: -0.4rem 0 0; font-size: 0.78rem; color: var(--ivory-dim); opacity: 0.65; font-style: italic; }
-.dungeon__stage { background: linear-gradient(180deg, rgba(20,18,26,0.92), rgba(8,8,12,0.96)); border: 1px solid rgba(217,176,106,0.25); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.9rem; }
+.dungeon__stage {
+  background:
+    linear-gradient(180deg, rgba(12,10,16,0.84), rgba(6,6,10,0.9)),
+    url('/dungeon/maps/harrowstone.webp') center / cover no-repeat;
+  border: 1px solid rgba(217,176,106,0.25); border-radius: 12px; padding: 1rem;
+  display: flex; flex-direction: column; gap: 0.9rem;
+}
 .dungeon__enemies { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; min-height: 96px; }
 .dmon { width: 112px; background: rgba(0,0,0,0.4); border: 1px solid rgba(200,80,80,0.4); border-radius: 10px; padding: 0.5rem 0.4rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; cursor: pointer; color: inherit; transition: transform .1s, border-color .1s, box-shadow .1s; }
 .dmon:hover:not(:disabled) { transform: translateY(-2px); border-color: rgba(255,120,120,0.85); }
