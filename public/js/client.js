@@ -686,7 +686,7 @@
     if (party) party.innerHTML = (d.party || []).map(m => {
       const pct = m.maxHp ? Math.max(0, Math.round(100 * m.hp / m.maxHp)) : 0;
       return `<div class="dpc ${pct <= 30 ? 'is-low' : ''}">
-        <div class="dpc__name">${escapeText(m.nickname)}${m.isLeader ? ' (you)' : ''}${m.sickened ? ' 🤢' : ''}</div>
+        <div class="dpc__name">${escapeText(m.nickname)}${m.isLeader ? ' (you)' : ''}${m.sickened ? ' 🤢' : ''}${m.paralyzed ? ' 🥶' : ''}</div>
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
         <div class="dpc__hp">${Math.max(0, m.hp)}/${m.maxHp} HP</div>
       </div>`;
@@ -720,8 +720,8 @@
         const me = (d.party || []).find(m => m.isLeader) || {};
         const lr = me.lightningReady, sr = me.stinkingReady;
         html += `<button class="btn btn--primary" data-dact="attack">⚔️ Attack</button>`;
-        html += `<button class="btn btn--ghost ${lr ? '' : 'is-cooling'}" data-dact="lightning" ${lr ? '' : 'disabled'}>⚡ Lightning${lr ? '' : ' (cooldown)'}</button>`;
-        html += `<button class="btn btn--ghost ${sr ? '' : 'is-cooling'}" data-dact="stinking" ${sr ? '' : 'disabled'}>💨 Stinking Cloud${sr ? '' : ' (cooldown)'}</button>`;
+        html += `<button class="btn btn--ghost ${lr ? '' : 'is-cooling'}" data-dact="lightning" ${lr ? '' : 'disabled'}>⚡ Lightning${lr ? '' : ' (used)'}</button>`;
+        html += `<button class="btn btn--ghost ${sr ? '' : 'is-cooling'}" data-dact="stinking" ${sr ? '' : 'disabled'}>💨 Stinking Cloud${sr ? '' : ' (used)'}</button>`;
         html += `<button class="btn btn--ghost" data-dact="bail">🏃 Bail</button>`;
       } else if (d.status === 'combat') {
         html += `<span class="dwait">Waiting…</span>`;
@@ -732,7 +732,8 @@
     }
 
     const log = $('#dungeonLog');
-    if (log) { log.innerHTML = (d.log || []).map(e => `<li>${escapeText(e.text)}</li>`).join(''); log.scrollTop = log.scrollHeight; }
+    // Most recent first; player can scroll DOWN to review earlier events.
+    if (log) { log.innerHTML = (d.log || []).slice().reverse().map(e => `<li>${escapeText(e.text)}</li>`).join(''); log.scrollTop = 0; }
   }
 
   // ---- Dungeon UI wiring (delegated; elements are static in index.html) ----

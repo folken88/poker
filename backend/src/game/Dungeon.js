@@ -20,10 +20,13 @@ const { logDungeon } = require('../persistence/logger');
 // ── Tuning knobs (all easily adjustable) ────────────────────────────────────
 const BASE_HP        = 30;     // gearless player hp
 const HP_PER_BONUS   = 10;     // +per ring tier and per cloak tier
-const SPELL_COOLDOWN = 3;      // rounds between casts of lightning / stinking
 const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;     // duration applied by stinking cloud
 const SICKENED_PENALTY = 2;    // -2 to-hit and damage while sickened
+const PARALYZE_DC = 14;        // ghoul/ghast paralysis save DC
+// Monsters were missing too often and failing Reflex (lightning) saves too
+// much — buff their to-hit + saves. Tunable from dungeon.jsonl data.
+const MON_TOHIT_BUFF = 3, MON_FORT_BUFF = 3, MON_REFLEX_BUFF = 4;
 const TURN_TIMER_MS  = 90_000; // AFK auto-bail after this on the player's turn
 const ENEMY_STEP_MS  = 750;    // pacing between auto-resolved enemy turns
 const BOSS_EVERY     = 5;      // every Nth room is a boss
@@ -38,13 +41,13 @@ const MON = {
   skeleton:          { name: 'Skeleton',          glyph: '💀', hp: 10, ac: 14, toHit: 3, dmgDie: 6,  dmgBonus: 1, fort: 2, reflex: 3, gold: [10, 25] },
   giant_spider:      { name: 'Giant Spider',      glyph: '🕷️', hp: 12, ac: 14, toHit: 4, dmgDie: 6,  dmgBonus: 1, fort: 3, reflex: 4, gold: [12, 30] },
   zombie:            { name: 'Zombie',            glyph: '🧟', hp: 16, ac: 12, toHit: 4, dmgDie: 6,  dmgBonus: 3, fort: 4, reflex: 0, gold: [15, 35] },
-  ghoul:             { name: 'Ghoul',             glyph: '🧛', hp: 14, ac: 15, toHit: 5, dmgDie: 6,  dmgBonus: 2, fort: 3, reflex: 4, gold: [18, 40] },
+  ghoul:             { name: 'Ghoul',             glyph: '🧛', hp: 14, ac: 15, toHit: 5, dmgDie: 6,  dmgBonus: 2, fort: 3, reflex: 4, gold: [18, 40], paralyze: true },
   cultist:           { name: 'Whispering Cultist',glyph: '🕯️', hp: 14, ac: 14, toHit: 4, dmgDie: 8,  dmgBonus: 1, fort: 3, reflex: 3, gold: [20, 45] },
   gray_ooze:         { name: 'Gray Ooze',         glyph: '🟢', hp: 18, ac: 10, toHit: 5, dmgDie: 6,  dmgBonus: 2, fort: 5, reflex: 0, gold: [15, 40] },
   skeletal_champion: { name: 'Skeletal Champion', glyph: '☠️', hp: 22, ac: 17, toHit: 6, dmgDie: 8,  dmgBonus: 3, fort: 4, reflex: 4, gold: [30, 60] },
   shadow:            { name: 'Shadow',            glyph: '🌑', hp: 20, ac: 15, toHit: 5, dmgDie: 6,  dmgBonus: 2, fort: 4, reflex: 6, gold: [35, 70] },
   wight:             { name: 'Wight',             glyph: '👻', hp: 26, ac: 16, toHit: 6, dmgDie: 8,  dmgBonus: 3, fort: 5, reflex: 4, gold: [40, 80] },
-  ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', hp: 24, ac: 17, toHit: 7, dmgDie: 8,  dmgBonus: 3, fort: 5, reflex: 5, gold: [45, 90] },
+  ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', hp: 24, ac: 17, toHit: 7, dmgDie: 8,  dmgBonus: 3, fort: 5, reflex: 5, gold: [45, 90], paralyze: true },
   gibbering_mouther: { name: 'Gibbering Mouther', glyph: '👄', hp: 36, ac: 15, toHit: 6, dmgDie: 6,  dmgBonus: 3, fort: 6, reflex: 4, gold: [60, 120] },
   ogre:              { name: 'Ogre',              glyph: '👹', hp: 34, ac: 16, toHit: 8, dmgDie: 10, dmgBonus: 6, fort: 7, reflex: 2, gold: [50, 110] },
   ettin:             { name: 'Ettin',             glyph: '👹', hp: 48, ac: 16, toHit: 9, dmgDie: 10, dmgBonus: 7, fort: 8, reflex: 2, gold: [80, 160] },
@@ -92,14 +95,16 @@ class Dungeon {
       hp: maxHp,
       maxHp,
       sickened: 0,
-      cooldown: { lightning: 0, stinking: 0 },   // round number when next available
+      paralyzed: 0,
+      usedLightning: false,   // ONE lightning + ONE stinking per room
+      usedStinking: false,
     }];
     this._note(`🗡️ ${this.party[0].nickname} descends into the dungeon. (${maxHp} HP)`);
     this._log('start', { maxHp, party: this.party.length });
   }
 
   roomName() { return `dungeon:${this.id}`; }
-  _note(text, sound) { this.log.push({ t: ++this._logSeq, text, sound: sound || null }); if (this.log.length > 60) this.log.shift(); }
+  _note(text, sound) { this.log.push({ t: ++this._logSeq, text, sound: sound || null }); if (this.log.length > 150) this.log.shift(); }
   // Persist a dungeon event to dungeon.jsonl for troubleshooting + tuning.
   _log(type, extra) {
     try { logDungeon({ type, run: this.id, leader: this.leaderId, depth: this.depth, round: this.round, ...(extra || {}) }); } catch (_) {}
@@ -121,8 +126,9 @@ class Dungeon {
         playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId,
         isBot: m.isBot, isLeader: m.isLeader, hp: Math.max(0, m.hp), maxHp: m.maxHp,
         sickened: m.sickened > 0,
-        lightningReady: this.round >= m.cooldown.lightning,
-        stinkingReady: this.round >= m.cooldown.stinking,
+        paralyzed: m.paralyzed > 0,
+        lightningReady: !m.usedLightning,
+        stinkingReady: !m.usedStinking,
       })),
       enemies: this.enemies.map(e => ({
         uid: e.uid, name: e.name, glyph: e.glyph, boss: !!e.boss,
@@ -134,7 +140,7 @@ class Dungeon {
         label: (db.GEAR_BY_KEY[l.slot]?.label || l.slot),
         hockValue: db.gearHockValue(l.slot, l.tier),
       })),
-      log: this.log.slice(-30),
+      log: this.log.slice(-60),
     };
   }
   _broadcast() {
@@ -162,6 +168,8 @@ class Dungeon {
     if (this.status !== 'exploring') return { ok: false, error: 'not exploring' };
     this.depth += 1;
     this._spawnRoom();
+    // Fresh spell charges each room: 1 lightning + 1 stinking per room.
+    for (const m of this.party) { m.usedLightning = false; m.usedStinking = false; }
     this.status = 'combat';
     this.round = 1;
     this._rollInitiative();
@@ -192,9 +200,10 @@ class Dungeon {
         boss,
         hp, maxHp: hp,
         ac: base.ac + acBump + (boss ? 2 : 0),
-        toHit: base.toHit + (boss ? 2 : 0),
+        toHit: base.toHit + MON_TOHIT_BUFF + (boss ? 2 : 0),
         dmgDie: base.dmgDie, dmgBonus: base.dmgBonus + (boss ? 2 : 0),
-        fort: base.fort, reflex: base.reflex,
+        fort: base.fort + MON_FORT_BUFF, reflex: base.reflex + MON_REFLEX_BUFF,
+        paralyze: !!base.paralyze,
         sickened: 0,
         gold: rint(goldLo, goldHi),
       });
@@ -243,6 +252,13 @@ class Dungeon {
     // party member
     const m = this.party.find(x => x.playerId === t.id);
     if (!m || m.hp <= 0) return this._nextTurn();
+    // Paralysis (ghoul/ghast) — lose the turn.
+    if (m.paralyzed > 0) {
+      m.paralyzed -= 1;
+      this._note(`🥶 ${m.nickname} is paralyzed — loses the turn.`);
+      this._broadcast();
+      return this._nextTurn();
+    }
     this._tickSickened(m);
     if (m.isLeader) {
       // Human leader — wait for input; arm the AFK auto-bail.
@@ -318,33 +334,39 @@ class Dungeon {
     return { playerId: best.playerId, nickname: best.nickname, gear: best.gear, rolled: true };
   }
 
-  // ── Combat resolution ────────────────────────────────────────────────────
+  // ── Combat resolution (rolls shown in the dungeon log) ───────────────────
+  _fmtBonus(n) { return (n >= 0 ? '+' : '') + n; }
+  _partySaveMod(m) { return (Number(m.gear?.ring) || 0) + (Number(m.gear?.cloak) || 0); }
+  _atkStr(r) { return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`; }
+
   _swingVsAC(attacker, ac) {
     const weapon = attacker.weapon;
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
+    const toHit = weapon.toHit - sick;
     const roll = dRoll(20);
-    const total = roll + weapon.toHit - sick;
-    if (roll === 1) return { hit: false, fumble: true, roll, sound: SND.fumble };
+    const total = roll + toHit;
+    if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
-    if (!hit) return { hit: false, roll, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
+    if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
     let dmg = dRoll(weapon.dmgDie) + weapon.dmgBonus - sick;
     let crit = false;
     if (roll >= weapon.critRange) {
       const conf = dRoll(20) + weapon.toHit;
       if (conf === 20 || conf >= ac) { crit = true; dmg += dRoll(weapon.dmgDie) + weapon.dmgBonus; }
     }
-    return { hit: true, crit, damage: Math.max(1, dmg), roll, sound: pick(SND.flesh) };
+    return { hit: true, crit, damage: Math.max(1, dmg), roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
   // Generic d20 attack used by monsters (no gear object).
   _monsterSwing(e, targetAC) {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
+    const toHit = e.toHit - sick;
     const roll = dRoll(20);
-    const total = roll + e.toHit - sick;
-    if (roll === 1) return { hit: false, sound: SND.fumble };
+    const total = roll + toHit;
+    if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
-    if (!hit) return { hit: false, sound: pick(SND.whiffSword) };
+    if (!hit) return { hit: false, roll, toHit, total, ac: targetAC, sound: pick(SND.whiffSword) };
     let dmg = dRoll(e.dmgDie) + e.dmgBonus - sick;
-    return { hit: true, damage: Math.max(1, dmg), sound: pick(SND.flesh) };
+    return { hit: true, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
   }
 
   _enemyAct(e) {
@@ -355,9 +377,17 @@ class Dungeon {
     const r = this._monsterSwing(e, ac);
     if (r.hit) {
       target.hp -= r.damage;
-      this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${r.damage}. (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
+      this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${r.damage}. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
+      // Ghoul/ghast paralysis: the victim saves or loses their next turn.
+      if (e.paralyze && target.hp > 0) {
+        const sm = this._partySaveMod(target);
+        const sroll = dRoll(20), stot = sroll + sm;
+        const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= PARALYZE_DC;
+        if (!saved) { target.paralyzed = 1; this._note(`🥶 ${target.nickname} fails the paralysis save [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${PARALYZE_DC}] — paralyzed!`); }
+        else this._note(`${target.nickname} resists paralysis [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${PARALYZE_DC}].`);
+      }
     } else {
-      this._note(`${e.glyph} ${e.name} misses ${target.nickname}.`, r.sound);
+      this._note(`${e.glyph} ${e.name} misses ${target.nickname}. ${this._atkStr(r)}`, r.sound);
     }
     this._echoToTable(r.sound);
   }
@@ -388,8 +418,8 @@ class Dungeon {
     this._log('action', { kind, partyHp: m.hp, enemiesAlive: this.livingEnemies().length });
     let handled = true;
     if (kind === 'attack')        this._playerAttack(m, payload.targetUid);
-    else if (kind === 'lightning') this._castLightning(m, payload.targetUids || []);
-    else if (kind === 'stinking')  this._castStinking(m);
+    else if (kind === 'lightning') { if (m.usedLightning) { this._armTurnTimer(); return { ok: false, error: 'lightning already used this room' }; } this._castLightning(m, payload.targetUids || []); }
+    else if (kind === 'stinking')  { if (m.usedStinking) { this._armTurnTimer(); return { ok: false, error: 'stinking already used this room' }; } this._castStinking(m); }
     else if (kind === 'bail')      { return this.bail(); }
     else if (kind === 'equip')     { this.equipLoot(payload.idx); this._armTurnTimer(); this._broadcast(); return { ok: true }; }
     else if (kind === 'hock')      { this.hockLoot(payload.idx); this._armTurnTimer(); this._broadcast(); return { ok: true }; }
@@ -399,53 +429,52 @@ class Dungeon {
     return { ok: true };
   }
 
-  _playerAttack(m, targetUid, silentTurn) {
+  _playerAttack(m, targetUid) {
     const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
     if (!e) return;
     m.weapon = weaponOf(m.gear);
     // Sickened creatures are +2 to be hit (effectively -2 AC).
     const r = this._swingVsAC(m, e.sickened > 0 ? e.ac - 2 : e.ac);
-    if (r.fumble) { this._note(`${m.nickname} fumbles the attack!`, r.sound); }
-    else if (r.hit) {
-      e.hp -= r.damage;
-      this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${e.name} for ${r.damage}.${e.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, e.hp)}/${e.maxHp})`}`, r.sound);
-    } else {
-      this._note(`${m.nickname} misses ${e.name}.`, r.sound);
-    }
+    if (r.fumble) this._note(`${m.nickname} fumbles the attack! ${this._atkStr(r)}`, r.sound);
+    else if (r.hit) { e.hp -= r.damage; this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${e.name} for ${r.damage}. ${this._atkStr(r)}${e.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, e.hp)}/${e.maxHp})`}`, r.sound); }
+    else this._note(`${m.nickname} misses ${e.name}. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
   }
   _castLightning(m, targetUids) {
-    if (this.round < m.cooldown.lightning) return;
-    m.cooldown.lightning = this.round + SPELL_COOLDOWN;
+    if (m.usedLightning) { this._note('⚡ Lightning Bolt already used this room.'); return; }
+    m.usedLightning = true;
     const power = Math.max(2, totalMagicBonus(m.gear));
     const dc = 10 + power;
     let chosen = (targetUids || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0)).filter(Boolean);
     if (!chosen.length) chosen = this.livingEnemies().slice(0, LIGHTNING_MAX_TARGETS);
     chosen = chosen.slice(0, LIGHTNING_MAX_TARGETS);
     const sound = pick(SND.lightning);
-    let parts = [];
+    const parts = [];
     for (const e of chosen) {
       let full = 0; for (let i = 0; i < power; i++) full += dRoll(6);
-      const saved = (dRoll(20) + e.reflex) >= dc;
+      const sroll = dRoll(20), stot = sroll + e.reflex;
+      const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
       const dmg = saved ? Math.floor(full / 2) : full;
       e.hp -= dmg;
-      parts.push(`${e.name} ${dmg}${saved ? ' (save)' : ''}${e.hp <= 0 ? ' ☠️' : ''}`);
+      parts.push(`${e.name}: Ref [d20 ${sroll} ${this._fmtBonus(e.reflex)} = ${stot} vs DC ${dc}] ${saved ? 'save, half' : 'fail'} ${dmg}${e.hp <= 0 ? ' ☠️' : ''}`);
     }
-    this._note(`⚡ ${m.nickname} looses a Lightning Bolt — ${parts.join(', ')}.`, sound);
+    this._note(`⚡ ${m.nickname} Lightning Bolt (${power}d6) — ${parts.join('; ')}.`, sound);
     this._echoToTable(sound);
   }
   _castStinking(m) {
-    if (this.round < m.cooldown.stinking) return;
-    m.cooldown.stinking = this.round + SPELL_COOLDOWN;
+    if (m.usedStinking) { this._note('💨 Stinking Cloud already used this room.'); return; }
+    m.usedStinking = true;
     const power = Math.max(2, totalMagicBonus(m.gear));
     const dc = 10 + power;
     const sound = pick(SND.stink);
-    let hit = 0;
+    const parts = [];
     for (const e of this.livingEnemies()) {
-      const saved = (dRoll(20) + e.fort) >= dc;
-      if (!saved) { e.sickened = SICKENED_ROUNDS; hit++; }
+      const sroll = dRoll(20), stot = sroll + e.fort;
+      const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
+      if (!saved) e.sickened = SICKENED_ROUNDS;
+      parts.push(`${e.name}: Fort [d20 ${sroll} ${this._fmtBonus(e.fort)} = ${stot} vs DC ${dc}] ${saved ? 'save' : 'SICKENED'}`);
     }
-    this._note(`💨 ${m.nickname} conjures a Stinking Cloud — ${hit} sickened.`, sound);
+    this._note(`💨 ${m.nickname} Stinking Cloud (DC ${dc}) — ${parts.join('; ')}.`, sound);
     this._echoToTable(sound);
   }
 

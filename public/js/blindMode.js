@@ -972,8 +972,10 @@
   const _dun = { depth: -1, logT: 0, turnKey: '', status: '' };
 
   function _stripGlyphs(s) {
-    try { return String(s || '').replace(/\p{Extended_Pictographic}/gu, '').replace(/\s+/g, ' ').trim(); }
-    catch (_) { return String(s || ''); }
+    // Drop bracketed roll math ([d20 14 +3 = 17 vs AC 15]) and emoji so the
+    // spoken line stays clean — the numbers stay visible in the on-screen log.
+    try { return String(s || '').replace(/\[[^\]]*\]/g, '').replace(/\p{Extended_Pictographic}/gu, '').replace(/\s+/g, ' ').trim(); }
+    catch (_) { return String(s || '').replace(/\[[^\]]*\]/g, '').trim(); }
   }
   function _dunEnemyPhrase(d) {
     const alive = (d.enemies || []).filter(e => e.alive);

@@ -21,6 +21,19 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🗡️ Dungeon — combat tuning + UX
+- **Spells are per-room now:** 1 Lightning Bolt + 1 Stinking Cloud each room
+  (refilled when you open a door), attacks unlimited — replaces the fiddly
+  round cooldowns.
+- **Ghouls & ghasts paralyze:** if one hits you, save (DC 14, +ring/+cloak) or
+  **lose your next turn**.
+- **Roll breakdowns are shown** in the dungeon log — every attack and save reads
+  like `[d20 14 +3 = 17 vs AC 15]` (spoken narration strips the math for clarity).
+- **Monsters buffed:** +to-hit and +saves (they were missing and failing
+  lightning saves too often). Tunable from the new dungeon.jsonl logs.
+- **Combat log is newest-first** and scrollable — latest action on top, scroll
+  down for the run's history (buffer raised to 150 lines).
+
 ### 🗡️ Dungeon — blind support, harsher loot, sickened rules, logging
 - **Blind mode can play the dungeon by ear + voice.** Spoken narration of rooms,
   enemies (with HP + numbered targets), your turn, combat results, loot, and the
