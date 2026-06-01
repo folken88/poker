@@ -855,8 +855,11 @@ async function dungeonLine(nick, eventType, ctx = {}) {
   if (!line) return null;
   let audio = null;
   if (elevenlabs.ENABLED) {
-    const voiceId = voiceFor(nick);
-    if (voiceId) { try { audio = await elevenlabs.synthesize(line, voiceId, settingsFor(nick)); } catch (_) {} }
+    // voiceNick lets Vorkstag speak in the voice of whoever he's wearing while
+    // the LINE itself is generated from his own (nick's) creepy personality.
+    const vNick = ctx.voiceNick || nick;
+    const voiceId = voiceFor(vNick);
+    if (voiceId) { try { audio = await elevenlabs.synthesize(line, voiceId, settingsFor(vNick)); } catch (_) {} }
   }
   return { line, audio, audioMime: 'audio/mpeg' };
 }

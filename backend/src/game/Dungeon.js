@@ -103,7 +103,7 @@ class Dungeon {
   // reactions (between rooms) get their own occasional chance.
   _tryBanter(member, eventType, ctx) {
     if (!member || !member.isBot) return;
-    if (!banter.CHARACTER_FLAVOR[member.nickname]) return;
+    if (!banter.CHARACTER_FLAVOR[member.trueNick || member.nickname]) return;
     if (this.status === 'combat') {
       if (this.round === this._bantRound) return;   // round already used its one chance
       this._bantRound = this.round;
@@ -112,11 +112,12 @@ class Dungeon {
     this._emitBanter(member, eventType, ctx);
   }
   _emitBanter(member, eventType, ctx) {
-    const nick = member.nickname;
-    Promise.resolve(banter.dungeonLine(nick, eventType, ctx)).then(res => {
+    const flavorNick = member.trueNick || member.nickname;   // Vorkstag keeps his own creepy voice…
+    const label = member.nickname;                           // …but is shown + voiced as whoever he wears
+    Promise.resolve(banter.dungeonLine(flavorNick, eventType, { ...ctx, voiceNick: label })).then(res => {
       if (!res || !res.line) return;
-      this._note(`💬 ${nick}: ${res.line}`);
-      if (this.io && res.audio) this.io.to(this.roomName()).emit('dungeon:say', { nick, audio: res.audio, audioMime: res.audioMime });
+      this._note(`💬 ${label}: ${res.line}`);
+      if (this.io && res.audio) this.io.to(this.roomName()).emit('dungeon:say', { nick: label, audio: res.audio, audioMime: res.audioMime });
       this._broadcast();
     }).catch(() => {});
   }
@@ -155,6 +156,13 @@ class Dungeon {
       usedLightning: false, usedStinking: false,
       left: false, dead: false,
     };
+    // Vorkstag the skinwalker wears a partymate's face + name (true identity
+    // hidden) — same as his poker-seat disguise. He keeps his own creepy
+    // personality but is shown/voiced as whoever he's impersonating.
+    if (playerId === 'vorkstag') {
+      const victims = this.party.filter(x => !x.left && x.hp > 0);
+      if (victims.length) { const v = pick(victims); m.trueNick = m.nickname; m.nickname = v.nickname; m.avatarId = v.avatarId; }
+    }
     this.party.push(m);
     this._note(`🚪 ${m.nickname} joins the delve. (${maxHp} HP)`);
     this._log('join', { who: playerId, maxHp, party: this.present().length });
