@@ -21,6 +21,23 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🗡️ Dungeon — blind support, harsher loot, sickened rules, logging
+- **Blind mode can play the dungeon by ear + voice.** Spoken narration of rooms,
+  enemies (with HP + numbered targets), your turn, combat results, loot, and the
+  run's end; voice commands ("dungeon" to enter; then attack / attack two /
+  lightning / stink / open / bail / read / hp / gold); plus full keyboard play on
+  the dungeon screen (1-9 target, A attack, L lightning, S stink, O door, B bail).
+- **Sickened enemies** (Stinking Cloud) now **lose their turn entirely** and are
+  **+2 to be hit** — making the cloud a real tactical tool.
+- **Loot is rarer & slower:** early-room drops ~1.5% (was 6-25%), and findable
+  tier is depth-capped (+1 at depths 1-3, +2 at 4-7, +3 at 8-11…). Only one
+  character claims a drop (party members roll off).
+- **More melee variety:** +12 sword hit/block/swing SFX from the Foundry library.
+- **Real backdrop:** the Carrion Crown **Harrowstone dungeon** battlemap.
+- **Logging:** runs record to `dungeon.jsonl` for troubleshooting + tuning.
+- Combat sounds are now a **single channel** (toggle + volume) like the others;
+  "Hit the Dungeon" lives in the money dropdown (🏋️); blind icon is now an 👂.
+
 ### 🗡️ NEW: "Hit the Dungeon" side-game (beta — solo MVP)
 - A push-your-luck dungeon crawl beneath the poker hall. Hit **🗡️ Hit the Dungeon**
   in the ≡ menu to leave your seat and descend: an endless room-crawl where you

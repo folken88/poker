@@ -610,6 +610,15 @@
     }
     state.pendingConfirm = null;
 
+    // In the dungeon side-game, route to the dungeon command set first.
+    if (document.body.dataset.screen === 'dungeon') {
+      if (handleDungeonCommand(raw)) return;
+      // Otherwise fall through (repeat / rate / blind off still work).
+    } else if (/^(dungeon|hit the dungeon|enter(?:\s+the)?\s+dungeon|go to the dungeon)$/.test(raw)) {
+      state.deps?.enterDungeon?.();
+      return;
+    }
+
     // Mode + rate controls
     if (/^blind\s+off$/.test(raw)) { toggle(); return; }
     if (/^(faster|speed up)$/.test(raw)) { state.rate = Math.min(2.5, state.rate + 0.2); speak(`Rate ${state.rate.toFixed(1)}.`, 'urgent'); return; }
@@ -954,10 +963,109 @@
     audioEl.addEventListener('pause', clear, { once: true });
   }
 
+  // ====================================================================
+  //  🗡️ Dungeon side-game — spoken narration + voice control
+  // ====================================================================
+  // Lets a blind player follow and play the dungeon entirely by ear + voice.
+  // Narration fires from onDungeonState (wired in client.js); voice commands
+  // are dispatched from processCommand's dungeon branch above.
+  const _dun = { depth: -1, logT: 0, turnKey: '', status: '' };
+
+  function _stripGlyphs(s) {
+    try { return String(s || '').replace(/\p{Extended_Pictographic}/gu, '').replace(/\s+/g, ' ').trim(); }
+    catch (_) { return String(s || ''); }
+  }
+  function _dunEnemyPhrase(d) {
+    const alive = (d.enemies || []).filter(e => e.alive);
+    if (!alive.length) return 'No enemies.';
+    if (alive.length === 1) return `Enemy: ${alive[0].name}, ${alive[0].hp} hit points${alive[0].sickened ? ', sickened' : ''}.`;
+    return `${alive.length} enemies. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${e.hp}${e.sickened ? ', sickened' : ''}`).join('. ') + '.';
+  }
+  function _dunNarrateFull(d) {
+    const me = (d.party || []).find(m => m.isLeader) || {};
+    const bits = [`Depth ${d.depth}.`, `You have ${me.hp} of ${me.maxHp} hit points.`, _dunEnemyPhrase(d), `${d.runGold} gold this run.`];
+    if (d.status === 'exploring') bits.push('Say open to descend, or bail to leave.');
+    else if (d.status === 'combat') bits.push('Say attack, lightning, stink, or bail. Add a number to target, like attack two.');
+    speak(bits.join(' '), 'urgent');
+  }
+
+  // Called from client.js on every dungeon:state push.
+  function onDungeonState(st) {
+    if (!state.on || !st) return;
+    const meId = state.deps?.state?.me?.player_id;
+
+    // New room / entry.
+    if (st.depth !== _dun.depth) {
+      _dun.depth = st.depth;
+      if (st.depth === 0) speak('You enter the dungeon. Say open to descend, or bail to leave.', 'event');
+      else speak(`Room ${st.depth}. ${_dunEnemyPhrase(st)}`, 'event');
+    }
+    // New combat-log lines (results) — speak the freshest, stripped of emoji.
+    if (Array.isArray(st.log) && st.log.length) {
+      const fresh = st.log.filter(e => e.t > _dun.logT);
+      if (fresh.length) {
+        _dun.logT = Math.max(_dun.logT, ...st.log.map(e => e.t));
+        for (const e of fresh.slice(-2)) { const t = _stripGlyphs(e.text); if (t) speak(t, 'event'); }
+      }
+    }
+    // Turn changes.
+    const turnKey = st.turn ? `${st.turn.kind}:${st.turn.id}:${st.round}` : `${st.status}`;
+    if (turnKey !== _dun.turnKey) {
+      _dun.turnKey = turnKey;
+      if (st.status === 'combat' && st.turn && st.turn.kind === 'party' && st.turn.id === meId) {
+        const me = (st.party || []).find(m => m.isLeader) || {};
+        speak(`Your turn. ${me.hp} hit points. ${_dunEnemyPhrase(st)} Attack, lightning, stink, or bail.`, 'urgent');
+      } else if (st.status === 'exploring' && _dun.status === 'combat') {
+        speak('Room clear. Open the next door, or bail with your gold.', 'event');
+      }
+    }
+    // Run end.
+    if (st.status !== _dun.status) {
+      const prev = _dun.status; _dun.status = st.status;
+      if (st.status === 'dead') speak('You have fallen in the dungeon. The run is lost.', 'urgent');
+      else if (st.status === 'bailed' && prev) speak(`You climbed out with ${st.runGold} gold.`, 'urgent');
+    }
+  }
+
+  // Voice command set while on the dungeon screen. Returns true if handled.
+  function handleDungeonCommand(raw) {
+    const d = state.deps?.state?.dungeon;
+    const socket = state.deps?.socket;
+    if (!d || !socket) return false;
+    const alive = (d.enemies || []).filter(e => e.alive);
+    const emit = (kind, payload) => socket.emit('dungeon:action', { kind, ...(payload || {}) }, () => {});
+
+    // Queries
+    if (/^(read|status|state|where am i|situation)$/.test(raw)) { _dunNarrateFull(d); return true; }
+    if (/^(enemies|targets|who.?s here)$/.test(raw)) { speak(_dunEnemyPhrase(d), 'urgent'); return true; }
+    if (/^(hp|health|my health|my hp)$/.test(raw)) { const me = (d.party || []).find(m => m.isLeader) || {}; speak(`${me.hp} of ${me.maxHp} hit points.`, 'urgent'); return true; }
+    if (/^(gold|my gold|loot)$/.test(raw)) { speak(`${d.runGold} gold this run.`, 'urgent'); return true; }
+    // Actions
+    if (/^(open|door|next|deeper|descend|go down|go deeper)$/.test(raw)) { emit('door'); return true; }
+    if (/^(bail|leave|climb out|retreat|get out|escape|go up|surface)$/.test(raw)) { emit('bail'); return true; }
+    if (/^(stink|stinking|cloud|stinking cloud|fart|gas)$/.test(raw)) { emit('stinking'); return true; }
+    if (/^equip$/.test(raw)) { emit('equip', { idx: 0 }); return true; }
+    if (/^(hock|sell)$/.test(raw)) { emit('hock', { idx: 0 }); return true; }
+    const lm = raw.match(/^(?:lightning|bolt|zap)(?:\s+(\d+))?(?:\s+(?:and\s+)?(\d+))?$/);
+    if (lm) {
+      const idxs = [lm[1], lm[2]].filter(Boolean).map(n => parseInt(n, 10) - 1);
+      const uids = idxs.map(i => alive[i]?.uid).filter(Boolean);
+      emit('lightning', { targetUids: uids });
+      return true;
+    }
+    const am = raw.match(/^(?:attack|hit|strike|swing|stab)(?:\s+(\d+))?$/);
+    if (am) {
+      const i = am[1] ? parseInt(am[1], 10) - 1 : 0;
+      emit('attack', { targetUid: (alive[i] || alive[0])?.uid });
+      return true;
+    }
+    return false;
+  }
+
   // Expose singleton
   window.BlindMode = {
     init, toggle, isOn, speak,
-    onState, onChat, onHole,
+    onState, onChat, onHole, onDungeonState,
     startListening, stopListening,
     notifyBanterStart,
     // Turn-controls + seating helpers (bound to keys in client.js)

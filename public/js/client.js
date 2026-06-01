@@ -635,6 +635,8 @@
       _dungeonSoundSeen = maxT;
     }
     if (document.body.dataset.screen === 'dungeon') renderDungeon();
+    // Blind-mode narration (no-ops when blind mode is off).
+    window.BlindMode?.onDungeonState?.(st);
   });
 
   socket.on('dungeon:echo', ({ sound } = {}) => {
@@ -764,6 +766,39 @@
     const ho = ev.target.closest('[data-loot-hock]');
     if (eq) dungeonAction('equip', { idx: Number(eq.dataset.lootEquip) });
     else if (ho) dungeonAction('hock', { idx: Number(ho.dataset.lootHock) });
+  });
+  // Keyboard play on the dungeon screen (mouse-free; aids blind players):
+  //   1-9 target an enemy · A attack · L lightning · S stink · O/Enter door · B bail
+  document.addEventListener('keydown', (e) => {
+    if (document.body.dataset.screen !== 'dungeon') return;
+    const tag = e.target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const d = state.dungeon; if (!d) return;
+    const k = (e.key || '').toLowerCase();
+    if (/^[1-9]$/.test(k)) {
+      const alive = (d.enemies || []).filter(x => x.alive);
+      const uid = alive[parseInt(k, 10) - 1]?.uid;
+      if (uid) {
+        const i = _dungeonSel.indexOf(uid);
+        if (i >= 0) _dungeonSel.splice(i, 1);
+        else { _dungeonSel.push(uid); if (_dungeonSel.length > 2) _dungeonSel.shift(); }
+        renderDungeon();
+      }
+      e.preventDefault(); return;
+    }
+    let act = null;
+    if (k === 'a') act = 'attack';
+    else if (k === 'l') act = 'lightning';
+    else if (k === 's') act = 'stinking';
+    else if (k === 'o' || k === 'enter') act = 'door';
+    else if (k === 'b') act = 'bail';
+    if (!act) return;
+    e.preventDefault();
+    if (act === 'attack') dungeonAction('attack', { targetUid: _dungeonSel[0] });
+    else if (act === 'lightning') dungeonAction('lightning', { targetUids: _dungeonSel.slice(0, 2) });
+    else dungeonAction(act);
+    if (act === 'attack' || act === 'lightning') _dungeonSel = [];
   });
 
   // Incremental chat events (in addition to the snapshot in table:state).
@@ -2927,7 +2962,7 @@
   (function wireBlindMode() {
     if (!window.BlindMode?.init) return;
     // sit() lets blind mode seat the player by voice ("sit" / "sit seat 3").
-    window.BlindMode.init({ state, socket, toast, $, sit: (idx) => sitDown(idx) });
+    window.BlindMode.init({ state, socket, toast, $, sit: (idx) => sitDown(idx), enterDungeon: () => enterDungeon() });
     const isTypingTarget = (el) => {
       if (!el) return false;
       const tag = el.tagName;

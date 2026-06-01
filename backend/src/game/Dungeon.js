@@ -228,7 +228,14 @@ class Dungeon {
     if (t.kind === 'enemy') {
       const e = this.enemies.find(x => x.uid === t.id);
       if (!e || e.hp <= 0) return this._nextTurn();
-      this._tickSickened(e);
+      // Sickened (Stinking Cloud): the creature LOSES its turn entirely (and is
+      // +2 to be hit while sickened — applied in _playerAttack).
+      if (e.sickened > 0) {
+        e.sickened -= 1;
+        this._note(`${e.glyph} ${e.name} retches in the cloud — loses its turn.`);
+        this._broadcast();
+        return this._nextTurn();
+      }
       this._stepTimer = setTimeout(() => { this._enemyAct(e); this._nextTurn(); }, ENEMY_STEP_MS);
       this._broadcast();
       return;
@@ -396,7 +403,8 @@ class Dungeon {
     const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
     if (!e) return;
     m.weapon = weaponOf(m.gear);
-    const r = this._swingVsAC(m, e.ac);
+    // Sickened creatures are +2 to be hit (effectively -2 AC).
+    const r = this._swingVsAC(m, e.sickened > 0 ? e.ac - 2 : e.ac);
     if (r.fumble) { this._note(`${m.nickname} fumbles the attack!`, r.sound); }
     else if (r.hit) {
       e.hp -= r.damage;
