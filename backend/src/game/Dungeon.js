@@ -100,6 +100,7 @@ class Dungeon {
   livingEnemies() { return this.enemies.filter(e => e.hp > 0); }
 
   hasMember(playerId) { const m = this.member(playerId); return !!(m && !m.left && m.hp > 0); }
+  botCount() { return this.party.filter(m => m.isBot && !m.left && m.hp > 0).length; }
 
   addMember(player, isBot = false) {
     const playerId = player.player_id;
@@ -148,6 +149,8 @@ class Dungeon {
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
       })),
       turn: this._currentTurn(),
+      botCount: this.botCount(),
+      recruitable: this._recruitableFn ? this._recruitableFn() : [],   // unseated bots, set by the socket layer
       lootRoll: this.lootRoll ? {
         slot: this.lootRoll.slot, tier: this.lootRoll.tier,
         label: db.GEAR_BY_KEY[this.lootRoll.slot]?.label || this.lootRoll.slot,

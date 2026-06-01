@@ -90,6 +90,10 @@ button, input { font: inherit; color: inherit; }
 .dungeon__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
 .dungeon__actions .is-cooling { opacity: 0.5; }
 .dwait { color: var(--ivory-dim); font-style: italic; align-self: center; }
+.dungeon__recruit { display: flex; flex-direction: column; gap: 0.4rem; }
+.dungeon__recruit:empty { display: none; }
+.dungeon__recruit-head { font-size: 0.78rem; color: var(--brass-bright); letter-spacing: 0.04em; }
+.bot-picker__grid--dungeon { max-height: 168px; }
 .dungeon__log { list-style: none; margin: 0; padding: 0.5rem 0.8rem; flex: 1; min-height: 70px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(217,176,106,0.15); border-radius: 8px; font-size: 0.82rem; line-height: 1.4; color: var(--ivory-dim); }
 .dungeon__log li { padding: 1px 0; }
 body[data-screen="loading"] .screen[data-show-on="loading"],

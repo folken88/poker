@@ -29,6 +29,13 @@ Thanks to the regulars whose suggestions made it into the game:
   upgrade), with the gold going into the shared pool. Works by voice too
   ("roll" / "pass") and keyboard (R / P) for blind players.
 
+### 🗡️ Dungeon — recruit AI allies
+- A **Recruit AI allies** panel now appears in the dungeon (same card style as the
+  poker "Pick AI" picker), listing only **unseated** bots — so you don't pull
+  anyone out of an active poker game. **50g each** (paid to the ally), up to **3**.
+  They join the party, auto-fight on their turns, roll for loot (and auto-hock
+  what they don't need into the pool).
+
 ### 🗡️ Dungeon is co-op now
 - **Party up:** one shared run per table — anyone who hits the dungeon joins the
   same delve. **Everyone takes one turn per round** in initiative order; you act

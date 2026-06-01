@@ -792,6 +792,24 @@
       acts.innerHTML = html;
     }
 
+    // Recruit panel — unseated AI bots you can bring along (50g each). Uses
+    // the same card style as the poker "Pick AI" picker.
+    const recruit = $('#dungeonRecruit');
+    if (recruit) {
+      const list = d.recruitable || [];
+      const full = (d.botCount || 0) >= 3;
+      if (d.status === 'over' || !list.length) recruit.innerHTML = '';
+      else recruit.innerHTML =
+        `<div class="dungeon__recruit-head">🤝 Recruit AI allies — 50g each${full ? ' · party full' : ''}</div>` +
+        `<div class="bot-picker__grid bot-picker__grid--dungeon">` +
+        list.map(b => `<button type="button" class="bot-picker__card" data-recruit="${escapeAttr(b.playerId)}" ${full ? 'disabled' : ''} title="Recruit ${escapeAttr(b.nickname)} for ${b.fee}g">
+            <div class="bot-picker__avatar">${renderAvatar(b.avatarId)}</div>
+            <div class="bot-picker__nick">${escapeText(b.nickname)}</div>
+            <div class="bot-picker__worth">🤝 ${b.fee}g</div>
+          </button>`).join('') +
+        `</div>`;
+    }
+
     const log = $('#dungeonLog');
     // Most recent first; player can scroll DOWN to review earlier events.
     if (log) { log.innerHTML = (d.log || []).slice().reverse().map(e => `<li>${escapeText(e.text)}</li>`).join(''); log.scrollTop = 0; }
@@ -822,6 +840,12 @@
     else if (act === 'bail')      dungeonAction('bail');
     else if (act === 'leave')     returnFromDungeon();
     if (act === 'attack' || act === 'lightning') _dungeonSel = [];
+  });
+  $('#dungeonRecruit')?.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-recruit]'); if (!b) return;
+    socket.emit('dungeon:recruit', { botId: b.dataset.recruit }, (resp) => {
+      if (resp && resp.ok === false) toast(resp.error || 'Could not recruit', true);
+    });
   });
   $('#dungeonLoot')?.addEventListener('click', (ev) => {
     const dr = ev.target.closest('[data-dact]');

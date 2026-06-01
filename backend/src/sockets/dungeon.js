@@ -12,9 +12,25 @@
 const db = require('../persistence/db');
 const { Dungeon } = require('../game/Dungeon');
 
+const RECRUIT_FEE = 50;        // gold paid to an AI ally to bring them along
+const MAX_BOT_ALLIES = 3;
+
 function registerDungeonHandlers(io, socket, { tables, dungeons }) {
   const meOf = () => socket.data.player;
   const tableIdOf = () => socket.data.tableId || 'main';
+
+  // Bots that are NOT seated at any table and not already in this run — the
+  // only ones you can recruit (idle mercenaries, so poker isn't disrupted).
+  function computeRecruitable(d) {
+    const seated = new Set();
+    for (const t of tables.values()) for (const s of t.seats) if (!s.isEmpty() && s.isBot) seated.add(s.playerId);
+    const inParty = new Set(d.party.filter(m => !m.left).map(m => m.playerId));
+    return db.listBots()
+      .filter(b => !seated.has(b.player_id) && !inParty.has(b.player_id))
+      .map(b => ({ playerId: b.player_id, nickname: b.nickname, avatarId: b.avatar_id, wealth: b.chips, fee: RECRUIT_FEE }))
+      .sort((a, b) => String(a.nickname).localeCompare(String(b.nickname)));
+  }
+  const isSeatedAnywhere = (botId) => [...tables.values()].some(t => !!t.findSeat(botId));
 
   function getOrCreateDungeon(tableId) {
     let d = dungeons.get(tableId);
@@ -34,6 +50,7 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
       },
       onEmpty: () => { dungeons.delete(tableId); },
     });
+    d._recruitableFn = () => computeRecruitable(d);   // unseated bots for the recruit UI
     dungeons.set(tableId, d);
     return d;
   }
@@ -73,6 +90,28 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     try { res = d.action(me.player_id, kind, payload); }
     catch (e) { res = { ok: false, error: e.message }; }
     ack?.(res || { ok: true });
+  });
+
+  socket.on('dungeon:recruit', ({ botId } = {}, ack) => {
+    const me = meOf();
+    if (!me) return ack?.({ ok: false, error: 'no player' });
+    const d = dungeons.get(tableIdOf());
+    if (!d || !d.hasMember(me.player_id)) return ack?.({ ok: false, error: 'not in a dungeon' });
+    if (d.botCount() >= MAX_BOT_ALLIES) return ack?.({ ok: false, error: `party is full (${MAX_BOT_ALLIES} AI allies max)` });
+    const bot = db.getPlayer(botId);
+    if (!bot || !bot.is_bot) return ack?.({ ok: false, error: 'unknown ally' });
+    if (isSeatedAnywhere(botId)) return ack?.({ ok: false, error: 'that AI is seated at the table' });
+    if (d.hasMember(botId)) return ack?.({ ok: false, error: 'already in the party' });
+    const meFresh = db.getPlayer(me.player_id);
+    if ((meFresh?.chips || 0) < RECRUIT_FEE) return ack?.({ ok: false, error: `not enough gold (need ${RECRUIT_FEE}g)` });
+    // Pay the fee: recruiter → ally.
+    db.setChips(me.player_id, meFresh.chips - RECRUIT_FEE);
+    db.setChips(botId, (bot.chips || 0) + RECRUIT_FEE);
+    d.addMember(bot, true);
+    d._note(`🤝 ${me.nickname} recruited ${bot.nickname} for ${RECRUIT_FEE}g.`);
+    d._broadcast();
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true });
   });
 
   socket.on('dungeon:leave', (_p, ack) => {
