@@ -85,6 +85,23 @@ const MON = {
   gray_ooze:         { name: 'Gray Ooze',         glyph: '🟢', cr: '4',   hp: 50,  ac: 6,  toHit: 5,  dmgDie: 6,  dmgBonus: 4, fort: 6,  reflex: 0,  gold: [38, 80] },
   gibbering_mouther: { name: 'Gibbering Mouther', glyph: '👄', cr: '5',   hp: 60,  ac: 19, toHit: 5,  dmgDie: 4,  dmgBonus: 0, fort: 8,  reflex: 6,  gold: [55, 120], attacks: 2 },                              // many small bites
   ettin:             { name: 'Ettin',             glyph: '👹', cr: '6',   hp: 65,  ac: 18, toHit: 12, dmgDie: 6,  dmgCount: 2, dmgBonus: 6, fort: 9, reflex: 3, attacks: 2, gold: [70, 150] },                    // two morningstars
+  // ── Diversity pack: animals, aberrations & other beasts (fills CR 3-8) ──
+  dire_ape:          { name: 'Dire Ape',          glyph: '🦍', cr: '3',   hp: 30,  ac: 15, toHit: 7,  dmgDie: 6,  dmgBonus: 5,  fort: 7,  reflex: 5,  attacks: 2, gold: [22, 48] },
+  ettercap:          { name: 'Ettercap',          glyph: '🕸️', cr: '3',   hp: 30,  ac: 16, toHit: 5,  dmgDie: 8,  dmgBonus: 3,  fort: 5,  reflex: 5,  attacks: 2, gold: [24, 52] },
+  dire_boar:         { name: 'Dire Boar',         glyph: '🐗', cr: '4',   hp: 51,  ac: 15, toHit: 12, dmgDie: 8,  dmgBonus: 12, fort: 9,  reflex: 5,  gold: [34, 72] },                                 // gore 1d8+12
+  harpy:             { name: 'Harpy',             glyph: '🦅', cr: '4',   hp: 38,  ac: 15, toHit: 9,  dmgDie: 8,  dmgBonus: 1,  fort: 2,  reflex: 7,  attacks: 2, gold: [34, 72] },
+  gargoyle:          { name: 'Gargoyle',          glyph: '🪨', cr: '4',   hp: 42,  ac: 16, toHit: 9,  dmgDie: 6,  dmgBonus: 4,  fort: 5,  reflex: 6,  attacks: 2, gold: [36, 78] },
+  minotaur:          { name: 'Minotaur',          glyph: '🐂', cr: '4',   hp: 45,  ac: 14, toHit: 9,  dmgDie: 6,  dmgCount: 3, dmgBonus: 6, fort: 6, reflex: 5, gold: [38, 80] },                       // greataxe 3d6+6
+  basilisk:          { name: 'Basilisk',          glyph: '🐍', cr: '5',   hp: 52,  ac: 16, toHit: 9,  dmgDie: 8,  dmgBonus: 4,  fort: 7,  reflex: 4,  paralyze: true, paralyzeDC: 13, gold: [42, 90] },  // petrifying gaze → "turned to stone, lose a turn"
+  winter_wolf:       { name: 'Winter Wolf',       glyph: '🐺', cr: '5',   hp: 57,  ac: 18, toHit: 11, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  gold: [44, 95] },
+  wood_golem:        { name: 'Wood Golem',        glyph: '🪵', cr: '6',   hp: 58,  ac: 21, toHit: 10, dmgDie: 8,  dmgCount: 2, dmgBonus: 5, fort: 2, reflex: 2, attacks: 2, gold: [55, 115] },         // two 2d8+5 slams; golem-poor saves
+  bog_brute:         { name: 'Bog Brute',         glyph: '🌿', cr: '6',   hp: 65,  ac: 17, toHit: 12, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 4,  attacks: 2, gold: [55, 115] },
+  dire_bear:         { name: 'Dire Bear',         glyph: '🐻', cr: '7',   hp: 84,  ac: 17, toHit: 16, dmgDie: 8,  dmgBonus: 10, fort: 13, reflex: 9, attacks: 2, gold: [70, 150], art: '/dungeon/monsters/dire_bear.png' },
+  chimera:           { name: 'Chimera',           glyph: '🦁', cr: '7',   hp: 76,  ac: 19, toHit: 11, dmgDie: 8,  dmgBonus: 4,  fort: 10, reflex: 6, attacks: 2, gold: [75, 160] },
+  hill_giant:        { name: 'Hill Giant',        glyph: '🪓', cr: '7',   hp: 85,  ac: 21, toHit: 16, dmgDie: 8,  dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 3, gold: [80, 165] },                   // greatclub 2d8+10
+  medusa:            { name: 'Medusa',            glyph: '🐍', cr: '7',   hp: 76,  ac: 15, toHit: 9,  dmgDie: 4,  dmgBonus: 2,  fort: 6,  reflex: 8,  attacks: 2, paralyze: true, paralyzeDC: 15, gold: [80, 165] },  // petrifying gaze
+  stone_giant:       { name: 'Stone Giant',       glyph: '🗿', cr: '8',   hp: 102, ac: 24, toHit: 17, dmgDie: 8,  dmgCount: 2, dmgBonus: 12, fort: 12, reflex: 5, gold: [95, 190] },                  // greatclub 2d8+12
+  abyssal_horror:    { name: 'Abyssal Horror',    glyph: '🐙', cr: '8',   hp: 95,  ac: 19, toHit: 14, dmgDie: 8,  dmgBonus: 6,  fort: 9,  reflex: 6,  attacks: 2, gold: [95, 190] },                  // eldritch chaos beast
   brass_golem:       { name: 'Brass Golem',       glyph: '🗿', cr: '9',   hp: 92,  ac: 24, toHit: 14, dmgDie: 10, dmgCount: 2, dmgBonus: 9, fort: 3, reflex: 3, attacks: 2, gold: [180, 320] },                  // 8-HD construct, two 2d10+9 slams
   barbed_devil:      { name: 'Barbed Devil',      glyph: '😈', cr: '11',  hp: 138, ac: 26, toHit: 18, dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 12, reflex: 9, attacks: 2, gold: [260, 460] },                 // hamatula, two 2d8+7 claws
 };
@@ -98,6 +115,11 @@ const MON_ART = {
   gray_ooze: 'ooze', skeletal_champion: 'skeletal_champion', shadow: 'shadow', wight: 'wight',
   ghast: 'ghast', gibbering_mouther: 'gibbering_mouther', ogre: 'ogre', ettin: 'ettin',
   brass_golem: 'brass_golem', barbed_devil: 'barbed_devil',
+  // diversity pack (dire_bear sets its .png art inline, so it's not listed here)
+  dire_ape: 'dire_ape', ettercap: 'ettercap', dire_boar: 'dire_boar', harpy: 'harpy',
+  gargoyle: 'gargoyle', minotaur: 'minotaur', basilisk: 'basilisk', winter_wolf: 'winter_wolf',
+  wood_golem: 'wood_golem', bog_brute: 'swamp_horror', chimera: 'chimera', hill_giant: 'hill_giant',
+  medusa: 'medusa', stone_giant: 'stone_giant', abyssal_horror: 'abyssal_horror',
 };
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
 

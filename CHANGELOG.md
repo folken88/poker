@@ -21,6 +21,14 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-02
 
+### 🐉 Dungeon — 16 new monsters (animals, aberrations & more)
+- A big diversity pass with real Foundry token art, filling out the mid-to-deep
+  CR bands (and the previously-empty CR 7–8): **Dire Ape, Ettercap, Dire Boar,
+  Harpy, Gargoyle, Minotaur, Basilisk** (petrifying gaze), **Winter Wolf, Wood
+  Golem, Bog Brute, Dire Bear, Chimera, Hill Giant, Medusa** (petrifying gaze),
+  **Stone Giant,** and an eldritch **Abyssal Horror.** All on true PF1e stats, so
+  the deeper you go the nastier — and more varied — the rooms get.
+
 ### 🥋 Dungeon — enemy Monks (with kiai)
 - A new **Monk** foe (CR 2) throws a **flurry of unarmed strikes** and screams a
   random **Bruce-Lee-style kiai** on every swing (a different "wataaah!"/punch
