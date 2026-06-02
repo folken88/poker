@@ -259,16 +259,18 @@
       for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
       const blob = new Blob([bytes], { type: mime });
       const url = URL.createObjectURL(blob);
-      // Heard from down in the dungeon → low-pass + quieter, like the rest of the
-      // table audio (the 11labs character voices were coming through full-clarity).
+      // Heard through the floor (dungeon voices at the table, or table banter from
+      // the dungeon) → low-pass + a touch quieter. SPEECH needs a higher cutoff
+      // than combat thumps to still read as "muffled talking" rather than an
+      // inaudible rumble — 378Hz killed it, ~820Hz keeps the voice's cadence/tone.
       if (muffle) {
         const ctx = audioCtx();
         if (ctx) {
           try {
             const a = new Audio(url);
             const srcNode = ctx.createMediaElementSource(a);
-            const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 378; lp.Q.value = 0.7;
-            const g = ctx.createGain(); g.gain.value = _voiceVolume * 0.6;
+            const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 820; lp.Q.value = 0.7;
+            const g = ctx.createGain(); g.gain.value = _voiceVolume * 0.72;
             srcNode.connect(lp); lp.connect(g); g.connect(ctx.destination);
             a.addEventListener('ended', () => { URL.revokeObjectURL(url); try { srcNode.disconnect(); lp.disconnect(); g.disconnect(); } catch (_) {} done(); });
             a.play().catch(() => { URL.revokeObjectURL(url); done(); });
