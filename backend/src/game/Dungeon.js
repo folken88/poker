@@ -40,6 +40,9 @@ const MON = {
   giant_centipede:   { name: 'Giant Centipede',   glyph: '🐛', hp: 5,  ac: 14, toHit: 3, dmgDie: 4,  dmgBonus: 0, fort: 1, reflex: 4, gold: [4, 12] },
   goblin:            { name: 'Goblin',            glyph: '👺', hp: 8,  ac: 15, toHit: 3, dmgDie: 6,  dmgBonus: 0, fort: 2, reflex: 3, gold: [8, 20] },
   kobold:            { name: 'Kobold',            glyph: '🦎', hp: 6,  ac: 15, toHit: 2, dmgDie: 6,  dmgBonus: 0, fort: 1, reflex: 3, gold: [8, 18] },
+  kobold_spearman:   { name: 'Kobold Spearman',   glyph: '🦎', hp: 7,  ac: 15, toHit: 3, dmgDie: 6,  dmgBonus: 0, fort: 1, reflex: 3, gold: [8, 20] },                          // 1d6 spear
+  kobold_shaman:     { name: 'Kobold Shaman',      glyph: '🦎', hp: 6,  ac: 14, toHit: 1, dmgDie: 4,  dmgBonus: 0, fort: 2, reflex: 3, gold: [14, 30], caster: 'holdperson' },    // casts Hold Person
+  kobold_rogue:      { name: 'Kobold Rogue',       glyph: '🦎', hp: 6,  ac: 15, toHit: 3, dmgDie: 3,  dmgBonus: 0, fort: 1, reflex: 4, gold: [12, 26], attacks: 2, atkSound: '/audio/fight_riki.mp3' },  // two 1d3 dagger stabs
   skeleton:          { name: 'Skeleton',          glyph: '💀', hp: 10, ac: 14, toHit: 3, dmgDie: 6,  dmgBonus: 1, fort: 2, reflex: 3, gold: [10, 25] },
   giant_spider:      { name: 'Giant Spider',      glyph: '🕷️', hp: 12, ac: 14, toHit: 4, dmgDie: 6,  dmgBonus: 1, fort: 3, reflex: 4, gold: [12, 30] },
   zombie:            { name: 'Zombie',            glyph: '🧟', hp: 16, ac: 12, toHit: 4, dmgDie: 6,  dmgBonus: 3, fort: 4, reflex: 0, gold: [15, 35] },
@@ -57,6 +60,8 @@ const MON = {
 // Real token art from the Foundry library (public/dungeon/monsters/). dire_rat
 // has no token in the library, so it falls back to its emoji glyph.
 const MON_ART = {
+  dire_rat: 'dire_rat',
+  kobold_spearman: 'kobold_spearman', kobold_shaman: 'kobold_shaman', kobold_rogue: 'kobold_rogue',
   giant_centipede: 'centipede', goblin: 'goblin', kobold: 'kobold', skeleton: 'skeleton',
   giant_spider: 'spider', zombie: 'zombie', ghoul: 'ghoul', cultist: 'cultist',
   gray_ooze: 'ooze', skeletal_champion: 'skeletal_champion', shadow: 'shadow', wight: 'wight',
@@ -65,8 +70,8 @@ const MON_ART = {
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
 
 const BANDS = {
-  shallow: ['dire_rat', 'giant_centipede', 'goblin', 'kobold', 'skeleton', 'giant_spider'],
-  mid:     ['skeleton', 'giant_spider', 'zombie', 'ghoul', 'cultist', 'gray_ooze', 'skeletal_champion'],
+  shallow: ['dire_rat', 'giant_centipede', 'goblin', 'kobold', 'kobold_spearman', 'kobold_shaman', 'kobold_rogue', 'skeleton', 'giant_spider'],
+  mid:     ['kobold_shaman', 'kobold_rogue', 'skeleton', 'giant_spider', 'zombie', 'ghoul', 'cultist', 'gray_ooze', 'skeletal_champion'],
   deep:    ['ghoul', 'cultist', 'shadow', 'wight', 'ghast', 'gibbering_mouther', 'ogre', 'ettin'],
 };
 function bandFor(depth) { return depth <= 3 ? 'shallow' : depth <= 7 ? 'mid' : 'deep'; }
@@ -271,6 +276,10 @@ class Dungeon {
         dmgDie: base.dmgDie, dmgBonus: base.dmgBonus + (boss ? 2 : 0),
         fort: base.fort + level, reflex: base.reflex + level,
         paralyze: !!base.paralyze, sickened: 0,
+        attacks: base.attacks || 1,           // kobold rogue swings twice
+        atkSound: base.atkSound || null,       // signature hit sound (rogue: riki)
+        caster: base.caster || null,           // kobold shaman: 'holdperson'
+        castsLeft: base.caster ? (boss ? 3 : 2) : 0,
         gold: rint(goldLo, goldHi),
       });
     }
@@ -486,18 +495,31 @@ class Dungeon {
     return { hit: true, damage: Math.max(1, dRoll(e.dmgDie) + e.dmgBonus - sick), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
   }
   _enemyAct(e) {
-    const all = this.livingParty();
-    if (!all.length) return;
-    // Focus the helpless — prefer a paralyzed target, who is also +4 to be hit.
-    const helpless = all.filter(m => m.paralyzed > 0);
-    const target = pick(helpless.length ? helpless : all);
-    const effAC = acOf(target.gear).ac - (target.paralyzed > 0 ? 4 : 0);
+    if (!this.livingParty().length) return;
+    // Kobold shaman: cast Hold Person on an unheld target before resorting to melee.
+    if (e.caster === 'holdperson' && e.castsLeft > 0) {
+      const free = this.livingParty().filter(m => !(m.paralyzed > 0));
+      if (free.length) return this._enemyCastHold(e, pick(free));
+    }
+    // Melee — the kobold rogue stabs twice (1d3 each); everyone else swings once.
+    // Re-pick a living, preferably-helpless target each swing.
+    for (let i = 0; i < Math.max(1, e.attacks || 1); i++) {
+      const living = this.livingParty();
+      if (!living.length) break;
+      const helpless = living.filter(m => m.paralyzed > 0);
+      this._enemyMelee(e, pick(helpless.length ? helpless : living));
+    }
+  }
+  // One enemy swing at a chosen target (handles the paralysis rider + signature sound).
+  _enemyMelee(e, target) {
+    const effAC = acOf(target.gear).ac - (target.paralyzed > 0 ? 4 : 0);   // helpless: +4 to be hit
     const r = this._monsterSwing(e, effAC);
+    if (r.hit && e.atkSound) r.sound = e.atkSound;   // rogue's "riki" stab
     if (r.hit) {
       target.hp -= r.damage;
       this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${r.damage}. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
-      if (target.hp <= 0) this._memberDown(target);
-      else if (e.paralyze) {
+      if (target.hp <= 0) { this._memberDown(target); this._echoToTable(r.sound); return; }
+      if (e.paralyze) {
         const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
         const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= PARALYZE_DC;
         if (!saved) { target.paralyzed = 1; this._note(`🥶 ${target.nickname} fails the paralysis save [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${PARALYZE_DC}] — paralyzed!`); }
@@ -508,6 +530,21 @@ class Dungeon {
       this._note(`${e.glyph} ${e.name} misses ${target.nickname}. ${this._atkStr(r)}`, r.sound);
     }
     this._echoToTable(r.sound);
+  }
+  // Kobold shaman's Hold Person: fail a Will save (DC 10 + ½ caster level) → lose a turn.
+  _enemyCastHold(e, target) {
+    e.castsLeft -= 1;
+    const dc = 10 + Math.floor((e.level || 0) / 2);
+    const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
+    const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
+    const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
+    if (!saved) {
+      target.paralyzed = Math.max(target.paralyzed || 0, 1);   // held → loses next turn
+      this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname} — HELD! ${roll} (loses a turn)`);
+    } else {
+      this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname}, who breaks free. ${roll}`);
+    }
+    this._broadcast();
   }
   _allyAct(m) { const foes = this.livingEnemies(); if (foes.length) this._playerAttack(m, foes[0].uid); }
   _memberDown(m) {

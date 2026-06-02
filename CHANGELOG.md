@@ -21,6 +21,34 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🗡️ Dungeon — character levels (gear-based)
+- Every delver (human **and** AI ally) now has a **level = 1 + the total of their
+  magic-item bonuses** (minimum 1). So a **+1 ring and a +1 sword make you Lv 3**.
+- **Level drives the sheet:** **HP = 10 × level**, **+level to hit**, and
+  **+level to saves**. A gearless Lv 1 starts at 10 HP; gear makes you tankier
+  and deadlier. Picking up loot mid-run **re-levels on the spot** (more max HP,
+  healed, better hit/saves). Level shows on the party cards and in chat.
+
+### 🗡️ Dungeon — enemies have levels too
+- Foes now scale with depth: **enemy level = room # ÷ 2** (rounded down). Room 1
+  is Lv 0, rooms 2–3 Lv 1, and so on — adding to their **attack rolls and saves**
+  (replacing the old flat monster buff with proper depth scaling). HP stays
+  species-based. The room banner shows the foes' level.
+
+### 🗡️ Dungeon — kobold warband
+- New kobold variants with real Foundry token art: **Spearmen** (1d6 spears),
+  **Shamans** who cast **Hold Person** — fail a Will save (DC 10 + ½ their level)
+  and you **lose a turn** — and **Rogues** who **stab twice** for 1d3 with a
+  signature dagger sound. Also gave the **dire rat** its proper token at last.
+
+### 🎭 Banter — Auren Vrood's "Golarion-Dracula flow"
+- Auren Vrood keeps his cold, clipped default, but when he **taunts or retorts**
+  he now unfurls grandiose, surreal Golarion braggadocio (used sparingly, never
+  the same twice).
+- **Fixed a banter glitch** where the in-setting "god → gods" filter mangled
+  ordinary lines (e.g. "I play like a **gods**"). It now only rewrites the
+  Earth-monotheist phrasings and leaves grammatical "a god / like a god" alone.
+
 ### 🗡️ Dungeon — magic-item loot roll-off
 - When a magic item drops, the party now **rolls for it**: each member chooses
   **🎲 Roll d20** or **Pass**, highest roll wins (ties re-break). Idle players
