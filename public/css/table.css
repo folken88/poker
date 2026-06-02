@@ -83,6 +83,10 @@ button, input { font: inherit; color: inherit; }
 .dpc.is-me { border-color: rgba(241,207,131,0.7); }
 .dpc.is-turn { box-shadow: 0 0 0 2px rgba(241,207,131,0.55); }
 .dpc.is-out { opacity: 0.4; filter: grayscale(0.8); }
+/* Downed/dying: not greyed out (they're savable) — pulsing red border + bloody HP. */
+.dpc.is-down { border-color: rgba(200,40,40,0.95); animation: dpc-dying 1s ease-in-out infinite; }
+.dpc.is-down .dpc__hp { color: #e06a6a; font-weight: 700; }
+@keyframes dpc-dying { 0%,100% { box-shadow: 0 0 0 1px rgba(200,40,40,0.5); } 50% { box-shadow: 0 0 8px 2px rgba(200,40,40,0.85); } }
 .dpc__name { font-size: 0.82rem; font-weight: 600; }
 .dpc__hpbar span { display: block; height: 100%; background: linear-gradient(90deg,#3fa34d,#7bd06a); }
 .dpc.is-low .dpc__hpbar span { background: linear-gradient(90deg,#c84a4a,#e8a15b); }

@@ -250,7 +250,9 @@ class Dungeon {
       party: this.party.map(m => ({
         playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot,
         level: m.level, hp: Math.max(0, m.hp), maxHp: m.maxHp,
-        dead: m.hp <= 0, left: !!m.left,
+        dead: !!m.dead, downed: !m.dead && !m.left && m.hp <= 0,
+        dyingHp: (!m.dead && !m.left && m.hp <= 0) ? m.hp : null,
+        left: !!m.left,
         sickened: m.sickened > 0, paralyzed: m.paralyzed > 0,
         lightningReady: !m.usedLightning, stinkingReady: !m.usedStinking,
       })),
@@ -388,13 +390,16 @@ class Dungeon {
   }
 
   // ── Resolution / run-over ────────────────────────────────────────────────
-  _anyHumanFighting() { return this.party.some(m => !m.isBot && !m.left && m.hp > 0); }
+  _anyUp() { return this.party.some(m => !m.left && !m.dead && m.hp > 0); }           // someone able to fight
+  _humansInRun() { return this.party.some(m => !m.isBot && !m.left && !m.dead); }     // includes the downed/dying
   _endIfResolved() {
     if (this.status !== 'combat') return true;
-    // The run belongs to the humans — once none are standing, cash out the AI
-    // allies (their even share of the pool) and end.
-    if (!this._anyHumanFighting()) { this._wrapUp(); return true; }
+    // Clear FIRST — clearing a room can drop a Cure potion that revives a downed ally.
     if (this.livingEnemies().length === 0) { this._clearRoom(); return true; }
+    // Nobody left standing (all downed or dead) while foes remain → party wipe.
+    if (!this._anyUp()) { this._wipe(); return true; }
+    // No human left in the run at all (dead or bailed) → AI allies cash out and end.
+    if (!this._humansInRun()) { this._wrapUp(); return true; }
     return false;
   }
   // Pay surviving AI allies an even share of what's left, announce it, then end.
@@ -457,14 +462,19 @@ class Dungeon {
     if (Math.random() >= chance) return;
     const p = potionForCR(effCR);
     let heal = p.bonus; for (let i = 0; i < p.count; i++) heal += dRoll(p.die);   // auto-roll e.g. 2d8+3
-    // Most-hurt living ally (lowest HP fraction) drinks it.
-    const hurt = this.alivePresent().filter(m => m.hp < m.maxHp).sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+    // Most-hurt member drinks it — DOWNED (dying) allies count too and sort first
+    // (negative HP fraction), so a Cure potion can haul them back up.
+    const hurt = this.party
+      .filter(m => !m.left && !m.dead && m.hp < m.maxHp)
+      .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
     if (hurt.length) {
       const m = hurt[0], before = m.hp;
       m.hp = Math.min(m.maxHp, m.hp + heal);
       const gained = m.hp - before;
-      this._note(`🧪 A Potion of ${p.name} drops — ${m.nickname} quaffs it (rolled ${p.count}d${p.die}+${p.bonus}): +${gained} HP (now ${m.hp}/${m.maxHp}).`);
-      this._log('potion', { name: p.name, who: m.playerId, rolled: heal, gained });
+      const revived = before <= 0 && m.hp > 0;
+      if (m.hp > 0) m.downed = false;
+      this._note(`🧪 A Potion of ${p.name} drops — ${m.nickname} ${revived ? 'is revived' : 'quaffs it'} (rolled ${p.count}d${p.die}+${p.bonus}): +${gained} HP (now ${m.hp}/${m.maxHp})${revived ? ' — back on their feet!' : ''}.`);
+      this._log('potion', { name: p.name, who: m.playerId, rolled: heal, gained, revived });
     } else {
       const sell = Math.floor(p.gp / 2); this.runGold += sell;
       this._note(`🧪 A Potion of ${p.name} drops, but everyone's hale — hocked for ${sell} gp (pool ${this.runGold} gp).`);
@@ -606,7 +616,8 @@ class Dungeon {
     if (r.hit) {
       target.hp -= r.damage;
       this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${r.damage}. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
-      if (target.hp <= 0) { this._memberDown(target); this._echoToTable(r.sound); return; }
+      if (target.hp <= -10) { this._memberDown(target); this._echoToTable(r.sound); return; }   // dead at −10
+      if (target.hp <= 0)   { this._downMember(target); this._echoToTable(r.sound); return; }    // 0..−9 = down/dying
       if (e.paralyze) {
         const pdc = e.paralyzeDC || PARALYZE_DC;
         const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
@@ -636,12 +647,33 @@ class Dungeon {
     this._broadcast();
   }
   _allyAct(m) { const foes = this.livingEnemies(); if (foes.length) this._playerAttack(m, foes[0].uid); }
-  _memberDown(m) {
+  // 0 to −9 HP: down and dying — can't act (the turn loop skips hp<=0), but a Cure
+  // potion can still bring them back. Dead only once they pass −10.
+  _downMember(m) {
     if (m.dead) return;
-    m.dead = true;   // hp<=0 already; the turn loop skips them, run ends in _endIfResolved
-    this._note(`☠️ ${m.nickname} falls in the dungeon — out of the run.`);
-    this._log('death', { who: m.playerId, depthReached: this.depth });
+    if (!m.downed) {
+      m.downed = true;
+      this._note(`🩸 ${m.nickname} collapses at ${m.hp} HP — DOWN and dying! (slain at −10; a Cure potion can still save them)`);
+      this._log('downed', { who: m.playerId, hp: m.hp, depth: this.depth });
+    } else {
+      this._note(`🩸 ${m.nickname} is battered while down — ${m.hp} HP (slain at −10).`);
+    }
+    this._broadcast();
+  }
+  _memberDown(m) {   // −10 or worse, or a total-party wipe: actually dead, out of the run
+    if (m.dead) return;
+    m.dead = true; m.downed = false;
+    this._note(`☠️ ${m.nickname} drops past −10 — slain in the dungeon, out of the run.`);
+    this._log('death', { who: m.playerId, hp: m.hp, depthReached: this.depth });
     this._emitMemberExit(m, { reason: 'dead', goldBanked: 0 });
+  }
+  // Total party incapacitation — everyone still in the run is down/dying, so they
+  // all bleed out and the run ends.
+  _wipe() {
+    if (this.status === 'over') return;
+    this._note('💀 The whole party is down — the dungeon claims them. The run ends.');
+    for (const m of this.party.filter(x => !x.left && !x.dead)) this._memberDown(m);
+    this._runOver();
   }
 
   // ── Player actions (from dungeon:action) ─────────────────────────────────
@@ -756,8 +788,10 @@ class Dungeon {
     this._note(`${fled ? '🏃' : '🪜'} ${m.nickname} ${fled ? 'flees the fight and climbs out' : 'climbed out'} with ${share} gp.`);
     this._log('bail', { who: playerId, share, poolLeft: this.runGold, fled });
     this._emitMemberExit(m, { reason: 'bailed', goldBanked: share, fled });
-    // Last human out (only AI allies left) → cash them out and end the run.
-    if (!this._anyHumanFighting()) { this._wrapUp(); return { ok: true, goldBanked: share }; }
+    // After the bailer leaves: if nobody's left standing, the dying bleed out; else
+    // if no human remains in the run at all, the AI allies cash out and end.
+    if (!this._anyUp()) { this._wipe(); return { ok: true, goldBanked: share }; }
+    if (!this._humansInRun()) { this._wrapUp(); return { ok: true, goldBanked: share }; }
     // Only nudge the turn cycle if the bailer was the one we were waiting on.
     if (this.status === 'combat' && wasActor) { clearTimeout(this._turnTimer); this._nextTurn(); }
     else this._broadcast();

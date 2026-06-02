@@ -738,13 +738,16 @@
       const pct = m.maxHp ? Math.max(0, Math.round(100 * m.hp / m.maxHp)) : 0;
       const isMe = m.playerId === meId;
       const isTurn = m.playerId === turnId;
-      const cls = ['dpc']; if (pct <= 30) cls.push('is-low'); if (m.dead || m.left) cls.push('is-out'); if (isMe) cls.push('is-me'); if (isTurn) cls.push('is-turn');
-      const tag = m.dead ? ' ☠️' : m.left ? ' 🪜' : `${m.sickened ? ' 🤢' : ''}${m.paralyzed ? ' 🥶' : ''}`;
+      const cls = ['dpc']; if (pct <= 30) cls.push('is-low'); if (m.dead || m.left) cls.push('is-out'); if (m.downed) cls.push('is-down'); if (isMe) cls.push('is-me'); if (isTurn) cls.push('is-turn');
+      const tag = m.dead ? ' ☠️' : m.downed ? ' 🩸' : m.left ? ' 🪜' : `${m.sickened ? ' 🤢' : ''}${m.paralyzed ? ' 🥶' : ''}`;
+      const hpText = m.downed
+        ? `${typeof m.dyingHp === 'number' ? m.dyingHp : 0}/${m.maxHp} HP · 🩸 DYING`
+        : `${Math.max(0, m.hp)}/${m.maxHp} HP${m.level ? ` · Lv ${m.level}` : ''}`;
       return `<div class="${cls.join(' ')}">
         <div class="dpc__avatar">${renderAvatar(m.avatarId)}</div>
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${tag}</div>
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
-        <div class="dpc__hp">${Math.max(0, m.hp)}/${m.maxHp} HP${m.level ? ` · Lv ${m.level}` : ''}</div>
+        <div class="dpc__hp">${hpText}</div>
       </div>`;
     }).join('');
 

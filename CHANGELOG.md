@@ -21,6 +21,18 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🩸 Dungeon — going down isn't dead yet (dying at 0, slain at −10)
+- Drop to **0 HP or below and you're DOWN and dying, not dead** — you can't act,
+  but you're **not out of the run**. You only die for real at **−10 HP**. Applies
+  to humans and AI allies.
+- **Cure potions can revive the downed** — a dropped potion now prioritizes the
+  most-hurt member *including* anyone bleeding out, hauling them back to their feet
+  if it heals them above 0. So clear the room, grab the potion, and your friend's
+  back in the fight.
+- Party cards show a pulsing red **🩸 DYING** state (with negative HP) — distinct
+  from a greyed-out dead/left member. If the *whole* party goes down at once, they
+  bleed out and the run ends.
+
 ### 🐉 Dungeon — real Pathfinder 1e monster stats (no more monster levels)
 - Monsters now use their **true PF1e stat blocks** (AC, HP, attack, damage, saves,
   CR) instead of an artificial per-room level. **Difficulty comes from which
