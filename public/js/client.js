@@ -289,9 +289,9 @@
   // next starts. A safety timer advances the queue if an end event never fires.
   const _voiceQueue = [];
   let _voiceBusy = false, _voiceFallback = null;
-  function enqueueVoice(b64, mime) {
+  function enqueueVoice(b64, mime, muffle = false) {
     if (!b64) return;
-    _voiceQueue.push({ b64, mime: mime || 'audio/mpeg' });
+    _voiceQueue.push({ b64, mime: mime || 'audio/mpeg', muffle: !!muffle });
     while (_voiceQueue.length > 4) _voiceQueue.shift();   // don't pile up stale lines
     _drainVoiceQueue();
   }
@@ -303,7 +303,7 @@
     let advanced = false;
     const advance = () => { if (advanced) return; advanced = true; clearTimeout(_voiceFallback); _voiceBusy = false; _drainVoiceQueue(); };
     _voiceFallback = setTimeout(advance, 15000);   // hard safety so the queue can never stall
-    playBase64Mp3(next.b64, next.mime, false, advance);
+    playBase64Mp3(next.b64, next.mime, next.muffle, advance);
   }
 
   // Warm up the cache so the first deal isn't a noticeable buffer
@@ -717,10 +717,18 @@
   });
 
   socket.on('dungeon:say', ({ audio, audioMime } = {}) => {
-    // AI ally trash-talk voice clip — the line itself is already in the dungeon
-    // log; this just voices it (gated by the AI-character-voice toggle). Queued so
-    // two allies never talk over each other — each clip finishes before the next.
-    if (_bannerVoiceEnabled && audio) enqueueVoice(audio, audioMime || 'audio/mpeg');
+    // AI ally trash-talk voice clip — CLEAR, only when you're actually in the
+    // dungeon. At the table you hear the muffled echo below instead (so a stale
+    // dungeon-room membership can't leak a full-clarity voice up to the table).
+    // Queued so two allies never talk over each other.
+    if (_inDungeon && _bannerVoiceEnabled && audio) enqueueVoice(audio, audioMime || 'audio/mpeg', false);
+  });
+
+  socket.on('dungeon:voiceecho', ({ audio, audioMime } = {}) => {
+    // Dungeon ally voices overheard from up at the table — muffled through the
+    // floor, like the combat echo. Dungeon players skip it (they got it clear).
+    if (_inDungeon || !_bannerVoiceEnabled || !audio) return;
+    enqueueVoice(audio, audioMime || 'audio/mpeg', true);
   });
 
   socket.on('dungeon:echo', ({ sound } = {}) => {

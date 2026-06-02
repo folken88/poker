@@ -183,7 +183,12 @@ class Dungeon {
     Promise.resolve(banter.dungeonLine(flavorNick, eventType, { ...ctx, voiceNick: label })).then(res => {
       if (!res || !res.line) return;
       this._note(`💬 ${label}: ${res.line}`);
-      if (this.io && res.audio) this.io.to(this.roomName()).emit('dungeon:say', { nick: label, audio: res.audio, audioMime: res.audioMime });
+      if (this.io && res.audio) {
+        // Clear for the dungeon party; the poker table overhears it MUFFLED
+        // (same "through the floor" treatment as the combat echo).
+        this.io.to(this.roomName()).emit('dungeon:say', { nick: label, audio: res.audio, audioMime: res.audioMime });
+        if (this.tableId) this.io.to(`table:${this.tableId}`).emit('dungeon:voiceecho', { audio: res.audio, audioMime: res.audioMime });
+      }
       this._broadcast();
     }).catch(() => {});
   }
