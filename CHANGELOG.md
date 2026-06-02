@@ -24,8 +24,11 @@ Thanks to the regulars whose suggestions made it into the game:
 ### 🐉 Dungeon — real Pathfinder 1e monster stats (no more monster levels)
 - Monsters now use their **true PF1e stat blocks** (AC, HP, attack, damage, saves,
   CR) instead of an artificial per-room level. **Difficulty comes from which
-  creatures a depth can spawn** (low-CR → high-CR) and from designated bosses —
-  not from buffing the same mooks. Monster cards now show **CR**.
+  creatures a depth can spawn** and from designated bosses — not from buffing the
+  same mooks. Monster cards now show **CR**.
+- **The room-by-room curve uses Pathfinder CR**, creeping **~0.25 CR per room** —
+  CR ¼ creatures at the door, ~CR 2 by room 8, ~CR 3 by room 12, the CR 4–6 horrors
+  deep down — with bosses as deliberate spikes above the curve.
 - **New bosses:** the **Brass Golem** (CR 9, two 2d10+9 slams) guards **rooms
   8–12**, and the **Barbed Devil** (CR 11) lurks in the deepest rooms. Multi-hit
   and multi-die attacks (golem/ogre/ettin slams, devil claws) are modeled properly.

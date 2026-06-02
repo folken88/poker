@@ -77,15 +77,29 @@ const MON_ART = {
 };
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
 
-// What a depth can spawn. Difficulty rises by swapping the roster (low-CR →
-// high-CR creatures), not by buffing individuals. Boss creatures are NOT in the
-// bands — they only appear via bossKeyFor on boss rooms.
-const BANDS = {
-  shallow: ['dire_rat', 'giant_centipede', 'goblin', 'kobold', 'kobold_spearman', 'kobold_shaman', 'kobold_rogue', 'skeleton', 'giant_spider'],
-  mid:     ['kobold_shaman', 'kobold_rogue', 'skeleton', 'giant_spider', 'zombie', 'ghoul', 'cultist', 'ghast', 'skeletal_champion'],
-  deep:    ['cultist', 'shadow', 'wight', 'ghast', 'gray_ooze', 'gibbering_mouther', 'ogre', 'ettin'],
-};
-function bandFor(depth) { return depth <= 3 ? 'shallow' : depth <= 7 ? 'mid' : 'deep'; }
+// ── Difficulty curve: Pathfinder CR creeps ~0.25 per room ───────────────────
+// Parse a CR string ("1/4", "3") to a number, and tag every monster with it.
+function crToNum(cr) {
+  if (typeof cr === 'number') return cr;
+  if (!cr) return 0;
+  if (String(cr).includes('/')) { const [a, b] = String(cr).split('/').map(Number); return b ? a / b : a; }
+  return Number(cr) || 0;
+}
+const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil']);   // boss-only, never regular spawns
+for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
+const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
+
+// Target CR for a regular room rises ~0.25/room: room 1 ≈ CR 0.25, room 4 ≈ CR 1,
+// room 8 ≈ CR 2, room 12 ≈ CR 3, room 20 ≈ CR 5. We pick a creature at-or-just-
+// below the target (small window) for a gentle, varied creep.
+function targetCR(depth) { return 0.25 * depth; }
+function pickByCR(depth) {
+  const target = targetCR(depth);
+  let cand = SPAWNABLE.filter(k => MON[k].crNum >= target - 0.75 && MON[k].crNum <= target + 0.25);
+  if (!cand.length) cand = [SPAWNABLE.reduce((best, k) =>
+    Math.abs(MON[k].crNum - target) < Math.abs(MON[best].crNum - target) ? k : best, SPAWNABLE[0])];
+  return pick(cand);
+}
 // Designated bosses by depth — real high-CR PF1e creatures, used as-is (no buff).
 function bossKeyFor(depth) {
   if (depth >= 8 && depth <= 12) return 'brass_golem';   // golden (brass) golem, CR 9
@@ -265,14 +279,13 @@ class Dungeon {
   _spawnRoom() {
     this.enemies = [];
     const boss = this.depth % BOSS_EVERY === 0;
-    const band = bandFor(this.depth);
     // Scale enemy COUNT up a little with party size so groups aren't trivial —
     // but each creature keeps its true PF1e stat block (no per-room buffs).
     const partyN = Math.max(1, this.alivePresent().length);
     const lo = this.depth <= 3 ? 1 : 2, hi = (this.depth <= 3 ? 3 : 4) + (partyN - 1);
     const count = boss ? 1 : rint(lo, hi);
     for (let i = 0; i < count; i++) {
-      const base = MON[boss ? bossKeyFor(this.depth) : pick(BANDS[band])];
+      const base = MON[boss ? bossKeyFor(this.depth) : pickByCR(this.depth)];
       this.enemies.push({
         uid: `e${++_uidSeq}`,
         name: boss ? `Boss: ${base.name}` : base.name,

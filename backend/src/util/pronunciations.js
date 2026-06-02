@@ -27,6 +27,7 @@ const PRONUNCIATIONS = [
   ['Fera',       'Fear ah'],
   ['Richton',    'Rick ton'],     // Farrah & her great-grandfather Farrus Richton
   ['bilge',      'bilj'],          // rhymes-ish with "build"; NOT "bill-jah" (common in pirate "bilge rat")
+  ['sus',        'suhss'],         // short for "suspicious" — /sʌs/, like the start of the word, NOT "S-U-S"
 ];
 
 module.exports = { PRONUNCIATIONS };
