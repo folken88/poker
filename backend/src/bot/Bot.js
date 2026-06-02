@@ -351,6 +351,15 @@ class Bot {
     }
     const foldThreshold = clamp01(baseFold + potOdds * 0.40 + tuning.foldBias + wealthFoldAdj + aggCredAdj + bluffAdj - preflopDiscount - mood * 0.08);
 
+    // Casual-game looseness: PREFLOP, a cheap call (≤1.5 BB ≈ 25-75g) is worth a
+    // limp with almost any playable hand — most starting hands score low, so the
+    // mode fold threshold mucks them even when it's cheap to see a flop. Only pure
+    // trash (v < 0.08) still folds; strong hands (v ≥ raiseThresh) fall through to
+    // raise; a real raise (toCall above 1.5 BB) routes to the normal fold logic.
+    if (street === 0 && toCall <= bb * 1.5 && v >= 0.08 && v < tuning.raiseThresh) {
+      return { action: 'call', reason: `limp v=${v.toFixed(2)} odds=${potOdds.toFixed(2)} ${tag}` };
+    }
+
     if (v < foldThreshold) {
       return { action: 'fold', reason: `fold v=${v.toFixed(2)} fT=${foldThreshold.toFixed(2)} ${tag}` };
     }

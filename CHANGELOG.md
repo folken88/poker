@@ -29,9 +29,9 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ### ♠️ Bots — looser preflop (cheap to see a flop)
 - AI were folding too much before the flop. Now a **cheap call (≈25–75g, up to 1.5
-  big blinds) keeps them in** with most hands to see the flop, while a **real early
-  raise (3 BB+) is the cue to fold** the weak stuff. Graduated by call size, so the
-  action is livelier without bots calling off big raises with junk.
+  big blinds) limps them in** with almost any playable hand (~80% of the time, vs
+  ~20% before) to see a flop — while a **real early raise still folds the weak
+  stuff** (~85–90%). Lots more action without bots calling off big raises with junk.
 
 ### 🐉 Dungeon — 16 new monsters (animals, aberrations & more)
 - A big diversity pass with real Foundry token art, filling out the mid-to-deep
