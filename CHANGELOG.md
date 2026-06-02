@@ -36,8 +36,12 @@ Thanks to the regulars whose suggestions made it into the game:
   if it heals them above 0. So clear the room, grab the potion, and your friend's
   back in the fight.
 - Party cards show a pulsing red **🩸 DYING** state (with negative HP) — distinct
-  from a greyed-out dead/left member. If the *whole* party goes down at once, they
-  bleed out and the run ends.
+  from a greyed-out dead/left member. If the *whole* party goes down **in combat**,
+  they bleed out and the run ends.
+- A downed ally still counts: they **bleed 1 HP per room** (so heal or extract them
+  before −10), they can **still roll for and win loot**, and they're owed a **share
+  of the gold**. If the party **retreats (bails) before they take another hit**, the
+  dying are **dragged out with their share** instead of being left to die.
 
 ### 🐉 Dungeon — real Pathfinder 1e monster stats (no more monster levels)
 - Monsters now use their **true PF1e stat blocks** (AC, HP, attack, damage, saves,

@@ -402,19 +402,44 @@ class Dungeon {
     if (!this._humansInRun()) { this._wrapUp(); return true; }
     return false;
   }
-  // Pay surviving AI allies an even share of what's left, announce it, then end.
+  // Pay remaining AI allies (standing OR dying — the downed get their cut too) an
+  // even share of what's left, announce it, then end.
   _wrapUp() {
     if (this.status === 'over') return;
-    const allies = this.party.filter(m => m.isBot && !m.left && m.hp > 0);
+    const allies = this.party.filter(m => m.isBot && !m.left && !m.dead);
     const share = allies.length ? Math.floor(this.runGold / allies.length) : 0;
     for (const m of allies) {
       if (share > 0) { const p = db.getPlayer(m.playerId); if (p) db.setChips(m.playerId, p.chips + share); this.runGold -= share; }
       m.left = true;
-      this._note(`🤖 ${m.nickname} returns from the dungeon with ${share} gp.`);
-      this._log('ally_payout', { who: m.playerId, share });
+      this._note(`${m.downed ? '🩸' : '🤖'} ${m.nickname} ${m.downed ? 'is dragged out of' : 'returns from'} the dungeon with ${share} gp.`);
+      this._log('ally_payout', { who: m.playerId, share, downed: !!m.downed });
       this._emitMemberExit(m, { reason: 'bailed', goldBanked: share, ai: true });
     }
     this._runOver();
+  }
+  // The last conscious member bailed → any allies still down are hauled out too,
+  // each banking an even share. (A voluntary retreat, NOT a combat wipe.)
+  _groupExtract() {
+    if (this.status === 'over') return;
+    const members = this.party.filter(m => !m.left && !m.dead);
+    if (!members.length) return this._runOver();
+    const share = Math.floor(this.runGold / members.length);
+    for (const m of members) {
+      if (share > 0) { const p = db.getPlayer(m.playerId); if (p) db.setChips(m.playerId, p.chips + share); this.runGold -= share; }
+      m.left = true;
+      this._note(`🩸 ${m.nickname} is dragged out of the dungeon with ${share} gp.`);
+      this._log('extract', { who: m.playerId, share });
+      this._emitMemberExit(m, { reason: 'bailed', goldBanked: share, ai: m.isBot });
+    }
+    this._runOver();
+  }
+  // Downed allies bleed 1 HP each room — heal or extract them before they hit −10.
+  _bleedDowned() {
+    for (const m of this.party.filter(x => !x.left && !x.dead && x.hp <= 0)) {
+      m.hp -= 1;
+      if (m.hp <= -10) { this._note(`🩸 ${m.nickname} bleeds out…`); this._memberDown(m); }
+      else this._note(`🩸 ${m.nickname} bleeds — ${m.hp} HP (slain at −10).`);
+    }
   }
   _clearRoom() {
     clearTimeout(this._turnTimer); clearTimeout(this._stepTimer);
@@ -424,7 +449,9 @@ class Dungeon {
     this._note(`✨ Room cleared! +${gold} gp (pool ${this.runGold} gp).`);
     this._log('clear', { gold, runGold: this.runGold });
     this._maybeDropLoot();
-    this._maybeDropPotion();
+    this._maybeDropPotion();     // can revive a downed ally before they bleed
+    this._bleedDowned();         // the still-dying lose 1 HP this room (toward −10)
+    if (!this._humansInRun()) { this._wrapUp(); return; }   // last human bled out → AI allies cash out
     this._broadcast();
   }
   _runOver() {
@@ -435,7 +462,7 @@ class Dungeon {
     if (this._onEmpty) try { this._onEmpty(); } catch (_) {}
   }
   _maybeDropLoot() {
-    const eligible = this.alivePresent();
+    const eligible = this.party.filter(m => !m.left && !m.dead);   // up OR dying — the downed can still roll/win loot
     if (!eligible.length || !this.enemies.length) return;
     // Pathfinder-style: the encounter's toughest creature (its CR) sets both the
     // odds of a magic item and its best enhancement; a crowd nudges the CR up;
@@ -785,18 +812,19 @@ class Dungeon {
     if (!m || m.left) return { ok: false, error: 'not in this run' };
     const wasActor = this._currentActorId() === playerId;
     const fled = this.status === 'combat';   // bailing mid-fight = running away
-    const denom = Math.max(1, this.alivePresent().length);
+    const denom = Math.max(1, this.party.filter(x => !x.left && !x.dead).length);   // split among everyone in the run, incl. the dying
     const share = Math.floor(this.runGold / denom);
     this.runGold -= share;
     const p = db.getPlayer(playerId);
     if (p) db.setChips(playerId, p.chips + share);
     m.left = true;   // turn loop skips left members; entry stays for index integrity
-    this._note(`${fled ? '🏃' : '🪜'} ${m.nickname} ${fled ? 'flees the fight and climbs out' : 'climbed out'} with ${share} gp.`);
-    this._log('bail', { who: playerId, share, poolLeft: this.runGold, fled });
+    const how = m.downed ? 'is dragged out of the dungeon' : fled ? 'flees the fight and climbs out' : 'climbed out';
+    this._note(`${m.downed ? '🩸' : fled ? '🏃' : '🪜'} ${m.nickname} ${how} with ${share} gp.`);
+    this._log('bail', { who: playerId, share, poolLeft: this.runGold, fled, downed: !!m.downed });
     this._emitMemberExit(m, { reason: 'bailed', goldBanked: share, fled });
-    // After the bailer leaves: if nobody's left standing, the dying bleed out; else
-    // if no human remains in the run at all, the AI allies cash out and end.
-    if (!this._anyUp()) { this._wipe(); return { ok: true, goldBanked: share }; }
+    // Last conscious member out → drag any remaining dying allies out with their
+    // share (voluntary retreat). Otherwise, if only AI remain, cash them out.
+    if (!this._anyUp()) { this._groupExtract(); return { ok: true, goldBanked: share }; }
     if (!this._humansInRun()) { this._wrapUp(); return { ok: true, goldBanked: share }; }
     // Only nudge the turn cycle if the bailer was the one we were waiting on.
     if (this.status === 'combat' && wasActor) { clearTimeout(this._turnTimer); this._nextTurn(); }
