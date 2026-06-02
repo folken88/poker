@@ -644,18 +644,22 @@ function buildMessages(speaker, eventDescription, table) {
   ];
 }
 
-// Keep a banter line short and clean: cap its length at a sentence boundary if
-// one fits the window, else at a word boundary (never a mid-word chop), with a
-// trailing "…" to signal the trim. Replaces the old hard slice(0,200) that cut
-// lines off mid-word ("…like a cloak of vic").
-function trimToSpoken(s, max) {
+// Keep banter SHORT — a quick volley, not a monologue. Real lines run ~6 words;
+// only the rambling tail needs clipping. Cap at maxWords, preferring to end on a
+// complete sentence within that budget; otherwise trail off with "…". (Never a
+// mid-word chop — the old slice(0,200) used to cut "…like a cloak of vic".)
+function trimToSpoken(s, maxWords = 16) {
   s = String(s || '').trim();
-  if (s.length <= max) return s;
-  const win = s.slice(0, max);
-  const sent = Math.max(win.lastIndexOf('. '), win.lastIndexOf('! '), win.lastIndexOf('? '));
-  if (sent >= 40) return s.slice(0, sent + 1).trim();
-  const sp = win.lastIndexOf(' ');
-  return (sp > 0 ? s.slice(0, sp) : win).trim() + '…';
+  if (!s) return s;
+  const words = s.split(/\s+/);
+  if (words.length <= maxWords) return s;
+  const slice = words.slice(0, maxWords);
+  // Cut back to the last word that ends a sentence (keeps it clean), if it's not
+  // a tiny 1-2 word fragment.
+  for (let i = slice.length - 1; i >= 2; i--) {
+    if (/[.!?]["'”’)]?$/.test(slice[i])) return slice.slice(0, i + 1).join(' ');
+  }
+  return slice.join(' ').replace(/[,;:—-]+$/, '').trim() + '…';
 }
 
 /** Async fetch with timeout. Returns generated text, or null on
@@ -677,7 +681,7 @@ async function callLLM(messages) {
         stream: false,
         think: false,                              // skip reasoning preamble (Gemma 4)
         messages,
-        options: { temperature: 0.9, top_p: 0.92, num_predict: 48 },   // shorter ceiling discourages prose/narration
+        options: { temperature: 0.9, top_p: 0.92, num_predict: 36 },   // tight ceiling — discourages prose/monologue
       }),
       signal: ctrl.signal,
     });
@@ -698,7 +702,7 @@ async function callLLM(messages) {
       .replace(/\s+/g, ' ')
       .trim();
     if (!/[A-Za-z]/.test(out)) return null;         // reject junk ("{", lone punctuation, pure sound smears)
-    return trimToSpoken(out, 140) || null;          // sentence/word-boundary cap — never a mid-word chop
+    return trimToSpoken(out) || null;               // clip the rambling tail to ~16 words
   } catch (_) {
     return null;
   } finally {
