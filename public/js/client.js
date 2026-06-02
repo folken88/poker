@@ -728,7 +728,7 @@
             ${portrait}
             <div class="dmon__name">${escapeText(e.name)}${e.sickened ? ' 🤢' : ''}</div>
             <div class="dmon__hpbar"><span style="width:${pct}%"></span></div>
-            <div class="dmon__hp">${dead ? '☠️' : `${e.hp}/${e.maxHp}`}</div>
+            <div class="dmon__hp">${dead ? '☠️' : `${e.hp}/${e.maxHp}`}${e.level ? ` · Lv ${e.level}` : ''}</div>
           </button>`;
         }).join('')
       : '<div class="dmon__none">— the room is quiet —</div>';

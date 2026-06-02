@@ -29,7 +29,6 @@ const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
 const SICKENED_PENALTY = 2;
 const PARALYZE_DC = 14;
-const MON_TOHIT_BUFF = 3, MON_FORT_BUFF = 3, MON_REFLEX_BUFF = 4;
 const AFK_PASS_MS    = 10_000; // idle on your turn → auto-pass after 10s
 const ENEMY_STEP_MS  = 750;    // pacing between auto-resolved enemy/ally turns
 const BOSS_EVERY     = 5;
@@ -71,6 +70,10 @@ const BANDS = {
   deep:    ['ghoul', 'cultist', 'shadow', 'wight', 'ghast', 'gibbering_mouther', 'ogre', 'ettin'],
 };
 function bandFor(depth) { return depth <= 3 ? 'shallow' : depth <= 7 ? 'mid' : 'deep'; }
+// Enemy level scales with room depth (room # ÷ 2, rounded down). Like players,
+// level adds to attack rolls and to Fort/Reflex saves. Room 1 → Lv 0 (no bonus),
+// rooms 2-3 → Lv 1, rooms 4-5 → Lv 2, … HP stays species-based (bestiary × hpScale).
+function enemyLevel(depth) { return Math.floor(depth / 2); }
 function rint(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
 
 let _uidSeq = 0;
@@ -191,7 +194,7 @@ class Dungeon {
         lightningReady: !m.usedLightning, stinkingReady: !m.usedStinking,
       })),
       enemies: this.enemies.map(e => ({
-        uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss,
+        uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, level: e.level,
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
       })),
       turn: this._currentTurn(),
@@ -236,8 +239,8 @@ class Dungeon {
     this.status = 'combat';
     this.round = 1;
     this._rollInitiative();
-    this._note(`🚪 Door creaks open — room ${this.depth}. ${this._enemySummary()}`);
-    this._log('room', { boss: this.enemies.some(e => e.boss), party: this.present().length, enemies: this.enemies.map(e => ({ name: e.name, hp: e.maxHp, ac: e.ac })) });
+    this._note(`🚪 Door creaks open — room ${this.depth} (foes Lv ${enemyLevel(this.depth)}). ${this._enemySummary()}`);
+    this._log('room', { boss: this.enemies.some(e => e.boss), foeLevel: enemyLevel(this.depth), party: this.present().length, enemies: this.enemies.map(e => ({ name: e.name, hp: e.maxHp, ac: e.ac, toHit: e.toHit })) });
     this._beginTurnCycle();
     return { ok: true };
   }
@@ -245,6 +248,7 @@ class Dungeon {
     this.enemies = [];
     const boss = this.depth % BOSS_EVERY === 0;
     const band = bandFor(this.depth);
+    const level = enemyLevel(this.depth);   // room # ÷ 2 → +to-hit and +saves
     const hpScale = 1 + Math.max(0, this.depth - 1) * 0.06;
     const acBump = Math.floor(this.depth / 4);
     const goldScale = 1 + this.depth * 0.05;
@@ -260,12 +264,12 @@ class Dungeon {
       this.enemies.push({
         uid: `e${++_uidSeq}`,
         name: boss ? `Boss: ${base.name}` : base.name,
-        glyph: base.glyph, art: base.art || null, boss,
+        glyph: base.glyph, art: base.art || null, boss, level,
         hp, maxHp: hp,
         ac: base.ac + acBump + (boss ? 2 : 0),
-        toHit: base.toHit + MON_TOHIT_BUFF + (boss ? 2 : 0),
+        toHit: base.toHit + level + (boss ? 2 : 0),
         dmgDie: base.dmgDie, dmgBonus: base.dmgBonus + (boss ? 2 : 0),
-        fort: base.fort + MON_FORT_BUFF, reflex: base.reflex + MON_REFLEX_BUFF,
+        fort: base.fort + level, reflex: base.reflex + level,
         paralyze: !!base.paralyze, sickened: 0,
         gold: rint(goldLo, goldHi),
       });
