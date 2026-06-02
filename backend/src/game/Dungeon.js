@@ -35,27 +35,34 @@ const BOSS_EVERY     = 5;
 const LOOT_ROLL_MS   = 20_000; // window to roll/pass on a dropped magic item
 
 // ── Monster bestiary (placeholder art = emoji glyphs) ───────────────────────
+// PF1e stat blocks (CR in comment). NO depth scaling — difficulty comes from
+// which creatures a depth's BAND can spawn and from designated bosses, not from
+// buffing mooks. Our combat model uses one representative attack:
+//   damage = dmgCount × d(dmgDie) + dmgBonus   (dmgCount defaults to 1)
+//   attacks = number of separate swings per turn (default 1)
 const MON = {
-  dire_rat:          { name: 'Dire Rat',          glyph: '🐀', hp: 6,  ac: 13, toHit: 2, dmgDie: 4,  dmgBonus: 0, fort: 2, reflex: 3, gold: [4, 14] },
-  giant_centipede:   { name: 'Giant Centipede',   glyph: '🐛', hp: 5,  ac: 14, toHit: 3, dmgDie: 4,  dmgBonus: 0, fort: 1, reflex: 4, gold: [4, 12] },
-  goblin:            { name: 'Goblin',            glyph: '👺', hp: 8,  ac: 15, toHit: 3, dmgDie: 6,  dmgBonus: 0, fort: 2, reflex: 3, gold: [8, 20] },
-  kobold:            { name: 'Kobold',            glyph: '🦎', hp: 6,  ac: 15, toHit: 2, dmgDie: 6,  dmgBonus: 0, fort: 1, reflex: 3, gold: [8, 18] },
-  kobold_spearman:   { name: 'Kobold Spearman',   glyph: '🦎', hp: 7,  ac: 15, toHit: 3, dmgDie: 6,  dmgBonus: 0, fort: 1, reflex: 3, gold: [8, 20] },                          // 1d6 spear
-  kobold_shaman:     { name: 'Kobold Shaman',      glyph: '🦎', hp: 6,  ac: 14, toHit: 1, dmgDie: 4,  dmgBonus: 0, fort: 2, reflex: 3, gold: [14, 30], caster: 'holdperson' },    // casts Hold Person
-  kobold_rogue:      { name: 'Kobold Rogue',       glyph: '🦎', hp: 6,  ac: 15, toHit: 3, dmgDie: 3,  dmgBonus: 0, fort: 1, reflex: 4, gold: [12, 26], attacks: 2, atkSound: '/audio/fight_riki.mp3' },  // two 1d3 dagger stabs
-  skeleton:          { name: 'Skeleton',          glyph: '💀', hp: 10, ac: 14, toHit: 3, dmgDie: 6,  dmgBonus: 1, fort: 2, reflex: 3, gold: [10, 25] },
-  giant_spider:      { name: 'Giant Spider',      glyph: '🕷️', hp: 12, ac: 14, toHit: 4, dmgDie: 6,  dmgBonus: 1, fort: 3, reflex: 4, gold: [12, 30] },
-  zombie:            { name: 'Zombie',            glyph: '🧟', hp: 16, ac: 12, toHit: 4, dmgDie: 6,  dmgBonus: 3, fort: 4, reflex: 0, gold: [15, 35] },
-  ghoul:             { name: 'Ghoul',             glyph: '🧛', hp: 14, ac: 15, toHit: 5, dmgDie: 6,  dmgBonus: 2, fort: 3, reflex: 4, gold: [18, 40], paralyze: true },
-  cultist:           { name: 'Whispering Cultist',glyph: '🕯️', hp: 14, ac: 14, toHit: 4, dmgDie: 8,  dmgBonus: 1, fort: 3, reflex: 3, gold: [20, 45] },
-  gray_ooze:         { name: 'Gray Ooze',         glyph: '🟢', hp: 18, ac: 10, toHit: 5, dmgDie: 6,  dmgBonus: 2, fort: 5, reflex: 0, gold: [15, 40] },
-  skeletal_champion: { name: 'Skeletal Champion', glyph: '☠️', hp: 22, ac: 17, toHit: 6, dmgDie: 8,  dmgBonus: 3, fort: 4, reflex: 4, gold: [30, 60] },
-  shadow:            { name: 'Shadow',            glyph: '🌑', hp: 20, ac: 15, toHit: 5, dmgDie: 6,  dmgBonus: 2, fort: 4, reflex: 6, gold: [35, 70] },
-  wight:             { name: 'Wight',             glyph: '👻', hp: 26, ac: 16, toHit: 6, dmgDie: 8,  dmgBonus: 3, fort: 5, reflex: 4, gold: [40, 80] },
-  ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', hp: 24, ac: 17, toHit: 7, dmgDie: 8,  dmgBonus: 3, fort: 5, reflex: 5, gold: [45, 90], paralyze: true },
-  gibbering_mouther: { name: 'Gibbering Mouther', glyph: '👄', hp: 36, ac: 15, toHit: 6, dmgDie: 6,  dmgBonus: 3, fort: 6, reflex: 4, gold: [60, 120] },
-  ogre:              { name: 'Ogre',              glyph: '👹', hp: 34, ac: 16, toHit: 8, dmgDie: 10, dmgBonus: 6, fort: 7, reflex: 2, gold: [50, 110] },
-  ettin:             { name: 'Ettin',             glyph: '👹', hp: 48, ac: 16, toHit: 9, dmgDie: 10, dmgBonus: 7, fort: 8, reflex: 2, gold: [80, 160] },
+  dire_rat:          { name: 'Dire Rat',          glyph: '🐀', cr: '1/3', hp: 5,   ac: 14, toHit: 1,  dmgDie: 4,  dmgBonus: 0, fort: 3,  reflex: 3,  gold: [3, 10] },
+  giant_centipede:   { name: 'Giant Centipede',   glyph: '🐛', cr: '1/2', hp: 5,   ac: 14, toHit: 2,  dmgDie: 6,  dmgBonus: 0, fort: 1,  reflex: 3,  gold: [3, 10] },
+  goblin:            { name: 'Goblin',            glyph: '👺', cr: '1/3', hp: 6,   ac: 16, toHit: 2,  dmgDie: 4,  dmgBonus: 0, fort: 3,  reflex: 2,  gold: [6, 16] },
+  kobold:            { name: 'Kobold',            glyph: '🦎', cr: '1/4', hp: 5,   ac: 15, toHit: 1,  dmgDie: 6,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [6, 14] },
+  kobold_spearman:   { name: 'Kobold Spearman',   glyph: '🦎', cr: '1/3', hp: 6,   ac: 15, toHit: 2,  dmgDie: 6,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [6, 16] },                                            // 1d6 spear
+  kobold_shaman:     { name: 'Kobold Shaman',     glyph: '🦎', cr: '1',   hp: 7,   ac: 13, toHit: 0,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [12, 26], caster: 'holdperson', spellDC: 13 },          // Hold Person (Will DC 13)
+  kobold_rogue:      { name: 'Kobold Rogue',      glyph: '🦎', cr: '1',   hp: 6,   ac: 16, toHit: 2,  dmgDie: 3,  dmgBonus: 0, fort: 1,  reflex: 4,  gold: [10, 24], attacks: 2, atkSound: '/audio/fight_riki.mp3' }, // two 1d3 daggers
+  skeleton:          { name: 'Skeleton',          glyph: '💀', cr: '1/3', hp: 5,   ac: 16, toHit: 2,  dmgDie: 6,  dmgBonus: 2, fort: 0,  reflex: 1,  gold: [8, 20] },
+  giant_spider:      { name: 'Giant Spider',      glyph: '🕷️', cr: '1',   hp: 16,  ac: 14, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 4,  reflex: 4,  gold: [10, 26] },
+  zombie:            { name: 'Zombie',            glyph: '🧟', cr: '1/2', hp: 12,  ac: 12, toHit: 4,  dmgDie: 6,  dmgBonus: 4, fort: 0,  reflex: 0,  gold: [10, 26] },
+  ghoul:             { name: 'Ghoul',             glyph: '🧛', cr: '1',   hp: 13,  ac: 14, toHit: 3,  dmgDie: 6,  dmgBonus: 1, fort: 1,  reflex: 3,  gold: [14, 32], paralyze: true, paralyzeDC: 13 },
+  cultist:           { name: 'Whispering Cultist',glyph: '🕯️', cr: '1',   hp: 14,  ac: 14, toHit: 3,  dmgDie: 8,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [16, 38] },
+  ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', cr: '2', hp: 17,  ac: 17, toHit: 6,  dmgDie: 8,  dmgBonus: 3, fort: 2,  reflex: 5,  gold: [28, 60], paralyze: true, paralyzeDC: 15 },
+  skeletal_champion: { name: 'Skeletal Champion', glyph: '☠️', cr: '2',   hp: 19,  ac: 17, toHit: 5,  dmgDie: 8,  dmgBonus: 3, fort: 3,  reflex: 2,  gold: [26, 55] },
+  shadow:            { name: 'Shadow',            glyph: '🌑', cr: '3',   hp: 19,  ac: 13, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 1,  reflex: 3,  gold: [30, 65] },
+  wight:             { name: 'Wight',             glyph: '👻', cr: '3',   hp: 26,  ac: 15, toHit: 4,  dmgDie: 4,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [34, 72] },
+  ogre:              { name: 'Ogre',              glyph: '👹', cr: '3',   hp: 30,  ac: 17, toHit: 8,  dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 6, reflex: 0, gold: [40, 90] },                                  // greatclub 2d8+7
+  gray_ooze:         { name: 'Gray Ooze',         glyph: '🟢', cr: '4',   hp: 50,  ac: 6,  toHit: 5,  dmgDie: 6,  dmgBonus: 4, fort: 6,  reflex: 0,  gold: [38, 80] },
+  gibbering_mouther: { name: 'Gibbering Mouther', glyph: '👄', cr: '5',   hp: 60,  ac: 19, toHit: 5,  dmgDie: 4,  dmgBonus: 0, fort: 8,  reflex: 6,  gold: [55, 120], attacks: 2 },                              // many small bites
+  ettin:             { name: 'Ettin',             glyph: '👹', cr: '6',   hp: 65,  ac: 18, toHit: 12, dmgDie: 6,  dmgCount: 2, dmgBonus: 6, fort: 9, reflex: 3, attacks: 2, gold: [70, 150] },                    // two morningstars
+  brass_golem:       { name: 'Brass Golem',       glyph: '🗿', cr: '9',   hp: 92,  ac: 24, toHit: 14, dmgDie: 10, dmgCount: 2, dmgBonus: 9, fort: 3, reflex: 3, attacks: 2, gold: [180, 320] },                  // 8-HD construct, two 2d10+9 slams
+  barbed_devil:      { name: 'Barbed Devil',      glyph: '😈', cr: '11',  hp: 138, ac: 26, toHit: 18, dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 12, reflex: 9, attacks: 2, gold: [260, 460] },                 // hamatula, two 2d8+7 claws
 };
 // Real token art from the Foundry library (public/dungeon/monsters/). dire_rat
 // has no token in the library, so it falls back to its emoji glyph.
@@ -66,19 +73,25 @@ const MON_ART = {
   giant_spider: 'spider', zombie: 'zombie', ghoul: 'ghoul', cultist: 'cultist',
   gray_ooze: 'ooze', skeletal_champion: 'skeletal_champion', shadow: 'shadow', wight: 'wight',
   ghast: 'ghast', gibbering_mouther: 'gibbering_mouther', ogre: 'ogre', ettin: 'ettin',
+  brass_golem: 'brass_golem', barbed_devil: 'barbed_devil',
 };
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
 
+// What a depth can spawn. Difficulty rises by swapping the roster (low-CR →
+// high-CR creatures), not by buffing individuals. Boss creatures are NOT in the
+// bands — they only appear via bossKeyFor on boss rooms.
 const BANDS = {
   shallow: ['dire_rat', 'giant_centipede', 'goblin', 'kobold', 'kobold_spearman', 'kobold_shaman', 'kobold_rogue', 'skeleton', 'giant_spider'],
-  mid:     ['kobold_shaman', 'kobold_rogue', 'skeleton', 'giant_spider', 'zombie', 'ghoul', 'cultist', 'gray_ooze', 'skeletal_champion'],
-  deep:    ['ghoul', 'cultist', 'shadow', 'wight', 'ghast', 'gibbering_mouther', 'ogre', 'ettin'],
+  mid:     ['kobold_shaman', 'kobold_rogue', 'skeleton', 'giant_spider', 'zombie', 'ghoul', 'cultist', 'ghast', 'skeletal_champion'],
+  deep:    ['cultist', 'shadow', 'wight', 'ghast', 'gray_ooze', 'gibbering_mouther', 'ogre', 'ettin'],
 };
 function bandFor(depth) { return depth <= 3 ? 'shallow' : depth <= 7 ? 'mid' : 'deep'; }
-// Enemy level scales with room depth (room # ÷ 2, rounded down). Like players,
-// level adds to attack rolls and to Fort/Reflex saves. Room 1 → Lv 0 (no bonus),
-// rooms 2-3 → Lv 1, rooms 4-5 → Lv 2, … HP stays species-based (bestiary × hpScale).
-function enemyLevel(depth) { return Math.floor(depth / 2); }
+// Designated bosses by depth — real high-CR PF1e creatures, used as-is (no buff).
+function bossKeyFor(depth) {
+  if (depth >= 8 && depth <= 12) return 'brass_golem';   // golden (brass) golem, CR 9
+  if (depth >= 13)               return 'barbed_devil';  // hamatula, CR 11
+  return depth >= 4 ? 'ogre' : 'skeletal_champion';      // early milestone bosses (rooms 5)
+}
 function rint(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
 
 let _uidSeq = 0;
@@ -178,7 +191,7 @@ class Dungeon {
     this._note(`🚪 ${m.nickname} joins the delve. (Lv ${level} · ${maxHp} HP)`);
     this._log('join', { who: playerId, level, maxHp, party: this.present().length });
     // Mid-combat join → add to the current turn order so they act this round.
-    if (this.status === 'combat') this.turnOrder.push({ kind: 'party', id: playerId, init: dRoll(20) + 2 });
+    if (this.status === 'combat') this.turnOrder.push({ kind: 'party', id: playerId, init: dRoll(20) + 2 + Math.floor((m.level || 1) / 2) });
     this._broadcast();
     return m;
   }
@@ -199,7 +212,7 @@ class Dungeon {
         lightningReady: !m.usedLightning, stinkingReady: !m.usedStinking,
       })),
       enemies: this.enemies.map(e => ({
-        uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, level: e.level,
+        uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
       })),
       turn: this._currentTurn(),
@@ -244,8 +257,8 @@ class Dungeon {
     this.status = 'combat';
     this.round = 1;
     this._rollInitiative();
-    this._note(`🚪 Door creaks open — room ${this.depth} (foes Lv ${enemyLevel(this.depth)}). ${this._enemySummary()}`);
-    this._log('room', { boss: this.enemies.some(e => e.boss), foeLevel: enemyLevel(this.depth), party: this.present().length, enemies: this.enemies.map(e => ({ name: e.name, hp: e.maxHp, ac: e.ac, toHit: e.toHit })) });
+    this._note(`🚪 Door creaks open — room ${this.depth}. ${this._enemySummary()}`);
+    this._log('room', { boss: this.enemies.some(e => e.boss), party: this.present().length, enemies: this.enemies.map(e => ({ name: e.name, cr: e.cr, hp: e.maxHp, ac: e.ac, toHit: e.toHit })) });
     this._beginTurnCycle();
     return { ok: true };
   }
@@ -253,34 +266,28 @@ class Dungeon {
     this.enemies = [];
     const boss = this.depth % BOSS_EVERY === 0;
     const band = bandFor(this.depth);
-    const level = enemyLevel(this.depth);   // room # ÷ 2 → +to-hit and +saves
-    const hpScale = 1 + Math.max(0, this.depth - 1) * 0.06;
-    const acBump = Math.floor(this.depth / 4);
-    const goldScale = 1 + this.depth * 0.05;
-    // Scale enemy count up a little with party size so groups aren't trivial.
+    // Scale enemy COUNT up a little with party size so groups aren't trivial —
+    // but each creature keeps its true PF1e stat block (no per-room buffs).
     const partyN = Math.max(1, this.alivePresent().length);
     const lo = this.depth <= 3 ? 1 : 2, hi = (this.depth <= 3 ? 3 : 4) + (partyN - 1);
     const count = boss ? 1 : rint(lo, hi);
     for (let i = 0; i < count; i++) {
-      const base = MON[pick(BANDS[band])];
-      const hp = Math.max(3, Math.round(base.hp * hpScale * (boss ? 1.8 : 1)));
-      const goldLo = Math.round(base.gold[0] * goldScale * (boss ? 3 : 1));
-      const goldHi = Math.round(base.gold[1] * goldScale * (boss ? 3 : 1));
+      const base = MON[boss ? bossKeyFor(this.depth) : pick(BANDS[band])];
       this.enemies.push({
         uid: `e${++_uidSeq}`,
         name: boss ? `Boss: ${base.name}` : base.name,
-        glyph: base.glyph, art: base.art || null, boss, level,
-        hp, maxHp: hp,
-        ac: base.ac + acBump + (boss ? 2 : 0),
-        toHit: base.toHit + level + (boss ? 2 : 0),
-        dmgDie: base.dmgDie, dmgBonus: base.dmgBonus + (boss ? 2 : 0),
-        fort: base.fort + level, reflex: base.reflex + level,
-        paralyze: !!base.paralyze, sickened: 0,
-        attacks: base.attacks || 1,           // kobold rogue swings twice
-        atkSound: base.atkSound || null,       // signature hit sound (rogue: riki)
-        caster: base.caster || null,           // kobold shaman: 'holdperson'
-        castsLeft: base.caster ? (boss ? 3 : 2) : 0,
-        gold: rint(goldLo, goldHi),
+        glyph: base.glyph, art: base.art || null, boss, cr: base.cr || null,
+        hp: base.hp, maxHp: base.hp,
+        ac: base.ac, toHit: base.toHit,
+        dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus,
+        fort: base.fort, reflex: base.reflex,
+        paralyze: !!base.paralyze, paralyzeDC: base.paralyzeDC || PARALYZE_DC, sickened: 0,
+        attacks: base.attacks || 1,            // separate swings per turn (rogue/ogre/golem…)
+        atkSound: base.atkSound || null,        // signature hit sound (rogue: riki)
+        caster: base.caster || null,            // kobold shaman: 'holdperson'
+        spellDC: base.spellDC || 13,
+        castsLeft: base.caster ? 2 : 0,
+        gold: rint(base.gold[0], base.gold[1]),
       });
     }
   }
@@ -291,7 +298,8 @@ class Dungeon {
   }
   _rollInitiative() {
     const order = [];
-    for (const m of this.alivePresent()) order.push({ kind: 'party', id: m.playerId, init: dRoll(20) + 2 });
+    // Characters add ½ their level (rounded down) to initiative, on top of the base +2.
+    for (const m of this.alivePresent()) order.push({ kind: 'party', id: m.playerId, init: dRoll(20) + 2 + Math.floor((m.level || 1) / 2) });
     for (const e of this.livingEnemies()) order.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });
     order.sort((a, b) => b.init - a.init);
     this.turnOrder = order;
@@ -492,7 +500,9 @@ class Dungeon {
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
     if (!hit) return { hit: false, roll, toHit, total, ac: targetAC, sound: pick(SND.whiffSword) };
-    return { hit: true, damage: Math.max(1, dRoll(e.dmgDie) + e.dmgBonus - sick), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
+    let dmg = e.dmgBonus - sick;
+    for (let i = 0; i < (e.dmgCount || 1); i++) dmg += dRoll(e.dmgDie);   // e.g. golem slam = 2d10+9
+    return { hit: true, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
   }
   _enemyAct(e) {
     if (!this.livingParty().length) return;
@@ -520,10 +530,11 @@ class Dungeon {
       this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${r.damage}. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
       if (target.hp <= 0) { this._memberDown(target); this._echoToTable(r.sound); return; }
       if (e.paralyze) {
+        const pdc = e.paralyzeDC || PARALYZE_DC;
         const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
-        const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= PARALYZE_DC;
-        if (!saved) { target.paralyzed = 1; this._note(`🥶 ${target.nickname} fails the paralysis save [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${PARALYZE_DC}] — paralyzed!`); }
-        else this._note(`${target.nickname} resists paralysis [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${PARALYZE_DC}].`);
+        const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= pdc;
+        if (!saved) { target.paralyzed = 1; this._note(`🥶 ${target.nickname} fails the paralysis save [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${pdc}] — paralyzed!`); }
+        else this._note(`${target.nickname} resists paralysis [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${pdc}].`);
       }
       if (target.hp > 0 && target.isBot) this._tryBanter(target, 'damage', { enemy: e.name, dmg: r.damage });
     } else {
@@ -534,7 +545,7 @@ class Dungeon {
   // Kobold shaman's Hold Person: fail a Will save (DC 10 + ½ caster level) → lose a turn.
   _enemyCastHold(e, target) {
     e.castsLeft -= 1;
-    const dc = 10 + Math.floor((e.level || 0) / 2);
+    const dc = e.spellDC || 13;
     const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
     const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;

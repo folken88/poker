@@ -21,6 +21,21 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🐉 Dungeon — real Pathfinder 1e monster stats (no more monster levels)
+- Monsters now use their **true PF1e stat blocks** (AC, HP, attack, damage, saves,
+  CR) instead of an artificial per-room level. **Difficulty comes from which
+  creatures a depth can spawn** (low-CR → high-CR) and from designated bosses —
+  not from buffing the same mooks. Monster cards now show **CR**.
+- **New bosses:** the **Brass Golem** (CR 9, two 2d10+9 slams) guards **rooms
+  8–12**, and the **Barbed Devil** (CR 11) lurks in the deepest rooms. Multi-hit
+  and multi-die attacks (golem/ogre/ettin slams, devil claws) are modeled properly.
+- Per-monster **paralysis DCs** (ghoul 13, ghast 15) and **spell DCs** (kobold
+  shaman's Hold Person, DC 13) replace the old level-derived numbers.
+
+### ⚡ Dungeon — initiative reflects your level
+- Characters (human and AI) add **½ their level (rounded down)** to initiative —
+  the more geared you are, the likelier you act first.
+
 ### 🛡️ Everyone wears a Chain Shirt now (+4 AC baseline)
 - All characters — human **and** AI — start with a free mundane **Chain Shirt
   (+4 AC)**, before buying anything. Purchasing **Full Plate** replaces it; if you
