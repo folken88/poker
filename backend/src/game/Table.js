@@ -1093,8 +1093,8 @@ class Table {
     // expected to bank their wins into gear via the Loot Bank — the
     // cap is the pressure that nudges them toward the LOOT LORD
     // win condition instead of just stockpiling cash to bully with.
-    // (Bots already drain to a ~5k reserve via the auto-invest loop
-    // above, so this almost never fires on AI seats.)
+    // (Bots get itchy to buy gear as they approach 15k via the auto-invest
+    // loop above, so they rarely climb anywhere near this cap.)
     // Cap = the most expensive single item (+5 Longsword, 50,315 gp) so a
     // player can always save up for the priciest piece of gear. Computed
     // from the price table so it tracks any future price changes.
@@ -1243,9 +1243,17 @@ class Table {
    *  A reserve of DEFAULT_STACK chips is held back so the bot can
    *  still pay blinds and call modest bets after the purchase. */
   _planBotGearPurchase(seat) {
-    const RESERVE = db.DEFAULT_STACK;
+    const RESERVE = db.DEFAULT_STACK;     // 5,000 — hard floor (solvency + bottom of the comfort band)
+    const COMFORT_CEIL = 15000;           // bots are comfy holding 5k-15k; the itch to buy grows toward 15k
     const available = seat.chipsAtTable - RESERVE;
     if (available <= 0) return null;
+
+    // Buy-eagerness rises CONVEXLY with the stack: ~0 in the low-mid band, near
+    // certain at 15k, and pinned at 1 above it (spend the excess down). So bots
+    // sit comfortably on 5k-15k and only think hard about gear as they approach /
+    // exceed 15k, instead of draining straight to the reserve every hand.
+    const eagerness = Math.min(1, (available / (COMFORT_CEIL - RESERVE)) ** 2);
+    if (Math.random() > eagerness) return null;
 
     const gear = db.getGear(seat.playerId);
     let minTier = 5;
