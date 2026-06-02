@@ -82,15 +82,23 @@ function scrubStrayMoney(line, amounts) {
  *  spaces / dangling separators are tidied. `amounts` is an optional
  *  { amount?, pot?, call? } map from the event. */
 // Keep the table in-setting and cut the LLM's overused "god," filler. Golarion
-// is polytheistic, so a bare "god" reads wrong; drop a leading "god,"/"oh god,"
-// interjection and pluralize the rest to "gods".
+// is polytheistic, so a monotheist "god" reads wrong. We SURGICALLY scrub only
+// the Earth-monotheist constructions (leading filler, idioms, lone interjections)
+// and LEAVE grammatical common-noun uses ("a god", "like a god", "the god of war")
+// alone — blanket-pluralizing those produced nonsense like "I play like a gods".
 function scrubEarthGod(line) {
   if (!line) return line;
   let out = line;
-  out = out.replace(/^\s*(?:oh[\s,]+)?(?:my[\s,]+)?gods?\s*[,!.]+\s*/i, '');  // strip leading "god,"/"oh my god," filler
-  out = out.replace(/\bgod(\s*damn)/gi, 'gods$1');
-  out = out.replace(/\boh my god\b/gi, 'oh my gods');
-  out = out.replace(/\bGod\b/g, 'Gods').replace(/\bgod\b/g, 'gods');
+  // strip a leading "god,"/"oh my god," filler interjection entirely
+  out = out.replace(/^\s*(?:oh[\s,]+)?(?:my[\s,]+)?gods?\s*[,!.]+\s*/i, '');
+  // monotheist idioms → Golarion polytheist phrasing
+  out = out.replace(/\bfor\s+god['’]?s\s+sake\b/gi, "for the gods' sake");
+  out = out.replace(/\b((?:swear|honest)\s+to|thank|so\s+help\s+me)\s+god\b/gi, '$1 the gods');
+  out = out.replace(/\b(oh\s+my|oh|my)\s+god\b/gi, '$1 gods');
+  out = out.replace(/\bgod\s*damn(ed)?\b/gi, 'gods damn$1');
+  // a lone capital "God" used as an Earth interjection (trailing punctuation, not a
+  // noun phrase like "a God"/"war God", not a sentence subject) → polytheist
+  out = out.replace(/(?<!\b(?:a|an|the|like|war|sun|love|young|old|living|dead|false|angry)\s)\bGod\b(?=\s*[,.!?]|$)/g, 'the gods');
   out = out.trim();
   return out || line;   // never blank a line out
 }
