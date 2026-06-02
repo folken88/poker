@@ -108,6 +108,24 @@ function bossKeyFor(depth) {
 }
 function rint(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
 
+// ── Loot odds from Pathfinder treasure-by-CR ────────────────────────────────
+// PF1e ties treasure to encounter CR. A +1 item (~1-2k gp of enhancement) is the
+// magic share of a ~CR 4-6 fight; +2 ≈ CR 7-9; +3 ≈ CR 10-12; +4 ≈ CR 13-15;
+// +5 ≈ CR 16+. Below CR 3 magic is rare (mostly coin). The defeated room's
+// toughest creature (its CR) drives both the drop chance and the best tier.
+function lootForCR(cr) {
+  const chance = cr < 3 ? 0.04 : Math.min(0.55, 0.10 + 0.045 * (cr - 3));
+  const maxTier = cr >= 16 ? 5 : cr >= 13 ? 4 : cr >= 10 ? 3 : cr >= 7 ? 2 : 1;
+  return { chance, maxTier };
+}
+// When an item drops, lesser enhancements are far likelier than great ones
+// (mirrors PF's minor/medium/major item weighting): +1 is the common case.
+function rollLootTier(maxTier) {
+  let t = 1;
+  while (t < maxTier && Math.random() < 0.4) t++;
+  return t;
+}
+
 let _uidSeq = 0;
 
 class Dungeon {
@@ -400,11 +418,19 @@ class Dungeon {
     if (this._onEmpty) try { this._onEmpty(); } catch (_) {}
   }
   _maybeDropLoot() {
-    const chance = this.depth <= 3 ? 0.015 : Math.min(0.12, 0.02 + (this.depth - 3) * 0.011);
-    if (Math.random() >= chance) return;
     const eligible = this.alivePresent();
-    if (!eligible.length) return;
-    const tier = Math.min(5, 1 + Math.floor(this.depth / 4));   // depth-capped: +1 @1-3, +2 @4-7 …
+    if (!eligible.length || !this.enemies.length) return;
+    // Pathfinder-style: the encounter's toughest creature (its CR) sets both the
+    // odds of a magic item and its best enhancement; a crowd nudges the CR up;
+    // bosses are loot milestones (a big chance bump, but tier still from CR).
+    const topCR = Math.max(0, ...this.enemies.map(e => crToNum(e.cr)));
+    const effCR = topCR + (this.enemies.length >= 4 ? 1 : 0);
+    let { chance, maxTier } = lootForCR(effCR);
+    const isBoss = this.enemies.some(e => e.boss);
+    if (isBoss) chance = Math.min(0.9, chance + 0.4);
+    this._log('loot_check', { topCR, effCR, boss: isBoss, chance: +chance.toFixed(2), maxTier });
+    if (Math.random() >= chance) return;
+    const tier = rollLootTier(maxTier);
     const slot = pick(db.GEAR_SLOT_KEYS);
     this._startLootRoll(slot, tier, eligible.map(m => m.playerId));
   }

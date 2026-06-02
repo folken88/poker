@@ -35,6 +35,15 @@ Thanks to the regulars whose suggestions made it into the game:
 - Per-monster **paralysis DCs** (ghoul 13, ghast 15) and **spell DCs** (kobold
   shaman's Hold Person, DC 13) replace the old level-derived numbers.
 
+### 💎 Dungeon — loot follows Pathfinder treasure-by-CR
+- Magic-item drops are now keyed to the **encounter's CR** (the room's toughest
+  creature), not raw depth — modeled on PF1e treasure tables. Weak rooms rarely
+  yield magic (mostly coin); **+1 items become common around CR 4+**, and the best
+  enhancement scales up (**+2 at CR 7–9, +3 at CR 10–12, +4/+5 deeper**), with
+  lesser items far likelier than great ones. **Bosses are loot milestones** with a
+  big drop-chance bump — so the Brass Golem and Barbed Devil are where the good
+  gear comes from.
+
 ### ⚡ Dungeon — initiative reflects your level
 - Characters (human and AI) add **½ their level (rounded down)** to initiative —
   the more geared you are, the likelier you act first.
