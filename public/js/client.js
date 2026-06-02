@@ -596,7 +596,12 @@
     }
   }
 
-  function setScreen(name) { document.body.dataset.screen = name; }
+  let _chatIdleTimer = null;   // drifts the chat back to newest after the reader idles
+  function setScreen(name) {
+    document.body.dataset.screen = name;
+    // Landing on the table (incl. returning from the dungeon) → snap chat to newest.
+    if (name === 'table') requestAnimationFrame(scrollChatToBottom);
+  }
   function toast(msg, isError = false) {
     const t = $('#toast');
     t.textContent = msg;
@@ -2266,6 +2271,17 @@
     }
     updateChatJump();
   }
+  // Snap the chat to the newest message and cancel any pending idle-return.
+  const CHAT_IDLE_RETURN_MS = 20000;   // scrolled-up reader drifts back to bottom after this
+  function scrollChatToBottom() {
+    const list = $('#chatList');
+    if (!list) return;
+    clearTimeout(_chatIdleTimer); _chatIdleTimer = null;
+    list.scrollTop = list.scrollHeight;
+    const jb = $('#chatJump');
+    if (jb) jb.classList.remove('chat-jump--new');
+    updateChatJump();
+  }
   // ── Chat "jump to present" arrow ────────────────────────────────────
   // Visible only when scrolled up; click snaps to the newest message.
   function updateChatJump() {
@@ -2288,7 +2304,14 @@
     let raf = 0;
     list.addEventListener('scroll', () => {
       if (raf) return;
-      raf = requestAnimationFrame(() => { raf = 0; updateChatJump(); });
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        updateChatJump();
+        // If the reader is scrolled up, drift back to the newest after they idle.
+        clearTimeout(_chatIdleTimer); _chatIdleTimer = null;
+        const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+        if (!nearBottom) _chatIdleTimer = setTimeout(scrollChatToBottom, CHAT_IDLE_RETURN_MS);
+      });
     }, { passive: true });
     updateChatJump();
   })();
