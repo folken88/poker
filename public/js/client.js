@@ -857,25 +857,33 @@
     const acts = $('#dungeonActions');
     if (acts) {
       const me = (d.party || []).find(m => m.playerId === meId) || {};
-      let html = '';
-      if (d.status === 'exploring') {
-        const rolling = !!d.lootRoll;
-        html += `<button class="btn btn--primary" data-dact="door" ${rolling ? 'disabled' : ''}>🚪 Open next door${rolling ? ' (loot roll…)' : ''}</button>`;
-        html += `<button class="btn btn--ghost" data-dact="bail">🏃 Bail · bank my share</button>`;
-      } else if (d.status === 'combat') {
-        if (isMyTurn) {
-          const lr = me.lightningReady, sr = me.stinkingReady;
-          html += `<button class="btn btn--primary" data-dact="attack">⚔️ Attack</button>`;
-          html += `<button class="btn btn--ghost ${lr ? '' : 'is-cooling'}" data-dact="lightning" ${lr ? '' : 'disabled'}>⚡ Lightning${lr ? '' : ' (used)'}</button>`;
-          html += `<button class="btn btn--ghost ${sr ? '' : 'is-cooling'}" data-dact="stinking" ${sr ? '' : 'disabled'}>💨 Stinking Cloud${sr ? '' : ' (used)'}</button>`;
-        } else {
-          html += `<span class="dwait">${turnName ? escapeText(turnName) + ' is acting…' : 'Enemies acting…'}</span>`;
-        }
-        html += `<button class="btn btn--ghost" data-dact="bail">🏃 Bail</button>`;
+      if (d.status === 'over') {
+        acts.innerHTML = `<div class="dungeon__actstatus">The run is over.</div>` +
+          `<div class="dungeon__actrow"><button class="btn btn--primary" data-dact="leave">↩ Back to the table</button></div>`;
       } else {
-        html += `<button class="btn btn--primary" data-dact="leave">↩ Back to the table</button>`;
+        const combat = d.status === 'combat';
+        const myTurn = combat && isMyTurn;
+        const rolling = !!d.lootRoll;
+        const lr = me.lightningReady, sr = me.stinkingReady;
+        // FIXED button set — the SAME five slots, same labels (same widths), every
+        // render. Each greys out (disabled) when it isn't usable instead of
+        // disappearing or shifting, so quick clicks always land on the intended
+        // action. A separate status line carries the turn text without moving buttons.
+        const B = (act, label, on, primary) =>
+          `<button class="btn ${primary ? 'btn--primary' : 'btn--ghost'}" data-dact="${act}"${on ? '' : ' disabled'}>${label}</button>`;
+        const status = combat
+          ? (myTurn ? '⚔️ Your turn' : (turnName ? escapeText(turnName) + ' is acting…' : 'Enemies acting…'))
+          : '🚪 Pick a door — or bail.';
+        acts.innerHTML =
+          `<div class="dungeon__actstatus">${status}</div>` +
+          `<div class="dungeon__actrow">` +
+            B('attack',    '⚔️ Attack',         myTurn,              combat) +
+            B('lightning', '⚡ Lightning',       myTurn && lr,        false) +
+            B('stinking',  '💨 Stinking Cloud',  myTurn && sr,        false) +
+            B('door',      '🚪 Open door',       !combat && !rolling, !combat) +
+            B('bail',      '🏃 Bail',            true,                false) +
+          `</div>`;
       }
-      acts.innerHTML = html;
     }
 
     // Recruit panel — unseated AI bots you can bring along (50g each). Uses
