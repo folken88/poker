@@ -481,15 +481,21 @@ class Dungeon {
       this._log('potion_sold', { name: p.name, sell });
     }
   }
-  // Everyone present rolls 1d20 or passes; highest roll claims the item. AI
-  // ALWAYS rolls (and auto-equips an upgrade, else hocks it for the pool).
+  // Everyone present rolls 1d20 or passes; highest roll claims the item. AI only
+  // rolls when it's an UPGRADE for them (better than what they have in that slot);
+  // otherwise they pass. If nobody rolls, the item is hocked into the pool.
   _startLootRoll(slot, tier, eligibleIds) {
     this.lootRoll = { slot, tier, eligible: eligibleIds, decided: {} };
     const label = db.GEAR_BY_KEY[slot]?.label || slot;
     this._note(`💎 A +${tier} ${label} drops! Roll a d20 for it, or pass.`);
     this._log('lootdrop', { slot, tier, eligible: eligibleIds.length });
-    // Bots decide immediately (always roll).
-    for (const id of eligibleIds) { const m = this.member(id); if (m && m.isBot) this._lootDecide(id, true); }
+    // Bots decide immediately: roll only if it beats what they already wear here.
+    for (const id of eligibleIds) {
+      const m = this.member(id);
+      if (!m || !m.isBot) continue;
+      const cur = Number((m.gear || db.getGear(id))[slot]) || 0;
+      this._lootDecide(id, tier > cur);   // upgrade → roll; equal/worse → pass
+    }
     // Idle humans auto-pass after the window.
     clearTimeout(this._lootTimer);
     this._lootTimer = setTimeout(() => {

@@ -21,6 +21,12 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🎲 Dungeon — AI only rolls for loot it would actually use
+- AI allies no longer roll on every magic item — they **pass unless the drop is a
+  real upgrade** for them (better than what they already wear in that slot). No more
+  bots winning gear just to hock it; if nobody wants an item, it's hocked into the
+  shared pool as before.
+
 ### 🩸 Dungeon — going down isn't dead yet (dying at 0, slain at −10)
 - Drop to **0 HP or below and you're DOWN and dying, not dead** — you can't act,
   but you're **not out of the run**. You only die for real at **−10 HP**. Applies
