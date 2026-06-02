@@ -250,7 +250,8 @@
   // TTS queue can hold non-urgent narration until the audio ends
   // (prevents the screen-reader voice from talking over the
   // character voice or vice versa).
-  function playBase64Mp3(b64, mime = 'audio/mpeg', muffle = false) {
+  function playBase64Mp3(b64, mime = 'audio/mpeg', muffle = false, onEnded = null) {
+    const done = () => { if (onEnded) { const cb = onEnded; onEnded = null; try { cb(); } catch (_) {} } };
     try {
       const bin = atob(b64);
       const len = bin.length;
@@ -269,18 +270,40 @@
             const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 378; lp.Q.value = 0.7;
             const g = ctx.createGain(); g.gain.value = _voiceVolume * 0.6;
             srcNode.connect(lp); lp.connect(g); g.connect(ctx.destination);
-            a.addEventListener('ended', () => { URL.revokeObjectURL(url); try { srcNode.disconnect(); lp.disconnect(); g.disconnect(); } catch (_) {} });
-            a.play().catch(() => URL.revokeObjectURL(url));
+            a.addEventListener('ended', () => { URL.revokeObjectURL(url); try { srcNode.disconnect(); lp.disconnect(); g.disconnect(); } catch (_) {} done(); });
+            a.play().catch(() => { URL.revokeObjectURL(url); done(); });
             return;
           } catch (_) { /* fall through to plain playback */ }
         }
       }
       const a = new Audio(url);
       a.volume = _voiceVolume;
-      a.addEventListener('ended', () => URL.revokeObjectURL(url));
+      a.addEventListener('ended', () => { URL.revokeObjectURL(url); done(); });
       window.BlindMode?.notifyBanterStart?.(a);
-      a.play().catch(() => URL.revokeObjectURL(url));
-    } catch (_) { /* silent */ }
+      a.play().catch(() => { URL.revokeObjectURL(url); done(); });
+    } catch (_) { done(); }
+  }
+
+  // Serialize AI banter voices so two characters never talk over each other — each
+  // 11labs clip plays in FULL (its own end event marks its real length) before the
+  // next starts. A safety timer advances the queue if an end event never fires.
+  const _voiceQueue = [];
+  let _voiceBusy = false, _voiceFallback = null;
+  function enqueueVoice(b64, mime) {
+    if (!b64) return;
+    _voiceQueue.push({ b64, mime: mime || 'audio/mpeg' });
+    while (_voiceQueue.length > 4) _voiceQueue.shift();   // don't pile up stale lines
+    _drainVoiceQueue();
+  }
+  function _drainVoiceQueue() {
+    if (_voiceBusy) return;
+    const next = _voiceQueue.shift();
+    if (!next) return;
+    _voiceBusy = true;
+    let advanced = false;
+    const advance = () => { if (advanced) return; advanced = true; clearTimeout(_voiceFallback); _voiceBusy = false; _drainVoiceQueue(); };
+    _voiceFallback = setTimeout(advance, 15000);   // hard safety so the queue can never stall
+    playBase64Mp3(next.b64, next.mime, false, advance);
   }
 
   // Warm up the cache so the first deal isn't a noticeable buffer
@@ -690,8 +713,9 @@
 
   socket.on('dungeon:say', ({ audio, audioMime } = {}) => {
     // AI ally trash-talk voice clip — the line itself is already in the dungeon
-    // log; this just voices it (gated by the AI-character-voice toggle).
-    if (_bannerVoiceEnabled && audio) playBase64Mp3(audio, audioMime || 'audio/mpeg');
+    // log; this just voices it (gated by the AI-character-voice toggle). Queued so
+    // two allies never talk over each other — each clip finishes before the next.
+    if (_bannerVoiceEnabled && audio) enqueueVoice(audio, audioMime || 'audio/mpeg');
   });
 
   socket.on('dungeon:echo', ({ sound } = {}) => {
