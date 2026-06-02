@@ -19,6 +19,15 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-06-02
+
+### 🥋 Dungeon — enemy Monks (with kiai)
+- A new **Monk** foe (CR 2) throws a **flurry of unarmed strikes** and screams a
+  random **Bruce-Lee-style kiai** on every swing (a different "wataaah!"/punch
+  each time). Each Monk wears a **random face** from a motley dojo of races and
+  ages — human, dwarf, orc, half-orc, tiefling, goblin, hobgoblin, and a couple of
+  cameos. Especially great heard **muffled from up at the poker table.**
+
 ## 2026-06-01
 
 ### 🎲 Dungeon — AI only rolls for loot it would actually use

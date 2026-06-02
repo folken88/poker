@@ -39,6 +39,24 @@ const ENEMY_STEP_MS  = 750;    // pacing between auto-resolved enemy/ally turns
 const BOSS_EVERY     = 5;
 const LOOT_ROLL_MS   = 20_000; // window to roll/pass on a dropped magic item
 
+// Bruce-Lee-style martial-arts SFX for enemy Monks — kiai screams, flurries and
+// smacks. Picked at random per swing (a different shout every punch); hilarious
+// when overheard muffled from up at the poker table.
+const BRUCE_SFX = [
+  '/audio/bruce_punch_juggling_fools.mp3', '/audio/bruce_punch_multi_flurry_rapid_fire.mp3',
+  '/audio/bruce_punch_multi_flurry_thum2p.mp3', '/audio/bruce_punch_multi_flurry_thump.mp3',
+  '/audio/bruce_punch_multi_punishing.mp3', '/audio/bruce_punch_single_quick.mp3',
+  '/audio/bruce_scream_buildup_jumpkick_laugh.mp3', '/audio/bruce_scream_hoo_hoo_hooo.mp3',
+  '/audio/bruce_scream_roar_kick_aftermath.mp3', '/audio/bruce_smack_multi_smack_boop.mp3',
+  '/audio/bruce_smack_scream_crash.mp3',
+];
+// Monk tokens span many races + ages — a random face per spawn so a room of Monks
+// is a motley dojo (human/dwarf/orc/half-orc/tiefling/goblin/hobgoblin + cameos).
+const MONK_TOKENS = [
+  'monk_human_m', 'monk_acolyte', 'monk_tian', 'monk_shaolin_f', 'monk_shaolin_m', 'monk_bald',
+  'monk_dwarf', 'monk_tiefling', 'monk_orc', 'monk_halforc_f', 'monk_goblin', 'monk_hobgoblin', 'monk_jackie',
+].map(n => `/dungeon/monsters/${n}.webp`).concat(['/dungeon/monsters/monk_bruce.png']);
+
 // ── Monster bestiary (placeholder art = emoji glyphs) ───────────────────────
 // PF1e stat blocks (CR in comment). NO depth scaling — difficulty comes from
 // which creatures a depth's BAND can spawn and from designated bosses, not from
@@ -59,6 +77,7 @@ const MON = {
   ghoul:             { name: 'Ghoul',             glyph: '🧛', cr: '1',   hp: 13,  ac: 14, toHit: 3,  dmgDie: 6,  dmgBonus: 1, fort: 1,  reflex: 3,  gold: [14, 32], paralyze: true, paralyzeDC: 13 },
   cultist:           { name: 'Whispering Cultist',glyph: '🕯️', cr: '1',   hp: 14,  ac: 14, toHit: 3,  dmgDie: 8,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [16, 38] },
   ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', cr: '2', hp: 17,  ac: 17, toHit: 6,  dmgDie: 8,  dmgBonus: 3, fort: 2,  reflex: 5,  gold: [28, 60], paralyze: true, paralyzeDC: 15 },
+  monk:              { name: 'Monk',              glyph: '🥋', cr: '2',   hp: 22,  ac: 16, toHit: 4,  dmgDie: 6,  dmgBonus: 2, fort: 4,  reflex: 5,  gold: [18, 42], attacks: 2, tokenPool: MONK_TOKENS, atkSounds: BRUCE_SFX },  // flurry of unarmed strikes; random face + kiai
   skeletal_champion: { name: 'Skeletal Champion', glyph: '☠️', cr: '2',   hp: 19,  ac: 17, toHit: 5,  dmgDie: 8,  dmgBonus: 3, fort: 3,  reflex: 2,  gold: [26, 55] },
   shadow:            { name: 'Shadow',            glyph: '🌑', cr: '3',   hp: 19,  ac: 13, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 1,  reflex: 3,  gold: [30, 65] },
   wight:             { name: 'Wight',             glyph: '👻', cr: '3',   hp: 26,  ac: 15, toHit: 4,  dmgDie: 4,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [34, 72] },
@@ -325,14 +344,15 @@ class Dungeon {
       this.enemies.push({
         uid: `e${++_uidSeq}`,
         name: boss ? `Boss: ${base.name}` : base.name,
-        glyph: base.glyph, art: base.art || null, boss, cr: base.cr || null,
+        glyph: base.glyph, art: base.tokenPool ? pick(base.tokenPool) : (base.art || null), boss, cr: base.cr || null,
         hp: base.hp, maxHp: base.hp,
         ac: base.ac, toHit: base.toHit,
         dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus,
         fort: base.fort, reflex: base.reflex,
         paralyze: !!base.paralyze, paralyzeDC: base.paralyzeDC || PARALYZE_DC, sickened: 0,
-        attacks: base.attacks || 1,            // separate swings per turn (rogue/ogre/golem…)
+        attacks: base.attacks || 1,            // separate swings per turn (rogue/ogre/golem/monk…)
         atkSound: base.atkSound || null,        // signature hit sound (rogue: riki)
+        atkSounds: base.atkSounds || null,      // randomized per-swing pool (monk: bruce kiai)
         caster: base.caster || null,            // kobold shaman: 'holdperson'
         spellDC: base.spellDC || 13,
         castsLeft: base.caster ? 2 : 0,
@@ -650,7 +670,8 @@ class Dungeon {
   _enemyMelee(e, target) {
     const effAC = acOf(target.gear).ac - (target.paralyzed > 0 ? 4 : 0);   // helpless: +4 to be hit
     const r = this._monsterSwing(e, effAC);
-    if (r.hit && e.atkSound) r.sound = e.atkSound;   // rogue's "riki" stab
+    if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);   // monk's randomized "bruce" kiai (hit or miss)
+    else if (r.hit && e.atkSound) r.sound = e.atkSound;                    // rogue's "riki" stab (hit only)
     if (r.hit) {
       target.hp -= r.damage;
       this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${r.damage}. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
