@@ -314,7 +314,7 @@
     const url = pool[Math.floor(Math.random() * pool.length)];
     // Down in the dungeon, poker SFX are heard MUFFLED through the floor
     // (low-pass), and a touch quieter; otherwise plain at full clarity.
-    if (_inDungeon) playUrl(url, _cardVolume * scale * 0.6, true);
+    if (_inDungeon) playUrl(url, _cardVolume * scale * 0.6, true, 414);   // low-pass ~414Hz (10% more muffled)
     else playUrl(url, _cardVolume * scale, false);
   }
 
@@ -681,7 +681,7 @@
     // Muffled basement thumps for players still at the table. The dungeon
     // player hears full combat via dungeon:state, so they skip this.
     if (_inDungeon || !sound || !combatSoundEnabled(sound)) return;
-    playUrl(sound, _combatVolume * 0.5, true, 420);   // low-pass: distant, through the floor
+    playUrl(sound, _combatVolume * 0.5, true, 378);   // low-pass ~378Hz: distant, through the floor (10% more muffled)
   });
 
   socket.on('dungeon:exit', (exit) => {
