@@ -631,13 +631,31 @@ function buildMessages(speaker, eventDescription, table) {
         `up to ~12 words is fine if the line actually lands. Beyond that is too long. NEVER speeches. ` +
         `Conversations at a poker table are quick volleys. If you can't land it in a short phrase, you ` +
         `probably shouldn't say it at all. No quotes, no stage directions, no asterisks, no actions — ` +
-        `just the words you'd actually say out loud at the table. Stay in character.`,
+        `just the words you'd actually say out loud at the table. Stay in character. \n` +
+        `CRITICAL — SPEAK, DON'T NARRATE: output ONLY the words spoken aloud. NEVER describe the scene, ` +
+        `the air/smell, your posture, your hands, or your thoughts. Banned openings: "Casually…", ` +
+        `"Watching X…", "Observing…", "Leaning back…", "The silence…", "The stale air…", "I lean…", ` +
+        `"I slide my chips…". If it isn't a thing you'd literally say with your mouth, don't write it.`,
     },
     {
       role: 'user',
       content: `What just happened: ${eventDescription}${ctx}\n\nReact in character (one line). Use the table info above only if it naturally informs your reaction — never recite it.`,
     },
   ];
+}
+
+// Keep a banter line short and clean: cap its length at a sentence boundary if
+// one fits the window, else at a word boundary (never a mid-word chop), with a
+// trailing "…" to signal the trim. Replaces the old hard slice(0,200) that cut
+// lines off mid-word ("…like a cloak of vic").
+function trimToSpoken(s, max) {
+  s = String(s || '').trim();
+  if (s.length <= max) return s;
+  const win = s.slice(0, max);
+  const sent = Math.max(win.lastIndexOf('. '), win.lastIndexOf('! '), win.lastIndexOf('? '));
+  if (sent >= 40) return s.slice(0, sent + 1).trim();
+  const sp = win.lastIndexOf(' ');
+  return (sp > 0 ? s.slice(0, sp) : win).trim() + '…';
 }
 
 /** Async fetch with timeout. Returns generated text, or null on
@@ -659,7 +677,7 @@ async function callLLM(messages) {
         stream: false,
         think: false,                              // skip reasoning preamble (Gemma 4)
         messages,
-        options: { temperature: 0.9, top_p: 0.92, num_predict: 80 },
+        options: { temperature: 0.9, top_p: 0.92, num_predict: 48 },   // shorter ceiling discourages prose/narration
       }),
       signal: ctrl.signal,
     });
@@ -672,13 +690,15 @@ async function callLLM(messages) {
              ?? null;
     if (!raw || typeof raw !== 'string') return null;
     let out = raw.trim()
-      .replace(/^["'`]+|["'`]+$/g, '')
-      .replace(/^[A-Za-z][A-Za-z .']*?:\s*/, '')   // strip "Mr. Brow:" prefix if echoed
-      .split('\n')[0]                              // first line only
-      .replace(/\s*\*[^*]+\*\s*/g, ' ')            // drop *actions in asterisks*
-      .trim()
-      .slice(0, 200);                              // hard char cap
-    return out || null;
+      .replace(/^[\s"'`*]+|[\s"'`*]+$/g, '')        // surrounding quotes / backticks / asterisks
+      .replace(/^[A-Za-z][A-Za-z .']*?:\s*/, '')    // strip an echoed "Name:" prefix
+      .split('\n')[0]                               // first line only
+      .replace(/\*[^*]*\*/g, ' ')                   // drop *balanced actions*
+      .replace(/\*/g, ' ')                          // drop any stray asterisk
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!/[A-Za-z]/.test(out)) return null;         // reject junk ("{", lone punctuation, pure sound smears)
+    return trimToSpoken(out, 140) || null;          // sentence/word-boundary cap — never a mid-word chop
   } catch (_) {
     return null;
   } finally {

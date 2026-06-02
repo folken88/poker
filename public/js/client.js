@@ -2262,7 +2262,7 @@
     list.appendChild(li);
     // Auto-scroll only if user is already near the bottom; don't yank them
     // back if they've scrolled up to read history.
-    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < CHAT_NEAR_BOTTOM_PX;
     if (nearBottom) list.scrollTop = list.scrollHeight;
     else {
       // New chat arrived while they're reading history — flag the jump arrow.
@@ -2273,6 +2273,7 @@
   }
   // Snap the chat to the newest message and cancel any pending idle-return.
   const CHAT_IDLE_RETURN_MS = 20000;   // scrolled-up reader drifts back to bottom after this
+  const CHAT_NEAR_BOTTOM_PX = 24;      // "at the bottom" tolerance — small so the jump arrow shows as soon as you scroll up
   function scrollChatToBottom() {
     const list = $('#chatList');
     if (!list) return;
@@ -2288,7 +2289,7 @@
     const list = $('#chatList');
     const jb = $('#chatJump');
     if (!list || !jb) return;
-    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < CHAT_NEAR_BOTTOM_PX;
     jb.hidden = nearBottom;
     if (nearBottom) jb.classList.remove('chat-jump--new');
   }
@@ -2309,7 +2310,7 @@
         updateChatJump();
         // If the reader is scrolled up, drift back to the newest after they idle.
         clearTimeout(_chatIdleTimer); _chatIdleTimer = null;
-        const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+        const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < CHAT_NEAR_BOTTOM_PX;
         if (!nearBottom) _chatIdleTimer = setTimeout(scrollChatToBottom, CHAT_IDLE_RETURN_MS);
       });
     }, { passive: true });
