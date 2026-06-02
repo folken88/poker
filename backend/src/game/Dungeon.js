@@ -427,7 +427,7 @@ class Dungeon {
     const effCR = topCR + (this.enemies.length >= 4 ? 1 : 0);
     let { chance, maxTier } = lootForCR(effCR);
     const isBoss = this.enemies.some(e => e.boss);
-    if (isBoss) chance = Math.min(0.9, chance + 0.4);
+    if (isBoss) chance = 1;   // bosses ALWAYS drop ≥1 item, and it's at least +1 (rollLootTier floors at 1)
     this._log('loot_check', { topCR, effCR, boss: isBoss, chance: +chance.toFixed(2), maxTier });
     if (Math.random() >= chance) return;
     const tier = rollLootTier(maxTier);

@@ -40,9 +40,9 @@ Thanks to the regulars whose suggestions made it into the game:
   creature), not raw depth — modeled on PF1e treasure tables. Weak rooms rarely
   yield magic (mostly coin); **+1 items become common around CR 4+**, and the best
   enhancement scales up (**+2 at CR 7–9, +3 at CR 10–12, +4/+5 deeper**), with
-  lesser items far likelier than great ones. **Bosses are loot milestones** with a
-  big drop-chance bump — so the Brass Golem and Barbed Devil are where the good
-  gear comes from.
+  lesser items far likelier than great ones. **Bosses always drop at least one
+  magic item, and it's +1 or better** (tier still scales with their CR) — so the
+  Brass Golem and Barbed Devil are guaranteed gear.
 
 ### ⚡ Dungeon — initiative reflects your level
 - Characters (human and AI) add **½ their level (rounded down)** to initiative —
