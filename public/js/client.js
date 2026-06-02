@@ -352,9 +352,10 @@
   function playFromPool(pool, scale = 1) {
     if (_audioMuted || !pool.length) return;
     const url = pool[Math.floor(Math.random() * pool.length)];
-    // Down in the dungeon, poker SFX are heard MUFFLED through the floor
-    // (low-pass), and a touch quieter; otherwise plain at full clarity.
-    if (_inDungeon) playUrl(url, _cardVolume * scale * 0.6, true, 414);   // low-pass ~414Hz (10% more muffled)
+    // Poker SFX are muffled (low-pass + quieter) ONLY while you're actually
+    // VIEWING the dungeon screen — heard through the floor. Keyed on the current
+    // screen, not the _inDungeon flag, so a stale flag can never muffle the table.
+    if (document.body.dataset.screen === 'dungeon') playUrl(url, _cardVolume * scale * 0.6, true, 414);
     else playUrl(url, _cardVolume * scale, false);
   }
 
@@ -645,6 +646,7 @@
       }
     }
     if (document.body.dataset.screen === 'table') {
+      _inDungeon = false;   // you're looking at the table → not in the dungeon (self-heal any stale flag)
       renderTable();
       // Keep topbar / sit-out button label in sync with seat state.
       if (state.me) paintMe();
