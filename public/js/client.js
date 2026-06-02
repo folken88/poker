@@ -250,7 +250,7 @@
   // TTS queue can hold non-urgent narration until the audio ends
   // (prevents the screen-reader voice from talking over the
   // character voice or vice versa).
-  function playBase64Mp3(b64, mime = 'audio/mpeg') {
+  function playBase64Mp3(b64, mime = 'audio/mpeg', muffle = false) {
     try {
       const bin = atob(b64);
       const len = bin.length;
@@ -258,6 +258,23 @@
       for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
       const blob = new Blob([bytes], { type: mime });
       const url = URL.createObjectURL(blob);
+      // Heard from down in the dungeon → low-pass + quieter, like the rest of the
+      // table audio (the 11labs character voices were coming through full-clarity).
+      if (muffle) {
+        const ctx = audioCtx();
+        if (ctx) {
+          try {
+            const a = new Audio(url);
+            const srcNode = ctx.createMediaElementSource(a);
+            const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 378; lp.Q.value = 0.7;
+            const g = ctx.createGain(); g.gain.value = _voiceVolume * 0.6;
+            srcNode.connect(lp); lp.connect(g); g.connect(ctx.destination);
+            a.addEventListener('ended', () => { URL.revokeObjectURL(url); try { srcNode.disconnect(); lp.disconnect(); g.disconnect(); } catch (_) {} });
+            a.play().catch(() => URL.revokeObjectURL(url));
+            return;
+          } catch (_) { /* fall through to plain playback */ }
+        }
+      }
       const a = new Audio(url);
       a.volume = _voiceVolume;
       a.addEventListener('ended', () => URL.revokeObjectURL(url));
@@ -944,14 +961,18 @@
       // Both gated by the same banter-voice toggle.
       if (_bannerVoiceEnabled && entry.kind === 'banter') {
         if (entry.audioUrl) {
-          try {
-            const a = new Audio(entry.audioUrl);
-            a.volume = _voiceVolume;
-            window.BlindMode?.notifyBanterStart?.(a);
-            a.play().catch(()=>{});
-          } catch (_) { /* silent */ }
+          // In the dungeon, table banter (incl. Crisp/Elfrip chirps) is muffled.
+          if (_inDungeon) { playUrl(entry.audioUrl, _voiceVolume * 0.6, true, 378); }
+          else {
+            try {
+              const a = new Audio(entry.audioUrl);
+              a.volume = _voiceVolume;
+              window.BlindMode?.notifyBanterStart?.(a);
+              a.play().catch(()=>{});
+            } catch (_) { /* silent */ }
+          }
         } else if (entry.audio) {
-          playBase64Mp3(entry.audio, entry.audioMime || 'audio/mpeg');
+          playBase64Mp3(entry.audio, entry.audioMime || 'audio/mpeg', _inDungeon);   // muffle when down in the dungeon
         }
       }
       // Fight-gag SFX play for EVERYONE at the table, independent of the
