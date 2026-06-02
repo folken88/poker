@@ -2275,7 +2275,8 @@ body[data-screen="dungeon"] .screen[data-show-on="dungeon"] { display: flex; }
   padding: 0.4rem 1rem 0.5rem;
   flex: 1;
   overflow-y: auto;
-  scroll-behavior: smooth;
+  /* No smooth scroll-behavior: the auto-pin to newest must land INSTANTLY,
+     otherwise rapid messages make it chase the bottom and fall behind. */
   font-size: 0.85rem;
   line-height: 1.35;
   display: flex; flex-direction: column; gap: 0.2rem;

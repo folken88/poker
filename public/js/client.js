@@ -598,6 +598,7 @@
   }
 
   let _chatIdleTimer = null;   // drifts the chat back to newest after the reader idles
+  let _chatStuck = true;       // sticky-to-bottom; only a deliberate scroll-up clears it
   function setScreen(name) {
     document.body.dataset.screen = name;
     // Landing on the table (incl. returning from the dungeon) → snap chat to newest.
@@ -2270,58 +2271,53 @@
       `<span class="chat-entry__time">${fmtClock(entry.ts)}</span>` +
       `<span class="chat-entry__text">${escapeText(entry.text)}</span>`;
     list.appendChild(li);
-    // Auto-scroll only if user is already near the bottom; don't yank them
-    // back if they've scrolled up to read history.
-    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < CHAT_NEAR_BOTTOM_PX;
-    if (nearBottom) list.scrollTop = list.scrollHeight;
-    else {
-      // New chat arrived while they're reading history — flag the jump arrow.
-      const jb = $('#chatJump');
-      if (jb) jb.classList.add('chat-jump--new');
-    }
+    // STICKY: while stuck to the bottom, pin to the newest INSTANTLY on every
+    // message (no smooth chase, no re-deriving "near bottom" — incidental nudges
+    // can't knock it loose). While unstuck (the reader deliberately scrolled up),
+    // just flag the jump arrow so they keep their place.
+    if (_chatStuck) list.scrollTop = list.scrollHeight;
+    else { const jb = $('#chatJump'); if (jb) jb.classList.add('chat-jump--new'); }
     updateChatJump();
   }
-  // Snap the chat to the newest message and cancel any pending idle-return.
-  const CHAT_IDLE_RETURN_MS = 20000;   // scrolled-up reader drifts back to bottom after this
-  const CHAT_NEAR_BOTTOM_PX = 24;      // "at the bottom" tolerance — small so the jump arrow shows as soon as you scroll up
+  // Snap the chat to the newest message, re-stick, and cancel any idle-return.
+  const CHAT_IDLE_RETURN_MS = 20000;   // a scrolled-up reader drifts back to bottom after this
+  const CHAT_STICK_PX = 48;            // within this of the bottom counts as "at the bottom" — generous so small nudges don't unstick
   function scrollChatToBottom() {
     const list = $('#chatList');
     if (!list) return;
     clearTimeout(_chatIdleTimer); _chatIdleTimer = null;
+    _chatStuck = true;
     list.scrollTop = list.scrollHeight;
     const jb = $('#chatJump');
     if (jb) jb.classList.remove('chat-jump--new');
     updateChatJump();
   }
   // ── Chat "jump to present" arrow ────────────────────────────────────
-  // Visible only when scrolled up; click snaps to the newest message.
+  // Shown only when unstuck (the reader scrolled up); click re-sticks to newest.
   function updateChatJump() {
-    const list = $('#chatList');
     const jb = $('#chatJump');
-    if (!list || !jb) return;
-    const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < CHAT_NEAR_BOTTOM_PX;
-    jb.hidden = nearBottom;
-    if (nearBottom) jb.classList.remove('chat-jump--new');
+    if (!jb) return;
+    jb.hidden = _chatStuck;
+    if (_chatStuck) jb.classList.remove('chat-jump--new');
   }
   (function wireChatJump() {
     const list = $('#chatList');
     const jb = $('#chatJump');
     if (!list || !jb) return;
-    jb.addEventListener('click', () => {
-      list.scrollTop = list.scrollHeight;   // smooth via CSS scroll-behavior
-      jb.classList.remove('chat-jump--new');
-      updateChatJump();
-    });
+    jb.addEventListener('click', scrollChatToBottom);
     let raf = 0;
     list.addEventListener('scroll', () => {
       if (raf) return;
       raf = requestAnimationFrame(() => {
         raf = 0;
-        updateChatJump();
-        // If the reader is scrolled up, drift back to the newest after they idle.
+        // Stuck iff at/within a hair of the bottom. A deliberate scroll-up moves
+        // well past CHAT_STICK_PX → unstick; landing back at the bottom re-sticks.
+        // Our own instant pin lands at the bottom, so it stays stuck.
+        const dist = list.scrollHeight - list.scrollTop - list.clientHeight;
+        _chatStuck = dist <= CHAT_STICK_PX;
         clearTimeout(_chatIdleTimer); _chatIdleTimer = null;
-        const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < CHAT_NEAR_BOTTOM_PX;
-        if (!nearBottom) _chatIdleTimer = setTimeout(scrollChatToBottom, CHAT_IDLE_RETURN_MS);
+        if (!_chatStuck) _chatIdleTimer = setTimeout(scrollChatToBottom, CHAT_IDLE_RETURN_MS);
+        updateChatJump();
       });
     }, { passive: true });
     updateChatJump();
