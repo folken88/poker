@@ -21,6 +21,12 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-02
 
+### ♠️ Bots — a little "mood"
+- Each bot now has a small mood that **drifts hand-to-hand** — some hands they're
+  feeling a touch braver (fold a bit less, open a hair more), some a touch more
+  cautious. It's subtle by design, just enough that the AI don't feel like fixed
+  formulas and play a bit more like people having good and bad days.
+
 ### ♠️ Bots — looser preflop (cheap to see a flop)
 - AI were folding too much before the flop. Now a **cheap call (≈25–75g, up to 1.5
   big blinds) keeps them in** with most hands to see the flop, while a **real early

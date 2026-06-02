@@ -76,6 +76,11 @@ class Bot {
     // Higher intelligence "remembers" more samples; lower intel
     // forgets faster (cap applied in noteOpponentReveal).
     this._opponentMemory = new Map();
+    // "Mood": a small value in [-1, 1] that drifts hand-to-hand (see maybeShiftMode).
+    // Positive = feeling braver today (folds a little less, opens a hair more),
+    // negative = more cautious. Gentle on purpose — just enough hand-to-hand
+    // variance that the bots don't feel like fixed formulas to human players.
+    this._mood = (Math.random() - 0.5) * 0.6;
   }
 
   /** Record that we saw an opponent's hand at showdown / fold-win.
@@ -145,14 +150,18 @@ class Bot {
     const v = this._perceivedStrength(trueStrength);
     const tag = `${this.mode}/${this.intelligence}`;
 
+    // Today's mood (see maybeShiftMode): braver (>0) folds a touch less and opens a
+    // hair more; cautious (<0) the reverse. Small, drifting, per-bot variance.
+    const mood = this._mood || 0;
+
     // VALUE-OVER-BLUFF REBALANCE (high-intel only). A skilled player extracts
     // THIN value: because it reads hands accurately (low noise), it can
     // profitably bet a touch weaker than its mode's base raiseThresh when it
     // gets to open. Lifts the value side of the bluff:value ratio to pair with
     // the reduced bluffProb above. Floor keeps it from value-betting junk.
-    const valueThresh = this.intelligence === 'high'
+    const valueThresh = (this.intelligence === 'high'
       ? Math.max(0.42, tuning.raiseThresh - 0.06)
-      : tuning.raiseThresh;
+      : tuning.raiseThresh) - mood * 0.05;   // braver mood opens a hair thinner
 
     // ─── Wealth context (chips + magic items) ────────────────────────────────
     // High-intel bots use this accurately; low-intel ones mostly ignore it
@@ -340,7 +349,7 @@ class Bot {
                       : toCall <= bb * 3   ? 0.16
                       :                      0.06;
     }
-    const foldThreshold = clamp01(baseFold + potOdds * 0.40 + tuning.foldBias + wealthFoldAdj + aggCredAdj + bluffAdj - preflopDiscount);
+    const foldThreshold = clamp01(baseFold + potOdds * 0.40 + tuning.foldBias + wealthFoldAdj + aggCredAdj + bluffAdj - preflopDiscount - mood * 0.08);
 
     if (v < foldThreshold) {
       return { action: 'fold', reason: `fold v=${v.toFixed(2)} fT=${foldThreshold.toFixed(2)} ${tag}` };
@@ -352,8 +361,8 @@ class Bot {
     }
 
     // Strong → raise. Risky promotes monsters to all-in; cautious does so
-    // only on near-nuts (the patient bot's payoff move).
-    if (v > tuning.raiseThresh) {
+    // only on near-nuts (the patient bot's payoff move). Mood shades the bar.
+    if (v > tuning.raiseThresh - mood * 0.05) {
       if (this.mode === 'risky' && v >= tuning.monsterThresh) {
         return { action: 'allin', reason: `monster v=${v.toFixed(2)} ${tag}` };
       }
@@ -370,9 +379,13 @@ class Bot {
     return { action: 'call', reason: `call v=${v.toFixed(2)} odds=${potOdds.toFixed(2)} ${tag}` };
   }
 
-  /** Possibly shift current mode. Tends to drift back to baseMode over time. */
+  /** Possibly shift current mode. Tends to drift back to baseMode over time.
+   *  Also nudges "mood" every hand — a slow random walk that mean-reverts to
+   *  neutral, giving small hand-to-hand bravery variance (not a personality flip). */
   maybeShiftMode() {
     const rng = Math.random;
+    // Mood drift: decay toward 0 + a small random kick, clamped to [-1, 1].
+    this._mood = clamp(-1, 1, (this._mood || 0) * 0.85 + (rng() - 0.5) * 0.6);
     if (rng() > 0.18) return false;
     let next;
     if (this.mode !== this.baseMode && rng() < 0.6) {
