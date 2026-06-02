@@ -250,6 +250,11 @@
   // TTS queue can hold non-urgent narration until the audio ends
   // (prevents the screen-reader voice from talking over the
   // character voice or vice versa).
+  // Shared "through the floor" SPEECH muffle — used IDENTICALLY both directions
+  // (dungeon voices overheard at the table, and table banter overheard from the
+  // dungeon). Lower Hz = more muffled.
+  const VOICE_MUFFLE_HZ = 480;
+  const VOICE_MUFFLE_VOL = 0.62;
   function playBase64Mp3(b64, mime = 'audio/mpeg', muffle = false, onEnded = null) {
     const done = () => { if (onEnded) { const cb = onEnded; onEnded = null; try { cb(); } catch (_) {} } };
     try {
@@ -260,17 +265,17 @@
       const blob = new Blob([bytes], { type: mime });
       const url = URL.createObjectURL(blob);
       // Heard through the floor (dungeon voices at the table, or table banter from
-      // the dungeon) → low-pass + a touch quieter. SPEECH needs a higher cutoff
-      // than combat thumps to read as "muffled talking" — 378Hz killed it, 820Hz
-      // was too clear, so ~600Hz is the middle ground: clearly talking, but muddy.
+      // the dungeon) → low-pass + quieter. ONE shared setting (VOICE_MUFFLE_*) so
+      // both directions sound identical. 378Hz was inaudible, 820 too clear, 600
+      // a touch clear — 480Hz reads as muddy-but-clearly-talking through a floor.
       if (muffle) {
         const ctx = audioCtx();
         if (ctx) {
           try {
             const a = new Audio(url);
             const srcNode = ctx.createMediaElementSource(a);
-            const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600; lp.Q.value = 0.7;
-            const g = ctx.createGain(); g.gain.value = _voiceVolume * 0.66;
+            const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = VOICE_MUFFLE_HZ; lp.Q.value = 0.7;
+            const g = ctx.createGain(); g.gain.value = _voiceVolume * VOICE_MUFFLE_VOL;
             srcNode.connect(lp); lp.connect(g); g.connect(ctx.destination);
             a.addEventListener('ended', () => { URL.revokeObjectURL(url); try { srcNode.disconnect(); lp.disconnect(); g.disconnect(); } catch (_) {} done(); });
             a.play().catch(() => { URL.revokeObjectURL(url); done(); });
@@ -1003,8 +1008,9 @@
       // Both gated by the same banter-voice toggle.
       if (_bannerVoiceEnabled && entry.kind === 'banter') {
         if (entry.audioUrl) {
-          // In the dungeon, table banter (incl. Crisp/Elfrip chirps) is muffled.
-          if (_inDungeon) { playUrl(entry.audioUrl, _voiceVolume * 0.6, true, 378); }
+          // In the dungeon, table banter (incl. Crisp/Elfrip chirps) is muffled —
+          // SAME muffle as the 11labs voices (shared VOICE_MUFFLE_* constants).
+          if (_inDungeon) { playUrl(entry.audioUrl, _voiceVolume * VOICE_MUFFLE_VOL, true, VOICE_MUFFLE_HZ); }
           else {
             try {
               const a = new Audio(entry.audioUrl);
