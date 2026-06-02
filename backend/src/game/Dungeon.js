@@ -164,12 +164,14 @@ function lootForCR(cr) {
   const maxTier = cr >= 16 ? 5 : cr >= 13 ? 4 : cr >= 10 ? 3 : cr >= 7 ? 2 : 1;
   return { chance, maxTier };
 }
-// When an item drops, lesser enhancements are far likelier than great ones
-// (mirrors PF's minor/medium/major item weighting): +1 is the common case.
+// A drop CENTERS on the encounter's ceiling so treasure actually scales with CR:
+// it's either the max tier or one below (50/50). A CR-9 boss (max +2) gives +1/+2,
+// a CR-11 (max +3) gives +2/+3, a CR-16 (max +5) gives +4/+5 — instead of the old
+// behaviour that buried everything at +1 regardless of how nasty the fight was.
 function rollLootTier(maxTier) {
-  let t = 1;
-  while (t < maxTier && Math.random() < 0.4) t++;
-  return t;
+  if (maxTier <= 1) return 1;
+  const floor = Math.max(1, maxTier - 1);
+  return floor + (Math.random() < 0.5 ? 1 : 0);
 }
 // Cure potions also drop (CR-scaled), auto-quaffed by the most-hurt ally.
 function potionForCR(cr) {
