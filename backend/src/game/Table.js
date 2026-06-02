@@ -829,12 +829,18 @@ class Table {
     const bot = this.bots.get(actor);
     if (!bot) return;
 
-    // Mode-flavored thinking delay: risky 1d4s, standard 1d10s, cautious 1d29s.
-    const delay = rollBotDelayMs(bot.mode);
-    // Surface the bot's deadline so the topbar clock ticks for everyone,
-    // not just humans. Callers broadcast after all timer setup is done —
-    // no internal broadcast here so we never emit a half-updated state.
-    this.actionDeadline = Date.now() + delay;
+    // The clock shows every bot the SAME fixed allotment — the MAX time they're
+    // given — regardless of how long they'll actually take, so the countdown can't
+    // telegraph a snap-decision vs a long brood.
+    const AI_TURN_MS = 15000;
+    // Hidden, mode-flavored think time (risky ~1-4s, standard ~1-10s, cautious
+    // longer) — when the bot ACTUALLY acts. Capped just inside the allotment so it
+    // never acts after the displayed timer would hit zero.
+    const delay = Math.min(rollBotDelayMs(bot.mode), AI_TURN_MS - 300);
+    // Surface the FULL allotment (not `delay`) so the topbar clock ticks down the
+    // fixed 15s max for everyone — not the bot's real think time. Callers broadcast
+    // after timer setup, so we never emit a half-updated state here.
+    this.actionDeadline = Date.now() + AI_TURN_MS;
     const expectedHand = this.hand;
     this._botActionTimer = setTimeout(() => {
       this._botActionTimer = null;
