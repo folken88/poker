@@ -878,7 +878,7 @@ async function dungeonLine(nick, eventType, ctx = {}) {
   const messages = [
     { role: 'system', content:
       `You are ${nick}, ${flavor} RIGHT NOW you are crawling a monster-infested dungeon with a party (NOT at the poker table). ` +
-      `Bark ONE short, in-character reaction / trash-talk line (MAX ~14 words) — cocky, funny, or pissed off, true to your personality. ` +
+      `Bark ONE short, in-character battle line (MAX ~14 words). You are IN THE THICK OF COMBAT — put real HEAT into it: excitement, fury, triumph, alarm, bloodlust, or pain, whatever the moment calls for. SHOUT it — exclaim! Cocky, funny, or pissed off, true to your personality. ` +
       `No quotes, no stage directions, no emoji — just the spoken line. Golarion only (no Earth gods; "god" filler is banned).` },
     { role: 'user', content: `React to this: ${ev}.` },
   ];
@@ -893,7 +893,13 @@ async function dungeonLine(nick, eventType, ctx = {}) {
     // the LINE itself is generated from his own (nick's) creepy personality.
     const vNick = ctx.voiceNick || nick;
     const voiceId = voiceFor(vNick);
-    if (voiceId) { try { audio = await elevenlabs.synthesize(line, voiceId, settingsFor(vNick)); } catch (_) {} }
+    // They're mid-COMBAT — crank the emotion vs. the calm table voice: lower
+    // stability (bigger emotional swing), much higher style (exaggerated, shouted
+    // delivery), and a touch faster/urgent. Overlaid on the character's own
+    // voice settings (their identity/similarity stays; only the energy changes).
+    const COMBAT_VOICE = { stability: 0.30, style: 0.55, speed: 1.02 };
+    const settings = { ...(settingsFor(vNick) || {}), ...COMBAT_VOICE };
+    if (voiceId) { try { audio = await elevenlabs.synthesize(line, voiceId, settings); } catch (_) {} }
   }
   return { line, audio, audioMime: 'audio/mpeg' };
 }
