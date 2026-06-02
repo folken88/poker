@@ -44,6 +44,13 @@ Thanks to the regulars whose suggestions made it into the game:
   magic item, and it's +1 or better** (tier still scales with their CR) — so the
   Brass Golem and Barbed Devil are guaranteed gear.
 
+### 🧪 Dungeon — cure potions in the loot
+- Rooms can now drop **Potions of Cure Wounds** (separate from gear, so the boss
+  gear guarantee stands). They're **auto-rolled and quaffed by the most-hurt
+  ally**, with the heal noted in chat. Strength scales with the room's CR —
+  **Cure Light (1d8+1)** early, **Moderate (2d8+3)** mid, **Serious (3d8+5)** in
+  the deep/boss rooms. If everyone's already healthy, the potion is hocked for gold.
+
 ### ⚡ Dungeon — initiative reflects your level
 - Characters (human and AI) add **½ their level (rounded down)** to initiative —
   the more geared you are, the likelier you act first.

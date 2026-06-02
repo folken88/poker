@@ -125,6 +125,12 @@ function rollLootTier(maxTier) {
   while (t < maxTier && Math.random() < 0.4) t++;
   return t;
 }
+// Cure potions also drop (CR-scaled), auto-quaffed by the most-hurt ally.
+function potionForCR(cr) {
+  if (cr >= 10) return { name: 'Cure Serious Wounds',  count: 3, die: 8, bonus: 5, gp: 750 };
+  if (cr >= 5)  return { name: 'Cure Moderate Wounds', count: 2, die: 8, bonus: 3, gp: 300 };
+  return          { name: 'Cure Light Wounds',    count: 1, die: 8, bonus: 1, gp: 50 };
+}
 
 let _uidSeq = 0;
 
@@ -408,6 +414,7 @@ class Dungeon {
     this._note(`✨ Room cleared! +${gold} gp (pool ${this.runGold} gp).`);
     this._log('clear', { gold, runGold: this.runGold });
     this._maybeDropLoot();
+    this._maybeDropPotion();
     this._broadcast();
   }
   _runOver() {
@@ -433,6 +440,31 @@ class Dungeon {
     const tier = rollLootTier(maxTier);
     const slot = pick(db.GEAR_SLOT_KEYS);
     this._startLootRoll(slot, tier, eligible.map(m => m.playerId));
+  }
+  // Cure potions drop separately from gear (so the boss gear guarantee stands) and
+  // are auto-rolled + quaffed by the most-hurt living ally. Strength scales with CR.
+  _maybeDropPotion() {
+    if (!this.enemies.length) return;
+    const topCR = Math.max(0, ...this.enemies.map(e => crToNum(e.cr)));
+    const effCR = topCR + (this.enemies.length >= 4 ? 1 : 0);
+    let chance = Math.min(0.35, 0.12 + 0.02 * effCR);
+    if (this.enemies.some(e => e.boss)) chance = Math.min(0.55, chance + 0.2);
+    if (Math.random() >= chance) return;
+    const p = potionForCR(effCR);
+    let heal = p.bonus; for (let i = 0; i < p.count; i++) heal += dRoll(p.die);   // auto-roll e.g. 2d8+3
+    // Most-hurt living ally (lowest HP fraction) drinks it.
+    const hurt = this.alivePresent().filter(m => m.hp < m.maxHp).sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+    if (hurt.length) {
+      const m = hurt[0], before = m.hp;
+      m.hp = Math.min(m.maxHp, m.hp + heal);
+      const gained = m.hp - before;
+      this._note(`🧪 A Potion of ${p.name} drops — ${m.nickname} quaffs it (rolled ${p.count}d${p.die}+${p.bonus}): +${gained} HP (now ${m.hp}/${m.maxHp}).`);
+      this._log('potion', { name: p.name, who: m.playerId, rolled: heal, gained });
+    } else {
+      const sell = Math.floor(p.gp / 2); this.runGold += sell;
+      this._note(`🧪 A Potion of ${p.name} drops, but everyone's hale — hocked for ${sell} gp (pool ${this.runGold} gp).`);
+      this._log('potion_sold', { name: p.name, sell });
+    }
   }
   // Everyone present rolls 1d20 or passes; highest roll claims the item. AI
   // ALWAYS rolls (and auto-equips an upgrade, else hocks it for the pool).
