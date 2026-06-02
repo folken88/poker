@@ -560,8 +560,9 @@ class Dungeon {
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
-    let dmg = dRoll(weapon.dmgDie) + weapon.dmgBonus - sick, crit = false;
-    if (roll >= weapon.critRange) { const conf = dRoll(20) + lvl; if (conf === 20 || conf >= ac) { crit = true; dmg += dRoll(weapon.dmgDie) + weapon.dmgBonus; } }
+    const lvlDmg = Math.floor(lvl / 2);     // characters add ½ level (rounded down) to damage
+    let dmg = dRoll(weapon.dmgDie) + weapon.dmgBonus + lvlDmg - sick, crit = false;
+    if (roll >= weapon.critRange) { const conf = dRoll(20) + lvl; if (conf === 20 || conf >= ac) { crit = true; dmg += dRoll(weapon.dmgDie) + weapon.dmgBonus + lvlDmg; } }
     return { hit: true, crit, damage: Math.max(1, dmg), roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
   _monsterSwing(e, targetAC) {
