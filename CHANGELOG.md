@@ -21,6 +21,12 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-01
 
+### 🛡️ Everyone wears a Chain Shirt now (+4 AC baseline)
+- All characters — human **and** AI — start with a free mundane **Chain Shirt
+  (+4 AC)**, before buying anything. Purchasing **Full Plate** replaces it; if you
+  **hock your Full Plate**, you drop back to the chain shirt (not bare skin). The
+  bank and seat cards label the baseline so it's clear you're never unarmored.
+
 ### 🗡️ Dungeon — character levels (gear-based)
 - Every delver (human **and** AI ally) now has a **level = 1 + the total of their
   magic-item bonuses** (minimum 1). So a **+1 ring and a +1 sword make you Lv 3**.

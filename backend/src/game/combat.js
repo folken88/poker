@@ -81,14 +81,16 @@ function weaponOf(gear) {
  *  Ring of Protection is deflection: it raises AC but isn't a physical block. */
 function acOf(gear) {
   let ac = 10, physical = 0;
-  if (gear) {
-    const armor = Number(gear.armor) || 0;
-    const shield = Number(gear.shield) || 0;
-    const ring = Number(gear.ring) || 0;
-    if (armor >= 1)  { const v = 9 + armor;  ac += v; physical += v; }
-    if (shield >= 1) { const v = 2 + shield; ac += v; physical += v; }
-    if (ring >= 1)   { ac += ring; }
-  }
+  const armor = Number(gear?.armor) || 0;
+  const shield = Number(gear?.shield) || 0;
+  const ring = Number(gear?.ring) || 0;
+  // Everyone — human and AI — wears at least a mundane Chain Shirt (+4 AC) for
+  // free. Buying Full Plate (+N) replaces it with 9+N; hocking the plate (armor
+  // back to 0) reverts to the chain shirt. Both are physical (they CLANG).
+  const armorAC = armor >= 1 ? (9 + armor) : 4;
+  ac += armorAC; physical += armorAC;
+  if (shield >= 1) { const v = 2 + shield; ac += v; physical += v; }
+  if (ring >= 1)   { ac += ring; }
   return { ac, physical };
 }
 

@@ -1832,7 +1832,10 @@
     if (!gear) return '';
     const cells = GEAR_SLOTS.map(slot => {
       const tier = gear[slot] || 0;
-      if (!tier) return `<span class="seat__gear-cell seat__gear-cell--empty" title="${GEAR_META[slot].label}: not owned">${GEAR_SVGS[slot]}</span>`;
+      if (!tier) {
+        const t = slot === 'armor' ? 'Chain Shirt (+4 AC) — Full Plate not owned' : `${GEAR_META[slot].label}: not owned`;
+        return `<span class="seat__gear-cell seat__gear-cell--empty" title="${t}">${GEAR_SVGS[slot]}</span>`;
+      }
       const cls = tier === 5 ? 'seat__gear-cell--max' : '';
       return `<span class="seat__gear-cell ${cls}" title="+${tier} ${GEAR_META[slot].label}">${GEAR_SVGS[slot]}<sup>+${tier}</sup></span>`;
     }).join('');
@@ -1868,7 +1871,9 @@
       const sellValue = cur ? Math.floor(gearPrice(slot, cur) / 2) : 0;
       const tierBadge = cur
         ? `<span class="bank__tier bank__tier--${cur===5?'max':'on'}">+${cur}</span>`
-        : `<span class="bank__tier bank__tier--off">—</span>`;
+        : (slot === 'armor'
+            ? `<span class="bank__tier bank__tier--off" title="Chain Shirt — free baseline armor (+4 AC) until you buy Full Plate">Chain</span>`
+            : `<span class="bank__tier bank__tier--off">—</span>`);
       const upgradeBtn = next
         ? `<button type="button" class="bank__btn bank__btn--buy" ${canAfford?'':'disabled'} data-buy-slot="${slot}" data-buy-tier="${next}" title="${cur?'Upgrade to':'Buy a'} +${next} ${meta.label} for ${upgradeCost.toLocaleString()} gp">${cur?'+':'Buy +'}${next}<br><small>${formatChips(upgradeCost)} gp</small></button>`
         : `<button type="button" class="bank__btn bank__btn--max" disabled title="Maxed">+5 ✓</button>`;
