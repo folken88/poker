@@ -29,6 +29,11 @@ const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
 const SICKENED_PENALTY = 2;
 const PARALYZE_DC = 14;
+// We don't roll ability scores — instead every character is assumed to have an 18
+// in their attack stat, granting the standard +4 ability modifier to hit AND to
+// damage (the latter doubles on a crit, like any static damage mod in PF1e). This
+// is the missing "STR/DEX" piece on top of level (BAB-ish) and gear.
+const ABILITY_MOD = 4;
 const AFK_PASS_MS    = 10_000; // idle on your turn → auto-pass after 10s
 const ENEMY_STEP_MS  = 750;    // pacing between auto-resolved enemy/ally turns
 const BOSS_EVERY     = 5;
@@ -554,15 +559,16 @@ class Dungeon {
   _swingVsAC(attacker, ac) {
     const weapon = attacker.weapon;
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
-    const lvl = attacker.level || 1;        // to-hit scales with level, not weapon tier
-    const toHit = lvl - sick;
+    const lvl = attacker.level || 1;        // level (1 + gear) = BAB-ish; to-hit also gets the +4 stat mod
+    const toHit = lvl + ABILITY_MOD - sick;
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
-    const lvlDmg = Math.floor(lvl / 2);     // characters add ½ level (rounded down) to damage
-    let dmg = dRoll(weapon.dmgDie) + weapon.dmgBonus + lvlDmg - sick, crit = false;
-    if (roll >= weapon.critRange) { const conf = dRoll(20) + lvl; if (conf === 20 || conf >= ac) { crit = true; dmg += dRoll(weapon.dmgDie) + weapon.dmgBonus + lvlDmg; } }
+    // Damage = weapon die + weapon enhancement + ½ level (scaling) + ability mod (flat).
+    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD;
+    let dmg = dRoll(weapon.dmgDie) + weapon.dmgBonus + flatDmg - sick, crit = false;
+    if (roll >= weapon.critRange) { const conf = dRoll(20) + lvl + ABILITY_MOD; if (conf === 20 || conf >= ac) { crit = true; dmg += dRoll(weapon.dmgDie) + weapon.dmgBonus + flatDmg; } }
     return { hit: true, crit, damage: Math.max(1, dmg), roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
   _monsterSwing(e, targetAC) {

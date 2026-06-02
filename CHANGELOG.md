@@ -51,11 +51,15 @@ Thanks to the regulars whose suggestions made it into the game:
   **Cure Light (1d8+1)** early, **Moderate (2d8+3)** mid, **Serious (3d8+5)** in
   the deep/boss rooms. If everyone's already healthy, the potion is hocked for gold.
 
-### ⚡ Dungeon — your level helps you hit harder & act first
-- Characters (human and AI) add **½ their level (rounded down)** to **melee damage**
-  (doubled on a crit) and to **initiative** — geared delvers were having trouble
-  putting down even weak monsters, so leveling now pays off in the swing, not just
-  the to-hit. The more gear you carry, the harder and faster you fight.
+### ⚔️ Dungeon — characters fight like real adventurers now
+- We don't roll ability scores, so every character is assumed to have an **18 in
+  their attack stat → a flat +4 to hit and +4 to damage** (doubled on a crit, like
+  any stat mod). That was the missing "STR/DEX" piece — a fresh delver now actually
+  *lands* hits on wimpy monsters instead of flailing.
+- On top of that, characters add **½ their level (rounded down)** to **melee damage**
+  and to **initiative**, so gear keeps paying off as you go deeper.
+- Net: a gearless Lv 1 swings at **+5 to hit** for a solid 5–8 a pop; magic weapons
+  stack their **+N to hit and damage** (the damage doubling on crits) right on top.
 
 ### 🛡️ Everyone wears a Chain Shirt now (+4 AC baseline)
 - All characters — human **and** AI — start with a free mundane **Chain Shirt
