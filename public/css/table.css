@@ -2216,7 +2216,11 @@ body[data-screen="dungeon"] .screen[data-show-on="dungeon"] { display: flex; }
    while you're scrolled away. Click to snap back to the newest message. */
 .chat-jump {
   position: absolute;
-  right: 1.1rem;
+  /* Hug the RIGHT EDGE OF THE CHAT COLUMN (the .chat-panel__list is a centered
+     760px column, so its scrollbar sits mid-screen on wide monitors — not at the
+     panel's far-right edge). This keeps the arrow next to the scrollbar where the
+     eye expects it, collapsing to the panel edge on narrow screens. */
+  right: calc(max(0px, (100% - 760px) / 2) + 0.4rem);
   bottom: 3.6rem;       /* clears the input form below */
   z-index: 8;
   width: 34px; height: 34px;
