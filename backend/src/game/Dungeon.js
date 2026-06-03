@@ -1137,6 +1137,54 @@ class Dungeon {
     //     while there are foes to fight and the party isn't already hasted.
     const haste = avail.find(a => a.effect === 'haste');
     if (haste && !(m.hasted > 0)) return { slot: slot(haste), payload: {} };
+    // 2c) Arcane controllers (wizard, sorcerer) play the battlefield: by default
+    //     they pick the spell that AFFECTS THE MOST foes — a wide blast (Fireball,
+    //     Lightning Bolt, Burning Hands) or a mass lockdown (Sleep, Grease). But
+    //     when a lone outsized foe ("boss") looms, they spike it with their
+    //     hardest single-target nuke (Disintegrate / Cone of Cold) or pin it with
+    //     a save-or-suck debuff (Hold Person). NOTE: some 'aoe'-tagged spells only
+    //     hit one target (maxTargets 1), so coverage = min(foes, maxTargets).
+    if (m.cls === 'wizard' || m.cls === 'sorcerer') {
+      const SPELLISH = ['aoe', 'grease', 'sleep', 'fascinate', 'bolt', 'missile', 'touch', 'rays', 'save_debuff'];
+      const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
+      const cand = [];
+      for (const a of avail) {
+        if (!SPELLISH.includes(a.effect)) continue;
+        const cap = a.maxTargets || 1;
+        const affects = Math.max(1, Math.min(targets.length, cap));
+        const single = cap < 2;
+        const isDebuff = a.effect === 'save_debuff' || ['grease', 'sleep', 'fascinate'].includes(a.effect);
+        // Rough damage rank for boss focus: 'level'/'halflevel' dice scale with
+        // caster level; a numeric dice count is taken as-is. Debuffs rank 0.
+        const power = isDebuff ? 0 : (typeof a.dice === 'number' ? a.dice : lvl) * (a.die || 6);
+        const payload = single ? { targetUid: weakFirst[0].uid } : { targetUids: weakFirst.slice(0, cap).map(e => e.uid) };
+        cand.push({ ab: a, payload, affects, single, isDebuff, power });
+      }
+      if (cand.length) {
+        const byHp = targets.slice().sort((a, b) => b.maxHp - a.maxHp);
+        const boss = (byHp.length >= 2 && byHp[0].maxHp >= 1.6 * byHp[1].maxHp) ? byHp[0]
+                   : (byHp.length === 1 ? byHp[0] : null);
+        let chosen = null;
+        if (boss) {
+          // Hardest single-target nuke on the boss (Disintegrate first), else a
+          // single-target debuff (Hold Person) to take it out of the fight.
+          const nuke = cand.filter(c => c.single && !c.isDebuff)
+                           .sort((x, y) => (y.power - x.power) || ((y.ab.minLevel || 1) - (x.ab.minLevel || 1)))[0];
+          const dbf = cand.find(c => c.single && c.ab.effect === 'save_debuff');
+          const c = nuke || dbf;
+          if (c) chosen = { ab: c.ab, payload: { targetUid: boss.uid } };
+        }
+        if (!chosen) {
+          // No boss → control the crowd: most-foes-affected wins, with a nudge
+          // away from last turn's spell so they vary their blasts.
+          const best = Math.max(...cand.map(c => c.affects));
+          const top = cand.filter(c => c.affects === best);
+          const c = top.find(o => o.ab.key !== m._lastAbilityKey) || top[0];
+          chosen = { ab: c.ab, payload: c.payload };
+        }
+        return { slot: slot(chosen.ab), payload: chosen.payload };
+      }
+    }
     // 3+4) Offense — gather usable options in priority order (group blast →
     //      single-target spell → maneuver), then prefer one we did NOT use last
     //      turn. That variety stops a bot from spamming ONE ability — and its one
@@ -1683,9 +1731,12 @@ class Dungeon {
     const cureAmt = () => Math.max(1, dRollN(ab.healDice || 1, 8) + Math.min(ab.healCap || lvl, lvl));
     if (ab.heal === 'party') {
       const allies = this.livingParty();
+      // PF1e: a channel rolls its healing ONCE and applies that same amount to
+      // every target in the burst — no per-ally re-roll.
+      const h = channelAmt();
       const parts = [];
-      for (const a of allies) { const h = channelAmt(); a.hp = Math.min(a.maxHp, a.hp + h); parts.push(`${a.nickname} +${h}`); }
-      this._note(`${ab.icon} ${m.nickname} channels positive energy — ${parts.join(', ')}.`, sound);
+      for (const a of allies) { a.hp = Math.min(a.maxHp, a.hp + h); parts.push(`${a.nickname} ${a.hp}/${a.maxHp}`); }
+      this._note(`${ab.icon} ${m.nickname} channels positive energy — +${h} to the party (${parts.join(', ')}).`, sound);
     } else {
       const allies = this.livingParty();
       const target = allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
