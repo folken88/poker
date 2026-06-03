@@ -620,6 +620,7 @@ class Dungeon {
       hellfire: base.hellfire || null,     // barbed devil: hellfire blast (fire AoE)
       hellfireLeft: base.hellfire ? 2 : 0,
       prayed: 0,                           // cleric Prayer: −1 to this enemy's attacks/damage/saves
+      acid: null,                          // Acid Arrow lingering burn: { rounds, dice, die }
       resist: base.resist || null,         // energy resistances / vulnerabilities (see RESIST_BY_KEY)
       flying: !!base.flying,               // airborne: immune to prone + "high ground" vs grounded foes
       evasion: !!base.evasion,             // rogues/monks: a made Reflex save vs an area effect = NO damage
@@ -687,6 +688,15 @@ class Dungeon {
     if (t.kind === 'enemy') {
       const e = this.enemies.find(x => x.uid === t.id);
       if (!e || e.hp <= 0) return this._nextTurn();
+      // Acid Arrow keeps eating away at the start of the foe's turn (whatever it
+      // then does). If the acid finishes it off, its turn just ends.
+      if (e.acid && e.acid.rounds > 0) {
+        e.acid.rounds -= 1;
+        const dealt = this._dmgE(e, Math.max(1, dRollN(e.acid.dice || 1, e.acid.die || 6)), 'acid');
+        if (e.acid.rounds <= 0) e.acid = null;
+        this._note(`🟢 Acid keeps sizzling on ${e.name} — ${dealt} acid${this._resistTag(e, 'acid')}.${this._afterEnemyHit(e)}`, null, { side: 'enemy' });
+        if (e.hp <= 0) { this._broadcast(); return this._nextTurn(); }
+      }
       if (e.fascinated) { this._note(`${e.glyph} ${e.name} stands fascinated — does nothing.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       if (e.paralyzed > 0) {
         if (e.heldDC) {   // Hold Person / Hideous Laughter: a NEW Will save each turn — costs the turn either way (PF1e).
@@ -2044,9 +2054,16 @@ class Dungeon {
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
-    const raw = Math.max(1, dRollN(this._spellDice(ab, m), ab.die || 6));
+    const dice = this._spellDice(ab, m);
+    const raw = Math.max(1, dRollN(dice, ab.die || 6));
     const dmg = this._dmgE(e, raw, ab.dtype);
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} jolts ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}.${this._afterEnemyHit(e)}`, sound);
+    let dotNote = '';
+    if (ab.dot && e.hp > 0) {   // Acid Arrow: it keeps eating away each of the foe's turns.
+      const rounds = Math.min(5, Math.max(1, Math.floor((m.level || 1) / 3)));   // 1 round per 3 caster levels
+      e.acid = { rounds, dice: Math.max(1, Math.floor(dice / 2)), die: ab.die || 6 };   // a fading burn (half the initial dice)
+      dotNote = ` It clings and KEEPS BURNING (${rounds} more round${rounds > 1 ? 's' : ''}).`;
+    }
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}.${dotNote}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   }
