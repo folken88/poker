@@ -21,6 +21,14 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-02
 
+### 🧹 Status polish & quality-of-life
+- Dungeon **buffs** now sit **top-left** of a hero card (debuffs top-right), and
+  **hovering any status icon** shows its **name + a short summary** of what it does.
+- Cut-off sound effects bumped from a **4s to a 5s** cutoff.
+- **Besmara** is now pronounced correctly in voice ("bez-marra").
+- Kicking an **AI** mid-hand now lets it **play the hand out** (it leaves after,
+  instead of being force-folded).
+
 ### 🏛️ Loan from Abadar — keep your gear
 - You no longer have to **hock your magic items first** to take a Loan from
   Abadar (just like the AI). Borrow a fresh stack **on top of** what you're

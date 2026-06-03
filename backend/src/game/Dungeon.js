@@ -363,11 +363,11 @@ class Dungeon {
   // (Same flag names on both, so one helper serves heroes and monsters.)
   _condList(o) {
     const I = '/dungeon/conditions/', c = [];
-    if (o.sickened > 0)  c.push({ key: 'sickened',  label: 'Sickened',  icon: `${I}sickened.webp` });
-    if (o.paralyzed > 0) c.push({ key: 'paralyzed', label: 'Paralyzed', icon: `${I}paralyzed.webp` });
-    if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   icon: `${I}stunned.webp` });
-    if (o.fascinated)    c.push({ key: 'asleep',    label: 'Asleep',    icon: `${I}sleep.webp` });
-    if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     icon: `${I}prone.webp` });
+    if (o.sickened > 0)  c.push({ key: 'sickened',  label: 'Sickened',  desc: '−2 to attacks & damage', icon: `${I}sickened.webp` });
+    if (o.paralyzed > 0) c.push({ key: 'paralyzed', label: 'Paralyzed', desc: 'frozen — loses turns; easy to hit', icon: `${I}paralyzed.webp` });
+    if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
+    if (o.fascinated)    c.push({ key: 'asleep',    label: 'Asleep',    desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
+    if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
     return c;
   }
 
@@ -377,21 +377,21 @@ class Dungeon {
   // their own flags.
   _buffList(m) {
     const I = '/dungeon/buffs/', c = [];
-    const push = (k, label) => c.push({ key: k, label, icon: `${I}${k}.webp` });
+    const push = (k, label, desc) => c.push({ key: k, label, desc, icon: `${I}${k}.webp` });
     const ap = m.buffApplied || {}, run = m.runBuffApplied || {};
-    if (ap.rage)        push('rage', 'Rage');
-    if (ap.bane)        push('bane', 'Bane');
-    if (ap.divinefavor) push('divinefavor', 'Divine Favor');
-    if (ap.prayer)      push('prayer', 'Prayer');
-    if (ap.shield || (m.buffs && m.buffs.ac > 0)) push('shield', 'Shield');
-    if (run.bless)      push('bless', 'Bless');
-    if (run.inspire)    push('inspire', 'Inspire Courage');
-    if (m.smiteActive)  push('smite', 'Smite');
-    if (m.hasted)       push('haste', 'Haste');
-    if (m.invisible)    push('invisible', 'Invisible');
-    if (m.judgment === 'destruction') push('judg_destruction', 'Judgement: Destruction');
-    if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection');
-    if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing');
+    if (ap.rage)        push('rage', 'Rage', '+2 hit & damage, −2 AC (this room)');
+    if (ap.bane)        push('bane', 'Bane', '+2 hit, +2d6+2 vs foes (this room)');
+    if (ap.divinefavor) push('divinefavor', 'Divine Favor', '+3 hit & damage (this room)');
+    if (ap.prayer)      push('prayer', 'Prayer', 'allies +1 hit & damage (this room)');
+    if (ap.shield || (m.buffs && m.buffs.ac > 0)) push('shield', 'Shield', '+4 AC (this room)');
+    if (run.bless)      push('bless', 'Bless', '+1 to hit — whole dungeon');
+    if (run.inspire)    push('inspire', 'Inspire Courage', 'allies +1 hit & damage — whole dungeon');
+    if (m.smiteActive)  push('smite', 'Smite', '+hit & +2×level damage vs evil');
+    if (m.hasted)       push('haste', 'Haste', 'an extra attack next turn');
+    if (m.invisible)    push('invisible', 'Invisible', 'unseen — until you attack');
+    if (m.judgment === 'destruction') push('judg_destruction', 'Judgement: Destruction', '+damage on your strikes');
+    if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection', '+AC');
+    if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing', 'regenerate HP each turn');
     return c;
   }
 

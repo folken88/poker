@@ -298,7 +298,15 @@ class Table {
     // the kicked player was the only AI at the table (no new hand starts,
     // no _afterHandComplete to consume the flag, seat stranded forever).
     if (this.hand && seat.inHand && this._inHandPlayerIds().has(playerId)) {
-      // Mid-hand: treat as a fold via the hand engine, then vacate after the hand resolves.
+      // Mid-hand. A BOT being told to leave "after this hand" PLAYS IT OUT — just
+      // flag the seat and let _afterHandComplete vacate it (same as the auto-yield
+      // path). No reason to fold a hand it's already in; folding throws away its
+      // equity. A HUMAN who clicks Leave folds out now and vacates after the hand.
+      if (seat.isBot) {
+        seat._standAfterHand = true;
+        this._broadcast();
+        return { ok: true };
+      }
       this._foldMidHandAndVacate(playerId, seat);
       return { ok: true };
     }

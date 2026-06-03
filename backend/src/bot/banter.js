@@ -122,6 +122,7 @@ function scrubHiccup(line) {
 // Sirona → "sih RHONA" (Rhona is read reliably as ROH-na).
 const SPOKEN_RESPELL = [
   [/\bSirona\b/gi, 'Sih-Rhona'],
+  [/\bBesmara\b/gi, 'Bez-Marra'],   // "bez marra"
 ];
 function speakable(text) {
   let out = String(text || '');

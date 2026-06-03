@@ -799,18 +799,20 @@
   }
   // A strip of PF1-system debuff icons (sickened / paralyzed / asleep / prone)
   // shown on a hero or monster card. Each is a small badge with a hover label.
+  // Hover title = "Name — short summary" (falls back to just the name).
+  const statusTitle = (c) => c.desc ? `${c.label} — ${c.desc}` : c.label;
   function condIcons(list) {
     if (!list || !list.length) return '';
     return `<div class="dcond">` + list.map(c =>
-      `<img class="dcond__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(c.label)}" loading="lazy" />`
+      `<img class="dcond__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(statusTitle(c))}" loading="lazy" />`
     ).join('') + `</div>`;
   }
-  // A strip of active BUFF icons (rage / shield / bless / smite / judgement…) along
-  // the bottom of a hero token — green ring marks a boon (vs the red debuff ring).
+  // A strip of active BUFF icons (rage / shield / bless / smite / judgement…) at
+  // the top-left of a hero token — green ring marks a boon (vs the red debuff ring).
   function buffIcons(list) {
     if (!list || !list.length) return '';
     return `<div class="dbuff">` + list.map(c =>
-      `<img class="dbuff__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(c.label)}" loading="lazy" />`
+      `<img class="dbuff__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(statusTitle(c))}" loading="lazy" />`
     ).join('') + `</div>`;
   }
   // Live-tick the dungeon auto-skip countdown badges (set by renderDungeon) so

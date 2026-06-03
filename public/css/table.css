@@ -72,10 +72,11 @@ button, input { font: inherit; color: inherit; }
 .dpc__avatar img, .dpc__avatar svg { width: 100%; height: 100%; object-fit: cover; display: block; }
 .dpc { align-items: center; text-align: center; }
 .dmon__name { font-size: 0.72rem; text-align: center; }
-/* PF1-system debuff icons — an OVERLAY on the token (top, left-to-right,
-   wrapping downward). Absolutely positioned so it never adds card height
-   (keeps the dungeon compact so the chat log stays on-screen); pointer-events
-   off so clicks still hit the target button underneath. */
+/* Status icons OVERLAY the token (absolute → never add card height, keeping the
+   dungeon compact). On a HERO card: BUFFS top-LEFT (green), DEBUFFS top-RIGHT
+   (red). On a monster card: debuffs span the top. Hover an icon for its name +
+   summary (hero icons get pointer-events; monster icons stay click-through so
+   you can still click the card to target). */
 .dcond {
   position: absolute; top: 3px; left: 3px; right: 3px;
   display: flex; flex-flow: row wrap; gap: 3px;
@@ -87,12 +88,10 @@ button, input { font: inherit; color: inherit; }
   background: rgba(0,0,0,0.55); padding: 1px;
   box-shadow: 0 0 0 1px rgba(217,72,72,0.85);   /* red ring = a debuff is active */
 }
-/* Active BUFFS — a strip along the BOTTOM of a hero card (green ring = a boon).
-   Absolute so it never changes card height. */
 .dbuff {
-  position: absolute; top: 26px; left: 4px; right: 4px;
+  position: absolute; top: 3px; left: 3px; right: 50%;
   display: flex; flex-flow: row wrap; gap: 3px;
-  justify-content: center; align-content: flex-start;
+  justify-content: flex-start; align-content: flex-start;
   pointer-events: none; z-index: 2;
 }
 .dbuff__i {
@@ -100,6 +99,11 @@ button, input { font: inherit; color: inherit; }
   background: rgba(0,0,0,0.55); padding: 1px;
   box-shadow: 0 0 0 1px rgba(96,196,108,0.9);   /* green ring = a buff is active */
 }
+/* On a hero card, push debuffs to the RIGHT half so buffs own the top-left. */
+.dpc .dcond { left: 50%; right: 3px; justify-content: flex-end; }
+/* Hero status icons are hoverable (heroes aren't click targets) → native title
+   tooltips work. Monster debuff icons inherit pointer-events:none (click-through). */
+.dpc .dcond__i, .dpc .dbuff__i { pointer-events: auto; }
 /* Auto-skip countdown badge — just to the right of the hero token (only on the
    active human's card). Absolute so it never changes card height. */
 .dpc__afk {
