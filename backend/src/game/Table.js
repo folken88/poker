@@ -287,6 +287,28 @@ class Table {
     return result;
   }
 
+  // Vorkstag the skinwalker swaps which seated player he's wearing — a fresh
+  // face (avatar) + voice (impersonatedNick) lifted from another occupied seat,
+  // never himself and (when possible) never his current disguise. Returns true
+  // if he changed. Called rarely each hand and more often when he's addressed.
+  reskinVorkstag() {
+    const seat = this.findSeat('vorkstag');
+    if (!seat || seat.isEmpty()) return false;
+    const targets = this.seats
+      .filter(s => !s.isEmpty() && s.playerId !== 'vorkstag' && s.player?.avatar_id)
+      .map(s => ({ avatar: s.player.avatar_id, nick: s.player.nickname }));
+    if (!targets.length) return false;
+    const pool = targets.filter(t => t.nick !== seat.impersonatedNick);
+    const choices = pool.length ? pool : targets;
+    const t = choices[Math.floor(Math.random() * choices.length)];
+    if (t.nick === seat.impersonatedNick) return false;   // nobody new to become
+    seat.avatarOverride   = t.avatar;
+    seat.impersonatedNick = t.nick;
+    this.chat('info', `🎭 Something is wrong with one of the players at the table…`);
+    this._broadcast();
+    return true;
+  }
+
   stand(playerId) {
     const seat = this.findSeat(playerId);
     if (!seat) return { ok: false, error: 'not seated' };
@@ -479,6 +501,9 @@ class Table {
     }
     // A hand is about to start — clear the next-hand timer.
     this.nextHandAt = null;
+
+    // Vorkstag occasionally sheds one face for another between hands (rare — 5%).
+    if (Math.random() < 0.05) { try { this.reskinVorkstag(); } catch (_) {} }
 
     // Rotate the dealer button — pick the next eligible seat clockwise.
     const buttonOrder = this._nextButtonIndex(ready);

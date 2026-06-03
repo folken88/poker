@@ -530,6 +530,7 @@ class Dungeon {
     this.depth += 1;
     this._spawnRoom();
     for (const m of this.present()) { this._resetAbilities(m); m.flatFooted = true; }  // refresh per-room spells/channels + flat-footed until they act
+    if (Math.random() < 0.05) { try { this._reskinVorkstag(); } catch (_) {} }   // skinwalker drifts to a new face between rooms (rare)
     this._maintainBardSongs();   // Inspire Courage is a passive aura — always up, no action spent
     this.status = 'combat';
     this.round = 1;
@@ -1215,7 +1216,7 @@ class Dungeon {
     //     a save-or-suck debuff (Hold Person). NOTE: some 'aoe'-tagged spells only
     //     hit one target (maxTargets 1), so coverage = min(foes, maxTargets).
     if (m.cls === 'wizard' || m.cls === 'sorcerer') {
-      const SPELLISH = ['aoe', 'grease', 'sleep', 'slow', 'fascinate', 'bolt', 'missile', 'touch', 'rays', 'save_debuff'];
+      const SPELLISH = ['aoe', 'disintegrate', 'grease', 'sleep', 'slow', 'fascinate', 'bolt', 'missile', 'touch', 'rays', 'save_debuff'];
       const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
       const cand = [];
       for (const a of avail) {
@@ -1327,6 +1328,7 @@ class Dungeon {
     if (!clean) return { ok: false, error: 'empty message' };
     this._note(`💬 ${m.nickname}: ${clean}`);
     this._broadcast();
+    try { this._maybeVorkstagReskinOnChat(clean); } catch (_) {}
     // Let a bot party-mate clap back if the player named one of them.
     try { this._maybeChatBanter(m, clean); } catch (_) { /* flavor only */ }
     return { ok: true };
@@ -1339,6 +1341,7 @@ class Dungeon {
     const nick = player.nickname || player.player_id;
     this._note(`💬 ${nick} (watching): ${clean}`);
     this._broadcast();
+    try { this._maybeVorkstagReskinOnChat(clean); } catch (_) {}
     // A heckler can still draw a clap-back if they name a bot in the party.
     try { this._maybeChatBanter({ playerId: player.player_id, nickname: nick }, clean); } catch (_) {}
     return { ok: true };
@@ -1359,6 +1362,29 @@ class Dungeon {
     // Bypasses the combat once-per-round banter gate since the player addressed them.
     if (!banter.CHARACTER_FLAVOR[named.trueNick || named.nickname]) return;
     this._emitBanter(named, 'chat', { from: speaker.nickname, said: text });
+  }
+  // Vorkstag the skinwalker swaps which delver he's wearing — a fresh face + name
+  // from another living party-mate (never himself, never his current disguise).
+  _reskinVorkstag() {
+    const vork = this.party.find(x => x.playerId === 'vorkstag' && !x.left && x.hp > 0);
+    if (!vork) return false;
+    vork.trueNick = vork.trueNick || vork.nickname;   // remember his real identity if not already
+    const victims = this.party.filter(x => x.playerId !== 'vorkstag' && !x.left && x.hp > 0 && x.nickname !== vork.nickname);
+    if (!victims.length) return false;
+    const v = pick(victims);
+    vork.nickname = v.nickname; vork.avatarId = v.avatarId;
+    this._note(`🎭 Something is wrong with one of the delvers…`);
+    this._broadcast();
+    return true;
+  }
+  // Addressing Vorkstag's current (fake) name in dungeon chat unsettles him — 25%
+  // of the time he sheds that face for another.
+  _maybeVorkstagReskinOnChat(text) {
+    const vork = this.present().find(x => x.playerId === 'vorkstag' && x.hp > 0);
+    if (!vork) return;
+    const nick = (vork.nickname || '').toLowerCase(), first = nick.split(/\s+/)[0], lower = String(text).toLowerCase();
+    const addressed = nick && (lower.includes(nick) || (first.length >= 4 && lower.includes(first)));
+    if (addressed && Math.random() < 0.25) { try { this._reskinVorkstag(); } catch (_) {} }
   }
 
   // ── Player actions (from dungeon:action) ─────────────────────────────────
@@ -1429,6 +1455,7 @@ class Dungeon {
       judgment:    () => this._abJudgment(m, ab),
       cleanse:     () => this._abCleanse(m, ab),
       aoe:         () => this._abAoe(m, ab, payload),
+      disintegrate: () => this._abDisintegrate(m, ab, payload),
       bolt:        () => this._abBolt(m, ab, payload.targetUid),
       missile:     () => this._abMissile(m, ab, payload),
       touch:       () => this._abTouch(m, ab, payload),
@@ -1640,6 +1667,29 @@ class Dungeon {
       parts.push(`${e.name}: ${saveLbl} ${sv.total} vs ${dc} ${outcome}${evaded ? '' : this._resistTag(e, ab.dtype)}${e.hp <= 0 ? ' ☠️' : ''}`);
     }
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} (${dice}d${ab.die || 6} → ${full} ${ab.dtype || ''}) — ${parts.join('; ')}.`, sound);
+    this._echoToTable(sound);
+  }
+  // Disintegrate (PF1e): a ranged TOUCH ATTACK; on a hit, 2d6 per caster level
+  // (cap 40d6 at CL20). Fortitude PARTIAL — a made save still takes 5d6 (NOT
+  // half). Anything reduced to 0 HP is disintegrated into fine dust.
+  _abDisintegrate(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    const sound = ab.sound || pick(SND.lightning);
+    const touchAC = Math.max(10, this._enemyAC(e) - 5);
+    const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
+    const roll = dRoll(20), total = roll + toHit;
+    if (roll !== 20 && (roll === 1 || total < touchAC)) {
+      this._note(`${ab.icon} ${m.nickname}'s ${ab.name} ray streaks wide of ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound);
+      this._echoToTable(sound); return;
+    }
+    const ndice = 2 * Math.min(20, m.level || 1);          // 2d6 / level, max 40d6
+    const dc = this._spellDC(m);
+    const sv = this._saveVs(this._enemySave(e, ab.save || 'fort'), dc);
+    const raw = sv.saved ? dRollN(5, 6) : dRollN(ndice, 6);   // Fort partial → only 5d6 on a save
+    const dmg = this._dmgE(e, raw, ab.dtype);
+    const dust = e.hp <= 0;
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} ray hits ${e.name} — Fort ${sv.total} vs ${dc}: ${sv.saved ? `partial ${dmg}` : `${dmg} force`}${this._resistTag(e, ab.dtype)}.${dust ? ` ☠️ ${e.name} crumbles to DUST!` : ` (${Math.max(0, e.hp)}/${e.maxHp})`}`, sound);
+    if (dust) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   }
   // Magic Missile — auto-hit force darts (PF1: 1 dart, +1 per 2 caster levels,

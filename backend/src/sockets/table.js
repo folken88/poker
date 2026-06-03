@@ -236,6 +236,11 @@ function registerTableHandlers(io, socket, { tables }) {
     try {
       const banter = require('../bot/banter');
       const mention = banter.detectAddressedBot(table, trimmed);
+      // Addressing Vorkstag (by whatever face he's wearing) makes the skinwalker
+      // nervous — 25% of the time he sheds that identity for another's.
+      if (mention && mention.playerId === 'vorkstag' && Math.random() < 0.25) {
+        try { table.reskinVorkstag(); } catch (_) {}
+      }
       if (mention && mention.exact) {
         banter.maybeSpeak(table, {
           kind: 'human-chat',
