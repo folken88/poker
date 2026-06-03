@@ -51,6 +51,7 @@ const SNEAK_DICE_CAP = 5;     // cap precision dice so it stays flavorful, not s
 const SMITE_TOHIT    = 2;     // paladin Smite Evil: to-hit bump vs an evil foe (+level dmg)
 const AFK_PASS_MS    = 30_000; // idle on your turn → auto-ATTACK after 30s
 const ENEMY_STEP_MS  = 1000;   // ~1s pacing between auto-resolved enemy/ally turns (slowed slightly for readability)
+const CHAIN_SFX_GAP_MS = 320;  // audible gap between staggered cleave/chain swing sounds
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
 const MAGUS_SPELLSTRIKE_SFX = {
@@ -1445,6 +1446,13 @@ class Dungeon {
     m.invisible = false;   // attacking (even a cantrip ray) breaks Invisibility
     const at = kitFor(m.cls).atwill;
     if (at && at.effect === 'bolt') return this._abBolt(m, at, payload.targetUid);
+    // A barbarian's EVERY swing can chain-cleave: drop a foe and carve into a
+    // random next one. (The chosen foe is the first target; chains are random.)
+    if (m.cls === 'barbarian') {
+      const e = this.enemies.find(x => x.uid === payload.targetUid && x.hp > 0) || this.livingEnemies()[0];
+      if (e) return this._cleaveSweep(m, e, { followThrough: false });
+      return;
+    }
     return this._playerAttack(m, payload.targetUid);
   }
   // One of the class's abilities (slot index). Gates on level + cost:
@@ -2045,37 +2053,71 @@ class Dungeon {
   }
   // Cleave: hit the target; then swing at a second foe (−2). A barbarian's
   // cleave (ab.acPen) also drops their guard −2 AC until their next turn.
-  // Cleave / Great Cleave. The primary swing, then a follow-through on a second
-  // foe if it CONNECTED — and crucially, EVERY swing that DROPS a foe grants
-  // another swing on a fresh enemy, chaining as long as it keeps felling them
-  // (until no foes remain). Follow-throughs are at −2 to hit (+2 AC).
   _abCleave(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
-    if (ab && ab.acPen) { m.acPenRound = this.round; m.acPenAmt = ab.acPen; }
+    this._cleaveSweep(m, e, { followThrough: true, acPen: ab && ab.acPen });
+  }
+  // A random living foe not already struck this sweep (chain cleaves jump around).
+  _randomLivingFoe(exclude) {
+    const pool = this.livingEnemies().filter(x => !exclude.has(x.uid));
+    return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+  }
+  // Play a sequence of swing sounds to the dungeon (clear) and the table (muffled
+  // echo), STAGGERED, so a chain of cleaves is heard as distinct hits — not one
+  // blurred thwack. (The dungeon:state broadcast only plays the single newest log
+  // sound, so chain swings carry no log sound and ride this instead.)
+  _emitChainSfx(sounds) {
+    let played = 0;
+    for (const snd of sounds) {
+      if (!snd) continue;
+      const delay = played * CHAIN_SFX_GAP_MS; played++;
+      setTimeout(() => {
+        try {
+          if (!this.io) return;
+          this.io.to(this.roomName()).emit('dungeon:sfx', { sound: snd });
+          this.io.to(`table:${this.tableId}`).emit('dungeon:echo', { sound: snd });
+        } catch (_) {}
+      }, delay);
+    }
+  }
+  // Cleave / Great Cleave sweep — shared by the Cleave ability AND any barbarian
+  // attack. Swings at firstTarget (the player-chosen foe); with `followThrough`
+  // the Cleave ability always gets one extra swing after a connecting hit; ANY
+  // swing that DROPS a foe chains onto a RANDOM fresh enemy, continuing while it
+  // keeps felling them. Each swing's attack sound is queued (staggered) so the
+  // chain is audible; the notes themselves carry no sound to avoid a double-play.
+  _cleaveSweep(m, firstTarget, opts = {}) {
+    m.flatFooted = false; m.invisible = false;
+    if (opts.acPen) { m.acPenRound = this.round; m.acPenAmt = opts.acPen; }
     m.weapon = weaponOf(m.gear, m.weaponKey);
+    const baseSound = m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null);
     const struck = new Set();
-    let target = e, bonus = false, kills = 0;
+    const sounds = [];
+    let target = firstTarget, bonus = false, kills = 0;
     const MAX = 24;   // safety cap so a freak run can't loop forever
     for (let swings = 0; target && swings < MAX; swings++) {
       struck.add(target.uid);
       const r = this._swingVsAC(m, this._enemyAC(target) + (bonus ? 2 : 0), target);
+      sounds.push(baseSound || r.sound || null);
       let downed = false;
-      if (r.hit) {
+      if (r.fumble) {
+        this._note(`🪓 ${m.nickname}${bonus ? '’s follow-through' : ''} fumbles at ${target.name}! ${this._atkStr(r)}`, null);
+      } else if (r.hit) {
         this._dmgE(target, r.damage); downed = target.hp <= 0;
-        this._note(`🪓 ${m.nickname} ${bonus ? '…cleaves on into' : 'cleaves'} ${target.name} for ${r.damage}.${this._afterEnemyHit(target)}`, r.sound);
+        this._note(`🪓 ${m.nickname} ${bonus ? '…cleaves on into' : 'cleaves'} ${target.name} for ${r.damage}.${this._afterEnemyHit(target)}`, null);
         if (downed) { kills++; this._tryBanter(m, 'down', { enemy: target.name }); }
       } else {
-        this._note(`🪓 ${m.nickname}'s ${bonus ? 'follow-through' : 'cleave'} misses ${target.name}. ${this._atkStr(r)}`, r.sound);
+        this._note(`🪓 ${m.nickname}'s ${bonus ? 'follow-through' : 'swing'} misses ${target.name}. ${this._atkStr(r)}`, null);
       }
-      this._echoToTable(r.sound);
       // Continue if this swing FELLED a foe (Great Cleave chain), or — once — to
-      // grant the standard single follow-through after the primary connects.
-      const keepGoing = downed || (r.hit && !bonus);
+      // grant the Cleave ability's standard follow-through after a connecting hit.
+      const keepGoing = downed || (opts.followThrough && r.hit && !bonus);
       bonus = true;
       if (!keepGoing) break;
-      target = this.livingEnemies().find(x => !struck.has(x.uid)) || null;
+      target = this._randomLivingFoe(struck);   // 2nd + chain targets are RANDOM
     }
     if (kills >= 3) this._note(`🪓 ${m.nickname} carves clean through the line — ${kills} foes felled in one furious sweep!`);
+    this._emitChainSfx(sounds);
   }
   // Feint: an opposed roll. On success the foe is flat-footed → a free
   // Sneak-Attack strike (the rogue's Sneak Attack rides on the denied defense).

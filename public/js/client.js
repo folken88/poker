@@ -789,6 +789,14 @@
     playUrl(sound, _combatVolume * 0.5, true, 378);   // low-pass ~378Hz: distant, through the floor (10% more muffled)
   });
 
+  socket.on('dungeon:sfx', ({ sound } = {}) => {
+    // A single staggered swing sound for the IN-DUNGEON player — used by chain
+    // cleaves so each hit is heard distinctly (the state broadcast only plays
+    // the newest log sound). Spectators in the room hear it too.
+    if (!_inDungeon || !sound) return;
+    playDungeonSound(sound, _combatVolume);
+  });
+
   socket.on('dungeon:exit', (exit) => {
     // Per-player now: only surface back to the table if this exit is MINE.
     if (!exit || exit.playerId !== state.me?.player_id) return;
@@ -942,11 +950,19 @@
 
     const acts = $('#dungeonActions');
     if (acts && _spectating) {
-      const canJoin = d.status !== 'over';
+      // Is there a live run to join, or just an empty/over dungeon to (re)start?
+      const delvers = (d.party || []).filter(m => !m.left && m.hp > 0);
+      const active = d.status !== 'over' && delvers.length > 0;
+      const status = active
+        ? `👁 Spectating ${escapeText(delvers.map(m => m.nickname).join(', '))} — you can heckle in chat below.`
+        : `👁 The dungeon is quiet — no one is delving right now.`;
+      const actionBtn = active
+        ? `<button class="btn btn--primary btn--sm" data-dact="join" title="Leave your poker seat and join the delve">⚔️ Join the delve</button>`
+        : `<button class="btn btn--primary btn--sm" data-dact="join" title="Leave your poker seat and kick off a fresh dungeon run">🗡️ Start Dungeon</button>`;
       acts.innerHTML =
-        `<div class="dungeon__actstatus dungeon__spectating">👁 Spectating ${escapeText((d.party || []).filter(m => !m.left).map(m => m.nickname).join(', ')) || 'the run'} — you can heckle in chat below.</div>` +
+        `<div class="dungeon__actstatus dungeon__spectating">${status}</div>` +
         `<div class="dungeon__actrow">` +
-          (canJoin ? `<button class="btn btn--primary btn--sm" data-dact="join" title="Leave your poker seat and join the delve">⚔️ Join the delve</button>` : '') +
+          actionBtn +
           `<button class="btn btn--ghost btn--sm" data-dact="leave">↩ Back to the table</button>` +
         `</div>`;
     } else if (acts) {
