@@ -18,6 +18,7 @@ const CLASSES = {
   fighter:      { name: 'Fighter',      hd: 10, bab: 'full', fort: 'good', ref: 'poor', will: 'poor' },
   monk:         { name: 'Monk',         hd: 8,  bab: '3/4',  fort: 'good', ref: 'good', will: 'good' },
   paladin:      { name: 'Paladin',      hd: 10, bab: 'full', fort: 'good', ref: 'poor', will: 'good' },
+  antipaladin:  { name: 'Antipaladin',  hd: 10, bab: 'full', fort: 'good', ref: 'poor', will: 'good' },
   ranger:       { name: 'Ranger',       hd: 10, bab: 'full', fort: 'good', ref: 'good', will: 'poor' },
   rogue:        { name: 'Rogue',        hd: 8,  bab: '3/4',  fort: 'poor', ref: 'good', will: 'poor' },
   sorcerer:     { name: 'Sorcerer',     hd: 6,  bab: '1/2',  fort: 'poor', ref: 'poor', will: 'good' },
@@ -57,6 +58,61 @@ const CLASSES = {
 
 const DEFAULT_CLASS = 'fighter';
 
+// ── Weapon proficiency by class ─────────────────────────────────────────────
+// `cats` = the proficiency categories a class is trained in ('simple',
+// 'martial', 'exotic'); `weapons` = extra specific staple keys granted on top
+// (a class's signature / deity-favored picks). A weapon is wielded proficiently
+// if its proficiency category is in `cats` OR its key is listed in `weapons`.
+// Wielding a NON-proficient weapon is −4 to hit (NON_PROFICIENT_PENALTY).
+// Full arcane casters are deliberately restricted — a wizard is NOT proficient
+// with a greatsword. Unarmed strikes are universal (handled in code).
+const _MARTIAL = ['simple', 'martial'];
+const _ALL     = ['simple', 'martial', 'exotic'];   // fighters/rangers/paladins: everything
+const _SIMPLE  = ['simple'];
+const PROFICIENCY = {
+  // Fighter / Ranger / Paladin are proficient with ALL weapons, even exotics.
+  fighter: { cats: _ALL }, ranger: { cats: _ALL }, paladin: { cats: _ALL },
+  antipaladin: { cats: _MARTIAL }, barbarian: { cats: _MARTIAL }, cavalier: { cats: _MARTIAL },
+  bloodrager: { cats: _MARTIAL }, brawler: { cats: _MARTIAL }, slayer: { cats: _MARTIAL },
+  gunslinger: { cats: _MARTIAL }, swashbuckler: { cats: _MARTIAL }, magus: { cats: _MARTIAL },
+  skald: { cats: _MARTIAL }, hunter: { cats: _MARTIAL }, vigilante: { cats: _MARTIAL },
+  medium: { cats: _MARTIAL }, warpriest: { cats: _MARTIAL },
+  samurai: { cats: _MARTIAL, weapons: ['katana'] },
+  // Rogues + inquisitors get full simple + martial proficiency (per request).
+  rogue: { cats: _MARTIAL }, inquisitor: { cats: _MARTIAL },
+  // Simple + a few signature / deity-favored martial picks.
+  bard: { cats: _SIMPLE, weapons: ['longsword', 'rapier', 'shortsword', 'whip'] },
+  ninja: { cats: _SIMPLE, weapons: ['katana', 'shortsword'] },
+  investigator: { cats: _SIMPLE, weapons: ['rapier', 'shortsword'] },
+  mesmerist: { cats: _SIMPLE, weapons: ['rapier', 'shortsword', 'whip'] },
+  cleric: { cats: _SIMPLE, weapons: ['warhammer'] },        // deity-favored stand-in
+  // Simple weapons only.
+  sorcerer: { cats: _SIMPLE }, oracle: { cats: _SIMPLE }, shaman: { cats: _SIMPLE },
+  alchemist: { cats: _SIMPLE }, summoner: { cats: _SIMPLE }, kineticist: { cats: _SIMPLE },
+  occultist: { cats: _SIMPLE }, spiritualist: { cats: _SIMPLE }, witch: { cats: _SIMPLE },
+  arcanist: { cats: _SIMPLE }, psychic: { cats: _SIMPLE },
+  // Restricted specific lists (NOT all simple).
+  wizard: { cats: [], weapons: ['dagger', 'quarterstaff'] },
+  druid:  { cats: [], weapons: ['dagger', 'quarterstaff', 'scimitar', 'longspear'] },
+  monk:   { cats: [], weapons: ['dagger', 'quarterstaff', 'longspear'] },
+};
+const NON_PROFICIENT_PENALTY = -4;
+
+/** Is `staple` (a staple weapon object with .key/.prof, or a bare key) wielded
+ *  proficiently by `classKey`? Unarmed is universal; unknown classes default to
+ *  full martial proficiency so we never wrongly penalize. */
+function weaponProficient(classKey, staple) {
+  if (!staple) return true;
+  const key  = typeof staple === 'string' ? staple : staple.key;
+  const prof = typeof staple === 'string' ? null   : staple.prof;
+  if (key === 'unarmed') return true;
+  if (staple && staple.custom) return true;   // a named NPC signature weapon — always proficient
+  const p = PROFICIENCY[classKey] || { cats: _MARTIAL };
+  if (prof && (p.cats || []).includes(prof)) return true;
+  if ((p.weapons || []).includes(key)) return true;
+  return false;
+}
+
 /** Base Attack Bonus for a class at a given level. */
 function babFor(classKey, level) {
   const c = CLASSES[classKey] || CLASSES[DEFAULT_CLASS];
@@ -73,4 +129,4 @@ function saveFor(classKey, which, level) {
   return c[which] === 'good' ? Math.floor(lvl / 2) + 2 : Math.floor(lvl / 3);
 }
 
-module.exports = { CLASSES, DEFAULT_CLASS, babFor, saveFor };
+module.exports = { CLASSES, DEFAULT_CLASS, babFor, saveFor, PROFICIENCY, NON_PROFICIENT_PENALTY, weaponProficient };

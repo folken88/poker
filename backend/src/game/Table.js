@@ -6,10 +6,13 @@
 const db = require('../persistence/db');
 const { Hand, STATES } = require('./Hand');
 const { Bot } = require('../bot/Bot');
-const { logHand, logBotDecision, logChat, getRecords, resetRecords } = require('../persistence/logger');
+const { logHand, logBotDecision, logChat, getRecords, resetRecords, recordSound } = require('../persistence/logger');
 const { gold } = require('../util/numwords');
 const { strengthOf } = require('../bot/strength');
-const { botRebuyMessage, humanRebuyMessage, bustMessage } = require('../util/flavor');
+const { botRebuyMessage, botBorrowMessage, botHockMessage, humanRebuyMessage, bustMessage } = require('../util/flavor');
+// A bot prefers to borrow from Abadar (keeping its magic items). Only once its
+// debt climbs past this does it pawn an item as a last resort to stay seated.
+const BOT_DEBT_CEILING = 30000;   // ~6 rebuys deep
 const banter = require('../bot/banter');
 
 // Showdown pause — how long the final hand stays on screen before clearing.
@@ -152,6 +155,7 @@ class Table {
     // banter + human chat + gameplay narration. Never let logging break
     // a broadcast.
     try { logChat({ tableId: this.id, entry, extras }); } catch (_) {}
+    if (extras && extras.audioUrl) { try { recordSound('table', extras.audioUrl, text); } catch (_) {} }
     // Build the emitted payload separately from the persisted entry so
     // ephemeral extras (audio, etc.) don't end up in the ring buffer.
     const payload = extras ? { ...entry, ...extras } : entry;
@@ -682,6 +686,14 @@ class Table {
       }
       if (line) this.chat('action', line);
 
+      // ---- Abadar's interest ----
+      // Each turn a human takes counts toward Abadar's compound-interest clock;
+      // every 10 turns (poker or dungeon) the tab grows. Bots never owe.
+      if (!isBot) {
+        const intr = db.tickDebtTurn(playerId);
+        if (intr) this.chat('debt', `🏛️ Abadar's interest — ${nick}'s tab compounds ${intr.before.toLocaleString()} → ${intr.after.toLocaleString()} gp (+${intr.interest.toLocaleString()}).`);
+      }
+
       // ---- Banter trigger (LLM-driven ambient chat) ----
       // Fire-and-forget; banter.maybeSpeak no-ops if LLM is disabled.
       // Triggered on the more noteworthy actions: raises, all-ins, and
@@ -1204,9 +1216,30 @@ class Table {
         if (seat.isEmpty() || seat.chipsAtTable > 0) continue;
         if (seat.isBot) {
           const nick = seat.displayNickname();
-          seat.chipsAtTable = db.DEFAULT_STACK;
-          db.setChips(seat.playerId, db.DEFAULT_STACK);
-          this.chat('rebuy', botRebuyMessage(nick, db.DEFAULT_STACK));
+          const fresh = db.getPlayer(seat.playerId) || {};
+          const debt = Number(fresh.rebuy_debt || 0);
+          const gear = db.getGear(seat.playerId) || {};
+          const owned = Object.entries(gear).filter(([, t]) => Number(t) > 0).sort((a, b) => Number(a[1]) - Number(b[1]));
+          // AI would rather BORROW from Abadar than sell their magic items — but
+          // once they're drowning in debt, they pawn their cheapest item to
+          // stay in the game (do what they must).
+          if (owned.length > 0 && debt >= BOT_DEBT_CEILING) {
+            const [slot, tier] = owned[0];
+            const proceeds = db.gearHockValue(slot, Number(tier));
+            gear[slot] = 0;
+            db.setGear(seat.playerId, gear);
+            const stack = Math.max(db.DEFAULT_STACK, proceeds);
+            db.setChips(seat.playerId, stack);
+            seat.chipsAtTable = stack;
+            const label = (db.GEAR_BY_KEY[slot] && db.GEAR_BY_KEY[slot].label) || slot;
+            this.chat('rebuy', botHockMessage(nick, `+${tier} ${label}`, proceeds));
+          } else {
+            // Borrow from the First Bank of Abadar — a loan; keeps their gear.
+            db.setChips(seat.playerId, db.DEFAULT_STACK);
+            db.addRebuyDebt(seat.playerId, db.DEFAULT_STACK);
+            seat.chipsAtTable = db.DEFAULT_STACK;
+            this.chat('rebuy', botBorrowMessage(nick, db.DEFAULT_STACK));
+          }
           rebought++;
         } else {
           const nick = seat.displayNickname();

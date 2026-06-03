@@ -681,6 +681,8 @@
   let _dungeonSel = [];        // selected enemy uids (combat targeting)
   let _dungeonSoundSeen = 0;   // highest dungeon-log id whose sound we've played
   let _recruitOpen = false;    // dungeon "Recruit AI ▾" dropdown open/closed
+  let _spellbookOpen = false;  // caster "📖 Spellbook ▾" dropdown open/closed
+  let _spectating = false;     // watching the dungeon (not a combatant) — heckle-only
 
   function playDungeonSound(url, vol) {
     if (!url || !combatSoundEnabled(url)) return;   // honors the combat-sound toggles
@@ -689,7 +691,17 @@
   function enterDungeon() {
     socket.emit('dungeon:enter', null, (resp) => {
       if (!resp?.ok) { toast(resp?.error || 'Could not enter the dungeon.', true); return; }
-      _inDungeon = true; _dungeonSel = []; _dungeonSoundSeen = 0;
+      _inDungeon = true; _spectating = false; _dungeonSel = []; _dungeonSoundSeen = 0;
+      state.dungeon = resp.state || null;
+      setScreen('dungeon');
+      renderDungeon();
+    });
+  }
+  // Spectate the run — watch + heckle without leaving your seat or fighting.
+  function spectateDungeon() {
+    socket.emit('dungeon:spectate', null, (resp) => {
+      if (!resp?.ok) { toast(resp?.error || 'Nobody is in the dungeon right now.', true); return; }
+      _inDungeon = true; _spectating = true; _dungeonSel = []; _dungeonSoundSeen = 0;
       state.dungeon = resp.state || null;
       setScreen('dungeon');
       renderDungeon();
@@ -701,6 +713,14 @@
     });
   }
   function returnFromDungeon() {
+    // Spectators never left their seat and aren't combatants — just drop out of
+    // the dungeon room and go back to the table view (no bail, no re-seat).
+    if (_spectating) {
+      _spectating = false; _inDungeon = false;
+      socket.emit('dungeon:leave', null, () => {});
+      setScreen('table');
+      return;
+    }
     _inDungeon = false;
     socket.emit('dungeon:leave', null, () => {});      // banks gold if still active
     // fromDungeon: come back as a spectator without evicting an AI from its seat.
@@ -724,6 +744,15 @@
     if (document.body.dataset.screen === 'dungeon') renderDungeon();
     // Blind-mode narration (no-ops when blind mode is off).
     window.BlindMode?.onDungeonState?.(st);
+  });
+
+  // A run started/changed/ended somewhere on this table. Tracked so the money
+  // menu can offer "Spectate the Dungeon" only while there's something to watch.
+  socket.on('dungeon:active', (summary) => {
+    const wasActive = state.dungeonActive;
+    state.dungeonActive = !!(summary && summary.active);
+    state.dungeonSummary = summary || null;
+    if (state.dungeonActive !== wasActive && document.body.dataset.screen === 'table' && state.me) paintMe();
   });
 
   socket.on('dungeon:say', ({ audio, audioMime } = {}) => {
@@ -768,6 +797,25 @@
     const parts = GEAR_SLOTS.map(slot => { const t = gear[slot]; return t ? `+${t} ${GEAR_META[slot].label}` : null; }).filter(Boolean);
     return parts.length ? parts.join(' · ') : 'no magic items';
   }
+  // A strip of PF1-system debuff icons (sickened / paralyzed / asleep / prone)
+  // shown on a hero or monster card. Each is a small badge with a hover label.
+  function condIcons(list) {
+    if (!list || !list.length) return '';
+    return `<div class="dcond">` + list.map(c =>
+      `<img class="dcond__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(c.label)}" loading="lazy" />`
+    ).join('') + `</div>`;
+  }
+  // Live-tick the dungeon auto-skip countdown badges (set by renderDungeon) so
+  // the seconds visibly tick down between server state updates. Started once.
+  setInterval(() => {
+    const now = Date.now();
+    document.querySelectorAll('.dpc__afk[data-afk-at]').forEach(el => {
+      const at = Number(el.getAttribute('data-afk-at')) || 0;
+      const s = Math.max(0, Math.ceil((at - now) / 1000));
+      el.textContent = `⏱ ${s}s`;
+      el.classList.toggle('is-urgent', (at - now) < 3000);
+    });
+  }, 250);
   function renderDungeon() {
     const d = state.dungeon;
     if (!d) return;
@@ -790,7 +838,8 @@
             : `<div class="dmon__glyph">${e.glyph || '❓'}${e.boss ? ' 👑' : ''}</div>`;
           return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''}" data-enemy="${escapeAttr(e.uid)}" ${dead ? 'disabled' : ''}>
             ${portrait}
-            <div class="dmon__name">${escapeText(e.name)}${e.sickened ? ' 🤢' : ''}</div>
+            <div class="dmon__name">${escapeText(e.name)}</div>
+            ${condIcons(e.conditions)}
             <div class="dmon__hpbar"><span style="width:${pct}%"></span></div>
             <div class="dmon__hp">${dead ? '☠️' : `${e.hp}/${e.maxHp}`}${e.cr ? ` · CR ${e.cr}` : ''}</div>
           </button>`;
@@ -803,13 +852,19 @@
       const isMe = m.playerId === meId;
       const isTurn = m.playerId === turnId;
       const cls = ['dpc']; if (pct <= 30) cls.push('is-low'); if (m.dead || m.left) cls.push('is-out'); if (m.downed) cls.push('is-down'); if (isMe) cls.push('is-me'); if (isTurn) cls.push('is-turn');
-      const tag = m.dead ? ' ☠️' : m.downed ? ' 🩸' : m.left ? ' 🪜' : `${m.sickened ? ' 🤢' : ''}${m.paralyzed ? ' 🥶' : ''}`;
+      const tag = m.dead ? ' ☠️' : m.downed ? ' 🩸' : m.left ? ' 🪜' : '';
       const hpText = m.downed
         ? `${typeof m.dyingHp === 'number' ? m.dyingHp : 0}/${m.maxHp} HP · 🩸 DYING`
         : `${Math.max(0, m.hp)}/${m.maxHp} HP${m.level ? ` · Lv ${m.level}` : ''}`;
+      // Auto-skip countdown badge — only on the human whose turn it is, just to
+      // the right of their token. Live-ticked by the interval below.
+      const afk = m.afkAt
+        ? `<span class="dpc__afk" data-afk-at="${m.afkAt}" title="You'll auto-skip if idle">⏱ ${Math.max(0, Math.ceil((m.afkAt - Date.now()) / 1000))}s</span>`
+        : '';
       return `<div class="${cls.join(' ')}">
-        <div class="dpc__avatar">${renderAvatar(m.avatarId)}</div>
+        <div class="dpc__avatar">${renderAvatar(m.avatarId)}</div>${afk}
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${tag}</div>
+        ${condIcons(m.conditions)}
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
         <div class="dpc__hp">${hpText}</div>
       </div>`;
@@ -854,8 +909,18 @@
       loot.innerHTML = html;
     }
 
+    // Spectators heckle from the gallery — no combat controls, just a banner.
+    const chatInput = $('#dungeonChatInput');
+    if (chatInput) chatInput.placeholder = _spectating
+      ? 'Heckle the delvers… (Enter to send)'
+      : 'Say something to the party… (Enter to send)';
+
     const acts = $('#dungeonActions');
-    if (acts) {
+    if (acts && _spectating) {
+      acts.innerHTML =
+        `<div class="dungeon__actstatus dungeon__spectating">👁 Spectating ${escapeText((d.party || []).filter(m => !m.left).map(m => m.nickname).join(', ')) || 'the run'} — you can heckle in chat below.</div>` +
+        `<div class="dungeon__actrow"><button class="btn btn--ghost btn--sm" data-dact="leave">↩ Back to the table</button></div>`;
+    } else if (acts) {
       const me = (d.party || []).find(m => m.playerId === meId) || {};
       if (d.status === 'over') {
         acts.innerHTML = `<div class="dungeon__actstatus">The run is over.</div>` +
@@ -864,24 +929,58 @@
         const combat = d.status === 'combat';
         const myTurn = combat && isMyTurn;
         const rolling = !!d.lootRoll;
-        const lr = me.lightningReady, sr = me.stinkingReady;
-        // FIXED button set — the SAME five slots, same labels (same widths), every
-        // render. Each greys out (disabled) when it isn't usable instead of
-        // disappearing or shifting, so quick clicks always land on the intended
-        // action. A separate status line carries the turn text without moving buttons.
         const B = (act, label, on, primary) =>
           `<button class="btn ${primary ? 'btn--primary' : 'btn--ghost'}" data-dact="${act}"${on ? '' : ' disabled'}>${label}</button>`;
+        const kit = me.kit || { atwill: { name: 'Attack', icon: '⚔️' }, abilities: [], spellPool: null };
+        // An ability's glyph: its art icon if present, else its emoji.
+        const ic = (ab) => ab.img ? `<img class="spell-ic" src="${escapeAttr(ab.img)}" alt="" />` : `${ab.icon || ''} `;
+        // A single ability/spell button. Level-locked → greyed 🔒. 'pool' spells
+        // draw from the shared cast pool; 'room' abilities show their own count;
+        // 'free' maneuvers are always on (your turn).
+        const abilBtn = (ab, slot) => {
+          if (!ab.available) {
+            return `<button class="btn btn--ghost" disabled title="${escapeAttr(ab.desc || '')}\n(unlocks at level ${ab.minLevel})">🔒 ${ic(ab)}${escapeText(ab.name)} <span class="dungeon__uses">Lv${ab.minLevel}</span></button>`;
+          }
+          const ok = ab.cost === 'free' ? true : (ab.remaining > 0);
+          const count = (ab.cost === 'room' || ab.cost === 'run')
+            ? ` <span class="dungeon__uses" title="${ab.cost === 'run' ? 'once per dungeon' : 'per room'}">${ab.remaining}/${ab.max}</span>` : '';
+          const tgt = ab.maxTargets > 1 ? ` <span class="dungeon__uses">×${ab.maxTargets}</span>` : '';
+          return `<button class="btn btn--ghost" data-dact="ability" data-slot="${slot}"${(myTurn && ok) ? '' : ' disabled'} title="${escapeAttr(ab.desc || '')}">${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
+        };
+        const atName = `${kit.atwill.img ? ic(kit.atwill) : (kit.atwill.icon || '⚔️') + ' '}${escapeText(kit.atwill.name || 'Attack')}`;
+        const pool = kit.spellPool ? ` · ✨ ${kit.spellPool.remaining}/${kit.spellPool.max} casts` : '';
         const status = combat
-          ? (myTurn ? '⚔️ Your turn' : (turnName ? escapeText(turnName) + ' is acting…' : 'Enemies acting…'))
+          ? (myTurn ? `⚔️ Your turn${pool}` : (turnName ? escapeText(turnName) + ' is acting…' : 'Enemies acting…'))
           : '🚪 Pick a door — or bail.';
+        // Casters collapse their spells into an expandable Spellbook ▾; everyone
+        // else shows their maneuvers inline. The badge/header differ by caster:
+        // cleric shows a shared cast pool; wizard/sorcerer show their own note
+        // ("one cast of each spell per room" / "cast freely").
+        let abilHtml;
+        if (kit.caster) {
+          const rows = (kit.abilities || []).map((ab, i) => abilBtn(ab, i)).join('');
+          const badge = kit.spellPool ? ` <span class="dungeon__uses">✨${kit.spellPool.remaining}/${kit.spellPool.max}</span>` : '';
+          const head  = kit.spellPool
+            ? `✨ ${kit.spellPool.remaining}/${kit.spellPool.max} casts left this room`
+            : (kit.spellNote || 'Spells');
+          abilHtml =
+            `<button type="button" class="btn ${_spellbookOpen ? 'btn--primary' : 'btn--ghost'}" data-spellbook-toggle aria-expanded="${_spellbookOpen}">📖 Spellbook ▾${badge}</button>` +
+            `<div class="dungeon__spellbook ${_spellbookOpen ? 'is-open' : ''}">` +
+              `<div class="dungeon__sb-head">${escapeText(head)}</div>` +
+              `<div class="dungeon__sb-grid">${rows}</div>` +
+            `</div>`;
+        } else {
+          abilHtml = (kit.abilities || []).map((ab, i) => abilBtn(ab, i)).join('');
+        }
         acts.innerHTML =
           `<div class="dungeon__actstatus">${status}</div>` +
-          `<div class="dungeon__actrow">` +
-            B('attack',    '⚔️ Attack',         myTurn,              combat) +
-            B('lightning', '⚡ Lightning',       myTurn && lr,        false) +
-            B('stinking',  '💨 Stinking Cloud',  myTurn && sr,        false) +
-            B('door',      '🚪 Open door',       !combat && !rolling, !combat) +
-            B('bail',      '🏃 Bail',            true,                false) +
+          `<div class="dungeon__actrow dungeon__actrow--abilities">` +
+            B('attack', atName, myTurn, combat) +
+            abilHtml +
+          `</div>` +
+          `<div class="dungeon__actrow dungeon__actrow--nav">` +
+            B('door', '🚪 Open door', !combat && !rolling, !combat) +
+            B('bail', '🏃 Bail', true, false) +
           `</div>`;
       }
     }
@@ -892,7 +991,7 @@
     if (recruit) {
       const list = d.recruitable || [];
       const full = (d.botCount || 0) >= 3;
-      if (d.status === 'over' || !list.length) { recruit.innerHTML = ''; _recruitOpen = false; }
+      if (d.status === 'over' || !list.length || _spectating) { recruit.innerHTML = ''; _recruitOpen = false; }
       else recruit.innerHTML =
         `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-toggle" data-recruit-toggle aria-expanded="${_recruitOpen}">🤝 Recruit AI ▾ <span class="dungeon__recruit-count">${list.length}</span></button>` +
         `<div class="dungeon__recruit-pop ${_recruitOpen ? 'is-open' : ''}">` +
@@ -918,6 +1017,7 @@
   // re-rendered each paintMe — so delegate the click.
   $('#mePursePop')?.addEventListener('click', (ev) => {
     if (ev.target.closest('[data-enter-dungeon]')) enterDungeon();
+    else if (ev.target.closest('[data-spectate-dungeon]')) spectateDungeon();
   });
   $('#dungeonLeaveBtn')?.addEventListener('click', returnFromDungeon);
   $('#dungeonEnemies')?.addEventListener('click', (ev) => {
@@ -929,15 +1029,16 @@
     renderDungeon();
   });
   $('#dungeonActions')?.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-dact]'); if (!b) return;
+    // Spellbook expand/collapse (caster classes).
+    if (ev.target.closest('[data-spellbook-toggle]')) { _spellbookOpen = !_spellbookOpen; renderDungeon(); return; }
+    const b = ev.target.closest('[data-dact]'); if (!b || b.disabled) return;
     const act = b.dataset.dact;
-    if (act === 'attack')         dungeonAction('attack', { targetUid: _dungeonSel[0] });
-    else if (act === 'lightning') dungeonAction('lightning', { targetUids: _dungeonSel.slice(0, 2) });
-    else if (act === 'stinking')  dungeonAction('stinking');
-    else if (act === 'door')      dungeonAction('door');
-    else if (act === 'bail')      dungeonAction('bail');
-    else if (act === 'leave')     returnFromDungeon();
-    if (act === 'attack' || act === 'lightning') _dungeonSel = [];
+    if (act === 'attack')       dungeonAction('attack', { targetUid: _dungeonSel[0] });
+    else if (act === 'ability') { dungeonAction('ability', { slot: Number(b.dataset.slot) || 0, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6) }); _spellbookOpen = false; }
+    else if (act === 'door')    dungeonAction('door');
+    else if (act === 'bail')    dungeonAction('bail');
+    else if (act === 'leave')   returnFromDungeon();
+    if (act === 'attack' || act === 'ability') _dungeonSel = [];
   });
   $('#dungeonRecruit')?.addEventListener('click', (ev) => {
     if (ev.target.closest('[data-recruit-toggle]')) {
@@ -951,6 +1052,19 @@
     const b = ev.target.closest('[data-recruit]'); if (!b) return;
     socket.emit('dungeon:recruit', { botId: b.dataset.recruit }, (resp) => {
       if (resp && resp.ok === false) toast(resp.error || 'Could not recruit', true);
+    });
+  });
+  // Dungeon party chat — mirrors the poker chat form. The message round-trips
+  // through dungeon:say and shows up in everyone's log via the state broadcast.
+  $('#dungeonChatForm')?.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const input = $('#dungeonChatInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    socket.emit('dungeon:say', { text }, (resp) => {
+      if (resp?.ok) input.value = '';
+      else toast(resp?.error || 'Could not send', true);
     });
   });
   $('#dungeonLoot')?.addEventListener('click', (ev) => {
@@ -990,18 +1104,19 @@
       }
       e.preventDefault(); return;
     }
-    let act = null;
+    // A = at-will attack, Q/W = the two class abilities, O/Enter = door, B = bail.
+    let act = null, slot = 0;
     if (k === 'a') act = 'attack';
-    else if (k === 'l') act = 'lightning';
-    else if (k === 's') act = 'stinking';
+    else if (k === 'q') { act = 'ability'; slot = 0; }
+    else if (k === 'w') { act = 'ability'; slot = 1; }
     else if (k === 'o' || k === 'enter') act = 'door';
     else if (k === 'b') act = 'bail';
     if (!act) return;
     e.preventDefault();
     if (act === 'attack') dungeonAction('attack', { targetUid: _dungeonSel[0] });
-    else if (act === 'lightning') dungeonAction('lightning', { targetUids: _dungeonSel.slice(0, 2) });
+    else if (act === 'ability') dungeonAction('ability', { slot, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6) });
     else dungeonAction(act);
-    if (act === 'attack' || act === 'lightning') _dungeonSel = [];
+    if (act === 'attack' || act === 'ability') _dungeonSel = [];
   });
 
   // Incremental chat events (in addition to the snapshot in table:state).
@@ -1339,6 +1454,8 @@
     // to 'they' if the column is missing (legacy rows / old backend).
     const gsel = $('#meGender');
     if (gsel) gsel.value = (p.gender === 'he' || p.gender === 'she') ? p.gender : 'they';
+    // Sync the PF1e class + weapon dropdowns (populated from lobby:pf1meta).
+    syncClassWeapon(p);
     $('#meChips').textContent = '💰 ' + formatChips(p.chips) + ' gp';
     $('#meAvatar').innerHTML = renderAvatar(p.avatar_id);
     // Chat input becomes available once a character is chosen.
@@ -1369,9 +1486,18 @@
     if (pop) {
       const debt = Number(p.rebuy_debt || 0);
       const chips = Number(p.chips || 0);
+      // Re-buy now lives in the money dropdown (moved out of the ≡ menu): it's
+      // a money action, so it belongs with the bank. It's a LOAN added to debt.
+      const rebuyRow = `<div class="purse__actions"><button type="button" class="purse__btn purse__btn--rebuy" data-rebuy title="Borrow a fresh ${formatChips(state.defaultStack)} gp stack from the Bank of Abadar — a loan added to your debt, paid down with winnings">🏛️ Loan from Abadar · ${formatChips(state.defaultStack)} gp</button></div>`;
       // 🏋️ "Hit the Dungeon" lives tucked inside the money dropdown (a play on
       // "hit the gym"). Clicking it leaves your seat and descends.
       const dungeonRow = `<div class="purse__actions"><button type="button" class="purse__btn purse__btn--dungeon" data-enter-dungeon title="Leave the table and descend into the dungeon to fight monsters for gold">🏋️ Hit the Dungeon</button></div>`;
+      // 👁 Spectate — watch + heckle without leaving your seat or joining the
+      // fight. Always offered; if nobody's delving the server says so. When a
+      // run IS live we tag the button with who's down there.
+      const watching = state.dungeonActive && state.dungeonSummary?.party?.length
+        ? ` (${escapeText(state.dungeonSummary.party.join(', '))})` : '';
+      const spectateRow = `<div class="purse__actions"><button type="button" class="purse__btn purse__btn--spectate" data-spectate-dungeon title="Watch the current dungeon run and heckle the delvers in chat">👁 Spectate the Dungeon${watching}</button></div>`;
       if (debt > 0) {
         const maxAffordable = Math.min(debt, chips);
         const smallPayment = Math.min(maxAffordable, 1000);
@@ -1392,7 +1518,9 @@
           <div class="purse__row purse__row--debt"><span>Outstanding loan</span><span>${formatChips(debt)} gp</span></div>
           ${payBlock}
           <div class="purse__foot">Pay it down to clear the red dot from the leaderboard. Full settlement happens automatically on the next Loot Lord reset.</div>
+          ${rebuyRow}
           ${dungeonRow}
+          ${spectateRow}
         `;
         pop.classList.add('has-content');
       } else {
@@ -1401,7 +1529,9 @@
           <div class="purse__row"><span>Chips on hand</span><span>${formatChips(chips)} gp</span></div>
           <div class="purse__row purse__row--clear"><span>Loan balance</span><span>—</span></div>
           <div class="purse__foot">You owe nothing. Abadar approves.</div>
+          ${rebuyRow}
           ${dungeonRow}
+          ${spectateRow}
         `;
         pop.classList.add('has-content');
       }
@@ -2049,9 +2179,13 @@
   /** Refresh the right-side perimeter leaderboard. Same data as the
    *  in-actpanel leaderboard but always visible. */
   // "Hall of Records" under the leaderboard — all-time per-hand extremes
-  // (server-tracked in state.table.records). Each row: label · who · value.
+  // (server-tracked in state.table.records, split into all/human/ai). The
+  // filter buttons pick which population to show.
+  let _recordsFilter = 'all';
   function renderRecords() {
-    const r = (state.table && state.table.records) || {};
+    const recs = (state.table && state.table.records) || {};
+    // Back-compat: older servers sent a flat object (no all/human/ai split).
+    const r = recs[_recordsFilter] || recs.all || recs;
     // id, label, record, value-formatter, optional color class
     const ROWS = [
       ['#recordBiggestWin',   '🥇 Gain',   r.biggestWin,    (x) => '+' + formatChips(x.amount), 'is-win'],
@@ -2075,6 +2209,14 @@
         + `<span class="lb-records__amt ${cls}">${valFn(rec)}</span>`;
     }
   }
+  // All / Humans / AI filter for the Hall of Records.
+  $('#sidebarRecords')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-rec-filter]');
+    if (!b) return;
+    _recordsFilter = b.dataset.recFilter || 'all';
+    $('#sidebarRecords').querySelectorAll('[data-rec-filter]').forEach(x => x.classList.toggle('is-active', x === b));
+    renderRecords();
+  });
 
   function renderSidebarLeaderboard() {
     const el = $('#sidebarLeaderboard');
@@ -2125,79 +2267,79 @@
     }).join('');
   }
 
-  /** Render the player's gear bank into the left-side perimeter panel.
-   *  Pulls fresh chip + gear state via buildBankHtml. Called on roster
-   *  events and renderTable so seat chip changes mid-hand show up.
-   *
-   *  Collapsed state is per-tab (sessionStorage). If the user hasn't
-   *  expressed a preference, we auto-collapse when there's nothing
-   *  actionable — no affordable upgrade AND no item worth hocking — so
-   *  the rankings underneath get more room. The user's manual toggle
-   *  always overrides the auto-state for the rest of the session. */
-  function renderSidebarBank() {
-    const el = $('#sidebarBank');
-    const toggle = $('#sidebarBankToggle');
-    if (!el) return;
-    if (!state.me) {
-      el.innerHTML = '<p class="sidebar-bank__empty">Pick a character to start your collection.</p>';
-      if (toggle) applySidebarBankCollapsed(true);
-      return;
-    }
-    el.innerHTML = buildBankHtml();
-    if (!toggle) return;
-    // Default expanded. Auto-collapse based on "no affordable upgrade"
-    // was hiding the bank when players actually wanted to see it —
-    // confusing. The header is now visibly a clickable toggle, so let
-    // the user drive it. Saved preference still wins.
-    const saved = sessionStorage.getItem('actpanel.bankCollapsed');
-    const collapsed = saved !== null ? saved === '1' : false;
-    applySidebarBankCollapsed(collapsed);
+  // ===== Loot Bank "paper doll" popover =====
+  // The "🎒 My Loot Bank" button stays collapsed; clicking it pops up a paper
+  // doll of the player's equipped gear (buy / hock per slot). Dismisses on a
+  // click outside, the ✕, or Escape.
+  let _bankDollOpen = false;
+  // A compact equipment-slot card: icon + tier badge + buy/hock buttons.
+  function bankSlotCard(slot, gear, chips) {
+    const meta = GEAR_META[slot];
+    const cur = gear[slot] || 0;
+    const next = cur < 5 ? cur + 1 : null;
+    const upgradeCost = next ? gearPrice(slot, next) - (cur ? gearPrice(slot, cur) : 0) : 0;
+    const canAfford = upgradeCost > 0 && chips >= upgradeCost;
+    const sellValue = cur ? Math.floor(gearPrice(slot, cur) / 2) : 0;
+    const tierTxt = cur ? `+${cur}` : (slot === 'armor' ? 'Chain' : '—');
+    const tierCls = cur === 5 ? 'is-max' : cur ? 'is-on' : 'is-off';
+    const buyBtn = next
+      ? `<button type="button" class="bank__btn bank__btn--buy" ${canAfford ? '' : 'disabled'} data-buy-slot="${slot}" data-buy-tier="${next}" title="${cur ? 'Upgrade to' : 'Buy a'} +${next} ${meta.label} — ${upgradeCost.toLocaleString()} gp">${cur ? '⬆ +' : 'Buy +'}${next} · ${formatChips(upgradeCost)}</button>`
+      : `<button type="button" class="bank__btn bank__btn--max" disabled>+5 ✓</button>`;
+    const sellBtn = cur
+      ? `<button type="button" class="bank__btn bank__btn--sell" data-sell-slot="${slot}" title="Hock for ${sellValue.toLocaleString()} gp (50% market)">Hock +${formatChips(sellValue)}</button>`
+      : '';
+    return `<div class="doll-slot">
+        <div class="doll-slot__icon" title="${meta.label}">${GEAR_SVGS[slot]}<span class="doll-slot__tier ${tierCls}">${tierTxt}</span></div>
+        <div class="doll-slot__label">${meta.short}</div>
+        <div class="doll-slot__btns">${buyBtn}${sellBtn}</div>
+      </div>`;
   }
-
-  /** Walk the current bank state to see if any row has either an
-   *  affordable upgrade or a hockable item. Used to decide whether to
-   *  auto-collapse the bank when it offers nothing actionable. */
-  function _bankHasActions() {
-    if (!state.me) return false;
-    const t = state.table;
-    const mySeat = t?.seats?.find(s => s.playerId === state.me.player_id);
+  function buildPaperDollHtml() {
+    const head = `<div class="bank-doll__head"><span>🎒 My Loot Bank</span><button type="button" class="bank-doll__close" data-bank-close aria-label="Close">✕</button></div>`;
+    if (!state.me) return head + '<p class="sidebar-bank__empty">Pick a character to start your collection.</p>';
+    const mySeat = state.table?.seats?.find(s => s.playerId === state.me.player_id);
     let gear = mySeat?.gear;
-    if (!gear) {
-      try { gear = JSON.parse(state.me.gear || '{}') || {}; }
-      catch (_) { gear = {}; }
-    }
+    if (!gear) { try { gear = JSON.parse(state.me.gear || '{}') || {}; } catch (_) { gear = {}; } }
     const chips = mySeat?.chips ?? state.me.chips ?? 0;
-    for (const slot of GEAR_SLOTS) {
-      const cur = gear[slot] || 0;
-      if (cur > 0) return true;                            // hockable
-      const cost = gearPrice(slot, 1);                     // cheapest path: +1 fresh
-      if (cur < 5 && chips >= (gearPrice(slot, cur + 1) - (cur ? gearPrice(slot, cur) : 0))) return true;
-    }
-    return false;
+    const totalValue = GEAR_SLOTS.reduce((s, slot) => s + ((gear[slot] || 0) ? gearPrice(slot, gear[slot]) : 0), 0);
+    const pct = Math.min(100, Math.round(totalValue / LOOT_LORD_TOTAL * 100));
+    const avatar = renderAvatar(state.me.avatar_id || mySeat?.avatarId);
+    const c = (s) => bankSlotCard(s, gear, chips);
+    return head + `
+      <div class="bank-doll__grid">
+        <div class="bank-doll__col">${c('weapon')}${c('armor')}</div>
+        <div class="bank-doll__figure"><div class="bank-doll__avatar">${avatar}</div><div class="bank-doll__chips">💰 ${formatChips(chips)} gp</div></div>
+        <div class="bank-doll__col">${c('shield')}${c('cloak')}</div>
+      </div>
+      <div class="bank-doll__ringrow">${c('ring')}</div>
+      <div class="bank__progress" title="Progress to LOOT LORD (full +5 set)"><div class="bank__progress-bar" style="width:${pct}%"></div><span class="bank__progress-text">${formatChips(totalValue)} / ${formatChips(LOOT_LORD_TOTAL)} · ${pct}%</span></div>`;
   }
-
-  /** Apply collapsed state to DOM + aria. */
-  function applySidebarBankCollapsed(collapsed) {
-    const toggle = $('#sidebarBankToggle');
-    const body   = $('#sidebarBank');
-    if (!toggle || !body) return;
-    toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    body.hidden = collapsed;
-    const chev = toggle.querySelector('.help-panel__chevron');
-    if (chev) chev.textContent = collapsed ? '▸' : '▾';
+  function openBankDoll() {
+    const el = $('#bankDoll'); if (!el) return;
+    _bankDollOpen = true; el.hidden = false; el.innerHTML = buildPaperDollHtml();
+    // Anchor (fixed) just below the button so it floats over the felt unclipped.
+    const btn = $('#sidebarBankToggle');
+    if (btn) { const r = btn.getBoundingClientRect(); el.style.top = `${Math.round(r.bottom + 6)}px`; el.style.left = `${Math.round(r.left)}px`; }
+    $('#sidebarBankToggle')?.setAttribute('aria-expanded', 'true');
   }
+  function closeBankDoll() {
+    const el = $('#bankDoll'); if (el) el.hidden = true;
+    _bankDollOpen = false;
+    $('#sidebarBankToggle')?.setAttribute('aria-expanded', 'false');
+  }
+  // Re-render the open doll when chips/gear change (called on roster/table state).
+  function renderSidebarBank() { if (_bankDollOpen) { const el = $('#bankDoll'); if (el) el.innerHTML = buildPaperDollHtml(); } }
+  function renderBank() { /* legacy no-op — gear bank also lives in the action panel */ }
 
-  // Click handler — record user's preference + apply.
+  $('#sidebarBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankDollOpen ? closeBankDoll() : openBankDoll(); });
+  $('#bankDoll')?.addEventListener('click', (e) => { if (e.target.closest('[data-bank-close]')) closeBankDoll(); });
+  // Click anywhere outside the doll (and not the toggle / a gear button) closes it.
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('#sidebarBankToggle');
-    if (!t) return;
-    const collapsed = t.getAttribute('aria-expanded') === 'true';   // currently expanded → collapsing
-    sessionStorage.setItem('actpanel.bankCollapsed', collapsed ? '1' : '0');
-    applySidebarBankCollapsed(collapsed);
+    if (!_bankDollOpen) return;
+    if (e.target.closest('#bankDoll') || e.target.closest('#sidebarBankToggle')) return;
+    closeBankDoll();
   });
-
-  /** Legacy no-op — bank now lives inline inside the action panel. */
-  function renderBank() { /* see buildBankHtml inside actpanel */ }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && _bankDollOpen) closeBankDoll(); });
 
   // ===== LOOT LORD ceremony overlay =====
   function renderLootLord() {
@@ -2882,6 +3024,12 @@
       });
       return;
     }
+    // Abadar bank: re-buy a fresh stack (moved here from the ≡ options menu).
+    if (e.target.closest('[data-rebuy]')) {
+      e.preventDefault();
+      doRebuy();
+      return;
+    }
     // Preset chip → fill the raise input
     const preset = e.target.closest('button[data-raise]');
     if (preset) {
@@ -2927,6 +3075,78 @@
     });
   })();
 
+  // PF1e class + weapon dropdowns — same profile cluster as pronouns. Options
+  // come from the server (lobby:pf1meta) so the class roster / staple weapon
+  // list stays single-sourced. These pick BAB + weapon dice for the dungeon
+  // and the cosmetic bar-brawl; they never touch poker.
+  function fillSelect(sel, items, value) {
+    if (!sel) return;
+    sel.innerHTML = items.map(i => `<option value="${i.key}">${i.label}</option>`).join('');
+    if (value != null) sel.value = value;
+  }
+  // Mirror of the server's weaponProficient() so the dropdown can sort/colour
+  // without a round-trip. `w` is a {key, prof} from pf1meta.
+  function isProficient(classKey, w) {
+    if (!w) return true;
+    if (w.key === 'unarmed') return true;
+    const p = (state.pf1meta?.proficiency || {})[classKey] || { cats: ['simple', 'martial'] };
+    if (w.prof && (p.cats || []).includes(w.prof)) return true;
+    if ((p.weapons || []).includes(w.key)) return true;
+    return false;
+  }
+  // Build the weapon <select> for a class: proficient weapons grouped at the
+  // top, non-proficient ones below in burnt orange with the −4 penalty spelled
+  // out (inline colour for reliable rendering inside native option lists).
+  function buildWeaponSelect(wsel, cls, value) {
+    const meta = state.pf1meta;
+    if (!wsel || !meta) return;
+    const pen = meta.profPenalty || -4;
+    const prof = [], non = [];
+    for (const w of meta.weapons) (isProficient(cls, w) ? prof : non).push(w);
+    const opt = (w, bad) =>
+      `<option value="${w.key}"${bad ? ' class="weapon-nonprof" style="color:#cc5500"' : ''}>`
+      + `${w.name} (${w.dmg})${bad ? ` — ${pen} non-prof` : ''}</option>`;
+    let html = '';
+    if (prof.length) html += `<optgroup label="✔ Proficient">${prof.map(w => opt(w, false)).join('')}</optgroup>`;
+    if (non.length)  html += `<optgroup label="✘ Not proficient (${pen} to hit)">${non.map(w => opt(w, true)).join('')}</optgroup>`;
+    wsel.innerHTML = html;
+    if (value != null) wsel.value = value;
+    // Tint the closed select burnt-orange when the chosen weapon is one this
+    // class isn't proficient with, so the penalty is visible without opening it.
+    const selected = meta.weapons.find(w => w.key === wsel.value);
+    wsel.classList.toggle('is-nonprof', !!selected && !isProficient(cls, selected));
+  }
+  function syncClassWeapon(p) {
+    const meta = state.pf1meta;
+    if (!meta || !p) return;
+    fillSelect($('#meClass'), meta.classes.map(c => ({ key: c.key, label: c.name })), p.class || 'fighter');
+    buildWeaponSelect($('#meWeapon'), p.class || 'fighter', p.weapon || 'dagger');
+  }
+  (function wireClassWeaponDropdowns() {
+    const csel = $('#meClass'), wsel = $('#meWeapon');
+    socket.emit('lobby:pf1meta', null, (resp) => {
+      if (!resp?.ok) return;
+      state.pf1meta = resp;
+      if (state.me) syncClassWeapon(state.me);
+    });
+    csel?.addEventListener('change', (e) => {
+      socket.emit('lobby:setClass', { cls: e.target.value }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not save class', true); return; }
+        if (state.me) state.me.class = resp.cls;
+        // Re-sort/re-colour the weapon list for the new class' proficiencies.
+        if (state.me) buildWeaponSelect($('#meWeapon'), resp.cls, state.me.weapon || 'dagger');
+      });
+    });
+    wsel?.addEventListener('change', (e) => {
+      socket.emit('lobby:setWeapon', { weapon: e.target.value }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not save weapon', true); return; }
+        if (state.me) state.me.weapon = resp.weapon;
+        const w = state.pf1meta?.weapons?.find(x => x.key === resp.weapon);
+        e.target.classList.toggle('is-nonprof', !!w && !isProficient(state.me?.class || 'fighter', w));
+      });
+    });
+  })();
+
   // ===== Topbar — Abadar purse popover tap-to-toggle =====
   // Hover handles desktop via CSS. For touch users (no :hover), tap
   // the chips badge to toggle .is-open on the wrapper; a click anywhere
@@ -2947,10 +3167,13 @@
   })();
 
   // ===== Topbar =====
-  $('#resetStackBtn').addEventListener('click', () => {
+  // Re-buy a fresh stack — invoked from the 💰 money-menu button (see the
+  // [data-rebuy] delegate above). A function declaration so that earlier-bound
+  // delegate is free to call it regardless of source order.
+  function doRebuy() {
     const debtNow = Number(state.me?.rebuy_debt || 0);
     const newDebt = debtNow + state.defaultStack;
-    const msg = `Re-buy ${state.defaultStack.toLocaleString()} gp?\n\n`
+    const msg = `Loan ${state.defaultStack.toLocaleString()} gp from Abadar?\n\n`
               + `This is a LOAN. Your long-term debt will go from `
               + `${debtNow.toLocaleString()} → ${newDebt.toLocaleString()} gp.\n`
               + `Pay it down later with winnings.`;
@@ -2962,7 +3185,7 @@
       paintMe();
       toast(`Stack reset to ${resp.chips.toLocaleString()} gp. Debt: ${resp.rebuyDebt.toLocaleString()} gp`);
     });
-  });
+  }
 
   // (Pay-Debt button removed — debt tracking is no longer a thing.
   // Old client tabs that still have the button just won't see anything
@@ -3079,13 +3302,26 @@
     const m = $('#botPickerModal');
     if (m) m.hidden = true;
   }
-  function emitAddBot(playerId) {
+  // Seat one AI. When `keepOpen` is true (picker card / Random), the modal
+  // stays open and the just-seated character is dropped from the grid — same
+  // feel as the dungeon's "Recruit AI" panel, so you can click several in a
+  // row. When false (or the table just filled), the picker closes.
+  function emitAddBot(playerId, keepOpen = false) {
     socket.emit('table:addBot', playerId ? { playerId } : null, (resp) => {
-      if (!resp?.ok) { toast(resp?.error || 'Could not add bot', true); return; }
+      if (!resp?.ok) {
+        toast(resp?.error || 'Could not add bot', true);
+        // A "table full" failure means there's nothing left to do here.
+        if (/full|no empty|no available|no seat/i.test(resp?.error || '')) closeBotPicker();
+        return;
+      }
       const seated = state.roster?.find(p => p.player_id === resp.playerId);
       toast(`${seated?.nickname || 'Bot'} joined the table`);
+      if (!keepOpen) { closeBotPicker(); return; }
+      // Drop the seated character and re-render; close once the bench is empty.
+      _botPickerData = _botPickerData.filter(({ p }) => p.player_id !== resp.playerId);
+      if (_botPickerData.length === 0) { closeBotPicker(); return; }
+      renderBotPickerGrid($('#botPickerSearch')?.value || '');
     });
-    closeBotPicker();
   }
   // Fill every empty seat with random AI in one request.
   function emitFillBots() {
@@ -3100,10 +3336,10 @@
   $('#pickBotBtn').addEventListener('click', openBotPicker);
   $('#botPickerModal').addEventListener('click', (e) => {
     if (e.target.closest('[data-close-bot-picker]')) { closeBotPicker(); return; }
-    if (e.target.closest('#botPickerFill')) { emitFillBots(); return; }
-    if (e.target.closest('#botPickerRandom')) { emitAddBot(null); return; }
+    if (e.target.closest('#botPickerFill')) { emitFillBots(); return; }   // fills all → closes
+    if (e.target.closest('#botPickerRandom')) { emitAddBot(null, true); return; }   // stays open
     const card = e.target.closest('[data-bot-id]');
-    if (card) emitAddBot(card.dataset.botId);
+    if (card) emitAddBot(card.dataset.botId, true);   // stays open — click several
   });
   // Live search-filter for the bot picker grid. `input` fires on every
   // keystroke (including paste / clear), so the grid stays in sync.
@@ -3116,7 +3352,7 @@
       const first = $('#botPickerGrid [data-bot-id]');
       if (first) {
         e.preventDefault();
-        emitAddBot(first.dataset.botId);
+        emitAddBot(first.dataset.botId, true);   // seat + keep picker open
       }
     } else if (e.key === 'Escape') {
       // Let Escape close the modal even when focus is in the search box.

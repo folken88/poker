@@ -21,14 +21,35 @@ const combat  = require('./combat');
 const db      = require('../persistence/db');
 const banter  = require('../bot/banter');
 const enemies = require('../bot/enemies');
+const { babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../pf1data/classes');
+const { STAPLE_BY_KEY } = require('../pf1data/staples');
+
+// Cosmetic class/weapon rider for a seated brawler: their chosen base weapon
+// plus a modest class-BAB scaling (a fighter swings better than a wizard) and
+// the −4 non-proficiency penalty if they're swinging a weapon their class can't
+// use. No flat ability mod here — bar-brawl numbers stay small and silly.
+function brawlOpts(playerId, gear) {
+  const p = db.getPlayer(playerId) || {};
+  const cls = p.class || 'fighter';
+  const weaponKey = p.weapon || 'dagger';
+  const lvl = Math.max(1, 1 + combat.totalMagicBonus(gear));
+  // NPCs are always proficient with their assigned weapon (signature gear).
+  const notProf = (p.is_bot || weaponProficient(cls, STAPLE_BY_KEY[weaponKey])) ? 0 : NON_PROFICIENT_PENALTY;
+  return { cls, weapon: weaponKey, bab: babFor(cls, lvl) + notProf, dmg: Math.floor(lvl / 2) };
+}
 
 // ----- Narration helpers (cosmetic only) -----
 const FLESH_VERBS = ['slashes', 'carves', 'cuts', 'eviscerates', 'opens up', 'runs through', 'guts', 'skewers'];
 // Narrative-only fight lines: the d20 / AC / confirmation-roll breakdowns are
 // gone now that the system is proven out — just the result, with the damage
 // number as the only number on a hit.
+const RAY_CLASSES = new Set(['wizard', 'sorcerer']);   // basic attack is an Elemental Ray, not a weapon
 function fightLine(attacker, defender, s, isCounter) {
   const lead = isCounter ? '↩️ ' : '⚔️ ';
+  if (s.ray) {
+    if (s.outcome === 'flesh') return `${isCounter ? '↩️ ' : '❄️ '}${attacker} blasts ${defender} with a ${s.weapon.name} for ${s.damage} cold!${s.crit ? ' 💥 CRIT!' : ''}`;
+    return `${isCounter ? '↩️ ' : '❄️ '}${attacker}'s ${s.weapon.name} streaks past ${defender} and misses.`;
+  }
   if (s.outcome === 'flesh') {
     const v = FLESH_VERBS[Math.floor(Math.random() * FLESH_VERBS.length)];
     const tail = s.crit ? ' 💥 CRIT!' : '';
@@ -107,13 +128,21 @@ function executeFight(table, attackerSeat, targetSeat, mode, opts = {}) {
     } catch (_) { /* flavor only */ }
   }
 
+  const aOpts = brawlOpts(attackerSeat.playerId, aGear);
+  const dOpts = brawlOpts(targetSeat.playerId, dGear);
+
   if (mode === 'melee') {
-    const a = combat.resolveSwing(aGear, dGear);
+    // Wizards/sorcerers fire an Elemental Ray instead of swinging a weapon.
+    const a = RAY_CLASSES.has(aOpts.cls)
+      ? combat.resolveRay(aGear, dGear)
+      : combat.resolveSwing(aGear, dGear, { attackerWeapon: aOpts.weapon, defenderWeapon: dOpts.weapon, babBonus: aOpts.bab, dmgBonus: aOpts.dmg });
     table.chat('fight', fightLine(aNick, dNick, a), { audioUrl: a.sound });
-    // Target's counter-swing, delayed so the two sounds don't collide.
+    // Target's counter, delayed so the two sounds don't collide.
     setTimeout(() => {
       try {
-        const c = combat.resolveSwing(dGear, aGear);
+        const c = RAY_CLASSES.has(dOpts.cls)
+          ? combat.resolveRay(dGear, aGear)
+          : combat.resolveSwing(dGear, aGear, { attackerWeapon: dOpts.weapon, defenderWeapon: aOpts.weapon, babBonus: dOpts.bab, dmgBonus: dOpts.dmg });
         table.chat('fight', fightLine(dNick, aNick, c, true), { audioUrl: c.sound });
         if (targetSeat.isBot) {
           const dealtMore = c.damage > a.damage;

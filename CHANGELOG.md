@@ -21,6 +21,385 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-02
 
+### 🎲 Sound variety, Druids, Dispel & spookier undead
+- **Fireball** and **Lightning Bolt** now **alternate between several sound
+  variants** each cast (no more identical boom on repeat); Haste does too.
+- **Druids** join the fray — **Entangle** (roots a random 1d4 foes), **Cure Light
+  Wounds**, and **Call Lightning**.
+- **Dispel Magic** (clears a debuff off an ally) and **Acid Arrow** added to the
+  arcane lists.
+- **Barbarian Rage** is now a **free action** — rage AND still attack the same
+  turn (and it roars like Odin).
+- **Rogues** get a signature sneak-attack sound with light blades; a slain hero
+  gets a somber death cue.
+- New foes: **Lich** and **Vampire**, whose **sinister gaze** can freeze a hero in
+  terror (Will save or lose a turn). Minotaurs now bellow.
+
+### 🪄 Even more spells, an Inquisitor judgement system & ~19 sounds
+- **Wizards** learn **Invisibility** (can't be targeted until you attack),
+  **Cone of Cold** (2+1d3 foes), and **Disintegrate**; **sorcerers** get Cone of
+  Cold + Disintegrate too.
+- **Clerics & Inquisitors** gain **Searing Light**. **Magi** get **Frigid Touch**
+  (a freezing spellstrike that staggers). **Bards** get **Hideous Laughter**, and
+  their **Inspire Courage** now buffs the whole party for the **entire dungeon**.
+- **Inquisitor JUDGEMENTS** — a free-action toggle (switch any time, no action
+  cost): **Destruction** (+damage), **Protection** (+AC), or **Healing** (regen
+  each turn). Only one active at a time.
+- **Fire Skeletons** — explode on death, scorching 1d2 nearby heroes.
+- **Danger's longbow** is now near-silent (the sound lands on the hit); warhammers
+  ring (and ring *holy* on a paladin's smite); Dismas's Rovadra fires faster.
+- ~19 new sound effects across all of the above.
+
+### ✨ New spells, foes & a pile of sound FX
+- **Clerics** gain high-level prayers as they level (PF1e progression):
+  **Boneshatter** (lvl 5), **Breath of Life** (lvl 7, revives a dying ally),
+  **Raise Dead** (lvl 9) and **Resurrection** (lvl 13, slain ally back at full HP).
+- **Scorching Ray** now SPLITS — **2 rays at caster level 7, 3 at 11**, each
+  rolling to hit (with a meatier "fire-combo" sound when it splits).
+- **Wizards** learn **Haste** — the whole party blurs and gets an **extra attack**
+  on their next turn. **Sorcerers** learn **Gust of Wind** — knocks down a random
+  1d3 foes (Fort save or prone).
+- **Skeletal Champions** now loose a **bone-rattling shout** — 1d8 + Fort save or
+  **stunned** (shown with the PF1 stunned icon).
+- **Farrus Richton** now dual-wields **twin battleaxes** — two strikes a turn (one
+  axe-chop sound), and no shield.
+- New foes: the **Blood Caimon** (giant red alligator) and the **Badger**.
+- A dozen new sound effects across channels, revives, shouts, bites, gusts, blunt
+  weapons and more.
+
+### ✝️ Clerics reworked — full prayer book
+- Clerics are now **prepared divine casters** (like wizards): **one casting of
+  each prayer per room**. Their book: **Cure Light / Cure Moderate Wounds**,
+  **Divine Favor** (+3 hit & damage to self, the room), **Holy Smite**,
+  **Prayer** (+1 hit & damage to *all allies*, the room), **Bless**, and
+  **Channel Positive**.
+- **Bless** is special: cast **once for the entire dungeon**, it gives every ally
+  **+1 to hit that never fades between rooms**.
+- **Channel Positive** uses Pathfinder norms — heals **½ caster level d6** to the
+  whole party, usable **once per 5 levels per room**.
+- Upshot: Holy Smite is now a single prepared cast per room (no more spam), and
+  the cleric plays like a real support — buff, heal, smite, then wade in.
+
+### ⏱️ Auto-skip countdown in the dungeon
+- On your turn in the dungeon, a **live countdown** now shows just to the right of
+  your token, so you can see exactly how long before you auto-skip.
+
+### 🖼️ Missing avatars fixed
+- The PNG→WebP conversion had orphaned some token paths, so a few avatars stopped
+  showing. Repaired the token manifests and migrated any stored avatar that still
+  pointed at a deleted `.png` over to its `.webp` — broken portraits are back.
+
+### 🎭 AI allies vary their abilities (no more spam)
+- Dungeon bots no longer repeat the same ability every turn — they won't use the
+  same one twice in a row when they have another option. So the cleric alternates
+  **Holy Smite / Hold Person** instead of hammering Holy Smite (and its sound)
+  over and over; martials mix Trip/Cleave, Rapid Shot/Bullseye, etc.
+
+### 🪓 Ulfred's battleaxe "Voidshard"
+- Ulfred now swings a named battleaxe, **Voidshard** (1d8, ×3), with its own
+  meaty axe report.
+
+### 🚪 Leave button always visible
+- The **Leave** button moved out of the ≡ menu to the top-right, so it's always
+  one tap away (no more digging through the mobile hamburger to stand up).
+
+### 🧠 AI allies use their class abilities
+- Dungeon bots no longer just swing every turn — they now **play their kit**:
+  **paladins** Smite and **Channel-heal** a wounded party, **clerics** heal /
+  Holy Smite / Hold Person, **wizards & sorcerers** sling spells (blasting groups
+  with AoE, picking off the weak with single-target), **magi** raise Shield then
+  Spell Strike, **barbarians** Rage then Cleave, **bards** Inspire then Fascinate,
+  **rangers** Rapid Shot, and so on. They heal when someone drops below ~55%,
+  buff once at the top of a fight, and fall back to a basic attack when nothing
+  better fits.
+
+### 🩹 Debuff icons in the dungeon
+- Heroes and monsters now show their active debuffs as proper **PF1 condition
+  icons** — **Sickened**, **Paralyzed**, **Asleep**, and **Prone** — right on
+  their cards (hover for the name), instead of stray emoji.
+- Fixed: **Hold Person** now actually freezes an *enemy's* turn (a paralyzed
+  monster loses its turn, as it should).
+
+### 🗣️ Elfrip grows up a little
+- Elfrip speaks a touch more grown-up now — fuller sentences, fewer dropped
+  words — while still talking about himself in the third person ("Elfrip wins!").
+
+### 🏛️ Abadar charges interest
+- Your **tab with Abadar now compounds**: **+5% for every 10 turns** you play —
+  poker actions *and* dungeon combat turns both count — for as long as you owe.
+  A chat line marks each time it grows. **Pay it down** to stop the clock (it
+  resets the moment you're square). Bots never owe.
+
+### 🖼️ Art converted to WebP (faster loads)
+- Every PNG asset (card back, character art, monster + token art) is now **WebP**
+  — the same images at a fraction of the size (~9 MB → ~1 MB), so the table and
+  dungeon load quicker.
+
+### ⚔️ Magus reworked — Spell Strike & Shield
+- A magus now makes a **basic attack with their chosen weapon**, plus two powers:
+  **Spell Strike** (that attack **plus up to +5d6 electricity** — Shocking Grasp
+  through the blade, usable **once per room per 5 levels**) and **Shield** (a
+  **+4 AC** ward that lasts the rest of the room).
+- Signature Spell Strike sounds per magus: **Kate**, **Vaughan**, and **Toni**
+  each get their own.
+
+### 🪄 Wizard vs. Sorcerer — two kinds of caster
+- **Wizards** are prepared casters: **one casting of each spell they know, per
+  room** (so their volume grows as they unlock more spells — no more spamming a
+  single Fireball).
+- **Sorcerers** know **fewer** spells but cast from a **shared per-room pool**
+  (their limited casts/day), free to recast their favorites until it runs dry.
+- **Farrah** is now a sorcerer.
+
+### 🔊 Audio leveled out + new sound FX
+- **Every sound is volume-normalized** so nothing blares over the rest (the
+  repeating crossbow was the worst offender).
+- New/changed cues: **Scorching Ray** now intones a **Dragon Slave**; **Sleep**
+  gets a quick *shh*; **Dismas's** Rovadra cracks with an echoing delay;
+  **Taelys's** rifle is now a **silenced DVL** shot; the monk's kiai pool is
+  trimmed to short, snappy clips. (And nobody hiccups "hic" out loud anymore.)
+
+### 🐢 Dungeon pacing & smarter allies
+- A **~1-second beat between turns** so the action is easier to follow.
+- **AI allies avoid hitting sleeping/fascinated foes** — they won't wake your
+  crowd-controlled enemies for free.
+
+### 🏛️ "Loan from Abadar"
+- The **Re-buy** button is now **Loan from Abadar** — same fresh stack, same loan
+  added to your debt, just by its proper name.
+
+### 🎒 Loot bank & Hall of Records polish
+- The **My Loot Bank** popover now shows a **paper-doll** of your equipped gear
+  over a **Vitruvian Gaspar** backdrop.
+- **Hall of Records** gains **Human / AI filters** (and fits on one row).
+
+### 🔥 Fireball goes wide
+- **Fireball** now engulfs a **random 1d6 enemies** (was a fixed 3) — great
+  against the new goblin hordes, but you never quite know how many it'll catch.
+
+### 👺 Goblin hordes with teeth
+- Rooms now favor **swarms of cheap mooks** — a full party gets buried under
+  goblins, kobolds, centipedes and the like (10–14 of them) instead of a few big
+  bruisers.
+- New **Goblin Rogue** and **Goblin Shaman**, and enemy **Sneak Attack**: a
+  shaman's **Hold Person** locks a hero down, then the rogues pile on for **+2d6**
+  against held or flat-footed targets. (Kobold Rogues sneak too now.)
+
+### 🗡️ Dungeon scales with party size (more heroes = more enemies)
+- Rooms now throw **a lot more monsters** at a packed party — each hero past the
+  first adds roughly a full encounter's worth of foes (a level-3 party meets ~2
+  enemies solo, ~7 at four heroes, ~10 at six). Each foe's CR still tracks the
+  weakest member (so nobody gets one-shot), but you'll get swarmed. **Boss rooms
+  now bring minions** too, scaled to party size.
+
+### ⚖️ Inquisitor — Bane & Divine Favor
+- The inquisitor's abilities are now **Bane** (+2 to hit and **+2d6+2** damage
+  vs their foes) and **Divine Favor** (+3 to hit and +3 damage to themselves),
+  each lasting the rest of the room. Sticky buffs no longer stack with themselves
+  on a re-cast (and Rage / Inspire are protected the same way).
+
+### ⚔️ Rogue/inquisitor martial proficiency + named sniper rifles
+- **Rogues and inquisitors are now proficient with all martial weapons** (exotics
+  like the whip/katana still take the −4 without the feat).
+- The rangers' sniper rifles are now distinct, named guns with their own Tarkov
+  reports: **Duristan** wields a **Lapua .338** (2d10, ×4) and **Taelys** an
+  **SV-98** (2d8, ×4).
+
+### ⚔️ Every NPC now has a class & signature weapon
+- Filled in the last of the unclassed NPCs: **Agu** (inquisitor, rapier),
+  **Chef** (rogue, battle axe), **Crisp** (rogue, Bite 1d6), **Kai Ginn** (ranger,
+  glaive), **Lirienne** (ranger, repeating crossbow), **Rissa** (druid, Claws),
+  **Taelys** & **Duristan** (rangers, sniper rifle 2d8), **Ulfred** (cleric,
+  warhammer + shield), **Vaughan** (magus, scimitar "Radiance"), **Texas Holden**
+  (swashbuckler, rapier). New repeating-crossbow & sniper-rifle sounds.
+- NPCs are now **always proficient with their assigned weapon** (the −4
+  non-proficiency penalty only ever applies to a human's own weapon choice).
+
+### ⚔️ More NPC classes (and a Bujon fix)
+- **Vesorianna** — cleric, wields a spectral **Ghost Touch** (2d6).
+- **Farrus Richton** — barbarian with a greataxe.
+- **Dinvaya** — cleric (warhammer + shield).
+- **Storgrim Thunderbeard** — fighter (battle axe + shield).
+- Fixed **Bujon** silently defaulting to Fighter — he's a **sorcerer** as intended
+  (his name/nickname key didn't match).
+
+### 📜 Hall of Records — filter by Humans / AI
+- The Hall of Records now tracks every category for **humans and AI separately**.
+  New **All · 🧑 Humans · 🤖 AI** filter buttons let you see the best across
+  everyone, the best human, or the best AI for each record (Gain, Loss, Pot, War,
+  Bluff, Ugliest).
+
+### 🎒 Loot Bank is a paper doll now
+- "🎒 My Loot Bank" is just a button — click it and a **paper doll** pops up with
+  your character, every equipped gear slot (weapon/armor/shield/cloak/ring), and
+  buy/hock buttons right there. Click anywhere outside (or ✕ / Escape) to close it.
+
+### 🗺️ Dungeon starts at the weakest delver's level
+- A run's first rooms now start at the **CR of the lowest-level party member**
+  (so nobody gets one-shot in room 1), then ramp up as you descend — instead of
+  averaging the party.
+
+### 🏦 Bots borrow instead of pawning their gear
+- When an AI busts, it now **borrows from the First Bank of Abadar** (a loan,
+  keeping its magic items) instead of "hocking" them — the chat flavor and the
+  ledger both reflect a real loan now. Only when a bot is **drowning in debt**
+  does it pawn its cheapest item (named) as a last resort to stay seated.
+
+### ⚖️ Encounters scale to your party (PF1 CR rules)
+- Now that heroes are much tougher (class HP, abilities, real to-hit), rooms are
+  built to match. Each room targets an **encounter CR based on your party's
+  Average Party Level** — ramping up as you descend, eased for small parties,
+  and stepped up on boss rooms — then filled with monsters by **PF1 XP budget**
+  (so "two CR-3s = a CR-5 room" math is exact). The Brass Golem / Barbed Devil
+  bosses now appear only when a deep, high-level party can actually face them.
+
+### 🔧 Stale-client fix
+- Fixed the "I still see the old buttons / no spellbook" bug: the HTML shell is
+  now served **no-store** for the root and all routes, so a plain reload always
+  loads the latest UI. (One more hard refresh, then you're set for good.)
+
+### 🏹 Danger the ranger + 🧙 caster Elemental Ray
+- **Danger (Rodney "Danger" Smith)** is now a **ranger** with a **Composite Longbow**
+  (1d8, ×3). He has **Point Blank Shot** (+1 to hit & damage with the bow) and can
+  use **Attack** (one shot), **Rapid Shot** (2 shots at −2), or **Bullseye Shot**
+  (1 shot at +4) — with real single-shot and multi-shot bow sounds.
+- **Elfrip** is now a **fire sorcerer** — Scorching Ray at level 4, **Fireball** (his
+  favorite) at level 7.
+- **Wizards & sorcerers no longer swing a weapon** — their basic attack is an
+  **Elemental Ray** (a ranged touch for **1d6+4 cold**, the *Avatar* ice-punch
+  sound). It's unlimited, and it's also their **poker-table harassment** attack
+  (they fire a frost ray instead of flailing a dagger).
+
+### 🔮 Sorcerer Magic Missile + Barbarian rework
+- **Sorcerers** now open (level 1) with **Magic Missile** and **Sleep** alongside
+  Burning Hands and Shocking Grasp. Magic Missile fires the proper PF1 count —
+  **1 dart, +1 every 2 levels (max 5)**, each an unerring 1d4+1 — and rips off the
+  *Aliens* pulse-rifle **burst** sound. Extra darts spread across your selected foes.
+- **Spell pools follow PF1**: your per-room casts are a sorcerer's 1st-level spell
+  slots + the bonus slot for an 18 casting stat (4 at level 1, up to 7).
+- **Barbarian** is now **Attack · Cleave · Rage**: Cleave hits two foes but drops
+  your guard (−2 AC that turn); **Rage** lasts the room for **+2 to hit & damage,
+  +1 Will, but −2 AC** (and yes, it stacks with a reckless cleave).
+
+### 💤 Wizard gets Sleep
+- A level-1 **Wizard** now opens with **Shocking Grasp, Grease, and Sleep**.
+  **Sleep** drops up to 3 of the weakest foes (Will save) into a helpless slumber
+  — they lose their turns until something hits them.
+
+### ❤️ Class HP + 📖 a real spellbook menu
+- **Hit points are now set by your class's Hit Die** (max roll per level): a
+  level-6 Barbarian has 72 HP, a Fighter/Paladin 60, a Cleric/Rogue/Bard/Magus
+  48, a Wizard/Sorcerer 36. Casters are squishier — position accordingly.
+- **Spellcasters get an expandable 📖 Spellbook ▾ menu** instead of a wall of
+  buttons — it lists every spell with its **art icon**, target count, level
+  requirement, and the shared cast-pool remaining. Each spell now shows a proper
+  **PF1 icon** (fireball, lightning bolt, scorching ray, hold person, channel, …);
+  martial maneuvers keep their glyphs.
+
+### 📖 Spellbook v2 — level-gated spells, signature weapons, sharper martials
+- **Casters now have a real, level-gated spell list** that draws from a shared
+  **per-room cast pool** (bigger at higher level):
+  - **Wizard** — Burning Hands, Shocking Grasp, **Grease** (2 foes slip prone, *splat*);
+    at L3 Scorching Ray + Hold Person; at L5 Fireball + Lightning Bolt.
+  - **Sorcerer** — Burning Hands, Shocking Grasp; Scorching Ray (4d6) at L4;
+    Lightning Bolt + Fireball at L7.
+  - **Cleric** — Hold Person · Holy Smite (2 foes) · Channel Positive (party heal).
+- **Martials sharpened:**
+  - **Fighter Trip** is now an attack roll that deals no damage — on a hit the foe
+    is knocked **prone, loses its turn**, and you get a **free attack** (prone = +4
+    for everyone to hit it).
+  - **Rogue** Sneak-Attacks anything **prone / flat-footed / sickened / paralyzed**,
+    strikes **twice with daggers**, and **Feint** is an opposed roll that sets up a
+    free Sneak-Attack strike.
+  - **Paladin Smite** now adds **double your level** to damage (1/room per 5 levels),
+    and Lay on Hands became **Channel Positive** (party heal).
+- **Bard** (Elodie) — **Inspire Courage** (party +to-hit/+dmg for the room) and
+  **Fascinate** (up to 3 foes lose their turns *until something hits them*).
+- **Signature weapons:** **Dismas** wields the holy dragon-rifle **Rovadra** (1d12,
+  with its own shot sound — and yes, he smites with it); **Gaspar** carries the
+  bastard sword **Curator**. Named weapons are always wielded proficiently.
+- **Proficiency:** **Fighters, Rangers, and Paladins are now proficient with every
+  weapon, even exotics.**
+
+### 📖 Class abilities & a PF1 spellbook (dungeon)
+- **Every class now fights its own way.** You get an **at-will attack every turn**
+  plus **two class abilities**, mapped as close to Pathfinder 1e as our combat
+  allows. Martial abilities are **condition-gated** (use them whenever it's smart);
+  spells and channels are a **per-room pool that grows with your level**.
+- The **core 10** classes are live (the rest stay in the data but are hidden from
+  the dropdown for now):
+  - **Fighter** — Trip (→ prone + free hit) · Cleave (hit two foes)
+  - **Barbarian** — Rage (+to-hit/+dmg this room) · Reckless Blow (+dmg, drop guard)
+  - **Rogue** — Feint (→ Sneak Attack) · Dirty Trick (blind a foe)
+  - **Paladin** — Smite Evil · Lay on Hands (heal)
+  - **Cleric** — Channel Energy (heal party) · Hold Person
+  - **Wizard** — Ray of Frost (cantrip) · Fireball · Magic Missile
+  - **Sorcerer** — Ray of Frost · Lightning Bolt · Scorching Ray
+  - **Magus** — Shocking Grasp · Frigid Touch (spellstrikes)
+  - **Inquisitor** — Judgment · Bane (weapon buffs)
+  - **Bard** — Inspire Courage (party buff) · Hideous Laughter
+- The dungeon action bar shows your kit (with **remaining uses** on spells), and
+  each spell has its own **sound** drawn from the studio library. Keys: **A** =
+  attack, **Q/W** = your two abilities, **1–9** = target. Blind mode speaks your
+  kit and takes the ability names as voice commands.
+
+### 👁 Spectate the dungeon
+- A new **👁 Spectate the Dungeon** button in your 💰 money menu lets you watch
+  the current run **without leaving your seat or joining the fight** — and
+  **heckle the delvers in chat** (your jabs show up tagged "(watching)"). Call a
+  bot ally out by name and they'll still fire back. Hit **↩ Back to the table**
+  to return whenever you like.
+
+### 💬 Chat in the dungeon
+- The dungeon now has a **chat box**, just like the poker table. Type to your
+  party and your line drops into the shared run log for everyone delving with
+  you. If you call a bot ally **by name**, they'll bark back in character (with
+  voice, when AI voices are on).
+
+### ⚔️ Weapon proficiency by class
+- Your class now determines which weapons you're **trained** with. A wizard
+  swinging a greatsword takes the PF1e **−4 non-proficiency penalty** to hit;
+  a fighter wields it cleanly. Full casters are restricted to their handful of
+  weapons (the wizard's dagger & quarterstaff), martial classes get everything,
+  and signature picks are honored (a rogue's short sword, a samurai's katana, a
+  cleric's warhammer, a druid's scimitar).
+- **The weapon dropdown now sorts by proficiency:** weapons you're trained with
+  sit up top under "✔ Proficient"; the rest fall under "✘ Not proficient (−4 to
+  hit)" rendered in **burnt orange**. Switch class and the list re-sorts on the
+  spot. Every AI's default weapon is one their class can actually use.
+
+### 🧹 Topbar declutter + money menu
+- The management buttons (**Sit out / Switch / Leave / Reset / + Bot / Pick AI**)
+  now collapse into a single **≡ menu** on every screen size — not just phones —
+  so the topbar isn't a long row of buttons anymore.
+- **Re-buy moved into your 💰 money menu** (click your chips), right next to
+  "Hit the Dungeon" — it's a money action, so it lives with the bank now.
+- **Pick AI seats characters as you click them** and *keeps the picker open*
+  (just like recruiting allies in the dungeon), so you can pack several in a row.
+  Each one you seat drops off the list. **Fill empty seats** still fills the
+  whole table and closes.
+
+### ⚔️ Pathfinder 1e classes & weapons (dungeon / cosmetic fights)
+- **Pick a class and a weapon.** Click your own name (the profile cluster, next
+  to pronouns) to choose from all **38 PF1e base classes** and a roster of staple
+  weapons — **dagger, shortsword, longsword, greatsword, warhammer, battleaxe,
+  greataxe, longspear, quarterstaff, unarmed, katana, scimitar, rapier, polearm,
+  whip**. Everyone starts with a **masterwork Dagger**.
+- **"+1 weapon" now means YOUR weapon, upgraded.** A weapon enhancement is a
+  flat +1/+2/… that rides on whatever you chose — no more being forced into a
+  longsword. Each staple keeps its true PF1e dice & crit (greataxe 1d12 ×3,
+  greatsword 2d6, rapier 18–20, …), pulled straight from the Pathfinder data.
+- **Class drives Base Attack Bonus.** Your to-hit in the dungeon (and the
+  cosmetic bar-brawl) now uses real PF1e BAB — a fighter swings better than a
+  wizard of the same level. The NPCs have fitting classes too: Sirona the
+  paladin, Gaspar the inquisitor, Tar-Baphon the wizard, Bujon the sorcerer,
+  Kelda the rogue, Kate & Toni the magi, and more.
+- **Smite Evil & Sneak Attack are live.** Enemies now carry an **alignment**, so
+  **paladins smite evil foes** for bonus to-hit and damage. Everyone (heroes and
+  monsters) tracks **flat-footed** status, so **rogues land Sneak Attack** on a
+  foe that hasn't acted yet. (All of this is dungeon/flavor only — it never
+  touches poker chips, pots, or standing.)
+
 ### ♠️ Bots — a little "mood"
 - Each bot now has a small mood that **drifts hand-to-hand** — some hands they're
   feeling a touch braver (fold a bit less, open a hair more), some a touch more

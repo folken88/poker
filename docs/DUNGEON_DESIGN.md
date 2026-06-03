@@ -150,3 +150,57 @@ random slot you don't already have at that tier → Hock (sell value from
 2. **AFK / turn timer:** a generous per-turn timer; on timeout it **auto-Bails**
    (banks gold and exits safely) rather than risk an AFK death.
 3. **Name:** button **"🗡️ Hit the Dungeon"**, screen titled **"The Dungeon."**
+
+---
+
+## Current implementation (as-built — 2026-06)
+
+The MVP has grown into a full PF1e-flavoured combat side-game. Source of truth:
+`backend/src/pf1data/abilities.js` (class kits), `backend/src/game/Dungeon.js`
+(engine), `backend/src/pf1data/staples.js` (weapons).
+
+### Ability cost models
+- **`free`** — martial maneuvers, usable every turn (Trip, Cleave, Feint, Rapid
+  Shot, bard songs). Some are **free actions** (`freeAction: true`) that don't end
+  the turn: barbarian **Rage**, inquisitor **Judgements**.
+- **`room`** — own per-room use count; refreshes each room (paladin Smite/Channel,
+  every **prepared** wizard/cleric/druid spell at `uses:1`).
+- **`pool`** — shared per-room cast pool (`spellSlots(level)`): the **sorcerer**.
+- **`run`** — once per WHOLE dungeon, never refreshed: **Bless**, bard **Inspire
+  Courage**. Pairs with **`persist`** buffs stored in `m.runBuffs` (survive room
+  resets).
+
+### Casters
+- **Wizard** — prepared; 1 cast of each spell/room. Shocking Grasp, Grease, Sleep,
+  Invisibility, Acid Arrow, Scorching Ray, Hold Person, Dispel Magic, Haste,
+  Fireball, Lightning Bolt, Cone of Cold, Disintegrate.
+- **Sorcerer** — spontaneous; few spells from a shared pool (Magic Missile,
+  Burning Hands, Acid Arrow, Gust of Wind, Scorching Ray, Fireball, Cone of Cold,
+  Disintegrate).
+- **Cleric** — prepared; Cure Light/Moderate, Divine Favor, Holy Smite, Searing
+  Light, Prayer, Bless, Channel Positive (½lvl d6, 1/5 levels/room), Boneshatter,
+  **Breath of Life / Raise Dead / Resurrection** (level-gated revives).
+- **Druid** — prepared; Entangle, Cure Light Wounds, Call Lightning.
+
+### Notable mechanics
+- **Scorching Ray** splits (1 ray, 2 at CL7, 3 at CL11) with a split sound.
+- **Invisibility** — untargetable (`_targetableParty`) until you attack.
+- **Haste** — party gets one extra attack next turn (`m.hasted`, `_hasteBonus`).
+- **Inquisitor Judgements** — one active at a time (Destruction +dmg / Protection
+  +AC / Healing regen), switched free.
+- **Sound pools** — abilities with `sounds:[...]` pick a random clip per cast
+  (Fireball, Lightning Bolt, Haste).
+- **Conditions** shown as PF1 icons: sickened, paralyzed, stunned, asleep, prone.
+- **Signature weapons** (`staples.js` CUSTOM_WEAPONS) carry `atkSound`, plus
+  `dual` (two swings/one report) + `noShield` (Farrus's twin axes).
+- **Enemy specials**: shaman Hold Person, Skeletal Champion stun-shout, Lich/
+  Vampire fear-gaze, Fire Skeleton death-explosion.
+
+### Bot ability AI (`Dungeon._botAbility`)
+Priority: revive fallen → dispel/heal the hurt → declare a judgement → raise
+buffs (once) → group-blast → spell/maneuver at the weakest foe → basic attack.
+Won't repeat the same ability twice in a row when alternatives exist.
+
+### Compound interest
+Abadar's loan (`rebuy_debt`) compounds +5%/10 turns played (poker actions AND
+dungeon combat turns) while in debt — see `db.tickDebtTurn`.

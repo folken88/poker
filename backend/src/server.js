@@ -47,12 +47,24 @@ app.get('/api/tts-cache', (_req, res) => {
 // whether anyone is seated. If nobody is, the watcher can recreate the
 // container immediately instead of waiting for a between-hands window.
 app.get('/api/tables', (_req, res) => {
+  // `connectedClients` = live browser sockets (humans only — bots are server-
+  // side, never sockets). Lets the deploy watcher hold a rebuild until every
+  // human has actually disconnected, not just left their seat.
+  const connectedClients = (io && io.engine && io.engine.clientsCount) || 0;
   res.json([...tables.values()].map(t => ({
     id: t.id,
     seated: t.seats.filter(s => !s.isEmpty()).length,
     humans: t.seats.filter(s => !s.isEmpty() && !s.isBot).length,
     handActive: !!t.hand,
+    connectedClients,
   })));
+});
+
+// Recent sounds emitted to clients + a play-count tally, for diagnosing an
+// overplayed sound. { last: [{ts,source,sound,label}], tally: [{sound,count}] }.
+app.get('/api/sounds', (req, res) => {
+  const n = Math.min(60, Math.max(1, parseInt(req.query.n, 10) || 15));
+  res.json(require('./persistence/logger').recentSounds(n));
 });
 
 if (process.env.SERVE_STATIC === '1') {

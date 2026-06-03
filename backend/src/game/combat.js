@@ -19,8 +19,12 @@
  *   - whiff  : didn't even connect → swing/whoosh (dagger vs sword) sounds
  */
 
+const { STAPLE_BY_KEY, WEAPON_LOOKUP, DEFAULT_WEAPON } = require('../pf1data/staples');
+
 function dRoll(sides) { return 1 + Math.floor(Math.random() * sides); }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+/** Roll NdX (count dice of `sides`) and sum. */
+function dRollN(count, sides) { let t = 0; for (let i = 0; i < (count || 1); i++) t += dRoll(sides); return t; }
 
 // Sound pools — files copied from the FoundryVTT effects library into
 // public/audio/ (served by nginx at /audio/...).
@@ -66,14 +70,42 @@ function totalMagicBonus(gear) {
   return t;
 }
 
-/** Derive weapon stats from a gear object ({ weapon: tier, ... } or null). */
-function weaponOf(gear) {
-  const tier = (gear && Number(gear.weapon)) || 0;
-  // Longsword & Dagger both threaten a crit on 19–20 and deal ×2 (PF1e).
-  if (tier >= 1) {
-    return { name: `+${tier} Longsword`, isDagger: false, toHit: tier, dmgDie: 8, dmgBonus: tier, critRange: 19, critMult: 2 };
-  }
-  return { name: 'Masterwork Dagger', isDagger: true, toHit: 1, dmgDie: 4, dmgBonus: 0, critRange: 19, critMult: 2 };
+/** Derive weapon stats from a gear object + the player's CHOSEN base weapon.
+ *
+ *  The "+N weapon" tier (gear.weapon) is now an ENHANCEMENT bonus that rides on
+ *  whatever weapon the player picked from the staple dropdown — it no longer
+ *  forces a longsword. Everyone's chosen weapon is at least MASTERWORK (+1
+ *  to-hit, +0 damage); a +N enhancement instead grants +N to both to-hit and
+ *  damage. Defaults to the Masterwork Dagger when no choice is stored.
+ *
+ *  @param {object|null} gear      economy gear blob ({ weapon: tier, ... })
+ *  @param {string} [weaponKey]    chosen staple key ('longsword', 'rapier', …)
+ */
+function weaponOf(gear, weaponKey) {
+  const tier = (gear && Number(gear.weapon)) || 0;          // +N enhancement
+  const base = WEAPON_LOOKUP[weaponKey] || STAPLE_BY_KEY[DEFAULT_WEAPON];
+  const enhanced = tier >= 1;
+  const mwHit = enhanced ? 0 : 1;                           // masterwork +1 to-hit
+  const prefix = enhanced ? `+${tier} ` : 'Masterwork ';
+  // A "dagger-class" light melee weapon uses the lighter whiff/swing sound.
+  const isDagger = base.cat === 'light' && !base.ranged;
+  return {
+    key: base.key || weaponKey || DEFAULT_WEAPON,
+    name: `${prefix}${base.name}`,
+    isDagger,
+    dmgCount: base.dmgCount || 1,
+    dmgDie: base.dmgDie,
+    toHit: tier + mwHit,
+    dmgBonus: tier,
+    critRange: base.crit || 20,
+    critMult: base.mult || 2,
+    cat: base.cat, ranged: !!base.ranged, dtype: base.type, group: base.group,
+    prof: base.prof || 'martial',   // proficiency category (simple/martial/exotic)
+    custom: !!base.custom,          // named signature weapon (always proficient)
+    dual: !!base.dual,              // two-weapon fighting → two swings, one report
+    noShield: !!base.noShield,      // dual-wielder carries no shield (no shield AC)
+    atkSound: base.atkSound || null,
+  };
 }
 
 /** Derive Armor Class from a gear object. `physical` is the armor+shield
@@ -95,12 +127,21 @@ function acOf(gear) {
 }
 
 /** Resolve a single swing of attackerGear against defenderGear.
- *  Returns everything the caller needs to narrate + play a sound. */
-function resolveSwing(attackerGear, defenderGear) {
-  const weapon = weaponOf(attackerGear);
+ *  Returns everything the caller needs to narrate + play a sound.
+ *
+ *  @param {object} [opts]
+ *  @param {string} [opts.attackerWeapon] chosen staple key for the attacker
+ *  @param {string} [opts.defenderWeapon] chosen staple key for the defender
+ *  @param {number} [opts.babBonus]       extra to-hit (class BAB + ability mod)
+ *  @param {number} [opts.dmgBonus]       extra flat damage (½level + ability mod)
+ */
+function resolveSwing(attackerGear, defenderGear, opts = {}) {
+  const weapon = weaponOf(attackerGear, opts.attackerWeapon);
   const { ac, physical } = acOf(defenderGear);
+  const babBonus = Number(opts.babBonus) || 0;
+  const flatDmg = Number(opts.dmgBonus) || 0;
   const roll = dRoll(20);
-  const total = roll + weapon.toHit;
+  const total = roll + weapon.toHit + babBonus;
   const fumble = roll === 1;   // natural 1: auto-miss (the "oof")
 
   let outcome, damage = 0, sound;
@@ -111,14 +152,14 @@ function resolveSwing(attackerGear, defenderGear) {
     sound = SND.fumble;
   } else if (roll === 20 || total >= ac) {   // natural 20 always hits
     outcome = 'flesh';
-    const base = dRoll(weapon.dmgDie) + weapon.dmgBonus;
+    const base = dRollN(weapon.dmgCount, weapon.dmgDie) + weapon.dmgBonus + flatDmg;
     // Pathfinder crit: a roll in the threat range (19–20) is a THREAT —
     // roll a second d20 + attack bonus to CONFIRM against the same AC.
     // Confirmed → ×critMult damage; unconfirmed → just a normal hit.
     if (roll >= weapon.critRange) {
       threat = true;
       confirmRoll = dRoll(20);
-      confirmTotal = confirmRoll + weapon.toHit;
+      confirmTotal = confirmRoll + weapon.toHit + babBonus;
       crit = (confirmRoll === 20) || (confirmTotal >= ac);
     }
     damage = crit ? base * weapon.critMult : base;
@@ -166,4 +207,22 @@ function resolveSpell(type, casterGear, targetGear) {
   return { type, save: 'Fortitude', dc, power, cloak, saveRoll, saveTotal, saved, sickened: !saved, sound: pick(SND.stink) };
 }
 
-module.exports = { resolveSwing, resolveSpell, weaponOf, acOf, totalMagicBonus, SND, dRoll, pick };
+/** Cosmetic ELEMENTAL RAY — the wizard/sorcerer's basic harass at the table
+ *  (instead of a weapon swing). A ranged touch for 1d6+4 cold; ice-punch sound.
+ *  Returns a swing-shaped result (with `ray:true`) so the narrator + bot-reaction
+ *  code reuse it unchanged. */
+const RAY_SOUND = '/audio/spell_frost_ray.mp3';
+function resolveRay(attackerGear, defenderGear) {
+  const { ac } = acOf(defenderGear);
+  const roll = dRoll(20);
+  const ray = { name: 'Ray of Frost', isDagger: false };
+  if (roll === 1 || roll < 5) {   // mostly hits — touch attacks ignore armor
+    return { outcome: 'whiff', ray: true, weapon: ray, damage: 0, roll, total: roll, ac, sound: RAY_SOUND };
+  }
+  const crit = roll === 20;
+  let damage = dRoll(6) + 4;
+  if (crit) damage += dRoll(6) + 4;
+  return { outcome: 'flesh', ray: true, crit, weapon: ray, damage, roll, total: roll, ac, sound: RAY_SOUND };
+}
+
+module.exports = { resolveSwing, resolveSpell, resolveRay, weaponOf, acOf, totalMagicBonus, SND, dRoll, dRollN, pick };

@@ -9,6 +9,9 @@
 
 const db = require('../persistence/db');
 const { humanRebuyMessage } = require('../util/flavor');
+const { CLASSES, PROFICIENCY, NON_PROFICIENT_PENALTY } = require('../pf1data/classes');
+const { STAPLE_BY_KEY } = require('../pf1data/staples');
+const { SELECTABLE_CLASSES } = require('../pf1data/abilities');
 
 function tableFor(socket, tables) {
   return tables.get(socket.data.tableId || 'main') || null;
@@ -68,6 +71,47 @@ function registerLobbyHandlers(io, socket, { tables }) {
     socket.data.player = refreshed;
     io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, gender: refreshed.gender });
+  });
+
+  // Player picks their PF1e class and base weapon from the same profile
+  // dropdown as gender. Validated in db.setClass / db.setWeapon (against the
+  // known classes / staple weapons); bots are pinned via BOT_CLASSES and
+  // re-synced on boot, so this path only changes humans. Roster rebroadcast so
+  // the banter LLM context + any class/weapon badges update everywhere.
+  socket.on('lobby:setClass', ({ cls } = {}, ack) => {
+    const player = socket.data.player;
+    if (!player) return ack?.({ ok: false, error: 'choose a player first' });
+    if (!CLASSES[cls]) return ack?.({ ok: false, error: 'invalid class' });
+    db.setClass(player.player_id, cls);
+    const refreshed = db.getPlayer(player.player_id);
+    socket.data.player = refreshed;
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, cls: refreshed.class });
+  });
+
+  socket.on('lobby:setWeapon', ({ weapon } = {}, ack) => {
+    const player = socket.data.player;
+    if (!player) return ack?.({ ok: false, error: 'choose a player first' });
+    if (!STAPLE_BY_KEY[weapon]) return ack?.({ ok: false, error: 'invalid weapon' });
+    db.setWeapon(player.player_id, weapon);
+    const refreshed = db.getPlayer(player.player_id);
+    socket.data.player = refreshed;
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, weapon: refreshed.weapon });
+  });
+
+  // Option lists for the class + weapon dropdowns (sorted for display).
+  socket.on('lobby:pf1meta', (_payload, ack) => {
+    // Only the CORE 10 (classes with wired-up ability kits) are offered in the
+    // dropdown. The rest stay valid in the data (bots use them) but are hidden.
+    const classes = SELECTABLE_CLASSES
+      .map(key => ({ key, name: CLASSES[key]?.name || key }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const weapons = Object.values(STAPLE_BY_KEY)
+      .map(w => ({ key: w.key, name: w.name, dmg: `${w.dmgCount}d${w.dmgDie}`, prof: w.prof }));
+    // Ship the proficiency map + penalty so the client can sort/colour the
+    // weapon dropdown by the player's current class without a round-trip.
+    ack?.({ ok: true, classes, weapons, proficiency: PROFICIENCY, profPenalty: NON_PROFICIENT_PENALTY });
   });
 
   socket.on('lobby:setAvatar', ({ avatarId } = {}, ack) => {

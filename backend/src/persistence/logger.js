@@ -77,10 +77,20 @@ function winningsFor(winners, playerId) {
 //   longestWar      : most raises/all-ins in one hand (a betting slugfest)
 //   biggestBluff    : biggest pot stolen uncontested with a weak hand
 //   ugliestWinner   : weakest made hand to win a shown-down pot
-const _records = {
-  biggestWin: null, biggestLoss: null, biggestPot: null,
-  longestWar: null, biggestBluff: null, ugliestWinner: null,
-};
+// Records are tracked per POPULATION so the Hall of Records can be filtered:
+//   all    — best across everyone
+//   human  — best among human players
+//   ai      — best among the AI
+const _emptyRecs = () => ({ biggestWin: null, biggestLoss: null, biggestPot: null, longestWar: null, biggestBluff: null, ugliestWinner: null });
+const _recAll = _emptyRecs(), _recHuman = _emptyRecs(), _recAi = _emptyRecs();
+const _isBotPid = (pid) => { try { return !!(db.getPlayer(String(pid || '')) || {}).is_bot; } catch (_) { return false; } };
+// Set a category's record on the "all" store AND the holder's population store,
+// using a `better(existing, candidate) → bool` comparator.
+function _bumpRec(cat, cand, better, isBot) {
+  if (!_recAll[cat] || better(_recAll[cat], cand)) _recAll[cat] = cand;
+  const store = isBot ? _recAi : _recHuman;
+  if (!store[cat] || better(store[cat], cand)) store[cat] = cand;
+}
 
 // Only players in the CURRENT roster (code-defined ROSTER + BOT_ROSTER) count —
 // so a long-gone test player (e.g. "OldOwl") who still lives in hands.jsonl
@@ -113,12 +123,10 @@ function _applyHandRecords(h) {
     if (!_isCurrent(p.playerId)) continue;
     const net = (p.stackEnd || 0) - (p.stackStart || 0);
     if (!Number.isFinite(net) || net === 0) continue;
+    const isBot = _isBotPid(p.playerId);
     const who = { nick: p.nickname || p.playerId, amount: Math.abs(net), ts };
-    if (net > 0) {
-      if (!_records.biggestWin || net > _records.biggestWin.amount) _records.biggestWin = who;
-    } else if (!_records.biggestLoss || -net > _records.biggestLoss.amount) {
-      _records.biggestLoss = who;
-    }
+    if (net > 0) _bumpRec('biggestWin', who, (a, c) => c.amount > a.amount, isBot);
+    else _bumpRec('biggestLoss', who, (a, c) => c.amount > a.amount, isBot);
   }
 
   // Everything below attributes to the hand's WINNER — find the top
@@ -131,22 +139,19 @@ function _applyHandRecords(h) {
     }
   }
   if (!win) return;
+  const isBotWin = _isBotPid(win.playerId);
   const winnerHole = (players.find(p => p.playerId === win.playerId) || {}).hole;
 
   // 2) Biggest POT (everyone's chips committed).
   const pot = players.reduce((s, p) => s + (p.totalIn || 0), 0);
-  if (pot > 0 && (!_records.biggestPot || pot > _records.biggestPot.amount)) {
-    _records.biggestPot = { nick: win.nick, amount: pot, ts };
-  }
+  if (pot > 0) _bumpRec('biggestPot', { nick: win.nick, amount: pot, ts }, (a, c) => c.amount > a.amount, isBotWin);
 
   // 3) Longest WAR (raises + all-ins in the action log).
   let raises = 0;
   for (const e of h.events || []) {
     if (e && e.type === 'action' && (e.action === 'raise' || e.action === 'allin')) raises++;
   }
-  if (raises > 0 && (!_records.longestWar || raises > _records.longestWar.count)) {
-    _records.longestWar = { nick: win.nick, count: raises, ts };
-  }
+  if (raises > 0) _bumpRec('longestWar', { nick: win.nick, count: raises, ts }, (a, c) => c.count > a.count, isBotWin);
 
   // 4) Biggest BLUFF — pot won UNCONTESTED (everyone else folded) with a weak
   //    hand. strengthOf < 0.40 ≈ junk; the bigger the stolen pot, the better.
@@ -154,9 +159,7 @@ function _applyHandRecords(h) {
   if (live.length === 1 && live[0].playerId === win.playerId && winnerHole && winnerHole.length === 2) {
     let str = 1;
     try { str = strengthOf(winnerHole, board); } catch (_) {}
-    if (str < 0.40 && (!_records.biggestBluff || pot > _records.biggestBluff.amount)) {
-      _records.biggestBluff = { nick: win.nick, amount: pot, ts };
-    }
+    if (str < 0.40) _bumpRec('biggestBluff', { nick: win.nick, amount: pot, ts }, (a, c) => c.amount > a.amount, isBotWin);
   }
 
   // 5) Ugliest WINNER — weakest made hand to win a CONTESTED showdown (river
@@ -165,21 +168,19 @@ function _applyHandRecords(h) {
     try {
       const solved = SolverHand.solve([...winnerHole, ...board]);
       const rank = solved && solved.rank;
-      if (Number.isFinite(rank) && (!_records.ugliestWinner || rank < _records.ugliestWinner.rank)) {
-        _records.ugliestWinner = { nick: win.nick, hand: solved.descr || 'a hand', rank, ts };
-      }
+      if (Number.isFinite(rank)) _bumpRec('ugliestWinner', { nick: win.nick, hand: solved.descr || 'a hand', rank, ts }, (a, c) => c.rank < a.rank, isBotWin);
     } catch (_) {}
   }
 }
 
-/** Snapshot of the records (only counts hands since the last reset). */
+/** Snapshot of the records by population (only counts hands since last reset).
+ *  Returns { all, human, ai }, each a map of category → record | null. */
 function getRecords() {
-  const out = {};
-  for (const k of Object.keys(_records)) out[k] = _records[k] ? { ..._records[k] } : null;
-  return out;
+  const clone = (store) => { const o = {}; for (const k of Object.keys(store)) o[k] = store[k] ? { ...store[k] } : null; return o; };
+  return { all: clone(_recAll), human: clone(_recHuman), ai: clone(_recAi) };
 }
 
-function _clearRecords() { for (const k of Object.keys(_records)) _records[k] = null; }
+function _clearRecords() { for (const store of [_recAll, _recHuman, _recAi]) for (const k of Object.keys(store)) store[k] = null; }
 
 /** Start a fresh records era. Called on a Full Reset / Loot Lord win: wipes the
  *  current records AND writes a boundary marker to the hand log, so the board
@@ -260,4 +261,23 @@ function logDungeon(event) {
   appendLine(DUNGEON_LOG, { ts: new Date().toISOString(), ...event });
 }
 
-module.exports = { logHand, logBotDecision, logChat, logDungeon, getRecords, resetRecords, HAND_LOG, BOT_LOG, CHAT_LOG, DUNGEON_LOG, LOG_DIR };
+// ── Recent-sounds ring buffer ───────────────────────────────────────────────
+// In-memory log of the last sounds emitted to clients (dungeon combat + table
+// banter/fight audio), for diagnosing "what's getting overplayed". Tallies a
+// play-count per sound so a repeat offender is obvious. Exposed via GET /api/sounds.
+const _recentSounds = [];
+function recordSound(source, sound, label) {
+  if (!sound) return;
+  _recentSounds.push({ ts: Date.now(), source, sound, label: (label || '').slice(0, 80) });
+  if (_recentSounds.length > 60) _recentSounds.shift();
+}
+/** The last `n` sounds (newest last) plus a play-count tally over the buffer. */
+function recentSounds(n = 10) {
+  const last = _recentSounds.slice(-n).map(s => ({ ...s }));
+  const counts = {};
+  for (const s of _recentSounds) counts[s.sound] = (counts[s.sound] || 0) + 1;
+  const tally = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([sound, count]) => ({ sound, count }));
+  return { last, tally, bufferSize: _recentSounds.length };
+}
+
+module.exports = { logHand, logBotDecision, logChat, logDungeon, getRecords, resetRecords, recordSound, recentSounds, HAND_LOG, BOT_LOG, CHAT_LOG, DUNGEON_LOG, LOG_DIR };

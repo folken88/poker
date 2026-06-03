@@ -169,6 +169,18 @@ function humanRebuyMessage(nickname, amount) {
   return `${nickname} ${pick(ABADAR_LINES)} ${amount.toLocaleString()} ${pick(ABADAR_PURPOSES)}`;
 }
 
+/** Bot re-buy line — bots now PREFER to borrow from Abadar (keep their magic
+ *  items) rather than pawn them, so they use the same bank-loan flavor. */
+function botBorrowMessage(nickname, amount) {
+  return `${nickname} ${pick(ABADAR_LINES)} ${amount.toLocaleString()} ${pick(ABADAR_PURPOSES)}`;
+}
+
+/** Last-resort line — a bot too deep in debt to borrow more pawns a REAL magic
+ *  item (its actual gear, named) for coin so it can stay in the game. */
+function botHockMessage(nickname, itemLabel, amount) {
+  return `${nickname} ${pick(VERBS)} their ${itemLabel} for ${amount.toLocaleString()} gp ${pick(SUFFIXES)}`;
+}
+
 const BUST_LINES = [
   'is out of gp. Time for the walk of shame.',
   'busted out. The table observes a moment of silence.',
@@ -180,4 +192,4 @@ function bustMessage(nickname) {
   return `${nickname} ${pick(BUST_LINES)}`;
 }
 
-module.exports = { botRebuyMessage, humanRebuyMessage, bustMessage };
+module.exports = { botRebuyMessage, botBorrowMessage, botHockMessage, humanRebuyMessage, bustMessage };

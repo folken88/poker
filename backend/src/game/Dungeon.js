@@ -16,14 +16,21 @@
  */
 
 const db = require('../persistence/db');
-const { weaponOf, acOf, totalMagicBonus, SND, dRoll, pick } = require('./combat');
-const { logDungeon } = require('../persistence/logger');
+const { weaponOf, acOf, totalMagicBonus, SND, dRoll, dRollN, pick } = require('./combat');
+const { CLASSES, babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../pf1data/classes');
+const { kitFor, roomUses, isPoolClass, isCaster, spellSlots, diceCount } = require('../pf1data/abilities');
+const { logDungeon, recordSound } = require('../persistence/logger');
 const banter = require('../bot/banter');
 
 // ── Tuning knobs ────────────────────────────────────────────────────────────
-// LEVEL = 1 + sum of all gear bonuses (min 1). Level drives HP (10/level),
-// to-hit, and saves — for humans AND AI allies.
-const HP_PER_LEVEL   = 10;
+// LEVEL = 1 + sum of all gear bonuses (min 1). Level drives HP, to-hit, and
+// saves — for humans AND AI allies.
+const HP_PER_LEVEL   = 10;   // legacy fallback (used only if a class has no Hit Die)
+// HP per level is the class's Hit Die, MAX roll assumed (barbarian d12, fighter
+// d10, rogue/cleric/bard d8, wizard/sorcerer d6 …). So a level-6 fighter has 60
+// HP, a level-6 wizard 36.
+function hdFor(cls) { return (CLASSES[cls] && CLASSES[cls].hd) || HP_PER_LEVEL; }
+function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1); }
 function levelOf(gear) { return Math.max(1, 1 + totalMagicBonus(gear)); }
 const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
@@ -34,28 +41,39 @@ const PARALYZE_DC = 14;
 // damage (the latter doubles on a crit, like any static damage mod in PF1e). This
 // is the missing "STR/DEX" piece on top of level (BAB-ish) and gear.
 const ABILITY_MOD = 4;
+// Class conditionals (powered by the alignment / flat-footed tracking).
+const SNEAK_CLASSES = new Set(['rogue', 'ninja', 'slayer']);  // gain Sneak Attack
+const SNEAK_DICE_CAP = 5;     // cap precision dice so it stays flavorful, not silly
+const SMITE_TOHIT    = 2;     // paladin Smite Evil: to-hit bump vs an evil foe (+level dmg)
 const AFK_PASS_MS    = 10_000; // idle on your turn → auto-pass after 10s
-const ENEMY_STEP_MS  = 750;    // pacing between auto-resolved enemy/ally turns
+const ENEMY_STEP_MS  = 1000;   // ~1s pacing between auto-resolved enemy/ally turns (slowed slightly for readability)
+// Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
+// magi (and any unlisted magus) fall back to the spell's default electric zap.
+const MAGUS_SPELLSTRIKE_SFX = {
+  Kate:    '/audio/spellstrike_boudicca.mp3',     // Kate Blackwood — "boudicca" battle cry
+  Vaughan: '/audio/spellstrike_vaughan.mp3',      // Vaughan — Genji-style sword ult
+  Toni:    '/audio/spellstrike_toni.mp3',         // Toni — arcane sword-lightning yell
+};
 const BOSS_EVERY     = 5;
 const LOOT_ROLL_MS   = 20_000; // window to roll/pass on a dropped magic item
 
 // Bruce-Lee-style martial-arts SFX for enemy Monks — kiai screams, flurries and
 // smacks. Picked at random per swing (a different shout every punch); hilarious
 // when overheard muffled from up at the poker table.
+// Only short kiai (<4s) — longer bruce clips (juggling_fools 4.7s, jumpkick_laugh
+// 7.7s, smack_boop 5.4s) dragged on past a single monk strike and were dropped.
 const BRUCE_SFX = [
-  '/audio/bruce_punch_juggling_fools.mp3', '/audio/bruce_punch_multi_flurry_rapid_fire.mp3',
-  '/audio/bruce_punch_multi_flurry_thum2p.mp3', '/audio/bruce_punch_multi_flurry_thump.mp3',
-  '/audio/bruce_punch_multi_punishing.mp3', '/audio/bruce_punch_single_quick.mp3',
-  '/audio/bruce_scream_buildup_jumpkick_laugh.mp3', '/audio/bruce_scream_hoo_hoo_hooo.mp3',
-  '/audio/bruce_scream_roar_kick_aftermath.mp3', '/audio/bruce_smack_multi_smack_boop.mp3',
-  '/audio/bruce_smack_scream_crash.mp3',
+  '/audio/bruce_punch_multi_flurry_rapid_fire.mp3', '/audio/bruce_punch_multi_flurry_thum2p.mp3',
+  '/audio/bruce_punch_multi_flurry_thump.mp3', '/audio/bruce_punch_multi_punishing.mp3',
+  '/audio/bruce_punch_single_quick.mp3', '/audio/bruce_scream_hoo_hoo_hooo.mp3',
+  '/audio/bruce_scream_roar_kick_aftermath.mp3', '/audio/bruce_smack_scream_crash.mp3',
 ];
 // Monk tokens span many races + ages — a random face per spawn so a room of Monks
 // is a motley dojo (human/dwarf/orc/half-orc/tiefling/goblin/hobgoblin + cameos).
 const MONK_TOKENS = [
   'monk_human_m', 'monk_acolyte', 'monk_tian', 'monk_shaolin_f', 'monk_shaolin_m', 'monk_bald',
   'monk_dwarf', 'monk_tiefling', 'monk_orc', 'monk_halforc_f', 'monk_goblin', 'monk_hobgoblin', 'monk_jackie',
-].map(n => `/dungeon/monsters/${n}.webp`).concat(['/dungeon/monsters/monk_bruce.png']);
+].map(n => `/dungeon/monsters/${n}.webp`).concat(['/dungeon/monsters/monk_bruce.webp']);
 
 // ── Monster bestiary (placeholder art = emoji glyphs) ───────────────────────
 // PF1e stat blocks (CR in comment). NO depth scaling — difficulty comes from
@@ -64,13 +82,16 @@ const MONK_TOKENS = [
 //   damage = dmgCount × d(dmgDie) + dmgBonus   (dmgCount defaults to 1)
 //   attacks = number of separate swings per turn (default 1)
 const MON = {
-  dire_rat:          { name: 'Dire Rat',          glyph: '🐀', cr: '1/3', hp: 5,   ac: 14, toHit: 1,  dmgDie: 4,  dmgBonus: 0, fort: 3,  reflex: 3,  gold: [3, 10] },
+  dire_rat:          { name: 'Dire Rat',          glyph: '🐀', cr: '1/3', hp: 5,   ac: 14, toHit: 1,  dmgDie: 4,  dmgBonus: 0, fort: 3,  reflex: 3,  gold: [3, 10], atkSound: '/audio/enemy_badger.mp3' },
+  badger:            { name: 'Badger',            glyph: '🦡', cr: '1/2', hp: 6,   ac: 14, toHit: 2,  dmgDie: 3,  dmgBonus: 1, fort: 3,  reflex: 3,  gold: [3, 9], atkSound: '/audio/enemy_badger.mp3' },   // small animal — snarling bite/claw
   giant_centipede:   { name: 'Giant Centipede',   glyph: '🐛', cr: '1/2', hp: 5,   ac: 14, toHit: 2,  dmgDie: 6,  dmgBonus: 0, fort: 1,  reflex: 3,  gold: [3, 10] },
   goblin:            { name: 'Goblin',            glyph: '👺', cr: '1/3', hp: 6,   ac: 16, toHit: 2,  dmgDie: 4,  dmgBonus: 0, fort: 3,  reflex: 2,  gold: [6, 16] },
   kobold:            { name: 'Kobold',            glyph: '🦎', cr: '1/4', hp: 5,   ac: 15, toHit: 1,  dmgDie: 6,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [6, 14] },
   kobold_spearman:   { name: 'Kobold Spearman',   glyph: '🦎', cr: '1/3', hp: 6,   ac: 15, toHit: 2,  dmgDie: 6,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [6, 16] },                                            // 1d6 spear
   kobold_shaman:     { name: 'Kobold Shaman',     glyph: '🦎', cr: '1',   hp: 7,   ac: 13, toHit: 0,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [12, 26], caster: 'holdperson', spellDC: 13 },          // Hold Person (Will DC 13)
-  kobold_rogue:      { name: 'Kobold Rogue',      glyph: '🦎', cr: '1',   hp: 6,   ac: 16, toHit: 2,  dmgDie: 3,  dmgBonus: 0, fort: 1,  reflex: 4,  gold: [10, 24], attacks: 2, atkSound: '/audio/fight_riki.mp3' }, // two 1d3 daggers
+  kobold_rogue:      { name: 'Kobold Rogue',      glyph: '🦎', cr: '1',   hp: 6,   ac: 16, toHit: 2,  dmgDie: 3,  dmgBonus: 0, fort: 1,  reflex: 4,  gold: [10, 24], attacks: 2, sneakDice: 2, atkSound: '/audio/fight_riki.mp3' }, // two 1d3 daggers + sneak attack
+  goblin_rogue:      { name: 'Goblin Rogue',      glyph: '👺', cr: '1/2', hp: 7,   ac: 15, toHit: 3,  dmgDie: 4,  dmgBonus: 1, fort: 1,  reflex: 5,  gold: [8, 20],  attacks: 1, sneakDice: 2, atkSound: '/audio/fight_riki.mp3' }, // dogslicer + Sneak Attack (+2d6 vs flat-footed / held)
+  goblin_shaman:     { name: 'Goblin Shaman',     glyph: '👺', cr: '1',   hp: 8,   ac: 13, toHit: 1,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 2,  gold: [12, 26], caster: 'holdperson', spellDC: 13 },          // Hold Person (Will DC 13) — sets up the rogues
   skeleton:          { name: 'Skeleton',          glyph: '💀', cr: '1/3', hp: 5,   ac: 16, toHit: 2,  dmgDie: 6,  dmgBonus: 2, fort: 0,  reflex: 1,  gold: [8, 20] },
   giant_spider:      { name: 'Giant Spider',      glyph: '🕷️', cr: '1',   hp: 16,  ac: 14, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 4,  reflex: 4,  gold: [10, 26] },
   zombie:            { name: 'Zombie',            glyph: '🧟', cr: '1/2', hp: 12,  ac: 12, toHit: 4,  dmgDie: 6,  dmgBonus: 4, fort: 0,  reflex: 0,  gold: [10, 26] },
@@ -78,8 +99,9 @@ const MON = {
   cultist:           { name: 'Whispering Cultist',glyph: '🕯️', cr: '1',   hp: 14,  ac: 14, toHit: 3,  dmgDie: 8,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [16, 38] },
   ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', cr: '2', hp: 17,  ac: 17, toHit: 6,  dmgDie: 8,  dmgBonus: 3, fort: 2,  reflex: 5,  gold: [28, 60], paralyze: true, paralyzeDC: 15 },
   monk:              { name: 'Monk',              glyph: '🥋', cr: '2',   hp: 22,  ac: 16, toHit: 4,  dmgDie: 6,  dmgBonus: 2, fort: 4,  reflex: 5,  gold: [18, 42], attacks: 2, tokenPool: MONK_TOKENS, atkSounds: BRUCE_SFX },  // flurry of unarmed strikes; random face + kiai
-  skeletal_champion: { name: 'Skeletal Champion', glyph: '☠️', cr: '2',   hp: 19,  ac: 17, toHit: 5,  dmgDie: 8,  dmgBonus: 3, fort: 3,  reflex: 2,  gold: [26, 55] },
+  skeletal_champion: { name: 'Skeletal Champion', glyph: '☠️', cr: '2',   hp: 19,  ac: 17, toHit: 5,  dmgDie: 8,  dmgBonus: 3, fort: 3,  reflex: 2,  gold: [26, 55], shout: { dc: 14, sound: '/audio/enemy_draugr_shout.mp3' } },   // bone-rattling shout: 1d8 + Fort or stunned 1
   shadow:            { name: 'Shadow',            glyph: '🌑', cr: '3',   hp: 19,  ac: 13, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 1,  reflex: 3,  gold: [30, 65] },
+  fire_skeleton:     { name: 'Fire Skeleton',     glyph: '🔥', cr: '3',   hp: 22,  ac: 16, toHit: 5,  dmgDie: 6,  dmgBonus: 2, fort: 1,  reflex: 2,  gold: [24, 52], explode: { count: 2, dice: 3, die: 6, sound: '/audio/enemy_fireskeleton_boom.mp3' } },   // bursts on death → 3d6 to 1d2 heroes
   wight:             { name: 'Wight',             glyph: '👻', cr: '3',   hp: 26,  ac: 15, toHit: 4,  dmgDie: 4,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [34, 72] },
   ogre:              { name: 'Ogre',              glyph: '👹', cr: '3',   hp: 30,  ac: 17, toHit: 8,  dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 6, reflex: 0, gold: [40, 90] },                                  // greatclub 2d8+7
   gray_ooze:         { name: 'Gray Ooze',         glyph: '🟢', cr: '4',   hp: 50,  ac: 6,  toHit: 5,  dmgDie: 6,  dmgBonus: 4, fort: 6,  reflex: 0,  gold: [38, 80] },
@@ -91,12 +113,13 @@ const MON = {
   dire_boar:         { name: 'Dire Boar',         glyph: '🐗', cr: '4',   hp: 51,  ac: 15, toHit: 12, dmgDie: 8,  dmgBonus: 12, fort: 9,  reflex: 5,  gold: [34, 72] },                                 // gore 1d8+12
   harpy:             { name: 'Harpy',             glyph: '🦅', cr: '4',   hp: 38,  ac: 15, toHit: 9,  dmgDie: 8,  dmgBonus: 1,  fort: 2,  reflex: 7,  attacks: 2, gold: [34, 72] },
   gargoyle:          { name: 'Gargoyle',          glyph: '🪨', cr: '4',   hp: 42,  ac: 16, toHit: 9,  dmgDie: 6,  dmgBonus: 4,  fort: 5,  reflex: 6,  attacks: 2, gold: [36, 78] },
-  minotaur:          { name: 'Minotaur',          glyph: '🐂', cr: '4',   hp: 45,  ac: 14, toHit: 9,  dmgDie: 6,  dmgCount: 3, dmgBonus: 6, fort: 6, reflex: 5, gold: [38, 80] },                       // greataxe 3d6+6
+  minotaur:          { name: 'Minotaur',          glyph: '🐂', cr: '4',   hp: 45,  ac: 14, toHit: 9,  dmgDie: 6,  dmgCount: 3, dmgBonus: 6, fort: 6, reflex: 5, gold: [38, 80], atkSound: '/audio/enemy_yak.mp3' },   // greataxe 3d6+6 — angry bovine bellow
   basilisk:          { name: 'Basilisk',          glyph: '🐍', cr: '5',   hp: 52,  ac: 16, toHit: 9,  dmgDie: 8,  dmgBonus: 4,  fort: 7,  reflex: 4,  paralyze: true, paralyzeDC: 13, gold: [42, 90] },  // petrifying gaze → "turned to stone, lose a turn"
   winter_wolf:       { name: 'Winter Wolf',       glyph: '🐺', cr: '5',   hp: 57,  ac: 18, toHit: 11, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  gold: [44, 95] },
+  blood_caimon:      { name: 'Blood Caimon',      glyph: '🐊', cr: '5',   hp: 60,  ac: 16, toHit: 11, dmgDie: 10, dmgBonus: 9,  fort: 8,  reflex: 5,  gold: [48, 105], atkSound: '/audio/enemy_caimon_bite.mp3' },   // giant red alligator — savage bite
   wood_golem:        { name: 'Wood Golem',        glyph: '🪵', cr: '6',   hp: 58,  ac: 21, toHit: 10, dmgDie: 8,  dmgCount: 2, dmgBonus: 5, fort: 2, reflex: 2, attacks: 2, gold: [55, 115] },         // two 2d8+5 slams; golem-poor saves
   bog_brute:         { name: 'Bog Brute',         glyph: '🌿', cr: '6',   hp: 65,  ac: 17, toHit: 12, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 4,  attacks: 2, gold: [55, 115] },
-  dire_bear:         { name: 'Dire Bear',         glyph: '🐻', cr: '7',   hp: 84,  ac: 17, toHit: 16, dmgDie: 8,  dmgBonus: 10, fort: 13, reflex: 9, attacks: 2, gold: [70, 150], art: '/dungeon/monsters/dire_bear.png' },
+  dire_bear:         { name: 'Dire Bear',         glyph: '🐻', cr: '7',   hp: 84,  ac: 17, toHit: 16, dmgDie: 8,  dmgBonus: 10, fort: 13, reflex: 9, attacks: 2, gold: [70, 150], art: '/dungeon/monsters/dire_bear.webp' },
   chimera:           { name: 'Chimera',           glyph: '🦁', cr: '7',   hp: 76,  ac: 19, toHit: 11, dmgDie: 8,  dmgBonus: 4,  fort: 10, reflex: 6, attacks: 2, gold: [75, 160] },
   hill_giant:        { name: 'Hill Giant',        glyph: '🪓', cr: '7',   hp: 85,  ac: 21, toHit: 16, dmgDie: 8,  dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 3, gold: [80, 165] },                   // greatclub 2d8+10
   medusa:            { name: 'Medusa',            glyph: '🐍', cr: '7',   hp: 76,  ac: 15, toHit: 9,  dmgDie: 4,  dmgBonus: 2,  fort: 6,  reflex: 8,  attacks: 2, paralyze: true, paralyzeDC: 15, gold: [80, 165] },  // petrifying gaze
@@ -104,6 +127,8 @@ const MON = {
   abyssal_horror:    { name: 'Abyssal Horror',    glyph: '🐙', cr: '8',   hp: 95,  ac: 19, toHit: 14, dmgDie: 8,  dmgBonus: 6,  fort: 9,  reflex: 6,  attacks: 2, gold: [95, 190] },                  // eldritch chaos beast
   brass_golem:       { name: 'Brass Golem',       glyph: '🗿', cr: '9',   hp: 92,  ac: 24, toHit: 14, dmgDie: 10, dmgCount: 2, dmgBonus: 9, fort: 3, reflex: 3, attacks: 2, gold: [180, 320] },                  // 8-HD construct, two 2d10+9 slams
   barbed_devil:      { name: 'Barbed Devil',      glyph: '😈', cr: '11',  hp: 138, ac: 26, toHit: 18, dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 12, reflex: 9, attacks: 2, gold: [260, 460] },                 // hamatula, two 2d8+7 claws
+  vampire:           { name: 'Vampire',           glyph: '🧛', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 6,  dmgBonus: 8, fort: 8,  reflex: 11, attacks: 2, gold: [100, 200], evil: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' } },   // dominating gaze → Will or frozen in terror
+  lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' } },                 // sinister gaze → fear
 };
 // Real token art from the Foundry library (public/dungeon/monsters/). dire_rat
 // has no token in the library, so it falls back to its emoji glyph.
@@ -115,13 +140,38 @@ const MON_ART = {
   gray_ooze: 'ooze', skeletal_champion: 'skeletal_champion', shadow: 'shadow', wight: 'wight',
   ghast: 'ghast', gibbering_mouther: 'gibbering_mouther', ogre: 'ogre', ettin: 'ettin',
   brass_golem: 'brass_golem', barbed_devil: 'barbed_devil',
-  // diversity pack (dire_bear sets its .png art inline, so it's not listed here)
+  // diversity pack (dire_bear sets its .webp art inline, so it's not listed here)
   dire_ape: 'dire_ape', ettercap: 'ettercap', dire_boar: 'dire_boar', harpy: 'harpy',
   gargoyle: 'gargoyle', minotaur: 'minotaur', basilisk: 'basilisk', winter_wolf: 'winter_wolf',
   wood_golem: 'wood_golem', bog_brute: 'swamp_horror', chimera: 'chimera', hill_giant: 'hill_giant',
   medusa: 'medusa', stone_giant: 'stone_giant', abyssal_horror: 'abyssal_horror',
 };
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
+
+// ── Alignment (drives Smite Evil & future alignment-keyed effects) ──────────
+// Two-letter PF1e alignment per monster. Animals/vermin/oozes/constructs are
+// true-neutral (NOT smite-able); most dungeon denizens are some flavor of
+// evil. Anything unlisted defaults to NE. `evil` is the derived smite flag.
+const ALIGN_BY_KEY = {
+  // unaligned: animals, vermin, oozes, mindless/neutral constructs & beasts
+  dire_rat: 'N', giant_centipede: 'N', giant_spider: 'N', dire_ape: 'N', dire_boar: 'N',
+  dire_bear: 'N', gray_ooze: 'N', gibbering_mouther: 'N', basilisk: 'N', stone_giant: 'N',
+  brass_golem: 'N', wood_golem: 'N',
+  // lawful evil
+  kobold: 'LE', kobold_spearman: 'LE', kobold_shaman: 'LE', kobold_rogue: 'LE',
+  wight: 'LE', medusa: 'LE', barbed_devil: 'LE',
+  // neutral evil
+  goblin: 'NE', skeleton: 'NE', skeletal_champion: 'NE', zombie: 'NE', cultist: 'NE', ettercap: 'NE', winter_wolf: 'NE',
+  // chaotic evil
+  ghoul: 'CE', ghast: 'CE', shadow: 'CE', ogre: 'CE', ettin: 'CE', minotaur: 'CE',
+  hill_giant: 'CE', harpy: 'CE', gargoyle: 'CE', chimera: 'CE', abyssal_horror: 'CE',
+  // lawful neutral (a disciplined martial foe — not smite-able)
+  monk: 'LN',
+};
+for (const [k, base] of Object.entries(MON)) {
+  base.align = ALIGN_BY_KEY[k] || 'NE';
+  base.evil  = base.align.includes('E');
+}
 
 // ── Difficulty curve: Pathfinder CR creeps ~0.25 per room ───────────────────
 // Parse a CR string ("1/4", "3") to a number, and tag every monster with it.
@@ -135,9 +185,16 @@ const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil']);   // boss-only, neve
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 
-// Target CR for a regular room rises ~0.25/room: room 1 ≈ CR 0.25, room 4 ≈ CR 1,
-// room 8 ≈ CR 2, room 12 ≈ CR 3, room 20 ≈ CR 5. We pick a creature at-or-just-
-// below the target (small window) for a gentle, varied creep.
+// PF1e XP value by CR — the currency for building balanced encounters. The
+// total XP of a room's monsters ≈ the XP of a single creature at the target
+// encounter CR (that's how PF1 turns "2× CR n = CR n+2" into simple addition).
+const XP_BY_CR = { 1: 400, 2: 600, 3: 800, 4: 1200, 5: 1600, 6: 2400, 7: 3200, 8: 4800, 9: 6400, 10: 9600, 11: 12800, 12: 19200, 13: 25600, 14: 38400, 15: 51200 };
+function xpForCR(cr) {
+  if (cr <= 0) return 50;
+  if (cr < 1) return cr <= 0.25 ? 100 : cr <= 0.34 ? 135 : 200;   // 1/4, 1/3, 1/2
+  return XP_BY_CR[Math.min(15, Math.round(cr))] || 400;
+}
+// Legacy gentle-creep target (kept as a fallback for the budget builder).
 function targetCR(depth) { return 0.25 * depth; }
 function pickByCR(depth) {
   const target = targetCR(depth);
@@ -237,7 +294,7 @@ class Dungeon {
   }
 
   roomName() { return `dungeon:${this.id}`; }
-  _note(text, sound) { this.log.push({ t: ++this._logSeq, text, sound: sound || null }); if (this.log.length > 150) this.log.shift(); }
+  _note(text, sound) { this.log.push({ t: ++this._logSeq, text, sound: sound || null }); if (this.log.length > 150) this.log.shift(); if (sound) { try { recordSound('dungeon', sound, text); } catch (_) {} } }
   _log(type, extra) {
     try { logDungeon({ type, run: this.id, depth: this.depth, round: this.round, ...(extra || {}) }); } catch (_) {}
   }
@@ -247,6 +304,9 @@ class Dungeon {
   present() { return this.party.filter(m => !m.left); }                 // still in the run (alive or downed-this-tick)
   alivePresent() { return this.party.filter(m => !m.left && m.hp > 0); }
   livingParty() { return this.alivePresent(); }
+  // Heroes the enemy can actually target — invisible ones are unseen (until they
+  // attack). If EVERY living hero is invisible, fall back so combat can resolve.
+  _targetableParty() { const live = this.alivePresent(); const seen = live.filter(m => !m.invisible); return seen.length ? seen : live; }
   livingEnemies() { return this.enemies.filter(e => e.hp > 0); }
 
   hasMember(playerId) { const m = this.member(playerId); return !!(m && !m.left && m.hp > 0); }
@@ -259,18 +319,29 @@ class Dungeon {
     if (idx >= 0) this.party.splice(idx, 1);   // drop a stale (downed/bailed) entry → rejoin fresh
     const gear = db.getGear(playerId);
     const level = levelOf(gear);
-    const maxHp = HP_PER_LEVEL * level;
+    const cls = player.class || 'fighter';
+    const maxHp = maxHpFor(cls, level);        // HP = class Hit Die × level (max roll)
     const m = {
       playerId,
       nickname: player.nickname || playerId,
       avatarId: player.avatar_id || null,
       isBot: !!isBot,
       gear, level,
+      cls,                                     // PF1e class → drives BAB + Hit Die
+      weaponKey: player.weapon || 'dagger',    // chosen base weapon (dropdown)
       hp: maxHp, maxHp,
-      sickened: 0, paralyzed: 0,
-      usedLightning: false, usedStinking: false,
+      sickened: 0, paralyzed: 0, flatFooted: true,
+      abilityUses: {}, buffs: null, smiteActive: false, acPenRound: -1, acPenAmt: 0,
+      // Per-RUN state (persists across rooms, NOT refreshed by _resetAbilities):
+      //   runAbilityUses — 'run'-cost abilities (Bless: once per whole dungeon)
+      //   runBuffs       — run-long buffs (Bless's +1 to-hit) that never fade
+      runAbilityUses: {}, runBuffs: { toHit: 0, dmg: 0 },
       left: false, dead: false,
     };
+    for (const ab of kitFor(cls).abilities) {
+      if (ab.cost === 'run') m.runAbilityUses[ab.key] = (typeof ab.uses === 'function' ? ab.uses(level) : (ab.uses || 1));
+    }
+    this._resetAbilities(m);   // stock the per-room spell/channel pool by level
     // Vorkstag the skinwalker wears a partymate's face + name (true identity
     // hidden) — same as his poker-seat disguise. He keeps his own creepy
     // personality but is shown/voiced as whoever he's impersonating.
@@ -287,6 +358,19 @@ class Dungeon {
     return m;
   }
 
+  // Active debuffs on a hero or monster, as PF1-system condition icons for the
+  // dungeon UI. Members carry sickened/paralyzed; enemies add asleep/prone.
+  // (Same flag names on both, so one helper serves heroes and monsters.)
+  _condList(o) {
+    const I = '/dungeon/conditions/', c = [];
+    if (o.sickened > 0)  c.push({ key: 'sickened',  label: 'Sickened',  icon: `${I}sickened.webp` });
+    if (o.paralyzed > 0) c.push({ key: 'paralyzed', label: 'Paralyzed', icon: `${I}paralyzed.webp` });
+    if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   icon: `${I}stunned.webp` });
+    if (o.fascinated)    c.push({ key: 'asleep',    label: 'Asleep',    icon: `${I}sleep.webp` });
+    if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     icon: `${I}prone.webp` });
+    return c;
+  }
+
   // ── Broadcasting ──────────────────────────────────────────────────────────
   publicState() {
     return {
@@ -297,16 +381,23 @@ class Dungeon {
       runGold: this.runGold,
       party: this.party.map(m => ({
         playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot,
+        cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
         level: m.level, hp: Math.max(0, m.hp), maxHp: m.maxHp,
         dead: !!m.dead, downed: !m.dead && !m.left && m.hp <= 0,
         dyingHp: (!m.dead && !m.left && m.hp <= 0) ? m.hp : null,
         left: !!m.left,
         sickened: m.sickened > 0, paralyzed: m.paralyzed > 0,
-        lightningReady: !m.usedLightning, stinkingReady: !m.usedStinking,
+        // Auto-skip countdown — only for the human whose turn it currently is.
+        afkAt: (this.status === 'combat' && !m.isBot && this._currentActorId() === m.playerId && m.afkDeadline) ? m.afkDeadline : null,
+        conditions: (!m.dead && !m.left && m.hp > 0) ? this._condList(m) : [],
+        smiteActive: !!m.smiteActive, buffed: !!(m.buffs && (m.buffs.toHit || m.buffs.dmg || m.buffs.bonusDice || m.buffs.ac)),
+        kit: this._kitState(m),    // at-will + 2 abilities (+ remaining uses) for the action UI
       })),
       enemies: this.enemies.map(e => ({
         uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
+        align: e.align || 'NE', evil: !!e.evil, flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated,
+        conditions: e.hp > 0 ? this._condList(e) : [],
       })),
       turn: this._currentTurn(),
       botCount: this.botCount(),
@@ -327,7 +418,16 @@ class Dungeon {
       log: this.log.slice(-60),
     };
   }
-  _broadcast() { if (this.io) this.io.to(this.roomName()).emit('dungeon:state', this.publicState()); }
+  _broadcast() {
+    if (!this.io) return;
+    this.io.to(this.roomName()).emit('dungeon:state', this.publicState());
+    // Tell everyone still at the poker table that a run is live, so they can
+    // pop in to spectate / heckle from the money menu.
+    if (this.tableId) this.io.to(`table:${this.tableId}`).emit('dungeon:active', this._summary());
+  }
+  _summary() {
+    return { active: this.status !== 'over', depth: this.depth, status: this.status, party: this.present().map(m => m.nickname) };
+  }
   _echoToTable(sound) {
     if (sound && this.io && this.tableId) this.io.to(`table:${this.tableId}`).emit('dungeon:echo', { sound });
   }
@@ -346,7 +446,7 @@ class Dungeon {
     if (this.lootRoll) return { ok: false, error: 'finish the loot roll first' };
     this.depth += 1;
     this._spawnRoom();
-    for (const m of this.present()) { m.usedLightning = false; m.usedStinking = false; }  // 1 of each per room
+    for (const m of this.present()) { this._resetAbilities(m); m.flatFooted = true; }  // refresh per-room spells/channels + flat-footed until they act
     this.status = 'combat';
     this.round = 1;
     this._rollInitiative();
@@ -355,34 +455,105 @@ class Dungeon {
     this._beginTurnCycle();
     return { ok: true };
   }
+  // Average Party Level (PF1e): mean of the heroes' levels (1 + gear), rounded.
+  _apl() {
+    const party = this.alivePresent();
+    if (!party.length) return 1;
+    return Math.max(1, Math.round(party.reduce((s, m) => s + (m.level || 1), 0) / party.length));
+  }
+  // The LOWEST level in the party — the dungeon starts geared to its weakest
+  // member so nobody gets one-shot in room 1, then ramps up as they descend.
+  _minLevel() {
+    const party = this.alivePresent();
+    if (!party.length) return 1;
+    return Math.max(1, Math.min(...party.map(m => m.level || 1)));
+  }
+  // The per-enemy CR for this room: geared to the LOWEST party member's level
+  // (so the weakest isn't one-shot), ramping ~+1 every 4 rooms as they descend,
+  // +2 on boss rooms. Party SIZE is handled by the XP budget (more heroes → more
+  // enemies), not by inflating each foe's CR. Capped to the bestiary.
+  _encounterCR(boss) {
+    let cr = this._minLevel() + Math.floor(this.depth / 4);
+    if (boss) cr += 2;
+    return Math.max(1, Math.min(13, cr));
+  }
+  // Strongest thematic foe (incl. boss-only creatures) the party can handle.
+  _pickBoss(capCR) {
+    const cand = Object.keys(MON).filter(k => MON[k].crNum <= capCR);
+    if (!cand.length) return bossKeyFor(this.depth);
+    const top = cand.sort((a, b) => MON[b].crNum - MON[a].crNum).slice(0, 3);
+    return pick(top);
+  }
+  // A spawnable creature that fits the remaining XP budget. Biased HARD toward
+  // CHEAP foes (weight ∝ 1/xp) so a room fills up with lots of shitty mooks —
+  // goblins, kobolds, their sneaky rogues and Hold-Person shamans — instead of a
+  // few tough ones. Falls back to anything affordable.
+  _pickForBudget(budget, floorCR, capCR) {
+    let cand = SPAWNABLE.filter(k => MON[k].crNum >= floorCR && MON[k].crNum <= capCR && xpForCR(MON[k].crNum) <= budget);
+    if (!cand.length) cand = SPAWNABLE.filter(k => MON[k].crNum <= capCR && xpForCR(MON[k].crNum) <= budget);
+    if (!cand.length) return null;
+    const weights = cand.map(k => 1 / Math.max(1, xpForCR(MON[k].crNum)));
+    const tot = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * tot;
+    for (let i = 0; i < cand.length; i++) { r -= weights[i]; if (r <= 0) return cand[i]; }
+    return cand[cand.length - 1];
+  }
+  _makeEnemy(base, boss) {
+    return {
+      uid: `e${++_uidSeq}`,
+      name: boss ? `Boss: ${base.name}` : base.name,
+      glyph: base.glyph, art: base.tokenPool ? pick(base.tokenPool) : (base.art || null), boss, cr: base.cr || null,
+      hp: base.hp, maxHp: base.hp,
+      ac: base.ac, toHit: base.toHit,
+      dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus,
+      fort: base.fort, reflex: base.reflex,
+      align: base.align || 'NE', evil: !!base.evil,
+      flatFooted: true, prone: false, fascinated: false, loseTurn: false,
+      paralyze: !!base.paralyze, paralyzeDC: base.paralyzeDC || PARALYZE_DC, sickened: 0,
+      attacks: base.attacks || 1,
+      atkSound: base.atkSound || null,
+      atkSounds: base.atkSounds || null,
+      caster: base.caster || null,
+      spellDC: base.spellDC || 13,
+      castsLeft: base.caster ? 2 : 0,
+      shout: base.shout || null,           // special shout attack (e.g. Skeletal Champion)
+      shoutsLeft: base.shout ? 2 : 0,
+      gold: rint(base.gold[0], base.gold[1]),
+    };
+  }
+  // Build a room of foes. The per-enemy CR is geared to the weakest hero; the
+  // NUMBER of foes scales with party SIZE — each hero past the first adds roughly
+  // a full standard encounter's worth of monsters, so a packed party gets mobbed.
   _spawnRoom() {
     this.enemies = [];
     const boss = this.depth % BOSS_EVERY === 0;
-    // Scale enemy COUNT up a little with party size so groups aren't trivial —
-    // but each creature keeps its true PF1e stat block (no per-room buffs).
+    const encCR = this._encounterCR(boss);
     const partyN = Math.max(1, this.alivePresent().length);
-    const lo = this.depth <= 3 ? 1 : 2, hi = (this.depth <= 3 ? 3 : 4) + (partyN - 1);
-    const count = boss ? 1 : rint(lo, hi);
-    for (let i = 0; i < count; i++) {
-      const base = MON[boss ? bossKeyFor(this.depth) : pickByCR(this.depth)];
-      this.enemies.push({
-        uid: `e${++_uidSeq}`,
-        name: boss ? `Boss: ${base.name}` : base.name,
-        glyph: base.glyph, art: base.tokenPool ? pick(base.tokenPool) : (base.art || null), boss, cr: base.cr || null,
-        hp: base.hp, maxHp: base.hp,
-        ac: base.ac, toHit: base.toHit,
-        dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus,
-        fort: base.fort, reflex: base.reflex,
-        paralyze: !!base.paralyze, paralyzeDC: base.paralyzeDC || PARALYZE_DC, sickened: 0,
-        attacks: base.attacks || 1,            // separate swings per turn (rogue/ogre/golem/monk…)
-        atkSound: base.atkSound || null,        // signature hit sound (rogue: riki)
-        atkSounds: base.atkSounds || null,      // randomized per-swing pool (monk: bruce kiai)
-        caster: base.caster || null,            // kobold shaman: 'holdperson'
-        spellDC: base.spellDC || 13,
-        castsLeft: base.caster ? 2 : 0,
-        gold: rint(base.gold[0], base.gold[1]),
-      });
+    const sizeMult = Math.max(1, partyN - 1);   // 1→×1, 2→×1, 3→×2, 4→×3, 6→×5
+    const keys = [];
+    // Fill an XP budget with creatures CR ≤ cap (and not trivially weak).
+    const fill = (budget, floorCR, capCR, maxCount) => {
+      let g = 0;
+      while (keys.length < maxCount && budget > 100 && g++ < 80) {
+        const key = this._pickForBudget(budget, floorCR, capCR);
+        if (!key) break;
+        keys.push(key);
+        budget -= xpForCR(MON[key].crNum);
+      }
+    };
+    if (boss) {
+      keys.push(this._pickBoss(encCR));   // one strong foe
+      // Boss rooms also mob a big party — minions at a notch below the room CR.
+      const baseCR = this._minLevel() + Math.floor(this.depth / 4);
+      fill(Math.round(xpForCR(baseCR) * Math.max(0, partyN - 1) * 0.6),
+           Math.max(0.25, encCR - 6), Math.max(1, encCR - 2), 1 + partyN);
+    } else {
+      fill(Math.round(xpForCR(encCR) * sizeMult),
+           Math.max(0.25, encCR - 4), encCR, Math.min(14, 4 + partyN * 2));
     }
+    if (!keys.length) keys.push(pickByCR(this.depth));
+    keys.forEach((k, i) => this.enemies.push(this._makeEnemy(MON[k], boss && i === 0)));
+    this._log('encounter', { depth: this.depth, minLevel: this._minLevel(), encCR, partyN, count: keys.length });
   }
   _enemySummary() {
     const counts = {};
@@ -408,6 +579,9 @@ class Dungeon {
     if (t.kind === 'enemy') {
       const e = this.enemies.find(x => x.uid === t.id);
       if (!e || e.hp <= 0) return this._nextTurn();
+      if (e.fascinated) { this._note(`${e.glyph} ${e.name} stands fascinated — does nothing.`); this._broadcast(); return this._nextTurn(); }
+      if (e.paralyzed > 0) { e.paralyzed -= 1; this._note(`🖐️ ${e.name} is held — paralyzed, loses its turn.`); this._broadcast(); return this._nextTurn(); }
+      if (e.loseTurn) { e.loseTurn = false; this._note(`${e.glyph} ${e.name} is off-balance — loses its turn.`); this._broadcast(); return this._nextTurn(); }
       if (e.sickened > 0) { e.sickened -= 1; this._note(`${e.glyph} ${e.name} retches in the cloud — loses its turn.`); this._broadcast(); return this._nextTurn(); }
       this._stepTimer = setTimeout(() => { this._enemyAct(e); this._nextTurn(); }, ENEMY_STEP_MS);
       this._broadcast();
@@ -417,7 +591,12 @@ class Dungeon {
     const m = this.member(t.id);
     if (!m || m.left || m.hp <= 0) return this._nextTurn();
     if (m.paralyzed > 0) { m.paralyzed -= 1; this._note(`🥶 ${m.nickname} is paralyzed — loses the turn.`); this._broadcast(); return this._nextTurn(); }
+    if (m.stunned > 0) { m.stunned -= 1; this._note(`😵 ${m.nickname} is stunned — loses the turn.`); this._broadcast(); return this._nextTurn(); }
     if (m.sickened > 0) m.sickened -= 1;
+    if (m.judgment === 'healing' && m.hp > 0 && m.hp < m.maxHp) {   // Judgement: Healing regen each turn
+      const h = Math.max(1, Math.floor((m.level || 1) / 3)); m.hp = Math.min(m.maxHp, m.hp + h);
+      this._note(`💗 ${m.nickname}'s Judgement of Healing mends ${h} HP.`);
+    }
     if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, ENEMY_STEP_MS); this._broadcast(); }
     else { this._armAfkTimer(m); this._broadcast(); }   // human — wait for input
   }
@@ -431,7 +610,10 @@ class Dungeon {
   }
   _armAfkTimer(m) {
     clearTimeout(this._turnTimer);
+    // Stamp when this human auto-skips, so their card can show a live countdown.
+    m.afkDeadline = Date.now() + AFK_PASS_MS;
     this._turnTimer = setTimeout(() => {
+      m.afkDeadline = null;
       this._note(`💤 ${m.nickname} is idle — passes.`);
       this._broadcast();
       this._nextTurn();
@@ -642,26 +824,68 @@ class Dungeon {
   // Recompute a member's level + HP from current gear (level = 1 + gear bonuses).
   _relevel(m) {
     const nl = levelOf(m.gear);
-    const gain = HP_PER_LEVEL * nl - m.maxHp;
-    m.level = nl; m.maxHp = HP_PER_LEVEL * nl;
+    const nmax = maxHpFor(m.cls, nl);
+    const gain = nmax - m.maxHp;
+    m.level = nl; m.maxHp = nmax;
     if (gain > 0) m.hp += gain;   // leveling up heals the new HP; never drains current HP
   }
-  _partySaveMod(m) { return m.level || 1; }   // saves scale with level
+  _partySaveMod(m) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0); }   // saves scale with level (+ rage's +Will)
+  // How much a hero's AC is lowered right now: sticky penalty (rage) + a
+  // this-turn penalty (reckless / barbarian cleave drop their guard).
+  _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0); }
+  _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection
+    return ((m.buffs && m.buffs.ac) || 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0);
+  }
   _atkStr(r) { return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`; }
-  _swingVsAC(attacker, ac) {
+  _swingVsAC(attacker, ac, target, extraToHit = 0) {
     const weapon = attacker.weapon;
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
-    const lvl = attacker.level || 1;        // level (1 + gear) = BAB-ish; to-hit also gets the +4 stat mod
-    const toHit = lvl + ABILITY_MOD - sick;
+    const lvl = attacker.level || 1;
+    const cls = attacker.cls || 'fighter';
+    // Point Blank Shot: rangers get +1 to hit & damage with ranged weapons.
+    const pbs = (cls === 'ranger' && weapon && weapon.ranged) ? 1 : 0;
+    // Smite Evil: an ACTIVATED smite (paladin's ability) vs an evil foe adds a
+    // to-hit bump + bonus (un-multiplied) damage equal to level.
+    const smite = !!(attacker.smiteActive && target && target.evil);
+    // Sneak Attack: rogue-likes add precision dice vs a target that's denied its
+    // defenses — flat-footed, prone, sickened, or paralyzed (PF1e). NOT crit-multiplied.
+    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0));
+    const sneakOk = SNEAK_CLASSES.has(cls) && denied;
+    const sneakDice = sneakOk ? Math.min(SNEAK_DICE_CAP, Math.max(1, Math.ceil(lvl / 2))) : 0;
+    // Sticky room buffs (Rage / Judgment / Bane / Inspire Courage / Prayer)
+    // PLUS run-long buffs (Bless's +1 to-hit) that persist across rooms.
+    const rb = attacker.runBuffs || {};
+    const rbuff = attacker.buffs || {};
+    const buff = {
+      toHit: (rbuff.toHit || 0) + (rb.toHit || 0),
+      dmg: (rbuff.dmg || 0) + (rb.dmg || 0),
+      bonusDice: rbuff.bonusDice || 0,
+    };
+    // PF1e to-hit = class BAB (level-scaled) + ability mod + weapon bonus
+    // (masterwork +1 / +N enhancement, carried on weapon.toHit) + smite + buffs,
+    // minus a non-proficiency penalty if the class can't use this weapon.
+    const bab = babFor(cls, lvl);
+    const smiteHit = smite ? SMITE_TOHIT : 0;
+    // NPCs are hand-assigned their signature weapons, so they're always
+    // proficient; the −4 penalty only guides human weapon choices.
+    const notProf = (attacker.isBot || weaponProficient(cls, weapon)) ? 0 : NON_PROFICIENT_PENALTY;
+    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick;
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
-    // Damage = weapon die + weapon enhancement + ½ level (scaling) + ability mod (flat).
-    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD;
-    let dmg = dRoll(weapon.dmgDie) + weapon.dmgBonus + flatDmg - sick, crit = false;
-    if (roll >= weapon.critRange) { const conf = dRoll(20) + lvl + ABILITY_MOD; if (conf === 20 || conf >= ac) { crit = true; dmg += dRoll(weapon.dmgDie) + weapon.dmgBonus + flatDmg; } }
-    return { hit: true, crit, damage: Math.max(1, dmg), roll, toHit, total, ac, sound: pick(SND.flesh) };
+    // Damage = weapon dice (NdX) + enhancement + ½ level + ability mod + buff dmg (+ Point Blank).
+    const judgDmg = attacker.judgment === 'destruction' ? Math.max(1, Math.floor(lvl / 3)) : 0;   // inquisitor Judgement: Destruction
+    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + pbs + judgDmg;
+    const rollDmg = () => dRollN(weapon.dmgCount, weapon.dmgDie) + weapon.dmgBonus + flatDmg;
+    let dmg = rollDmg() - sick, crit = false;
+    if (roll >= weapon.critRange) { const conf = dRoll(20) + bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
+    // Precision (sneak), smite, and bane dice ride on top — NOT multiplied by a crit.
+    let sneakDmg = 0;
+    if (sneakDice) { sneakDmg = dRollN(sneakDice, 6); dmg += sneakDmg; }
+    if (buff.bonusDice) dmg += dRollN(buff.bonusDice, 6);   // Bane
+    if (smite) dmg += 2 * lvl;   // Smite Evil: +double level damage
+    return { hit: true, crit, smite, sneakDice, sneakDmg, damage: Math.max(1, dmg), roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
   _monsterSwing(e, targetAC) {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
@@ -675,16 +899,23 @@ class Dungeon {
     return { hit: true, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
   }
   _enemyAct(e) {
+    e.flatFooted = false;   // acting ends flat-footed
+    if (e.prone) { e.prone = false; this._note(`${e.glyph} ${e.name} clambers back to its feet.`); }
     if (!this.livingParty().length) return;
     // Kobold shaman: cast Hold Person on an unheld target before resorting to melee.
     if (e.caster === 'holdperson' && e.castsLeft > 0) {
-      const free = this.livingParty().filter(m => !(m.paralyzed > 0));
+      const free = this._targetableParty().filter(m => !(m.paralyzed > 0));
       if (free.length) return this._enemyCastHold(e, pick(free));
     }
+    // Skeletal Champion: a bone-rattling shout — 1d8 + save-or-stunned.
+    if (e.shout && e.shoutsLeft > 0 && dRoll(2) === 1) {
+      const awake = this._targetableParty().filter(m => !(m.stunned > 0) && !(m.paralyzed > 0));
+      if (awake.length) return this._enemyShout(e, pick(awake));
+    }
     // Melee — the kobold rogue stabs twice (1d3 each); everyone else swings once.
-    // Re-pick a living, preferably-helpless target each swing.
+    // Re-pick a living, TARGETABLE (non-invisible), preferably-helpless target.
     for (let i = 0; i < Math.max(1, e.attacks || 1); i++) {
-      const living = this.livingParty();
+      const living = this._targetableParty();
       if (!living.length) break;
       const helpless = living.filter(m => m.paralyzed > 0);
       this._enemyMelee(e, pick(helpless.length ? helpless : living));
@@ -692,13 +923,22 @@ class Dungeon {
   }
   // One enemy swing at a chosen target (handles the paralysis rider + signature sound).
   _enemyMelee(e, target) {
-    const effAC = acOf(target.gear).ac - (target.paralyzed > 0 ? 4 : 0);   // helpless: +4 to be hit
+    // Dual-wielders (Farrus's twin axes) carry no shield — strip any shield AC.
+    const tw = weaponOf(target.gear, target.weaponKey);
+    const noShield = (tw && tw.noShield && (Number(target.gear && target.gear.shield) || 0) >= 1) ? (2 + Number(target.gear.shield)) : 0;
+    const effAC = acOf(target.gear).ac + this._acBonus(target) - noShield - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);   // Shield: +4; helpless / rage / reckless / cleave: easier to hit
     const r = this._monsterSwing(e, effAC);
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);   // monk's randomized "bruce" kiai (hit or miss)
     else if (r.hit && e.atkSound) r.sound = e.atkSound;                    // rogue's "riki" stab (hit only)
     if (r.hit) {
-      target.hp -= r.damage;
-      this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${r.damage}. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
+      let dmg = r.damage, sneakTag = '';
+      // Enemy Sneak Attack (goblin/kobold rogues): +Xd6 vs a hero who's denied
+      // their defenses — flat-footed (hasn't acted yet) or HELD by a shaman.
+      if (e.sneakDice && (target.paralyzed > 0 || target.flatFooted)) {
+        const sn = dRollN(e.sneakDice, 6); dmg += sn; sneakTag = ` 🗡️+${sn} sneak!`;
+      }
+      target.hp -= dmg;
+      this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${dmg}.${sneakTag} ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
       if (target.hp <= -10) { this._memberDown(target); this._echoToTable(r.sound); return; }   // dead at −10
       if (target.hp <= 0)   { this._downMember(target); this._echoToTable(r.sound); return; }    // 0..−9 = down/dying
       if (e.paralyze) {
@@ -729,9 +969,130 @@ class Dungeon {
     }
     this._broadcast();
   }
-  _allyAct(m) { const foes = this.livingEnemies(); if (foes.length) this._playerAttack(m, foes[0].uid); }
+  // Skeletal Champion's shout: 1d8 sonic damage, Fort save or STUNNED 1 round.
+  _enemyShout(e, target) {
+    e.shoutsLeft -= 1;
+    const cfg = e.shout || {};
+    const fear = !!cfg.fear;   // Lich/Vampire sinister gaze: no damage, Will save or frozen in terror
+    const dmg = fear ? 0 : dRollN(1, 8);
+    if (dmg) this._dmgToMember(target, dmg);
+    const dc = cfg.dc || e.spellDC || 14;
+    const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
+    const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
+    const roll = `[${fear ? 'Will' : 'Fort'} d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
+    const snd = cfg.sound || null;
+    if (!saved && target.hp > 0) {
+      target.stunned = Math.max(target.stunned || 0, 1);
+      this._note(fear
+        ? `👁️ ${e.glyph} ${e.name}'s sinister gaze freezes ${target.nickname} in TERROR — loses a turn! ${roll}`
+        : `📢 ${e.glyph} ${e.name} looses a bone-rattling shout — ${target.nickname} takes ${dmg} and is STUNNED! ${roll}`, snd);
+    } else {
+      this._note(fear
+        ? `👁️ ${e.glyph} ${e.name} glares at ${target.nickname}, who steels their nerve. ${roll}`
+        : `📢 ${e.glyph} ${e.name} shouts at ${target.nickname} for ${dmg}${target.hp > 0 ? ', who shrugs off the daze' : ''}. ${roll}`, snd);
+    }
+    this._echoToTable(snd);
+    this._broadcast();
+  }
+  _allyAct(m) {
+    const foes = this.livingEnemies();
+    if (!foes.length) return;
+    // First see if a class ability is the smart play this turn (heal, buff,
+    // blast, spell). If so, use it; otherwise fall back to a basic attack.
+    const choice = this._botAbility(m);
+    if (choice) {
+      const ab = kitFor(m.cls).abilities[choice.slot];
+      const r = this._useAbility(m, choice.slot, choice.payload);
+      if (r && r.ok && ab) m._lastAbilityKey = ab.key;
+      if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }   // free action (judgement) → keep acting
+    }
+    // Basic attack — prefer foes that are NOT asleep/fascinated (a hit wakes
+    // them and throws away the crowd-control). Only target a sleeper if every
+    // living foe is already incapacitated this way.
+    const awake = foes.filter(e => !e.fascinated);
+    this._playerAttack(m, (awake.length ? awake : foes)[0].uid);
+    this._hasteBonus(m);   // Haste: spend a pending extra attack after the action
+  }
+  // Bot ability AI: pick a class ability for this turn, or null to basic-attack.
+  // Priority: heal the hurt → raise buffs (smite/rage/shield/inspire/bane) →
+  // blast/control a group → fire a spell or maneuver at the best target. Only
+  // ever returns an ability that's actually usable right now (level + uses/pool).
+  _botAbility(m) {
+    const kit = kitFor(m.cls);
+    if (!kit.abilities || !kit.abilities.length) return null;
+    const lvl = m.level || 1;
+    const foes = this.livingEnemies();
+    if (!foes.length) return null;
+    const awake = foes.filter(e => !e.fascinated);
+    const targets = awake.length ? awake : foes;          // don't wake sleepers
+    const usable = (ab) => {
+      if (!ab || lvl < (ab.minLevel || 1)) return false;
+      if (ab.cost === 'pool') return (m.spellPool || 0) > 0;
+      if (ab.cost === 'room') return ((m.abilityUses && m.abilityUses[ab.key]) || 0) > 0;
+      return true;                                         // 'free'
+    };
+    const slot = (ab) => kit.abilities.indexOf(ab);
+    const avail = kit.abilities.filter(usable);
+    if (!avail.length) return null;
+    const allies = this.livingParty();
+    const someoneHurt = allies.some(a => a.hp < a.maxHp * 0.55);
+    const weakestFoe = targets.slice().sort((a, b) => a.hp - b.hp)[0];
+    const anyDowned = this.party.some(a => !a.dead && !a.left && a.downed);
+    const anyDead = this.party.some(a => a.dead);
+
+    // 0) Revive a fallen ally if we have the prayer for it (Raise Dead/Resurrection
+    //    for the slain; Breath of Life for the dying).
+    const revive = avail.find(a => a.effect === 'revive' && (a.raiseDead ? anyDead : anyDowned));
+    if (revive) return { slot: slot(revive), payload: {} };
+    // 0b) Inquisitor: declare a Judgement if none is up (free action, then attack).
+    const judg = avail.find(a => a.effect === 'judgment');
+    if (judg && !m.judgment) return { slot: slot(judg), payload: {} };
+    // 1) Heal when an ally (or self) is meaningfully hurt.
+    const heal = avail.find(a => a.effect === 'heal');
+    if (heal && someoneHurt) return { slot: slot(heal), payload: {} };
+    // 1b) Dispel Magic — cleanse a debuffed ally (paralysis / stun / sickness).
+    const cleanse = avail.find(a => a.effect === 'cleanse');
+    if (cleanse && allies.some(a => a.paralyzed > 0 || a.stunned > 0 || a.sickened > 0)) return { slot: slot(cleanse), payload: {} };
+    // 2) Put up buffs once — Smite, then sticky self/party buffs (rage, shield,
+    //    bane, divine favor, inspire). Sticky guard stops re-casting.
+    const smite = avail.find(a => a.effect === 'smite' && !m.smiteActive);
+    if (smite) return { slot: slot(smite), payload: {} };
+    const buff = avail.find(a => a.effect === 'buff' && a.sticky && !(m.buffApplied && m.buffApplied[a.key]));
+    if (buff) return { slot: slot(buff), payload: {} };
+    // 3+4) Offense — gather usable options in priority order (group blast →
+    //      single-target spell → maneuver), then prefer one we did NOT use last
+    //      turn. That variety stops a bot from spamming ONE ability — and its one
+    //      sound (e.g. a cleric's Holy Smite) — every single turn; the cleric
+    //      now alternates Holy Smite / Hold Person instead.
+    const offense = [];
+    if (targets.length >= 2) {
+      for (const a of avail) if (['aoe', 'grease', 'sleep', 'fascinate'].includes(a.effect)) {
+        offense.push({ ab: a, payload: { targetUids: targets.slice(0, a.maxTargets || 3).map(e => e.uid) } });
+      }
+    }
+    if (weakestFoe) {
+      for (const a of avail) if (['bolt', 'missile', 'touch', 'rays', 'spellstrike', 'save_debuff'].includes(a.effect)) {
+        offense.push({ ab: a, payload: { targetUid: weakestFoe.uid } });
+      }
+      for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint'].includes(a.effect)) {
+        offense.push({ ab: a, payload: { targetUid: weakestFoe.uid } });
+      }
+    }
+    if (offense.length) {
+      const choice = offense.find(o => o.ab.key !== m._lastAbilityKey) || offense[0];
+      return { slot: slot(choice.ab), payload: choice.payload };
+    }
+    return null;   // nothing fit → basic attack
+  }
   // 0 to −9 HP: down and dying — can't act (the turn loop skips hp<=0), but a Cure
   // potion can still bring them back. Dead only once they pass −10.
+  // Apply non-melee damage to a member (shouts, hazards) with the same down/dead
+  // thresholds as a weapon hit.
+  _dmgToMember(m, dmg) {
+    m.hp -= dmg;
+    if (m.hp <= -10) return this._memberDown(m);
+    if (m.hp <= 0) return this._downMember(m);
+  }
   _downMember(m) {
     if (m.dead) return;
     if (!m.downed) {
@@ -746,7 +1107,8 @@ class Dungeon {
   _memberDown(m) {   // −10 or worse, or a total-party wipe: actually dead, out of the run
     if (m.dead) return;
     m.dead = true; m.downed = false;
-    this._note(`☠️ ${m.nickname} drops past −10 — slain in the dungeon, out of the run.`);
+    this._note(`☠️ ${m.nickname} drops past −10 — slain in the dungeon, out of the run.`, '/audio/hero_death.mp3');
+    this._echoToTable('/audio/hero_death.mp3');
     this._log('death', { who: m.playerId, hp: m.hp, depthReached: this.depth });
     this._emitMemberExit(m, { reason: 'dead', goldBanked: 0 });
   }
@@ -757,6 +1119,50 @@ class Dungeon {
     this._note('💀 The whole party is down — the dungeon claims them. The run ends.');
     for (const m of this.party.filter(x => !x.left && !x.dead)) this._memberDown(m);
     this._runOver();
+  }
+
+  // ── Human chat in the dungeon (from dungeon:say) ─────────────────────────
+  // Mirrors the poker table chat: a 💬-prefixed line in the shared dungeon log,
+  // visible to everyone in the run. Combatants only (you must be in the party).
+  say(playerId, text) {
+    const m = this.member(playerId);
+    if (!m || m.left) return { ok: false, error: 'not in this run' };
+    const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+    if (!clean) return { ok: false, error: 'empty message' };
+    this._note(`💬 ${m.nickname}: ${clean}`);
+    this._broadcast();
+    // Let a bot party-mate clap back if the player named one of them.
+    try { this._maybeChatBanter(m, clean); } catch (_) { /* flavor only */ }
+    return { ok: true };
+  }
+  // A spectator up at the table heckling the delvers. Not a combatant — their
+  // line is tagged "(watching)" but lands in the same shared log.
+  spectatorSay(player, text) {
+    const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+    if (!clean) return { ok: false, error: 'empty message' };
+    const nick = player.nickname || player.player_id;
+    this._note(`💬 ${nick} (watching): ${clean}`);
+    this._broadcast();
+    // A heckler can still draw a clap-back if they name a bot in the party.
+    try { this._maybeChatBanter({ playerId: player.player_id, nickname: nick }, clean); } catch (_) {}
+    return { ok: true };
+  }
+  // If the human's line names a bot currently in the party, that bot may answer
+  // in character (dungeon voice). Best-effort and rate-limited by banter itself.
+  _maybeChatBanter(speaker, text) {
+    const lower = text.toLowerCase();
+    const botMates = this.present().filter(x => x.isBot && x.hp > 0 && x.playerId !== speaker.playerId);
+    if (!botMates.length) return;
+    const named = botMates.find(b => {
+      const nick = (b.trueNick || b.nickname || '').toLowerCase();
+      const first = nick.split(/\s+/)[0];
+      return nick && (lower.includes(nick) || (first.length >= 4 && lower.includes(first)));
+    });
+    if (!named) return;
+    // Explicit mention → reply (near-)always, like the poker chat's name call-out.
+    // Bypasses the combat once-per-round banter gate since the player addressed them.
+    if (!banter.CHARACTER_FLAVOR[named.trueNick || named.nickname]) return;
+    this._emitBanter(named, 'chat', { from: speaker.nickname, said: text });
   }
 
   // ── Player actions (from dungeon:action) ─────────────────────────────────
@@ -778,58 +1184,574 @@ class Dungeon {
     if (this._currentActorId() !== playerId) return { ok: false, error: 'not your turn' };
     clearTimeout(this._turnTimer);
     this._log('action', { who: playerId, kind, hp: m.hp, enemiesAlive: this.livingEnemies().length });
-    if (kind === 'attack')         this._playerAttack(m, payload.targetUid);
-    else if (kind === 'lightning') { if (m.usedLightning) { this._armAfkTimer(m); return { ok: false, error: 'lightning already used this room' }; } this._castLightning(m, payload.targetUids || []); }
-    else if (kind === 'stinking')  { if (m.usedStinking) { this._armAfkTimer(m); return { ok: false, error: 'stinking already used this room' }; } this._castStinking(m); }
+    if (kind === 'attack') this._useAtwill(m, payload);
+    else if (kind === 'ability') {
+      const r = this._useAbility(m, payload.slot | 0, payload);
+      if (r && r.ok === false) { this._armAfkTimer(m); return r; }   // spent/invalid → don't burn the turn
+      if (r && r.freeAction) { this._armAfkTimer(m); this._broadcast(); return { ok: true, freeAction: true }; }   // judgement switch — keep your turn
+    }
     else { this._armAfkTimer(m); return { ok: false, error: 'unknown action' }; }
+    this._hasteBonus(m);   // Haste: spend a pending extra attack after the action
+    // Abadar's interest: a human's combat turn counts toward the compound-
+    // interest clock (same one poker ticks); every 10 turns the tab grows.
+    if (!m.isBot) {
+      const intr = db.tickDebtTurn(playerId);
+      if (intr) this._note(`🏛️ Abadar's interest — ${m.nickname}'s tab compounds ${intr.before.toLocaleString()} → ${intr.after.toLocaleString()} gp (+${intr.interest.toLocaleString()}).`);
+    }
     this._nextTurn();
     return { ok: true };
   }
 
-  _playerAttack(m, targetUid) {
-    const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
-    if (!e) return;
-    m.weapon = weaponOf(m.gear);
-    const r = this._swingVsAC(m, e.sickened > 0 ? e.ac - 2 : e.ac);   // sickened: +2 to be hit
-    if (r.fumble) this._note(`${m.nickname} fumbles the attack! ${this._atkStr(r)}`, r.sound);
-    else if (r.hit) { e.hp -= r.damage; this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${e.name} for ${r.damage}. ${this._atkStr(r)}${e.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, e.hp)}/${e.maxHp})`}`, r.sound); }
-    else this._note(`${m.nickname} misses ${e.name}. ${this._atkStr(r)}`, r.sound);
-    if (r.hit && e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
-    this._echoToTable(r.sound);
+  // ── Ability system ───────────────────────────────────────────────────────
+  // At-will: a weapon swing (martials) or a cantrip (full casters), every turn.
+  _useAtwill(m, payload) {
+    m.invisible = false;   // attacking (even a cantrip ray) breaks Invisibility
+    const at = kitFor(m.cls).atwill;
+    if (at && at.effect === 'bolt') return this._abBolt(m, at, payload.targetUid);
+    return this._playerAttack(m, payload.targetUid);
   }
-  _castLightning(m, targetUids) {
-    m.usedLightning = true;
-    const power = Math.max(2, totalMagicBonus(m.gear)), dc = 10 + power;
-    const dice = Math.max(1, Math.floor(power / 2));   // 1d6 per 2 "levels" of magic power, rounded down
-    let chosen = (targetUids || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0)).filter(Boolean);
-    if (!chosen.length) chosen = this.livingEnemies().slice(0, LIGHTNING_MAX_TARGETS);
-    chosen = chosen.slice(0, LIGHTNING_MAX_TARGETS);
-    const sound = pick(SND.lightning), parts = [];
-    for (const e of chosen) {
-      let full = 0; for (let i = 0; i < dice; i++) full += dRoll(6);
-      const sroll = dRoll(20), stot = sroll + e.reflex;
-      const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
-      const dmg = saved ? Math.floor(full / 2) : full;
-      e.hp -= dmg;
-      parts.push(`${e.name}: Ref [d20 ${sroll} ${this._fmtBonus(e.reflex)} = ${stot} vs DC ${dc}] ${saved ? 'save, half' : 'fail'} ${dmg}${e.hp <= 0 ? ' ☠️' : ''}`);
-    }
-    this._note(`⚡ ${m.nickname} Lightning Bolt (${dice}d6) — ${parts.join('; ')}.`, sound);
-    this._echoToTable(sound);
+  // One of the class's abilities (slot index). Gates on level + cost:
+  //   'pool' → spend a shared spell slot; 'room' → spend its own use; 'free' → unlimited.
+  _useAbility(m, slot, payload) {
+    const kit = kitFor(m.cls);
+    const ab = kit.abilities[slot];
+    if (!ab) return { ok: false, error: 'no such ability' };
+    const lvl = m.level || 1;
+    if (ab.minLevel && lvl < ab.minLevel) return { ok: false, error: `${ab.name} needs level ${ab.minLevel}` };
+    if (ab.cost === 'pool' && (m.spellPool || 0) <= 0) return { ok: false, error: 'out of spell casts this room' };
+    if (ab.cost === 'room' && ((m.abilityUses && m.abilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is spent for this room` };
+    if (ab.cost === 'run'  && ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is already cast for this dungeon` };
+    m.flatFooted = false;   // acting ends flat-footed
+    const D = {
+      trip:        () => this._abTrip(m, payload),
+      cleave:      () => this._abCleave(m, ab, payload),
+      feint:       () => this._abFeint(m, payload),
+      reckless:    () => this._abReckless(m, payload),
+      buff:        () => this._abBuff(m, ab),
+      smite:       () => this._abSmite(m, ab),
+      heal:        () => this._abHeal(m, ab),
+      revive:      () => this._abRevive(m, ab),
+      haste:       () => this._abHaste(m, ab),
+      invisible:   () => this._abInvisible(m, ab),
+      judgment:    () => this._abJudgment(m, ab),
+      cleanse:     () => this._abCleanse(m, ab),
+      aoe:         () => this._abAoe(m, ab, payload),
+      bolt:        () => this._abBolt(m, ab, payload.targetUid),
+      missile:     () => this._abMissile(m, ab, payload),
+      touch:       () => this._abTouch(m, ab, payload),
+      rays:        () => this._abRays(m, ab, payload),
+      spellstrike: () => this._abSpellstrike(m, ab, payload),
+      save_debuff: () => this._abSaveDebuff(m, ab, payload),
+      grease:      () => this._abGrease(m, ab, payload),
+      fascinate:   () => this._abFascinate(m, ab, payload),
+      sleep:       () => this._abSleep(m, ab, payload),
+      rapidshot:   () => this._abRapidShot(m, ab, payload),
+      bullseye:    () => this._abBullseye(m, ab, payload),
+    }[ab.effect];
+    if (!D) return { ok: false, error: 'unknown ability' };
+    D();
+    if (ab.cost === 'pool') m.spellPool = Math.max(0, (m.spellPool || 0) - 1);
+    else if (ab.cost === 'room') m.abilityUses[ab.key] = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 0) - 1);
+    else if (ab.cost === 'run') m.runAbilityUses[ab.key] = Math.max(0, ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) - 1);
+    if (ab.target === 'enemy' || ab.target === 'aoe') m.invisible = false;   // attacking breaks Invisibility
+    if (ab.effect === 'judgment' || ab.freeAction) return { ok: true, freeAction: true };   // judgement switch / barbarian Rage cost no action
+    return { ok: true };
   }
-  _castStinking(m) {
-    m.usedStinking = true;
-    const power = Math.max(2, totalMagicBonus(m.gear)), dc = 10 + power;
-    const sound = pick(SND.stink), parts = [];
-    for (const e of this.livingEnemies()) {
-      const sroll = dRoll(20), stot = sroll + e.fort;
-      const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
-      if (!saved) e.sickened = SICKENED_ROUNDS;
-      parts.push(`${e.name}: Fort [d20 ${sroll} ${this._fmtBonus(e.fort)} = ${stot} vs DC ${dc}] ${saved ? 'save' : 'SICKENED'}`);
-    }
-    this._note(`💨 ${m.nickname} Stinking Cloud (DC ${dc}) — ${parts.join('; ')}.`, sound);
-    this._echoToTable(sound);
+  // Per-room reset: refill the shared spell pool (full casters) + own-count
+  // abilities, and clear sticky room buffs. Called each room and on join.
+  _resetAbilities(m) {
+    const kit = kitFor(m.cls);
+    m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
+    m.abilityUses = {};
+    for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1);
+    m.buffs = null;          // rage / bane / divine favor / inspire clear
+    m.buffApplied = {};      // which sticky buffs are already active (no stacking)
+    m.smiteActive = false;
+    m.hasted = false; m.stunned = 0;   // transient round effects clear each room
+    m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
+    m.acPenRound = -1; m.acPenAmt = 0;
+  }
+  // The member's kit + remaining uses + level-availability, for the action UI.
+  _kitState(m) {
+    const kit = kitFor(m.cls);
+    const lvl = m.level || 1;
+    return {
+      atwill: { key: kit.atwill.key, name: kit.atwill.name, icon: kit.atwill.icon, img: kit.atwill.img || null },
+      caster: isCaster(m.cls),
+      spellNote: kit.note || null,
+      spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
+      abilities: kit.abilities.map(ab => ({
+        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, maxTargets: ab.maxTargets || 1,
+        minLevel: ab.minLevel || 1, available: lvl >= (ab.minLevel || 1), desc: ab.desc || '',
+        remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
+        max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'room' ? roomUses(ab, lvl) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl) : (ab.uses || 1)) : null,
+      })),
+    };
+  }
+  // Spell save DC + caster level for this member (level = 1 + gear).
+  _spellDC(m) { return 10 + (m.level || 1) + ABILITY_MOD; }
+  _spellDice(ab, m) { return diceCount(ab, m.level || 1); }
+  _enemyTargets(payload, max) {
+    let chosen = ((payload && payload.targetUids) || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0)).filter(Boolean);
+    if (!chosen.length) chosen = this.livingEnemies();
+    return max ? chosen.slice(0, max) : chosen;
+  }
+  _oneEnemy(payload) {
+    return this.enemies.find(x => x.uid === (payload && payload.targetUid) && x.hp > 0) || this.livingEnemies()[0] || null;
+  }
+  _saveVs(bonus, dc) { const r = dRoll(20); return { roll: r, total: r + bonus, saved: r === 20 ? true : r === 1 ? false : (r + bonus) >= dc }; }
+  _afterEnemyHit(e) { if (e.hp <= 0) return ' ☠️'; return ` (${Math.max(0, e.hp)}/${e.maxHp})`; }
+  // Effective melee AC of an enemy: sickened = +2 to be hit, prone = +4 to be hit.
+  _enemyAC(e) { return e.ac - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0); }
+  // Apply damage to an enemy; any hit snaps it out of a Fascinate.
+  _dmgE(e, dmg) {
+    e.hp -= dmg; if (e.fascinated) e.fascinated = false;
+    if (e.hp <= 0 && e.explode && !e._exploded) { e._exploded = true; this._enemyExplode(e); }
+    return e.hp;
+  }
+  // A Fire Skeleton bursts on death, striking 1d2 (random, targetable) heroes.
+  _enemyExplode(e) {
+    const ex = e.explode || {};
+    const live = this._targetableParty().slice();
+    if (!live.length) return;
+    for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
+    const hit = live.slice(0, dRoll(ex.count || 2));
+    const parts = [];
+    for (const t of hit) { const d = dRollN(ex.dice || 3, ex.die || 6); this._dmgToMember(t, d); parts.push(`${t.nickname} −${d}`); }
+    this._note(`💥 ${e.name} erupts into flame as it falls — ${parts.join(', ')}!`, ex.sound);
+    this._echoToTable(ex.sound);
+  }
+  // Enemy save bonus. Monsters carry Fort + Reflex; Will is approximated.
+  _enemySave(e, which) {
+    if (which === 'fort') return e.fort || 0;
+    if (which === 'reflex') return e.reflex || 0;
+    return Math.floor(((e.fort || 0) + (e.reflex || 0)) / 2);   // will (approx)
+  }
+  // A bare attack roll (to-hit only, no damage) using the member's weapon.
+  _attackRoll(m, e) {
+    const w = m.weapon || weaponOf(m.gear, m.weaponKey);
+    const lvl = m.level || 1, cls = m.cls || 'fighter';
+    const notProf = (m.isBot || weaponProficient(cls, w)) ? 0 : NON_PROFICIENT_PENALTY;
+    const toHit = babFor(cls, lvl) + ABILITY_MOD + (w.toHit || 0) + ((m.buffs && m.buffs.toHit) || 0) + notProf - (m.sickened > 0 ? SICKENED_PENALTY : 0);
+    const roll = dRoll(20), total = roll + toHit;
+    return { hit: roll === 20 || (roll !== 1 && total >= this._enemyAC(e)), roll, total, toHit, weapon: w };
   }
 
+  // ── Effects ──────────────────────────────────────────────────────────────
+  // Ranged touch cantrip / single small bolt (Ray of Frost).
+  _abBolt(m, ab, targetUid) {
+    m.flatFooted = false;
+    const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
+    if (!e) return;
+    const touchAC = Math.max(10, e.ac - 5);   // touch attacks ignore most armor
+    const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
+    const roll = dRoll(20), total = roll + toHit;
+    const sound = ab.sound || pick(SND.lightning);
+    if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs touch ${touchAC}]`, sound); this._echoToTable(sound); return; }
+    const dmg = Math.max(1, dRollN(this._spellDice(ab, m), ab.die || 3) + (ab.flat || 0));
+    this._dmgE(e, dmg);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}.${this._afterEnemyHit(e)}`, sound);
+    if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+    this._echoToTable(sound);
+  }
+  // Area damage with a save for half — Burning Hands / Holy Smite / Lightning
+  // Bolt / Fireball. Hits up to ab.maxTargets foes (chosen or auto).
+  _abAoe(m, ab, payload) {
+    const dc = this._spellDC(m), dice = this._spellDice(ab, m);
+    let chosen;
+    if (ab.randFoes || ab.randBase) {
+      // Fireball-style: a RANDOM 1dN of the living enemies. Cone of Cold uses
+      // randBase+randDie → 2+1d3 foes.
+      const living = this.livingEnemies().slice();
+      for (let i = living.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [living[i], living[j]] = [living[j], living[i]]; }
+      const n = ab.randBase ? ((ab.randBase || 0) + dRoll(ab.randDie || 1)) : dRoll(ab.randFoes);
+      chosen = living.slice(0, n);
+    } else {
+      chosen = this._enemyTargets(payload, ab.maxTargets || 2);
+    }
+    const sound = (ab.sounds ? pick(ab.sounds) : ab.sound) || pick(SND.lightning), parts = [];   // Fireball/Lightning alternate from a pool
+    const saveStat = ab.save || 'reflex';
+    const saveLbl = saveStat === 'fort' ? 'Fort' : saveStat === 'will' ? 'Will' : 'Ref';
+    for (const e of chosen) {
+      const full = dRollN(dice, ab.die || 6);
+      const sv = this._saveVs(this._enemySave(e, saveStat), dc);
+      const dmg = sv.saved ? Math.floor(full / 2) : full;
+      this._dmgE(e, dmg);
+      parts.push(`${e.name}: ${saveLbl} ${sv.total} vs ${dc} ${sv.saved ? 'half' : 'fail'} ${dmg}${e.hp <= 0 ? ' ☠️' : ''}`);
+    }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} (${dice}d${ab.die || 6} ${ab.dtype || ''}) — ${parts.join('; ')}.`, sound);
+    this._echoToTable(sound);
+  }
+  // Magic Missile — auto-hit force darts (PF1: 1 dart, +1 per 2 caster levels,
+  // max 5; each 1d4+1). Darts split across selected foes if more than one.
+  _abMissile(m, ab, payload) {
+    const darts = Math.min(5, 1 + Math.floor(((m.level || 1) - 1) / 2));   // L1:1 L3:2 L5:3 L7:4 L9:5
+    let targets = this._enemyTargets(payload, darts);
+    if (!targets.length) { const e = this._oneEnemy(payload); if (!e) return; targets = [e]; }
+    const sound = ab.sound || pick(SND.lightning), parts = [];
+    for (let i = 0; i < darts; i++) {
+      const e = targets[i % targets.length];
+      if (!e || e.hp <= 0) continue;
+      const d = dRoll(4) + 1;
+      this._dmgE(e, d);
+      parts.push(`${e.name} ${d}${e.hp <= 0 ? ' ☠️' : ''}`);
+      if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+    }
+    this._note(`${ab.icon} ${m.nickname} looses ${darts} Magic Missile${darts > 1 ? 's' : ''} (auto-hit) — ${parts.join(', ')}.`, sound);
+    this._echoToTable(sound);
+  }
+  // Ranged touch rays (Scorching Ray): 1+¼level rays of 4d6 each.
+  _abRays(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    // PF1e Scorching Ray: 1 ray, +1 per 4 caster levels past 3rd → 2 rays at CL7,
+    // 3 at CL11. Each ray rolls to hit (4d6 fire). When it SPLITS (2+), use the
+    // dramatic fire-combo sound instead of the single-ray report.
+    const rays = Math.max(1, Math.min(3, 1 + Math.floor(((m.level || 1) - 3) / 4)));
+    const touchAC = Math.max(10, e.ac - 5), toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
+    let dmg = 0, hits = 0;
+    for (let i = 0; i < rays; i++) { const roll = dRoll(20); if (roll === 20 || (roll !== 1 && roll + toHit >= touchAC)) { dmg += dRollN(ab.dice || 4, ab.die || 6); hits++; } }
+    const sound = (rays >= 2 && ab.splitSound) ? ab.splitSound : (ab.sound || pick(SND.lightning));
+    if (!hits) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} (${rays} ray${rays > 1 ? 's' : ''}) all miss ${e.name}.`, sound); this._echoToTable(sound); return; }
+    this._dmgE(e, dmg);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} — ${hits}/${rays} rays burn ${e.name} for ${dmg} fire.${this._afterEnemyHit(e)}`, sound);
+    if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+    this._echoToTable(sound);
+  }
+  // Spellstrike: a weapon hit carrying bonus elemental dice (+ optional debuff).
+  _abSpellstrike(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const r = this._swingVsAC(m, this._enemyAC(e), e);
+    const sound = MAGUS_SPELLSTRIKE_SFX[m.nickname] || ab.sound || r.sound;
+    if (!r.hit) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. ${this._atkStr(r)}`, sound); this._echoToTable(sound); return; }
+    const bonus = dRollN(this._spellDice(ab, m), ab.die || 6);
+    const total = r.damage + bonus;
+    this._dmgE(e, total);
+    let extra = '';
+    if (ab.debuff === 'sickened' && e.hp > 0) { e.sickened = SICKENED_ROUNDS; extra = ' — staggered!'; }
+    this._note(`${ab.icon} ${m.nickname} ${ab.name}s ${e.name} for ${r.damage}+${bonus} ${ab.dtype || ''} = ${total}.${extra}${this._afterEnemyHit(e)}`, sound);
+    if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+    this._echoToTable(sound);
+  }
+  // Haste — the whole party blurs with speed. Each ally gets ONE extra attack on
+  // their next turn (see _hasteBonus), consumed when they act. Lasts ~1 round.
+  _abHaste(m, ab) {
+    const sound = ab.sounds ? pick(ab.sounds) : ab.sound;
+    for (const a of this.livingParty()) a.hasted = true;
+    this._note(`${ab.icon} ${m.nickname} casts Haste — the whole party blurs with speed! (everyone gets an extra attack on their next turn)`, sound);
+    this._echoToTable(sound);
+  }
+  // Dispel Magic — strip the worst debuff off an afflicted ally (or self).
+  _abCleanse(m, ab) {
+    const sound = ab.sound;
+    const allies = this.livingParty();
+    const target = allies.find(a => (a.paralyzed > 0 || a.stunned > 0 || a.sickened > 0)) || m;
+    const cleared = [];
+    if (target.paralyzed > 0) { target.paralyzed = 0; cleared.push('paralysis'); }
+    if (target.stunned > 0)   { target.stunned = 0;   cleared.push('stun'); }
+    if (target.sickened > 0)  { target.sickened = 0;  cleared.push('sickness'); }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${target.nickname} — ${cleared.length ? 'clears ' + cleared.join(', ') + '!' : 'nothing to dispel'}.`, sound);
+    this._echoToTable(sound);
+  }
+  // Invisibility — enemies can't target you until you attack (see _targetableParty
+  // and the m.invisible=false clears in _playerAttack / offensive _useAbility).
+  _abInvisible(m, ab) {
+    m.invisible = true;
+    this._note(`${ab.icon} ${m.nickname} fades from view — unseen until they strike!`, ab.sound);
+    this._echoToTable(ab.sound);
+  }
+  // Judgement (inquisitor): set the one active judgement. Switching is a FREE
+  // action (see _useAbility returning freeAction). destruction=+dmg, protection=
+  // +AC, healing=regen each of your turns. Applied in combat math + _advanceToActor.
+  _abJudgment(m, ab) {
+    m.judgment = ab.judgmentType;
+    const what = { destruction: '⚔️ Destruction (+damage)', protection: '🛡️ Protection (+AC)', healing: '💗 Healing (regen)' }[ab.judgmentType] || ab.judgmentType;
+    this._note(`${ab.icon} ${m.nickname} pronounces Judgement — ${what}.`, ab.sound);
+    this._echoToTable(ab.sound);
+  }
+  // If `m` is hasted, spend it on one bonus attack against a living foe. Called
+  // right after the member's normal action resolves (human + bot paths).
+  _hasteBonus(m) {
+    if (!m || !m.hasted || m.hp <= 0 || m.left || m.dead) return;
+    m.hasted = false;
+    const foes = this.livingEnemies();
+    if (!foes.length) return;
+    const awake = foes.filter(e => !e.fascinated);
+    this._note(`💨 ${m.nickname} blurs with Haste — an extra strike!`);
+    this._playerAttack(m, (awake.length ? awake : foes)[0].uid);
+  }
+  // Breath of Life (revive a DYING ally + big heal) / Raise Dead + Resurrection
+  // (bring a SLAIN ally back into the run). High-level cleric prayers.
+  _abRevive(m, ab) {
+    const lvl = m.level || 1;
+    const sound = ab.sound;
+    const healBig = () => Math.max(1, dRollN(ab.reviveDice || 5, 8) + Math.min(ab.reviveCap || lvl, lvl));
+    if (ab.raiseDead) {
+      const dead = this.party.find(a => a.dead);
+      if (dead) {
+        dead.dead = false; dead.downed = false; dead.left = false;
+        dead.hp = ab.full ? dead.maxHp : Math.max(1, Math.floor(dead.maxHp / 2));
+        dead.flatFooted = true; dead.paralyzed = 0; dead.stunned = 0;
+        this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${dead.nickname} is restored to the run at ${dead.hp}/${dead.maxHp} HP!`, sound);
+        if (this.status === 'combat' && !this.turnOrder.some(t => t.kind === 'party' && t.id === dead.playerId)) {
+          this.turnOrder.push({ kind: 'party', id: dead.playerId, init: dRoll(20) });
+        }
+        this._echoToTable(sound); this._broadcast(); return;
+      }
+      // No corpse to raise → fall through to a big heal.
+    } else {
+      // Breath of Life — snatch a DYING (downed) ally back first.
+      const downed = this.party.find(a => !a.dead && !a.left && a.downed);
+      if (downed) {
+        downed.downed = false; downed.hp = Math.min(downed.maxHp, healBig());
+        this._note(`${ab.icon} ${m.nickname} breathes life into ${downed.nickname} — back up at ${downed.hp}/${downed.maxHp} HP!`, sound);
+        this._echoToTable(sound); this._broadcast(); return;
+      }
+    }
+    // Nobody to revive → a big heal on the most-hurt living ally.
+    const allies = this.livingParty();
+    const target = allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
+    const h = healBig(); target.hp = Math.min(target.maxHp, target.hp + h);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${target.nickname} heals ${h} (${target.hp}/${target.maxHp}).`, sound);
+    this._echoToTable(sound);
+  }
+  // Save-or-be-disabled (Hold Person): Will save or paralyzed.
+  _abSaveDebuff(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    const dc = this._spellDC(m);
+    const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
+    const sound = ab.sound || pick(SND.stink);
+    if (!sv.saved && ab.debuff === 'paralyzed') e.paralyzed = 2;
+    else if (!sv.saved && ab.debuff === 'sickened') e.sickened = SICKENED_ROUNDS;
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${String(ab.debuff).toUpperCase()}!`}`, sound);
+    this._echoToTable(sound);
+  }
+  // Touch spell (Shocking Grasp): a ranged touch attack for level d6.
+  _abTouch(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    const touchAC = Math.max(10, this._enemyAC(e) - 5);
+    const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD + ((m.buffs && m.buffs.toHit) || 0);
+    const roll = dRoll(20), total = roll + toHit;
+    const sound = ab.sound || pick(SND.lightning);
+    if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
+    const dmg = Math.max(1, dRollN(this._spellDice(ab, m), ab.die || 6));
+    this._dmgE(e, dmg);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} jolts ${e.name} for ${dmg} ${ab.dtype || ''}.${this._afterEnemyHit(e)}`, sound);
+    if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+    this._echoToTable(sound);
+  }
+  // Grease: up to maxTargets foes Reflex-save or slip prone (and lose the turn).
+  _abGrease(m, ab, payload) {
+    const dc = this._spellDC(m);
+    // Gust of Wind hits a RANDOM 1d3 foes (randFoes); Grease targets the picked
+    // ones. Save type is configurable (Grease=Reflex, Gust=Fort).
+    let chosen;
+    if (ab.randFoes) {
+      const living = this.livingEnemies().slice();
+      for (let i = living.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [living[i], living[j]] = [living[j], living[i]]; }
+      chosen = living.slice(0, dRoll(ab.randFoes));
+    } else {
+      chosen = this._enemyTargets(payload, ab.maxTargets || 2);
+    }
+    const saveType = ab.save || 'reflex';
+    const lbl = saveType === 'fort' ? 'Fort' : saveType === 'will' ? 'Will' : 'Ref';
+    const sound = ab.sound || pick(SND.flesh), parts = [];
+    for (const e of chosen) {
+      const sv = this._saveVs(this._enemySave(e, saveType), dc);
+      if (!sv.saved) { e.prone = true; e.loseTurn = true; }
+      parts.push(`${e.name}: ${lbl} ${sv.total} vs ${dc} ${sv.saved ? 'stays up' : 'KNOCKED prone'}`);
+    }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${parts.join('; ')}.`, sound);
+    this._echoToTable(sound);
+  }
+  // Sleep: the weakest foes (lowest HP) must make a Will save or fall asleep —
+  // helpless (flat-footed) and losing turns until something strikes them.
+  _abSleep(m, ab, payload) {
+    const dc = this._spellDC(m);
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).slice().sort((a, b) => a.hp - b.hp);
+    const sound = ab.sound || pick(SND.flesh), parts = [];
+    for (const e of chosen) {
+      const sv = this._saveVs(this._enemySave(e, 'will'), dc);
+      if (!sv.saved) { e.fascinated = true; e.flatFooted = true; }   // asleep: skip turns (woken by a hit) + helpless
+      parts.push(`${e.name}: Will ${sv.total} vs ${dc} ${sv.saved ? 'shrugs it off' : '💤 ASLEEP'}`);
+    }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${parts.join('; ')}.`, sound);
+    this._echoToTable(sound);
+  }
+  // Fascinate: up to maxTargets foes stand enthralled, losing turns until struck.
+  _abFascinate(m, ab, payload) {
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 3);
+    for (const e of chosen) e.fascinated = true;
+    const sound = ab.sound || pick(SND.flesh);
+    this._note(`${ab.icon} ${m.nickname} performs ${ab.name} — ${chosen.map(e => e.name).join(', ')} stand fascinated (until struck).`, sound);
+    this._echoToTable(sound);
+  }
+  // Heal: 'party' (channel) heals all living allies; 'channel' (lay on hands)
+  // heals the most-wounded ally (or self).
+  _abHeal(m, ab) {
+    const lvl = m.level || 1;
+    const sound = ab.sound || pick(SND.flesh);
+    // Channel Positive — PF1e positive-energy burst: ½ caster level d6 (1d6 at
+    // L1, +1d6 every 2 levels → 6d6 at L11), to the whole party.
+    const channelAmt = () => Math.max(1, dRollN(Math.max(1, Math.ceil(lvl / 2)), 6));
+    // Cure X Wounds — healDice d8 + caster level (capped: +5 light, +10 moderate).
+    const cureAmt = () => Math.max(1, dRollN(ab.healDice || 1, 8) + Math.min(ab.healCap || lvl, lvl));
+    if (ab.heal === 'party') {
+      const allies = this.livingParty();
+      const parts = [];
+      for (const a of allies) { const h = channelAmt(); a.hp = Math.min(a.maxHp, a.hp + h); parts.push(`${a.nickname} +${h}`); }
+      this._note(`${ab.icon} ${m.nickname} channels positive energy — ${parts.join(', ')}.`, sound);
+    } else {
+      const allies = this.livingParty();
+      const target = allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
+      const h = cureAmt(); target.hp = Math.min(target.maxHp, target.hp + h);
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${target.nickname} heals ${h} (${target.hp}/${target.maxHp}).`, sound);
+    }
+    this._echoToTable(sound);
+  }
+  // Sticky room buff (Rage / Judgment / Bane / Inspire). `party` spreads it.
+  _abBuff(m, ab) {
+    const apply = (who) => {
+      who.buffApplied = who.buffApplied || {};
+      if (ab.sticky && who.buffApplied[ab.key]) return;   // already active this room — don't stack
+      if (ab.sticky) who.buffApplied[ab.key] = true;
+      if (ab.persist) {   // Bless: a run-long buff that survives room resets (never fades)
+        who.runBuffs = who.runBuffs || { toHit: 0, dmg: 0 };
+        who.runBuffs.toHit += (ab.buff && ab.buff.toHit) || 0;
+        who.runBuffs.dmg   += (ab.buff && ab.buff.dmg) || 0;
+        return;
+      }
+      who.buffs = who.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+      who.buffs.toHit += (ab.buff && ab.buff.toHit) || 0;
+      who.buffs.dmg += (ab.buff && ab.buff.dmg) || 0;
+      who.buffs.bonusDice += (ab.buff && ab.buff.bonusDice) || 0;
+      who.buffs.acPen += (ab.buff && ab.buff.acPen) || 0;   // rage: −2 AC (sticky)
+      who.buffs.ac += (ab.buff && ab.buff.ac) || 0;         // magus Shield: +4 AC (sticky)
+      who.buffs.save += (ab.buff && ab.buff.save) || 0;     // rage: +1 saves
+    };
+    const sound = ab.sound || pick(SND.flesh);
+    if (ab.party) { for (const a of this.livingParty()) apply(a); this._note(`${ab.icon} ${m.nickname} strikes up ${ab.name} — the party is emboldened!`, sound); }
+    else { apply(m); this._note(`${ab.icon} ${m.nickname} uses ${ab.name}!`, sound); }
+    this._echoToTable(sound);
+  }
+  // Smite Evil — your strikes smite evil foes this room.
+  _abSmite(m, ab) {
+    m.smiteActive = true;
+    const sound = ab.sound || pick(SND.flesh);
+    this._note(`${ab.icon} ${m.nickname} calls a Smite — righteous fury against evil this room!`, sound);
+    this._echoToTable(sound);
+  }
+  // Trip: an ATTACK ROLL (no damage). On a hit the foe is knocked prone, LOSES
+  // its turn, and you get an immediate free attack (prone = +4 for all to hit).
+  _abTrip(m, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    if (e.noTrip) { this._note(`${m.nickname} can't trip ${e.name} (no legs).`); return this._echoToTable(); }
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const a = this._attackRoll(m, e);
+    if (!a.hit) { this._note(`🦵 ${m.nickname} tries to trip ${e.name} but misses. [d20 ${a.roll} ${this._fmtBonus(a.toHit)} = ${a.total} vs AC ${this._enemyAC(e)}]`, a.weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword)); return this._echoToTable(); }
+    e.prone = true; e.loseTurn = true;
+    this._note(`🦵 ${m.nickname} TRIPS ${e.name} prone — it loses its turn! Free attack!`);
+    const r = this._swingVsAC(m, this._enemyAC(e), e);   // prone (−4 AC) folded into _enemyAC
+    if (r.hit) { this._dmgE(e, r.damage); this._note(`⚔️ free hit on ${e.name} for ${r.damage}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    else this._note(`⚔️ the free hit misses. ${this._atkStr(r)}`, r.sound);
+    this._echoToTable(r.sound);
+  }
+  // Cleave: hit the target; then swing at a second foe (−2). A barbarian's
+  // cleave (ab.acPen) also drops their guard −2 AC until their next turn.
+  _abCleave(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    if (ab && ab.acPen) { m.acPenRound = this.round; m.acPenAmt = ab.acPen; }
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const r = this._swingVsAC(m, this._enemyAC(e), e);
+    if (r.hit) { this._dmgE(e, r.damage); this._note(`🪓 ${m.nickname} cleaves ${e.name} for ${r.damage}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    else this._note(`🪓 ${m.nickname}'s cleave misses ${e.name}. ${this._atkStr(r)}`, r.sound);
+    this._echoToTable(r.sound);
+    const e2 = this.livingEnemies().find(x => x.uid !== e.uid);
+    if (e2) {
+      const r2 = this._swingVsAC(m, this._enemyAC(e2) + 2, e2);   // −2 to hit = +2 AC
+      if (r2.hit) { this._dmgE(e2, r2.damage); this._note(`🪓 …and through to ${e2.name} for ${r2.damage}.${this._afterEnemyHit(e2)}`, r2.sound); if (e2.hp <= 0) this._tryBanter(m, 'down', { enemy: e2.name }); }
+      else this._note(`🪓 …but the follow-through misses ${e2.name}.`, r2.sound);
+      this._echoToTable(r2.sound);
+    }
+  }
+  // Feint: an opposed roll. On success the foe is flat-footed → a free
+  // Sneak-Attack strike (the rogue's Sneak Attack rides on the denied defense).
+  _abFeint(m, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    const bluff = dRoll(20) + (m.level || 1) + ABILITY_MOD;
+    const sense = dRoll(20) + (e.toHit || 0);
+    if (bluff < sense) { this._note(`🎭 ${m.nickname} feints ${e.name}, but it doesn't bite. [${bluff} vs ${sense}]`, pick(SND.whiffSword)); return this._echoToTable(); }
+    e.flatFooted = true;
+    this._note(`🎭 ${m.nickname} feints ${e.name} flat-footed! [${bluff} vs ${sense}] — free strike!`);
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const r = this._swingVsAC(m, this._enemyAC(e), e);
+    const tag = r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '';
+    if (r.hit) { this._dmgE(e, r.damage); this._note(`🗡️ ${m.nickname} strikes ${e.name} for ${r.damage}.${tag}${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    else this._note(`🗡️ the strike misses ${e.name}. ${this._atkStr(r)}`, r.sound);
+    this._echoToTable(r.sound);
+  }
+  // Reckless Blow: +4 damage this swing, but −4 AC until your next turn.
+  _abReckless(m, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.acPenRound = this.round; m.acPenAmt = 4;
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const r = this._swingVsAC(m, this._enemyAC(e), e);
+    if (r.hit) { const dmg = r.damage + 4; this._dmgE(e, dmg); this._note(`💥 ${m.nickname} swings recklessly at ${e.name} for ${dmg}! (guard dropped)${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    else this._note(`💥 ${m.nickname}'s reckless swing misses ${e.name}. ${this._atkStr(r)}`, r.sound);
+    this._echoToTable(r.sound);
+  }
+
+  // One bow shot at a to-hit modifier (rangers). Uses the bow's report sound.
+  _bowShot(m, ab, payload, hitMod, label) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const r = this._swingVsAC(m, this._enemyAC(e), e, hitMod);
+    if (ab.sound) r.sound = ab.sound; else if (m.weapon.atkSound) r.sound = m.weapon.atkSound;
+    if (r.hit) { this._dmgE(e, r.damage); this._note(`${ab.icon} ${m.nickname}${label} ${r.crit ? 'CRITS' : 'hits'} ${e.name} for ${r.damage}. ${this._atkStr(r)}${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    else this._note(`${ab.icon} ${m.nickname}${label} misses ${e.name}. ${this._atkStr(r)}`, r.sound);
+    this._echoToTable(r.sound);
+  }
+  // Rapid Shot: two arrows this turn, each at −2.
+  _abRapidShot(m, ab, payload) {
+    this._bowShot(m, ab, payload, -2, ' (rapid 1)');
+    this._bowShot(m, ab, payload, -2, ' (rapid 2)');
+  }
+  // Bullseye Shot: one carefully-aimed arrow at +4.
+  _abBullseye(m, ab, payload) {
+    this._bowShot(m, ab, payload, 4, ' takes aim and');
+  }
+
+  // At-will attack. Rogues with daggers strike TWICE (two-weapon style); a rogue
+  // with any other weapon strikes once. Sneak Attack applies via _swingVsAC.
+  _playerAttack(m, targetUid) {
+    m.flatFooted = false;   // acting ends flat-footed
+    m.invisible = false;    // attacking breaks Invisibility
+    const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
+    if (!e) return;
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    // Two swings for a dual-wield weapon (Farrus's twin axes) or a rogue's dagger.
+    const swings = m.weapon.dual ? 2 : ((m.cls === 'rogue' && m.weaponKey === 'dagger') ? 2 : 1);
+    // Sound: signature atkSound > a blunt "bap" for B-type weapons (quarterstaff,
+    // warhammer…) > the swing's own hit/whiff. A dual weapon plays its report ONCE.
+    let baseSound = m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null);
+    if (m.smiteActive && m.weaponKey === 'warhammer') baseSound = '/audio/weapon_warhammer_smite.mp3';   // holy hammer-ring on a smite
+    for (let i = 0; i < swings; i++) {
+      const tgt = (e.hp > 0) ? e : this.livingEnemies()[0];
+      if (!tgt) break;
+      const r = this._swingVsAC(m, this._enemyAC(tgt), tgt);
+      if (m.weapon.dual) r.sound = (i === 0) ? baseSound : null;   // one report for the whole flurry
+      else if (baseSound) r.sound = baseSound;                     // signature / blunt report (e.g. Rovadra)
+      // Rogue Sneak Attack with a light blade (dagger/kukri/shortsword) → Riki.
+      if (r.sneakDice && m.cls === 'rogue' && ['dagger', 'kukri', 'shortsword'].includes(m.weaponKey)) r.sound = '/audio/sneak_riki.mp3';
+      const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '');
+      const lead = swings > 1 ? `${m.nickname} (hit ${i + 1})` : m.nickname;
+      if (r.fumble) this._note(`${lead} fumbles the attack! ${this._atkStr(r)}`, r.sound);
+      else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${lead} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name} for ${r.damage}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, tgt.hp)}/${tgt.maxHp})`}`, r.sound); }
+      else this._note(`${lead} misses ${tgt.name}. ${this._atkStr(r)}`, r.sound);
+      if (r.hit && tgt.hp <= 0) this._tryBanter(m, 'down', { enemy: tgt.name });
+      this._echoToTable(r.sound);
+    }
+  }
   // ── Loot (per owner) ──────────────────────────────────────────────────────
   equipLoot(playerId, idx) {
     const loot = this.pendingLoot[idx];

@@ -59,7 +59,7 @@ button, input { font: inherit; color: inherit; }
   display: flex; flex-direction: column; gap: 0.9rem;
 }
 .dungeon__enemies { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; min-height: 96px; }
-.dmon { width: 112px; background: rgba(0,0,0,0.4); border: 1px solid rgba(200,80,80,0.4); border-radius: 10px; padding: 0.5rem 0.4rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; cursor: pointer; color: inherit; transition: transform .1s, border-color .1s, box-shadow .1s; }
+.dmon { position: relative; width: 112px; background: rgba(0,0,0,0.4); border: 1px solid rgba(200,80,80,0.4); border-radius: 10px; padding: 0.5rem 0.4rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; cursor: pointer; color: inherit; transition: transform .1s, border-color .1s, box-shadow .1s; }
 .dmon:hover:not(:disabled) { transform: translateY(-2px); border-color: rgba(255,120,120,0.85); }
 .dmon.is-sel { border-color: var(--brass-bright); box-shadow: 0 0 0 2px rgba(241,207,131,0.4); }
 .dmon.is-boss { border-color: rgba(220,170,60,0.9); background: rgba(40,28,10,0.5); }
@@ -72,13 +72,39 @@ button, input { font: inherit; color: inherit; }
 .dpc__avatar img, .dpc__avatar svg { width: 100%; height: 100%; object-fit: cover; display: block; }
 .dpc { align-items: center; text-align: center; }
 .dmon__name { font-size: 0.72rem; text-align: center; }
+/* PF1-system debuff icons — an OVERLAY on the token (top, left-to-right,
+   wrapping downward). Absolutely positioned so it never adds card height
+   (keeps the dungeon compact so the chat log stays on-screen); pointer-events
+   off so clicks still hit the target button underneath. */
+.dcond {
+  position: absolute; top: 3px; left: 3px; right: 3px;
+  display: flex; flex-flow: row wrap; gap: 3px;
+  justify-content: flex-start; align-content: flex-start;
+  pointer-events: none; z-index: 2;
+}
+.dcond__i {
+  width: 18px; height: 18px; border-radius: 4px;
+  background: rgba(0,0,0,0.55); padding: 1px;
+  box-shadow: 0 0 0 1px rgba(217,72,72,0.85);   /* red ring = a debuff is active */
+}
+/* Auto-skip countdown badge — just to the right of the hero token (only on the
+   active human's card). Absolute so it never changes card height. */
+.dpc__afk {
+  position: absolute; top: 8px; left: calc(50% + 26px);
+  font-size: 0.66rem; font-weight: 700; line-height: 1;
+  color: var(--brass-bright); background: rgba(0,0,0,0.6);
+  padding: 2px 5px; border-radius: 8px; white-space: nowrap;
+  border: 1px solid rgba(217,176,106,0.5); pointer-events: none; z-index: 3;
+}
+.dpc__afk.is-urgent { color: #ff6f6f; border-color: rgba(255,90,90,0.8); animation: dpcAfkPulse 0.7s ease-in-out infinite; }
+@keyframes dpcAfkPulse { 50% { opacity: 0.35; } }
 .dmon__hpbar, .dpc__hpbar { width: 100%; height: 6px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; }
 .dmon__hpbar span { display: block; height: 100%; background: linear-gradient(90deg,#c84a4a,#e87b5b); }
 .dmon__hp { font-size: 0.7rem; font-variant-numeric: tabular-nums; color: var(--ivory-dim); }
 .dmon__none { color: var(--ivory-dim); opacity: 0.6; font-style: italic; align-self: center; }
 .dungeon__turn { text-align: center; font-weight: 600; color: var(--brass-bright); min-height: 1.2em; }
 .dungeon__party { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; }
-.dpc { width: 190px; background: rgba(0,0,0,0.4); border: 1px solid rgba(217,176,106,0.3); border-radius: 10px; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.dpc { position: relative; width: 190px; background: rgba(0,0,0,0.4); border: 1px solid rgba(217,176,106,0.3); border-radius: 10px; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
 .dpc.is-low { border-color: rgba(220,80,80,0.7); }
 .dpc.is-me { border-color: rgba(241,207,131,0.7); }
 .dpc.is-turn { box-shadow: 0 0 0 2px rgba(241,207,131,0.55); }
@@ -104,6 +130,27 @@ button, input { font: inherit; color: inherit; }
 .dungeon__actrow { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
 .dungeon__actstatus { min-height: 1.2em; color: var(--ivory-dim); font-style: italic; font-size: 0.85rem; }
 .dungeon__actions .is-cooling { opacity: 0.5; }
+/* Per-room ability use counter inside an action button (e.g. "2/3"). */
+.dungeon__uses { font-size: 0.72em; opacity: 0.85; font-variant-numeric: tabular-nums; }
+.dungeon__actrow .btn:disabled .dungeon__uses { opacity: 0.6; }
+/* Abilities wrap to fit a class's spell list; nav (door/bail) sits on its own
+   row with a little separation so it stays a stable target. */
+.dungeon__actrow--abilities { flex-wrap: wrap; }
+.dungeon__actrow--nav { margin-top: 0.15rem; }
+.dungeon__actions { position: relative; }   /* anchor for the spellbook dropdown */
+/* Spell/ability art icon inside a button. */
+.spell-ic { width: 18px; height: 18px; border-radius: 3px; object-fit: cover; vertical-align: -4px; margin-right: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,0.4); }
+/* Caster "📖 Spellbook ▾" expandable menu. */
+.dungeon__spellbook {
+  display: none; position: absolute; z-index: 60; left: 50%; transform: translateX(-50%);
+  bottom: calc(100% + 0.3rem); min-width: 260px; max-width: 92vw;
+  padding: 0.5rem; background: linear-gradient(180deg, rgba(20,24,18,0.98), rgba(10,14,10,0.99));
+  border: 1px solid rgba(217,176,106,0.4); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+}
+.dungeon__spellbook.is-open { display: block; }
+.dungeon__sb-head { font-size: 0.78rem; color: var(--brass-bright); margin-bottom: 0.4rem; text-align: center; }
+.dungeon__sb-grid { display: flex; flex-direction: column; gap: 0.3rem; }
+.dungeon__sb-grid .btn { width: 100%; text-align: left; justify-content: flex-start; }
 .dwait { color: var(--ivory-dim); font-style: italic; align-self: center; }
 .dungeon__recruit { position: relative; }
 .dungeon__recruit:empty { display: none; }
@@ -125,6 +172,19 @@ button, input { font: inherit; color: inherit; }
 .dungeon__recruit-head { font-size: 0.78rem; color: var(--brass-bright); letter-spacing: 0.04em; margin-bottom: 0.4rem; position: sticky; top: -0.5rem; background: rgba(14,12,18,0.98); padding: 0.25rem 0; }
 .bot-picker__grid--dungeon { max-height: none; overflow: visible; }   /* the popover scrolls instead */
 .dungeon__log { list-style: none; margin: 0; padding: 0.5rem 0.8rem; flex: 1; min-height: 70px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(217,176,106,0.15); border-radius: 8px; font-size: 0.82rem; line-height: 1.4; color: var(--ivory-dim); }
+.dungeon__spectating { color: #9ec5f0; font-style: italic; }
+.dungeon__chat { display: flex; gap: 0.4rem; align-items: center; }
+.dungeon__chat input {
+  flex: 1; min-width: 0;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(217,176,106,0.3);
+  border-radius: 6px;
+  color: var(--ivory);
+  font: inherit; font-size: 0.85rem;
+  padding: 6px 10px;
+}
+.dungeon__chat input::placeholder { color: var(--ivory-dim); }
+.dungeon__chat input:focus { outline: none; border-color: rgba(217,176,106,0.6); }
 .dungeon__log li { padding: 1px 0; }
 .dungeon__log .droll { color: var(--brass-bright); font-weight: 700; }
 .dungeon__log .dlog-say { color: #d8c6f0; font-style: italic; }
@@ -517,17 +577,30 @@ body[data-screen="dungeon"] .screen[data-show-on="dungeon"] { display: flex; }
 .topbar__blind { flex: 0 0 auto; margin-left: 0.5rem; white-space: nowrap; }
 .topbar__blind.is-active { color: #ffe9a8; background: linear-gradient(180deg, rgba(180,120,30,0.55), rgba(120,70,10,0.65)); border-color: rgba(241,207,131,0.7); }
 .topbar__me    { flex: 0 0 auto; }
-/* Management-button row inside the topbar. On desktop this is just
-   an inline flex container that flows alongside the other .topbar__me
-   items. On mobile (≤720px) it collapses into a slide-down menu
-   triggered by .topbar__menu-toggle (which itself is hidden on desktop). */
+/* Management actions (Sit out, Switch, Leave, Reset, +Bot, Pick AI) collapse
+   into a single ≡ dropdown at ALL widths — keeps the topbar uncluttered on
+   desktop too, not just on phones. Anchored to the bottom-right of the
+   per-player .topbar__me block (which is position:relative). */
 .topbar__menu {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  flex-wrap: wrap;
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 70;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+  padding: 0.5rem;
+  background: linear-gradient(180deg, rgba(20,24,18,0.97), rgba(10,14,10,0.99));
+  border: 1px solid rgba(217,176,106,0.4);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+  min-width: 170px;
 }
-.topbar__menu-toggle { display: none; } /* desktop default */
+.topbar__menu.is-open { display: flex; }
+.topbar__menu .btn { width: 100%; min-height: 34px; text-align: left; }
+.topbar__menu-toggle { display: inline-flex; }
 /* The clock sits in the middle and absorbs slack. */
 .topbar__clock { flex: 1 1 auto; max-width: 420px; margin: 0 auto; }
 /* Spectator list sits immediately right of the clock, before the
@@ -588,6 +661,7 @@ body[data-screen="dungeon"] .screen[data-show-on="dungeon"] { display: flex; }
 .topbar__me {
   display: flex; align-items: center; gap: 0.6rem;
   font-size: 0.9rem;
+  position: relative;   /* anchor for the ≡ options dropdown */
 }
 
 /* ===== Topbar digital countdown clock ===== */
@@ -735,6 +809,11 @@ body[data-screen="dungeon"] .screen[data-show-on="dungeon"] { display: flex; }
 }
 .me-gender:hover { color: var(--ivory); }
 .me-gender:focus { outline: 1px solid rgba(217,176,106,0.5); outline-offset: 1px; }
+/* Burnt-orange cue: a non-proficient weapon is selected (−4 to hit). Applies to
+   the closed weapon <select> and to the non-proficient <option>s themselves. */
+.me-weapon.is-nonprof { color: #cc5500; }
+.me-weapon.is-nonprof:hover { color: #e06a14; }
+option.weapon-nonprof { color: #cc5500; }
 /* Dropdown options need a dark background so they're readable
    against the page (browser default is white on most engines). */
 .me-gender option {
@@ -990,6 +1069,20 @@ body[data-screen="dungeon"] .screen[data-show-on="dungeon"] { display: flex; }
   border-color: var(--brass);
   background: linear-gradient(180deg, rgba(241,207,131,0.28), rgba(217,176,106,0.14));
 }
+/* Spectate the dungeon — full-width, lit cool blue (a watcher's chair). */
+.purse__btn--spectate {
+  width: 100%;
+  border-color: rgba(120,160,210,0.5);
+  background: linear-gradient(180deg, rgba(80,120,190,0.24), rgba(50,80,130,0.14));
+}
+.purse__btn--spectate:hover { background: linear-gradient(180deg, rgba(100,150,210,0.34), rgba(60,100,150,0.2)); }
+/* Re-buy: full-width money action, lit slightly green (a fresh stack). */
+.purse__btn--rebuy {
+  width: 100%;
+  border-color: rgba(120,190,130,0.5);
+  background: linear-gradient(180deg, rgba(90,170,110,0.24), rgba(60,120,80,0.14));
+}
+.purse__btn--rebuy:hover { background: linear-gradient(180deg, rgba(110,200,130,0.34), rgba(70,140,90,0.2)); }
 .purse__hint {
   font-size: 0.78rem;
   color: var(--ivory-dim);
@@ -1758,7 +1851,46 @@ body[data-screen="dungeon"] .screen[data-show-on="dungeon"] { display: flex; }
   flex-direction: column;
   padding: 0.75rem 0.65rem;
   gap: 0.4rem;
+  position: relative;   /* anchor for the paper-doll popover */
 }
+/* ===== Loot Bank paper-doll popover ===== */
+.bank-doll {
+  position: fixed; z-index: 9999;   /* float over the felt; top/left set in JS from the button */
+  top: 130px; left: 16px;
+  width: 300px; max-width: 92vw;
+  padding: 0.6rem;
+  /* Vitruvian Gaspar art behind a darkened gradient so the slot text stays legible. */
+  background:
+    linear-gradient(180deg, rgba(18,22,15,0.68), rgba(9,12,8,0.74)),
+    url('/assets/vitruvian_gaspar.webp') center top / cover no-repeat;
+  border: 1px solid rgba(217,176,106,0.5);
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.8);
+}
+.bank-doll__head { display: flex; justify-content: space-between; align-items: center; color: var(--brass-bright); font-weight: 700; margin-bottom: 0.5rem; }
+.bank-doll__close { background: none; border: none; color: var(--ivory-dim); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 3px 7px; border-radius: 6px; }
+.bank-doll__close:hover { color: var(--ivory); background: rgba(255,255,255,0.08); }
+.bank-doll__grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.4rem; align-items: stretch; }
+.bank-doll__col { display: flex; flex-direction: column; gap: 0.4rem; }
+.bank-doll__figure { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 4px; }
+.bank-doll__avatar { width: 60px; height: 60px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(217,176,106,0.4); }
+.bank-doll__avatar svg, .bank-doll__avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bank-doll__chips { font-size: 0.7rem; color: var(--brass-bright); white-space: nowrap; }
+.bank-doll__ringrow { margin-top: 0.4rem; }
+.bank-doll__ringrow .doll-slot { flex-direction: row; align-items: center; }
+.bank-doll__ringrow .doll-slot__btns { flex: 1; flex-direction: row; }
+.doll-slot { display: flex; flex-direction: column; gap: 3px; background: rgba(0,0,0,0.28); border: 1px solid rgba(217,176,106,0.18); border-radius: 8px; padding: 5px; }
+.doll-slot__icon { position: relative; width: 30px; height: 30px; }
+.doll-slot__icon svg { width: 100%; height: 100%; }
+.doll-slot__tier { position: absolute; bottom: -3px; right: -5px; font-size: 0.58rem; font-weight: 700; padding: 0 3px; border-radius: 4px; background: rgba(0,0,0,0.78); }
+.doll-slot__tier.is-on { color: var(--brass-bright); }
+.doll-slot__tier.is-max { color: #8effa0; }
+.doll-slot__tier.is-off { color: var(--ivory-dim); }
+.doll-slot__label { font-size: 0.62rem; color: var(--ivory-dim); }
+.doll-slot__btns { display: flex; flex-direction: column; gap: 3px; }
+.doll-slot__btns .bank__btn { width: 100%; font-size: 0.6rem; padding: 3px 4px; line-height: 1.15; }
+.bank-doll .bank__progress { height: 18px; margin-top: 0.5rem; }
+.bank-doll .bank__progress-text { font-size: 0.64rem; }
 .help-panel--bank .help-panel__title {
   flex: 0 0 auto;
   margin: 0;
@@ -1886,6 +2018,19 @@ body[data-screen="dungeon"] .screen[data-show-on="dungeon"] { display: flex; }
   text-transform: uppercase;
   color: var(--ivory-dim);
 }
+/* Header row: title + All / Humans / AI filter. */
+.lb-records__head { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex: 0 0 auto; }
+.lb-records__filter { display: flex; gap: 2px; flex: 0 0 auto; }
+.lb-records__fbtn {
+  background: rgba(217,176,106,0.08);
+  border: 1px solid rgba(217,176,106,0.22);
+  color: var(--ivory-dim);
+  font: inherit; font-size: 0.6rem; line-height: 1;
+  padding: 3px 5px; border-radius: 5px; cursor: pointer;
+  white-space: nowrap;
+}
+.lb-records__fbtn:hover { color: var(--ivory); border-color: rgba(217,176,106,0.4); }
+.lb-records__fbtn.is-active { background: rgba(217,176,106,0.28); border-color: var(--brass); color: var(--brass-bright); }
 .lb-records__row {
   display: grid;
   grid-template-columns: auto 1fr auto;

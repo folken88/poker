@@ -983,11 +983,20 @@
     if (alive.length === 1) return `Enemy: ${alive[0].name}, ${alive[0].hp} hit points${alive[0].sickened ? ', sickened' : ''}.`;
     return `${alive.length} enemies. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${e.hp}${e.sickened ? ', sickened' : ''}`).join('. ') + '.';
   }
+  // "Say attack, <ability 1>, <ability 2>, or bail." built from the player's kit.
+  function _dunActionsHint(d) {
+    const meId = state.deps?.state?.me?.player_id;
+    const kit = ((d.party || []).find(m => m.playerId === meId) || {}).kit;
+    const names = kit ? (kit.abilities || []).map(a => a && a.name).filter(Boolean) : [];
+    const atk = (kit && kit.atwill && kit.atwill.name) || 'attack';
+    if (names.length) return `Say ${atk.toLowerCase()}, ${names.join(', ')}, or bail. Add a number to target, like ${atk.toLowerCase()} two.`;
+    return 'Say attack, ability one, ability two, or bail. Add a number to target.';
+  }
   function _dunNarrateFull(d) {
     const me = (d.party||[]).find(m => m.playerId === (state.deps?.state?.me?.player_id)) || {};
     const bits = [`Depth ${d.depth}.`, `You have ${me.hp} of ${me.maxHp} hit points.`, _dunEnemyPhrase(d), `${d.runGold} gold this run.`];
     if (d.status === 'exploring') bits.push('Say open to descend, or bail to leave.');
-    else if (d.status === 'combat') bits.push('Say attack, lightning, stink, or bail. Add a number to target, like attack two.');
+    else if (d.status === 'combat') bits.push(_dunActionsHint(d));
     speak(bits.join(' '), 'urgent');
   }
 
@@ -1016,7 +1025,7 @@
       _dun.turnKey = turnKey;
       if (st.status === 'combat' && st.turn && st.turn.kind === 'party' && st.turn.id === meId) {
         const me = (st.party||[]).find(m => m.playerId === meId) || {};
-        speak(`Your turn. ${me.hp} hit points. ${_dunEnemyPhrase(st)} Attack, lightning, stink, or bail.`, 'urgent');
+        speak(`Your turn. ${me.hp} hit points. ${_dunEnemyPhrase(st)} ${_dunActionsHint(st)}`, 'urgent');
       } else if (st.status === 'exploring' && _dun.status === 'combat') {
         speak('Room clear. Open the next door, or bail with your gold.', 'event');
       }
@@ -1060,15 +1069,29 @@
     // Actions
     if (/^(open|door|next|deeper|descend|go down|go deeper)$/.test(raw)) { emit('door'); return true; }
     if (/^(bail|leave|climb out|retreat|get out|escape|go up|surface)$/.test(raw)) { emit('bail'); return true; }
-    if (/^(stink|stinking|cloud|stinking cloud|fart|gas)$/.test(raw)) { emit('stinking'); return true; }
     if (/^equip$/.test(raw)) { emit('equip', { idx: 0 }); return true; }
     if (/^(hock|sell)$/.test(raw)) { emit('hock', { idx: 0 }); return true; }
-    const lm = raw.match(/^(?:lightning|bolt|zap)(?:\s+(\d+))?(?:\s+(?:and\s+)?(\d+))?$/);
-    if (lm) {
-      const idxs = [lm[1], lm[2]].filter(Boolean).map(n => parseInt(n, 10) - 1);
-      const uids = idxs.map(i => alive[i]?.uid).filter(Boolean);
-      emit('lightning', { targetUids: uids });
-      return true;
+    // Class abilities — by slot ("ability one/two") or by spoken name ("fireball",
+    // "trip", "smite"). A trailing number targets that enemy.
+    const myKit = ((d.party || []).find(m => m.playerId === meId) || {}).kit;
+    if (myKit && Array.isArray(myKit.abilities)) {
+      const allUids = alive.map(e => e.uid).slice(0, 6);
+      let slot = null, tnum = null;
+      const sm = raw.match(/^(?:ability|power|cast|use)\s+(one|1|first|two|2|second)(?:\s+(\d+))?$/);
+      if (sm) { slot = /^(two|2|second)$/.test(sm[1]) ? 1 : 0; tnum = sm[2] ? parseInt(sm[2], 10) - 1 : null; }
+      if (slot === null) {
+        const idx = myKit.abilities.findIndex(a => a && (raw.startsWith(String(a.name || '').toLowerCase()) || raw.startsWith(String(a.key || '').toLowerCase())));
+        if (idx >= 0) { slot = idx; const nm = raw.match(/(\d+)\s*$/); tnum = nm ? parseInt(nm[1], 10) - 1 : null; }
+      }
+      if (slot !== null && myKit.abilities[slot] && myKit.abilities[slot].available === false) {
+        speak(`${myKit.abilities[slot].name} unlocks at level ${myKit.abilities[slot].minLevel}.`, 'urgent');
+        return true;
+      }
+      if (slot !== null) {
+        const uid = (tnum != null ? alive[tnum] : alive[0])?.uid;
+        emit('ability', { slot, targetUid: uid, targetUids: allUids });
+        return true;
+      }
     }
     const am = raw.match(/^(?:attack|hit|strike|swing|stab)(?:\s+(\d+))?$/);
     if (am) {

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260602-dungbtns" />
+  <link rel="stylesheet" href="/css/table.css?v=20260603-cleric" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -99,6 +99,12 @@
             <option value="he">he / him</option>
             <option value="she">she / her</option>
           </select>
+          <!-- PF1e class + base weapon: persist via lobby:setClass /
+               lobby:setWeapon. Options are filled from lobby:pf1meta. These
+               drive Base Attack Bonus and the weapon dice in the dungeon /
+               cosmetic fights — never poker. -->
+          <select class="me-gender me-class"  id="meClass"  aria-label="Your class"></select>
+          <select class="me-gender me-weapon" id="meWeapon" aria-label="Your weapon"></select>
         </span>
         <!-- Chips badge doubles as the Abadar-bank hover trigger. The
              popover (#mePursePop) is hidden by default; the .me-purse
@@ -146,6 +152,10 @@
           </div>
         </span>
         <button class="btn btn--ghost btn--sm" id="helpBtn" aria-label="How to play — open help" title="How to play (actions, hand rankings, tips)">?</button>
+        <!-- Leave is pulled OUT of the ≡ menu so it's ALWAYS visible at the top
+             right — vacating your seat shouldn't be buried behind the mobile
+             hamburger. -->
+        <button class="btn btn--ghost btn--sm topbar__leave" id="leaveBtn" title="Leave the table entirely (vacate your seat)">Leave</button>
         <!-- Mobile-only hamburger that collapses the management-button
              row below into a slide-down menu. Hidden on desktop. The
              row itself stays inline on desktop (default flex) and
@@ -156,10 +166,8 @@
         <div class="topbar__menu" id="topbarMenu">
           <button class="btn btn--ghost btn--sm" id="addBotBtn" title="Add a random AI to an empty seat">+ Bot</button>
           <button class="btn btn--ghost btn--sm" id="pickBotBtn" title="Pick a specific AI character to seat">Pick AI ▾</button>
-          <button class="btn btn--ghost btn--sm" id="resetStackBtn" title="Re-buy 5,000 chips. Hock any magic items first.">Re-buy</button>
           <button class="btn btn--ghost btn--sm" id="sitOutBtn" title="Keep your seat but skip upcoming deals. Click Rejoin to come back.">Sit out</button>
           <button class="btn btn--ghost btn--sm" id="switchBtn"     title="Switch to a different player">Switch</button>
-          <button class="btn btn--ghost btn--sm" id="leaveBtn"      title="Leave the table entirely (vacate your seat)">Leave</button>
           <button class="btn btn--danger btn--sm" id="resetGameBtn" title="Reset EVERYONE's chips + cancel hand">Reset</button>
         </div>
       </div>
@@ -173,11 +181,13 @@
            regardless so the reference is always one glance away. -->
       <aside class="help-panel help-panel--left help-panel--bank" aria-label="My loot bank and hand rankings">
         <button type="button" class="help-panel__collapser" id="sidebarBankToggle"
-                aria-expanded="true" aria-controls="sidebarBank">
+                aria-expanded="false" aria-haspopup="dialog" aria-controls="bankDoll">
           <span class="help-panel__title">🎒 My Loot Bank</span>
           <span class="help-panel__chevron" aria-hidden="true">▾</span>
         </button>
-        <div id="sidebarBank" class="sidebar-bank"></div>
+        <!-- Paper-doll popover: equipped gear + buy/hock, opened by the button
+             above and dismissed on click-outside. -->
+        <div id="bankDoll" class="bank-doll" hidden role="dialog" aria-label="My Loot Bank — equipped gear, buy, hock"></div>
 
         <h3 class="help-panel__title help-panel__title--ranks">Hand rankings</h3>
         <ol class="help-panel__rankings">
@@ -226,7 +236,14 @@
         <p class="help-panel__sub">Chips + magic-item value, updated in real time. Goal: full +5 set = LOOT LORD.</p>
         <ol class="lb lb--sidebar" id="sidebarLeaderboard"></ol>
         <div class="lb-records" id="sidebarRecords">
-          <h4 class="lb-records__title">📜 Hall of Records</h4>
+          <div class="lb-records__head">
+            <h4 class="lb-records__title">📜 Hall of Records</h4>
+            <div class="lb-records__filter" role="group" aria-label="Filter records by player type">
+              <button type="button" class="lb-records__fbtn is-active" data-rec-filter="all">All</button>
+              <button type="button" class="lb-records__fbtn" data-rec-filter="human" aria-label="Humans" title="Humans">🧑 Hu</button>
+              <button type="button" class="lb-records__fbtn" data-rec-filter="ai">🤖 AI</button>
+            </div>
+          </div>
           <div class="lb-records__row" id="recordBiggestWin"></div>
           <div class="lb-records__row" id="recordBiggestLoss"></div>
           <div class="lb-records__row" id="recordBiggestPot"></div>
@@ -295,6 +312,16 @@
       <div class="dungeon__loot" id="dungeonLoot"></div>
       <div class="dungeon__actions" id="dungeonActions"></div>
       <div class="dungeon__recruit" id="dungeonRecruit" aria-label="Recruit AI allies"></div>
+      <!-- Party chat — same idea as the poker table chat, scoped to this run.
+           Sits above the log because the log renders newest-first, so your
+           message lands right beneath the box. -->
+      <form class="dungeon__chat" id="dungeonChatForm" autocomplete="off" aria-label="Dungeon party chat">
+        <label for="dungeonChatInput" class="sr-only">Dungeon chat message</label>
+        <input type="text" id="dungeonChatInput" maxlength="240"
+               placeholder="Say something to the party… (Enter to send)"
+               aria-label="Dungeon chat message — type and press Enter" />
+        <button type="submit" class="btn btn--ghost btn--sm" id="dungeonChatSend" aria-label="Send dungeon message">Send</button>
+      </form>
       <ol class="dungeon__log" id="dungeonLog" role="log" aria-live="polite" aria-label="Dungeon log"></ol>
     </div>
   </section>
@@ -379,7 +406,7 @@
           <ul class="help-modal__tips">
             <li>Click an empty seat to join the next hand.</li>
             <li>The brass ring shows whose turn it is.</li>
-            <li>Out of chips? Hit <b>Re-buy</b> for a fresh stack (adds to debt).</li>
+            <li>Out of chips? Open your <b>💰 money menu</b> and hit <b>🏛️ Loan from Abadar</b> for a fresh stack (adds to debt).</li>
             <li>Open the <b>🎒 Loot Bank</b> inside the action panel to buy gear.</li>
             <li>Goal: assemble a +5 gear set to become the <b>LOOT LORD</b>.</li>
           </ul>
@@ -396,7 +423,7 @@
     <div class="modal__backdrop" data-close-bot-picker></div>
     <div class="modal__panel modal__panel--bot-picker">
       <h2 class="modal__title" id="botPickerTitle">Pick an AI to seat</h2>
-      <p class="modal__body">Choose a specific character, hit <strong>Random</strong> for one, or <strong>Fill empty seats</strong> to pack the table.</p>
+      <p class="modal__body">Click characters to seat them — the picker stays open so you can add several. <strong>Random</strong> seats one at a time; <strong>Fill empty seats</strong> packs the table and closes.</p>
       <div class="bot-picker__search">
         <input type="search" id="botPickerSearch" class="bot-picker__search-input" placeholder="Search by name…" autocomplete="off" spellcheck="false" />
         <span class="bot-picker__count" id="botPickerCount" aria-live="polite"></span>
@@ -432,8 +459,8 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
-  <script src="/js/cards.js?v=20260601-blindtop"></script>
+  <script src="/js/cards.js?v=20260602-abadar"></script>
   <script src="/js/blindMode.js?v=20260601-blindtop"></script>
-  <script src="/js/client.js?v=20260602-dungbtns"></script>
+  <script src="/js/client.js?v=20260603-cleric"></script>
 </body>
 </html>

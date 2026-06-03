@@ -71,7 +71,7 @@
   {
     "id": "token-animal-great-spirit-bear-dd-monster-resembles-griz",
     "name": "Animal Great Spirit Bear",
-    "art": "/tokens/token-animal-great-spirit-bear-dd-monster-resembles-griz.png",
+    "art": "/tokens/token-animal-great-spirit-bear-dd-monster-resembles-griz.webp",
     "sourceFile": "animal/token_animal_great_spirit_bear_dd_monster_resembles_griz.png",
     "mtime": "2026-05-25T16:06:43.912Z",
     "size": 402916
@@ -186,7 +186,7 @@
   {
     "id": "bastion",
     "name": "Bastion",
-    "art": "/tokens/bastion.png",
+    "art": "/tokens/bastion.webp",
     "sourceFile": "human/token_human_male_bastion_paladin_dead_white.png",
     "mtime": "2026-05-25T15:59:17.975Z",
     "size": 323084,
@@ -199,7 +199,7 @@
   {
     "id": "token-human-male-bastion-paladin-dead-white",
     "name": "Bastion Paladin Dead White",
-    "art": "/tokens/token-human-male-bastion-paladin-dead-white.png",
+    "art": "/tokens/token-human-male-bastion-paladin-dead-white.webp",
     "sourceFile": "human/token_human_male_bastion_paladin_dead_white.png",
     "mtime": "2026-05-25T15:59:17.975Z",
     "size": 323084
@@ -207,7 +207,7 @@
   {
     "id": "token-human-male-bastion-paladin-of-african-descent-armo",
     "name": "Bastion Paladin Of African",
-    "art": "/tokens/token-human-male-bastion-paladin-of-african-descent-armo.png",
+    "art": "/tokens/token-human-male-bastion-paladin-of-african-descent-armo.webp",
     "sourceFile": "human/token_human_male_bastion_paladin_of_African_descent_armo.png",
     "mtime": "2026-05-25T15:59:30.520Z",
     "size": 365790
@@ -454,7 +454,7 @@
   {
     "id": "token-human-danger-male-spirit-camo",
     "name": "Danger Spirit Camo",
-    "art": "/tokens/token-human-danger-male-spirit-camo.png",
+    "art": "/tokens/token-human-danger-male-spirit-camo.webp",
     "sourceFile": "human/token_human_danger_male_spirit_camo.png",
     "mtime": "2026-05-24T05:36:59.419Z",
     "size": 460997
@@ -497,7 +497,7 @@
   {
     "id": "token-aasimar-dinvaya-white-spirit-halo",
     "name": "Dinvaya White Spirit Halo",
-    "art": "/tokens/token-aasimar-dinvaya-white-spirit-halo.png",
+    "art": "/tokens/token-aasimar-dinvaya-white-spirit-halo.webp",
     "sourceFile": "angelic_characters/token_aasimar_dinvaya_white_spirit_halo.png",
     "mtime": "2026-05-24T05:32:07.926Z",
     "size": 488974
@@ -505,7 +505,7 @@
   {
     "id": "dismas-aevrett",
     "name": "Dismas Aevrett",
-    "art": "/tokens/dismas-aevrett.png",
+    "art": "/tokens/dismas-aevrett.webp",
     "sourceFile": "human/token_human_dismas_spirit_white.png",
     "mtime": "2026-05-24T05:32:55.971Z",
     "size": 456876,
@@ -582,7 +582,7 @@
   {
     "id": "token-goblin-elfrip-helmet-spirit",
     "name": "Elfrip Helmet Spirit",
-    "art": "/tokens/token-goblin-elfrip-helmet-spirit.png",
+    "art": "/tokens/token-goblin-elfrip-helmet-spirit.webp",
     "sourceFile": "goblin/token_goblin_elfrip_helmet_spirit.png",
     "mtime": "2026-05-24T05:34:16.096Z",
     "size": 442720
@@ -750,7 +750,7 @@
   {
     "id": "token-human-gaspar-spirit-white",
     "name": "Gaspar Spirit White",
-    "art": "/tokens/token-human-gaspar-spirit-white.png",
+    "art": "/tokens/token-human-gaspar-spirit-white.webp",
     "sourceFile": "human/token_human_gaspar_spirit_white.png",
     "mtime": "2026-05-24T05:40:54.865Z",
     "size": 491340
@@ -1027,7 +1027,7 @@
   {
     "id": "token-tiefling-kovira-spirit-camo",
     "name": "Kovira Spirit Camo",
-    "art": "/tokens/token-tiefling-kovira-spirit-camo.png",
+    "art": "/tokens/token-tiefling-kovira-spirit-camo.webp",
     "sourceFile": "tiefling/token_tiefling_kovira_spirit_camo.png",
     "mtime": "2026-05-24T05:34:48.934Z",
     "size": 385262

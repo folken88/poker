@@ -94,6 +94,40 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     ack?.(res || { ok: true });
   });
 
+  // Spectate the run — watch + heckle without leaving your poker seat or
+  // joining the fight. Just joins the dungeon room to receive state + voices.
+  socket.on('dungeon:spectate', (_p, ack) => {
+    const me = meOf();
+    if (!me) return ack?.({ ok: false, error: 'choose a player first' });
+    const d = dungeons.get(tableIdOf());
+    if (!d || d.status === 'over') return ack?.({ ok: false, error: 'nobody is in the dungeon right now' });
+    if (d.hasMember(me.player_id)) return ack?.({ ok: false, error: 'you are already in the dungeon' });
+    socket.join(d.roomName());
+    socket.data.dungeonSpectator = true;
+    socket.emit('dungeon:state', d.publicState());
+    ack?.({ ok: true, state: d.publicState() });
+  });
+
+  // Human chat in the dungeon — same idea as table:say, scoped to the run.
+  // Open to combatants AND spectators (heckling is half the fun).
+  socket.on('dungeon:say', ({ text } = {}, ack) => {
+    const me = meOf();
+    if (!me) return ack?.({ ok: false, error: 'no player' });
+    const d = dungeons.get(tableIdOf());
+    if (!d) return ack?.({ ok: false, error: 'no dungeon' });
+    const isMember = d.hasMember(me.player_id);
+    const isSpectator = !!socket.data.dungeonSpectator;
+    if (!isMember && !isSpectator) return ack?.({ ok: false, error: 'not in a dungeon' });
+    if (typeof text !== 'string') return ack?.({ ok: false, error: 'bad text' });
+    const now = Date.now();
+    if (now - (socket.data.lastDungeonChatAt || 0) < 1200) return ack?.({ ok: false, error: 'slow down…' });
+    socket.data.lastDungeonChatAt = now;
+    let res;
+    try { res = isMember ? d.say(me.player_id, text) : d.spectatorSay(me, text); }
+    catch (e) { res = { ok: false, error: e.message }; }
+    ack?.(res || { ok: true });
+  });
+
   socket.on('dungeon:recruit', ({ botId } = {}, ack) => {
     const me = meOf();
     if (!me) return ack?.({ ok: false, error: 'no player' });
@@ -123,6 +157,7 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
       if (d && d.hasMember(me.player_id)) { try { d.bail(me.player_id); } catch (_) {} }
       if (d) socket.leave(d.roomName());
     }
+    socket.data.dungeonSpectator = false;   // stop spectating (no-op for combatants)
     ack?.({ ok: true });
   });
 

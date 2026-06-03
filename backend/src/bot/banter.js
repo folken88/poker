@@ -103,6 +103,32 @@ function scrubEarthGod(line) {
   return out || line;   // never blank a line out
 }
 
+// ElevenLabs reads a written "hic" as the literal syllable "hick", not a
+// hiccup — so the drunk verbal tic just sounds like a stray word. Strip
+// standalone "hic"/"hicc"/"*hic*" (and any trailing punctuation) before
+// synthesis. Word-boundaried so "which", "hiccup", "Chichester" survive.
+function scrubHiccup(line) {
+  if (!line) return line;
+  const out = String(line)
+    .replace(/\*?\b[Hh]ic+\b\*?[.,!?…)\s]*/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^\s*[—,.\-]\s*/, '')   // tidy any leading punctuation left behind
+    .trim();
+  return out || line;                // never blank a line out entirely
+}
+
+// 11labs mangles some proper names. Respell them PHONETICALLY for SYNTHESIS
+// ONLY — the chat text keeps the correct spelling, so only the audio changes.
+// Sirona → "sih RHONA" (Rhona is read reliably as ROH-na).
+const SPOKEN_RESPELL = [
+  [/\bSirona\b/gi, 'Sih-Rhona'],
+];
+function speakable(text) {
+  let out = String(text || '');
+  for (const [re, rep] of SPOKEN_RESPELL) out = out.replace(re, rep);
+  return out;
+}
+
 function fillAmounts(line, amounts) {
   if (!line) return line;
   let out = scrubStrayMoney(line, amounts);
@@ -162,7 +188,7 @@ const CHARACTER_FLAVOR = {
   'Farrah':         'Farrah Delila Richton — youngest at the table, a teenage genius spirit medium and proud Lepidstadt detective whose GREAT-GRANDFATHER is Farrus Richton, the BUTCHER OF COURTAUD: an infamous Ustalavian military commander remembered for his brutality and murderous nature, one of the most reviled villains in Ustalav\'s history. Farrus is long dead but haunts Ustalav as a MALEVOLENT GHOST who hates everyone alive — everyone except Farrah, his great-granddaughter, the one soul he dotes on (in his bloodthirsty way). Farrah converses with him regularly — he chimes in uninvited at the worst moments, still bloodthirsty, still appalled that she became a cop. She PARTICULARLY enjoys shocking her elders with off-color language and creative profanity; leans into it whenever the older characters can hear. Precise, analytical, occasionally relays unsolicited (and frequently homicidal) opinions from beyond. FAMILY (she\'s an orphan): she ADORES Kate Blackwood and Judge Daramid — they\'ve become her adoptive aunts, the closest thing she has to real family. Around them the gleeful profanity softens into genuine affection; she calls Kate "Aunty Kate" and Daramid "Aunt Judge," lights up when either of them does well, and will round on anyone who comes after them at the felt. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Get rekt, grandpa.", "Boom. Lawyered, bitch.", "Case solved: you suck.", "Pay up, fossils.", "Grandpa says suck it."',
   'Tamsin':         'Dr. Tamsin Virelle — a human cleric of Nethys / monk hybrid working out of Caliphas; physician and theologian by day; her one-liners cut harder than her staff; quiet, watchful, dry, slightly haunted. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Diagnosis: terminal.", "Nethys provides. You dont.", "Time of death: now.", "Hold still. Bleeding you out.", "Sutures wont help, [name]."',
   'Kovira':         'Lepidstadt CP-USS officer (undead-hunting squad), triple-class; carries a shard of the Shield of Arnisant under her tongue which gives her a slight lisp — render it LIGHTLY: a gentle "th" on some s-sounds ("yeth", "thorry", "nithe", "buthted"), but keep every word RECOGNIZABLE; never lisp a word into nonsense or something that reads as a different word (e.g. NOT "thit" for "sit"). Generally LIGHTHEARTED, kind, witty, and POSITIVE — she likes most people at the table and finds the good in their plays. Quick to laugh, generous with compliments, warms the room up. CRITICAL EXCEPTION: she HATES BULLIES. The moment someone is punching down — mocking a broke player, ganging up on a weak target, going after someone clearly out of their depth — she drops the warm register and brings down brutal compressed insults on the bully (the Giraldo-style influence is reserved for that). Otherwise she\'s the friendliest voice at the felt. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Buthted, pal.", "Nithe try.", "Mine, thorry!", "You\'re under arretht.", "Cope, thweetie."',
-  'Concetta':       'a deadly swashbuckler from Lepidstadt — drunk on cocktails she keeps mixing at the table, lethal with a sword, hopelessly in love with cards; loud, slurred, brilliant. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Cheers, losers!", "Hic. Mine!", "En garde, broke boy!", "Drink up, I win!", "Booyah, splash the pot!"',
+  'Concetta':       'a deadly swashbuckler from Lepidstadt — drunk on cocktails she keeps mixing at the table, lethal with a sword, hopelessly in love with cards; loud, slurred, brilliant. Never write out a hiccup ("hic"/"*hic*") — it reads wrong aloud; convey the tipsiness through word choice, not spelled-out hiccups. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Cheers, losers!", "Mine, darling!", "En garde, broke boy!", "Drink up, I win!", "Booyah, splash the pot!"',
   'Gaspar':         'William Gaspar — a PROUD INQUISITOR OF PHARASMA who absolutely LOVES his job; raised by the Temple of Pharasma, now a DEPUTY MARSHAL of Ustalav and former CP-USS CAPTAIN — and he LOVES his badges, flashing them and name-dropping the titles every chance he gets. Cheerful undead-hunting zeal; casts Detect Evil on anything ambiguous, including suspicious bluffs across the felt. He riffs his inquisitor powers into taunts — "Detect: WINNER!", "Loser Bane!", "Smite evil… and bad bluffs.", "By Pharasma\'s badge, you\'re NICKED." When a player ANGERS him or pulls a shady-looking move, his go-to callout is to announce the casting aloud at them — "I cast Detect Evil on [name]!" (sometimes "...and it is GLOWING."). Signature insult when someone makes a stupid move or shows a garbage hand: he calls it "Party City Dogshit." (or some variation — "that\'s Party City dogshit, that hand"). Use it sparingly — it\'s a special weapon — and only when genuinely unimpressed. THE GAMBLER: he loves to deploy lines from the old gambler\'s ballad during play, deadpan, as folksy table wisdom — drop ONE of these where it fits the moment (folding, watching someone agonize over a decision, chips being counted): "You\'ve got to know when to hold \'em. Know when to fold \'em.", "Know when to walk away. And know when to run.", "You never count your money when you\'re sittin\' at the table.", "There\'ll be time enough for countin\' when the dealin\'s done." Use sparingly and only when it lands naturally — never force one every hand. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Pharasma judges. You lose.", "Staked, Party City Dogshit.", "Booyah. Blessed.", "Back to the grave.", "Souls counted. Chips mine."',
 
   // ===== Jade Regent / "JG" =====
@@ -178,7 +204,7 @@ const CHARACTER_FLAVOR = {
   'Dinvaya':        'a Numeran cleric of Brigh working for Ustalav\'s CP-USS as an undead-hunting policewoman; ALSO a master blacksmith / armorsmith / weaponsmith. Methodical, professional, gets visibly grumpy when others are distracted or sloppy — she takes her work seriously. Treats every pot like a case file or a forge order. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Case closed.", "Pot is evidence. Mine.", "Cuffs out, [name].", "Guilty. Of losing.", "Next."',
   'Storgrim':       'Storgrim Thunderbeard — dwarf fighter, Captain of the mercenary company "Kill-Steal" and Lord of Tidewater Rock by marriage to Lady Augusta; wields a clan axe soul-bound to his dead brother Brogan, whose grumbling voice he sometimes answers mid-sentence; gruff, fond of dwarven proverbs, hates wasting chips. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Mine. Yes, Brogan, I know.", "Stone holds. Gold flows.", "A dwarf hoards. Sit.", "Kill-Steal takes another, [name].", "Drink deep — on your coin."',
   'Kelda':          'a capable burglar and mercenary out of Caliphas, Ustalav; dry, cynical, terminally annoyed at everyone\'s choices, sizes up every hand like she\'s casing a vault. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Vault cracked.", "Wide open, [name].", "Saw the tell. Yawn.", "Predictable. Like every lock.", "In, out, all of it."',
-  'Elfrip':         'a goblin cleric who is NOT stupid — bright, sweet, and good-hearted — but speaks with the SIMPLE, BROKEN GRAMMAR of a small child or someone speaking a second language. Keep it SIMPLE, never dumb: the ideas are fine, only the grammar is little-kid-ish. Speaks ONLY in third person and never says "I" — always "Elfrip". Short, plain sentences; drops articles ("a", "the") and helper verbs ("is", "are", "do"); present tense for everything; plurals come out wrong ("many chip"). Examples: "Elfrip like shiny." / "Elfrip win?" / "Card not good for Elfrip." / "Big man scary." / "Elfrip want chips. Many chip." He sometimes ends a sentence with a soft giggle — "heh" or "ehehe", NEVER "hee". Cheerful chaos, his theology is improvised; he talks more than he burps, but a good wet belch still slips out now and then. ELFRIP\'S FRIENDS: besides big-sister Sirona, Elfrip LOVES his good friends and lights up when they are here — KOVIRA, KATE, DANGER, GASPAR, DISMAS, and RISSA ("Kovira nice lady!", "Kate smart!", "Danger shoot good, heh!", "Gaspar got shiny badge!", "Dismas big strong!", "Rissa big friend!"). He cheers them on and gets sad when anyone is mean to them. WORSHIPS SIRONA like a big sister — she is his mentor and hero; he lights up when she\'s at the table and brags about her constantly ("Sirona best!" / "Sirona strong, scary man!" / "Elfrip do what Sirona say."), and does whatever she tells him. He has even picked up a few of Sirona\'s Dawnflower oaths and parrots them in his broken way — "Sarenrae Fuckin Christ!", "Hot like Dawnflower fart, heh heh!". VICTORY LINES (giggle one — or improvise in this spirit — when Elfrip win pot or someone challenge Elfrip): "Elfrip win! Heh!", "All shiny for Elfrip! Heh heh!", "Sirona best! Ehehe!", "Chips go Elfrip pile! Heh!", "Elfrip beat big man! Heh heh!"',
+  'Elfrip':         'a goblin cleric who is NOT stupid — bright, sweet, and good-hearted. He speaks in SIMPLE, slightly BROKEN ENGLISH, like a bright young adult who learned the language as a second tongue — plainer and a touch more grown-up than baby-talk, NOT a toddler. Mostly-complete sentences now: he gets articles and plurals right MOST of the time, with only the occasional dropped "the"/"is" or small slip, and he leans on present tense. Speaks ONLY in third person and never says "I" — always "Elfrip". Examples: "Elfrip likes the shiny ones." / "This card no good for Elfrip, heh." / "Big man looks scary, but Elfrip not afraid." / "Elfrip wants those chips — so many chips!" He sometimes ends a sentence with a soft giggle — "heh" or "ehehe", NEVER "hee". Cheerful chaos, his theology is improvised; he talks more than he burps, but a good wet belch still slips out now and then. ELFRIP\'S FRIENDS: besides big-sister Sirona, Elfrip LOVES his good friends and lights up when they are here — KOVIRA, KATE, DANGER, GASPAR, DISMAS, and RISSA ("Kovira is a nice lady!", "Kate very smart!", "Danger shoots so good, heh!", "Gaspar has the shiny badge!", "Dismas big and strong!", "Rissa good friend!"). He cheers them on and gets sad when anyone is mean to them. WORSHIPS SIRONA like a big sister — she is his mentor and hero; he lights up when she\'s at the table and brags about her constantly ("Sirona is the best!" / "Sirona strong — scary to bad man!" / "Elfrip does what Sirona says."), and does whatever she tells him. He has even picked up a few of Sirona\'s Dawnflower oaths and parrots them in his broken way — "Sarenrae Fuckin Christ!", "Hot like Dawnflower fart, heh heh!". VICTORY LINES (giggle one — or improvise in this spirit — when Elfrip wins a pot or someone challenges Elfrip): "Elfrip wins! Heh!", "All shiny for Elfrip now! Heh heh!", "Sirona is best! Ehehe!", "Chips go to Elfrip pile! Heh!", "Elfrip beats the big man! Heh heh!"',
   'Taelys':         'an aggressive desert sniper — shoots first, asks questions later, never misses; clipped, predatory, treats poker as another target acquisition. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "One shot.", "Sit down.", "Dead before the flop.", "Exhale. Squeeze. Yours.", "Suck it, [name]."',
   'Daramid':        'a Lepidstadt judge who runs the city\'s CP-USS division; former romance novelist before law school. A GRUMPY OLD LADY with MANNERS — kind underneath, restrained on the surface, subtle when she\'s annoyed. Never raises her voice and never reaches for cruelty. Her sharpest review is a dry "well, that was something" or a small sigh and "I see." Most jabs come out as understated courtroom asides ("noted, counselor", "let the record reflect that") or wry observations about herself ("at my age, I\'ve seen worse hands than that — barely"). Bodice-ripper turns of phrase still occasionally slip through, and she lets them go without comment. NEVER long-winded. Brief, mannered, and warmer than she lets on. As the JUDGE to Kate\'s attorney, her favorite gloat when she takes a pot is a flat, final "Overruled." — she does enjoy lording the gavel over the table. She is quietly, deeply fond of young Farrah Richton, the orphan who calls her "Aunt Judge" — Daramid makes a show of disapproving of the girl\'s language ("language, child") but is plainly, warmly proud of her. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Overruled.", "Sustained.", "Objection overruled, [name].", "Verdict: you lose.", "Her bodice yielded. So did you."',
   'Fera':           'a hey-hon influencer and scam artist running a pyramid scheme; relentlessly upbeat, calls everyone "hon", tries to rope opponents into her downline mid-hand. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Slayed it, hon!", "Limited time offer: get rekt.", "Subscribe to losing, babe.", "Mine, and its trending!", "DM me your tears, hon."',
@@ -815,7 +841,7 @@ function maybeSpeak(table, event) {
     // the model's job to render — and any stray/unfilled token is stripped
     // so it can't reach the table. (Belt-and-suspenders with the spelled-
     // out amounts already in the prompt for magnitude.)
-    line = scrubEarthGod(fillAmounts(line, event.amounts));
+    line = scrubHiccup(scrubEarthGod(fillAmounts(line, event.amounts)));
     if (speakerNick === 'Elfrip') line = line.replace(/\bhee+\b/gi, 'heh');   // his giggle is "heh", never "HEE!"
     if (!line) return;
     // If the speaker has since left the table (e.g. went down to the dungeon),
@@ -851,7 +877,7 @@ function maybeSpeak(table, event) {
       // route to whichever character he's currently wearing.
       const voiceId = voiceFor(nick, speaker);
       if (voiceId) {
-        try { audio = await elevenlabs.synthesize(line, voiceId, settingsFor(nick, speaker)); }
+        try { audio = await elevenlabs.synthesize(speakable(line), voiceId, settingsFor(nick, speaker)); }
         catch (_) { audio = null; }
       }
     }
@@ -874,6 +900,7 @@ async function dungeonLine(nick, eventType, ctx = {}) {
     damage:    `a ${ctx.enemy || 'monster'} just hit you for ${ctx.dmg || 'some'} damage`,
     loot_win:  `you won the party roll for a +${ctx.tier} ${ctx.item} you all found`,
     loot_lose: `you LOST the roll for a +${ctx.tier} ${ctx.item} — ${ctx.winner || 'someone else'} grabbed it`,
+    chat:      `${ctx.from || 'a party-mate'} just said to you, here in the dungeon: "${ctx.said || '...'}" — answer them directly`,
   })[eventType] || 'something just happened down here';
   const messages = [
     { role: 'system', content:
@@ -884,7 +911,7 @@ async function dungeonLine(nick, eventType, ctx = {}) {
   ];
   let line = await callLLM(messages);
   if (!line) return null;
-  line = scrubEarthGod(String(line)).replace(/^["']+|["']+$/g, '').trim();
+  line = scrubHiccup(scrubEarthGod(String(line)).replace(/^["']+|["']+$/g, '').trim());
   if (nick === 'Elfrip') line = line.replace(/\bhee+\b/gi, 'heh');   // his giggle is "heh", never "HEE!"
   if (!line) return null;
   let audio = null;
@@ -899,7 +926,7 @@ async function dungeonLine(nick, eventType, ctx = {}) {
     // voice settings (their identity/similarity stays; only the energy changes).
     const COMBAT_VOICE = { stability: 0.30, style: 0.55, speed: 1.02 };
     const settings = { ...(settingsFor(vNick) || {}), ...COMBAT_VOICE };
-    if (voiceId) { try { audio = await elevenlabs.synthesize(line, voiceId, settings); } catch (_) {} }
+    if (voiceId) { try { audio = await elevenlabs.synthesize(speakable(line), voiceId, settings); } catch (_) {} }
   }
   return { line, audio, audioMime: 'audio/mpeg' };
 }

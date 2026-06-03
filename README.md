@@ -425,16 +425,23 @@ docker logs -f --since 1s folken-poker-backend 2>&1 \
 docker compose up -d backend
 ```
 
-An **empty table needs no wait** — if `GET /api/tables` reports `seated: 0`,
-recreate immediately. The live deploy uses a small watcher that polls
-`/api/tables`: deploy now if nobody's seated, otherwise wait for the next
-completed hand (`hands.jsonl` grows) before recreating, always passing
-`DEPLOY_NOTE="…"` so the boot posts a "🔧 Update: …" line to table chat.
+`GET /api/tables` → `[{ id, seated, humans, handActive, connectedClients }]` is
+the deploy gate (`handActive = !!t.hand`; `connectedClients` = live human
+sockets). Rules, in order:
 
-The marker is `[poker] hand-complete table=<id> #<handCount>`, emitted
-from `Table._afterHandComplete()`. Don't use a quiet-gap heuristic —
-cautious bots can brood for 15s normally, which is indistinguishable
-from the post-hand pause.
+- **Never recreate mid-hand while a HUMAN is playing.** A bots-only hand
+  (`humans: 0`, even with `seated: 9`) is fine to drop.
+- **Safe when** every table has `seated: 0` **or** `handActive: false` (idle, or
+  the between-hands gap) — recreate now.
+- **Hold a batch** until `connectedClients === 0` (every human disconnected) when
+  asked, so a full house of real players isn't disrupted at all.
+
+Always pass `DEPLOY_NOTE="…"` so the boot posts a "🔧 Update: …" line to table
+chat. Quick check (prints `SAFE`/`WAIT`):
+
+```bash
+docker exec folken-poker-backend node -e "fetch('http://localhost:3000/api/tables').then(r=>r.json()).then(d=>console.log(d.some(t=>t.seated>0&&t.handActive)?'WAIT':'SAFE'))"
+```
 
 Frontend-only changes (CSS, JS, HTML, audio assets) don't need a
 container recreate — nginx serves them live. Just bump the

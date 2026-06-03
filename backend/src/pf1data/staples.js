@@ -10,30 +10,70 @@ const { WEAPON_BY_NAME } = require('./weapons');
 
 const UNARMED = { name: 'Unarmed Strike', cat: 'light', ranged: false, dmgCount: 1, dmgDie: 3, crit: 20, mult: 2, type: 'B', group: 'natural' };
 
+// Each entry: [storageKey, foundryName, proficiencyClass]. The proficiency
+// class ('simple' | 'martial' | 'exotic') drives class proficiency — wielding a
+// weapon your class isn't proficient with is −4 to hit (see classes.js).
 const STAPLE_DEFS = [
-  ['dagger',       'Dagger'],
-  ['shortsword',   'Shortsword'],
-  ['longsword',    'Longsword'],
-  ['greatsword',   'Greatsword'],
-  ['warhammer',    'Warhammer'],
-  ['battleaxe',    'Battle Axe'],
-  ['greataxe',     'Greataxe'],
-  ['longspear',    'Longspear'],
-  ['quarterstaff', 'Quarterstaff'],
-  ['unarmed',      null],          // SRD entry (UNARMED above)
-  ['katana',       'Katana'],
-  ['scimitar',     'Scimitar'],
-  ['rapier',       'Rapier'],
-  ['glaive',       'Glaive'],      // representative polearm
-  ['whip',         'Whip'],
+  ['dagger',       'Dagger',       'simple'],
+  ['shortsword',   'Shortsword',   'martial'],
+  ['longsword',    'Longsword',    'martial'],
+  ['greatsword',   'Greatsword',   'martial'],
+  ['warhammer',    'Warhammer',    'martial'],
+  ['battleaxe',    'Battle Axe',   'martial'],
+  ['greataxe',     'Greataxe',     'martial'],
+  ['longspear',    'Longspear',    'simple'],
+  ['quarterstaff', 'Quarterstaff', 'simple'],
+  ['unarmed',      null,           'simple'],   // SRD entry (UNARMED above) — everyone is proficient
+  ['katana',       'Katana',       'exotic'],
+  ['scimitar',     'Scimitar',     'martial'],
+  ['rapier',       'Rapier',       'martial'],
+  ['glaive',       'Glaive',       'martial'],  // representative polearm
+  ['whip',         'Whip',         'exotic'],
 ];
 
-const STAPLE_WEAPONS = STAPLE_DEFS.map(([key, name]) => {
+const STAPLE_WEAPONS = STAPLE_DEFS.map(([key, name, prof]) => {
   const w = key === 'unarmed' ? UNARMED : WEAPON_BY_NAME[String(name).toLowerCase()];
   if (!w) throw new Error(`staple weapon not found: ${name}`);
-  return { key, ...w };
+  return { key, prof, ...w };
 });
 const STAPLE_BY_KEY = Object.fromEntries(STAPLE_WEAPONS.map(w => [w.key, w]));
+// Per-staple signature attack sounds (override the generic blunt/swing report).
+const STAPLE_SOUNDS = { warhammer: '/audio/weapon_warhammer.mp3' };
+for (const [k, snd] of Object.entries(STAPLE_SOUNDS)) if (STAPLE_BY_KEY[k]) STAPLE_BY_KEY[k].atkSound = snd;
 const DEFAULT_WEAPON = 'dagger';
 
-module.exports = { STAPLE_WEAPONS, STAPLE_BY_KEY, DEFAULT_WEAPON };
+// Named NPC SIGNATURE weapons — not selectable in the dropdown, assigned to
+// specific characters in db.js. `custom: true` means the wielder is always
+// proficient (it's their iconic weapon). `atkSound` overrides the hit sound.
+const CUSTOM_WEAPONS = {
+  // Dismas's holy dragon-rifle. A firearm (1d12, ×4 crit) — he smites with it.
+  rovadra: { key: 'rovadra', name: 'Rovadra', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 12, crit: 20, mult: 4, type: 'B', group: 'firearms', prof: 'exotic', custom: true, atkSound: '/audio/rovadra_dragonrifle.mp3' },   // Dismas's holy-gun report — the dragonrifle "delay" recording (single shot)
+  // Gaspar's bastard sword "Curator".
+  curator: { key: 'curator', name: 'Curator', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 19, mult: 2, type: 'S', group: 'heavyBlades', prof: 'exotic', custom: true },
+  // Danger's composite longbow (1d8, ×3) — single-shot bow report.
+  longbow: { key: 'longbow', name: 'Composite Longbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'P', group: 'bows', prof: 'martial', custom: true, atkSound: '/audio/bow_silent_hits.mp3' },   // Danger's longbow — near-silent loose, sound lands on the hit
+  // Vesorianna's spectral Ghost Touch — a chilling 2d6 melee strike.
+  ghosttouch: { key: 'ghosttouch', name: 'Ghost Touch', cat: '1h', ranged: false, dmgCount: 2, dmgDie: 6, crit: 20, mult: 2, type: 'B', group: 'natural', prof: 'simple', custom: true },
+  // Crisp's bite (natural weapon, 1d6).
+  bite: { key: 'bite', name: 'Bite', cat: 'light', ranged: false, dmgCount: 1, dmgDie: 6, crit: 20, mult: 2, type: 'P', group: 'natural', prof: 'simple', custom: true },
+  // Rissa's claws (natural, 1d6).
+  claws: { key: 'claws', name: 'Claws', cat: 'light', ranged: false, dmgCount: 1, dmgDie: 6, crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true },
+  // Vaughan's named scimitar "Radiance" (1d6, 18–20/×2).
+  radiance: { key: 'radiance', name: 'Radiance', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true },
+  // Lirienne's repeating crossbow (1d8, 19–20).
+  repeatingcrossbow: { key: 'repeatingcrossbow', name: 'Repeating Crossbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'exotic', custom: true, atkSound: '/audio/crossbow.mp3' },
+  // Duristan's .338 Lapua Magnum — a heavy-hitting bolt-action (2d10, ×4).
+  lapua: { key: 'lapua', name: 'Lapua .338', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 10, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, atkSound: '/audio/rifle_lapua.mp3' },
+  // Taelys's SV-98 bolt-action sniper rifle (2d8, ×4).
+  sv98: { key: 'sv98', name: 'SV-98', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 8, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, atkSound: '/audio/rifle_dvl_silenced.mp3' },   // Taelys's rifle — DVL silenced shot
+  // Ulfred's named battleaxe "Voidshard" (1d8, ×3) — its own meaty axe report.
+  voidshard: { key: 'voidshard', name: 'Voidshard', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'S', group: 'axes', prof: 'martial', custom: true, atkSound: '/audio/voidshard.mp3' },
+  // Farrus Richton's TWIN battleaxes — two-weapon fighting (2 swings/turn, one
+  // report), and no shield (dual-wield → no shield AC).
+  twoaxes: { key: 'twoaxes', name: 'Twin Battleaxes', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'S', group: 'axes', prof: 'martial', custom: true, dual: true, noShield: true, atkSound: '/audio/weapon_double_axe.mp3' },
+};
+
+// Combined lookup used by combat.weaponOf — staples + custom signature weapons.
+const WEAPON_LOOKUP = { ...STAPLE_BY_KEY, ...CUSTOM_WEAPONS };
+
+module.exports = { STAPLE_WEAPONS, STAPLE_BY_KEY, DEFAULT_WEAPON, CUSTOM_WEAPONS, WEAPON_LOOKUP };

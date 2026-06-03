@@ -11,6 +11,8 @@
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
+const { CLASSES } = require('../pf1data/classes');
+const { STAPLE_BY_KEY } = require('../pf1data/staples');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data');
 const DB_PATH  = process.env.DB_PATH  || path.join(DATA_DIR, 'poker.db');
@@ -43,6 +45,10 @@ ensureColumn('players', 'bot_intelligence', "TEXT NOT NULL DEFAULT 'average'");
 // this debt. They can pay it down later from their stack via `lobby:payDebt`.
 // Bots do NOT accrue debt — their auto-rebuys are free (they're the house).
 ensureColumn('players', 'rebuy_debt', 'INTEGER NOT NULL DEFAULT 0');
+// Turns-in-debt clock for Abadar's compound interest (see tickDebtTurn). Counts
+// the turns a player takes — poker actions AND dungeon combat turns — while they
+// owe; every DEBT_INTEREST_TURNS the tab compounds. Resets when the debt clears.
+ensureColumn('players', 'debt_turns', 'INTEGER NOT NULL DEFAULT 0');
 // JSON object mapping sword tier (string '1'..'5') to count, e.g.
 // '{"1":2,"2":1}' = two +1 longswords and one +2. LEGACY — superseded by
 // the `gear` column below. Left in place so older rows don't break.
@@ -56,6 +62,21 @@ ensureColumn('players', 'gear',       "TEXT NOT NULL DEFAULT '{}'");
 // 'they' until they pick from the dropdown. Bots are pinned via
 // BOT_ROSTER entries below and re-synced on every boot.
 ensureColumn('players', 'gender',     "TEXT NOT NULL DEFAULT 'they'");
+// PF1e class (drives BAB / saves / abilities) and chosen base weapon (the +N
+// enhancement in the gear 'weapon' slot rides on this weapon). Humans default to
+// a Fighter with a masterwork Dagger and change both in the name-click menu;
+// bots are pinned from BOT_CLASSES below and re-synced each boot.
+ensureColumn('players', 'class',      "TEXT NOT NULL DEFAULT 'fighter'");
+ensureColumn('players', 'weapon',     "TEXT NOT NULL DEFAULT 'dagger'");
+
+// One-time fix-up (2026-06-02 PNG→WebP asset conversion): avatar_id stores the
+// token's served PATH, and the old .png token files were converted to .webp and
+// deleted — so any stored avatar ending in .png now 404s. Rewrite the trailing
+// .png to .webp (every converted png has a same-named webp). Idempotent: once no
+// avatar_id ends in .png, this is a no-op.
+try {
+  db.prepare("UPDATE players SET avatar_id = substr(avatar_id, 1, length(avatar_id) - 4) || '.webp' WHERE avatar_id LIKE '%.png'").run();
+} catch (_) { /* non-fatal: a broken avatar just shows the fallback glyph */ }
 
 // Champions Board — one row per Loot Lord. Logged when someone hits +5
 // in every slot. The reset-to-default that follows wipes everyone's
@@ -338,9 +359,53 @@ migrateRemoveAmulet();
 // everyone's debt to 0 (see Table.js _doFullReset), which is the only
 // legitimate way to wipe it now.)
 
+// PF1e class per AI character (drives BAB / saves / abilities). User-specified
+// where known; the rest inferred from Carrion Crown / Iron Gods / etc. lore;
+// anything unlisted defaults to Fighter. Re-synced from here every boot.
+const BOT_CLASSES = {
+  'Sirona': 'paladin', 'Gaspar': 'inquisitor', 'Tar Baphon': 'wizard', 'Bujon, Storm of Cheliax': 'sorcerer',
+  'Kelda': 'rogue', 'Kate Blackwood': 'magus', 'Toni': 'magus', 'Adimarus': 'antipaladin',
+  'Rhyarca': 'oracle', 'Conchobar': 'bard', 'Nomkath': 'rogue', 'Lou Candlebean': 'cavalier',
+  'Elodie': 'bard', 'Dismas': 'paladin', 'Vorkstag': 'alchemist', 'Estovion': 'wizard',
+  'Auren Vrood': 'wizard', 'Casandalee': 'wizard', 'Meyanda': 'cleric', 'Daramid': 'wizard',
+  'Kovira': 'inquisitor', 'Tokala': 'barbarian', 'Mr. Brow': 'investigator', 'Tamsin': 'bard',
+  'Concetta': 'swashbuckler', 'Farrah': 'sorcerer', 'Fera': 'rogue',
+  'Elfrip': 'sorcerer', 'Rodney Smith': 'ranger',   // Elfrip favors fire; Rodney "Danger" Smith is an archer
+  'Vesorianna': 'cleric', 'Farrus Richton': 'barbarian', 'Dinvaya': 'cleric', 'Storgrim Thunderbeard': 'fighter',
+  'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'rogue', 'Kai Ginn': 'ranger', 'Lirienne': 'ranger',
+  'Rissa': 'druid', 'Taelys': 'ranger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'ranger',
+  'Holden': 'swashbuckler',
+};
+// Sensible default base weapon per class so AI aren't all daggers in the dungeon.
+const CLASS_WEAPON = {
+  fighter:'longsword', paladin:'longsword', antipaladin:'scimitar', cavalier:'longsword',
+  samurai:'katana', bloodrager:'greatsword', slayer:'longsword', warpriest:'warhammer',
+  barbarian:'greataxe', ranger:'longsword', rogue:'shortsword', ninja:'shortsword',
+  monk:'unarmed', brawler:'unarmed', bard:'rapier', skald:'longsword', swashbuckler:'rapier',
+  magus:'longsword', cleric:'warhammer', inquisitor:'longsword', druid:'scimitar',
+  oracle:'scimitar', shaman:'quarterstaff', wizard:'quarterstaff', sorcerer:'quarterstaff',
+  witch:'quarterstaff', arcanist:'quarterstaff', psychic:'dagger', alchemist:'dagger',
+  investigator:'shortsword', gunslinger:'longsword', summoner:'longspear', hunter:'longspear',
+  kineticist:'quarterstaff', medium:'longsword', mesmerist:'rapier', occultist:'longsword',
+  spiritualist:'dagger', vigilante:'shortsword',
+};
+const weaponForClass = (cls) => CLASS_WEAPON[cls] || 'dagger';
+// Named NPC signature weapons (override the class default). Dismas's holy
+// dragon-rifle Rovadra, Gaspar's bastard sword Curator, Elodie's rapier.
+const BOT_WEAPONS = {
+  'Dismas': 'rovadra', 'Gaspar': 'curator', 'Elodie': 'rapier', 'Rodney Smith': 'longbow',
+  'Vesorianna': 'ghosttouch', 'Farrus Richton': 'twoaxes', 'Dinvaya': 'warhammer', 'Storgrim Thunderbeard': 'battleaxe',
+  'Agu': 'rapier', 'Chef': 'battleaxe', 'Crisp': 'bite', 'Kai Ginn': 'glaive', 'Lirienne': 'repeatingcrossbow',
+  'Rissa': 'claws', 'Taelys': 'sv98', 'Ulfred': 'voidshard', 'Vaughan': 'radiance', 'Duristan Silvio': 'lapua',
+  'Holden': 'rapier',
+};
+const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
+
 function seedRoster() {
   const now = Date.now();
   let humans = 0, bots = 0, prunedBots = 0;
+  const updateBotClass  = db.prepare('UPDATE players SET class = ? WHERE player_id = ? AND is_bot = 1');
+  const updateBotWeapon = db.prepare('UPDATE players SET weapon = ? WHERE player_id = ? AND is_bot = 1');
   const updateBotAvatar = db.prepare('UPDATE players SET avatar_id = ? WHERE player_id = ? AND is_bot = 1');
   const updateBotMode   = db.prepare('UPDATE players SET bot_mode = ? WHERE player_id = ? AND is_bot = 1');
   const updateBotIntel  = db.prepare('UPDATE players SET bot_intelligence = ? WHERE player_id = ? AND is_bot = 1');
@@ -379,6 +444,9 @@ function seedRoster() {
       updateBotMode.run(p.baseMode || 'standard', id);
       updateBotIntel.run(p.intelligence || 'average', id);
       updateBotGender.run(p.gender || 'they', id);
+      const cls = BOT_CLASSES[p.name] || 'fighter';
+      updateBotClass.run(cls, id);
+      updateBotWeapon.run(weaponForBot(p.name, cls), id);
     }
     // Prune stale bot rows from previous rosters so they don't show up in
     // the "+ Bot" picker. Humans are never pruned (their chip totals matter).
@@ -424,6 +492,29 @@ function payRebuyDebt(playerId, amount) {
   if (!Number.isFinite(amount) || amount <= 0) return;
   stmts.payDebt.run(amount, amount, playerId);
 }
+// ── Abadar's compound interest ──────────────────────────────────────────────
+// Every DEBT_INTEREST_TURNS turns a player takes (a poker action OR a dungeon
+// combat turn) while they owe Abadar, the tab compounds by DEBT_INTEREST_RATE.
+// Only humans carry debt, so bots never accrue. Tunable knobs:
+const DEBT_INTEREST_TURNS = 10;
+const DEBT_INTEREST_RATE  = 0.05;   // +5% per 10 turns, compounding
+const _debtRowStmt  = db.prepare('SELECT rebuy_debt, debt_turns FROM players WHERE player_id = ?');
+const _setDebtTurns = db.prepare('UPDATE players SET debt_turns = ? WHERE player_id = ?');
+const _compoundDebt = db.prepare('UPDATE players SET rebuy_debt = ?, debt_turns = ? WHERE player_id = ?');
+/** Advance a player's "turns in debt" clock by one. Every DEBT_INTEREST_TURNS
+ *  turns the tab compounds — returns { before, after, interest } on a compound
+ *  tick, else null. No-ops (and resets the clock) when the player owes nothing. */
+function tickDebtTurn(playerId) {
+  const row = _debtRowStmt.get(playerId);
+  if (!row) return null;
+  const debt = Number(row.rebuy_debt || 0);
+  if (debt <= 0) { if (row.debt_turns) _setDebtTurns.run(0, playerId); return null; }
+  const turns = Number(row.debt_turns || 0) + 1;
+  if (turns < DEBT_INTEREST_TURNS) { _setDebtTurns.run(turns, playerId); return null; }
+  const after = Math.round(debt * (1 + DEBT_INTEREST_RATE));
+  _compoundDebt.run(after, turns - DEBT_INTEREST_TURNS, playerId);   // carry any remainder
+  return { before: debt, after, interest: after - debt };
+}
 /** Update a player's pronoun set. Validates against the known
  *  values; silently no-ops otherwise. Bots' genders are pinned
  *  via seedRoster and shouldn't be set through this path. */
@@ -431,6 +522,18 @@ const _setGenderStmt = db.prepare('UPDATE players SET gender = ? WHERE player_id
 function setGender(playerId, gender) {
   if (!['he', 'she', 'they'].includes(gender)) return;
   _setGenderStmt.run(gender, playerId);
+}
+/** Set a player's PF1e class — validated against the known base classes. */
+const _setClassStmt = db.prepare('UPDATE players SET class = ? WHERE player_id = ?');
+function setClass(playerId, cls) {
+  if (!CLASSES[cls]) return;
+  _setClassStmt.run(cls, playerId);
+}
+/** Set a player's chosen base weapon — validated against the staple list. */
+const _setWeaponStmt = db.prepare('UPDATE players SET weapon = ? WHERE player_id = ?');
+function setWeapon(playerId, weapon) {
+  if (!STAPLE_BY_KEY[weapon]) return;
+  _setWeaponStmt.run(weapon, playerId);
 }
 function getSwords(playerId) {
   const p = stmts.getPlayer.get(playerId);
@@ -516,7 +619,10 @@ module.exports = {
   setChips,
   addRebuyDebt,
   payRebuyDebt,
+  tickDebtTurn,
   setGender,
+  setClass,
+  setWeapon,
   getSwords,
   setSwords,
   recordWin,
