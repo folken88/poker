@@ -2253,23 +2253,16 @@ class Dungeon {
     const pool = this.livingEnemies().filter(x => !exclude.has(x.uid));
     return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
   }
-  // Play a sequence of swing sounds to the dungeon (clear) and the table (muffled
-  // echo), STAGGERED, so a chain of cleaves is heard as distinct hits — not one
-  // blurred thwack. (The dungeon:state broadcast only plays the single newest log
-  // sound, so chain swings carry no log sound and ride this instead.)
+  // Play ONE report for the whole cleave sweep — a chain shouldn't machine-gun a
+  // sound per swing (too noisy). The notes carry no log sound, so this is the
+  // single sound the dungeon (clear) and the table (muffled echo) hear.
   _emitChainSfx(sounds) {
-    let played = 0;
-    for (const snd of sounds) {
-      if (!snd) continue;
-      const delay = played * CHAIN_SFX_GAP_MS; played++;
-      setTimeout(() => {
-        try {
-          if (!this.io) return;
-          this.io.to(this.roomName()).emit('dungeon:sfx', { sound: snd });
-          this.io.to(`table:${this.tableId}`).emit('dungeon:echo', { sound: snd });
-        } catch (_) {}
-      }, delay);
-    }
+    const snd = sounds.find(Boolean);
+    if (!snd || !this.io) return;
+    try {
+      this.io.to(this.roomName()).emit('dungeon:sfx', { sound: snd });
+      this.io.to(`table:${this.tableId}`).emit('dungeon:echo', { sound: snd });
+    } catch (_) {}
   }
   // Cleave / Great Cleave sweep — shared by the Cleave ability AND any barbarian
   // attack. Swings at firstTarget (the player-chosen foe); with `followThrough`
