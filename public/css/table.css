@@ -202,7 +202,26 @@ button, input { font: inherit; color: inherit; }
 }
 .dungeon__chat input::placeholder { color: var(--ivory-dim); }
 .dungeon__chat input:focus { outline: none; border-color: rgba(217,176,106,0.6); }
-.dungeon__log li { padding: 1px 0; }
+/* Combat log split horizontally: heroes left, monsters right, run/chat centred. */
+.dungeon__log li { padding: 1px 0; display: flex; }
+.dungeon__log li.dlog--hero   { justify-content: flex-start; }
+.dungeon__log li.dlog--enemy  { justify-content: flex-end; }
+.dungeon__log li.dlog--system { justify-content: center; }
+.dungeon__log .dlog__b {
+  max-width: 64%;
+  padding: 1px 7px;
+  border-radius: 6px;
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
+}
+.dungeon__log li.dlog--hero  .dlog__b { text-align: left;  border-left-color: rgba(122,184,122,0.45);  background: rgba(122,184,122,0.05); }
+.dungeon__log li.dlog--enemy .dlog__b { text-align: right; border-right-color: rgba(214,120,120,0.45); background: rgba(214,120,120,0.05); }
+.dungeon__log li.dlog--system .dlog__b { max-width: 92%; text-align: center; color: var(--ivory-dim); opacity: 0.82; font-size: 0.78rem; }
+/* Subtle event tints — heal gold, death red, buff blue, debuff purple. */
+.dungeon__log .dlog-k--heal   { color: #e7cf8e; }
+.dungeon__log .dlog-k--death  { color: #e58d8d; }
+.dungeon__log .dlog-k--buff   { color: #8fb8ec; }
+.dungeon__log .dlog-k--debuff { color: #c79cf0; }
 .dungeon__log .droll { color: var(--brass-bright); font-weight: 700; }
 .dungeon__log .dlog-say { color: #d8c6f0; font-style: italic; }
 body[data-screen="loading"] .screen[data-show-on="loading"],

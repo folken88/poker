@@ -1018,8 +1018,21 @@
 
     const log = $('#dungeonLog');
     // Most recent first; player can scroll DOWN to review earlier events.
+    // Split horizontally — heroes on the left, monsters on the right, run/chat
+    // events centred — so the eye can track its own side. `side` & `kind` come
+    // from the server; fall back to text sniffing for older entries.
     // Bold the raw d20 die roll inside each "[d20 N …]" breakdown so it pops.
-    if (log) { log.innerHTML = (d.log || []).slice().reverse().map(e => { const say = (e.text || '').startsWith('💬'); return `<li class="${say ? 'dlog-say' : ''}">${escapeText(e.text).replace(/d20 (\d+)/g, 'd20 <b class="droll">$1</b>')}</li>`; }).join(''); log.scrollTop = 0; }
+    if (log) {
+      log.innerHTML = (d.log || []).slice().reverse().map(e => {
+        const txt = e.text || '';
+        const say = txt.startsWith('💬');
+        const side = e.side || (say ? 'system' : 'hero');
+        const kind = e.kind || 'normal';
+        const body = escapeText(txt).replace(/d20 (\d+)/g, 'd20 <b class="droll">$1</b>');
+        return `<li class="dlog--${side}"><span class="dlog__b dlog-k--${kind}${say ? ' dlog-say' : ''}">${body}</span></li>`;
+      }).join('');
+      log.scrollTop = 0;
+    }
   }
 
   // ---- Dungeon UI wiring (delegated; elements are static in index.html) ----

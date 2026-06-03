@@ -259,6 +259,7 @@ class Dungeon {
     this.status = 'exploring';   // exploring | combat | over
     this.log = [];
     this._logSeq = 0;
+    this._noteSide = null;   // set to 'enemy' while a monster is taking its turn (see _withSide)
     this._turnTimer = null;
     this._stepTimer = null;
     this._bantRound = -1;        // last combat round an AI ally reacted (1 per round)
@@ -294,7 +295,31 @@ class Dungeon {
   }
 
   roomName() { return `dungeon:${this.id}`; }
-  _note(text, sound) { this.log.push({ t: ++this._logSeq, text, sound: sound || null }); if (this.log.length > 150) this.log.shift(); if (sound) { try { recordSound('dungeon', sound, text); } catch (_) {} } }
+  _note(text, sound, meta = {}) {
+    // Each entry carries `side` (which column it belongs in) and `kind` (its
+    // colour tint) so the client can split the log hero-left / enemy-right and
+    // gently colour heals (gold), deaths (red), buffs (blue), debuffs (purple).
+    const side = meta.side || this._noteSide || this._inferSide(text);
+    const kind = meta.kind || this._inferKind(text);
+    this.log.push({ t: ++this._logSeq, text, sound: sound || null, side, kind });
+    if (this.log.length > 150) this.log.shift();
+    if (sound) { try { recordSound('dungeon', sound, text); } catch (_) {} }
+  }
+  // Run `fn` with every _note inside it attributed to one side (used to tag a
+  // monster's whole turn 'enemy' in one place). Synchronous; restores on exit.
+  _withSide(side, fn) { const prev = this._noteSide; this._noteSide = side; try { return fn(); } finally { this._noteSide = prev; } }
+  // Party chatter and run-level admin (doors, loot, gold, interest) live in the
+  // centre channel; everything else defaults to the hero side unless _noteSide
+  // (an enemy turn) or an explicit meta.side says otherwise.
+  _inferSide(text) { return /^(💬|🚪|✨|💎|🎲|🚫|🏆|💰|🛡️|🏛️|💀|🧪|🪜|🏃)/.test(text) ? 'system' : 'hero'; }
+  // Colour tint by event kind. Order matters: death wins over heal/buff/debuff.
+  _inferKind(text) {
+    if (/☠️|💀|🩸|hero_death|[Ss]lain|bleeds out|bleeds —|collapses|DOWN and dying|battered while down|drops past|claims them|dragged out/.test(text)) return 'death';
+    if (/💗|💚|🧪|heals|mends|is revived|quaffs|breathes life|[Bb]reath of [Ll]ife|restored to the run|channels positive|back on their feet|back up at/.test(text)) return 'heal';
+    if (/💨|[Hh]aste|emboldened|Inspire|Bless|Rage|fades from view|unseen until|Invisib|Divine Favor|righteous fury|calls a Smite|Prayer|blurs with|pronounces Judgement|Judgement —|Judgment —/.test(text)) return 'buff';
+    if (/paralyz|fascinat|sickened|retches|prone|clambers|feint|TRIPS|tries to trip|HELD|Hold Person|Hideous|off-balance|flat-footed|dispel|stunned|held —|is held/.test(text)) return 'debuff';
+    return 'normal';
+  }
   _log(type, extra) {
     try { logDungeon({ type, run: this.id, depth: this.depth, round: this.round, ...(extra || {}) }); } catch (_) {}
   }
@@ -604,11 +629,11 @@ class Dungeon {
     if (t.kind === 'enemy') {
       const e = this.enemies.find(x => x.uid === t.id);
       if (!e || e.hp <= 0) return this._nextTurn();
-      if (e.fascinated) { this._note(`${e.glyph} ${e.name} stands fascinated — does nothing.`); this._broadcast(); return this._nextTurn(); }
-      if (e.paralyzed > 0) { e.paralyzed -= 1; this._note(`🖐️ ${e.name} is held — paralyzed, loses its turn.`); this._broadcast(); return this._nextTurn(); }
-      if (e.loseTurn) { e.loseTurn = false; this._note(`${e.glyph} ${e.name} is off-balance — loses its turn.`); this._broadcast(); return this._nextTurn(); }
-      if (e.sickened > 0) { e.sickened -= 1; this._note(`${e.glyph} ${e.name} retches in the cloud — loses its turn.`); this._broadcast(); return this._nextTurn(); }
-      this._stepTimer = setTimeout(() => { this._enemyAct(e); this._nextTurn(); }, ENEMY_STEP_MS);
+      if (e.fascinated) { this._note(`${e.glyph} ${e.name} stands fascinated — does nothing.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
+      if (e.paralyzed > 0) { e.paralyzed -= 1; this._note(`🖐️ ${e.name} is held — paralyzed, loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
+      if (e.loseTurn) { e.loseTurn = false; this._note(`${e.glyph} ${e.name} is off-balance — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
+      if (e.sickened > 0) { e.sickened -= 1; this._note(`${e.glyph} ${e.name} retches in the cloud — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
+      this._stepTimer = setTimeout(() => { this._withSide('enemy', () => this._enemyAct(e)); this._nextTurn(); }, ENEMY_STEP_MS);
       this._broadcast();
       return;
     }
@@ -1371,7 +1396,7 @@ class Dungeon {
     const hit = live.slice(0, dRoll(ex.count || 2));
     const parts = [];
     for (const t of hit) { const d = dRollN(ex.dice || 3, ex.die || 6); this._dmgToMember(t, d); parts.push(`${t.nickname} −${d}`); }
-    this._note(`💥 ${e.name} erupts into flame as it falls — ${parts.join(', ')}!`, ex.sound);
+    this._note(`💥 ${e.name} erupts into flame as it falls — ${parts.join(', ')}!`, ex.sound, { side: 'enemy' });
     this._echoToTable(ex.sound);
   }
   // Enemy save bonus. Monsters carry Fort + Reflex; Will is approximated.

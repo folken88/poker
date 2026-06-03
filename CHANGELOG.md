@@ -19,6 +19,21 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-06-03
+
+### 📜 Readable, colour-coded dungeon combat log
+- The combat log is now **split horizontally** — your **heroes' actions sit on
+  the left**, the **monsters' on the right** (run/loot/chat events run down the
+  centre). Each side is easier to follow when the action moves fast.
+- **Subtle colour cues** so you can skim: healing is **gold**, deaths are
+  **red**, buffs are **blue**, debuffs are **purple**.
+
+### 🗡️ Vorkstag is a Rogue
+- Vorkstag now delves as a **Rogue** (shortsword + Sneak Attack) instead of an
+  alchemist — and benefits from the rogue AI that hunts helpless targets.
+
+---
+
 ## 2026-06-02
 
 ### 🎶 Bard Haste & laughter-into-sneak synergy
