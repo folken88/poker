@@ -21,6 +21,18 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-03
 
+### 🧛 Undead monster art + smarter arcane casters
+- The **Lich**, **Vampire** and **Fire Skeleton** now show real Foundry token
+  art (a skeletal lich in his mitre, a fanged vampire lord, a burning skull)
+  instead of plain 💀🧛🔥 emoji.
+- **Wizards & sorcerers** now fight like battlefield controllers: by default
+  they cast whatever **affects the most enemies** (a wide Fireball / Lightning
+  Bolt / Burning Hands, or mass lockdown via Sleep / Grease). When a lone
+  **boss** towers over the pack, they focus-fire it with their hardest single
+  spell (**Disintegrate** / Cone of Cold) or pin it with **Hold Person**.
+- **Channel Positive** now rolls its healing **once** and applies that amount to
+  the whole party (PF1e-correct), instead of re-rolling for each ally.
+
 ### 📜 Readable, colour-coded dungeon combat log
 - The combat log is now **split horizontally** — your **heroes' actions sit on
   the left**, the **monsters' on the right** (run/loot/chat events run down the

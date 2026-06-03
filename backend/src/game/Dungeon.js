@@ -137,6 +137,9 @@ const MON_ART = {
   kobold_spearman: 'kobold_spearman', kobold_shaman: 'kobold_shaman', kobold_rogue: 'kobold_rogue',
   giant_centipede: 'centipede', goblin: 'goblin', kobold: 'kobold', skeleton: 'skeleton',
   giant_spider: 'spider', zombie: 'zombie', ghoul: 'ghoul', cultist: 'cultist',
+  // Undead with fresh Foundry token art (were emoji-only): a burning skull,
+  // a fanged vampire lord, and a skeletal lich in his mitre.
+  fire_skeleton: 'fire_skeleton', vampire: 'vampire', lich: 'lich',
   gray_ooze: 'ooze', skeletal_champion: 'skeletal_champion', shadow: 'shadow', wight: 'wight',
   ghast: 'ghast', gibbering_mouther: 'gibbering_mouther', ogre: 'ogre', ettin: 'ettin',
   brass_golem: 'brass_golem', barbed_devil: 'barbed_devil',
