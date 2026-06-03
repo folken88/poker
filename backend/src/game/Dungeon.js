@@ -62,6 +62,29 @@ const MAGUS_SPELLSTRIKE_SFX = {
 const BOSS_EVERY     = 5;
 const LOOT_ROLL_MS   = 20_000; // window to roll/pass on a dropped magic item
 
+// Every applied spell/feat buff that should show an icon on a hero's buff strip,
+// keyed by the ability key recorded in m.buffApplied / m.runBuffApplied. Each
+// needs a matching /dungeon/buffs/<key>.webp. _buffList walks the applied keys,
+// so adding a new buff spell is just: give it a kit entry + an icon + a line here.
+const BUFF_META = {
+  rage:          { label: 'Rage',            desc: '+2 hit & damage, −2 AC (this room)' },
+  bane:          { label: 'Bane',            desc: '+2 hit, +2d6+2 vs foes (this room)' },
+  divinefavor:   { label: 'Divine Favor',    desc: '+3 hit & damage (this room)' },
+  prayer:        { label: 'Prayer',          desc: 'allies +1 hit, damage & saves (this room)' },
+  shield:        { label: 'Shield',          desc: '+4 AC (this room)' },
+  shieldoffaith: { label: 'Shield of Faith', desc: '+2 deflection AC (this room)' },
+  catsgrace:     { label: "Cat's Grace",     desc: '+2 AC & +1 to hit — Dexterity (this room)' },
+  bullsstrength: { label: "Bull's Strength", desc: '+2 hit & damage — Strength (this room)' },
+  bearsendurance:{ label: "Bear's Endurance",desc: '+temporary HP — Constitution (this room)' },
+  heroism:       { label: 'Heroism',         desc: '+2 to hit & +2 on saves (this room)' },
+  goodhope:      { label: 'Good Hope',       desc: 'allies +2 hit, damage & saves (this room)' },
+  deadlyaim:     { label: 'Deadly Aim',      desc: 'trading aim for power — −hit, +damage' },
+  fly:           { label: 'Flying',          desc: 'airborne — grounded foes cannot reach you' },
+  protectfire:   { label: 'Fire Ward',       desc: 'fire damage halved (Protection from Fire)' },
+  bless:         { label: 'Bless',           desc: '+1 to hit — whole dungeon' },
+  inspire:       { label: 'Inspire Courage', desc: 'allies +1 hit & damage — whole dungeon' },
+};
+
 // Bruce-Lee-style martial-arts SFX for enemy Monks — kiai screams, flurries and
 // smacks. Picked at random per swing (a different shout every punch); hilarious
 // when overheard muffled from up at the poker table.
@@ -443,16 +466,15 @@ class Dungeon {
   // ones (bless/inspire) from runBuffApplied; smite/haste/invisible/judgement are
   // their own flags.
   _buffList(m) {
-    const I = '/dungeon/buffs/', c = [];
-    const push = (k, label, desc) => c.push({ key: k, label, desc, icon: `${I}${k}.webp` });
-    const ap = m.buffApplied || {}, run = m.runBuffApplied || {};
-    if (ap.rage)        push('rage', 'Rage', '+2 hit & damage, −2 AC (this room)');
-    if (ap.bane)        push('bane', 'Bane', '+2 hit, +2d6+2 vs foes (this room)');
-    if (ap.divinefavor) push('divinefavor', 'Divine Favor', '+3 hit & damage (this room)');
-    if (ap.prayer)      push('prayer', 'Prayer', 'allies +1 hit & damage (this room)');
-    if (ap.shield || (m.buffs && m.buffs.ac > 0)) push('shield', 'Shield', '+4 AC (this room)');
-    if (run.bless)      push('bless', 'Bless', '+1 to hit — whole dungeon');
-    if (run.inspire)    push('inspire', 'Inspire Courage', 'allies +1 hit & damage — whole dungeon');
+    const I = '/dungeon/buffs/', c = [], pushed = new Set();
+    const push = (k, label, desc) => { if (pushed.has(k)) return; pushed.add(k); c.push({ key: k, label, desc, icon: `${I}${k}.webp` }); };
+    // Every applied spell/feat buff carries its own icon via BUFF_META — walk the
+    // recorded keys so any buff (new ones included) lights up automatically.
+    for (const key of [...Object.keys(m.buffApplied || {}), ...Object.keys(m.runBuffApplied || {})]) {
+      const meta = BUFF_META[key];
+      if (meta) push(key, meta.label, meta.desc);
+    }
+    // Transient states tracked by their own flags, not in buffApplied:
     if (m.smiteActive)  push('smite', 'Smite', '+hit & +2×level damage vs evil');
     if (m.hasted > 0)   push('haste', 'Haste', `an extra attack each turn (${m.hasted} left)`);
     if (m.invisible)    push('invisible', 'Invisible', 'unseen — until you attack');
