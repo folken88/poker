@@ -403,6 +403,7 @@ class Dungeon {
     this._log('join', { who: playerId, level, maxHp, party: this.present().length });
     // Mid-combat join → add to the current turn order so they act this round.
     if (this.status === 'combat') this.turnOrder.push({ kind: 'party', id: playerId, init: dRoll(20) + 2 + Math.floor((m.level || 1) / 2) });
+    this._maintainBardSongs();   // a bard's Inspire aura covers the newcomer (or the newcomer IS the bard)
     this._broadcast();
     return m;
   }
@@ -524,6 +525,7 @@ class Dungeon {
     this.depth += 1;
     this._spawnRoom();
     for (const m of this.present()) { this._resetAbilities(m); m.flatFooted = true; }  // refresh per-room spells/channels + flat-footed until they act
+    this._maintainBardSongs();   // Inspire Courage is a passive aura — always up, no action spent
     this.status = 'combat';
     this.round = 1;
     this._rollInitiative();
@@ -1155,6 +1157,7 @@ class Dungeon {
       if (!ab || lvl < (ab.minLevel || 1)) return false;
       if (ab.cost === 'pool') return (m.spellPool || 0) > 0;
       if (ab.cost === 'room') return ((m.abilityUses && m.abilityUses[ab.key]) || 0) > 0;
+      if (ab.cost === 'run')  return ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) > 0;   // don't re-pick a spent run cast (e.g. auto-Inspire/Bless)
       return true;                                         // 'free'
     };
     const slot = (ab) => kit.abilities.indexOf(ab);
@@ -1450,6 +1453,34 @@ class Dungeon {
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
+  }
+  // Inspire Courage is a passive bard AURA — it costs the bard NO action and is
+  // simply ALWAYS up while a bard is in the party. Fold its run-long +1/+1 into
+  // every ally that doesn't already have it (guarded per-ally so multiple bards
+  // or repeated rooms never stack it). Announced + played once per run, when the
+  // song first goes up. Called at every room start and on join.
+  _maintainBardSongs() {
+    const bard = this.present().find(m => m.cls === 'bard' && !m.dead);
+    if (!bard) return;
+    const ab = (kitFor('bard').abilities || []).find(a => a.key === 'inspire');
+    if (!ab) return;
+    let fresh = false;
+    for (const a of this.present()) {
+      if (a.dead) continue;
+      a.runBuffApplied = a.runBuffApplied || {};
+      if (a.runBuffApplied.inspire) continue;
+      a.runBuffApplied.inspire = true;
+      a.runBuffs = a.runBuffs || { toHit: 0, dmg: 0 };
+      a.runBuffs.toHit += (ab.buff && ab.buff.toHit) || 0;
+      a.runBuffs.dmg   += (ab.buff && ab.buff.dmg) || 0;
+      fresh = true;
+    }
+    bard.runAbilityUses = bard.runAbilityUses || {};
+    bard.runAbilityUses.inspire = 0;   // the song is up — no manual cast needed (won't be re-picked)
+    if (fresh && !this._inspireAnnounced) {
+      this._inspireAnnounced = true;
+      this._note(`${ab.icon} ${bard.nickname} keeps ${ab.name} up — the whole party stays emboldened all delve!`, ab.sound);
+    }
   }
   // The member's kit + remaining uses + level-availability, for the action UI.
   _kitState(m) {

@@ -101,9 +101,11 @@ button, input { font: inherit; color: inherit; }
 }
 /* On a hero card, push debuffs to the RIGHT half so buffs own the top-left. */
 .dpc .dcond { left: 50%; right: 3px; justify-content: flex-end; }
-/* Hero status icons are hoverable (heroes aren't click targets) → native title
-   tooltips work. Monster debuff icons inherit pointer-events:none (click-through). */
-.dpc .dcond__i, .dpc .dbuff__i { pointer-events: auto; }
+/* Status icons are hoverable → native title tooltips (name + effect summary)
+   work on BOTH heroes and monsters. A monster icon sits inside the .dmon target
+   button, so a click on it still bubbles up to select the monster; only hover is
+   captured for the tooltip. */
+.dpc .dcond__i, .dpc .dbuff__i, .dmon .dcond__i { pointer-events: auto; }
 /* Auto-skip countdown badge — just to the right of the hero token (only on the
    active human's card). Absolute so it never changes card height. */
 .dpc__afk {
