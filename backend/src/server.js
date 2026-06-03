@@ -111,10 +111,16 @@ server.listen(PORT, '0.0.0.0', () => {
   // the restart sees it.
   const note = (process.env.DEPLOY_NOTE || '').trim();
   if (note) {
+    // Post the COMPLETE notes — split into readable lines (on newlines or " | ")
+    // so a multi-point update isn't cut off. First line is headed "🔧 Update:",
+    // the rest are bulleted. Each line is capped only as a sanity bound.
+    const lines = note.split(/\s*\n\s*|\s*\|\s*/).map(s => s.trim()).filter(Boolean);
     for (const t of tables.values()) {
-      try { t.chat('info', `🔧 Update: ${note.slice(0, 160)}`); } catch (_) {}
+      lines.forEach((ln, i) => {
+        try { t.chat('info', `${i === 0 ? '🔧 Update:' : '   •'} ${ln.slice(0, 300)}`); } catch (_) {}
+      });
     }
-    console.log(`[poker] deploy note posted: ${note.slice(0, 160)}`);
+    console.log(`[poker] deploy note posted (${lines.length} line${lines.length === 1 ? '' : 's'})`);
   }
 });
 
