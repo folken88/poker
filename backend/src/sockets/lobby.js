@@ -139,32 +139,23 @@ function registerLobbyHandlers(io, socket, { tables }) {
   socket.on('lobby:resetStack', (_p, ack) => {
     const player = socket.data.player;
     if (!player) return ack?.({ ok: false, error: 'choose a player first' });
-    // Hock-first gate: as long as you own magic items, you have to
-    // liquidate those before going to the bank. Otherwise you could
-    // hoard +5 gear AND ride the loan window indefinitely. Once you
-    // hit a true 0-gear / 0-gold floor, the First Bank of Abadar will
-    // extend you a fresh DEFAULT_STACK loan. There's no cap on how
-    // many times you can do this — the debt just keeps stacking.
-    const gear = db.getGear(player.player_id) || {};
-    const ownedItems = Object.entries(gear).filter(([, t]) => t > 0);
-    if (ownedItems.length > 0) {
-      return ack?.({
-        ok: false,
-        error: 'You own magic items — hock them first (use the Loot Bank).',
-      });
-    }
-    // 0 gear, 0 gold → take an Abadar loan. Chips back to DEFAULT_STACK,
-    // outstanding debt += DEFAULT_STACK. Pay it down voluntarily via
-    // lobby:payDebt; otherwise it lingers on the ledger (and drags net
-    // worth) until the next Loot Lord reset wipes everyone clean.
-    db.setChips(player.player_id, db.DEFAULT_STACK);
+    // Loan from Abadar — like the AI, you can borrow while KEEPING your magic
+    // items (no hock-first gate). You receive a fresh DEFAULT_STACK ON TOP of
+    // whatever you're holding (a true loan, never a chip reset), and your debt
+    // grows by DEFAULT_STACK. The cost is the debt itself: it compounds while you
+    // owe (db.tickDebtTurn) and drags net worth until you pay it down via
+    // lobby:payDebt (or the next Loot Lord reset wipes everyone clean). There's
+    // no cap on how many times you can borrow — the debt just keeps stacking.
+    const table = tableFor(socket, tables);
+    const seat = table ? table.findSeat(player.player_id) : null;
+    const cur = seat ? (seat.chipsAtTable || 0) : (db.getPlayer(player.player_id)?.chips || 0);
+    const newChips = cur + db.DEFAULT_STACK;
+    db.setChips(player.player_id, newChips);
     db.addRebuyDebt(player.player_id, db.DEFAULT_STACK);
     const refreshed = db.getPlayer(player.player_id);
     socket.data.player = refreshed;
-    const table = tableFor(socket, tables);
+    if (seat) seat.chipsAtTable = newChips;
     if (table) {
-      const seat = table.findSeat(player.player_id);
-      if (seat) seat.chipsAtTable = refreshed.chips;
       table.chat('rebuy', humanRebuyMessage(refreshed.nickname, db.DEFAULT_STACK));
       table._broadcast?.();
     }

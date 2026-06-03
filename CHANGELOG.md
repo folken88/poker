@@ -21,6 +21,12 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-02
 
+### 🏛️ Loan from Abadar — keep your gear
+- You no longer have to **hock your magic items first** to take a Loan from
+  Abadar (just like the AI). Borrow a fresh stack **on top of** what you're
+  holding — it's a real loan added to your debt, not a chip reset, and you keep
+  every piece of gear. (The debt still compounds while you owe it.)
+
 ### 🗡️ Rogues hunt the helpless
 - Rogues now **prefer incapacitated foes** (flat-footed, prone, sickened, held,
   or **asleep**) so they land **Sneak Attack** — they'll gladly stab a sleeping

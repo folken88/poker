@@ -3182,16 +3182,16 @@
     const debtNow = Number(state.me?.rebuy_debt || 0);
     const newDebt = debtNow + state.defaultStack;
     const msg = `Loan ${state.defaultStack.toLocaleString()} gp from Abadar?\n\n`
-              + `This is a LOAN. Your long-term debt will go from `
-              + `${debtNow.toLocaleString()} → ${newDebt.toLocaleString()} gp.\n`
+              + `You keep your gear — this is a LOAN added to your stack. Your `
+              + `long-term debt goes from ${debtNow.toLocaleString()} → ${newDebt.toLocaleString()} gp.\n`
               + `Pay it down later with winnings.`;
     if (!confirm(msg)) return;
     socket.emit('lobby:resetStack', null, (resp) => {
-      if (!resp?.ok) { toast(resp?.error || 'Could not reset', true); return; }
+      if (!resp?.ok) { toast(resp?.error || 'Could not borrow', true); return; }
       state.me.chips = resp.chips;
       state.me.rebuy_debt = resp.rebuyDebt;
       paintMe();
-      toast(`Stack reset to ${resp.chips.toLocaleString()} gp. Debt: ${resp.rebuyDebt.toLocaleString()} gp`);
+      toast(`Borrowed ${state.defaultStack.toLocaleString()} gp — stack now ${resp.chips.toLocaleString()} gp. Debt: ${resp.rebuyDebt.toLocaleString()} gp`);
     });
   }
 
