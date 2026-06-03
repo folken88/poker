@@ -2011,21 +2011,37 @@ class Dungeon {
   }
   // Cleave: hit the target; then swing at a second foe (−2). A barbarian's
   // cleave (ab.acPen) also drops their guard −2 AC until their next turn.
+  // Cleave / Great Cleave. The primary swing, then a follow-through on a second
+  // foe if it CONNECTED — and crucially, EVERY swing that DROPS a foe grants
+  // another swing on a fresh enemy, chaining as long as it keeps felling them
+  // (until no foes remain). Follow-throughs are at −2 to hit (+2 AC).
   _abCleave(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     if (ab && ab.acPen) { m.acPenRound = this.round; m.acPenAmt = ab.acPen; }
     m.weapon = weaponOf(m.gear, m.weaponKey);
-    const r = this._swingVsAC(m, this._enemyAC(e), e);
-    if (r.hit) { this._dmgE(e, r.damage); this._note(`🪓 ${m.nickname} cleaves ${e.name} for ${r.damage}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
-    else this._note(`🪓 ${m.nickname}'s cleave misses ${e.name}. ${this._atkStr(r)}`, r.sound);
-    this._echoToTable(r.sound);
-    const e2 = this.livingEnemies().find(x => x.uid !== e.uid);
-    if (e2) {
-      const r2 = this._swingVsAC(m, this._enemyAC(e2) + 2, e2);   // −2 to hit = +2 AC
-      if (r2.hit) { this._dmgE(e2, r2.damage); this._note(`🪓 …and through to ${e2.name} for ${r2.damage}.${this._afterEnemyHit(e2)}`, r2.sound); if (e2.hp <= 0) this._tryBanter(m, 'down', { enemy: e2.name }); }
-      else this._note(`🪓 …but the follow-through misses ${e2.name}.`, r2.sound);
-      this._echoToTable(r2.sound);
+    const struck = new Set();
+    let target = e, bonus = false, kills = 0;
+    const MAX = 24;   // safety cap so a freak run can't loop forever
+    for (let swings = 0; target && swings < MAX; swings++) {
+      struck.add(target.uid);
+      const r = this._swingVsAC(m, this._enemyAC(target) + (bonus ? 2 : 0), target);
+      let downed = false;
+      if (r.hit) {
+        this._dmgE(target, r.damage); downed = target.hp <= 0;
+        this._note(`🪓 ${m.nickname} ${bonus ? '…cleaves on into' : 'cleaves'} ${target.name} for ${r.damage}.${this._afterEnemyHit(target)}`, r.sound);
+        if (downed) { kills++; this._tryBanter(m, 'down', { enemy: target.name }); }
+      } else {
+        this._note(`🪓 ${m.nickname}'s ${bonus ? 'follow-through' : 'cleave'} misses ${target.name}. ${this._atkStr(r)}`, r.sound);
+      }
+      this._echoToTable(r.sound);
+      // Continue if this swing FELLED a foe (Great Cleave chain), or — once — to
+      // grant the standard single follow-through after the primary connects.
+      const keepGoing = downed || (r.hit && !bonus);
+      bonus = true;
+      if (!keepGoing) break;
+      target = this.livingEnemies().find(x => !struck.has(x.uid)) || null;
     }
+    if (kills >= 3) this._note(`🪓 ${m.nickname} carves clean through the line — ${kills} foes felled in one furious sweep!`);
   }
   // Feint: an opposed roll. On success the foe is flat-footed → a free
   // Sneak-Attack strike (the rogue's Sneak Attack rides on the denied defense).

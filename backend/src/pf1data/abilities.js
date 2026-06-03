@@ -128,10 +128,10 @@ const KITS = {
   // ── Martials (conditional maneuvers) ──
   fighter: { atwill: ATTACK('⚔️'), abilities: [
     { key: 'trip',   name: 'Trip',   icon: '🦵', cost: 'free', effect: 'trip',   target: 'enemy', desc: 'Attack to trip (no damage). On a hit the foe is knocked prone, loses its turn, and you get a free attack. Prone = +4 for everyone to hit it.' },
-    { key: 'cleave', name: 'Cleave', icon: '🪓', cost: 'free', effect: 'cleave', target: 'enemy', desc: 'Swing through — hit your target, then a second foe (−2).' },
+    { key: 'cleave', name: 'Cleave', icon: '🪓', cost: 'free', effect: 'cleave', target: 'enemy', desc: 'Swing through — hit your target, then a second foe (−2). Great Cleave: every foe you DROP grants another swing, chaining until you stop felling them.' },
   ] },
   barbarian: { atwill: ATTACK('⚔️'), abilities: [
-    { key: 'cleave', name: 'Cleave', icon: '🪓', cost: 'free', effect: 'cleave', target: 'enemy', acPen: 2, desc: 'Hit your target and a second foe (−2 to the second) — but drop your guard (−2 AC) this turn.' },
+    { key: 'cleave', name: 'Cleave', icon: '🪓', cost: 'free', effect: 'cleave', target: 'enemy', acPen: 2, desc: 'Hit your target and a second foe (−2) — every foe you DROP grants another swing, chaining until you stop felling them — but you drop your guard (−2 AC) this turn.' },
     { key: 'rage',   name: 'Rage',   icon: '😤', cost: 'free', freeAction: true, effect: 'buff', target: 'self', buff: { toHit: 2, dmg: 2, acPen: 2, save: 1 }, sticky: true, sound: S.rage, desc: 'Fly into a rage for the rest of the room (FREE action — still attack this turn): +2 to hit & damage and +1 Will, but −2 AC.' },
   ] },
   ranger: { atwill: ATTACK('🏹'), abilities: [
