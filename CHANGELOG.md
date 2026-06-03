@@ -19,6 +19,23 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-06-03 (night)
+
+### 🪚 Chainsaws, real Rage, bard spells & smarter buffs
+- **Tokala wields a Chainsaw** — a roaring **3d6 slashing** two-hander that
+  **crits on an 18**, with its own snarling sound.
+- **Barbarian Rage** now scales like PF1e (Greater at 11, Mighty at 20) and
+  pumps **Constitution → temporary HP** (e.g. **+20 HP at level 10**), on top of
+  the to-hit / damage / Will bonuses and −2 AC. The temp HP fades between rooms.
+- **Bards** learn **Cure Light Wounds** (1st) and **Cure Moderate Wounds** (2nd),
+  plus the 2nd-level buffs **Bull's Strength**, **Cat's Grace**, and **Bear's
+  Endurance** — single-ally, last the room — and now get a proper **spellbook**.
+- **Barbarians** are limited to **medium armor** (a breastplate), not full plate.
+- **AI casters** no longer waste a turn re-casting a non-stacking buff (Inspire,
+  Haste, Shield…) that's already up on the party.
+- The **Goblin Barbarian's taunt** now compels **everyone** — even your own
+  attack gets dragged onto him.
+
 ## 2026-06-03 (evening)
 
 ### ⚔️ Dungeon combat depth

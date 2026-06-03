@@ -398,6 +398,7 @@ const BOT_WEAPONS = {
   'Agu': 'rapier', 'Chef': 'battleaxe', 'Crisp': 'bite', 'Kai Ginn': 'glaive', 'Lirienne': 'repeatingcrossbow',
   'Rissa': 'claws', 'Taelys': 'sv98', 'Ulfred': 'voidshard', 'Vaughan': 'radiance', 'Duristan Silvio': 'lapua',
   'Holden': 'rapier', 'Rhyarca': 'rapier', 'Kovira': 'unarmed',   // Kovira (wizard) attacks with her Elemental Ray at-will
+  'Tokala': 'chainsaw',   // 3d6 slashing two-hander, crits on 18
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 

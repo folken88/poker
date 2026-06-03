@@ -1258,7 +1258,17 @@ class Dungeon {
     //    bane, divine favor, inspire). Sticky guard stops re-casting.
     const smite = avail.find(a => a.effect === 'smite' && !m.smiteActive);
     if (smite) return { slot: slot(smite), payload: {} };
-    const buff = avail.find(a => a.effect === 'buff' && a.sticky && !(m.buffApplied && m.buffApplied[a.key]));
+    // Don't waste a turn re-casting a NON-STACKING buff that's already up. A buff
+    // is "fully up" when every recipient already has it: the whole party for a
+    // party buff (Inspire/Prayer/Bless), or the caster for a self buff (Rage/
+    // Shield). Single-ally buffs (Bull's/Cat's/Bear's) are gated by their once-
+    // per-room use instead, so they fall through to the find naturally.
+    const buffFullyUp = (a) => {
+      const flag = a.persist ? 'runBuffApplied' : 'buffApplied';
+      const recips = a.party ? this.livingParty() : (a.target === 'ally' ? [] : [m]);
+      return recips.length > 0 && recips.every(w => w[flag] && w[flag][a.key]);
+    };
+    const buff = avail.find(a => a.effect === 'buff' && a.sticky && !buffFullyUp(a));
     if (buff) return { slot: slot(buff), payload: {} };
     // 2a) Taunt — a barbarian roars to pull a pack's fire onto themselves (once
     //     per room, only worth it against 2+ foes).
@@ -1525,7 +1535,7 @@ class Dungeon {
       cleave:      () => this._abCleave(m, ab, payload),
       feint:       () => this._abFeint(m, payload),
       reckless:    () => this._abReckless(m, payload),
-      buff:        () => this._abBuff(m, ab),
+      buff:        () => this._abBuff(m, ab, payload),
       taunt:       () => this._abTaunt(m, ab),
       smite:       () => this._abSmite(m, ab),
       heal:        () => this._abHeal(m, ab),
@@ -1565,6 +1575,7 @@ class Dungeon {
     m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
     m.abilityUses = {};
     for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1);
+    if (m.tempHp) { m.maxHp -= m.tempHp; if (m.hp > m.maxHp) m.hp = m.maxHp; m.tempHp = 0; }   // rage / Bear's Endurance temp HP fades
     m.buffs = null;          // rage / bane / divine favor / inspire clear
     m.buffApplied = {};      // which sticky buffs are already active (no stacking)
     m.smiteActive = false;
@@ -2046,7 +2057,45 @@ class Dungeon {
     this._echoToTable(sound);
   }
   // Sticky room buff (Rage / Judgment / Bane / Inspire). `party` spreads it.
-  _abBuff(m, ab) {
+  // Grant temporary HP (rage's / Bear's Endurance's Con bonus) — boosts current
+  // AND max HP; reverted when the buff ends (room reset, see _resetAbilities).
+  _grantTempHp(who, amount) {
+    if (!amount) return;
+    who.tempHp = (who.tempHp || 0) + amount;
+    who.maxHp += amount; who.hp += amount;
+  }
+  // Pick the single ally a target:'ally' buff lands on — the player's chosen one,
+  // else a bot picks by intent (most-hurt for Bear's, a martial for Bull's…).
+  _buffTarget(m, ab, payload) {
+    const allies = this.livingParty();
+    if (payload && payload.targetUid) { const t = allies.find(a => a.playerId === payload.targetUid); if (t) return t; }
+    const MARTIAL = ['fighter', 'barbarian', 'paladin', 'antipaladin', 'ranger', 'rogue', 'magus', 'cavalier', 'monk', 'inquisitor'];
+    if (ab.key === 'bearsendurance') return allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
+    if (ab.key === 'catsgrace')      return allies.find(a => a.cls === 'ranger' || a.cls === 'rogue') || allies.find(a => MARTIAL.includes(a.cls)) || m;
+    if (ab.key === 'bullsstrength')  return allies.find(a => MARTIAL.includes(a.cls) && a.playerId !== m.playerId) || allies.find(a => MARTIAL.includes(a.cls)) || m;
+    return m;
+  }
+  _abBuff(m, ab, payload) {
+    const sound = ab.sound || pick(SND.flesh);
+    const lvl = m.level || 1;
+    // RAGE — scales like PF1e (Greater at 11, Mighty at 20) and pumps Con → HP.
+    if (ab.key === 'rage') {
+      m.buffApplied = m.buffApplied || {};
+      if (m.buffApplied.rage) return;   // already raging this room
+      m.buffApplied.rage = true;
+      const mod = lvl >= 20 ? 4 : lvl >= 11 ? 3 : 2;   // +8/+6/+4 Str & Con → +4/+3/+2 mod
+      m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+      m.buffs.toHit += mod;          // Strength to hit
+      m.buffs.dmg   += mod + 1;      // Strength to damage (+1 for a two-hander)
+      m.buffs.save  += mod;          // morale bonus to Will
+      m.buffs.acPen += 2;            // −2 AC while raging
+      const hp = mod * lvl;          // +Con mod per Hit Die
+      this._grantTempHp(m, hp);
+      const tier = lvl >= 20 ? 'MIGHTY ' : lvl >= 11 ? 'GREATER ' : '';
+      this._note(`😤 ${m.nickname} flies into a ${tier}RAGE — +${mod} hit, +${mod + 1} dmg, +${mod} Will, +${hp} HP (${m.hp}/${m.maxHp}), −2 AC!`, sound);
+      this._echoToTable(sound);
+      return;
+    }
     const apply = (who) => {
       who.buffApplied = who.buffApplied || {};
       if (ab.sticky && who.buffApplied[ab.key]) return;   // already active this room — don't stack
@@ -2063,12 +2112,13 @@ class Dungeon {
       who.buffs.toHit += (ab.buff && ab.buff.toHit) || 0;
       who.buffs.dmg += (ab.buff && ab.buff.dmg) || 0;
       who.buffs.bonusDice += (ab.buff && ab.buff.bonusDice) || 0;
-      who.buffs.acPen += (ab.buff && ab.buff.acPen) || 0;   // rage: −2 AC (sticky)
-      who.buffs.ac += (ab.buff && ab.buff.ac) || 0;         // magus Shield: +4 AC (sticky)
-      who.buffs.save += (ab.buff && ab.buff.save) || 0;     // rage: +1 saves
+      who.buffs.acPen += (ab.buff && ab.buff.acPen) || 0;   // rage handled above; here magus Shield etc.
+      who.buffs.ac += (ab.buff && ab.buff.ac) || 0;         // Shield / Cat's Grace: +AC (sticky)
+      who.buffs.save += (ab.buff && ab.buff.save) || 0;
+      if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
     };
-    const sound = ab.sound || pick(SND.flesh);
     if (ab.party) { for (const a of this.livingParty()) apply(a); this._note(`${ab.icon} ${m.nickname} strikes up ${ab.name} — the party is emboldened!`, sound); }
+    else if (ab.target === 'ally') { const t = this._buffTarget(m, ab, payload); apply(t); this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${t.nickname}.`, sound); }
     else { apply(m); this._note(`${ab.icon} ${m.nickname} uses ${ab.name}!`, sound); }
     this._echoToTable(sound);
   }

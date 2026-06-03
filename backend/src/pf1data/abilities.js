@@ -35,7 +35,7 @@ function smiteUses(level)   { return Math.max(1, Math.floor(Math.max(1, level) /
 // clerics are prepared casters (per-spell 'room' uses, 1× each per room). All
 // three are CASTERS, so the UI groups their spells under the Spellbook ▾.
 const POOL_CLASSES   = new Set(['sorcerer']);
-const CASTER_CLASSES = new Set(['wizard', 'sorcerer', 'cleric', 'druid']);
+const CASTER_CLASSES = new Set(['wizard', 'sorcerer', 'cleric', 'druid', 'bard']);
 
 // Spell-damage dice count from a level scale.
 function diceCount(ab, level) {
@@ -226,6 +226,11 @@ const KITS = {
     { key: 'slow',      name: 'Slow',            icon: '🐌', cost: 'room', uses: 1, minLevel: 7, slvl: 3, effect: 'slow', target: 'aoe', randN: 2, randDie: 4, maxTargets: 8, save: 'will', sound: S.slow, desc: 'Time drags for a RANDOM 2d4 foes — Will save or be SLOWED: sluggish (acts only every other turn) and easier to hit. (Bard 3rd-level spell.)' },
     { key: 'hideouslaughter', name: 'Hideous Laughter', icon: '😂', cost: 'free', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', slvl: 2, sound: S.hideous, desc: 'A foe collapses in helpless laughter — Will save or HELD (helpless, Sneak-Attackable). Each turn it may re-save to recover, but the attempt costs its turn.' },
     { key: 'fascinate', name: 'Fascinate',       icon: '🎵', cost: 'free', effect: 'fascinate', target: 'aoe', maxTargets: 3, sound: S.fascinate, desc: 'Up to 3 foes stand fascinated and lose their turns — until something hits them.' },
+    { key: 'curelight',    name: 'Cure Light Wounds',    icon: '💚', cost: 'room', uses: 1, slvl: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5,  target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5). (Bard 1st-level spell.)' },
+    { key: 'curemoderate', name: 'Cure Moderate Wounds', icon: '💚', cost: 'room', uses: 1, minLevel: 4, slvl: 2, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10). (Bard 2nd-level spell.)' },
+    { key: 'bullsstrength', name: "Bull's Strength",     icon: '💪', cost: 'room', uses: 1, minLevel: 4, slvl: 2, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'Bull-strong — one ally gets +2 to hit and +2 melee damage for the rest of the room.' },
+    { key: 'catsgrace',     name: "Cat's Grace",         icon: '🐈', cost: 'room', uses: 1, minLevel: 4, slvl: 2, effect: 'buff', target: 'ally', buff: { ac: 2, toHit: 1 }, sticky: true, sound: S.invoke, desc: 'Feline-quick — one ally gets +2 AC and +1 ranged to-hit (Dex) for the rest of the room.' },
+    { key: 'bearsendurance', name: "Bear's Endurance",   icon: '🐻', cost: 'room', uses: 1, minLevel: 4, slvl: 2, effect: 'buff', target: 'ally', buff: { conHp: 2 }, sticky: true, sound: S.invoke, desc: 'Bear-hardy — one ally gains temporary HP (+2 per level, from +4 Con) for the rest of the room.' },
   ] },
   // DRUID — prepared nature caster: one casting of each spell per room.
   druid: { atwill: ATTACK('🌿'), note: 'One casting of each spell, per room.', abilities: [
