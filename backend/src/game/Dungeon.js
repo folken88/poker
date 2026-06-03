@@ -45,7 +45,7 @@ const ABILITY_MOD = 4;
 const SNEAK_CLASSES = new Set(['rogue', 'ninja', 'slayer']);  // gain Sneak Attack
 const SNEAK_DICE_CAP = 5;     // cap precision dice so it stays flavorful, not silly
 const SMITE_TOHIT    = 2;     // paladin Smite Evil: to-hit bump vs an evil foe (+level dmg)
-const AFK_PASS_MS    = 10_000; // idle on your turn → auto-pass after 10s
+const AFK_PASS_MS    = 30_000; // idle on your turn → auto-ATTACK after 30s
 const ENEMY_STEP_MS  = 1000;   // ~1s pacing between auto-resolved enemy/ally turns (slowed slightly for readability)
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
@@ -387,7 +387,7 @@ class Dungeon {
     if (run.bless)      push('bless', 'Bless', '+1 to hit — whole dungeon');
     if (run.inspire)    push('inspire', 'Inspire Courage', 'allies +1 hit & damage — whole dungeon');
     if (m.smiteActive)  push('smite', 'Smite', '+hit & +2×level damage vs evil');
-    if (m.hasted)       push('haste', 'Haste', 'an extra attack next turn');
+    if (m.hasted > 0)   push('haste', 'Haste', `an extra attack each turn (${m.hasted} left)`);
     if (m.invisible)    push('invisible', 'Invisible', 'unseen — until you attack');
     if (m.judgment === 'destruction') push('judg_destruction', 'Judgement: Destruction', '+damage on your strikes');
     if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection', '+AC');
@@ -635,11 +635,20 @@ class Dungeon {
   }
   _armAfkTimer(m) {
     clearTimeout(this._turnTimer);
-    // Stamp when this human auto-skips, so their card can show a live countdown.
+    // Stamp when this human auto-acts, so their card can show a live countdown.
     m.afkDeadline = Date.now() + AFK_PASS_MS;
     this._turnTimer = setTimeout(() => {
       m.afkDeadline = null;
-      this._note(`💤 ${m.nickname} is idle — passes.`);
+      // Time's up → swing rather than waste the turn. (Class-aware target pick.)
+      const foes = this.livingEnemies();
+      if (foes.length) {
+        this._note(`⏱️ ${m.nickname} hesitates too long — auto-attacks!`);
+        const tgt = this._preferredFoe(m, foes);
+        if (tgt) this._playerAttack(m, tgt.uid);
+        this._hasteBonus(m);
+      } else {
+        this._note(`💤 ${m.nickname} is idle — passes.`);
+      }
       this._broadcast();
       this._nextTurn();
     }, AFK_PASS_MS);
@@ -1307,7 +1316,7 @@ class Dungeon {
     m.buffs = null;          // rage / bane / divine favor / inspire clear
     m.buffApplied = {};      // which sticky buffs are already active (no stacking)
     m.smiteActive = false;
-    m.hasted = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
+    m.hasted = 0; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
   }
@@ -1477,11 +1486,14 @@ class Dungeon {
   // their next turn (see _hasteBonus), consumed when they act. Lasts ~1 round.
   _abHaste(m, ab) {
     const sound = ab.sounds ? pick(ab.sounds) : ab.sound;
-    for (const a of this.livingParty()) a.hasted = true;
+    // Lasts 1 turn per 5 caster levels (rounded down, min 1). Each hasted turn
+    // grants one extra attack (see _hasteBonus, which decrements the counter).
+    const turns = Math.max(1, Math.floor((m.level || 1) / 5));
+    for (const a of this.livingParty()) a.hasted = turns;
     // The caster spent THIS turn casting — their own extra attack waits until
     // their next turn (so the cast plays the Haste sound, not an immediate swing).
     m._justHasted = true;
-    this._note(`${ab.icon} ${m.nickname} casts Haste — the whole party blurs with speed! (everyone gets an extra attack on their next turn)`, sound);
+    this._note(`${ab.icon} ${m.nickname} casts Haste — the party blurs with speed for ${turns} turn${turns > 1 ? 's' : ''}! (an extra attack each turn)`, sound);
     this._echoToTable(sound);
   }
   // Dispel Magic — strip the worst debuff off an afflicted ally (or self).
@@ -1515,9 +1527,9 @@ class Dungeon {
   // If `m` is hasted, spend it on one bonus attack against a living foe. Called
   // right after the member's normal action resolves (human + bot paths).
   _hasteBonus(m) {
-    if (!m || !m.hasted || m.hp <= 0 || m.left || m.dead) return;
+    if (!m || !(m.hasted > 0) || m.hp <= 0 || m.left || m.dead) return;
     if (m._justHasted) { m._justHasted = false; return; }   // cast Haste this turn → bonus starts next turn
-    m.hasted = false;
+    m.hasted -= 1;   // spend one of the hasted turns
     const foes = this.livingEnemies();
     if (!foes.length) return;
     const awake = foes.filter(e => !e.fascinated);

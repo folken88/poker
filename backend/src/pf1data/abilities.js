@@ -173,7 +173,7 @@ const KITS = {
     preparedSpell(SPELL.scorchingray,  3),
     preparedSpell(SPELL.holdperson,    3),
     preparedSpell(SPELL.dispelmagic,   5),
-    { key: 'haste', name: 'Haste', icon: '💨', cost: 'room', uses: 1, minLevel: 5, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — every ally gets one EXTRA attack on their next turn (in addition to their action).' },
+    { key: 'haste', name: 'Haste', icon: '💨', cost: 'room', uses: 1, minLevel: 5, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — every ally gets an EXTRA attack each turn for 1 turn per 5 caster levels (on top of their action).' },
     preparedSpell(SPELL.fireball,      5),
     preparedSpell(SPELL.lightningbolt, 5),
     preparedSpell(SPELL.coneofcold,    9),

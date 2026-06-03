@@ -21,6 +21,12 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-02
 
+### 💨 Haste duration & a smarter dungeon timer
+- **Haste** now lasts **1 turn per 5 caster levels** (rounded down) — each hasted
+  turn grants an extra attack, instead of just one.
+- The dungeon **turn timer** is extended to **30 seconds**, and when it runs out
+  you now **auto-attack** the best target instead of just passing the turn.
+
 ### 🧹 Status polish & quality-of-life
 - Dungeon **buffs** now sit **top-left** of a hero card (debuffs top-right), and
   **hovering any status icon** shows its **name + a short summary** of what it does.
