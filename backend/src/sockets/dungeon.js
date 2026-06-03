@@ -150,6 +150,19 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     ack?.({ ok: true });
   });
 
+  // Bail out of the FIGHT but keep WATCHING — banks your gold, leaves the run,
+  // and stays in the dungeon room as a spectator (you can re-Join later).
+  socket.on('dungeon:bailWatch', (_p, ack) => {
+    const me = meOf();
+    if (!me) return ack?.({ ok: false, error: 'no player' });
+    const d = dungeons.get(tableIdOf());
+    if (!d) return ack?.({ ok: false, error: 'no dungeon' });
+    if (d.hasMember(me.player_id)) { try { d.bail(me.player_id); } catch (_) {} }
+    socket.join(d.roomName());               // ensure we keep receiving state + voices
+    socket.data.dungeonSpectator = true;     // now a heckler
+    ack?.({ ok: true, state: d.publicState() });
+  });
+
   socket.on('dungeon:leave', (_p, ack) => {
     const me = meOf();
     if (me) {

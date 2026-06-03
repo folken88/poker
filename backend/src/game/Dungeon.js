@@ -36,6 +36,10 @@ const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
 const SICKENED_PENALTY = 2;
 const PARALYZE_DC = 14;
+// A flying creature holds the "high ground" over grounded foes: +1 to hit them,
+// +2 AC against their attacks. (Heroes are always grounded.)
+const HIGH_GROUND_HIT = 1;
+const HIGH_GROUND_AC  = 2;
 // We don't roll ability scores — instead every character is assumed to have an 18
 // in their attack stat, granting the standard +4 ability modifier to hit AND to
 // damage (the latter doubles on a crit, like any static damage mod in PF1e). This
@@ -111,8 +115,8 @@ const MON = {
   dire_ape:          { name: 'Dire Ape',          glyph: '🦍', cr: '3',   hp: 30,  ac: 15, toHit: 7,  dmgDie: 6,  dmgBonus: 5,  fort: 7,  reflex: 5,  attacks: 2, gold: [22, 48] },
   ettercap:          { name: 'Ettercap',          glyph: '🕸️', cr: '3',   hp: 30,  ac: 16, toHit: 5,  dmgDie: 8,  dmgBonus: 3,  fort: 5,  reflex: 5,  attacks: 2, gold: [24, 52] },
   dire_boar:         { name: 'Dire Boar',         glyph: '🐗', cr: '4',   hp: 51,  ac: 15, toHit: 12, dmgDie: 8,  dmgBonus: 12, fort: 9,  reflex: 5,  gold: [34, 72] },                                 // gore 1d8+12
-  harpy:             { name: 'Harpy',             glyph: '🦅', cr: '4',   hp: 38,  ac: 15, toHit: 9,  dmgDie: 8,  dmgBonus: 1,  fort: 2,  reflex: 7,  attacks: 2, gold: [34, 72] },
-  gargoyle:          { name: 'Gargoyle',          glyph: '🪨', cr: '4',   hp: 42,  ac: 16, toHit: 9,  dmgDie: 6,  dmgBonus: 4,  fort: 5,  reflex: 6,  attacks: 2, gold: [36, 78] },
+  harpy:             { name: 'Harpy',             glyph: '🦅', cr: '4',   hp: 38,  ac: 15, toHit: 9,  dmgDie: 8,  dmgBonus: 1,  fort: 2,  reflex: 7,  attacks: 2, gold: [34, 72], flying: true },
+  gargoyle:          { name: 'Gargoyle',          glyph: '🪨', cr: '4',   hp: 42,  ac: 16, toHit: 9,  dmgDie: 6,  dmgBonus: 4,  fort: 5,  reflex: 6,  attacks: 2, gold: [36, 78], flying: true },
   minotaur:          { name: 'Minotaur',          glyph: '🐂', cr: '4',   hp: 45,  ac: 14, toHit: 9,  dmgDie: 6,  dmgCount: 3, dmgBonus: 6, fort: 6, reflex: 5, gold: [38, 80], atkSound: '/audio/enemy_yak.mp3' },   // greataxe 3d6+6 — angry bovine bellow
   basilisk:          { name: 'Basilisk',          glyph: '🐍', cr: '5',   hp: 52,  ac: 16, toHit: 9,  dmgDie: 8,  dmgBonus: 4,  fort: 7,  reflex: 4,  paralyze: true, paralyzeDC: 13, gold: [42, 90] },  // petrifying gaze → "turned to stone, lose a turn"
   winter_wolf:       { name: 'Winter Wolf',       glyph: '🐺', cr: '5',   hp: 57,  ac: 18, toHit: 11, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  gold: [44, 95] },
@@ -120,7 +124,7 @@ const MON = {
   wood_golem:        { name: 'Wood Golem',        glyph: '🪵', cr: '6',   hp: 58,  ac: 21, toHit: 10, dmgDie: 8,  dmgCount: 2, dmgBonus: 5, fort: 2, reflex: 2, attacks: 2, gold: [55, 115] },         // two 2d8+5 slams; golem-poor saves
   bog_brute:         { name: 'Bog Brute',         glyph: '🌿', cr: '6',   hp: 65,  ac: 17, toHit: 12, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 4,  attacks: 2, gold: [55, 115] },
   dire_bear:         { name: 'Dire Bear',         glyph: '🐻', cr: '7',   hp: 84,  ac: 17, toHit: 16, dmgDie: 8,  dmgBonus: 10, fort: 13, reflex: 9, attacks: 2, gold: [70, 150], art: '/dungeon/monsters/dire_bear.webp' },
-  chimera:           { name: 'Chimera',           glyph: '🦁', cr: '7',   hp: 76,  ac: 19, toHit: 11, dmgDie: 8,  dmgBonus: 4,  fort: 10, reflex: 6, attacks: 2, gold: [75, 160] },
+  chimera:           { name: 'Chimera',           glyph: '🦁', cr: '7',   hp: 76,  ac: 19, toHit: 11, dmgDie: 8,  dmgBonus: 4,  fort: 10, reflex: 6, attacks: 2, gold: [75, 160], flying: true },
   hill_giant:        { name: 'Hill Giant',        glyph: '🪓', cr: '7',   hp: 85,  ac: 21, toHit: 16, dmgDie: 8,  dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 3, gold: [80, 165] },                   // greatclub 2d8+10
   medusa:            { name: 'Medusa',            glyph: '🐍', cr: '7',   hp: 76,  ac: 15, toHit: 9,  dmgDie: 4,  dmgBonus: 2,  fort: 6,  reflex: 8,  attacks: 2, paralyze: true, paralyzeDC: 15, gold: [80, 165] },  // petrifying gaze
   stone_giant:       { name: 'Stone Giant',       glyph: '🗿', cr: '8',   hp: 102, ac: 24, toHit: 17, dmgDie: 8,  dmgCount: 2, dmgBonus: 12, fort: 12, reflex: 5, gold: [95, 190] },                  // greatclub 2d8+12
@@ -473,6 +477,7 @@ class Dungeon {
       })),
       enemies: this.enemies.map(e => ({
         uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
+        flying: !!e.flying,
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
         align: e.align || 'NE', evil: !!e.evil, flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated,
         conditions: e.hp > 0 ? this._condList(e) : [],
@@ -598,6 +603,7 @@ class Dungeon {
       shout: base.shout || null,           // special shout attack (e.g. Skeletal Champion)
       shoutsLeft: base.shout ? 2 : 0,
       resist: base.resist || null,         // energy resistances / vulnerabilities (see RESIST_BY_KEY)
+      flying: !!base.flying,               // airborne: immune to prone + "high ground" vs grounded foes
       slowed: 0, _slowTick: 0,             // Slow spell: sluggish for N rounds, acts every other turn
       gold: rint(base.gold[0], base.gold[1]),
     };
@@ -1000,7 +1006,8 @@ class Dungeon {
   }
   _monsterSwing(e, targetAC) {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
-    const toHit = e.toHit - sick;
+    // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
+    const toHit = e.toHit - sick + (e.flying ? HIGH_GROUND_HIT : 0);
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
@@ -1513,7 +1520,9 @@ class Dungeon {
   _saveVs(bonus, dc) { const r = dRoll(20); return { roll: r, total: r + bonus, saved: r === 20 ? true : r === 1 ? false : (r + bonus) >= dc }; }
   _afterEnemyHit(e) { if (e.hp <= 0) return ' ☠️'; return ` (${Math.max(0, e.hp)}/${e.maxHp})`; }
   // Effective melee AC of an enemy: sickened = +2 to be hit, prone = +4 to be hit.
-  _enemyAC(e) { return e.ac - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0) - (e.slowed > 0 ? 1 : 0); }
+  // A flying creature holds the HIGH GROUND over the grounded party: +2 AC (hard
+  // to reach a flyer from the floor). All heroes are grounded, so it always applies.
+  _enemyAC(e) { return e.ac - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0) - (e.slowed > 0 ? 1 : 0) + (e.flying ? HIGH_GROUND_AC : 0); }
   // Energy-resistance multiplier for a damage type (see RESIST_BY_KEY): 0 immune,
   // 0.5 resistant, 1.5 vulnerable, 1 (default) unchanged. Physical/untyped (no
   // dtype) is never modified.
@@ -1803,6 +1812,7 @@ class Dungeon {
     const lbl = saveType === 'fort' ? 'Fort' : saveType === 'will' ? 'Will' : 'Ref';
     const sound = ab.sound || pick(SND.flesh), parts = [];
     for (const e of chosen) {
+      if (e.flying) { parts.push(`${e.name}: airborne — can't be tripped (immune to prone)`); continue; }
       const sv = this._saveVs(this._enemySave(e, saveType), dc);
       if (!sv.saved) { e.prone = true; e.loseTurn = true; }
       parts.push(`${e.name}: ${lbl} ${sv.total} vs ${dc} ${sv.saved ? 'stays up' : 'KNOCKED prone'}`);
@@ -1923,6 +1933,7 @@ class Dungeon {
   _abTrip(m, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     if (e.noTrip) { this._note(`${m.nickname} can't trip ${e.name} (no legs).`); return this._echoToTable(); }
+    if (e.flying)  { this._note(`${m.nickname} can't trip ${e.name} — it's airborne, immune to prone.`); return this._echoToTable(); }
     m.weapon = weaponOf(m.gear, m.weaponKey);
     const a = this._attackRoll(m, e);
     if (!a.hit) { this._note(`🦵 ${m.nickname} tries to trip ${e.name} but misses. [d20 ${a.roll} ${this._fmtBonus(a.toHit)} = ${a.total} vs AC ${this._enemyAC(e)}]`, a.weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword)); return this._echoToTable(); }

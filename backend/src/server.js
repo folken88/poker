@@ -51,13 +51,20 @@ app.get('/api/tables', (_req, res) => {
   // side, never sockets). Lets the deploy watcher hold a rebuild until every
   // human has actually disconnected, not just left their seat.
   const connectedClients = (io && io.engine && io.engine.clientsCount) || 0;
-  res.json([...tables.values()].map(t => ({
-    id: t.id,
-    seated: t.seats.filter(s => !s.isEmpty()).length,
-    humans: t.seats.filter(s => !s.isEmpty() && !s.isBot).length,
-    handActive: !!t.hand,
-    connectedClients,
-  })));
+  res.json([...tables.values()].map(t => {
+    const d = dungeons.get(t.id);
+    return {
+      id: t.id,
+      seated: t.seats.filter(s => !s.isEmpty()).length,
+      humans: t.seats.filter(s => !s.isEmpty() && !s.isBot).length,
+      handActive: !!t.hand,
+      // A run is "active" until it's over — lets the deploy watcher hold a
+      // rebuild until BOTH the hand is between deals AND the delve has wrapped.
+      dungeonActive: !!(d && d.status && d.status !== 'over'),
+      dungeonHumans: d ? d.party.filter(m => !m.isBot && !m.left && !m.dead).length : 0,
+      connectedClients,
+    };
+  }));
 });
 
 // Recent sounds emitted to clients + a play-count tally, for diagnosing an

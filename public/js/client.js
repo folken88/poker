@@ -712,6 +712,18 @@
       if (resp && resp.ok === false && resp.error) toast(resp.error, true);
     });
   }
+  // Bail out of the fight but keep watching — banks gold, drops to spectator,
+  // stays on the dungeon screen. (_spectating is set first so the dungeon:exit
+  // our own bail triggers won't bounce us back to the poker table.)
+  function bailToSpectate() {
+    _spectating = true; _dungeonSel = [];
+    socket.emit('dungeon:bailWatch', null, (resp) => {
+      if (!resp?.ok) { _spectating = false; toast(resp?.error || 'Could not bail.', true); renderDungeon(); return; }
+      if (resp.state) state.dungeon = resp.state;
+      toast('👁 Bailed out — you bank your gold and keep watching.');
+      renderDungeon();
+    });
+  }
   function returnFromDungeon() {
     // Spectators never left their seat and aren't combatants — just drop out of
     // the dungeon room and go back to the table view (no bail, no re-seat).
@@ -780,6 +792,9 @@
   socket.on('dungeon:exit', (exit) => {
     // Per-player now: only surface back to the table if this exit is MINE.
     if (!exit || exit.playerId !== state.me?.player_id) return;
+    // If I chose to bail-but-keep-watching, my own bail's exit shouldn't yank me
+    // back to the poker table — stay on the dungeon screen as a spectator.
+    if (_spectating) { renderDungeon(); return; }
     state.dungeonExit = exit;
     if (document.body.dataset.screen === 'dungeon') renderDungeon();
     setTimeout(() => {
@@ -848,7 +863,7 @@
             : `<div class="dmon__glyph">${e.glyph || '❓'}${e.boss ? ' 👑' : ''}</div>`;
           return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''}" data-enemy="${escapeAttr(e.uid)}" ${dead ? 'disabled' : ''}>
             ${portrait}
-            <div class="dmon__name">${escapeText(e.name)}</div>
+            <div class="dmon__name">${escapeText(e.name)}${e.flying ? ` <span class="dmon__fly" title="Flying — immune to prone (can't be tripped); holds the high ground: +1 to hit and +2 AC vs grounded heroes">🪽</span>` : ''}</div>
             ${condIcons(e.conditions)}
             <div class="dmon__hpbar"><span style="width:${pct}%"></span></div>
             <div class="dmon__hp">${dead ? '☠️' : `${e.hp}/${e.maxHp}`}${e.cr ? ` · CR ${e.cr}` : ''}</div>
@@ -927,9 +942,13 @@
 
     const acts = $('#dungeonActions');
     if (acts && _spectating) {
+      const canJoin = d.status !== 'over';
       acts.innerHTML =
         `<div class="dungeon__actstatus dungeon__spectating">👁 Spectating ${escapeText((d.party || []).filter(m => !m.left).map(m => m.nickname).join(', ')) || 'the run'} — you can heckle in chat below.</div>` +
-        `<div class="dungeon__actrow"><button class="btn btn--ghost btn--sm" data-dact="leave">↩ Back to the table</button></div>`;
+        `<div class="dungeon__actrow">` +
+          (canJoin ? `<button class="btn btn--primary btn--sm" data-dact="join" title="Leave your poker seat and join the delve">⚔️ Join the delve</button>` : '') +
+          `<button class="btn btn--ghost btn--sm" data-dact="leave">↩ Back to the table</button>` +
+        `</div>`;
     } else if (acts) {
       const me = (d.party || []).find(m => m.playerId === meId) || {};
       if (d.status === 'over') {
@@ -1023,7 +1042,7 @@
           `</div>` +
           `<div class="dungeon__actrow dungeon__actrow--nav">` +
             B('door', '🚪 Open door', !combat && !rolling, !combat) +
-            B('bail', '🏃 Bail', true, false) +
+            `<button class="btn btn--ghost" data-dact="spectate" title="Bank your gold and leave the fight — but keep watching from the sidelines">👁 Spectate</button>` +
           `</div>`;
       }
     }
@@ -1100,6 +1119,8 @@
     else if (act === 'ability') { dungeonAction('ability', { slot: Number(b.dataset.slot) || 0, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6) }); _spellbookOpen = false; }
     else if (act === 'door')    dungeonAction('door');
     else if (act === 'bail')    dungeonAction('bail');
+    else if (act === 'join')    enterDungeon();        // spectator → combatant
+    else if (act === 'spectate') bailToSpectate();     // combatant → spectator (keeps watching)
     else if (act === 'leave')   returnFromDungeon();
     if (act === 'attack' || act === 'ability') _dungeonSel = [];
   });
