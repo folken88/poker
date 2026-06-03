@@ -366,7 +366,7 @@ const BOT_CLASSES = {
   'Sirona': 'paladin', 'Gaspar': 'inquisitor', 'Tar Baphon': 'wizard', 'Bujon, Storm of Cheliax': 'sorcerer',
   'Kelda': 'rogue', 'Kate Blackwood': 'magus', 'Toni': 'magus', 'Adimarus': 'antipaladin',
   'Rhyarca': 'cleric', 'Conchobar': 'bard', 'Nomkath': 'rogue', 'Lou Candlebean': 'cavalier',
-  'Elodie': 'bard', 'Dismas': 'paladin', 'Vorkstag': 'alchemist', 'Estovion': 'wizard',
+  'Elodie': 'bard', 'Dismas': 'paladin', 'Vorkstag': 'rogue', 'Estovion': 'wizard',
   'Auren Vrood': 'wizard', 'Casandalee': 'wizard', 'Meyanda': 'cleric', 'Daramid': 'wizard',
   'Kovira': 'wizard', 'Tokala': 'barbarian', 'Mr. Brow': 'investigator', 'Tamsin': 'bard',
   'Concetta': 'swashbuckler', 'Farrah': 'sorcerer', 'Fera': 'rogue',
