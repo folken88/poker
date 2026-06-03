@@ -1307,7 +1307,7 @@ class Dungeon {
     m.buffs = null;          // rage / bane / divine favor / inspire clear
     m.buffApplied = {};      // which sticky buffs are already active (no stacking)
     m.smiteActive = false;
-    m.hasted = false; m.stunned = 0;   // transient round effects clear each room
+    m.hasted = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
   }
@@ -1478,6 +1478,9 @@ class Dungeon {
   _abHaste(m, ab) {
     const sound = ab.sounds ? pick(ab.sounds) : ab.sound;
     for (const a of this.livingParty()) a.hasted = true;
+    // The caster spent THIS turn casting — their own extra attack waits until
+    // their next turn (so the cast plays the Haste sound, not an immediate swing).
+    m._justHasted = true;
     this._note(`${ab.icon} ${m.nickname} casts Haste — the whole party blurs with speed! (everyone gets an extra attack on their next turn)`, sound);
     this._echoToTable(sound);
   }
@@ -1513,6 +1516,7 @@ class Dungeon {
   // right after the member's normal action resolves (human + bot paths).
   _hasteBonus(m) {
     if (!m || !m.hasted || m.hp <= 0 || m.left || m.dead) return;
+    if (m._justHasted) { m._justHasted = false; return; }   // cast Haste this turn → bonus starts next turn
     m.hasted = false;
     const foes = this.livingEnemies();
     if (!foes.length) return;
