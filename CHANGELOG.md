@@ -21,6 +21,13 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-02
 
+### ✅ Buffs show on heroes
+- Heroes now display their **active buffs** as a green-ringed icon strip on the
+  token (debuffs stay red up top): **Rage, Shield, Divine Favor, Bane, Prayer,
+  Bless, Inspire Courage, Smite, Haste, Invisibility**, and the three Inquisitor
+  **Judgements**. Hover any icon for its name. Art sourced from the Foundry icon
+  library.
+
 ### 🎲 Sound variety, Druids, Dispel & spookier undead
 - **Fireball** and **Lightning Bolt** now **alternate between several sound
   variants** each cast (no more identical boom on repeat); Haste does too.

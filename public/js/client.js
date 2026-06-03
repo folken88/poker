@@ -805,6 +805,14 @@
       `<img class="dcond__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(c.label)}" loading="lazy" />`
     ).join('') + `</div>`;
   }
+  // A strip of active BUFF icons (rage / shield / bless / smite / judgement…) along
+  // the bottom of a hero token — green ring marks a boon (vs the red debuff ring).
+  function buffIcons(list) {
+    if (!list || !list.length) return '';
+    return `<div class="dbuff">` + list.map(c =>
+      `<img class="dbuff__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(c.label)}" loading="lazy" />`
+    ).join('') + `</div>`;
+  }
   // Live-tick the dungeon auto-skip countdown badges (set by renderDungeon) so
   // the seconds visibly tick down between server state updates. Started once.
   setInterval(() => {
@@ -864,7 +872,7 @@
       return `<div class="${cls.join(' ')}">
         <div class="dpc__avatar">${renderAvatar(m.avatarId)}</div>${afk}
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${tag}</div>
-        ${condIcons(m.conditions)}
+        ${condIcons(m.conditions)}${buffIcons(m.buffs)}
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
         <div class="dpc__hp">${hpText}</div>
       </div>`;

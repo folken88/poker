@@ -335,7 +335,7 @@ class Dungeon {
       // Per-RUN state (persists across rooms, NOT refreshed by _resetAbilities):
       //   runAbilityUses — 'run'-cost abilities (Bless: once per whole dungeon)
       //   runBuffs       — run-long buffs (Bless's +1 to-hit) that never fade
-      runAbilityUses: {}, runBuffs: { toHit: 0, dmg: 0 },
+      runAbilityUses: {}, runBuffs: { toHit: 0, dmg: 0 }, runBuffApplied: {},
       left: false, dead: false,
     };
     for (const ab of kitFor(cls).abilities) {
@@ -371,6 +371,30 @@ class Dungeon {
     return c;
   }
 
+  // Active BUFFS on a hero, as Foundry-art icons for the dungeon UI. Sticky room
+  // buffs (rage/bane/divine favor/prayer/shield) come from buffApplied; run-long
+  // ones (bless/inspire) from runBuffApplied; smite/haste/invisible/judgement are
+  // their own flags.
+  _buffList(m) {
+    const I = '/dungeon/buffs/', c = [];
+    const push = (k, label) => c.push({ key: k, label, icon: `${I}${k}.webp` });
+    const ap = m.buffApplied || {}, run = m.runBuffApplied || {};
+    if (ap.rage)        push('rage', 'Rage');
+    if (ap.bane)        push('bane', 'Bane');
+    if (ap.divinefavor) push('divinefavor', 'Divine Favor');
+    if (ap.prayer)      push('prayer', 'Prayer');
+    if (ap.shield || (m.buffs && m.buffs.ac > 0)) push('shield', 'Shield');
+    if (run.bless)      push('bless', 'Bless');
+    if (run.inspire)    push('inspire', 'Inspire Courage');
+    if (m.smiteActive)  push('smite', 'Smite');
+    if (m.hasted)       push('haste', 'Haste');
+    if (m.invisible)    push('invisible', 'Invisible');
+    if (m.judgment === 'destruction') push('judg_destruction', 'Judgement: Destruction');
+    if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection');
+    if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing');
+    return c;
+  }
+
   // ── Broadcasting ──────────────────────────────────────────────────────────
   publicState() {
     return {
@@ -390,6 +414,7 @@ class Dungeon {
         // Auto-skip countdown — only for the human whose turn it currently is.
         afkAt: (this.status === 'combat' && !m.isBot && this._currentActorId() === m.playerId && m.afkDeadline) ? m.afkDeadline : null,
         conditions: (!m.dead && !m.left && m.hp > 0) ? this._condList(m) : [],
+        buffs: (!m.dead && !m.left && m.hp > 0) ? this._buffList(m) : [],
         smiteActive: !!m.smiteActive, buffed: !!(m.buffs && (m.buffs.toHit || m.buffs.dmg || m.buffs.bonusDice || m.buffs.ac)),
         kit: this._kitState(m),    // at-will + 2 abilities (+ remaining uses) for the action UI
       })),
@@ -1615,10 +1640,12 @@ class Dungeon {
       who.buffApplied = who.buffApplied || {};
       if (ab.sticky && who.buffApplied[ab.key]) return;   // already active this room — don't stack
       if (ab.sticky) who.buffApplied[ab.key] = true;
-      if (ab.persist) {   // Bless: a run-long buff that survives room resets (never fades)
+      if (ab.persist) {   // Bless / Inspire: a run-long buff that survives room resets (never fades)
         who.runBuffs = who.runBuffs || { toHit: 0, dmg: 0 };
         who.runBuffs.toHit += (ab.buff && ab.buff.toHit) || 0;
         who.runBuffs.dmg   += (ab.buff && ab.buff.dmg) || 0;
+        who.runBuffApplied = who.runBuffApplied || {};
+        who.runBuffApplied[ab.key] = true;
         return;
       }
       who.buffs = who.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
