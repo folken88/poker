@@ -133,7 +133,7 @@ const KITS = {
   barbarian: { atwill: ATTACK('⚔️'), abilities: [
     { key: 'cleave', name: 'Cleave', icon: '🪓', cost: 'free', effect: 'cleave', target: 'enemy', acPen: 2, desc: 'Hit your target and a second foe (−2) — every foe you DROP grants another swing, chaining until you stop felling them — but you drop your guard (−2 AC) this turn.' },
     { key: 'rage',   name: 'Rage',   icon: '😤', cost: 'free', freeAction: true, effect: 'buff', target: 'self', buff: { toHit: 2, dmg: 2, acPen: 2, save: 1 }, sticky: true, sound: S.rage, desc: 'Fly into a rage for the rest of the room (FREE action — still attack this turn): +2 to hit & damage and +1 Will, but −2 AC.' },
-    { key: 'taunt',  name: 'Taunt',  icon: '📢', cost: 'room', uses: 1, effect: 'taunt', target: 'aoe', save: 'will', sound: '/audio/taunt_creed.mp3', desc: 'A furious challenge — EVERY enemy must make a Will save or be forced to attack YOU on its next turn (drawing fire off your allies). Once per room.' },
+    { key: 'taunt',  name: 'Taunt',  icon: '📢', cost: 'room', uses: 1, effect: 'taunt', target: 'aoe', save: 'will', sounds: ['/audio/taunt_creed.mp3', '/audio/taunt_predator.mp3'], desc: 'A furious challenge — EVERY enemy must make a Will save or be forced to attack YOU on its next turn (drawing fire off your allies). Once per room.' },
   ] },
   ranger: { atwill: ATTACK('🏹'), abilities: [
     { key: 'rapidshot', name: 'Rapid Shot',    icon: '🏹', cost: 'free', effect: 'rapidshot', target: 'enemy', sound: S.bowmulti, desc: 'Loose 2 arrows this turn — each at −2 to hit.' },

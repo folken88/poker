@@ -97,6 +97,7 @@ const MON = {
   kobold_rogue:      { name: 'Kobold Rogue',      glyph: '🦎', cr: '1',   hp: 6,   ac: 16, toHit: 2,  dmgDie: 3,  dmgBonus: 0, fort: 1,  reflex: 4,  gold: [10, 24], attacks: 2, sneakDice: 2, evasion: true, atkSound: '/audio/fight_riki.mp3' }, // two 1d3 daggers + sneak attack; Evasion
   goblin_rogue:      { name: 'Goblin Rogue',      glyph: '👺', cr: '1/2', hp: 7,   ac: 15, toHit: 3,  dmgDie: 4,  dmgBonus: 1, fort: 1,  reflex: 5,  gold: [8, 20],  attacks: 1, sneakDice: 2, evasion: true, atkSound: '/audio/fight_riki.mp3' }, // dogslicer + Sneak Attack; Evasion
   goblin_shaman:     { name: 'Goblin Shaman',     glyph: '👺', cr: '1',   hp: 8,   ac: 13, toHit: 1,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 2,  gold: [12, 26], caster: 'holdperson', spellDC: 13 },          // Hold Person (Will DC 13) — sets up the rogues
+  goblin_barbarian:  { name: 'Goblin Barbarian',  glyph: '👺', cr: '1',   hp: 17,  ac: 14, toHit: 4,  dmgDie: 8,  dmgBonus: 4, fort: 4,  reflex: 2,  gold: [12, 28], taunt: { dc: 13, sound: '/audio/taunt_predator_goblin.mp3' } },   // raging goblin — roars a Taunt that pulls AI allies onto it
   skeleton:          { name: 'Skeleton',          glyph: '💀', cr: '1/3', hp: 5,   ac: 16, toHit: 2,  dmgDie: 6,  dmgBonus: 2, fort: 0,  reflex: 1,  gold: [8, 20] },
   giant_spider:      { name: 'Giant Spider',      glyph: '🕷️', cr: '1',   hp: 16,  ac: 14, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 4,  reflex: 4,  gold: [10, 26] },
   zombie:            { name: 'Zombie',            glyph: '🧟', cr: '1/2', hp: 12,  ac: 12, toHit: 4,  dmgDie: 6,  dmgBonus: 4, fort: 0,  reflex: 0,  gold: [10, 26] },
@@ -140,7 +141,7 @@ const MON = {
 const MON_ART = {
   dire_rat: 'dire_rat',
   kobold_spearman: 'kobold_spearman', kobold_shaman: 'kobold_shaman', kobold_rogue: 'kobold_rogue',
-  giant_centipede: 'centipede', goblin: 'goblin', kobold: 'kobold', skeleton: 'skeleton',
+  giant_centipede: 'centipede', goblin: 'goblin', goblin_barbarian: 'goblin', kobold: 'kobold', skeleton: 'skeleton',
   giant_spider: 'spider', zombie: 'zombie', ghoul: 'ghoul', cultist: 'cultist',
   // Undead with fresh Foundry token art (were emoji-only): a burning skull,
   // a fanged vampire lord, and a skeletal lich in his mitre.
@@ -191,6 +192,7 @@ const ALIGN_BY_KEY = {
   wight: 'LE', medusa: 'LE', barbed_devil: 'LE',
   // neutral evil
   goblin: 'NE', skeleton: 'NE', skeletal_champion: 'NE', zombie: 'NE', cultist: 'NE', ettercap: 'NE', winter_wolf: 'NE',
+  goblin_barbarian: 'CE',
   // chaotic evil
   ghoul: 'CE', ghast: 'CE', shadow: 'CE', ogre: 'CE', ettin: 'CE', minotaur: 'CE',
   hill_giant: 'CE', harpy: 'CE', gargoyle: 'CE', chimera: 'CE', abyssal_horror: 'CE',
@@ -604,6 +606,8 @@ class Dungeon {
       castsLeft: base.caster ? 2 : 0,
       shout: base.shout || null,           // special shout attack (e.g. Skeletal Champion)
       shoutsLeft: base.shout ? 2 : 0,
+      taunt: base.taunt || null,           // goblin barbarian: roars a taunt that pulls AI allies onto it
+      tauntsLeft: base.taunt ? 1 : 0,
       resist: base.resist || null,         // energy resistances / vulnerabilities (see RESIST_BY_KEY)
       flying: !!base.flying,               // airborne: immune to prone + "high ground" vs grounded foes
       evasion: !!base.evasion,             // rogues/monks: a made Reflex save vs an area effect = NO damage
@@ -732,7 +736,7 @@ class Dungeon {
       if (foes.length) {
         this._note(`⏱️ ${m.nickname} hesitates too long — auto-attacks!`);
         const tgt = this._preferredFoe(m, foes);
-        if (tgt) this._playerAttack(m, tgt.uid);
+        if (tgt) this._basicAttack(m, tgt.uid);
         this._hasteBonus(m);
       } else {
         this._note(`💤 ${m.nickname} is idle — passes.`);
@@ -1048,6 +1052,8 @@ class Dungeon {
         const awake = this._targetableParty().filter(m => !(m.stunned > 0) && !(m.paralyzed > 0));
         if (awake.length) return this._enemyShout(e, pick(awake));
       }
+      // Goblin Barbarian: roar a taunt (once) to pull the party's AI onto it.
+      if (e.taunt && e.tauntsLeft > 0 && this.livingParty().some(m => m.isBot)) return this._enemyTaunt(e);
     }
     // Melee — the kobold rogue stabs twice (1d3 each); everyone else swings once.
     // A taunted foe hammers the barbarian; otherwise re-pick a living, TARGETABLE
@@ -1135,9 +1141,35 @@ class Dungeon {
     this._echoToTable(snd);
     this._broadcast();
   }
+  // Goblin Barbarian's Taunt: a Predator-roar challenge. Every AI ally must make
+  // a Will save or be COMPELLED to attack the goblin on its next turn (humans
+  // keep their own agency — they just get rattled). Once per encounter.
+  _enemyTaunt(e) {
+    e.tauntsLeft -= 1;
+    const cfg = e.taunt || {};
+    const dc = cfg.dc || 13;
+    const snd = cfg.sound || null;
+    const parts = [];
+    for (const m of this.livingParty()) {
+      const sm = this._partySaveMod(m), sroll = dRoll(20), stot = sroll + sm;
+      const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
+      if (!saved && m.isBot) m.tauntedBy = e.uid;   // only AI allies are compelled
+      parts.push(`${m.nickname}: ${saved ? 'unmoved' : (m.isBot ? `📢 fixated on ${e.name}` : 'rattled (you still choose)')} [${stot} vs ${dc}]`);
+    }
+    this._note(`📢 ${e.glyph} ${e.name} roars a furious challenge — ${parts.join('; ')}!`, snd, { side: 'enemy' });
+    this._echoToTable(snd);
+    this._broadcast();
+  }
   _allyAct(m) {
     const foes = this.livingEnemies();
     if (!foes.length) return;
+    // Taunted by a goblin barbarian → drop the clever play and just go hit it.
+    if (m.tauntedBy && foes.some(e => e.uid === m.tauntedBy)) {
+      const tgt = this._preferredFoe(m, foes);   // returns + consumes the taunter
+      if (tgt) this._basicAttack(m, tgt.uid);
+      this._hasteBonus(m);
+      return;
+    }
     // First see if a class ability is the smart play this turn (heal, buff,
     // blast, spell). If so, use it; otherwise fall back to a basic attack.
     const choice = this._botAbility(m);
@@ -1149,7 +1181,7 @@ class Dungeon {
     }
     // Basic attack — class-aware target pick (see _preferredFoe).
     const tgt = this._preferredFoe(m, foes);
-    if (tgt) this._playerAttack(m, tgt.uid);
+    if (tgt) this._basicAttack(m, tgt.uid);
     this._hasteBonus(m);   // Haste: spend a pending extra attack after the action
   }
   // Which foe a bot should strike. ROGUES hunt the HELPLESS (flat-footed / prone
@@ -1158,6 +1190,12 @@ class Dungeon {
   // wastes the crowd-control), only hitting one if all living foes are out.
   _preferredFoe(m, foes) {
     if (!foes || !foes.length) return null;
+    // Taunted by a goblin barbarian → compelled to go straight for it (AI only).
+    if (m.tauntedBy) {
+      const t = foes.find(e => e.uid === m.tauntedBy);
+      m.tauntedBy = null;   // the compulsion is consumed by this turn's strike
+      if (t) return t;
+    }
     if (m.cls === 'rogue') {
       const helpless = foes.filter(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated);
       return (helpless.length ? helpless : foes).slice().sort((a, b) => a.hp - b.hp)[0];   // weakest sneakable foe
@@ -1444,16 +1482,20 @@ class Dungeon {
   // At-will: a weapon swing (martials) or a cantrip (full casters), every turn.
   _useAtwill(m, payload) {
     m.invisible = false;   // attacking (even a cantrip ray) breaks Invisibility
+    return this._basicAttack(m, payload.targetUid);
+  }
+  // The basic attack for any combatant (human input, bot turn, or AFK auto-swing)
+  // — a caster's cantrip ray, or a weapon swing. A barbarian's swing chain-cleaves
+  // (drops a foe → carve into a random next one). Chosen foe is first; chains random.
+  _basicAttack(m, targetUid) {
     const at = kitFor(m.cls).atwill;
-    if (at && at.effect === 'bolt') return this._abBolt(m, at, payload.targetUid);
-    // A barbarian's EVERY swing can chain-cleave: drop a foe and carve into a
-    // random next one. (The chosen foe is the first target; chains are random.)
+    if (at && at.effect === 'bolt') return this._abBolt(m, at, targetUid);
     if (m.cls === 'barbarian') {
-      const e = this.enemies.find(x => x.uid === payload.targetUid && x.hp > 0) || this.livingEnemies()[0];
+      const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
       if (e) return this._cleaveSweep(m, e, { followThrough: false });
       return;
     }
-    return this._playerAttack(m, payload.targetUid);
+    return this._playerAttack(m, targetUid);
   }
   // One of the class's abilities (slot index). Gates on level + cost:
   //   'pool' → spend a shared spell slot; 'room' → spend its own use; 'free' → unlimited.
@@ -1517,6 +1559,7 @@ class Dungeon {
     m.smiteActive = false;
     m.hasted = 0; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
+    m.tauntedBy = null;   // any pending goblin-taunt compulsion clears
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
   }
@@ -2018,7 +2061,7 @@ class Dungeon {
   // fire off the rest of the party. Once per room.
   _abTaunt(m, ab) {
     const dc = 10 + Math.floor((m.level || 1) / 2) + ABILITY_MOD;   // martial intimidation DC
-    const sound = ab.sound;
+    const sound = ab.sounds ? pick(ab.sounds) : ab.sound;   // alternate between the taunt yells
     const parts = [];
     for (const e of this.livingEnemies()) {
       const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
