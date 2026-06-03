@@ -146,6 +146,8 @@ const SPELL = {
   fly:           { key: 'fly',           name: 'Fly',            icon: '🪽', cost: 'pool', effect: 'buff', target: 'self', fly: true, slvl: 3, sticky: true, sound: S.invis, desc: 'Take to the air — grounded foes CANNOT reach you (immune to non-ranged attacks) for the rest of the room.' },
   coneofcold:    { key: 'coneofcold',    name: 'Cone of Cold',   icon: '🥶', cost: 'pool', effect: 'aoe', target: 'aoe', randBase: 2, randDie: 3, save: 'reflex', die: 6, dice: 'level', dcap: 15, minLevel: 9, dtype: 'cold', slvl: 5, sound: S.coldcone, desc: 'A blast of frost engulfs 2+1d3 foes — Reflex for half (level d6).' },
   disintegrate:  { key: 'disintegrate',  name: 'Disintegrate',   icon: '☢️', cost: 'pool', effect: 'disintegrate', target: 'enemy', maxTargets: 1, save: 'fort', die: 6, dice: 'level', dcap: 20, minLevel: 11, dtype: 'force', slvl: 6, sound: S.disintegrate, desc: 'A thin green ray — ranged touch attack, then 2d6 per caster level (max 40d6). Fort partial: a made save still takes 5d6. Reduced to 0 HP → disintegrated to dust.' },
+  firesnake:     { key: 'firesnake',     name: 'Fire Snake',     icon: '🐍', cost: 'pool', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, minLevel: 7, dtype: 'fire', slvl: 4, sounds: FIREBALL_SFX, desc: 'A serpent of flame weaves through up to 4 foes — 1d6 fire per caster level (max 15d6), Reflex for half.' },
+  stoneskin:     { key: 'stoneskin',     name: 'Stoneskin',      icon: '🪨', cost: 'pool', effect: 'buff', target: 'ally', buff: {}, dr: 10, slvl: 4, minLevel: 7, sticky: true, sound: S.invoke, desc: 'An ally\'s skin turns to stone — DR 10 against physical blows (melee/claws/chains) for the rest of the room.' },
 };
 const ATTACK = (icon) => ({ key: 'attack', name: 'Attack', icon: icon || '⚔️', effect: 'attack', target: 'enemy' });
 // A WIZARD's prepared spell: one casting per room (own 'room' use of 1).
@@ -231,6 +233,8 @@ const KITS = {
     preparedSpell(SPELL.slow,          5),
     preparedSpell(SPELL.fireball,      5),
     preparedSpell(SPELL.lightningbolt, 5),
+    preparedSpell(SPELL.firesnake,     7),
+    preparedSpell(SPELL.stoneskin,     7),
     preparedSpell(SPELL.coneofcold,    9),
     preparedSpell(SPELL.disintegrate,  11),
   ] },
@@ -250,6 +254,8 @@ const KITS = {
     spontaneousSpell(SPELL.fly,          6),
     spontaneousSpell(SPELL.slow,         6),
     spontaneousSpell(SPELL.fireball,     6),
+    spontaneousSpell(SPELL.firesnake,    8),
+    spontaneousSpell(SPELL.stoneskin,    8),
     spontaneousSpell(SPELL.coneofcold,   10),
     spontaneousSpell(SPELL.disintegrate, 12),
   ] },

@@ -73,6 +73,7 @@ const BUFF_META = {
   prayer:        { label: 'Prayer',          desc: 'allies +1 hit, damage & saves (this room)' },
   shield:        { label: 'Shield',          desc: '+4 AC (this room)' },
   shieldoffaith: { label: 'Shield of Faith', desc: '+2 deflection AC (this room)' },
+  stoneskin:     { label: 'Stoneskin',       desc: 'DR 10 vs physical blows (this room)' },
   catsgrace:     { label: "Cat's Grace",     desc: '+2 AC & +1 to hit — Dexterity (this room)' },
   bullsstrength: { label: "Bull's Strength", desc: '+2 hit & damage — Strength (this room)' },
   bearsendurance:{ label: "Bear's Endurance",desc: '+temporary HP — Constitution (this room)' },
@@ -1141,8 +1142,9 @@ class Dungeon {
       if (e.sneakDice && (target.paralyzed > 0 || target.flatFooted)) {
         const sn = dRollN(e.sneakDice, 6); dmg += sn; sneakTag = ` 🗡️+${sn} sneak!`;
       }
+      let drTag = ''; [dmg, drTag] = this._physDR(target, dmg);   // Stoneskin soaks physical blows
       target.hp -= dmg;
-      this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${dmg}.${sneakTag} ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
+      this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${dmg}.${sneakTag}${drTag} ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
       if (target.hp <= -10) { this._memberDown(target); this._echoToTable(r.sound); return; }   // dead at −10
       if (target.hp <= 0)   { this._downMember(target); this._echoToTable(r.sound); return; }    // 0..−9 = down/dying
       if (e.paralyze) {
@@ -1232,17 +1234,18 @@ class Dungeon {
       this._note(`⛓️ ${e.glyph} ${e.name} hurls its barbed chain at ${target.nickname} — the hook scrapes past. ${this._atkStr(r)}`, snd, { side: 'enemy' });
       this._echoToTable(snd); this._broadcast(); return;
     }
-    this._dmgToMember(target, r.damage);
+    const [hookDmg, hookDR] = this._physDR(target, r.damage);   // Stoneskin soaks the bite
+    this._dmgToMember(target, hookDmg);
     if (!target.dead && target.hp > -10) { target.grappled = true; target.grappledBy = e.uid; }
-    this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${r.damage} and drags them into a GRAPPLE! ${this._atkStr(r)} (Dispel or Grease to break free)`, snd, { side: 'enemy' });
+    this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR} and drags them into a GRAPPLE! ${this._atkStr(r)} (Dispel or Grease to break free)`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   }
   // Crush a hero the devil is already grappling — automatic chain damage.
   _enemyConstrict(e, target) {
     const cfg = e.hook || {};
-    const dmg = dRollN(2, 8) + 4;
+    const [dmg, drTag] = this._physDR(target, dRollN(2, 8) + 4);   // Stoneskin soaks the crush
     this._dmgToMember(target, dmg);
-    this._note(`⛓️ ${e.glyph} ${e.name}'s chains CRUSH the grappled ${target.nickname} for ${dmg}! (Dispel or Grease to break free)`, cfg.sound, { side: 'enemy' });
+    this._note(`⛓️ ${e.glyph} ${e.name}'s chains CRUSH the grappled ${target.nickname} for ${dmg}${drTag}! (Dispel or Grease to break free)`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
   }
   // Barbed Devil's Hellfire Blast — fire AoE on a random handful of heroes,
@@ -1497,6 +1500,14 @@ class Dungeon {
     if (m.hp <= -10) return this._memberDown(m);
     if (m.hp <= 0) return this._downMember(m);
   }
+  // Stoneskin DR vs PHYSICAL blows (melee swings, claws, chains — NOT energy/spells).
+  // Returns [reducedDamage, tag] where tag annotates how much the stone soaked.
+  _physDR(target, dmg) {
+    const dr = target.dr || 0;
+    if (dr <= 0) return [dmg, ''];
+    const soaked = Math.min(dmg, dr);
+    return [Math.max(0, dmg - dr), soaked > 0 ? ` 🪨−${soaked}` : ''];
+  }
   _downMember(m) {
     if (m.dead) return;
     if (!m.downed) {
@@ -1730,7 +1741,7 @@ class Dungeon {
     m.smiteActive = false;
     m.hasted = 0; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false;   // taunt / grapple / fire ward / flight clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0;   // taunt / grapple / fire ward / flight / stoneskin clear between rooms
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
   }
@@ -2241,6 +2252,7 @@ class Dungeon {
     if (ab.key === 'bearsendurance') return allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
     if (ab.key === 'catsgrace')      return allies.find(a => a.cls === 'ranger' || a.cls === 'rogue') || allies.find(a => MARTIAL.includes(a.cls)) || m;
     if (ab.key === 'bullsstrength')  return allies.find(a => MARTIAL.includes(a.cls) && a.playerId !== m.playerId) || allies.find(a => MARTIAL.includes(a.cls)) || m;
+    if (ab.key === 'stoneskin')      return allies.find(a => MARTIAL.includes(a.cls) && !a.flying && !a.dr) || allies.find(a => MARTIAL.includes(a.cls)) || m;   // shield the front-line melee
     return m;
   }
   _abBuff(m, ab, payload) {
@@ -2277,14 +2289,19 @@ class Dungeon {
       this._echoToTable(sound);
       return;
     }
+    // Inspire Courage scales with BARD level, PF1-style: +1, rising to +2/+3/+4
+    // at caster level 5 / 11 / 17. (`lvl` is the caster's level.)
+    const inspMod = lvl >= 17 ? 4 : lvl >= 11 ? 3 : lvl >= 5 ? 2 : 1;
     const apply = (who) => {
       who.buffApplied = who.buffApplied || {};
       if (ab.sticky && who.buffApplied[ab.key]) return;   // already active this room — don't stack
       if (ab.sticky) who.buffApplied[ab.key] = true;
       if (ab.persist) {   // Bless / Inspire: a run-long buff that survives room resets (never fades)
+        const tH = ab.key === 'inspire' ? inspMod : ((ab.buff && ab.buff.toHit) || 0);
+        const dG = ab.key === 'inspire' ? inspMod : ((ab.buff && ab.buff.dmg) || 0);
         who.runBuffs = who.runBuffs || { toHit: 0, dmg: 0 };
-        who.runBuffs.toHit += (ab.buff && ab.buff.toHit) || 0;
-        who.runBuffs.dmg   += (ab.buff && ab.buff.dmg) || 0;
+        who.runBuffs.toHit += tH;
+        who.runBuffs.dmg   += dG;
         who.runBuffApplied = who.runBuffApplied || {};
         who.runBuffApplied[ab.key] = true;
         return;
@@ -2297,6 +2314,7 @@ class Dungeon {
       who.buffs.ac += (ab.buff && ab.buff.ac) || 0;         // Shield / Cat's Grace: +AC (sticky)
       who.buffs.save += (ab.buff && ab.buff.save) || 0;
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
+      if (ab.dr) who.dr = Math.max(who.dr || 0, ab.dr);   // Stoneskin — DR vs physical blows
       if (ab.protectFire) who.protectFire = true;   // Protection from Fire — halves fire damage taken
       if (ab.fly) who.flying = true;                // Fly — grounded foes can't melee them
     };
@@ -2305,7 +2323,8 @@ class Dungeon {
       // Prayer floods the WHOLE battlefield — allies up, enemies down (−1 to hit,
       // damage & saves for the room). See _monsterSwing / _enemySave.
       if (ab.enemyPenalty) for (const e of this.livingEnemies()) e.prayed = Math.max(e.prayed || 0, ab.enemyPenalty);
-      this._note(`${ab.icon} ${m.nickname} ${ab.enemyPenalty ? `intones ${ab.name} — allies blessed, enemies cursed across the field` : `strikes up ${ab.name} — the party is emboldened`}!`, sound);
+      const inspTag = ab.key === 'inspire' ? ` (+${inspMod} to hit & damage)` : '';
+      this._note(`${ab.icon} ${m.nickname} ${ab.enemyPenalty ? `intones ${ab.name} — allies blessed, enemies cursed across the field` : `strikes up ${ab.name} — the party is emboldened`}${inspTag}!`, sound);
     }
     else if (ab.target === 'ally') { const t = this._buffTarget(m, ab, payload); apply(t); this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${t.nickname}.`, sound); }
     else { apply(m); this._note(`${ab.icon} ${m.nickname} uses ${ab.name}!`, sound); }
