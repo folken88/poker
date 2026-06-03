@@ -19,6 +19,34 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-06-03 (latest)
+
+### 🪄 The spellcaster overhaul
+- **Spell slots, the PF1e way.** Spontaneous casters (**sorcerer, bard, oracle**)
+  get **per-level spell slots** by their PF1 progression; **clerics** prepare from
+  a real per-level list; prepared **wizards/druids** cast each known spell once a
+  room. Slots refresh every room. The **spellbook** shows how many slots of each
+  level you have left, and **bard class features** (Inspire, Fascinate) now sit
+  **beside** the spellbook instead of inside it.
+- **Cleric spell list** filled out by level — Cure Light/Moderate/Serious/Critical,
+  **Shield of Faith**, Divine Favor, **Bless** (once a run), Hold Person,
+  Bull's/Bear's, **Prayer**, Searing Light, Dispel, **Protection from Fire**
+  (auto-cast when fire foes appear), and **Blessing of Fervor** (acts like Haste).
+- **Shield of Faith** now lands on the **ally with the lowest AC** — the one who
+  needs the +2 deflection most.
+- **Prayer** sweeps the **whole battlefield**: allies **+1** to hit/damage/saves,
+  enemies **−1**, for the rest of the room.
+- **Sorcerers & wizards** gain **Shield** (self-only **+4 AC** for the room) and
+  **Fly** (immune to non-ranged attacks, high-ground bonuses); sorcerers also pick
+  up Sleep, Cat's Grace, and Dispel Magic at the right levels.
+- **Acid Arrow keeps burning** — it deals acid **again each of the target's turns**
+  for **1 round per 3 caster levels**, not just on the hit.
+
+### 🖥️ Battlefield fit
+- The enemy field is now a **fixed-height box**: when a room gets crowded the
+  **cards shrink to fit** instead of pushing the action bar and **spellbook** off
+  the bottom of the screen — so you can always scroll to your higher-level spells.
+
 ## 2026-06-03 (late night)
 
 ### 😈 The Barbed Devil, a sniper & reference pages
