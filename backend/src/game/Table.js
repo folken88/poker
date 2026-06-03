@@ -695,12 +695,8 @@ class Table {
       if (line) this.chat('action', line);
 
       // ---- Abadar's interest ----
-      // Each turn a human takes counts toward Abadar's compound-interest clock;
-      // every 10 turns (poker or dungeon) the tab grows. Bots never owe.
-      if (!isBot) {
-        const intr = db.tickDebtTurn(playerId);
-        if (intr) this.chat('debt', `🏛️ Abadar's interest — ${nick}'s tab compounds ${intr.before.toLocaleString()} → ${intr.after.toLocaleString()} gp (+${intr.interest.toLocaleString()}).`);
-      }
+      // NOTE: the debt clock no longer ticks per ACTION — a whole poker HAND
+      // counts as ONE tick (see _afterHandComplete), matching one dungeon run.
 
       // ---- Banter trigger (LLM-driven ambient chat) ----
       // Fire-and-forget; banter.maybeSpeak no-ops if LLM is disabled.
@@ -976,6 +972,18 @@ class Table {
     // container). A long quiet gap could just be a cautious bot
     // brooding — this is the unambiguous "round just ended" signal.
     console.log(`[poker] hand-complete table=${this.id} #${this.handCount}`);
+    // ---- Abadar's interest ----
+    // ONE completed poker hand = ONE tick of the compound-interest clock for
+    // each HUMAN who was dealt in (a dungeon run counts the same — see
+    // Dungeon._emitMemberExit). Bots never owe; spectators aren't in the hand.
+    try {
+      for (const p of (this.hand?.players || [])) {
+        const seat = this.seats.find(s => !s.isEmpty() && s.playerId === p.playerId);
+        if (seat && seat.isBot) continue;   // bots never owe Abadar
+        const intr = db.tickDebtTurn(p.playerId);
+        if (intr) this.chat('debt', `🏛️ Abadar's interest — ${p.nickname}'s tab compounds ${intr.before.toLocaleString()} → ${intr.after.toLocaleString()} gp (+${intr.interest.toLocaleString()}).`);
+      }
+    } catch (_) {}
     // Announce winners in the chat log before we tear the hand down.
     try {
       const ws = this.hand.winners || [];

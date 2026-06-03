@@ -1373,12 +1373,9 @@ class Dungeon {
     }
     else { this._armAfkTimer(m); return { ok: false, error: 'unknown action' }; }
     this._hasteBonus(m);   // Haste: spend a pending extra attack after the action
-    // Abadar's interest: a human's combat turn counts toward the compound-
-    // interest clock (same one poker ticks); every 10 turns the tab grows.
-    if (!m.isBot) {
-      const intr = db.tickDebtTurn(playerId);
-      if (intr) this._note(`🏛️ Abadar's interest — ${m.nickname}'s tab compounds ${intr.before.toLocaleString()} → ${intr.after.toLocaleString()} gp (+${intr.interest.toLocaleString()}).`);
-    }
+    // NOTE: Abadar's interest no longer ticks per combat turn or per room — a
+    // whole dungeon RUN counts as ONE tick (see _emitMemberExit), the same as
+    // one poker hand.
     this._nextTurn();
     return { ok: true };
   }
@@ -2055,6 +2052,16 @@ class Dungeon {
   }
   // Tell THIS player's client to surface back to the table; notify the table.
   _emitMemberExit(m, exit) {
+    // Abadar's interest: ONE dungeon RUN = ONE tick of the compound-interest
+    // clock for a human delver (the same as one poker hand) — NOT per room or
+    // per combat turn. Guarded so the various exit paths tick at most once.
+    if (!m.isBot && !m._debtTicked) {
+      m._debtTicked = true;
+      try {
+        const intr = db.tickDebtTurn(m.playerId);
+        if (intr) this._note(`🏛️ Abadar's interest — ${m.nickname}'s tab compounds ${intr.before.toLocaleString()} → ${intr.after.toLocaleString()} gp (+${intr.interest.toLocaleString()}).`);
+      } catch (_) {}
+    }
     if (this.io) this.io.to(this.roomName()).emit('dungeon:exit', { playerId: m.playerId, ...exit });
     if (this._onMemberExit) try { this._onMemberExit(m.playerId, m.nickname, exit); } catch (_) {}
   }

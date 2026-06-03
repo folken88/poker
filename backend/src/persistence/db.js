@@ -493,11 +493,13 @@ function payRebuyDebt(playerId, amount) {
   stmts.payDebt.run(amount, amount, playerId);
 }
 // ── Abadar's compound interest ──────────────────────────────────────────────
-// Every DEBT_INTEREST_TURNS turns a player takes (a poker action OR a dungeon
-// combat turn) while they owe Abadar, the tab compounds by DEBT_INTEREST_RATE.
-// Only humans carry debt, so bots never accrue. Tunable knobs:
+// The clock ticks ONCE per completed POKER HAND the player is dealt into, and
+// ONCE per DUNGEON RUN — NOT per action, per room, or per combat turn (so a
+// player only accrues while actually seated at poker or delving). Every
+// DEBT_INTEREST_TURNS ticks while they owe Abadar, the tab compounds by
+// DEBT_INTEREST_RATE. Only humans carry debt, so bots never accrue. Tunable:
 const DEBT_INTEREST_TURNS = 10;
-const DEBT_INTEREST_RATE  = 0.05;   // +5% per 10 turns, compounding
+const DEBT_INTEREST_RATE  = 0.05;   // +5% per 10 hands/runs, compounding
 const _debtRowStmt  = db.prepare('SELECT rebuy_debt, debt_turns FROM players WHERE player_id = ?');
 const _setDebtTurns = db.prepare('UPDATE players SET debt_turns = ? WHERE player_id = ?');
 const _compoundDebt = db.prepare('UPDATE players SET rebuy_debt = ?, debt_turns = ? WHERE player_id = ?');
