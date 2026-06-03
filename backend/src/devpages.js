@@ -43,8 +43,10 @@ function shell(title, count, body) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>${esc(title)} — Folken Dev</title><style>${STYLE}</style></head>
-<body><header><h1>🛠 ${esc(title)}</h1><span class="count">${esc(count)}</span>
-<nav><a href="/monsters">monsters</a><a href="/spells">spells</a><a href="/classes">classes</a></nav></header>
+<body><header>
+<a href="/" style="color:#e7cf8e;text-decoration:none;border:1px solid #2a3320;border-radius:5px;padding:3px 9px;background:#1a2014">← Back to table</a>
+<h1>🛠 ${esc(title)}</h1><span class="count">${esc(count)}</span>
+<nav><a href="/api/monsters">monsters</a><a href="/api/spells">spells</a><a href="/api/classes">classes</a></nav></header>
 <main>${body}</main></body></html>`;
 }
 
@@ -151,9 +153,13 @@ function classesPage() {
 }
 
 function registerDevPages(app) {
-  app.get('/monsters', (_req, res) => res.type('html').send(monstersPage()));
-  app.get('/spells',   (_req, res) => res.type('html').send(spellsPage()));
-  app.get('/classes',  (_req, res) => res.type('html').send(classesPage()));
+  // Served under /api/* because that path reliably proxies to the backend (the
+  // bare /monsters etc. fall through to the SPA's index.html). Both are wired.
+  for (const [path, page] of [['monsters', monstersPage], ['spells', spellsPage], ['classes', classesPage]]) {
+    const handler = (_req, res) => res.type('html').send(page());
+    app.get('/' + path, handler);
+    app.get('/api/' + path, handler);
+  }
 }
 
 module.exports = { registerDevPages };

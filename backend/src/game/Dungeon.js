@@ -132,7 +132,11 @@ const MON = {
   stone_giant:       { name: 'Stone Giant',       glyph: '🗿', cr: '8',   hp: 102, ac: 24, toHit: 17, dmgDie: 8,  dmgCount: 2, dmgBonus: 12, fort: 12, reflex: 5, gold: [95, 190] },                  // greatclub 2d8+12
   abyssal_horror:    { name: 'Abyssal Horror',    glyph: '🐙', cr: '8',   hp: 95,  ac: 19, toHit: 14, dmgDie: 8,  dmgBonus: 6,  fort: 9,  reflex: 6,  attacks: 2, gold: [95, 190] },                  // eldritch chaos beast
   brass_golem:       { name: 'Brass Golem',       glyph: '🗿', cr: '9',   hp: 92,  ac: 24, toHit: 14, dmgDie: 10, dmgCount: 2, dmgBonus: 9, fort: 3, reflex: 3, attacks: 2, gold: [180, 320] },                  // 8-HD construct, two 2d10+9 slams
-  barbed_devil:      { name: 'Barbed Devil',      glyph: '😈', cr: '11',  hp: 138, ac: 26, toHit: 18, dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 12, reflex: 9, attacks: 2, gold: [260, 460] },                 // hamatula, two 2d8+7 claws
+  barbed_devil:      { name: 'Barbed Devil',      glyph: '😈', cr: '11',  hp: 138, ac: 26, toHit: 18, dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 12, reflex: 9, attacks: 2, gold: [260, 460],
+                       atkSounds: ['/audio/slorr_sever.mp3', '/audio/slorr_crush.mp3', '/audio/slorr_fury.mp3'],   // Slorr voicelines on its barbed claws
+                       hook: { dmgDie: 8, dmgCount: 2, dmgBonus: 7, constrict: 14, sound: '/audio/slorr_grapple.mp3' },   // chain hook → grapple the weakest hero, then constrict each turn
+                       hellfire: { count: 3, dice: 5, die: 6, dc: 19, sound: '/audio/spell_hellfire.mp3' } },           // Hellfire Blast — fire AoE, Reflex for half
+
   vampire:           { name: 'Vampire',           glyph: '🧛', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 6,  dmgBonus: 8, fort: 8,  reflex: 11, attacks: 2, gold: [100, 200], evil: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' } },   // dominating gaze → Will or frozen in terror
   lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' } },                 // sinister gaze → fear
 };
@@ -425,6 +429,7 @@ class Dungeon {
       ? { key: 'held',      label: 'Held',      desc: 'helpless — re-saves each turn (the attempt costs the turn)', icon: `${I}paralyzed.webp` }
       : { key: 'paralyzed', label: 'Paralyzed', desc: 'frozen — loses turns; easy to hit', icon: `${I}paralyzed.webp` });
     if (o.slowed > 0)    c.push({ key: 'slowed',    label: 'Slowed',    desc: 'sluggish — acts only every other turn; −1 AC', icon: `${I}slowed.webp` });
+    if (o.grappled)      c.push({ key: 'grappled',  label: 'Grappled',  desc: 'chained — −2 to hit, easier to strike; crushed each turn (Dispel or Grease frees you)', icon: `${I}grappled.webp` });
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
     if (o.fascinated)    c.push({ key: 'asleep',    label: 'Asleep',    desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
     if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
@@ -608,6 +613,9 @@ class Dungeon {
       shoutsLeft: base.shout ? 2 : 0,
       taunt: base.taunt || null,           // goblin barbarian: roars a taunt that pulls AI allies onto it
       tauntsLeft: base.taunt ? 1 : 0,
+      hook: base.hook || null,             // barbed devil: chain hook → grapple + constrict
+      hellfire: base.hellfire || null,     // barbed devil: hellfire blast (fire AoE)
+      hellfireLeft: base.hellfire ? 2 : 0,
       resist: base.resist || null,         // energy resistances / vulnerabilities (see RESIST_BY_KEY)
       flying: !!base.flying,               // airborne: immune to prone + "high ground" vs grounded foes
       evasion: !!base.evasion,             // rogues/monks: a made Reflex save vs an area effect = NO damage
@@ -958,7 +966,7 @@ class Dungeon {
   _partySaveMod(m) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0); }   // saves scale with level (+ rage's +Will)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
-  _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0); }
+  _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
   _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection
     return ((m.buffs && m.buffs.ac) || 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0);
   }
@@ -995,7 +1003,7 @@ class Dungeon {
     // NPCs are hand-assigned their signature weapons, so they're always
     // proficient; the −4 penalty only guides human weapon choices.
     const notProf = (attacker.isBot || weaponProficient(cls, weapon)) ? 0 : NON_PROFICIENT_PENALTY;
-    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick;
+    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0);
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
@@ -1054,6 +1062,15 @@ class Dungeon {
       }
       // Goblin Barbarian: roar a taunt (once) to pull the party's AI onto it.
       if (e.taunt && e.tauntsLeft > 0 && this.livingParty().some(m => m.isBot)) return this._enemyTaunt(e);
+      // Barbed Devil: occasionally a Hellfire Blast; otherwise chain-hook the
+      // weakest hero and CRUSH whoever it's already grappling.
+      if (e.hellfire && e.hellfireLeft > 0 && this._targetableParty().length >= 2 && dRoll(3) === 1) return this._enemyHellfire(e);
+      if (e.hook) {
+        const victim = this._targetableParty().find(p => p.grappled && p.grappledBy === e.uid);
+        if (victim) return this._enemyConstrict(e, victim);
+        const weakest = this._targetableParty().slice().sort((a, b) => a.hp - b.hp)[0];
+        if (weakest) return this._enemyHook(e, weakest);
+      }
     }
     // Melee — the kobold rogue stabs twice (1d3 each); everyone else swings once.
     // A taunted foe hammers the barbarian; otherwise re-pick a living, TARGETABLE
@@ -1160,6 +1177,50 @@ class Dungeon {
     this._note(`📢 ${e.glyph} ${e.name} roars a furious challenge — ${parts.join('; ')}!`, snd, { side: 'enemy' });
     this._echoToTable(snd);
     this._broadcast();
+  }
+  // Barbed Devil's chain HOOK — hurled at the weakest hero; on a hit it bites for
+  // damage and GRAPPLES them (cleared by Dispel Magic or Grease — see _abCleanse
+  // / _abGrease). While grappled the hero takes −2 to hit and is easier to strike.
+  _enemyHook(e, target) {
+    const cfg = e.hook || {};
+    const snd = cfg.sound || null;
+    const effAC = acOf(target.gear, target.cls).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);
+    const r = this._monsterSwing(e, effAC);
+    if (!r.hit) {
+      this._note(`⛓️ ${e.glyph} ${e.name} hurls its barbed chain at ${target.nickname} — the hook scrapes past. ${this._atkStr(r)}`, snd, { side: 'enemy' });
+      this._echoToTable(snd); this._broadcast(); return;
+    }
+    this._dmgToMember(target, r.damage);
+    if (!target.dead && target.hp > -10) { target.grappled = true; target.grappledBy = e.uid; }
+    this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${r.damage} and drags them into a GRAPPLE! ${this._atkStr(r)} (Dispel or Grease to break free)`, snd, { side: 'enemy' });
+    this._echoToTable(snd); this._broadcast();
+  }
+  // Crush a hero the devil is already grappling — automatic chain damage.
+  _enemyConstrict(e, target) {
+    const cfg = e.hook || {};
+    const dmg = dRollN(2, 8) + 4;
+    this._dmgToMember(target, dmg);
+    this._note(`⛓️ ${e.glyph} ${e.name}'s chains CRUSH the grappled ${target.nickname} for ${dmg}! (Dispel or Grease to break free)`, cfg.sound, { side: 'enemy' });
+    this._echoToTable(cfg.sound); this._broadcast();
+  }
+  // Barbed Devil's Hellfire Blast — fire AoE on a random handful of heroes,
+  // Reflex for half. Rolls its damage once for the whole burst.
+  _enemyHellfire(e) {
+    e.hellfireLeft -= 1;
+    const cfg = e.hellfire || {};
+    const live = this._targetableParty().slice();
+    for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
+    const hit = live.slice(0, dRoll(cfg.count || 3));
+    const dc = cfg.dc || 18, full = dRollN(cfg.dice || 5, cfg.die || 6), parts = [];
+    for (const t of hit) {
+      const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
+      const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
+      const dmg = saved ? Math.floor(full / 2) : full;
+      this._dmgToMember(t, dmg);
+      parts.push(`${t.nickname} ${saved ? 'half ' : ''}−${dmg}`);
+    }
+    this._note(`🔥 ${e.glyph} ${e.name} unleashes a HELLFIRE BLAST (${cfg.dice || 5}d${cfg.die || 6} → ${full}) — ${parts.join(', ')}! [Ref DC ${dc}]`, cfg.sound, { side: 'enemy' });
+    this._echoToTable(cfg.sound); this._broadcast();
   }
   // A living foe this member is compelled (taunted) to attack, or null.
   _forcedFoe(m) {
@@ -1581,7 +1642,7 @@ class Dungeon {
     m.smiteActive = false;
     m.hasted = 0; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
-    m.tauntedBy = null;   // any pending goblin-taunt compulsion clears
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null;   // taunt / grapple clear between rooms
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
   }
@@ -1853,11 +1914,12 @@ class Dungeon {
   _abCleanse(m, ab) {
     const sound = ab.sound;
     const allies = this.livingParty();
-    const target = allies.find(a => (a.paralyzed > 0 || a.stunned > 0 || a.sickened > 0)) || m;
+    const target = allies.find(a => (a.paralyzed > 0 || a.stunned > 0 || a.sickened > 0 || a.grappled)) || m;
     const cleared = [];
     if (target.paralyzed > 0) { target.paralyzed = 0; target.heldDC = null; cleared.push('paralysis'); }
     if (target.stunned > 0)   { target.stunned = 0;   cleared.push('stun'); }
     if (target.sickened > 0)  { target.sickened = 0;  cleared.push('sickness'); }
+    if (target.grappled)      { target.grappled = false; target.grappledBy = null; cleared.push('grapple'); }
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${target.nickname} — ${cleared.length ? 'clears ' + cleared.join(', ') + '!' : 'nothing to dispel'}.`, sound);
     this._echoToTable(sound);
   }
@@ -1960,6 +2022,10 @@ class Dungeon {
   // Grease: up to maxTargets foes Reflex-save or slip prone (and lose the turn).
   _abGrease(m, ab, payload) {
     const dc = this._spellDC(m);
+    // Grease is slippery enough to let a GRAPPLED ally slither out of the chains.
+    if (ab.effect === 'grease') for (const a of this.livingParty()) {
+      if (a.grappled) { a.grappled = false; a.grappledBy = null; this._note(`🛢️ ${a.nickname} slips free of the grapple in the grease!`); }
+    }
     // Gust of Wind hits a RANDOM 1d3 foes (randFoes); Grease targets the picked
     // ones. Save type is configurable (Grease=Reflex, Gust=Fort).
     let chosen;

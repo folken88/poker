@@ -947,6 +947,9 @@ option.weapon-nonprof { color: #cc5500; }
   cursor: pointer;
   user-select: none;
 }
+/* Dev/reference page links inside the settings popover. */
+.audio-menu__link { text-decoration: none; color: var(--ivory); border-radius: 6px; padding: 4px 6px; }
+.audio-menu__link:hover { background: rgba(217,176,106,0.16); color: var(--brass-bright); }
 /* Sub-group header inside the audio popover (e.g. "Combat sounds"). */
 .audio-menu__grouphdr {
   margin-top: 8px;
