@@ -19,6 +19,46 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-06-03 (evening)
+
+### ⚔️ Dungeon combat depth
+- **Great Cleave** — every foe you drop with a Cleave grants another swing,
+  chaining until you stop felling them. A clean sweep can clear a whole pack.
+- **Barbarian Taunt** (once/room) — a roaring challenge; every enemy Will-saves
+  or is forced to attack the barbarian next turn, pulling fire off the squishies.
+- **Disintegrate** now works the PF1e way: a **ranged touch attack** (it can
+  miss), **2d6 per caster level** (up to 40d6), **Fort partial = only 5d6**, and
+  anything dropped to 0 HP **crumbles to dust**.
+- **Fire Skeletons** are suicide bombers — they rush in and **detonate on their
+  turn** (1d6 fire/level to 1d2 heroes), destroying themselves. **Kill them first
+  to defuse.**
+- **AoE spells** roll their damage **once** for the whole burst; each target
+  saves against that number — full / half / **none with Evasion** (rogues &
+  monks). Already-crowd-controlled foes are skipped by AoE/CC targeting.
+- **Flying creatures** (harpy, gargoyle, chimera) are **immune to prone** and
+  hold the **high ground** (+1 to hit, +2 AC vs grounded heroes).
+
+### 🎭 Vorkstag, dungeon access & UI
+- **Vorkstag** the skinwalker now **changes whose face he wears mid-game** —
+  rarely each poker hand / dungeon room, more often (25%) when he's addressed.
+- Dungeon **spectators can Join** the fight; delvers can **Spectate** (bank gold,
+  keep watching) without returning to the table.
+- **"My Loot Bank"** is reachable from the dungeon, not just the poker table.
+- **Channel Positive** now heals the **whole party including the downed/dying** —
+  it can pull a dying ally back to their feet.
+- **Inspire Courage** is a **passive aura** — always up while a bard is present,
+  no action spent.
+- **Monster debuffs** show name + effect on hover, like heroes'.
+
+### 🧮 Economy, art, voices & deploys
+- **Loans** tick **once per poker hand** and **once per dungeon run** (not per
+  action / room / turn) — you only accrue interest while actually playing.
+- **Leaderboard & Hall of Records** get a **Hu / All** toggle (default Humans),
+  remembered across sessions.
+- Real token art for the **Lich, Vampire, Fire Skeleton, Blood Caimon**.
+- **Kai Ginn & Kelda** now talk like zoomers (Graham characters).
+- **Patch notes** post in full to table chat (multi-line, no more cut-offs).
+
 ## 2026-06-03 (later)
 
 ### 🐌 Slow, real Hold Person, elemental resistances & more

@@ -607,6 +607,7 @@ class Dungeon {
       flying: !!base.flying,               // airborne: immune to prone + "high ground" vs grounded foes
       evasion: !!base.evasion,             // rogues/monks: a made Reflex save vs an area effect = NO damage
       detonate: base.detonate || null,     // fire skeleton: rushes in and blows itself up on its turn
+      taunted: null,                       // barbarian Taunt: playerId it's compelled to attack next turn
       slowed: 0, _slowTick: 0,             // Slow spell: sluggish for N rounds, acts every other turn
       gold: rint(base.gold[0], base.gold[1]),
     };
@@ -1023,24 +1024,37 @@ class Dungeon {
     e.flatFooted = false;   // acting ends flat-footed
     if (e.prone) { e.prone = false; this._note(`${e.glyph} ${e.name} clambers back to its feet.`); }
     if (!this.livingParty().length) return;
-    // Fire Skeleton: its whole purpose is to rush in and blow up. If it survives
-    // to its turn, it detonates (and dies) instead of making a normal attack.
-    if (e.detonate && !e._exploded) return this._detonate(e);
-    // Kobold shaman: cast Hold Person on an unheld target before resorting to melee.
-    if (e.caster === 'holdperson' && e.castsLeft > 0) {
-      const free = this._targetableParty().filter(m => !(m.paralyzed > 0));
-      if (free.length) return this._enemyCastHold(e, pick(free));
+    // Taunted: compelled to go straight at the barbarian who taunted it — this
+    // overrides its specials and target choice. The pull lasts only this (its
+    // next) turn, so consume it now.
+    let forced = null;
+    if (e.taunted) {
+      forced = this._targetableParty().find(p => p.playerId === e.taunted && p.hp > 0 && !p.left) || null;
+      e.taunted = null;
+      if (forced) this._note(`📢 ${e.glyph} ${e.name}, taunted, charges ${forced.nickname}!`, null, { side: 'enemy' });
     }
-    // Skeletal Champion: a bone-rattling shout — 1d8 + save-or-stunned.
-    if (e.shout && e.shoutsLeft > 0 && dRoll(2) === 1) {
-      const awake = this._targetableParty().filter(m => !(m.stunned > 0) && !(m.paralyzed > 0));
-      if (awake.length) return this._enemyShout(e, pick(awake));
+    if (!forced) {
+      // Fire Skeleton: its whole purpose is to rush in and blow up. If it survives
+      // to its turn, it detonates (and dies) instead of making a normal attack.
+      if (e.detonate && !e._exploded) return this._detonate(e);
+      // Kobold shaman: cast Hold Person on an unheld target before resorting to melee.
+      if (e.caster === 'holdperson' && e.castsLeft > 0) {
+        const free = this._targetableParty().filter(m => !(m.paralyzed > 0));
+        if (free.length) return this._enemyCastHold(e, pick(free));
+      }
+      // Skeletal Champion: a bone-rattling shout — 1d8 + save-or-stunned.
+      if (e.shout && e.shoutsLeft > 0 && dRoll(2) === 1) {
+        const awake = this._targetableParty().filter(m => !(m.stunned > 0) && !(m.paralyzed > 0));
+        if (awake.length) return this._enemyShout(e, pick(awake));
+      }
     }
     // Melee — the kobold rogue stabs twice (1d3 each); everyone else swings once.
-    // Re-pick a living, TARGETABLE (non-invisible), preferably-helpless target.
+    // A taunted foe hammers the barbarian; otherwise re-pick a living, TARGETABLE
+    // (non-invisible), preferably-helpless target.
     for (let i = 0; i < Math.max(1, e.attacks || 1); i++) {
       const living = this._targetableParty();
       if (!living.length) break;
+      if (forced && forced.hp > 0 && !forced.left) { this._enemyMelee(e, forced); continue; }
       const helpless = living.filter(m => m.paralyzed > 0);
       this._enemyMelee(e, pick(helpless.length ? helpless : living));
     }
@@ -1204,6 +1218,10 @@ class Dungeon {
     if (smite) return { slot: slot(smite), payload: {} };
     const buff = avail.find(a => a.effect === 'buff' && a.sticky && !(m.buffApplied && m.buffApplied[a.key]));
     if (buff) return { slot: slot(buff), payload: {} };
+    // 2a) Taunt — a barbarian roars to pull a pack's fire onto themselves (once
+    //     per room, only worth it against 2+ foes).
+    const taunt = avail.find(a => a.effect === 'taunt');
+    if (taunt && foes.length >= 2) return { slot: slot(taunt), payload: {} };
     // 2b) Haste — a powerful party buff (bards & wizards love it). Cast it once
     //     while there are foes to fight and the party isn't already hasted.
     const haste = avail.find(a => a.effect === 'haste');
@@ -1447,6 +1465,7 @@ class Dungeon {
       feint:       () => this._abFeint(m, payload),
       reckless:    () => this._abReckless(m, payload),
       buff:        () => this._abBuff(m, ab),
+      taunt:       () => this._abTaunt(m, ab),
       smite:       () => this._abSmite(m, ab),
       heal:        () => this._abHeal(m, ab),
       revive:      () => this._abRevive(m, ab),
@@ -1984,6 +2003,21 @@ class Dungeon {
     const sound = ab.sound || pick(SND.flesh);
     if (ab.party) { for (const a of this.livingParty()) apply(a); this._note(`${ab.icon} ${m.nickname} strikes up ${ab.name} — the party is emboldened!`, sound); }
     else { apply(m); this._note(`${ab.icon} ${m.nickname} uses ${ab.name}!`, sound); }
+    this._echoToTable(sound);
+  }
+  // Taunt (barbarian): a roaring challenge — every enemy makes a Will save or is
+  // COMPELLED to attack the barbarian on its next turn (see _enemyAct), pulling
+  // fire off the rest of the party. Once per room.
+  _abTaunt(m, ab) {
+    const dc = 10 + Math.floor((m.level || 1) / 2) + ABILITY_MOD;   // martial intimidation DC
+    const sound = ab.sound;
+    const parts = [];
+    for (const e of this.livingEnemies()) {
+      const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
+      if (!sv.saved) e.taunted = m.playerId;
+      parts.push(`${e.name}: Will ${sv.total} vs ${dc} ${sv.saved ? 'shrugs it off' : `📢 must come for ${m.nickname}`}`);
+    }
+    this._note(`${ab.icon} ${m.nickname} bellows a furious challenge — ${parts.join('; ')}.`, sound);
     this._echoToTable(sound);
   }
   // Smite Evil — your strikes smite evil foes this room.
