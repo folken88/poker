@@ -1173,8 +1173,11 @@ class Dungeon {
     // 0b) Inquisitor: declare a Judgement if none is up (free action, then attack).
     const judg = avail.find(a => a.effect === 'judgment');
     if (judg && !m.judgment) return { slot: slot(judg), payload: {} };
-    // 1) Heal when an ally (or self) is meaningfully hurt.
+    // 1) Heal when an ally (or self) is meaningfully hurt — or CHANNEL to pull a
+    //    downed ally back up (a party channel revives the dying).
     const heal = avail.find(a => a.effect === 'heal');
+    const channelHeal = avail.find(a => a.effect === 'heal' && a.heal === 'party');
+    if (channelHeal && anyDowned) return { slot: slot(channelHeal), payload: {} };
     if (heal && someoneHurt) return { slot: slot(heal), payload: {} };
     // 1b) Dispel Magic — cleanse a debuffed ally (paralysis / stun / sickness).
     const cleanse = avail.find(a => a.effect === 'cleanse');
@@ -1831,12 +1834,19 @@ class Dungeon {
     // Cure X Wounds — healDice d8 + caster level (capped: +5 light, +10 moderate).
     const cureAmt = () => Math.max(1, dRollN(ab.healDice || 1, 8) + Math.min(ab.healCap || lvl, lvl));
     if (ab.heal === 'party') {
-      const allies = this.livingParty();
-      // PF1e: a channel rolls its healing ONCE and applies that same amount to
-      // every target in the burst — no per-ally re-roll.
+      // PF1e: a channel rolls its healing ONCE and heals EVERY hero in the burst.
+      // That includes the DOWNED/dying (negative HP but not dead at −10) — a
+      // channel is positive energy and can pull a dying ally back onto their feet.
+      const allies = this.present().filter(a => !a.dead);
       const h = channelAmt();
       const parts = [];
-      for (const a of allies) { a.hp = Math.min(a.maxHp, a.hp + h); parts.push(`${a.nickname} ${a.hp}/${a.maxHp}`); }
+      for (const a of allies) {
+        const wasDown = a.hp <= 0;
+        a.hp = Math.min(a.maxHp, a.hp + h);
+        const up = wasDown && a.hp > 0;
+        if (up) a.downed = false;   // revived — back on their feet
+        parts.push(`${a.nickname} ${a.hp}/${a.maxHp}${up ? ' ⤴up!' : ''}`);
+      }
       this._note(`${ab.icon} ${m.nickname} channels positive energy — +${h} to the party (${parts.join(', ')}).`, sound);
     } else {
       const allies = this.livingParty();
