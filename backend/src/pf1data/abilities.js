@@ -141,6 +141,9 @@ const SPELL = {
   slow:          { key: 'slow',          name: 'Slow',           icon: '🐌', cost: 'pool', effect: 'slow',   target: 'aoe', randN: 2, randDie: 4, maxTargets: 8, save: 'will', minLevel: 5, slvl: 3, sound: S.slow, desc: 'Time drags for a RANDOM 2d4 foes — Will save or be SLOWED: sluggish (acts only every other turn) and easier to hit.' },
   gustofwind:    { key: 'gustofwind',    name: 'Gust of Wind',   icon: '🌪️', cost: 'pool', effect: 'grease', target: 'aoe', randFoes: 3, save: 'fort', minLevel: 4, slvl: 2, sound: S.gust, desc: 'A roaring gale blasts a RANDOM 1d3 foes — Fort save or be knocked prone.' },
   invisibility:  { key: 'invisibility',  name: 'Invisibility',   icon: '👻', cost: 'pool', effect: 'invisible', target: 'self', minLevel: 3, slvl: 2, sound: S.invis, desc: "Vanish from sight — enemies can't target you until you attack." },
+  shield:        { key: 'shield',        name: 'Shield',         icon: '🛡️', cost: 'pool', effect: 'buff', target: 'self', buff: { ac: 4 }, slvl: 1, sticky: true, sound: S.invoke, desc: 'A wall of force — +4 shield AC for the rest of the room.' },
+  catsgrace:     { key: 'catsgrace',     name: "Cat's Grace",    icon: '🐈', cost: 'pool', effect: 'buff', target: 'ally', buff: { ac: 2, toHit: 1 }, slvl: 2, sticky: true, sound: S.invoke, desc: 'Feline-quick — one ally gets +2 AC and +1 ranged to-hit (Dex) for the rest of the room.' },
+  fly:           { key: 'fly',           name: 'Fly',            icon: '🪽', cost: 'pool', effect: 'buff', target: 'self', fly: true, slvl: 3, sticky: true, sound: S.invis, desc: 'Take to the air — grounded foes CANNOT reach you (immune to non-ranged attacks) for the rest of the room.' },
   coneofcold:    { key: 'coneofcold',    name: 'Cone of Cold',   icon: '🥶', cost: 'pool', effect: 'aoe', target: 'aoe', randBase: 2, randDie: 3, save: 'reflex', die: 6, dice: 'level', dcap: 15, minLevel: 9, dtype: 'cold', slvl: 5, sound: S.coldcone, desc: 'A blast of frost engulfs 2+1d3 foes — Reflex for half (level d6).' },
   disintegrate:  { key: 'disintegrate',  name: 'Disintegrate',   icon: '☢️', cost: 'pool', effect: 'disintegrate', target: 'enemy', maxTargets: 1, save: 'fort', die: 6, dice: 'level', dcap: 20, minLevel: 11, dtype: 'force', slvl: 6, sound: S.disintegrate, desc: 'A thin green ray — ranged touch attack, then 2d6 per caster level (max 40d6). Fort partial: a made save still takes 5d6. Reduced to 0 HP → disintegrated to dust.' },
 };
@@ -217,10 +220,12 @@ const KITS = {
     preparedSpell(SPELL.shockinggrasp, 1),
     preparedSpell(SPELL.grease,        1),
     preparedSpell(SPELL.sleep,         1),
+    preparedSpell(SPELL.shield,        1),
     preparedSpell(SPELL.invisibility,  3),
     preparedSpell(SPELL.aciddart,      3),
     preparedSpell(SPELL.scorchingray,  3),
     preparedSpell(SPELL.holdperson,    3),
+    preparedSpell(SPELL.fly,           5),
     preparedSpell(SPELL.dispelmagic,   5),
     { key: 'haste', name: 'Haste', icon: '💨', cost: 'room', uses: 1, minLevel: 5, slvl: 3, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — every ally gets an EXTRA attack each turn for 1 turn per 5 caster levels (on top of their action).' },
     preparedSpell(SPELL.slow,          5),
@@ -232,16 +237,21 @@ const KITS = {
   // SORCERER — spontaneous caster: knows FEWER spells, drawn from a shared
   // per-room cast pool (his limited casts/day = casts/room). A focused blaster's
   // signature repertoire he can recast freely until the pool empties.
-  sorcerer: { atwill: { ...RAY_OF_FROST }, note: 'Few spells — limited casts each room.', abilities: [
+  sorcerer: { atwill: { ...RAY_OF_FROST }, abilities: [
     spontaneousSpell(SPELL.magicmissile, 1),
     spontaneousSpell(SPELL.burninghands, 1),
-    spontaneousSpell(SPELL.aciddart,     3),
+    spontaneousSpell(SPELL.shield,       1),
+    spontaneousSpell(SPELL.sleep,        1),
+    spontaneousSpell(SPELL.aciddart,     4),
     spontaneousSpell(SPELL.gustofwind,   4),
     spontaneousSpell(SPELL.scorchingray, 4),
+    spontaneousSpell(SPELL.catsgrace,    4),
+    spontaneousSpell(SPELL.dispelmagic,  6),
+    spontaneousSpell(SPELL.fly,          6),
     spontaneousSpell(SPELL.slow,         6),
-    spontaneousSpell(SPELL.fireball,     7),
-    spontaneousSpell(SPELL.coneofcold,   9),
-    spontaneousSpell(SPELL.disintegrate, 11),
+    spontaneousSpell(SPELL.fireball,     6),
+    spontaneousSpell(SPELL.coneofcold,   10),
+    spontaneousSpell(SPELL.disintegrate, 12),
   ] },
   // ── Hybrids ──
   // MAGUS — basic attack with the player's chosen weapon (martial proficiency).

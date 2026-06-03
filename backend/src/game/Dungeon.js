@@ -455,6 +455,8 @@ class Dungeon {
     if (m.smiteActive)  push('smite', 'Smite', '+hit & +2×level damage vs evil');
     if (m.hasted > 0)   push('haste', 'Haste', `an extra attack each turn (${m.hasted} left)`);
     if (m.invisible)    push('invisible', 'Invisible', 'unseen — until you attack');
+    if (m.flying)       push('fly', 'Flying', 'airborne — grounded foes cannot reach you');
+    if (m.protectFire)  push('protectfire', 'Fire Ward', 'fire damage halved (Protection from Fire)');
     if (m.judgment === 'destruction') push('judg_destruction', 'Judgement: Destruction', '+damage on your strikes');
     if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection', '+AC');
     if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing', 'regenerate HP each turn');
@@ -1077,14 +1079,18 @@ class Dungeon {
     }
     // Melee — the kobold rogue stabs twice (1d3 each); everyone else swings once.
     // A taunted foe hammers the barbarian; otherwise re-pick a living, TARGETABLE
-    // (non-invisible), preferably-helpless target.
+    // (non-invisible), preferably-helpless target. FLYING heroes are out of reach
+    // of a GROUNDED foe (Fly = immune to non-ranged attacks); a flyer can hit them.
+    let noReach = false;
     for (let i = 0; i < Math.max(1, e.attacks || 1); i++) {
-      const living = this._targetableParty();
-      if (!living.length) break;
-      if (forced && forced.hp > 0 && !forced.left) { this._enemyMelee(e, forced); continue; }
+      const seen = this._targetableParty();
+      const living = e.flying ? seen : seen.filter(m => !m.flying);
+      if (!living.length) { noReach = seen.length > 0; break; }
+      if (forced && forced.hp > 0 && !forced.left && (e.flying || !forced.flying)) { this._enemyMelee(e, forced); continue; }
       const helpless = living.filter(m => m.paralyzed > 0);
       this._enemyMelee(e, pick(helpless.length ? helpless : living));
     }
+    if (noReach) this._note(`${e.glyph} ${e.name} claws at the air — its prey is on the wing, out of reach!`, null, { side: 'enemy' });
   }
   // One enemy swing at a chosen target (handles the paralysis rider + signature sound).
   _enemyMelee(e, target) {
@@ -1662,7 +1668,7 @@ class Dungeon {
     m.smiteActive = false;
     m.hasted = 0; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false;   // taunt / grapple / fire ward clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false;   // taunt / grapple / fire ward / flight clear between rooms
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
   }
@@ -2221,6 +2227,7 @@ class Dungeon {
       who.buffs.save += (ab.buff && ab.buff.save) || 0;
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
       if (ab.protectFire) who.protectFire = true;   // Protection from Fire — halves fire damage taken
+      if (ab.fly) who.flying = true;                // Fly — grounded foes can't melee them
     };
     if (ab.party) {
       for (const a of this.livingParty()) apply(a);
