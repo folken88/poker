@@ -19,6 +19,21 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-06-03 (late night)
+
+### 😈 The Barbed Devil, a sniper & reference pages
+- **The Barbed Devil** is now a real terror — in **Slorr's voice**. It hurls a
+  **barbed chain hook** at your **weakest** hero, **grappling** them and
+  **crushing** them every turn (−2 to hit, easier to strike). **Dispel Magic or
+  Grease breaks the grapple.** It also looses a **Hellfire Blast** (fire AoE).
+- **Taelys** trades up to the **DVL-10 bolt-action sniper rifle** (2d8, ×4). A
+  bolt-action **can't Rapid Shot**, so she leans on **Bullseye Shot** and the new
+  **Deadly Aim** feat — trade accuracy for big damage. (Deadly Aim is open to all
+  rangers; bow rangers keep Rapid Shot.)
+- **Reference pages** for **Monsters / Spells / Classes** (a live, compact view
+  of everything loaded) are reachable from the **🔊 settings menu**, each with a
+  **Back to table** button.
+
 ## 2026-06-03 (night)
 
 ### 🪚 Chainsaws, real Rage, bard spells & smarter buffs
