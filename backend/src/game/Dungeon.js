@@ -93,8 +93,8 @@ const MON = {
   kobold:            { name: 'Kobold',            glyph: '🦎', cr: '1/4', hp: 5,   ac: 15, toHit: 1,  dmgDie: 6,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [6, 14] },
   kobold_spearman:   { name: 'Kobold Spearman',   glyph: '🦎', cr: '1/3', hp: 6,   ac: 15, toHit: 2,  dmgDie: 6,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [6, 16] },                                            // 1d6 spear
   kobold_shaman:     { name: 'Kobold Shaman',     glyph: '🦎', cr: '1',   hp: 7,   ac: 13, toHit: 0,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [12, 26], caster: 'holdperson', spellDC: 13 },          // Hold Person (Will DC 13)
-  kobold_rogue:      { name: 'Kobold Rogue',      glyph: '🦎', cr: '1',   hp: 6,   ac: 16, toHit: 2,  dmgDie: 3,  dmgBonus: 0, fort: 1,  reflex: 4,  gold: [10, 24], attacks: 2, sneakDice: 2, atkSound: '/audio/fight_riki.mp3' }, // two 1d3 daggers + sneak attack
-  goblin_rogue:      { name: 'Goblin Rogue',      glyph: '👺', cr: '1/2', hp: 7,   ac: 15, toHit: 3,  dmgDie: 4,  dmgBonus: 1, fort: 1,  reflex: 5,  gold: [8, 20],  attacks: 1, sneakDice: 2, atkSound: '/audio/fight_riki.mp3' }, // dogslicer + Sneak Attack (+2d6 vs flat-footed / held)
+  kobold_rogue:      { name: 'Kobold Rogue',      glyph: '🦎', cr: '1',   hp: 6,   ac: 16, toHit: 2,  dmgDie: 3,  dmgBonus: 0, fort: 1,  reflex: 4,  gold: [10, 24], attacks: 2, sneakDice: 2, evasion: true, atkSound: '/audio/fight_riki.mp3' }, // two 1d3 daggers + sneak attack; Evasion
+  goblin_rogue:      { name: 'Goblin Rogue',      glyph: '👺', cr: '1/2', hp: 7,   ac: 15, toHit: 3,  dmgDie: 4,  dmgBonus: 1, fort: 1,  reflex: 5,  gold: [8, 20],  attacks: 1, sneakDice: 2, evasion: true, atkSound: '/audio/fight_riki.mp3' }, // dogslicer + Sneak Attack; Evasion
   goblin_shaman:     { name: 'Goblin Shaman',     glyph: '👺', cr: '1',   hp: 8,   ac: 13, toHit: 1,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 2,  gold: [12, 26], caster: 'holdperson', spellDC: 13 },          // Hold Person (Will DC 13) — sets up the rogues
   skeleton:          { name: 'Skeleton',          glyph: '💀', cr: '1/3', hp: 5,   ac: 16, toHit: 2,  dmgDie: 6,  dmgBonus: 2, fort: 0,  reflex: 1,  gold: [8, 20] },
   giant_spider:      { name: 'Giant Spider',      glyph: '🕷️', cr: '1',   hp: 16,  ac: 14, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 4,  reflex: 4,  gold: [10, 26] },
@@ -102,10 +102,10 @@ const MON = {
   ghoul:             { name: 'Ghoul',             glyph: '🧛', cr: '1',   hp: 13,  ac: 14, toHit: 3,  dmgDie: 6,  dmgBonus: 1, fort: 1,  reflex: 3,  gold: [14, 32], paralyze: true, paralyzeDC: 13 },
   cultist:           { name: 'Whispering Cultist',glyph: '🕯️', cr: '1',   hp: 14,  ac: 14, toHit: 3,  dmgDie: 8,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [16, 38] },
   ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', cr: '2', hp: 17,  ac: 17, toHit: 6,  dmgDie: 8,  dmgBonus: 3, fort: 2,  reflex: 5,  gold: [28, 60], paralyze: true, paralyzeDC: 15 },
-  monk:              { name: 'Monk',              glyph: '🥋', cr: '2',   hp: 22,  ac: 16, toHit: 4,  dmgDie: 6,  dmgBonus: 2, fort: 4,  reflex: 5,  gold: [18, 42], attacks: 2, tokenPool: MONK_TOKENS, atkSounds: BRUCE_SFX },  // flurry of unarmed strikes; random face + kiai
+  monk:              { name: 'Monk',              glyph: '🥋', cr: '2',   hp: 22,  ac: 16, toHit: 4,  dmgDie: 6,  dmgBonus: 2, fort: 4,  reflex: 5,  gold: [18, 42], attacks: 2, evasion: true, tokenPool: MONK_TOKENS, atkSounds: BRUCE_SFX },  // flurry of unarmed strikes; random face + kiai; Evasion
   skeletal_champion: { name: 'Skeletal Champion', glyph: '☠️', cr: '2',   hp: 19,  ac: 17, toHit: 5,  dmgDie: 8,  dmgBonus: 3, fort: 3,  reflex: 2,  gold: [26, 55], shout: { dc: 14, sound: '/audio/enemy_draugr_shout.mp3' } },   // bone-rattling shout: 1d8 + Fort or stunned 1
   shadow:            { name: 'Shadow',            glyph: '🌑', cr: '3',   hp: 19,  ac: 13, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 1,  reflex: 3,  gold: [30, 65] },
-  fire_skeleton:     { name: 'Fire Skeleton',     glyph: '🔥', cr: '3',   hp: 22,  ac: 16, toHit: 5,  dmgDie: 6,  dmgBonus: 2, fort: 1,  reflex: 2,  gold: [24, 52], explode: { count: 2, dice: 3, die: 6, sound: '/audio/enemy_fireskeleton_boom.mp3' } },   // bursts on death → 3d6 to 1d2 heroes
+  fire_skeleton:     { name: 'Fire Skeleton',     glyph: '🔥', cr: '3',   hp: 22,  ac: 16, toHit: 5,  dmgDie: 6,  dmgBonus: 2, fort: 1,  reflex: 2,  gold: [24, 52], detonate: { count: 2, die: 6, sound: '/audio/enemy_fireskeleton_boom.mp3' } },   // suicide bomber: on its TURN it rushes in and detonates — 1d6 fire/level to 1d2 heroes, destroying itself (kill it first to defuse)
   wight:             { name: 'Wight',             glyph: '👻', cr: '3',   hp: 26,  ac: 15, toHit: 4,  dmgDie: 4,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [34, 72] },
   ogre:              { name: 'Ogre',              glyph: '👹', cr: '3',   hp: 30,  ac: 17, toHit: 8,  dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 6, reflex: 0, gold: [40, 90] },                                  // greatclub 2d8+7
   gray_ooze:         { name: 'Gray Ooze',         glyph: '🟢', cr: '4',   hp: 50,  ac: 6,  toHit: 5,  dmgDie: 6,  dmgBonus: 4, fort: 6,  reflex: 0,  gold: [38, 80] },
@@ -604,6 +604,8 @@ class Dungeon {
       shoutsLeft: base.shout ? 2 : 0,
       resist: base.resist || null,         // energy resistances / vulnerabilities (see RESIST_BY_KEY)
       flying: !!base.flying,               // airborne: immune to prone + "high ground" vs grounded foes
+      evasion: !!base.evasion,             // rogues/monks: a made Reflex save vs an area effect = NO damage
+      detonate: base.detonate || null,     // fire skeleton: rushes in and blows itself up on its turn
       slowed: 0, _slowTick: 0,             // Slow spell: sluggish for N rounds, acts every other turn
       gold: rint(base.gold[0], base.gold[1]),
     };
@@ -1020,6 +1022,9 @@ class Dungeon {
     e.flatFooted = false;   // acting ends flat-footed
     if (e.prone) { e.prone = false; this._note(`${e.glyph} ${e.name} clambers back to its feet.`); }
     if (!this.livingParty().length) return;
+    // Fire Skeleton: its whole purpose is to rush in and blow up. If it survives
+    // to its turn, it detonates (and dies) instead of making a normal attack.
+    if (e.detonate && !e._exploded) return this._detonate(e);
     // Kobold shaman: cast Hold Person on an unheld target before resorting to melee.
     if (e.caster === 'holdperson' && e.castsLeft > 0) {
       const free = this._targetableParty().filter(m => !(m.paralyzed > 0));
@@ -1551,19 +1556,24 @@ class Dungeon {
   _dmgE(e, dmg, dtype) {
     const dealt = this._resisted(e, dmg, dtype);
     e.hp -= dealt; if (e.fascinated) e.fascinated = false;
-    if (e.hp <= 0 && e.explode && !e._exploded) { e._exploded = true; this._enemyExplode(e); }
+    // NOTE: a Fire Skeleton does NOT explode when slain — kill it first and it's
+    // DEFUSED. It only blows up if it survives to its own turn (see _detonate).
     return dealt;
   }
-  // A Fire Skeleton bursts on death, striking 1d2 (random, targetable) heroes.
-  _enemyExplode(e) {
-    const ex = e.explode || {};
+  // Fire Skeleton suicide bomber: on its turn it rushes in and DETONATES — one
+  // fire roll (1d6 per party level) lands on 1d2 random heroes (no save, point-
+  // blank), and the skeleton is consumed in the blast.
+  _detonate(e) {
+    const ex = e.detonate || {};
+    const lvl = Math.max(1, this._minLevel());
+    const d = dRollN(lvl, ex.die || 6);   // ONE roll: 1d6 per level, shared by everyone caught in it
     const live = this._targetableParty().slice();
-    if (!live.length) return;
     for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
-    const hit = live.slice(0, dRoll(ex.count || 2));
+    const hit = live.slice(0, dRoll(ex.count || 2));   // 1d2 heroes caught in the blast
     const parts = [];
-    for (const t of hit) { const d = dRollN(ex.dice || 3, ex.die || 6); this._dmgToMember(t, d); parts.push(`${t.nickname} −${d}`); }
-    this._note(`💥 ${e.name} erupts into flame as it falls — ${parts.join(', ')}!`, ex.sound, { side: 'enemy' });
+    for (const t of hit) { this._dmgToMember(t, d); parts.push(`${t.nickname} −${d}`); }
+    e._exploded = true; e.hp = 0;   // it consumes itself
+    this._note(`💥 ${e.name} hurls itself among the heroes and DETONATES (${lvl}d6 fire = ${d})${parts.length ? ' — ' + parts.join(', ') : ' — but catches no one'}! It is destroyed.`, ex.sound, { side: 'enemy' });
     this._echoToTable(ex.sound);
   }
   // Enemy save bonus. Monsters carry Fort + Reflex; Will is approximated.
@@ -1617,14 +1627,19 @@ class Dungeon {
     const sound = (ab.sounds ? pick(ab.sounds) : ab.sound) || pick(SND.lightning), parts = [];   // Fireball/Lightning alternate from a pool
     const saveStat = ab.save || 'reflex';
     const saveLbl = saveStat === 'fort' ? 'Fort' : saveStat === 'will' ? 'Will' : 'Ref';
+    // PF1e: the burst rolls its damage ONCE; every target saves against that same
+    // number. Fail = full, save = half — or NONE if they have Evasion (a Reflex-
+    // save area effect only). Resistance/vulnerability still applies per target.
+    const full = dRollN(dice, ab.die || 6);
     for (const e of chosen) {
-      const full = dRollN(dice, ab.die || 6);
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
-      const raw = sv.saved ? Math.floor(full / 2) : full;
+      const evaded = sv.saved && saveStat === 'reflex' && e.evasion;
+      const raw = sv.saved ? (evaded ? 0 : Math.floor(full / 2)) : full;
       const dmg = this._dmgE(e, raw, ab.dtype);
-      parts.push(`${e.name}: ${saveLbl} ${sv.total} vs ${dc} ${sv.saved ? 'half' : 'fail'} ${dmg}${this._resistTag(e, ab.dtype)}${e.hp <= 0 ? ' ☠️' : ''}`);
+      const outcome = sv.saved ? (evaded ? '🤸 EVADES — 0' : `half ${dmg}`) : `fail ${dmg}`;
+      parts.push(`${e.name}: ${saveLbl} ${sv.total} vs ${dc} ${outcome}${evaded ? '' : this._resistTag(e, ab.dtype)}${e.hp <= 0 ? ' ☠️' : ''}`);
     }
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} (${dice}d${ab.die || 6} ${ab.dtype || ''}) — ${parts.join('; ')}.`, sound);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} (${dice}d${ab.die || 6} → ${full} ${ab.dtype || ''}) — ${parts.join('; ')}.`, sound);
     this._echoToTable(sound);
   }
   // Magic Missile — auto-hit force darts (PF1: 1 dart, +1 per 2 caster levels,
