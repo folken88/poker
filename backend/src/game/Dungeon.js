@@ -432,7 +432,8 @@ class Dungeon {
     if (o.grappled)      c.push({ key: 'grappled',  label: 'Grappled',  desc: 'chained — −2 to hit, easier to strike; crushed each turn (Dispel or Grease frees you)', icon: `${I}grappled.webp` });
     if (o.prayed > 0)    c.push({ key: 'prayed',     label: 'Prayer',    desc: `−${o.prayed} to hit, damage & saves (cleric Prayer covers the battlefield)`, icon: `${I}shaken.webp` });
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
-    if (o.fascinated)    c.push({ key: 'asleep',    label: 'Asleep',    desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
+    if (o.asleep)        c.push({ key: 'asleep',     label: 'Asleep',     desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
+    else if (o.fascinated) c.push({ key: 'fascinated', label: 'Fascinated', desc: 'enthralled — loses turns; the first hit snaps it out', icon: `${I}fascinated.webp` });
     if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
     return c;
   }
@@ -490,7 +491,7 @@ class Dungeon {
         uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
         flying: !!e.flying,
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
-        align: e.align || 'NE', evil: !!e.evil, flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated,
+        align: e.align || 'NE', evil: !!e.evil, flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep,
         conditions: e.hp > 0 ? this._condList(e) : [],
       })),
       turn: this._currentTurn(),
@@ -604,7 +605,7 @@ class Dungeon {
       dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus,
       fort: base.fort, reflex: base.reflex,
       align: base.align || 'NE', evil: !!base.evil,
-      flatFooted: true, prone: false, fascinated: false, loseTurn: false,
+      flatFooted: true, prone: false, fascinated: false, asleep: false, loseTurn: false,
       paralyze: !!base.paralyze, paralyzeDC: base.paralyzeDC || PARALYZE_DC, sickened: 0,
       attacks: base.attacks || 1,
       atkSound: base.atkSound || null,
@@ -697,7 +698,7 @@ class Dungeon {
         this._note(`🟢 Acid keeps sizzling on ${e.name} — ${dealt} acid${this._resistTag(e, 'acid')}.${this._afterEnemyHit(e)}`, null, { side: 'enemy' });
         if (e.hp <= 0) { this._broadcast(); return this._nextTurn(); }
       }
-      if (e.fascinated) { this._note(`${e.glyph} ${e.name} stands fascinated — does nothing.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
+      if (e.fascinated) { this._note(`${e.glyph} ${e.name} ${e.asleep ? 'sleeps soundly' : 'stands fascinated'} — does nothing.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       if (e.paralyzed > 0) {
         if (e.heldDC) {   // Hold Person / Hideous Laughter: a NEW Will save each turn — costs the turn either way (PF1e).
           e.paralyzed -= 1; const hdc = e.heldDC;
@@ -1775,7 +1776,7 @@ class Dungeon {
   // Returns the damage actually dealt.
   _dmgE(e, dmg, dtype) {
     const dealt = this._resisted(e, dmg, dtype);
-    e.hp -= dealt; if (e.fascinated) e.fascinated = false;
+    e.hp -= dealt; if (e.fascinated) { e.fascinated = false; e.asleep = false; }   // a hit snaps Sleep/Fascinate
     // NOTE: a Fire Skeleton does NOT explode when slain — kill it first and it's
     // DEFUSED. It only blows up if it survives to its own turn (see _detonate).
     return dealt;
@@ -2104,7 +2105,7 @@ class Dungeon {
     const sound = ab.sound || pick(SND.flesh), parts = [];
     for (const e of chosen) {
       const sv = this._saveVs(this._enemySave(e, 'will'), dc);
-      if (!sv.saved) { e.fascinated = true; e.flatFooted = true; }   // asleep: skip turns (woken by a hit) + helpless
+      if (!sv.saved) { e.fascinated = true; e.asleep = true; e.flatFooted = true; }   // asleep: skip turns (woken by a hit) + helpless
       parts.push(`${e.name}: Will ${sv.total} vs ${dc} ${sv.saved ? 'shrugs it off' : '💤 ASLEEP'}`);
     }
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${parts.join('; ')}.`, sound);
