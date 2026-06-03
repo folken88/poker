@@ -957,6 +957,20 @@
           const tgt = ab.maxTargets > 1 ? ` <span class="dungeon__uses">×${ab.maxTargets}</span>` : '';
           return `<button class="btn btn--ghost" data-dact="ability" data-slot="${slot}"${(myTurn && ok) ? '' : ' disabled'} title="${escapeAttr(ab.desc || '')}">${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
         };
+        // Spellbook tile: icon ONLY (name + short description show on hover).
+        // A corner badge carries the uses-left count, or 🔒 when level-locked.
+        const spellIcon = (ab, slot) => {
+          const locked = !ab.available;
+          const ok = !locked && (ab.cost === 'free' ? true : (ab.remaining > 0));
+          const dis = !myTurn || !ok;
+          const cnt = (ab.cost === 'room' || ab.cost === 'run') && ab.max ? `${ab.remaining}/${ab.max}` : '';
+          const badge = locked ? `<span class="dungeon__sb-badge dungeon__sb-lock">🔒</span>`
+                      : (cnt ? `<span class="dungeon__sb-badge">${cnt}</span>` : '');
+          const tgt = ab.maxTargets > 1 ? ` · up to ${ab.maxTargets} foes` : '';
+          const lk  = locked ? ` — unlocks at level ${ab.minLevel}` : '';
+          const title = `${ab.name}${tgt}${lk}${ab.desc ? ' — ' + ab.desc : ''}`;
+          return `<button class="dungeon__sb-spell${locked ? ' is-locked' : ''}" data-dact="ability" data-slot="${slot}"${dis ? ' disabled' : ''} title="${escapeAttr(title)}" aria-label="${escapeAttr(ab.name)}">${ic(ab)}${badge}</button>`;
+        };
         const atName = `${kit.atwill.img ? ic(kit.atwill) : (kit.atwill.icon || '⚔️') + ' '}${escapeText(kit.atwill.name || 'Attack')}`;
         const pool = kit.spellPool ? ` · ✨ ${kit.spellPool.remaining}/${kit.spellPool.max} casts` : '';
         const status = combat
@@ -968,7 +982,19 @@
         // ("one cast of each spell per room" / "cast freely").
         let abilHtml;
         if (kit.caster) {
-          const rows = (kit.abilities || []).map((ab, i) => abilBtn(ab, i)).join('');
+          // Group spells by the level they unlock at, ascending, then render
+          // each group as a row of icon-only tiles (names/desc on hover).
+          const groups = new Map();
+          (kit.abilities || []).forEach((ab, i) => {
+            const lv = ab.minLevel || 1;
+            if (!groups.has(lv)) groups.set(lv, []);
+            groups.get(lv).push(spellIcon(ab, i));
+          });
+          const sections = [...groups.keys()].sort((a, b) => a - b).map(lv =>
+            `<div class="dungeon__sb-lvl">` +
+              `<div class="dungeon__sb-lvlhead">Level ${lv}</div>` +
+              `<div class="dungeon__sb-row">${groups.get(lv).join('')}</div>` +
+            `</div>`).join('');
           const badge = kit.spellPool ? ` <span class="dungeon__uses">✨${kit.spellPool.remaining}/${kit.spellPool.max}</span>` : '';
           const head  = kit.spellPool
             ? `✨ ${kit.spellPool.remaining}/${kit.spellPool.max} casts left this room`
@@ -977,7 +1003,7 @@
             `<button type="button" class="btn ${_spellbookOpen ? 'btn--primary' : 'btn--ghost'}" data-spellbook-toggle aria-expanded="${_spellbookOpen}">📖 Spellbook ▾${badge}</button>` +
             `<div class="dungeon__spellbook ${_spellbookOpen ? 'is-open' : ''}">` +
               `<div class="dungeon__sb-head">${escapeText(head)}</div>` +
-              `<div class="dungeon__sb-grid">${rows}</div>` +
+              `<div class="dungeon__sb-scroll">${sections}</div>` +
             `</div>`;
         } else {
           abilHtml = (kit.abilities || []).map((ab, i) => abilBtn(ab, i)).join('');

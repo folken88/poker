@@ -158,16 +158,39 @@ button, input { font: inherit; color: inherit; }
 /* Spell/ability art icon inside a button. */
 .spell-ic { width: 18px; height: 18px; border-radius: 3px; object-fit: cover; vertical-align: -4px; margin-right: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,0.4); }
 /* Caster "📖 Spellbook ▾" expandable menu. */
+/* Opens DOWN and to the RIGHT from the toggle, grouped by level and scrolling
+   vertically when there are many spells. */
 .dungeon__spellbook {
-  display: none; position: absolute; z-index: 60; left: 50%; transform: translateX(-50%);
-  bottom: calc(100% + 0.3rem); min-width: 260px; max-width: 92vw;
+  display: none; position: absolute; z-index: 60; left: 0; top: calc(100% + 0.3rem);
+  min-width: 280px; max-width: min(360px, 92vw);
   padding: 0.5rem; background: linear-gradient(180deg, rgba(20,24,18,0.98), rgba(10,14,10,0.99));
   border: 1px solid rgba(217,176,106,0.4); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.7);
 }
 .dungeon__spellbook.is-open { display: block; }
 .dungeon__sb-head { font-size: 0.78rem; color: var(--brass-bright); margin-bottom: 0.4rem; text-align: center; }
-.dungeon__sb-grid { display: flex; flex-direction: column; gap: 0.3rem; }
-.dungeon__sb-grid .btn { width: 100%; text-align: left; justify-content: flex-start; }
+.dungeon__sb-scroll { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+.dungeon__sb-lvlhead {
+  font-size: 0.68rem; color: var(--brass-bright); letter-spacing: 0.06em; text-transform: uppercase;
+  opacity: 0.85; margin-bottom: 0.25rem; padding: 2px 0;
+  position: sticky; top: 0; background: rgba(14,16,12,0.98); z-index: 1;
+}
+.dungeon__sb-row { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.dungeon__sb-spell {
+  position: relative; width: 40px; height: 40px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; line-height: 1;
+  border-radius: 8px; border: 1px solid rgba(217,176,106,0.3);
+  background: rgba(0,0,0,0.35); color: var(--ivory); cursor: pointer;
+}
+.dungeon__sb-spell:hover:not(:disabled) { border-color: var(--brass-bright); background: rgba(217,176,106,0.16); }
+.dungeon__sb-spell:disabled { cursor: default; opacity: 0.5; }
+.dungeon__sb-spell.is-locked { opacity: 0.4; }
+.dungeon__sb-spell .spell-ic { width: 30px; height: 30px; margin: 0; vertical-align: 0; }
+.dungeon__sb-badge {
+  position: absolute; bottom: -3px; right: -3px; font-size: 0.58rem; line-height: 1;
+  padding: 1px 3px; border-radius: 6px; background: rgba(10,10,14,0.95);
+  border: 1px solid rgba(217,176,106,0.4); color: var(--ivory-dim); font-variant-numeric: tabular-nums;
+}
+.dungeon__sb-badge.dungeon__sb-lock { background: transparent; border: none; padding: 0; bottom: -2px; right: -1px; }
 .dwait { color: var(--ivory-dim); font-style: italic; align-self: center; }
 .dungeon__recruit { position: relative; }
 .dungeon__recruit:empty { display: none; }
