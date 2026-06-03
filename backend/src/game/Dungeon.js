@@ -1625,6 +1625,15 @@ class Dungeon {
     if (ab.cost === 'slot' && ((m.slots && m.slots[ab.slvl]) || 0) <= 0) return { ok: false, error: `no level-${ab.slvl || '?'} spell slots left this room` };
     if (ab.cost === 'room' && ((m.abilityUses && m.abilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is spent for this room` };
     if (ab.cost === 'run'  && ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is already cast for this dungeon` };
+    // Don't waste Sleep/Fascinate on a foe that's already asleep OR fascinated —
+    // they share the same "out of the fight" state, so re-casting either one on
+    // an already-entranced foe is wasted. Refuse the cast (the slot is kept) when
+    // every chosen target is already down. Bots already pick un-CC'd foes; this
+    // guards manual casts and the all-CC'd edge case.
+    if (ab.effect === 'sleep' || ab.effect === 'fascinate') {
+      const picked = this._enemyTargets(payload, ab.maxTargets || 3);
+      if (picked.length && picked.every(e => e.fascinated)) return { ok: false, error: 'those foes are already asleep or fascinated' };
+    }
     m.flatFooted = false;   // acting ends flat-footed
     const D = {
       trip:        () => this._abTrip(m, payload),
@@ -2101,7 +2110,7 @@ class Dungeon {
   // helpless (flat-footed) and losing turns until something strikes them.
   _abSleep(m, ab, payload) {
     const dc = this._spellDC(m);
-    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).slice().sort((a, b) => a.hp - b.hp);
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !e.fascinated).slice().sort((a, b) => a.hp - b.hp);   // skip foes already asleep/fascinated
     const sound = ab.sound || pick(SND.flesh), parts = [];
     for (const e of chosen) {
       const sv = this._saveVs(this._enemySave(e, 'will'), dc);
@@ -2132,7 +2141,8 @@ class Dungeon {
   }
   // Fascinate: up to maxTargets foes stand enthralled, losing turns until struck.
   _abFascinate(m, ab, payload) {
-    const chosen = this._enemyTargets(payload, ab.maxTargets || 3);
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !e.fascinated);   // skip foes already asleep/fascinated
+    if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} begins ${ab.name}, but those foes are already entranced.`); return; }
     for (const e of chosen) e.fascinated = true;
     const sound = ab.sound || pick(SND.flesh);
     this._note(`${ab.icon} ${m.nickname} performs ${ab.name} — ${chosen.map(e => e.name).join(', ')} stand fascinated (until struck).`, sound);
