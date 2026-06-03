@@ -21,6 +21,15 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-02
 
+### 🗡️ Rogues hunt the helpless
+- Rogues now **prefer incapacitated foes** (flat-footed, prone, sickened, held,
+  or **asleep**) so they land **Sneak Attack** — they'll gladly stab a sleeping
+  enemy, while everyone else still avoids waking it. A rogue only **Feints** when
+  there's no opening to exploit. (Asleep/fascinated now counts as denied-Dex for
+  Sneak Attack.)
+- **Dispel Magic** clears a debuff off an afflicted ally (and is ready to strip
+  enemy buffs once foes can carry them).
+
 ### ✅ Buffs show on heroes
 - Heroes now display their **active buffs** as a green-ringed icon strip on the
   token (debuffs stay red up top): **Rage, Shield, Divine Favor, Bane, Prayer,

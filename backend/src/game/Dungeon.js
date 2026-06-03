@@ -874,7 +874,7 @@ class Dungeon {
     const smite = !!(attacker.smiteActive && target && target.evil);
     // Sneak Attack: rogue-likes add precision dice vs a target that's denied its
     // defenses — flat-footed, prone, sickened, or paralyzed (PF1e). NOT crit-multiplied.
-    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0));
+    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated));
     const sneakOk = SNEAK_CLASSES.has(cls) && denied;
     const sneakDice = sneakOk ? Math.min(SNEAK_DICE_CAP, Math.max(1, Math.ceil(lvl / 2))) : 0;
     // Sticky room buffs (Rage / Judgment / Bane / Inspire Courage / Prayer)
@@ -1031,12 +1031,23 @@ class Dungeon {
       if (r && r.ok && ab) m._lastAbilityKey = ab.key;
       if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }   // free action (judgement) → keep acting
     }
-    // Basic attack — prefer foes that are NOT asleep/fascinated (a hit wakes
-    // them and throws away the crowd-control). Only target a sleeper if every
-    // living foe is already incapacitated this way.
-    const awake = foes.filter(e => !e.fascinated);
-    this._playerAttack(m, (awake.length ? awake : foes)[0].uid);
+    // Basic attack — class-aware target pick (see _preferredFoe).
+    const tgt = this._preferredFoe(m, foes);
+    if (tgt) this._playerAttack(m, tgt.uid);
     this._hasteBonus(m);   // Haste: spend a pending extra attack after the action
+  }
+  // Which foe a bot should strike. ROGUES hunt the HELPLESS (flat-footed / prone
+  // / sickened / paralyzed / ASLEEP) for Sneak Attack — they'll happily stab a
+  // sleeper. Everyone else AVOIDS asleep/fascinated foes (a hit wakes them and
+  // wastes the crowd-control), only hitting one if all living foes are out.
+  _preferredFoe(m, foes) {
+    if (!foes || !foes.length) return null;
+    if (m.cls === 'rogue') {
+      const helpless = foes.filter(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated);
+      return (helpless.length ? helpless : foes).slice().sort((a, b) => a.hp - b.hp)[0];   // weakest sneakable foe
+    }
+    const awake = foes.filter(e => !e.fascinated);
+    return (awake.length ? awake : foes)[0];
   }
   // Bot ability AI: pick a class ability for this turn, or null to basic-attack.
   // Priority: heal the hurt → raise buffs (smite/rage/shield/inspire/bane) →
@@ -1048,6 +1059,10 @@ class Dungeon {
     const lvl = m.level || 1;
     const foes = this.livingEnemies();
     if (!foes.length) return null;
+    // Rogue: if a foe is already HELPLESS (flat-footed at the open, prone, asleep,
+    // held…) it's a free Sneak target — skip Feint and just stab it (basic attack).
+    // Feint only when there's no opening to set one up.
+    if (m.cls === 'rogue' && foes.some(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated)) return null;
     const awake = foes.filter(e => !e.fascinated);
     const targets = awake.length ? awake : foes;          // don't wake sleepers
     const usable = (ab) => {
