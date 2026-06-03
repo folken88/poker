@@ -185,9 +185,6 @@
           <span class="help-panel__title">🎒 My Loot Bank</span>
           <span class="help-panel__chevron" aria-hidden="true">▾</span>
         </button>
-        <!-- Paper-doll popover: equipped gear + buy/hock, opened by the button
-             above and dismissed on click-outside. -->
-        <div id="bankDoll" class="bank-doll" hidden role="dialog" aria-label="My Loot Bank — equipped gear, buy, hock"></div>
 
         <h3 class="help-panel__title help-panel__title--ranks">Hand rankings</h3>
         <ol class="help-panel__rankings">
@@ -306,6 +303,9 @@
       <header class="dungeon__top">
         <div class="dungeon__title">🗡️ The Dungeon</div>
         <div class="dungeon__meta" id="dungeonMeta">Depth 0</div>
+        <button class="btn btn--ghost btn--sm" id="dungeonBankToggle"
+                aria-expanded="false" aria-haspopup="dialog" aria-controls="bankDoll"
+                title="Equip, buy, or hock your magic gear">🎒 My Loot Bank</button>
         <button class="btn btn--ghost btn--sm" id="dungeonLeaveBtn" title="Bank your gold and climb back to the poker table">↩ Back to table</button>
       </header>
       <p class="dungeon__ambient">🎵 muffled poker sounds drift down from the hall above…</p>
@@ -342,6 +342,11 @@
       </div>
     </div>
   </section>
+
+  <!-- Paper-doll loot-bank popover. Lives at top level (not inside a screen) so
+       it floats over EITHER the poker table or the dungeon — opened by
+       #sidebarBankToggle (table) or #dungeonBankToggle (dungeon). -->
+  <div id="bankDoll" class="bank-doll" hidden role="dialog" aria-label="My Loot Bank — equipped gear, buy, hock"></div>
 
   <!-- ===== Reset confirm modal ===== -->
   <div class="modal" id="resetModal" hidden role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
@@ -478,6 +483,6 @@
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
   <script src="/js/cards.js?v=20260602-abadar"></script>
   <script src="/js/blindMode.js?v=20260601-blindtop"></script>
-  <script src="/js/client.js?v=20260603-batch7"></script>
+  <script src="/js/client.js?v=20260603-dbank"></script>
 </body>
 </html>

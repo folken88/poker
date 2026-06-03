@@ -2403,29 +2403,38 @@
       <div class="bank-doll__ringrow">${c('ring')}</div>
       <div class="bank__progress" title="Progress to LOOT LORD (full +5 set)"><div class="bank__progress-bar" style="width:${pct}%"></div><span class="bank__progress-text">${formatChips(totalValue)} / ${formatChips(LOOT_LORD_TOTAL)} · ${pct}%</span></div>`;
   }
-  function openBankDoll() {
+  // Both the table sidebar button and the dungeon header button open the same
+  // (top-level, position:fixed) popover; we anchor it under whichever was used.
+  const _bankToggles = () => [$('#sidebarBankToggle'), $('#dungeonBankToggle')].filter(Boolean);
+  function openBankDoll(btn) {
     const el = $('#bankDoll'); if (!el) return;
     _bankDollOpen = true; el.hidden = false; el.innerHTML = buildPaperDollHtml();
-    // Anchor (fixed) just below the button so it floats over the felt unclipped.
-    const btn = $('#sidebarBankToggle');
-    if (btn) { const r = btn.getBoundingClientRect(); el.style.top = `${Math.round(r.bottom + 6)}px`; el.style.left = `${Math.round(r.left)}px`; }
-    $('#sidebarBankToggle')?.setAttribute('aria-expanded', 'true');
+    // Anchor (fixed) just below the button, clamped so it can't run off-screen
+    // (the dungeon button sits on the right side of its header).
+    const anchor = btn || $('#dungeonBankToggle') || $('#sidebarBankToggle');
+    if (anchor) {
+      const r = anchor.getBoundingClientRect();
+      el.style.top = `${Math.round(r.bottom + 6)}px`;
+      el.style.left = `${Math.round(Math.max(8, Math.min(r.left, window.innerWidth - 312)))}px`;
+    }
+    _bankToggles().forEach(b => b.setAttribute('aria-expanded', 'true'));
   }
   function closeBankDoll() {
     const el = $('#bankDoll'); if (el) el.hidden = true;
     _bankDollOpen = false;
-    $('#sidebarBankToggle')?.setAttribute('aria-expanded', 'false');
+    _bankToggles().forEach(b => b.setAttribute('aria-expanded', 'false'));
   }
   // Re-render the open doll when chips/gear change (called on roster/table state).
   function renderSidebarBank() { if (_bankDollOpen) { const el = $('#bankDoll'); if (el) el.innerHTML = buildPaperDollHtml(); } }
   function renderBank() { /* legacy no-op — gear bank also lives in the action panel */ }
 
-  $('#sidebarBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankDollOpen ? closeBankDoll() : openBankDoll(); });
+  $('#sidebarBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankDollOpen ? closeBankDoll() : openBankDoll($('#sidebarBankToggle')); });
+  $('#dungeonBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankDollOpen ? closeBankDoll() : openBankDoll($('#dungeonBankToggle')); });
   $('#bankDoll')?.addEventListener('click', (e) => { if (e.target.closest('[data-bank-close]')) closeBankDoll(); });
-  // Click anywhere outside the doll (and not the toggle / a gear button) closes it.
+  // Click anywhere outside the doll (and not a toggle / a gear button) closes it.
   document.addEventListener('click', (e) => {
     if (!_bankDollOpen) return;
-    if (e.target.closest('#bankDoll') || e.target.closest('#sidebarBankToggle')) return;
+    if (e.target.closest('#bankDoll') || e.target.closest('#sidebarBankToggle') || e.target.closest('#dungeonBankToggle')) return;
     closeBankDoll();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && _bankDollOpen) closeBankDoll(); });
