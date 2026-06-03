@@ -2184,6 +2184,7 @@ class Dungeon {
     const allies = this.livingParty();
     if (payload && payload.targetUid) { const t = allies.find(a => a.playerId === payload.targetUid); if (t) return t; }
     const MARTIAL = ['fighter', 'barbarian', 'paladin', 'antipaladin', 'ranger', 'rogue', 'magus', 'cavalier', 'monk', 'inquisitor'];
+    if (ab.key === 'shieldoffaith') return allies.slice().sort((a, b) => (acOf(a.gear, a.cls).ac + this._acBonus(a) - this._acPenalty(a)) - (acOf(b.gear, b.cls).ac + this._acBonus(b) - this._acPenalty(b)))[0] || m;   // lowest-AC ally
     if (ab.key === 'bearsendurance') return allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
     if (ab.key === 'catsgrace')      return allies.find(a => a.cls === 'ranger' || a.cls === 'rogue') || allies.find(a => MARTIAL.includes(a.cls)) || m;
     if (ab.key === 'bullsstrength')  return allies.find(a => MARTIAL.includes(a.cls) && a.playerId !== m.playerId) || allies.find(a => MARTIAL.includes(a.cls)) || m;

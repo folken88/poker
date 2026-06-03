@@ -189,7 +189,7 @@ const KITS = {
     { key: 'channel',      name: 'Channel Positive',     icon: '💖', cost: 'room', uses: smiteUses, effect: 'heal', heal: 'party', target: 'ally', sound: S.charge, desc: 'Channel positive energy — heal the whole party for ½level d6 (PF1e). Once per 5 levels per room.' },
     // ── 1st-level prayers ──
     { key: 'curelight',    name: 'Cure Light Wounds',    icon: '💚', cost: 'slot', slvl: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5,  target: 'ally', sound: S.cure,    desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5).' },
-    { key: 'shieldoffaith',name: 'Shield of Faith',      icon: '🛡️', cost: 'slot', slvl: 1, effect: 'buff', target: 'self', buff: { ac: 2 }, sticky: true, sound: S.invoke, desc: '+2 deflection AC to yourself for the rest of the room.' },
+    { key: 'shieldoffaith',name: 'Shield of Faith',      icon: '🛡️', cost: 'slot', slvl: 1, effect: 'buff', target: 'ally', buff: { ac: 2 }, sticky: true, sound: S.invoke, desc: '+2 deflection AC to an ally (the one with the LOWEST AC) for the rest of the room.' },
     { key: 'divinefavor',  name: 'Divine Favor',         icon: '🙏', cost: 'slot', slvl: 1, effect: 'buff', target: 'self', buff: { toHit: 3, dmg: 3 }, sticky: true, sound: S.invoke,   desc: '+3 to hit and +3 damage to yourself for the rest of the room.' },
     { key: 'bless',        name: 'Bless',                icon: '✨', cost: 'run',  uses: 1, slvl: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1 }, sticky: true, sound: S.cure, desc: 'All allies gain +1 to hit for the ENTIRE dungeon — cast once; it never fades between rooms.' },
     // ── 2nd-level prayers ──

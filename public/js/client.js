@@ -878,6 +878,13 @@
           </button>`;
         }).join('')
       : '<div class="dmon__none">— the room is quiet —</div>';
+    // Static battlefield box: shrink the cards as the field fills so a crowded
+    // room never spills past the box / pushes the spellbook off-screen.
+    if (ene) {
+      const n = (d.enemies || []).length;
+      ene.classList.toggle('is-compact', n > 6 && n <= 12);
+      ene.classList.toggle('is-packed', n > 12);
+    }
 
     const party = $('#dungeonParty');
     if (party) party.innerHTML = (d.party || []).map(m => {

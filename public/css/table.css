@@ -58,8 +58,20 @@ button, input { font: inherit; color: inherit; }
   border: 1px solid rgba(217,176,106,0.25); border-radius: 12px; padding: 1rem;
   display: flex; flex-direction: column; gap: 0.9rem;
 }
-.dungeon__enemies { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; min-height: 96px; }
+/* The enemy field is a STATIC-height box — when it fills up the cards shrink
+   (is-compact / is-packed, set in JS by enemy count) and, as a last-resort
+   fallback, it scrolls internally — so a crowded battlefield never pushes the
+   action bar / spellbook off the bottom of the screen. */
+.dungeon__enemies { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; align-content: flex-start; min-height: 96px; max-height: 30vh; overflow-y: auto; }
 .dmon { position: relative; width: 112px; background: rgba(0,0,0,0.4); border: 1px solid rgba(200,80,80,0.4); border-radius: 10px; padding: 0.5rem 0.4rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; cursor: pointer; color: inherit; transition: transform .1s, border-color .1s, box-shadow .1s; }
+.dungeon__enemies.is-compact .dmon { width: 88px; padding: 0.3rem 0.25rem; gap: 0.15rem; }
+.dungeon__enemies.is-compact .dmon__art { width: 48px; height: 48px; }
+.dungeon__enemies.is-compact .dmon__glyph { font-size: 1.5rem; }
+.dungeon__enemies.is-compact .dmon__name { font-size: 0.72rem; }
+.dungeon__enemies.is-packed .dmon { width: 66px; padding: 0.2rem; gap: 0.1rem; }
+.dungeon__enemies.is-packed .dmon__art { width: 38px; height: 38px; }
+.dungeon__enemies.is-packed .dmon__glyph { font-size: 1.2rem; }
+.dungeon__enemies.is-packed .dmon__name { font-size: 0.62rem; }
 .dmon:hover:not(:disabled) { transform: translateY(-2px); border-color: rgba(255,120,120,0.85); }
 .dmon.is-sel { border-color: var(--brass-bright); box-shadow: 0 0 0 2px rgba(241,207,131,0.4); }
 .dmon.is-boss { border-color: rgba(220,170,60,0.9); background: rgba(40,28,10,0.5); }
