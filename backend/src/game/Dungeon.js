@@ -1296,8 +1296,9 @@ class Dungeon {
   }
   // Which foe a bot should strike. ROGUES hunt the HELPLESS (flat-footed / prone
   // / sickened / paralyzed / ASLEEP) for Sneak Attack — they'll happily stab a
-  // sleeper. Everyone else AVOIDS asleep/fascinated foes (a hit wakes them and
-  // wastes the crowd-control), only hitting one if all living foes are out.
+  // sleeper. BARBARIANS pick the lowest-HP foe to fish for a kill → Cleave chain.
+  // Everyone else AVOIDS asleep/fascinated foes (a hit wakes them and wastes the
+  // crowd-control), only hitting one if all living foes are out.
   _preferredFoe(m, foes) {
     if (!foes || !foes.length) return null;
     // Taunted → compelled to go straight for the taunter (cleared at turn's end).
@@ -1308,6 +1309,7 @@ class Dungeon {
       return (helpless.length ? helpless : foes).slice().sort((a, b) => a.hp - b.hp)[0];   // weakest sneakable foe
     }
     const awake = foes.filter(e => !e.fascinated);
+    if (m.cls === 'barbarian') return (awake.length ? awake : foes).slice().sort((a, b) => a.hp - b.hp)[0];   // weakest first → drop it → Cleave carries on
     return (awake.length ? awake : foes)[0];
   }
   // Bot ability AI: pick a class ability for this turn, or null to basic-attack.
@@ -1370,8 +1372,13 @@ class Dungeon {
     // per-room use instead, so they fall through to the find naturally.
     const buffFullyUp = (a) => {
       const flag = a.persist ? 'runBuffApplied' : 'buffApplied';
-      const recips = a.party ? this.livingParty() : (a.target === 'ally' ? [] : [m]);
-      return recips.length > 0 && recips.every(w => w[flag] && w[flag][a.key]);
+      // party buff → everyone; single-ally buff → the one ally it would land on
+      // (so it's "done" once that ally has it, instead of re-casting forever);
+      // self buff → me.
+      const recips = a.party ? this.livingParty()
+                   : a.target === 'ally' ? [this._buffTarget(m, a)]
+                   : [m];
+      return recips.length > 0 && recips.every(w => w && w[flag] && w[flag][a.key]);
     };
     // Protection from Fire — only worth a slot when fiery foes are on the field.
     const fireFoes = foes.some(e => e.detonate || e.hellfire || /fire|flame|magma|salamander|phoenix/i.test(e.name));
@@ -1393,6 +1400,19 @@ class Dungeon {
     //     while there are foes to fight and the party isn't already hasted.
     const haste = avail.find(a => a.effect === 'haste');
     if (haste && !(m.hasted > 0)) return { slot: slot(haste), payload: {} };
+    // 2b2) Bards LOCK DOWN a boss so it misses its turns. Hideous Laughter (Held)
+    //      is ideal — unlike Fascinate it survives being hit, so the party can
+    //      keep focus-firing while the boss wastes turns trying to re-save. Once
+    //      the party buffs are up the bard pins the boss; it only re-casts if the
+    //      boss shrugs free. A crowd with no boss falls through to group offense.
+    if (m.cls === 'bard') {
+      const heaviest = targets.slice().sort((a, b) => b.maxHp - a.maxHp);
+      const boss = targets.find(e => e.boss) || (heaviest.length >= 2 && heaviest[0].maxHp >= 1.6 * heaviest[1].maxHp ? heaviest[0] : null);
+      if (boss && !(boss.paralyzed > 0)) {
+        const laugh = avail.find(a => a.effect === 'save_debuff');   // Hideous Laughter → Held
+        if (laugh) return { slot: slot(laugh), payload: { targetUid: boss.uid } };
+      }
+    }
     // 2c) Arcane controllers (wizard, sorcerer) play the battlefield: by default
     //     they pick the spell that AFFECTS THE MOST foes — a wide blast (Fireball,
     //     Lightning Bolt, Burning Hands) or a mass lockdown (Sleep, Grease). But
