@@ -1016,22 +1016,29 @@
         `</div>`;
     }
 
-    const log = $('#dungeonLog');
-    // Most recent first; player can scroll DOWN to review earlier events.
-    // Split horizontally — heroes on the left, monsters on the right, run/chat
-    // events centred — so the eye can track its own side. `side` & `kind` come
-    // from the server; fall back to text sniffing for older entries.
-    // Bold the raw d20 die roll inside each "[d20 N …]" breakdown so it pops.
-    if (log) {
-      log.innerHTML = (d.log || []).slice().reverse().map(e => {
+    // Two independent panes: party (hero + run/loot/chat) on the left, monsters
+    // on the right, each scrolling on its own. Newest-first; we only snap a pane
+    // back to the top when it was already near the top, so a player reading
+    // earlier events isn't yanked away mid-fight. `side`/`kind` come from the
+    // server (fall back to text sniffing for older entries).
+    const heroLog = $('#dungeonLogHero'), enemyLog = $('#dungeonLogEnemy');
+    if (heroLog && enemyLog) {
+      const row = e => {
         const txt = e.text || '';
         const say = txt.startsWith('💬');
-        const side = e.side || (say ? 'system' : 'hero');
         const kind = e.kind || 'normal';
         const body = escapeText(txt).replace(/d20 (\d+)/g, 'd20 <b class="droll">$1</b>');
-        return `<li class="dlog--${side}"><span class="dlog__b dlog-k--${kind}${say ? ' dlog-say' : ''}">${body}</span></li>`;
-      }).join('');
-      log.scrollTop = 0;
+        return `<li><span class="dlog__b dlog-k--${kind}${say ? ' dlog-say' : ''}">${body}</span></li>`;
+      };
+      const sideOf = e => e.side || ((e.text || '').startsWith('💬') ? 'system' : 'hero');
+      const all = (d.log || []).slice().reverse();
+      const paint = (el, html) => {
+        const atTop = el.scrollTop < 24;
+        el.innerHTML = html;
+        if (atTop) el.scrollTop = 0;
+      };
+      paint(heroLog,  all.filter(e => sideOf(e) !== 'enemy').map(row).join(''));
+      paint(enemyLog, all.filter(e => sideOf(e) === 'enemy').map(row).join(''));
     }
   }
 

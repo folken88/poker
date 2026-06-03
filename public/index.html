@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260603-dlog" />
+  <link rel="stylesheet" href="/css/table.css?v=20260603-dlog2" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -322,7 +322,19 @@
                aria-label="Dungeon chat message — type and press Enter" />
         <button type="submit" class="btn btn--ghost btn--sm" id="dungeonChatSend" aria-label="Send dungeon message">Send</button>
       </form>
-      <ol class="dungeon__log" id="dungeonLog" role="log" aria-live="polite" aria-label="Dungeon log"></ol>
+      <!-- Two independent scroll panes: party actions on the left, monster
+           actions on the right, so a fast fight on one side never scrolls the
+           other out of view. Run/loot/chat events ride along in the party pane. -->
+      <div class="dungeon__logs">
+        <div class="dungeon__logcol dungeon__logcol--hero">
+          <div class="dungeon__loghead">⚔️ Party</div>
+          <ol class="dungeon__log" id="dungeonLogHero" role="log" aria-live="polite" aria-label="Party combat log"></ol>
+        </div>
+        <div class="dungeon__logcol dungeon__logcol--enemy">
+          <div class="dungeon__loghead">👹 Monsters</div>
+          <ol class="dungeon__log" id="dungeonLogEnemy" role="log" aria-live="polite" aria-label="Monster combat log"></ol>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -461,6 +473,6 @@
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
   <script src="/js/cards.js?v=20260602-abadar"></script>
   <script src="/js/blindMode.js?v=20260601-blindtop"></script>
-  <script src="/js/client.js?v=20260603-dlog"></script>
+  <script src="/js/client.js?v=20260603-dlog2"></script>
 </body>
 </html>

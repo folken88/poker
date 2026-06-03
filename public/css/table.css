@@ -188,7 +188,15 @@ button, input { font: inherit; color: inherit; }
 .dungeon__recruit-pop.is-open { display: block; }
 .dungeon__recruit-head { font-size: 0.78rem; color: var(--brass-bright); letter-spacing: 0.04em; margin-bottom: 0.4rem; position: sticky; top: -0.5rem; background: rgba(14,12,18,0.98); padding: 0.25rem 0; }
 .bot-picker__grid--dungeon { max-height: none; overflow: visible; }   /* the popover scrolls instead */
-.dungeon__log { list-style: none; margin: 0; padding: 0.5rem 0.8rem; flex: 1; min-height: 70px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(217,176,106,0.15); border-radius: 8px; font-size: 0.82rem; line-height: 1.4; color: var(--ivory-dim); }
+/* Two side-by-side scroll panes — party left, monsters right. */
+.dungeon__logs { display: flex; gap: 0.5rem; flex: 1; min-height: 120px; }
+.dungeon__logcol { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dungeon__loghead { font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 6px 3px; opacity: 0.9; }
+.dungeon__logcol--hero  .dungeon__loghead { color: #9fd29f; }
+.dungeon__logcol--enemy .dungeon__loghead { color: #e2a0a0; }
+.dungeon__log { list-style: none; margin: 0; padding: 0.4rem 0.6rem; flex: 1; min-height: 70px; overflow-y: auto; background: rgba(0,0,0,0.3); border: 1px solid rgba(217,176,106,0.15); border-radius: 8px; font-size: 0.82rem; line-height: 1.4; color: var(--ivory-dim); }
+.dungeon__logcol--hero  .dungeon__log { border-color: rgba(122,184,122,0.25); }
+.dungeon__logcol--enemy .dungeon__log { border-color: rgba(214,120,120,0.25); }
 .dungeon__spectating { color: #9ec5f0; font-style: italic; }
 .dungeon__chat { display: flex; gap: 0.4rem; align-items: center; }
 .dungeon__chat input {
@@ -202,21 +210,8 @@ button, input { font: inherit; color: inherit; }
 }
 .dungeon__chat input::placeholder { color: var(--ivory-dim); }
 .dungeon__chat input:focus { outline: none; border-color: rgba(217,176,106,0.6); }
-/* Combat log split horizontally: heroes left, monsters right, run/chat centred. */
-.dungeon__log li { padding: 1px 0; display: flex; }
-.dungeon__log li.dlog--hero   { justify-content: flex-start; }
-.dungeon__log li.dlog--enemy  { justify-content: flex-end; }
-.dungeon__log li.dlog--system { justify-content: center; }
-.dungeon__log .dlog__b {
-  max-width: 64%;
-  padding: 1px 7px;
-  border-radius: 6px;
-  border-left: 2px solid transparent;
-  border-right: 2px solid transparent;
-}
-.dungeon__log li.dlog--hero  .dlog__b { text-align: left;  border-left-color: rgba(122,184,122,0.45);  background: rgba(122,184,122,0.05); }
-.dungeon__log li.dlog--enemy .dlog__b { text-align: right; border-right-color: rgba(214,120,120,0.45); background: rgba(214,120,120,0.05); }
-.dungeon__log li.dlog--system .dlog__b { max-width: 92%; text-align: center; color: var(--ivory-dim); opacity: 0.82; font-size: 0.78rem; }
+.dungeon__log li { padding: 1px 0; }
+.dungeon__log .dlog__b { display: block; }
 /* Subtle event tints — heal gold, death red, buff blue, debuff purple. */
 .dungeon__log .dlog-k--heal   { color: #e7cf8e; }
 .dungeon__log .dlog-k--death  { color: #e58d8d; }
