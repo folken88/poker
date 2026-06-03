@@ -18,7 +18,7 @@
 const db = require('../persistence/db');
 const { weaponOf, acOf, totalMagicBonus, SND, dRoll, dRollN, pick } = require('./combat');
 const { CLASSES, babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../pf1data/classes');
-const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, spontaneousSlots, diceCount } = require('../pf1data/abilities');
+const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, spontaneousSlots, slotsFor, diceCount } = require('../pf1data/abilities');
 const { logDungeon, recordSound } = require('../persistence/logger');
 const banter = require('../bot/banter');
 
@@ -1218,9 +1218,10 @@ class Dungeon {
     for (const t of hit) {
       const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
-      const dmg = saved ? Math.floor(full / 2) : full;
+      let dmg = saved ? Math.floor(full / 2) : full;
+      if (t.protectFire) dmg = Math.max(1, Math.floor(dmg / 2));   // fire ward halves it
       this._dmgToMember(t, dmg);
-      parts.push(`${t.nickname} ${saved ? 'half ' : ''}−${dmg}`);
+      parts.push(`${t.nickname} ${saved ? 'half ' : ''}−${dmg}${t.protectFire ? ' 🔥½' : ''}`);
     }
     this._note(`🔥 ${e.glyph} ${e.name} unleashes a HELLFIRE BLAST (${cfg.dice || 5}d${cfg.die || 6} → ${full}) — ${parts.join(', ')}! [Ref DC ${dc}]`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
@@ -1333,7 +1334,11 @@ class Dungeon {
       const recips = a.party ? this.livingParty() : (a.target === 'ally' ? [] : [m]);
       return recips.length > 0 && recips.every(w => w[flag] && w[flag][a.key]);
     };
-    const buff = avail.find(a => a.effect === 'buff' && a.sticky && !buffFullyUp(a));
+    // Protection from Fire — only worth a slot when fiery foes are on the field.
+    const fireFoes = foes.some(e => e.detonate || e.hellfire || /fire|flame|magma|salamander|phoenix/i.test(e.name));
+    const protect = avail.find(a => a.protectFire);
+    if (protect && fireFoes && this.livingParty().some(p => !p.protectFire)) return { slot: slot(protect), payload: {} };
+    const buff = avail.find(a => a.effect === 'buff' && a.sticky && !a.protectFire && !buffFullyUp(a));
     if (buff) return { slot: slot(buff), payload: {} };
     // 2a) Taunt — a barbarian roars to pull a pack's fire onto themselves (once
     //     per room, only worth it against 2+ foes). With multiple barbarians,
@@ -1648,7 +1653,7 @@ class Dungeon {
   _resetAbilities(m) {
     const kit = kitFor(m.cls);
     m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
-    m.slots = isSpontaneous(m.cls) ? spontaneousSlots(m.level || 1) : null;   // per-spell-level slots (sorcerer/bard/oracle)
+    m.slots = slotsFor(m.cls, m.level || 1);   // per-spell-level slots (sorcerer/bard/oracle/cleric)
     m.abilityUses = {};
     for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1);
     if (m.tempHp) { m.maxHp -= m.tempHp; if (m.hp > m.maxHp) m.hp = m.maxHp; m.tempHp = 0; }   // rage / Bear's Endurance temp HP fades
@@ -1657,7 +1662,7 @@ class Dungeon {
     m.smiteActive = false;
     m.hasted = 0; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null;   // taunt / grapple clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false;   // taunt / grapple / fire ward clear between rooms
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
   }
@@ -1694,7 +1699,7 @@ class Dungeon {
     const kit = kitFor(m.cls);
     const lvl = m.level || 1;
     const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // single-shot rifle → no Rapid Shot
-    const maxSlots = isSpontaneous(m.cls) ? spontaneousSlots(lvl) : null;
+    const maxSlots = slotsFor(m.cls, lvl);
     return {
       atwill: { key: kit.atwill.key, name: kit.atwill.name, icon: kit.atwill.icon, img: kit.atwill.img || null },
       caster: isCaster(m.cls),
@@ -1770,7 +1775,7 @@ class Dungeon {
     for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
     const hit = live.slice(0, dRoll(ex.count || 2));   // 1d2 heroes caught in the blast
     const parts = [];
-    for (const t of hit) { this._dmgToMember(t, d); parts.push(`${t.nickname} −${d}`); }
+    for (const t of hit) { const dd = t.protectFire ? Math.max(1, Math.floor(d / 2)) : d; this._dmgToMember(t, dd); parts.push(`${t.nickname} −${dd}${t.protectFire ? ' 🔥½' : ''}`); }
     e._exploded = true; e.hp = 0;   // it consumes itself
     this._note(`💥 ${e.name} hurls itself among the heroes and DETONATES (${lvl}d6 fire = ${d})${parts.length ? ' — ' + parts.join(', ') : ' — but catches no one'}! It is destroyed.`, ex.sound, { side: 'enemy' });
     this._echoToTable(ex.sound);
@@ -2215,6 +2220,7 @@ class Dungeon {
       who.buffs.ac += (ab.buff && ab.buff.ac) || 0;         // Shield / Cat's Grace: +AC (sticky)
       who.buffs.save += (ab.buff && ab.buff.save) || 0;
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
+      if (ab.protectFire) who.protectFire = true;   // Protection from Fire — halves fire damage taken
     };
     if (ab.party) {
       for (const a of this.livingParty()) apply(a);

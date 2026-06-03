@@ -42,11 +42,26 @@ const SORC_SLOTS_BY_LEVEL = {
   13: [6, 6, 6, 6, 6, 4], 14: [6, 6, 6, 6, 6, 5, 3], 15: [6, 6, 6, 6, 6, 6, 4], 16: [6, 6, 6, 6, 6, 6, 5, 3],
   17: [6, 6, 6, 6, 6, 6, 6, 4], 18: [6, 6, 6, 6, 6, 6, 6, 5, 3], 19: [6, 6, 6, 6, 6, 6, 6, 6, 4], 20: [6, 6, 6, 6, 6, 6, 6, 6, 6],
 };
-function spontaneousSlots(level) {
-  const arr = SORC_SLOTS_BY_LEVEL[Math.max(1, Math.min(20, level || 1))] || SORC_SLOTS_BY_LEVEL[1];
+// PF1 CLERIC base spells/day (prepared divine). Clerics prepare a number of
+// spells of each level; spare slots get filled with more cures.
+const CLERIC_SLOTS_BY_LEVEL = {
+  1: [2], 2: [3], 3: [3, 2], 4: [4, 3], 5: [4, 3, 2], 6: [4, 4, 3], 7: [5, 4, 3, 2], 8: [5, 4, 4, 3],
+  9: [5, 5, 4, 3, 2], 10: [5, 5, 4, 4, 3], 11: [5, 5, 5, 4, 3, 2], 12: [5, 5, 5, 4, 4, 3],
+  13: [5, 5, 5, 5, 4, 3, 2], 14: [5, 5, 5, 5, 4, 4, 3], 15: [5, 5, 5, 5, 5, 4, 3, 2], 16: [5, 5, 5, 5, 5, 4, 4, 3],
+  17: [5, 5, 5, 5, 5, 5, 4, 3, 2], 18: [5, 5, 5, 5, 5, 5, 4, 4, 3], 19: [5, 5, 5, 5, 5, 5, 5, 4, 4], 20: [5, 5, 5, 5, 5, 5, 5, 5, 5],
+};
+function _tableSlots(table, level) {
+  const arr = table[Math.max(1, Math.min(20, level || 1))] || table[1];
   const out = {};
   arr.forEach((n, i) => { out[i + 1] = n; });
   return out;   // { 1: n, 2: n, … } slots per spell level
+}
+function spontaneousSlots(level) { return _tableSlots(SORC_SLOTS_BY_LEVEL, level); }
+// Slot table for any per-level slot caster (null = not a slot caster).
+function slotsFor(cls, level) {
+  if (cls === 'cleric') return _tableSlots(CLERIC_SLOTS_BY_LEVEL, level);
+  if (SPONTANEOUS_CLASSES.has(cls)) return _tableSlots(SORC_SLOTS_BY_LEVEL, level);
+  return null;
 }
 
 const POOL_CLASSES   = new Set([]);   // (sorcerer is spontaneous-per-level now)
@@ -164,24 +179,35 @@ const KITS = {
     { key: 'smite',   name: 'Smite Evil',     icon: '⚜️', cost: 'room', uses: smiteUses, effect: 'smite', target: 'self', sound: S.holy, desc: 'Once per 5 levels per room: your strikes smite evil foes (+to-hit, +double your level to damage).' },
     { key: 'channel', name: 'Channel Positive', icon: '💖', cost: 'room', uses: channelUses, effect: 'heal', heal: 'party', target: 'ally', sound: S.charge, desc: 'Channel positive energy — heal the whole party (scales with level).' },
   ] },
-  // CLERIC — prepared divine caster (like the wizard): ONE casting of each prayer
-  // per room. Plus two specials: CHANNEL POSITIVE refreshes a small own-count each
-  // room (one per 5 levels), and BLESS is cast ONCE for the WHOLE dungeon (cost
-  // 'run') — a +1 to-hit that never fades between rooms.
-  cleric: { atwill: ATTACK('🔨'), note: 'One casting of each prayer, per room.', abilities: [
-    { key: 'curelight',    name: 'Cure Light Wounds',    icon: '💚', cost: 'room', uses: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5,  target: 'ally', sound: S.cure,    desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5).' },
-    { key: 'curemoderate', name: 'Cure Moderate Wounds', icon: '💚', cost: 'room', uses: 1, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure,    desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
-    { key: 'divinefavor',  name: 'Divine Favor',         icon: '🙏', cost: 'room', uses: 1, effect: 'buff', target: 'self', buff: { toHit: 3, dmg: 3 }, sticky: true, sound: S.invoke,   desc: '+3 to hit and +3 damage to yourself for the rest of the room.' },
-    { key: 'holysmite',    name: 'Holy Smite',           icon: '🌟', cost: 'room', uses: 1, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
-    { key: 'searinglight', name: 'Searing Light',        icon: '🔆', cost: 'room', uses: 1, minLevel: 5, effect: 'touch', target: 'enemy', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.searing, desc: 'A ray of divine light — ranged touch for ½level d8 (extra vs undead).' },
-    { key: 'prayer',       name: 'Prayer',               icon: '📿', cost: 'room', uses: 1, effect: 'buff', target: 'self', party: true, buff: { toHit: 1, dmg: 1, save: 1 }, enemyPenalty: 1, sticky: true, sound: S.prayer, desc: 'Fills the whole battlefield: ALL allies gain +1 to hit, damage & saves, and ALL enemies suffer −1 to hit, damage & saves for the rest of the room.' },
-    { key: 'bless',        name: 'Bless',                icon: '✨', cost: 'run',  uses: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1 }, sticky: true, sound: S.cure, desc: 'All allies gain +1 to hit for the ENTIRE dungeon — cast once; it never fades between rooms.' },
+  // CLERIC — prepared divine caster with SPELL SLOTS PER LEVEL (PF1 progression).
+  // Each spell spends a slot of its level; with extra slots the AI prepares more
+  // cures. CHANNEL is a class feature (own count); BLESS is run-long (cast once).
+  cleric: { atwill: ATTACK('🔨'), abilities: [
     { key: 'channel',      name: 'Channel Positive',     icon: '💖', cost: 'room', uses: smiteUses, effect: 'heal', heal: 'party', target: 'ally', sound: S.charge, desc: 'Channel positive energy — heal the whole party for ½level d6 (PF1e). Once per 5 levels per room.' },
-    { key: 'boneshatter',  name: 'Boneshatter',          icon: '🦴', cost: 'room', uses: 1, minLevel: 5,  effect: 'aoe', target: 'aoe', maxTargets: 1, save: 'fort', die: 6, dice: 'level', dcap: 8, dtype: 'negative', sound: S.boneshatter, desc: 'Splinter a foe\'s bones — ½level… up to level d6 negative energy, Fort for half.' },
-    // High-level prayers, unlocked by caster level (PF1e progression):
-    { key: 'breathoflife', name: 'Breath of Life',       icon: '🌬️', cost: 'room', uses: 1, minLevel: 7,  effect: 'revive', reviveDice: 5, reviveCap: 25, target: 'ally', sound: S.revive, desc: 'Snatch a DYING ally back — revive & heal them 5d8 + caster level (max +25). (CL 7+)' },
-    { key: 'raisedead',    name: 'Raise Dead',           icon: '⚰️', cost: 'room', uses: 1, minLevel: 9,  effect: 'revive', raiseDead: true, target: 'ally', sound: S.revive, desc: 'Call a SLAIN ally back into the run, restored to half health. (CL 9+)' },
-    { key: 'resurrection', name: 'Resurrection',         icon: '✨', cost: 'room', uses: 1, minLevel: 13, effect: 'revive', raiseDead: true, full: true, target: 'ally', sound: S.revive, desc: 'Fully resurrect a SLAIN ally — back in the run at FULL health. (CL 13+)' },
+    // ── 1st-level prayers ──
+    { key: 'curelight',    name: 'Cure Light Wounds',    icon: '💚', cost: 'slot', slvl: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5,  target: 'ally', sound: S.cure,    desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5).' },
+    { key: 'shieldoffaith',name: 'Shield of Faith',      icon: '🛡️', cost: 'slot', slvl: 1, effect: 'buff', target: 'self', buff: { ac: 2 }, sticky: true, sound: S.invoke, desc: '+2 deflection AC to yourself for the rest of the room.' },
+    { key: 'divinefavor',  name: 'Divine Favor',         icon: '🙏', cost: 'slot', slvl: 1, effect: 'buff', target: 'self', buff: { toHit: 3, dmg: 3 }, sticky: true, sound: S.invoke,   desc: '+3 to hit and +3 damage to yourself for the rest of the room.' },
+    { key: 'bless',        name: 'Bless',                icon: '✨', cost: 'run',  uses: 1, slvl: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1 }, sticky: true, sound: S.cure, desc: 'All allies gain +1 to hit for the ENTIRE dungeon — cast once; it never fades between rooms.' },
+    // ── 2nd-level prayers ──
+    { key: 'curemoderate', name: 'Cure Moderate Wounds', icon: '💚', cost: 'slot', slvl: 2, minLevel: 3, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
+    { key: 'holdperson',   name: 'Hold Person',          icon: '🖐️', cost: 'slot', slvl: 2, minLevel: 3, effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', sound: S.anchor, desc: 'A foe must save or be HELD (helpless). Each turn it may re-save to break free — the attempt costs its turn.' },
+    { key: 'bullsstrength', name: "Bull's Strength",     icon: '💪', cost: 'slot', slvl: 2, minLevel: 3, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'Bull-strong — one ally gets +2 to hit and +2 melee damage for the rest of the room.' },
+    { key: 'bearsendurance', name: "Bear's Endurance",   icon: '🐻', cost: 'slot', slvl: 2, minLevel: 3, effect: 'buff', target: 'ally', buff: { conHp: 2 }, sticky: true, sound: S.invoke, desc: 'Bear-hardy — one ally gains temporary HP (+2 per level) for the rest of the room.' },
+    // ── 3rd-level prayers ──
+    { key: 'prayer',       name: 'Prayer',               icon: '📿', cost: 'slot', slvl: 3, minLevel: 5, effect: 'buff', target: 'self', party: true, buff: { toHit: 1, dmg: 1, save: 1 }, enemyPenalty: 1, sticky: true, sound: S.prayer, desc: 'Fills the whole battlefield: ALL allies +1 to hit, damage & saves; ALL enemies −1, for the rest of the room. (Only one is ever needed.)' },
+    { key: 'searinglight', name: 'Searing Light',        icon: '🔆', cost: 'slot', slvl: 3, minLevel: 5, effect: 'touch', target: 'enemy', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.searing, desc: 'A ray of divine light — ranged touch for ½level d8 (extra vs undead).' },
+    { key: 'cureserious',  name: 'Cure Serious Wounds',  icon: '💚', cost: 'slot', slvl: 3, minLevel: 5, effect: 'heal', heal: 'single', healDice: 3, healCap: 15, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 3d8 + caster level (max +15).' },
+    { key: 'dispelmagic',  name: 'Dispel Magic',         icon: '🌀', cost: 'slot', slvl: 3, minLevel: 5, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'Strip a debuff off an afflicted ally (paralysis / hold / grapple / stun / sickness).' },
+    // ── 4th-level prayers ──
+    { key: 'curecritical', name: 'Cure Critical Wounds', icon: '💚', cost: 'slot', slvl: 4, minLevel: 7, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20).' },
+    { key: 'protectfire',  name: 'Protection from Fire',  icon: '🔥', cost: 'slot', slvl: 4, minLevel: 7, effect: 'buff', target: 'self', party: true, protectFire: true, sticky: true, sound: S.invoke, desc: 'Ward the whole party against FIRE — fire damage they take is HALVED for the rest of the room. (Cast it when fiery foes loom.)' },
+    { key: 'blessingoffervor', name: 'Blessing of Fervor', icon: '💨', cost: 'slot', slvl: 4, minLevel: 7, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (like Haste).' },
+    { key: 'holysmite',    name: 'Holy Smite',           icon: '🌟', cost: 'slot', slvl: 4, minLevel: 7, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
+    // ── High-level prayers (revives), gated by level + slot availability ──
+    { key: 'breathoflife', name: 'Breath of Life',       icon: '🌬️', cost: 'slot', slvl: 5, minLevel: 9,  effect: 'revive', reviveDice: 5, reviveCap: 25, target: 'ally', sound: S.revive, desc: 'Snatch a DYING ally back — revive & heal them 5d8 + caster level (max +25).' },
+    { key: 'raisedead',    name: 'Raise Dead',           icon: '⚰️', cost: 'slot', slvl: 5, minLevel: 9,  effect: 'revive', raiseDead: true, target: 'ally', sound: S.revive, desc: 'Call a SLAIN ally back into the run, restored to half health.' },
+    { key: 'resurrection', name: 'Resurrection',         icon: '✨', cost: 'slot', slvl: 7, minLevel: 13, effect: 'revive', raiseDead: true, full: true, target: 'ally', sound: S.revive, desc: 'Fully resurrect a SLAIN ally — back in the run at FULL health.' },
   ] },
   // ── Full arcane casters ──
   // WIZARD — prepared caster: a BROAD spellbook, but ONE casting of each spell
@@ -304,5 +330,5 @@ const isCaster    = (cls) => CASTER_CLASSES.has(cls);
 module.exports = {
   KITS, SPELL, DEFAULT_KIT, SELECTABLE_CLASSES, CASTER_CLASSES, SPONTANEOUS_CLASSES, SLVL_BY_KEY,
   kitFor, isPoolClass, isCaster, isSpontaneous, imgFor,
-  spellSlots, spontaneousSlots, roomUses, diceCount, channelUses, smiteUses,
+  spellSlots, spontaneousSlots, slotsFor, roomUses, diceCount, channelUses, smiteUses,
 };
