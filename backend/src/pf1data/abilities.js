@@ -83,6 +83,7 @@ const S = {
   dispel: '/audio/spell_dispel.mp3',           // Dispel Magic
   acid: '/audio/spell_acidarrow.mp3',          // Acid Arrow
   entangle: '/audio/spell_entangle.mp3',       // druid Entangle
+  slow: '/audio/spell_slow.mp3',               // Slow (the Evil Morty theme)
 };
 // Sound POOLS — abilities with `sounds: [...]` pick one at random per cast, so a
 // repeated spell doesn't drone the same clip (Fireball / Lightning Bolt / Haste).
@@ -90,23 +91,27 @@ const FIREBALL_SFX = ['/audio/fireball_1.mp3', '/audio/fireball_2.mp3', '/audio/
 const THUNDER_SFX  = ['/audio/thunder_1.mp3', '/audio/thunder_2.mp3', '/audio/thunder_3.mp3', '/audio/thunder_4.mp3', '/audio/thunder_5.mp3'];
 const HASTE_SFX    = ['/audio/spell_haste.mp3', '/audio/spell_haste2.mp3'];
 
-// Reusable spell defs (shared by wizard + sorcerer).
+// Reusable spell defs (shared by wizard + sorcerer). `slvl` = the PF1e SPELL
+// level (1st–9th), used to organise the spellbook; `minLevel` is the CHARACTER
+// level at which this kit unlocks it (they differ — e.g. Cone of Cold is a 5th-
+// level spell a wizard can't cast until character level 9).
 const SPELL = {
-  burninghands:  { key: 'burninghands',  name: 'Burning Hands',  icon: '🔥', cost: 'pool', effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 4, dice: 'level', dcap: 5, dtype: 'fire', sound: S.fire, desc: 'A cone of flame — 2 foes, Reflex for half (level d4, cap 5d4).' },
-  shockinggrasp: { key: 'shockinggrasp', name: 'Shocking Grasp', icon: '⚡', cost: 'pool', effect: 'touch', target: 'enemy', die: 6, dice: 'level', dcap: 5, dtype: 'electricity', sound: S.shock, desc: 'A charged touch — ranged touch attack (level d6, cap 5d6).' },
-  scorchingray:  { key: 'scorchingray',  name: 'Scorching Ray',  icon: '☄️', cost: 'pool', effect: 'rays', target: 'enemy', die: 6, dice: 4, minLevel: 4, dtype: 'fire', sound: S.scorch, splitSound: S.scorchsplit, desc: 'A searing ray (4d6 fire) — SPLITS into 2 rays at caster level 7, 3 at 11; each rolls to hit.' },
-  lightningbolt: { key: 'lightningbolt', name: 'Lightning Bolt',  icon: '⚡', cost: 'pool', effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 6, dice: 'level', dcap: 10, minLevel: 7, dtype: 'electricity', sounds: THUNDER_SFX, desc: 'A bolt skewering 2 foes — Reflex for half (level d6).' },
-  fireball:      { key: 'fireball',      name: 'Fireball',       icon: '💥', cost: 'pool', effect: 'aoe', target: 'aoe', maxTargets: 6, randFoes: 6, save: 'reflex', die: 6, dice: 'level', dcap: 10, minLevel: 7, dtype: 'fire', sounds: FIREBALL_SFX, desc: 'A roaring blast that engulfs a RANDOM 1d6 enemies — Reflex for half (level d6).' },
-  aciddart:      { key: 'aciddart',      name: 'Acid Arrow',     icon: '🟢', cost: 'pool', effect: 'touch', target: 'enemy', die: 6, dice: 'halflevel', dcap: 5, minLevel: 3, dtype: 'acid', sound: S.acid, desc: 'A bolt of acid — ranged touch for ½level d6 (sizzling acid).' },
-  dispelmagic:   { key: 'dispelmagic',   name: 'Dispel Magic',   icon: '🌀', cost: 'pool', effect: 'cleanse', target: 'ally', minLevel: 5, sound: S.dispel, desc: 'Strip a debuff off an afflicted ally (paralysis / stun / sickness) — or a buff off a foe, if any.' },
-  holdperson:    { key: 'holdperson',    name: 'Hold Person',    icon: '🖐️', cost: 'pool', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', sound: S.anchor, desc: 'A foe must save or be paralyzed.' },
-  grease:        { key: 'grease',        name: 'Grease',         icon: '🛢️', cost: 'pool', effect: 'grease', target: 'aoe', maxTargets: 2, save: 'reflex', minLevel: 1, sound: S.grease, desc: 'Slick the floor — 2 foes Reflex or fall prone (splat!).' },
-  sleep:         { key: 'sleep',         name: 'Sleep',          icon: '💤', cost: 'pool', effect: 'sleep',  target: 'aoe', maxTargets: 3, save: 'will',   minLevel: 1, sound: S.sleep, desc: 'Up to 3 weaker foes must save or fall asleep — helpless, losing turns until struck.' },
-  magicmissile:  { key: 'magicmissile',  name: 'Magic Missile',  icon: '🔮', cost: 'pool', effect: 'missile', target: 'enemy', minLevel: 1, sound: S.missile, desc: 'Unerring darts of force — 1 dart +1 per 2 levels (max 5), 1d4+1 each, auto-hit.' },
-  gustofwind:    { key: 'gustofwind',    name: 'Gust of Wind',   icon: '🌪️', cost: 'pool', effect: 'grease', target: 'aoe', randFoes: 3, save: 'fort', minLevel: 4, sound: S.gust, desc: 'A roaring gale blasts a RANDOM 1d3 foes — Fort save or be knocked prone.' },
-  invisibility:  { key: 'invisibility',  name: 'Invisibility',   icon: '👻', cost: 'pool', effect: 'invisible', target: 'self', minLevel: 3, sound: S.invis, desc: "Vanish from sight — enemies can't target you until you attack." },
-  coneofcold:    { key: 'coneofcold',    name: 'Cone of Cold',   icon: '🥶', cost: 'pool', effect: 'aoe', target: 'aoe', randBase: 2, randDie: 3, save: 'reflex', die: 6, dice: 'level', dcap: 15, minLevel: 9, dtype: 'cold', sound: S.coldcone, desc: 'A blast of frost engulfs 2+1d3 foes — Reflex for half (level d6).' },
-  disintegrate:  { key: 'disintegrate',  name: 'Disintegrate',   icon: '☢️', cost: 'pool', effect: 'aoe', target: 'enemy', maxTargets: 1, save: 'fort', die: 6, dice: 'level', dcap: 20, minLevel: 11, dtype: 'force', sound: S.disintegrate, desc: 'A thin green ray reduces ONE foe toward dust — Fort for half (up to 20d6 force).' },
+  burninghands:  { key: 'burninghands',  name: 'Burning Hands',  icon: '🔥', cost: 'pool', effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 4, dice: 'level', dcap: 5, dtype: 'fire', slvl: 1, sound: S.fire, desc: 'A cone of flame — 2 foes, Reflex for half (level d4, cap 5d4).' },
+  shockinggrasp: { key: 'shockinggrasp', name: 'Shocking Grasp', icon: '⚡', cost: 'pool', effect: 'touch', target: 'enemy', die: 6, dice: 'level', dcap: 5, dtype: 'electricity', slvl: 1, sound: S.shock, desc: 'A charged touch — ranged touch attack (level d6, cap 5d6).' },
+  scorchingray:  { key: 'scorchingray',  name: 'Scorching Ray',  icon: '☄️', cost: 'pool', effect: 'rays', target: 'enemy', die: 6, dice: 4, minLevel: 4, dtype: 'fire', slvl: 2, sound: S.scorch, splitSound: S.scorchsplit, desc: 'A searing ray (4d6 fire) — SPLITS into 2 rays at caster level 7, 3 at 11; each rolls to hit.' },
+  lightningbolt: { key: 'lightningbolt', name: 'Lightning Bolt',  icon: '⚡', cost: 'pool', effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 6, dice: 'level', dcap: 10, minLevel: 7, dtype: 'electricity', slvl: 3, sounds: THUNDER_SFX, desc: 'A bolt skewering 2 foes — Reflex for half (level d6).' },
+  fireball:      { key: 'fireball',      name: 'Fireball',       icon: '💥', cost: 'pool', effect: 'aoe', target: 'aoe', maxTargets: 6, randFoes: 6, save: 'reflex', die: 6, dice: 'level', dcap: 10, minLevel: 7, dtype: 'fire', slvl: 3, sounds: FIREBALL_SFX, desc: 'A roaring blast that engulfs a RANDOM 1d6 enemies — Reflex for half (level d6).' },
+  aciddart:      { key: 'aciddart',      name: 'Acid Arrow',     icon: '🟢', cost: 'pool', effect: 'touch', target: 'enemy', die: 6, dice: 'halflevel', dcap: 5, minLevel: 3, dtype: 'acid', slvl: 2, sound: S.acid, desc: 'A bolt of acid — ranged touch for ½level d6 (sizzling acid).' },
+  dispelmagic:   { key: 'dispelmagic',   name: 'Dispel Magic',   icon: '🌀', cost: 'pool', effect: 'cleanse', target: 'ally', minLevel: 5, slvl: 3, sound: S.dispel, desc: 'Strip a debuff off an afflicted ally (paralysis / stun / sickness) — or a buff off a foe, if any.' },
+  holdperson:    { key: 'holdperson',    name: 'Hold Person',    icon: '🖐️', cost: 'pool', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', slvl: 3, sound: S.anchor, desc: 'A foe must save or be HELD (helpless). Each of its turns it may re-save to break free — but the attempt costs its turn either way.' },
+  grease:        { key: 'grease',        name: 'Grease',         icon: '🛢️', cost: 'pool', effect: 'grease', target: 'aoe', maxTargets: 2, save: 'reflex', minLevel: 1, slvl: 1, sound: S.grease, desc: 'Slick the floor — 2 foes Reflex or fall prone (splat!).' },
+  sleep:         { key: 'sleep',         name: 'Sleep',          icon: '💤', cost: 'pool', effect: 'sleep',  target: 'aoe', maxTargets: 3, save: 'will',   minLevel: 1, slvl: 1, sound: S.sleep, desc: 'Up to 3 weaker foes must save or fall asleep — helpless, losing turns until struck.' },
+  magicmissile:  { key: 'magicmissile',  name: 'Magic Missile',  icon: '🔮', cost: 'pool', effect: 'missile', target: 'enemy', minLevel: 1, slvl: 1, sound: S.missile, desc: 'Unerring darts of force — 1 dart +1 per 2 levels (max 5), 1d4+1 each, auto-hit.' },
+  slow:          { key: 'slow',          name: 'Slow',           icon: '🐌', cost: 'pool', effect: 'slow',   target: 'aoe', randN: 2, randDie: 4, maxTargets: 8, save: 'will', minLevel: 5, slvl: 3, sound: S.slow, desc: 'Time drags for a RANDOM 2d4 foes — Will save or be SLOWED: sluggish (acts only every other turn) and easier to hit.' },
+  gustofwind:    { key: 'gustofwind',    name: 'Gust of Wind',   icon: '🌪️', cost: 'pool', effect: 'grease', target: 'aoe', randFoes: 3, save: 'fort', minLevel: 4, slvl: 2, sound: S.gust, desc: 'A roaring gale blasts a RANDOM 1d3 foes — Fort save or be knocked prone.' },
+  invisibility:  { key: 'invisibility',  name: 'Invisibility',   icon: '👻', cost: 'pool', effect: 'invisible', target: 'self', minLevel: 3, slvl: 2, sound: S.invis, desc: "Vanish from sight — enemies can't target you until you attack." },
+  coneofcold:    { key: 'coneofcold',    name: 'Cone of Cold',   icon: '🥶', cost: 'pool', effect: 'aoe', target: 'aoe', randBase: 2, randDie: 3, save: 'reflex', die: 6, dice: 'level', dcap: 15, minLevel: 9, dtype: 'cold', slvl: 5, sound: S.coldcone, desc: 'A blast of frost engulfs 2+1d3 foes — Reflex for half (level d6).' },
+  disintegrate:  { key: 'disintegrate',  name: 'Disintegrate',   icon: '☢️', cost: 'pool', effect: 'aoe', target: 'enemy', maxTargets: 1, save: 'fort', die: 6, dice: 'level', dcap: 20, minLevel: 11, dtype: 'force', slvl: 6, sound: S.disintegrate, desc: 'A thin green ray reduces ONE foe toward dust — Fort for half (up to 20d6 force).' },
 };
 const ATTACK = (icon) => ({ key: 'attack', name: 'Attack', icon: icon || '⚔️', effect: 'attack', target: 'enemy' });
 // A WIZARD's prepared spell: one casting per room (own 'room' use of 1).
@@ -173,7 +178,8 @@ const KITS = {
     preparedSpell(SPELL.scorchingray,  3),
     preparedSpell(SPELL.holdperson,    3),
     preparedSpell(SPELL.dispelmagic,   5),
-    { key: 'haste', name: 'Haste', icon: '💨', cost: 'room', uses: 1, minLevel: 5, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — every ally gets an EXTRA attack each turn for 1 turn per 5 caster levels (on top of their action).' },
+    { key: 'haste', name: 'Haste', icon: '💨', cost: 'room', uses: 1, minLevel: 5, slvl: 3, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — every ally gets an EXTRA attack each turn for 1 turn per 5 caster levels (on top of their action).' },
+    preparedSpell(SPELL.slow,          5),
     preparedSpell(SPELL.fireball,      5),
     preparedSpell(SPELL.lightningbolt, 5),
     preparedSpell(SPELL.coneofcold,    9),
@@ -188,6 +194,7 @@ const KITS = {
     spontaneousSpell(SPELL.aciddart,     3),
     spontaneousSpell(SPELL.gustofwind,   4),
     spontaneousSpell(SPELL.scorchingray, 4),
+    spontaneousSpell(SPELL.slow,         6),
     spontaneousSpell(SPELL.fireball,     7),
     spontaneousSpell(SPELL.coneofcold,   9),
     spontaneousSpell(SPELL.disintegrate, 11),
@@ -214,8 +221,9 @@ const KITS = {
   ] },
   bard: { atwill: ATTACK('🗡️'), abilities: [
     { key: 'inspire',   name: 'Inspire Courage', icon: '🎶', cost: 'run', uses: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1, dmg: 1 }, sticky: true, sound: S.bardsong, desc: 'Strike up a song — you and all allies get +1 to hit and damage for the ENTIRE dungeon (struck up once).' },
-    { key: 'haste',     name: 'Haste',           icon: '💨', cost: 'room', uses: 1, minLevel: 7, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 turn per 5 caster levels. (Bard 3rd-level spell.)' },
-    { key: 'hideouslaughter', name: 'Hideous Laughter', icon: '😂', cost: 'free', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', sound: S.hideous, desc: 'A foe collapses in helpless laughter — Will save or lose its turns (HELPLESS, so it can be Sneak Attacked).' },
+    { key: 'haste',     name: 'Haste',           icon: '💨', cost: 'room', uses: 1, minLevel: 7, slvl: 3, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 turn per 5 caster levels. (Bard 3rd-level spell.)' },
+    { key: 'slow',      name: 'Slow',            icon: '🐌', cost: 'room', uses: 1, minLevel: 7, slvl: 3, effect: 'slow', target: 'aoe', randN: 2, randDie: 4, maxTargets: 8, save: 'will', sound: S.slow, desc: 'Time drags for a RANDOM 2d4 foes — Will save or be SLOWED: sluggish (acts only every other turn) and easier to hit. (Bard 3rd-level spell.)' },
+    { key: 'hideouslaughter', name: 'Hideous Laughter', icon: '😂', cost: 'free', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', slvl: 2, sound: S.hideous, desc: 'A foe collapses in helpless laughter — Will save or HELD (helpless, Sneak-Attackable). Each turn it may re-save to recover, but the attempt costs its turn.' },
     { key: 'fascinate', name: 'Fascinate',       icon: '🎵', cost: 'free', effect: 'fascinate', target: 'aoe', maxTargets: 3, sound: S.fascinate, desc: 'Up to 3 foes stand fascinated and lose their turns — until something hits them.' },
   ] },
   // DRUID — prepared nature caster: one casting of each spell per room.
@@ -234,10 +242,22 @@ const ICON_KEYS = new Set([
   'judgment', 'bane', 'inspire', 'fascinate',
 ]);
 const imgFor = (key) => (ICON_KEYS.has(key) ? `/icons/spells/${key}.jpg` : null);
-// Attach an `img` to every ability + at-will that has artwork.
+// PF1e SPELL level (1st–9th) for the divine prayers / nature spells defined
+// inline (the shared arcane SPELL defs already carry their own `slvl`). Drives
+// the spellbook's level grouping. Class features with no spell level (Channel)
+// are intentionally omitted → they bucket under "Other".
+const SLVL_BY_KEY = {
+  curelight: 1, curemoderate: 2, divinefavor: 1, bless: 1, prayer: 3, searinglight: 3,
+  holysmite: 4, boneshatter: 4, breathoflife: 5, raisedead: 5, resurrection: 7,
+  entangle: 1, calllightning: 3,
+};
+// Attach an `img` (and a divine `slvl` fallback) to every ability + at-will.
 for (const kit of Object.values(KITS)) {
   if (kit.atwill) kit.atwill.img = imgFor(kit.atwill.key);
-  for (const ab of kit.abilities) ab.img = imgFor(ab.key);
+  for (const ab of kit.abilities) {
+    ab.img = imgFor(ab.key);
+    if (ab.slvl == null && SLVL_BY_KEY[ab.key] != null) ab.slvl = SLVL_BY_KEY[ab.key];
+  }
 }
 
 const DEFAULT_KIT = KITS.fighter;

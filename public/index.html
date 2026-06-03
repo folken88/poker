@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260603-sb" />
+  <link rel="stylesheet" href="/css/table.css?v=20260603-batch7" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -232,16 +232,21 @@
 
       <!-- ===== RIGHT perimeter: Live wealth leaderboard ===== -->
       <aside class="help-panel help-panel--right help-panel--leaderboard" aria-label="Leaderboard">
-        <h3 class="help-panel__title">🏆 Leaderboard</h3>
+        <div class="lb-head">
+          <h3 class="help-panel__title">🏆 Leaderboard</h3>
+          <div class="lb-records__filter" id="sidebarLbFilter" role="group" aria-label="Filter leaderboard by player type">
+            <button type="button" class="lb-records__fbtn is-active" data-lb-filter="human" aria-label="Humans" title="Humans only">🧑 Hu</button>
+            <button type="button" class="lb-records__fbtn" data-lb-filter="all" title="Everyone (humans + AI)">All</button>
+          </div>
+        </div>
         <p class="help-panel__sub">Chips + magic-item value, updated in real time. Goal: full +5 set = LOOT LORD.</p>
         <ol class="lb lb--sidebar" id="sidebarLeaderboard"></ol>
         <div class="lb-records" id="sidebarRecords">
           <div class="lb-records__head">
             <h4 class="lb-records__title">📜 Hall of Records</h4>
             <div class="lb-records__filter" role="group" aria-label="Filter records by player type">
-              <button type="button" class="lb-records__fbtn is-active" data-rec-filter="all">All</button>
-              <button type="button" class="lb-records__fbtn" data-rec-filter="human" aria-label="Humans" title="Humans">🧑 Hu</button>
-              <button type="button" class="lb-records__fbtn" data-rec-filter="ai">🤖 AI</button>
+              <button type="button" class="lb-records__fbtn is-active" data-rec-filter="human" aria-label="Humans" title="Humans only">🧑 Hu</button>
+              <button type="button" class="lb-records__fbtn" data-rec-filter="all" title="Everyone (humans + AI)">All</button>
             </div>
           </div>
           <div class="lb-records__row" id="recordBiggestWin"></div>
@@ -473,6 +478,6 @@
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
   <script src="/js/cards.js?v=20260602-abadar"></script>
   <script src="/js/blindMode.js?v=20260601-blindtop"></script>
-  <script src="/js/client.js?v=20260603-sb"></script>
+  <script src="/js/client.js?v=20260603-batch7"></script>
 </body>
 </html>

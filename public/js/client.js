@@ -982,29 +982,36 @@
         // ("one cast of each spell per room" / "cast freely").
         let abilHtml;
         if (kit.caster) {
-          // Group spells by the level they unlock at, ascending, then render
-          // each group as a row of icon-only tiles (names/desc on hover).
+          // Group spells by their PF1e SPELL level (1st–9th), ascending; anything
+          // without a spell level (class features like Channel) buckets last.
+          // Each group is a row of icon-only tiles (names/desc on hover).
+          const ord = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
           const groups = new Map();
           (kit.abilities || []).forEach((ab, i) => {
-            const lv = ab.minLevel || 1;
-            if (!groups.has(lv)) groups.set(lv, []);
-            groups.get(lv).push(spellIcon(ab, i));
+            const key = ab.slvl != null ? ab.slvl : 'other';
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(spellIcon(ab, i));
           });
-          const sections = [...groups.keys()].sort((a, b) => a - b).map(lv =>
+          const keys = [...groups.keys()].sort((a, b) => (a === 'other') - (b === 'other') || a - b);
+          const sections = keys.map(k =>
             `<div class="dungeon__sb-lvl">` +
-              `<div class="dungeon__sb-lvlhead">Level ${lv}</div>` +
-              `<div class="dungeon__sb-row">${groups.get(lv).join('')}</div>` +
+              `<div class="dungeon__sb-lvlhead">${k === 'other' ? 'Other' : ord(k) + '-Level'}</div>` +
+              `<div class="dungeon__sb-row">${groups.get(k).join('')}</div>` +
             `</div>`).join('');
           const badge = kit.spellPool ? ` <span class="dungeon__uses">✨${kit.spellPool.remaining}/${kit.spellPool.max}</span>` : '';
           const head  = kit.spellPool
             ? `✨ ${kit.spellPool.remaining}/${kit.spellPool.max} casts left this room`
             : (kit.spellNote || 'Spells');
+          // Wrap the toggle + popover so the popover anchors to the BUTTON (drops
+          // straight down-and-right from it), not to the whole action panel.
           abilHtml =
-            `<button type="button" class="btn ${_spellbookOpen ? 'btn--primary' : 'btn--ghost'}" data-spellbook-toggle aria-expanded="${_spellbookOpen}">📖 Spellbook ▾${badge}</button>` +
-            `<div class="dungeon__spellbook ${_spellbookOpen ? 'is-open' : ''}">` +
-              `<div class="dungeon__sb-head">${escapeText(head)}</div>` +
-              `<div class="dungeon__sb-scroll">${sections}</div>` +
-            `</div>`;
+            `<span class="dungeon__sb-wrap">` +
+              `<button type="button" class="btn ${_spellbookOpen ? 'btn--primary' : 'btn--ghost'}" data-spellbook-toggle aria-expanded="${_spellbookOpen}">📖 Spellbook ▾${badge}</button>` +
+              `<div class="dungeon__spellbook ${_spellbookOpen ? 'is-open' : ''}">` +
+                `<div class="dungeon__sb-head">${escapeText(head)}</div>` +
+                `<div class="dungeon__sb-scroll">${sections}</div>` +
+              `</div>` +
+            `</span>`;
         } else {
           abilHtml = (kit.abilities || []).map((ab, i) => abilBtn(ab, i)).join('');
         }
@@ -2237,7 +2244,11 @@
   // "Hall of Records" under the leaderboard — all-time per-hand extremes
   // (server-tracked in state.table.records, split into all/human/ai). The
   // filter buttons pick which population to show.
-  let _recordsFilter = 'all';
+  // Both the leaderboard and the Hall of Records default to HUMANS-only, and
+  // remember the player's choice across sessions (localStorage).
+  const _prefGet = (k, dflt) => { try { return localStorage.getItem(k) || dflt; } catch (_) { return dflt; } };
+  const _prefSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+  let _recordsFilter = _prefGet('fp_recFilter', 'human');
   function renderRecords() {
     const recs = (state.table && state.table.records) || {};
     // Back-compat: older servers sent a flat object (no all/human/ai split).
@@ -2265,14 +2276,34 @@
         + `<span class="lb-records__amt ${cls}">${valFn(rec)}</span>`;
     }
   }
-  // All / Humans / AI filter for the Hall of Records.
+  // Hu / All filter for the Hall of Records (remembers the choice).
+  function _syncRecFilterButtons() {
+    $('#sidebarRecords')?.querySelectorAll('[data-rec-filter]').forEach(x => x.classList.toggle('is-active', x.dataset.recFilter === _recordsFilter));
+  }
   $('#sidebarRecords')?.addEventListener('click', (e) => {
     const b = e.target.closest('[data-rec-filter]');
     if (!b) return;
-    _recordsFilter = b.dataset.recFilter || 'all';
-    $('#sidebarRecords').querySelectorAll('[data-rec-filter]').forEach(x => x.classList.toggle('is-active', x === b));
+    _recordsFilter = b.dataset.recFilter || 'human';
+    _prefSet('fp_recFilter', _recordsFilter);
+    _syncRecFilterButtons();
     renderRecords();
   });
+  _syncRecFilterButtons();   // reflect the stored preference on load
+
+  // Hu / All filter for the leaderboard (remembers the choice).
+  let _lbFilter = _prefGet('fp_lbFilter', 'human');
+  function _syncLbFilterButtons() {
+    $('#sidebarLbFilter')?.querySelectorAll('[data-lb-filter]').forEach(x => x.classList.toggle('is-active', x.dataset.lbFilter === _lbFilter));
+  }
+  $('#sidebarLbFilter')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-lb-filter]');
+    if (!b) return;
+    _lbFilter = b.dataset.lbFilter || 'human';
+    _prefSet('fp_lbFilter', _lbFilter);
+    _syncLbFilterButtons();
+    renderSidebarLeaderboard();
+  });
+  _syncLbFilterButtons();
 
   function renderSidebarLeaderboard() {
     const el = $('#sidebarLeaderboard');
@@ -2302,7 +2333,9 @@
     const ranked = all
       .map(p => ({ p, wealth: wealthOf(p) }))
       .filter(({ wealth }) => wealth !== 5000)
+      .filter(({ p }) => _lbFilter === 'all' || !p.is_bot)   // Hu = humans only (default)
       .sort((a, b) => b.wealth - a.wealth);
+    if (!ranked.length) { el.innerHTML = `<li class="lb__empty">${_lbFilter === 'all' ? 'No players yet…' : 'No human players yet…'}</li>`; return; }
     el.innerHTML = ranked.map((row, i) => {
       const p = row.p;
       const mine = p.player_id === meId ? 'is-me' : '';

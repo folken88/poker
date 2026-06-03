@@ -158,10 +158,13 @@ button, input { font: inherit; color: inherit; }
 /* Spell/ability art icon inside a button. */
 .spell-ic { width: 18px; height: 18px; border-radius: 3px; object-fit: cover; vertical-align: -4px; margin-right: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,0.4); }
 /* Caster "📖 Spellbook ▾" expandable menu. */
+/* The toggle + popover live in this inline-block wrapper so the popover anchors
+   to the BUTTON (drops straight down from it), not the whole action panel. */
+.dungeon__sb-wrap { position: relative; display: inline-block; }
 /* Opens DOWN and to the RIGHT from the toggle, grouped by level and scrolling
    vertically when there are many spells. */
 .dungeon__spellbook {
-  display: none; position: absolute; z-index: 60; left: 0; top: calc(100% + 0.3rem);
+  display: none; position: absolute; z-index: 60; left: 0; right: auto; top: calc(100% + 0.3rem);
   min-width: 280px; max-width: min(360px, 92vw);
   padding: 0.5rem; background: linear-gradient(180deg, rgba(20,24,18,0.98), rgba(10,14,10,0.99));
   border: 1px solid rgba(217,176,106,0.4); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.7);
@@ -2035,6 +2038,9 @@ option.weapon-nonprof { color: #cc5500; }
   flex: 0 0 auto;
   margin: 0 0 0.25rem;
 }
+/* Leaderboard header row: title on the left, Hu/All filter on the right. */
+.lb-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex: 0 0 auto; }
+.lb-head .help-panel__title { margin: 0; }
 .help-panel__sub {
   flex: 0 0 auto;
   margin: 0 0 0.55rem;

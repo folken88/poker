@@ -19,7 +19,26 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
-## 2026-06-03
+## 2026-06-03 (later)
+
+### 🐌 Slow, real Hold Person, elemental resistances & more
+- **New spell — Slow** (Wizard/Sorcerer/Bard, 3rd level): a random **2d4** foes
+  Will-save or are slowed (act only every other turn, −1 AC). Cast to the
+  **Evil Morty theme**.
+- **Hold Person** now works the PF1e way: the victim is **Held for multiple
+  rounds**, and each of its turns it may attempt a **new Will save to break
+  free — but the attempt eats its turn either way**. Much nastier. (Hideous
+  Laughter uses the same rule.)
+- **Energy resistances & vulnerabilities** on monsters: **Fire Skeletons are
+  immune to fire** but take **×1.5 from cold**; **Wood Golems** take ×1.5 from
+  fire; most **undead are immune to cold**; vampires resist cold & lightning.
+  The log shows ⛔immune / 🔥×1.5! tags.
+- **Spellbook** now organises by true **PF1e spell level** (Cone of Cold is 5th,
+  not 9th), opens **down-and-right anchored to the button** (no longer over the
+  chat box), and shows icons-only with name/desc on hover.
+- **Blood Caimon** gets real gator art instead of 🐊.
+- **Leaderboard & Hall of Records** each get a **Hu / All** toggle, default to
+  **Humans-only**, and remember your choice.
 
 ### 🧛 Undead monster art + smarter arcane casters
 - The **Lich**, **Vampire** and **Fire Skeleton** now show real Foundry token

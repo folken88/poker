@@ -148,8 +148,29 @@ const MON_ART = {
   gargoyle: 'gargoyle', minotaur: 'minotaur', basilisk: 'basilisk', winter_wolf: 'winter_wolf',
   wood_golem: 'wood_golem', bog_brute: 'swamp_horror', chimera: 'chimera', hill_giant: 'hill_giant',
   medusa: 'medusa', stone_giant: 'stone_giant', abyssal_horror: 'abyssal_horror',
+  blood_caimon: 'blood_caimon',
 };
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
+
+// ── Energy resistances / vulnerabilities ────────────────────────────────────
+// A damage MULTIPLIER per energy type: 0 = immune, 0.5 = resistant (half),
+// 1.5 = vulnerable (takes 50% more). Physical (B/S/P) and untyped damage are
+// never modified here. Most undead shrug off cold (PF1e) — a Fire Skeleton is
+// the exception (made of fire: immune to its own element, vulnerable to cold).
+const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'zombie', 'ghoul', 'ghast', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich'];
+const RESIST_BY_KEY = {
+  fire_skeleton: { fire: 0, cold: 1.5 },          // burning bones: fireproof, but cold shatters them
+  wood_golem:    { fire: 1.5 },                    // dry timber: catches fire easily
+  winter_wolf:   { cold: 0, fire: 1.5 },           // creature of ice: immune cold, vuln fire
+  vampire:       { cold: 0.5, electricity: 0.5 },  // classic vampire energy resistance
+  fire_elemental: { fire: 0, cold: 1.5 },
+};
+for (const k of UNDEAD_KEYS) {                      // undead are immune to cold unless told otherwise
+  if (!MON[k]) continue;
+  const r = RESIST_BY_KEY[k] || (RESIST_BY_KEY[k] = {});
+  if (r.cold == null) r.cold = 0;
+}
+for (const [k, r] of Object.entries(RESIST_BY_KEY)) if (MON[k]) MON[k].resist = r;
 
 // ── Alignment (drives Smite Evil & future alignment-keyed effects) ──────────
 // Two-letter PF1e alignment per monster. Animals/vermin/oozes/constructs are
@@ -392,7 +413,10 @@ class Dungeon {
   _condList(o) {
     const I = '/dungeon/conditions/', c = [];
     if (o.sickened > 0)  c.push({ key: 'sickened',  label: 'Sickened',  desc: '−2 to attacks & damage', icon: `${I}sickened.webp` });
-    if (o.paralyzed > 0) c.push({ key: 'paralyzed', label: 'Paralyzed', desc: 'frozen — loses turns; easy to hit', icon: `${I}paralyzed.webp` });
+    if (o.paralyzed > 0) c.push(o.heldDC
+      ? { key: 'held',      label: 'Held',      desc: 'helpless — re-saves each turn (the attempt costs the turn)', icon: `${I}paralyzed.webp` }
+      : { key: 'paralyzed', label: 'Paralyzed', desc: 'frozen — loses turns; easy to hit', icon: `${I}paralyzed.webp` });
+    if (o.slowed > 0)    c.push({ key: 'slowed',    label: 'Slowed',    desc: 'sluggish — acts only every other turn; −1 AC', icon: `${I}slowed.webp` });
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
     if (o.fascinated)    c.push({ key: 'asleep',    label: 'Asleep',    desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
     if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
@@ -571,6 +595,8 @@ class Dungeon {
       castsLeft: base.caster ? 2 : 0,
       shout: base.shout || null,           // special shout attack (e.g. Skeletal Champion)
       shoutsLeft: base.shout ? 2 : 0,
+      resist: base.resist || null,         // energy resistances / vulnerabilities (see RESIST_BY_KEY)
+      slowed: 0, _slowTick: 0,             // Slow spell: sluggish for N rounds, acts every other turn
       gold: rint(base.gold[0], base.gold[1]),
     };
   }
@@ -633,9 +659,21 @@ class Dungeon {
       const e = this.enemies.find(x => x.uid === t.id);
       if (!e || e.hp <= 0) return this._nextTurn();
       if (e.fascinated) { this._note(`${e.glyph} ${e.name} stands fascinated — does nothing.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
-      if (e.paralyzed > 0) { e.paralyzed -= 1; this._note(`🖐️ ${e.name} is held — paralyzed, loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
+      if (e.paralyzed > 0) {
+        if (e.heldDC) {   // Hold Person / Hideous Laughter: a NEW Will save each turn — costs the turn either way (PF1e).
+          e.paralyzed -= 1; const hdc = e.heldDC;
+          const sv = this._saveVs(this._enemySave(e, 'will'), hdc);
+          if (sv.saved || e.paralyzed <= 0) { e.paralyzed = 0; e.heldDC = null; this._note(`🖐️ ${e.name} ${sv.saved ? 'wrenches free of the hold' : 'the hold finally fades'}! [Will ${sv.total} vs ${hdc}]${sv.saved ? ' — but the struggle cost its turn.' : ''}`, null, { side: 'enemy' }); }
+          else this._note(`🖐️ ${e.name} stays HELD — struggles in vain and loses its turn. [Will ${sv.total} vs ${hdc}]`, null, { side: 'enemy' });
+        } else { e.paralyzed -= 1; this._note(`🖐️ ${e.name} is paralyzed — loses its turn.`, null, { side: 'enemy' }); }
+        this._broadcast(); return this._nextTurn();
+      }
       if (e.loseTurn) { e.loseTurn = false; this._note(`${e.glyph} ${e.name} is off-balance — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       if (e.sickened > 0) { e.sickened -= 1; this._note(`${e.glyph} ${e.name} retches in the cloud — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
+      if (e.slowed > 0) {   // Slow: sluggish — acts only every other turn.
+        e.slowed -= 1; e._slowTick = (e._slowTick || 0) + 1;
+        if (e._slowTick % 2 === 1) { this._note(`🐌 ${e.name} is slowed — too sluggish to act this turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
+      }
       this._stepTimer = setTimeout(() => { this._withSide('enemy', () => this._enemyAct(e)); this._nextTurn(); }, ENEMY_STEP_MS);
       this._broadcast();
       return;
@@ -643,7 +681,16 @@ class Dungeon {
     // party member
     const m = this.member(t.id);
     if (!m || m.left || m.hp <= 0) return this._nextTurn();
-    if (m.paralyzed > 0) { m.paralyzed -= 1; this._note(`🥶 ${m.nickname} is paralyzed — loses the turn.`); this._broadcast(); return this._nextTurn(); }
+    if (m.paralyzed > 0) {
+      if (m.heldDC) {   // Hold Person on a hero: re-save each turn, costs the turn either way (PF1e).
+        m.paralyzed -= 1; const hdc = m.heldDC;
+        const sm = this._partySaveMod(m), sroll = dRoll(20), stot = sroll + sm;
+        const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= hdc;
+        if (saved || m.paralyzed <= 0) { m.paralyzed = 0; m.heldDC = null; this._note(`🖐️ ${m.nickname} ${saved ? 'breaks free of the hold' : 'the hold finally fades'}! [Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs ${hdc}]${saved ? ' — but the struggle cost the turn.' : ''}`); }
+        else this._note(`🖐️ ${m.nickname} stays HELD — can't break free and loses the turn. [Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs ${hdc}]`);
+      } else { m.paralyzed -= 1; this._note(`🥶 ${m.nickname} is paralyzed — loses the turn.`); }
+      this._broadcast(); return this._nextTurn();
+    }
     if (m.stunned > 0) { m.stunned -= 1; this._note(`😵 ${m.nickname} is stunned — loses the turn.`); this._broadcast(); return this._nextTurn(); }
     if (m.sickened > 0) m.sickened -= 1;
     if (m.judgment === 'healing' && m.hp > 0 && m.hp < m.maxHp) {   // Judgement: Healing regen each turn
@@ -1024,10 +1071,12 @@ class Dungeon {
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
     const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
     if (!saved) {
-      target.paralyzed = Math.max(target.paralyzed || 0, 1);   // held → loses next turn
-      this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname} — HELD! ${roll} (loses a turn)`);
+      // HELD: multiple rounds, but the hero re-saves each of their turns (and the
+      // attempt costs the turn either way) — see heldDC handling in _advanceToActor.
+      target.paralyzed = Math.max(target.paralyzed || 0, 3); target.heldDC = dc;
+      this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname} — HELD! ${roll} (re-save each turn to break free)`, null, { side: 'enemy' });
     } else {
-      this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname}, who breaks free. ${roll}`);
+      this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname}, who breaks free. ${roll}`, null, { side: 'enemy' });
     }
     this._broadcast();
   }
@@ -1148,7 +1197,7 @@ class Dungeon {
     //     a save-or-suck debuff (Hold Person). NOTE: some 'aoe'-tagged spells only
     //     hit one target (maxTargets 1), so coverage = min(foes, maxTargets).
     if (m.cls === 'wizard' || m.cls === 'sorcerer') {
-      const SPELLISH = ['aoe', 'grease', 'sleep', 'fascinate', 'bolt', 'missile', 'touch', 'rays', 'save_debuff'];
+      const SPELLISH = ['aoe', 'grease', 'sleep', 'slow', 'fascinate', 'bolt', 'missile', 'touch', 'rays', 'save_debuff'];
       const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
       const cand = [];
       for (const a of avail) {
@@ -1195,7 +1244,7 @@ class Dungeon {
     //      now alternates Holy Smite / Hold Person instead.
     const offense = [];
     if (targets.length >= 2) {
-      for (const a of avail) if (['aoe', 'grease', 'sleep', 'fascinate'].includes(a.effect)) {
+      for (const a of avail) if (['aoe', 'grease', 'sleep', 'slow', 'fascinate'].includes(a.effect)) {
         offense.push({ ab: a, payload: { targetUids: targets.slice(0, a.maxTargets || 3).map(e => e.uid) } });
       }
     }
@@ -1374,6 +1423,7 @@ class Dungeon {
       grease:      () => this._abGrease(m, ab, payload),
       fascinate:   () => this._abFascinate(m, ab, payload),
       sleep:       () => this._abSleep(m, ab, payload),
+      slow:        () => this._abSlow(m, ab, payload),
       rapidshot:   () => this._abRapidShot(m, ab, payload),
       bullseye:    () => this._abBullseye(m, ab, payload),
     }[ab.effect];
@@ -1397,6 +1447,7 @@ class Dungeon {
     m.buffApplied = {};      // which sticky buffs are already active (no stacking)
     m.smiteActive = false;
     m.hasted = 0; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
+    m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
   }
@@ -1411,7 +1462,7 @@ class Dungeon {
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
       abilities: kit.abilities.map(ab => ({
         key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, maxTargets: ab.maxTargets || 1,
-        minLevel: ab.minLevel || 1, available: lvl >= (ab.minLevel || 1), desc: ab.desc || '',
+        minLevel: ab.minLevel || 1, slvl: ab.slvl || null, available: lvl >= (ab.minLevel || 1), desc: ab.desc || '',
         remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
         max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'room' ? roomUses(ab, lvl) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl) : (ab.uses || 1)) : null,
       })),
@@ -1431,12 +1482,37 @@ class Dungeon {
   _saveVs(bonus, dc) { const r = dRoll(20); return { roll: r, total: r + bonus, saved: r === 20 ? true : r === 1 ? false : (r + bonus) >= dc }; }
   _afterEnemyHit(e) { if (e.hp <= 0) return ' ☠️'; return ` (${Math.max(0, e.hp)}/${e.maxHp})`; }
   // Effective melee AC of an enemy: sickened = +2 to be hit, prone = +4 to be hit.
-  _enemyAC(e) { return e.ac - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0); }
-  // Apply damage to an enemy; any hit snaps it out of a Fascinate.
-  _dmgE(e, dmg) {
-    e.hp -= dmg; if (e.fascinated) e.fascinated = false;
+  _enemyAC(e) { return e.ac - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0) - (e.slowed > 0 ? 1 : 0); }
+  // Energy-resistance multiplier for a damage type (see RESIST_BY_KEY): 0 immune,
+  // 0.5 resistant, 1.5 vulnerable, 1 (default) unchanged. Physical/untyped (no
+  // dtype) is never modified.
+  _resistMult(e, dtype) {
+    if (!dtype || !e.resist || e.resist[dtype] == null) return 1;
+    return e.resist[dtype];
+  }
+  // The damage actually dealt after resistance (vulnerable rounds up, resisted
+  // keeps at least 1 unless fully immune).
+  _resisted(e, dmg, dtype) {
+    const mult = this._resistMult(e, dtype);
+    if (mult === 1) return dmg;
+    if (mult === 0) return 0;
+    return Math.max(1, Math.round(dmg * mult));
+  }
+  // A short tag for the log when resistance changed the number.
+  _resistTag(e, dtype) {
+    const mult = this._resistMult(e, dtype);
+    if (mult === 0) return ' ⛔immune';
+    if (mult > 1) return ` 🔥×${mult}!`;
+    if (mult < 1) return ' (resisted)';
+    return '';
+  }
+  // Apply (resisted) damage of `dtype` to an enemy; any hit snaps a Fascinate.
+  // Returns the damage actually dealt.
+  _dmgE(e, dmg, dtype) {
+    const dealt = this._resisted(e, dmg, dtype);
+    e.hp -= dealt; if (e.fascinated) e.fascinated = false;
     if (e.hp <= 0 && e.explode && !e._exploded) { e._exploded = true; this._enemyExplode(e); }
-    return e.hp;
+    return dealt;
   }
   // A Fire Skeleton bursts on death, striking 1d2 (random, targetable) heroes.
   _enemyExplode(e) {
@@ -1477,9 +1553,9 @@ class Dungeon {
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs touch ${touchAC}]`, sound); this._echoToTable(sound); return; }
-    const dmg = Math.max(1, dRollN(this._spellDice(ab, m), ab.die || 3) + (ab.flat || 0));
-    this._dmgE(e, dmg);
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}.${this._afterEnemyHit(e)}`, sound);
+    const raw = Math.max(1, dRollN(this._spellDice(ab, m), ab.die || 3) + (ab.flat || 0));
+    const dmg = this._dmgE(e, raw, ab.dtype);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}.${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   }
@@ -1504,9 +1580,9 @@ class Dungeon {
     for (const e of chosen) {
       const full = dRollN(dice, ab.die || 6);
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
-      const dmg = sv.saved ? Math.floor(full / 2) : full;
-      this._dmgE(e, dmg);
-      parts.push(`${e.name}: ${saveLbl} ${sv.total} vs ${dc} ${sv.saved ? 'half' : 'fail'} ${dmg}${e.hp <= 0 ? ' ☠️' : ''}`);
+      const raw = sv.saved ? Math.floor(full / 2) : full;
+      const dmg = this._dmgE(e, raw, ab.dtype);
+      parts.push(`${e.name}: ${saveLbl} ${sv.total} vs ${dc} ${sv.saved ? 'half' : 'fail'} ${dmg}${this._resistTag(e, ab.dtype)}${e.hp <= 0 ? ' ☠️' : ''}`);
     }
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} (${dice}d${ab.die || 6} ${ab.dtype || ''}) — ${parts.join('; ')}.`, sound);
     this._echoToTable(sound);
@@ -1541,8 +1617,8 @@ class Dungeon {
     for (let i = 0; i < rays; i++) { const roll = dRoll(20); if (roll === 20 || (roll !== 1 && roll + toHit >= touchAC)) { dmg += dRollN(ab.dice || 4, ab.die || 6); hits++; } }
     const sound = (rays >= 2 && ab.splitSound) ? ab.splitSound : (ab.sound || pick(SND.lightning));
     if (!hits) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} (${rays} ray${rays > 1 ? 's' : ''}) all miss ${e.name}.`, sound); this._echoToTable(sound); return; }
-    this._dmgE(e, dmg);
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} — ${hits}/${rays} rays burn ${e.name} for ${dmg} fire.${this._afterEnemyHit(e)}`, sound);
+    const dealt = this._dmgE(e, dmg, ab.dtype);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} — ${hits}/${rays} rays burn ${e.name} for ${dealt} fire${this._resistTag(e, ab.dtype)}.${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   }
@@ -1582,7 +1658,7 @@ class Dungeon {
     const allies = this.livingParty();
     const target = allies.find(a => (a.paralyzed > 0 || a.stunned > 0 || a.sickened > 0)) || m;
     const cleared = [];
-    if (target.paralyzed > 0) { target.paralyzed = 0; cleared.push('paralysis'); }
+    if (target.paralyzed > 0) { target.paralyzed = 0; target.heldDC = null; cleared.push('paralysis'); }
     if (target.stunned > 0)   { target.stunned = 0;   cleared.push('stun'); }
     if (target.sickened > 0)  { target.sickened = 0;  cleared.push('sickness'); }
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${target.nickname} — ${cleared.length ? 'clears ' + cleared.join(', ') + '!' : 'nothing to dispel'}.`, sound);
@@ -1657,7 +1733,10 @@ class Dungeon {
     const dc = this._spellDC(m);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
     const sound = ab.sound || pick(SND.stink);
-    if (!sv.saved && ab.debuff === 'paralyzed') e.paralyzed = 2;
+    // Hold Person / Hideous Laughter: HELD for up to 1 round per caster level,
+    // but a NEW Will save each of the foe's turns can end it early (the re-save
+    // costs its turn either way) — see the heldDC handling in _advanceToActor.
+    if (!sv.saved && ab.debuff === 'paralyzed') { e.paralyzed = Math.max(2, Math.min(12, m.level || 1)); e.heldDC = dc; }
     else if (!sv.saved && ab.debuff === 'sickened') e.sickened = SICKENED_ROUNDS;
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${String(ab.debuff).toUpperCase()}!`}`, sound);
     this._echoToTable(sound);
@@ -1670,9 +1749,9 @@ class Dungeon {
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
-    const dmg = Math.max(1, dRollN(this._spellDice(ab, m), ab.die || 6));
-    this._dmgE(e, dmg);
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} jolts ${e.name} for ${dmg} ${ab.dtype || ''}.${this._afterEnemyHit(e)}`, sound);
+    const raw = Math.max(1, dRollN(this._spellDice(ab, m), ab.die || 6));
+    const dmg = this._dmgE(e, raw, ab.dtype);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} jolts ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}.${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   }
@@ -1712,6 +1791,25 @@ class Dungeon {
       parts.push(`${e.name}: Will ${sv.total} vs ${dc} ${sv.saved ? 'shrugs it off' : '💤 ASLEEP'}`);
     }
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${parts.join('; ')}.`, sound);
+    this._echoToTable(sound);
+  }
+  // Slow: a RANDOM 2d4 foes must make a Will save or be SLOWED for ~1 round per
+  // caster level — sluggish (acts only every other turn) and a touch easier to
+  // hit (−1 AC). Plays the Evil Morty theme.
+  _abSlow(m, ab, payload) {
+    const dc = this._spellDC(m);
+    const living = this.livingEnemies().slice();
+    for (let i = living.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [living[i], living[j]] = [living[j], living[i]]; }
+    const n = dRollN(ab.randN || 2, ab.randDie || 4);   // 2d4 targets
+    const chosen = living.slice(0, n);
+    const dur = Math.max(3, Math.min(10, m.level || 1));
+    const sound = ab.sound || pick(SND.flesh), parts = [];
+    for (const e of chosen) {
+      const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
+      if (!sv.saved) { e.slowed = Math.max(e.slowed || 0, dur); e._slowTick = 0; }
+      parts.push(`${e.name}: Will ${sv.total} vs ${dc} ${sv.saved ? 'resists' : '🐌 SLOWED'}`);
+    }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${chosen.length} foe${chosen.length === 1 ? '' : 's'} — ${parts.join('; ')}.`, sound);
     this._echoToTable(sound);
   }
   // Fascinate: up to maxTargets foes stand enthralled, losing turns until struck.
