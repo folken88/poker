@@ -270,6 +270,7 @@ const isPoolClass = (cls) => POOL_CLASSES.has(cls);
 const isCaster    = (cls) => CASTER_CLASSES.has(cls);
 
 module.exports = {
-  KITS, DEFAULT_KIT, SELECTABLE_CLASSES, kitFor, isPoolClass, isCaster, imgFor,
+  KITS, SPELL, DEFAULT_KIT, SELECTABLE_CLASSES, CASTER_CLASSES, SLVL_BY_KEY,
+  kitFor, isPoolClass, isCaster, imgFor,
   spellSlots, roomUses, diceCount, channelUses, smiteUses,
 };

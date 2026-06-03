@@ -67,6 +67,9 @@ app.get('/api/tables', (_req, res) => {
   }));
 });
 
+// Hidden dev/reference pages: /monsters, /spells, /classes (not linked in the UI).
+try { require('./devpages').registerDevPages(app); } catch (e) { console.warn('[devpages] not loaded:', e.message); }
+
 // Recent sounds emitted to clients + a play-count tally, for diagnosing an
 // overplayed sound. { last: [{ts,source,sound,label}], tally: [{sound,count}] }.
 app.get('/api/sounds', (req, res) => {

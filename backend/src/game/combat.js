@@ -111,15 +111,17 @@ function weaponOf(gear, weaponKey) {
 /** Derive Armor Class from a gear object. `physical` is the armor+shield
  *  portion — the part that CLANGS (distinguishes a blocked hit from a whiff).
  *  Ring of Protection is deflection: it raises AC but isn't a physical block. */
-function acOf(gear) {
+function acOf(gear, cls) {
   let ac = 10, physical = 0;
   const armor = Number(gear?.armor) || 0;
   const shield = Number(gear?.shield) || 0;
   const ring = Number(gear?.ring) || 0;
   // Everyone — human and AI — wears at least a mundane Chain Shirt (+4 AC) for
-  // free. Buying Full Plate (+N) replaces it with 9+N; hocking the plate (armor
-  // back to 0) reverts to the chain shirt. Both are physical (they CLANG).
-  const armorAC = armor >= 1 ? (9 + armor) : 4;
+  // free. Buying armor (+N) upgrades them: Full Plate is 9+N. BARBARIANS are
+  // restricted to MEDIUM armor — a Breastplate (6+N) — they can't fight freely
+  // in heavy plate. Hocking the armor (back to 0) reverts to the chain shirt.
+  const heavyBase = (cls === 'barbarian') ? 6 : 9;   // breastplate vs full plate
+  const armorAC = armor >= 1 ? (heavyBase + armor) : 4;
   ac += armorAC; physical += armorAC;
   if (shield >= 1) { const v = 2 + shield; ac += v; physical += v; }
   if (ring >= 1)   { ac += ring; }

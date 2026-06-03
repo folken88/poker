@@ -1071,7 +1071,7 @@ class Dungeon {
     // Dual-wielders (Farrus's twin axes) carry no shield — strip any shield AC.
     const tw = weaponOf(target.gear, target.weaponKey);
     const noShield = (tw && tw.noShield && (Number(target.gear && target.gear.shield) || 0) >= 1) ? (2 + Number(target.gear.shield)) : 0;
-    const effAC = acOf(target.gear).ac + this._acBonus(target) - noShield - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);   // Shield: +4; helpless / rage / reckless / cleave: easier to hit
+    const effAC = acOf(target.gear, target.cls).ac + this._acBonus(target) - noShield - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);   // Shield: +4 (barbarians cap at breastplate); helpless / rage / reckless / cleave: easier to hit
     const r = this._monsterSwing(e, effAC);
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);   // monk's randomized "bruce" kiai (hit or miss)
     else if (r.hit && e.atkSound) r.sound = e.atkSound;                    // rogue's "riki" stab (hit only)
@@ -1141,9 +1141,10 @@ class Dungeon {
     this._echoToTable(snd);
     this._broadcast();
   }
-  // Goblin Barbarian's Taunt: a Predator-roar challenge. Every AI ally must make
-  // a Will save or be COMPELLED to attack the goblin on its next turn (humans
-  // keep their own agency — they just get rattled). Once per encounter.
+  // Goblin Barbarian's Taunt: a Predator-roar challenge. EVERY hero (human or AI)
+  // must make a Will save or be COMPELLED — its next attack (incl. a free Haste/
+  // Cleave swing) is forced onto the goblin, no matter what it tried to target.
+  // Once per encounter.
   _enemyTaunt(e) {
     e.tauntsLeft -= 1;
     const cfg = e.taunt || {};
@@ -1153,12 +1154,17 @@ class Dungeon {
     for (const m of this.livingParty()) {
       const sm = this._partySaveMod(m), sroll = dRoll(20), stot = sroll + sm;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
-      if (!saved && m.isBot) m.tauntedBy = e.uid;   // only AI allies are compelled
-      parts.push(`${m.nickname}: ${saved ? 'unmoved' : (m.isBot ? `📢 fixated on ${e.name}` : 'rattled (you still choose)')} [${stot} vs ${dc}]`);
+      if (!saved) m.tauntedBy = e.uid;
+      parts.push(`${m.nickname}: ${saved ? 'unmoved' : `📢 must strike ${e.name}`} [${stot} vs ${dc}]`);
     }
     this._note(`📢 ${e.glyph} ${e.name} roars a furious challenge — ${parts.join('; ')}!`, snd, { side: 'enemy' });
     this._echoToTable(snd);
     this._broadcast();
+  }
+  // A living foe this member is compelled (taunted) to attack, or null.
+  _forcedFoe(m) {
+    if (!m || !m.tauntedBy) return null;
+    return this.enemies.find(x => x.uid === m.tauntedBy && x.hp > 0) || null;
   }
   _allyAct(m) {
     const foes = this.livingEnemies();
@@ -1190,12 +1196,9 @@ class Dungeon {
   // wastes the crowd-control), only hitting one if all living foes are out.
   _preferredFoe(m, foes) {
     if (!foes || !foes.length) return null;
-    // Taunted by a goblin barbarian → compelled to go straight for it (AI only).
-    if (m.tauntedBy) {
-      const t = foes.find(e => e.uid === m.tauntedBy);
-      m.tauntedBy = null;   // the compulsion is consumed by this turn's strike
-      if (t) return t;
-    }
+    // Taunted → compelled to go straight for the taunter (cleared at turn's end).
+    const forced = this._forcedFoe(m);
+    if (forced) return forced;
     if (m.cls === 'rogue') {
       const helpless = foes.filter(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated);
       return (helpless.length ? helpless : foes).slice().sort((a, b) => a.hp - b.hp)[0];   // weakest sneakable foe
@@ -1465,6 +1468,12 @@ class Dungeon {
     this._log('action', { who: playerId, kind, hp: m.hp, enemiesAlive: this.livingEnemies().length });
     if (kind === 'attack') this._useAtwill(m, payload);
     else if (kind === 'ability') {
+      // Taunted → a single-target offensive ability is dragged onto the taunter.
+      const forced = this._forcedFoe(m);
+      if (forced) {
+        const ab = kitFor(m.cls).abilities[payload.slot | 0];
+        if (ab && ab.target === 'enemy') payload.targetUid = forced.uid;
+      }
       const r = this._useAbility(m, payload.slot | 0, payload);
       if (r && r.ok === false) { this._armAfkTimer(m); return r; }   // spent/invalid → don't burn the turn
       if (r && r.freeAction) { this._armAfkTimer(m); this._broadcast(); return { ok: true, freeAction: true }; }   // judgement switch — keep your turn
@@ -1488,6 +1497,8 @@ class Dungeon {
   // — a caster's cantrip ray, or a weapon swing. A barbarian's swing chain-cleaves
   // (drops a foe → carve into a random next one). Chosen foe is first; chains random.
   _basicAttack(m, targetUid) {
+    const forced = this._forcedFoe(m);   // taunted → attack is dragged onto the taunter
+    if (forced) targetUid = forced.uid;
     const at = kitFor(m.cls).atwill;
     if (at && at.effect === 'bolt') return this._abBolt(m, at, targetUid);
     if (m.cls === 'barbarian') {
@@ -1858,12 +1869,17 @@ class Dungeon {
   // If `m` is hasted, spend it on one bonus attack against a living foe. Called
   // right after the member's normal action resolves (human + bot paths).
   _hasteBonus(m) {
-    if (!m || !(m.hasted > 0) || m.hp <= 0 || m.left || m.dead) return;
+    if (!m) return;
+    // This runs at the very end of the member's turn, so it's also where the
+    // taunt compulsion is spent — but the free Haste swing still honors it.
+    const forced = this._forcedFoe(m);
+    m.tauntedBy = null;
+    if (!(m.hasted > 0) || m.hp <= 0 || m.left || m.dead) return;
     if (m._justHasted) { m._justHasted = false; return; }   // cast Haste this turn → bonus starts next turn
     m.hasted -= 1;   // spend one of the hasted turns
     const foes = this.livingEnemies();
     if (!foes.length) return;
-    const tgt = this._preferredFoe(m, foes) || foes[0];
+    const tgt = (forced && foes.includes(forced)) ? forced : (this._preferredFoe(m, foes) || foes[0]);
     this._note(`💨 ${m.nickname} blurs with Haste — an extra strike!`);
     this._playerAttack(m, tgt.uid, true);   // quiet: don't clobber the turn's main-action sound
   }
@@ -2130,6 +2146,8 @@ class Dungeon {
   // keeps felling them. Each swing's attack sound is queued (staggered) so the
   // chain is audible; the notes themselves carry no sound to avoid a double-play.
   _cleaveSweep(m, firstTarget, opts = {}) {
+    const forced = this._forcedFoe(m);   // taunted → the FIRST cleave is dragged onto the taunter (chains stay random)
+    if (forced) firstTarget = forced;
     m.flatFooted = false; m.invisible = false;
     if (opts.acPen) { m.acPenRound = this.round; m.acPenAmt = opts.acPen; }
     m.weapon = weaponOf(m.gear, m.weaponKey);
@@ -2310,4 +2328,4 @@ class Dungeon {
   destroy() { clearTimeout(this._turnTimer); clearTimeout(this._stepTimer); clearTimeout(this._lootTimer); }
 }
 
-module.exports = { Dungeon };
+module.exports = { Dungeon, MON, BOSS_KEYS };
