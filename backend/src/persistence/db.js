@@ -365,10 +365,10 @@ migrateRemoveAmulet();
 const BOT_CLASSES = {
   'Sirona': 'paladin', 'Gaspar': 'inquisitor', 'Tar Baphon': 'wizard', 'Bujon, Storm of Cheliax': 'sorcerer',
   'Kelda': 'rogue', 'Kate Blackwood': 'magus', 'Toni': 'magus', 'Adimarus': 'antipaladin',
-  'Rhyarca': 'oracle', 'Conchobar': 'bard', 'Nomkath': 'rogue', 'Lou Candlebean': 'cavalier',
+  'Rhyarca': 'cleric', 'Conchobar': 'bard', 'Nomkath': 'rogue', 'Lou Candlebean': 'cavalier',
   'Elodie': 'bard', 'Dismas': 'paladin', 'Vorkstag': 'alchemist', 'Estovion': 'wizard',
   'Auren Vrood': 'wizard', 'Casandalee': 'wizard', 'Meyanda': 'cleric', 'Daramid': 'wizard',
-  'Kovira': 'inquisitor', 'Tokala': 'barbarian', 'Mr. Brow': 'investigator', 'Tamsin': 'bard',
+  'Kovira': 'wizard', 'Tokala': 'barbarian', 'Mr. Brow': 'investigator', 'Tamsin': 'bard',
   'Concetta': 'swashbuckler', 'Farrah': 'sorcerer', 'Fera': 'rogue',
   'Elfrip': 'sorcerer', 'Rodney Smith': 'ranger',   // Elfrip favors fire; Rodney "Danger" Smith is an archer
   'Vesorianna': 'cleric', 'Farrus Richton': 'barbarian', 'Dinvaya': 'cleric', 'Storgrim Thunderbeard': 'fighter',
@@ -397,7 +397,7 @@ const BOT_WEAPONS = {
   'Vesorianna': 'ghosttouch', 'Farrus Richton': 'twoaxes', 'Dinvaya': 'warhammer', 'Storgrim Thunderbeard': 'battleaxe',
   'Agu': 'rapier', 'Chef': 'battleaxe', 'Crisp': 'bite', 'Kai Ginn': 'glaive', 'Lirienne': 'repeatingcrossbow',
   'Rissa': 'claws', 'Taelys': 'sv98', 'Ulfred': 'voidshard', 'Vaughan': 'radiance', 'Duristan Silvio': 'lapua',
-  'Holden': 'rapier',
+  'Holden': 'rapier', 'Rhyarca': 'rapier', 'Kovira': 'unarmed',   // Kovira (wizard) attacks with her Elemental Ray at-will
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 
