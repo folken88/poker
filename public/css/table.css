@@ -179,6 +179,7 @@ button, input { font: inherit; color: inherit; }
   opacity: 0.85; margin-bottom: 0.25rem; padding: 2px 0;
   position: sticky; top: 0; background: rgba(14,16,12,0.98); z-index: 1;
 }
+.dungeon__sb-slots { color: #9fd29f; font-variant-numeric: tabular-nums; text-transform: none; letter-spacing: 0; }
 .dungeon__sb-row { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .dungeon__sb-spell {
   position: relative; width: 40px; height: 40px; padding: 0;

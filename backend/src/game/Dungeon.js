@@ -18,7 +18,7 @@
 const db = require('../persistence/db');
 const { weaponOf, acOf, totalMagicBonus, SND, dRoll, dRollN, pick } = require('./combat');
 const { CLASSES, babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../pf1data/classes');
-const { kitFor, roomUses, isPoolClass, isCaster, spellSlots, diceCount } = require('../pf1data/abilities');
+const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, spontaneousSlots, diceCount } = require('../pf1data/abilities');
 const { logDungeon, recordSound } = require('../persistence/logger');
 const banter = require('../bot/banter');
 
@@ -430,6 +430,7 @@ class Dungeon {
       : { key: 'paralyzed', label: 'Paralyzed', desc: 'frozen — loses turns; easy to hit', icon: `${I}paralyzed.webp` });
     if (o.slowed > 0)    c.push({ key: 'slowed',    label: 'Slowed',    desc: 'sluggish — acts only every other turn; −1 AC', icon: `${I}slowed.webp` });
     if (o.grappled)      c.push({ key: 'grappled',  label: 'Grappled',  desc: 'chained — −2 to hit, easier to strike; crushed each turn (Dispel or Grease frees you)', icon: `${I}grappled.webp` });
+    if (o.prayed > 0)    c.push({ key: 'prayed',     label: 'Prayer',    desc: `−${o.prayed} to hit, damage & saves (cleric Prayer covers the battlefield)`, icon: `${I}shaken.webp` });
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
     if (o.fascinated)    c.push({ key: 'asleep',    label: 'Asleep',    desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
     if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
@@ -616,6 +617,7 @@ class Dungeon {
       hook: base.hook || null,             // barbed devil: chain hook → grapple + constrict
       hellfire: base.hellfire || null,     // barbed devil: hellfire blast (fire AoE)
       hellfireLeft: base.hellfire ? 2 : 0,
+      prayed: 0,                           // cleric Prayer: −1 to this enemy's attacks/damage/saves
       resist: base.resist || null,         // energy resistances / vulnerabilities (see RESIST_BY_KEY)
       flying: !!base.flying,               // airborne: immune to prone + "high ground" vs grounded foes
       evasion: !!base.evasion,             // rogues/monks: a made Reflex save vs an area effect = NO damage
@@ -1023,13 +1025,14 @@ class Dungeon {
   }
   _monsterSwing(e, targetAC) {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
+    const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
-    const toHit = e.toHit - sick + (e.flying ? HIGH_GROUND_HIT : 0);
+    const toHit = e.toHit - sick - pray + (e.flying ? HIGH_GROUND_HIT : 0);
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
     if (!hit) return { hit: false, roll, toHit, total, ac: targetAC, sound: pick(SND.whiffSword) };
-    let dmg = e.dmgBonus - sick;
+    let dmg = e.dmgBonus - sick - pray;
     for (let i = 0; i < (e.dmgCount || 1); i++) dmg += dRoll(e.dmgDie);   // e.g. golem slam = 2d10+9
     return { hit: true, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
   }
@@ -1286,6 +1289,7 @@ class Dungeon {
     const usable = (ab) => {
       if (!ab || lvl < (ab.minLevel || 1)) return false;
       if (ab.cost === 'pool') return (m.spellPool || 0) > 0;
+      if (ab.cost === 'slot') return ((m.slots && m.slots[ab.slvl]) || 0) > 0;   // spontaneous: a slot of that level
       if (ab.cost === 'room') return ((m.abilityUses && m.abilityUses[ab.key]) || 0) > 0;
       if (ab.cost === 'run')  return ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) > 0;   // don't re-pick a spent run cast (e.g. auto-Inspire/Bless)
       return true;                                         // 'free'
@@ -1332,9 +1336,15 @@ class Dungeon {
     const buff = avail.find(a => a.effect === 'buff' && a.sticky && !buffFullyUp(a));
     if (buff) return { slot: slot(buff), payload: {} };
     // 2a) Taunt — a barbarian roars to pull a pack's fire onto themselves (once
-    //     per room, only worth it against 2+ foes).
+    //     per room, only worth it against 2+ foes). With multiple barbarians,
+    //     DON'T pile on if a team-mate's taunt already gripped most foes — but if
+    //     MOST of the pack RESISTED, a second taunt (re-rolling their saves) is
+    //     worth it. Heuristic: only taunt while fewer than half the foes are
+    //     currently under a taunt-compulsion.
     const taunt = avail.find(a => a.effect === 'taunt');
-    if (taunt && foes.length >= 2) return { slot: slot(taunt), payload: {} };
+    if (taunt && foes.length >= 2 && foes.filter(e => e.taunted).length * 2 < foes.length) {
+      return { slot: slot(taunt), payload: {} };
+    }
     // 2b) Haste — a powerful party buff (bards & wizards love it). Cast it once
     //     while there are foes to fight and the party isn't already hasted.
     const haste = avail.find(a => a.effect === 'haste');
@@ -1590,6 +1600,7 @@ class Dungeon {
     const lvl = m.level || 1;
     if (ab.minLevel && lvl < ab.minLevel) return { ok: false, error: `${ab.name} needs level ${ab.minLevel}` };
     if (ab.cost === 'pool' && (m.spellPool || 0) <= 0) return { ok: false, error: 'out of spell casts this room' };
+    if (ab.cost === 'slot' && ((m.slots && m.slots[ab.slvl]) || 0) <= 0) return { ok: false, error: `no level-${ab.slvl || '?'} spell slots left this room` };
     if (ab.cost === 'room' && ((m.abilityUses && m.abilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is spent for this room` };
     if (ab.cost === 'run'  && ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is already cast for this dungeon` };
     m.flatFooted = false;   // acting ends flat-footed
@@ -1625,6 +1636,7 @@ class Dungeon {
     if (!D) return { ok: false, error: 'unknown ability' };
     D();
     if (ab.cost === 'pool') m.spellPool = Math.max(0, (m.spellPool || 0) - 1);
+    else if (ab.cost === 'slot') { m.slots = m.slots || {}; m.slots[ab.slvl] = Math.max(0, (m.slots[ab.slvl] || 0) - 1); }
     else if (ab.cost === 'room') m.abilityUses[ab.key] = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 0) - 1);
     else if (ab.cost === 'run') m.runAbilityUses[ab.key] = Math.max(0, ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) - 1);
     if (ab.target === 'enemy' || ab.target === 'aoe') m.invisible = false;   // attacking breaks Invisibility
@@ -1636,6 +1648,7 @@ class Dungeon {
   _resetAbilities(m) {
     const kit = kitFor(m.cls);
     m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
+    m.slots = isSpontaneous(m.cls) ? spontaneousSlots(m.level || 1) : null;   // per-spell-level slots (sorcerer/bard/oracle)
     m.abilityUses = {};
     for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1);
     if (m.tempHp) { m.maxHp -= m.tempHp; if (m.hp > m.maxHp) m.hp = m.maxHp; m.tempHp = 0; }   // rage / Bear's Endurance temp HP fades
@@ -1681,16 +1694,19 @@ class Dungeon {
     const kit = kitFor(m.cls);
     const lvl = m.level || 1;
     const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // single-shot rifle → no Rapid Shot
+    const maxSlots = isSpontaneous(m.cls) ? spontaneousSlots(lvl) : null;
     return {
       atwill: { key: kit.atwill.key, name: kit.atwill.name, icon: kit.atwill.icon, img: kit.atwill.img || null },
       caster: isCaster(m.cls),
       spellNote: kit.note || null,
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
+      // Per-spell-level slots for spontaneous casters: { 1: {remaining,max}, … }.
+      slots: maxSlots ? Object.fromEntries(Object.keys(maxSlots).map(L => [L, { remaining: (m.slots && m.slots[L]) || 0, max: maxSlots[L] }])) : null,
       abilities: kit.abilities.map(ab => ({
         key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, maxTargets: ab.maxTargets || 1,
-        minLevel: ab.minLevel || 1, slvl: ab.slvl || null, available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction), desc: ab.desc || '',
-        remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
-        max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'room' ? roomUses(ab, lvl) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl) : (ab.uses || 1)) : null,
+        minLevel: ab.minLevel || 1, slvl: ab.slvl || null, available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction) && !(ab.cost === 'slot' && !(maxSlots && maxSlots[ab.slvl])), desc: ab.desc || '',
+        remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'slot' ? ((m.slots && m.slots[ab.slvl]) || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
+        max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'slot' ? ((maxSlots && maxSlots[ab.slvl]) || 0) : ab.cost === 'room' ? roomUses(ab, lvl) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl) : (ab.uses || 1)) : null,
       })),
     };
   }
@@ -1761,9 +1777,10 @@ class Dungeon {
   }
   // Enemy save bonus. Monsters carry Fort + Reflex; Will is approximated.
   _enemySave(e, which) {
-    if (which === 'fort') return e.fort || 0;
-    if (which === 'reflex') return e.reflex || 0;
-    return Math.floor(((e.fort || 0) + (e.reflex || 0)) / 2);   // will (approx)
+    const pray = e.prayed || 0;   // Prayer: −1 to all the enemy's saves
+    if (which === 'fort') return (e.fort || 0) - pray;
+    if (which === 'reflex') return (e.reflex || 0) - pray;
+    return Math.floor(((e.fort || 0) + (e.reflex || 0)) / 2) - pray;   // will (approx)
   }
   // A bare attack roll (to-hit only, no damage) using the member's weapon.
   _attackRoll(m, e) {
@@ -2199,7 +2216,13 @@ class Dungeon {
       who.buffs.save += (ab.buff && ab.buff.save) || 0;
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
     };
-    if (ab.party) { for (const a of this.livingParty()) apply(a); this._note(`${ab.icon} ${m.nickname} strikes up ${ab.name} — the party is emboldened!`, sound); }
+    if (ab.party) {
+      for (const a of this.livingParty()) apply(a);
+      // Prayer floods the WHOLE battlefield — allies up, enemies down (−1 to hit,
+      // damage & saves for the room). See _monsterSwing / _enemySave.
+      if (ab.enemyPenalty) for (const e of this.livingEnemies()) e.prayed = Math.max(e.prayed || 0, ab.enemyPenalty);
+      this._note(`${ab.icon} ${m.nickname} ${ab.enemyPenalty ? `intones ${ab.name} — allies blessed, enemies cursed across the field` : `strikes up ${ab.name} — the party is emboldened`}!`, sound);
+    }
     else if (ab.target === 'ally') { const t = this._buffTarget(m, ab, payload); apply(t); this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${t.nickname}.`, sound); }
     else { apply(m); this._note(`${ab.icon} ${m.nickname} uses ${ab.name}!`, sound); }
     this._echoToTable(sound);

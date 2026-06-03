@@ -1017,29 +1017,35 @@
         // ("one cast of each spell per room" / "cast freely").
         let abilHtml;
         if (kit.caster) {
-          // Group spells by their PF1e SPELL level (1st–9th), ascending; anything
-          // without a spell level (class features like Channel) buckets last.
-          // Each group is a row of icon-only tiles (names/desc on hover).
           const ord = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
-          const groups = new Map();
+          // Class FEATURES (no spell level — bardic performance, Channel…) show as
+          // inline buttons; SPELLS (with a spell level) live in the Spellbook ▾,
+          // grouped by level. Keep each ability's ORIGINAL index for data-slot.
+          const features = [], spellsByLvl = new Map();
           (kit.abilities || []).forEach((ab, i) => {
-            const key = ab.slvl != null ? ab.slvl : 'other';
-            if (!groups.has(key)) groups.set(key, []);
-            groups.get(key).push(spellIcon(ab, i));
+            if (ab.slvl == null) { features.push({ ab, i }); return; }
+            if (!spellsByLvl.has(ab.slvl)) spellsByLvl.set(ab.slvl, []);
+            spellsByLvl.get(ab.slvl).push(spellIcon(ab, i));
           });
-          const keys = [...groups.keys()].sort((a, b) => (a === 'other') - (b === 'other') || a - b);
-          const sections = keys.map(k =>
-            `<div class="dungeon__sb-lvl">` +
-              `<div class="dungeon__sb-lvlhead">${k === 'other' ? 'Other' : ord(k) + '-Level'}</div>` +
-              `<div class="dungeon__sb-row">${groups.get(k).join('')}</div>` +
-            `</div>`).join('');
-          const badge = kit.spellPool ? ` <span class="dungeon__uses">✨${kit.spellPool.remaining}/${kit.spellPool.max}</span>` : '';
-          const head  = kit.spellPool
-            ? `✨ ${kit.spellPool.remaining}/${kit.spellPool.max} casts left this room`
-            : (kit.spellNote || 'Spells');
+          const sections = [...spellsByLvl.keys()].sort((a, b) => a - b).map(k => {
+            const sl = kit.slots && kit.slots[k];   // spontaneous: per-level slot count
+            const slotTxt = sl ? ` <span class="dungeon__sb-slots">${sl.remaining}/${sl.max} slots</span>` : '';
+            return `<div class="dungeon__sb-lvl">` +
+              `<div class="dungeon__sb-lvlhead">${ord(k)}-Level${slotTxt}</div>` +
+              `<div class="dungeon__sb-row">${spellsByLvl.get(k).join('')}</div>` +
+            `</div>`;
+          }).join('');
+          // Slot summary (spontaneous) → e.g. "1st:6 2nd:5 3rd:3"; cleric shows its pool.
+          const slotSummary = kit.slots ? Object.keys(kit.slots).sort((a, b) => a - b).map(L => `${ord(+L)}:${kit.slots[L].remaining}`).join(' ') : '';
+          const badge = kit.spellPool ? ` <span class="dungeon__uses">✨${kit.spellPool.remaining}/${kit.spellPool.max}</span>`
+                      : (kit.slots ? ` <span class="dungeon__uses">✨${slotSummary}</span>` : '');
+          const head  = kit.slots ? `✨ Spell slots — ${slotSummary}`
+                      : (kit.spellPool ? `✨ ${kit.spellPool.remaining}/${kit.spellPool.max} casts left this room` : (kit.spellNote || 'Spells'));
+          const featureBtns = features.map(({ ab, i }) => abilBtn(ab, i)).join('');
           // Wrap the toggle + popover so the popover anchors to the BUTTON (drops
           // straight down-and-right from it), not to the whole action panel.
           abilHtml =
+            featureBtns +
             `<span class="dungeon__sb-wrap">` +
               `<button type="button" class="btn ${_spellbookOpen ? 'btn--primary' : 'btn--ghost'}" data-spellbook-toggle aria-expanded="${_spellbookOpen}">📖 Spellbook ▾${badge}</button>` +
               `<div class="dungeon__spellbook ${_spellbookOpen ? 'is-open' : ''}">` +

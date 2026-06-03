@@ -31,11 +31,27 @@ function spellSlots(level) { return Math.min(6, 2 + Math.max(1, level)) + 1; }
 function channelUses(level) { return Math.max(1, Math.floor(Math.max(1, level) / 2)); }   // L2:1 L4:2 …
 function smiteUses(level)   { return Math.max(1, Math.floor(Math.max(1, level) / 5)); }    // 1 per 5 levels (min 1)
 
-// Only the SORCERER draws from a shared per-room spell pool now. Wizards AND
-// clerics are prepared casters (per-spell 'room' uses, 1× each per room). All
-// three are CASTERS, so the UI groups their spells under the Spellbook ▾.
-const POOL_CLASSES   = new Set(['sorcerer']);
+// SPONTANEOUS casters (sorcerer, bard, oracle) get SPELL SLOTS PER SPELL LEVEL,
+// following the PF1 sorcerer spells/day table (no ability-bonus slots). A spell
+// of level N spends a slot of level N. (We treat one adventuring "day" as one
+// room — slots refresh each room.)
+const SPONTANEOUS_CLASSES = new Set(['sorcerer', 'bard', 'oracle']);
+const SORC_SLOTS_BY_LEVEL = {
+  1: [3], 2: [4], 3: [5], 4: [6, 3], 5: [6, 4], 6: [6, 5, 3], 7: [6, 6, 4], 8: [6, 6, 5, 3],
+  9: [6, 6, 6, 4], 10: [6, 6, 6, 5, 3], 11: [6, 6, 6, 6, 4], 12: [6, 6, 6, 6, 5, 3],
+  13: [6, 6, 6, 6, 6, 4], 14: [6, 6, 6, 6, 6, 5, 3], 15: [6, 6, 6, 6, 6, 6, 4], 16: [6, 6, 6, 6, 6, 6, 5, 3],
+  17: [6, 6, 6, 6, 6, 6, 6, 4], 18: [6, 6, 6, 6, 6, 6, 6, 5, 3], 19: [6, 6, 6, 6, 6, 6, 6, 6, 4], 20: [6, 6, 6, 6, 6, 6, 6, 6, 6],
+};
+function spontaneousSlots(level) {
+  const arr = SORC_SLOTS_BY_LEVEL[Math.max(1, Math.min(20, level || 1))] || SORC_SLOTS_BY_LEVEL[1];
+  const out = {};
+  arr.forEach((n, i) => { out[i + 1] = n; });
+  return out;   // { 1: n, 2: n, … } slots per spell level
+}
+
+const POOL_CLASSES   = new Set([]);   // (sorcerer is spontaneous-per-level now)
 const CASTER_CLASSES = new Set(['wizard', 'sorcerer', 'cleric', 'druid', 'bard']);
+const isSpontaneous = (cls) => SPONTANEOUS_CLASSES.has(cls);
 
 // Spell-damage dice count from a level scale.
 function diceCount(ab, level) {
@@ -118,7 +134,7 @@ const ATTACK = (icon) => ({ key: 'attack', name: 'Attack', icon: icon || '⚔️
 const preparedSpell   = (spell, minLevel) => ({ ...spell, cost: 'room', uses: 1, minLevel });
 // A SORCERER's known spell: spontaneous — drawn from the shared per-room cast
 // pool ('pool'), so any of his few known spells can be cast until slots run out.
-const spontaneousSpell = (spell, minLevel) => ({ ...spell, cost: 'pool', minLevel });
+const spontaneousSpell = (spell, minLevel) => ({ ...spell, cost: 'slot', minLevel });
 // Wizard/Sorcerer at-will is NOT a weapon swing — it's an Elemental Ray: an
 // unlimited ranged touch attack for 1d6+4 (cold). Used in the dungeon AND for
 // poker-table harassment. (Ice-punch sound.)
@@ -133,7 +149,7 @@ const KITS = {
   barbarian: { atwill: ATTACK('⚔️'), abilities: [
     { key: 'cleave', name: 'Cleave', icon: '🪓', cost: 'free', effect: 'cleave', target: 'enemy', acPen: 2, desc: 'Hit your target and a second foe (−2) — every foe you DROP grants another swing, chaining until you stop felling them — but you drop your guard (−2 AC) this turn.' },
     { key: 'rage',   name: 'Rage',   icon: '😤', cost: 'free', freeAction: true, effect: 'buff', target: 'self', buff: { toHit: 2, dmg: 2, acPen: 2, save: 1 }, sticky: true, sound: S.rage, desc: 'Fly into a rage for the rest of the room (FREE action — still attack this turn): +2 to hit & damage and +1 Will, but −2 AC.' },
-    { key: 'taunt',  name: 'Taunt',  icon: '📢', cost: 'room', uses: 1, effect: 'taunt', target: 'aoe', save: 'will', sounds: ['/audio/taunt_creed.mp3', '/audio/taunt_predator.mp3'], desc: 'A furious challenge — EVERY enemy must make a Will save or be forced to attack YOU on its next turn (drawing fire off your allies). Once per room.' },
+    { key: 'taunt',  name: 'Taunt',  icon: '📢', cost: 'room', uses: 1, effect: 'taunt', target: 'aoe', save: 'will', sound: '/audio/taunt_predator.mp3', desc: 'A furious challenge — EVERY enemy must make a Will save or be forced to attack YOU on its next turn (drawing fire off your allies). Once per room.' },
   ] },
   ranger: { atwill: ATTACK('🏹'), abilities: [
     { key: 'rapidshot', name: 'Rapid Shot',    icon: '🏹', cost: 'free', effect: 'rapidshot', target: 'enemy', needsRepeating: true, sound: S.bowmulti, desc: 'Loose 2 shots this turn — each at −2 to hit. (Needs a weapon that can fire repeatedly — NOT a bolt-action sniper rifle.)' },
@@ -158,7 +174,7 @@ const KITS = {
     { key: 'divinefavor',  name: 'Divine Favor',         icon: '🙏', cost: 'room', uses: 1, effect: 'buff', target: 'self', buff: { toHit: 3, dmg: 3 }, sticky: true, sound: S.invoke,   desc: '+3 to hit and +3 damage to yourself for the rest of the room.' },
     { key: 'holysmite',    name: 'Holy Smite',           icon: '🌟', cost: 'room', uses: 1, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
     { key: 'searinglight', name: 'Searing Light',        icon: '🔆', cost: 'room', uses: 1, minLevel: 5, effect: 'touch', target: 'enemy', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.searing, desc: 'A ray of divine light — ranged touch for ½level d8 (extra vs undead).' },
-    { key: 'prayer',       name: 'Prayer',               icon: '📿', cost: 'room', uses: 1, effect: 'buff', target: 'self', party: true, buff: { toHit: 1, dmg: 1 }, sticky: true, sound: S.prayer, desc: 'All allies gain +1 to hit and +1 damage for the rest of the room.' },
+    { key: 'prayer',       name: 'Prayer',               icon: '📿', cost: 'room', uses: 1, effect: 'buff', target: 'self', party: true, buff: { toHit: 1, dmg: 1, save: 1 }, enemyPenalty: 1, sticky: true, sound: S.prayer, desc: 'Fills the whole battlefield: ALL allies gain +1 to hit, damage & saves, and ALL enemies suffer −1 to hit, damage & saves for the rest of the room.' },
     { key: 'bless',        name: 'Bless',                icon: '✨', cost: 'run',  uses: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1 }, sticky: true, sound: S.cure, desc: 'All allies gain +1 to hit for the ENTIRE dungeon — cast once; it never fades between rooms.' },
     { key: 'channel',      name: 'Channel Positive',     icon: '💖', cost: 'room', uses: smiteUses, effect: 'heal', heal: 'party', target: 'ally', sound: S.charge, desc: 'Channel positive energy — heal the whole party for ½level d6 (PF1e). Once per 5 levels per room.' },
     { key: 'boneshatter',  name: 'Boneshatter',          icon: '🦴', cost: 'room', uses: 1, minLevel: 5,  effect: 'aoe', target: 'aoe', maxTargets: 1, save: 'fort', die: 6, dice: 'level', dcap: 8, dtype: 'negative', sound: S.boneshatter, desc: 'Splinter a foe\'s bones — ½level… up to level d6 negative energy, Fort for half.' },
@@ -221,17 +237,27 @@ const KITS = {
     { key: 'judg_protection',  name: 'Judgement: Protection',  icon: '🛡️', cost: 'free', effect: 'judgment', judgmentType: 'protection',  sound: S.judgment, desc: 'JUDGEMENT (only one active; switch free): +AC against your foes.' },
     { key: 'judg_healing',     name: 'Judgement: Healing',     icon: '💗', cost: 'free', effect: 'judgment', judgmentType: 'healing',     sound: S.judgment, desc: 'JUDGEMENT (only one active; switch free): regenerate HP each of your turns.' },
   ] },
+  // BARD — spontaneous caster (spell SLOTS per level). The bardic-performance
+  // CLASS FEATURES (Inspire Courage, Fascinate) are NOT spells and sit beside the
+  // spellbook; everything with a spell level (slvl) is a spell that spends a slot.
   bard: { atwill: ATTACK('🗡️'), abilities: [
+    // ── Bardic performance (class features) ──
     { key: 'inspire',   name: 'Inspire Courage', icon: '🎶', cost: 'run', uses: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1, dmg: 1 }, sticky: true, sound: S.bardsong, desc: 'Strike up a song — you and all allies get +1 to hit and damage for the ENTIRE dungeon (struck up once).' },
-    { key: 'haste',     name: 'Haste',           icon: '💨', cost: 'room', uses: 1, minLevel: 7, slvl: 3, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 turn per 5 caster levels. (Bard 3rd-level spell.)' },
-    { key: 'slow',      name: 'Slow',            icon: '🐌', cost: 'room', uses: 1, minLevel: 7, slvl: 3, effect: 'slow', target: 'aoe', randN: 2, randDie: 4, maxTargets: 8, save: 'will', sound: S.slow, desc: 'Time drags for a RANDOM 2d4 foes — Will save or be SLOWED: sluggish (acts only every other turn) and easier to hit. (Bard 3rd-level spell.)' },
-    { key: 'hideouslaughter', name: 'Hideous Laughter', icon: '😂', cost: 'free', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', slvl: 2, sound: S.hideous, desc: 'A foe collapses in helpless laughter — Will save or HELD (helpless, Sneak-Attackable). Each turn it may re-save to recover, but the attempt costs its turn.' },
     { key: 'fascinate', name: 'Fascinate',       icon: '🎵', cost: 'free', effect: 'fascinate', target: 'aoe', maxTargets: 3, sound: S.fascinate, desc: 'Up to 3 foes stand fascinated and lose their turns — until something hits them.' },
-    { key: 'curelight',    name: 'Cure Light Wounds',    icon: '💚', cost: 'room', uses: 1, slvl: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5,  target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5). (Bard 1st-level spell.)' },
-    { key: 'curemoderate', name: 'Cure Moderate Wounds', icon: '💚', cost: 'room', uses: 1, minLevel: 4, slvl: 2, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10). (Bard 2nd-level spell.)' },
-    { key: 'bullsstrength', name: "Bull's Strength",     icon: '💪', cost: 'room', uses: 1, minLevel: 4, slvl: 2, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'Bull-strong — one ally gets +2 to hit and +2 melee damage for the rest of the room.' },
-    { key: 'catsgrace',     name: "Cat's Grace",         icon: '🐈', cost: 'room', uses: 1, minLevel: 4, slvl: 2, effect: 'buff', target: 'ally', buff: { ac: 2, toHit: 1 }, sticky: true, sound: S.invoke, desc: 'Feline-quick — one ally gets +2 AC and +1 ranged to-hit (Dex) for the rest of the room.' },
-    { key: 'bearsendurance', name: "Bear's Endurance",   icon: '🐻', cost: 'room', uses: 1, minLevel: 4, slvl: 2, effect: 'buff', target: 'ally', buff: { conHp: 2 }, sticky: true, sound: S.invoke, desc: 'Bear-hardy — one ally gains temporary HP (+2 per level, from +4 Con) for the rest of the room.' },
+    // ── 1st-level spells ──
+    { key: 'curelight',    name: 'Cure Light Wounds',    icon: '💚', cost: 'slot', slvl: 1, minLevel: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5,  target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5).' },
+    // ── 2nd-level spells ──
+    { key: 'hideouslaughter', name: 'Hideous Laughter', icon: '😂', cost: 'slot', slvl: 2, minLevel: 4, effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', sound: S.hideous, desc: 'A foe collapses in helpless laughter — Will save or HELD (helpless, Sneak-Attackable). Each turn it may re-save to recover, but the attempt costs its turn.' },
+    { key: 'curemoderate', name: 'Cure Moderate Wounds', icon: '💚', cost: 'slot', slvl: 2, minLevel: 4, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
+    { key: 'soundburst',   name: 'Sound Burst',          icon: '🔊', cost: 'slot', slvl: 2, minLevel: 4, effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'fort', die: 8, dice: 1, dtype: 'sonic', sounds: THUNDER_SFX, desc: 'A concussive blast of sound — 1d8 sonic to up to 3 foes, Fort for half.' },
+    { key: 'bullsstrength', name: "Bull's Strength",     icon: '💪', cost: 'slot', slvl: 2, minLevel: 4, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'Bull-strong — one ally gets +2 to hit and +2 melee damage for the rest of the room.' },
+    { key: 'catsgrace',     name: "Cat's Grace",         icon: '🐈', cost: 'slot', slvl: 2, minLevel: 4, effect: 'buff', target: 'ally', buff: { ac: 2, toHit: 1 }, sticky: true, sound: S.invoke, desc: 'Feline-quick — one ally gets +2 AC and +1 ranged to-hit (Dex) for the rest of the room.' },
+    { key: 'bearsendurance', name: "Bear's Endurance",   icon: '🐻', cost: 'slot', slvl: 2, minLevel: 4, effect: 'buff', target: 'ally', buff: { conHp: 2 }, sticky: true, sound: S.invoke, desc: 'Bear-hardy — one ally gains temporary HP (+2 per level, from +4 Con) for the rest of the room.' },
+    // ── 3rd-level spells ──
+    { key: 'haste',     name: 'Haste',           icon: '💨', cost: 'slot', slvl: 3, minLevel: 7, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 turn per 5 caster levels.' },
+    { key: 'slow',      name: 'Slow',            icon: '🐌', cost: 'slot', slvl: 3, minLevel: 7, effect: 'slow', target: 'aoe', randN: 2, randDie: 4, maxTargets: 8, save: 'will', sound: S.slow, desc: 'Time drags for a RANDOM 2d4 foes — Will save or be SLOWED (acts only every other turn, easier to hit).' },
+    { key: 'goodhope',  name: 'Good Hope',       icon: '🌟', cost: 'slot', slvl: 3, minLevel: 7, effect: 'buff', target: 'self', party: true, buff: { toHit: 2, dmg: 2, save: 2 }, sticky: true, sound: S.bardsong, desc: 'Fill the party with hope — all allies get +2 to hit, damage, and saves for the rest of the room.' },
+    { key: 'heroism',   name: 'Heroism',         icon: '🦸', cost: 'slot', slvl: 3, minLevel: 7, effect: 'buff', target: 'ally', buff: { toHit: 2, save: 2 }, sticky: true, sound: S.invoke, desc: 'One ally becomes heroic — +2 to hit and +2 to saves for the rest of the room.' },
   ] },
   // DRUID — prepared nature caster: one casting of each spell per room.
   druid: { atwill: ATTACK('🌿'), note: 'One casting of each spell, per room.', abilities: [
@@ -276,7 +302,7 @@ const isPoolClass = (cls) => POOL_CLASSES.has(cls);
 const isCaster    = (cls) => CASTER_CLASSES.has(cls);
 
 module.exports = {
-  KITS, SPELL, DEFAULT_KIT, SELECTABLE_CLASSES, CASTER_CLASSES, SLVL_BY_KEY,
-  kitFor, isPoolClass, isCaster, imgFor,
-  spellSlots, roomUses, diceCount, channelUses, smiteUses,
+  KITS, SPELL, DEFAULT_KIT, SELECTABLE_CLASSES, CASTER_CLASSES, SPONTANEOUS_CLASSES, SLVL_BY_KEY,
+  kitFor, isPoolClass, isCaster, isSpontaneous, imgFor,
+  spellSlots, spontaneousSlots, roomUses, diceCount, channelUses, smiteUses,
 };
