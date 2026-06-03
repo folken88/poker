@@ -1402,7 +1402,9 @@ class Dungeon {
       for (const a of avail) if (['bolt', 'missile', 'touch', 'rays', 'spellstrike', 'save_debuff'].includes(a.effect)) {
         offense.push({ ab: a, payload: { targetUid: weakestFoe.uid } });
       }
+      const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // can't Rapid Shot a bolt-action rifle
       for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint'].includes(a.effect)) {
+        if (a.needsRepeating && boltAction) continue;
         offense.push({ ab: a, payload: { targetUid: weakestFoe.uid } });
       }
     }
@@ -1678,6 +1680,7 @@ class Dungeon {
   _kitState(m) {
     const kit = kitFor(m.cls);
     const lvl = m.level || 1;
+    const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // single-shot rifle → no Rapid Shot
     return {
       atwill: { key: kit.atwill.key, name: kit.atwill.name, icon: kit.atwill.icon, img: kit.atwill.img || null },
       caster: isCaster(m.cls),
@@ -1685,7 +1688,7 @@ class Dungeon {
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
       abilities: kit.abilities.map(ab => ({
         key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, maxTargets: ab.maxTargets || 1,
-        minLevel: ab.minLevel || 1, slvl: ab.slvl || null, available: lvl >= (ab.minLevel || 1), desc: ab.desc || '',
+        minLevel: ab.minLevel || 1, slvl: ab.slvl || null, available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction), desc: ab.desc || '',
         remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
         max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'room' ? roomUses(ab, lvl) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl) : (ab.uses || 1)) : null,
       })),
@@ -2144,6 +2147,19 @@ class Dungeon {
   _abBuff(m, ab, payload) {
     const sound = ab.sound || pick(SND.flesh);
     const lvl = m.level || 1;
+    // DEADLY AIM (feat toggle) — −2 to hit for heavy bonus damage on every shot,
+    // scaling with level (+2 per +4 BAB, like PF1e).
+    if (ab.deadlyaim) {
+      m.buffApplied = m.buffApplied || {};
+      if (m.buffApplied.deadlyaim) return;
+      m.buffApplied.deadlyaim = true;
+      const dmg = 2 + 2 * Math.floor((lvl - 1) / 4);   // +2 at 1-4, +4 at 5-8, +6 at 9-12…
+      m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+      m.buffs.toHit -= 2; m.buffs.dmg += dmg;
+      this._note(`🎯 ${m.nickname} sets Deadly Aim — −2 to hit, +${dmg} damage on every shot this room.`, sound);
+      this._echoToTable(sound);
+      return;
+    }
     // RAGE — scales like PF1e (Greater at 11, Mighty at 20) and pumps Con → HP.
     if (ab.key === 'rage') {
       m.buffApplied = m.buffApplied || {};
@@ -2335,6 +2351,8 @@ class Dungeon {
   }
   // Rapid Shot: two arrows this turn, each at −2.
   _abRapidShot(m, ab, payload) {
+    // A bolt-action sniper rifle can't fire twice — fall back to a single shot.
+    if (weaponOf(m.gear, m.weaponKey).boltAction) { this._bowShot(m, ab, payload, 0, ''); return; }
     this._bowShot(m, ab, payload, -2, ' (rapid 1)');
     this._bowShot(m, ab, payload, -2, ' (rapid 2)');
   }

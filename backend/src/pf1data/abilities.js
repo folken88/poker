@@ -136,8 +136,9 @@ const KITS = {
     { key: 'taunt',  name: 'Taunt',  icon: '📢', cost: 'room', uses: 1, effect: 'taunt', target: 'aoe', save: 'will', sounds: ['/audio/taunt_creed.mp3', '/audio/taunt_predator.mp3'], desc: 'A furious challenge — EVERY enemy must make a Will save or be forced to attack YOU on its next turn (drawing fire off your allies). Once per room.' },
   ] },
   ranger: { atwill: ATTACK('🏹'), abilities: [
-    { key: 'rapidshot', name: 'Rapid Shot',    icon: '🏹', cost: 'free', effect: 'rapidshot', target: 'enemy', sound: S.bowmulti, desc: 'Loose 2 arrows this turn — each at −2 to hit.' },
+    { key: 'rapidshot', name: 'Rapid Shot',    icon: '🏹', cost: 'free', effect: 'rapidshot', target: 'enemy', needsRepeating: true, sound: S.bowmulti, desc: 'Loose 2 shots this turn — each at −2 to hit. (Needs a weapon that can fire repeatedly — NOT a bolt-action sniper rifle.)' },
     { key: 'bullseye',  name: 'Bullseye Shot',  icon: '🎯', cost: 'free', effect: 'bullseye',  target: 'enemy', sound: S.bow,      desc: 'A carefully aimed shot at +4 to hit.' },
+    { key: 'deadlyaim', name: 'Deadly Aim',     icon: '🎯', cost: 'free', freeAction: true, effect: 'buff', target: 'self', deadlyaim: true, sticky: true, sound: S.bow, desc: 'A feat (toggle): trade −2 to hit for heavy bonus damage on every shot this room (scales with level).' },
   ] },
   rogue: { atwill: ATTACK('🗡️'), abilities: [
     { key: 'feint', name: 'Feint', icon: '🎭', cost: 'free', effect: 'feint', target: 'enemy', desc: 'Bluff a foe flat-footed; on success, a free Sneak-Attack strike. (You also Sneak Attack any prone/sickened/paralyzed/flat-footed foe, and strike twice with daggers.)' },

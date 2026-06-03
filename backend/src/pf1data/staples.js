@@ -62,10 +62,12 @@ const CUSTOM_WEAPONS = {
   radiance: { key: 'radiance', name: 'Radiance', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true },
   // Lirienne's repeating crossbow (1d8, 19–20).
   repeatingcrossbow: { key: 'repeatingcrossbow', name: 'Repeating Crossbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'exotic', custom: true, atkSound: '/audio/crossbow.mp3' },
-  // Duristan's .338 Lapua Magnum — a heavy-hitting bolt-action (2d10, ×4).
-  lapua: { key: 'lapua', name: 'Lapua .338', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 10, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, atkSound: '/audio/rifle_lapua.mp3' },
-  // Taelys's SV-98 bolt-action sniper rifle (2d8, ×4).
-  sv98: { key: 'sv98', name: 'SV-98', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 8, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, atkSound: '/audio/rifle_dvl_silenced.mp3' },   // Taelys's rifle — DVL silenced shot
+  // Duristan's .338 Lapua Magnum — a heavy-hitting bolt-action (2d10, ×4). Single-
+  // shot: no Rapid Shot.
+  lapua: { key: 'lapua', name: 'Lapua .338', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 10, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, boltAction: true, atkSound: '/audio/rifle_lapua.mp3' },
+  // Taelys's DVL-10 bolt-action sniper rifle (2d8, ×4) — silenced single shot,
+  // so no Rapid Shot (she relies on Bullseye Shot + Deadly Aim instead).
+  dvl: { key: 'dvl', name: 'DVL-10 Sniper Rifle', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 8, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, boltAction: true, atkSound: '/audio/rifle_dvl_silenced.mp3' },
   // Ulfred's named battleaxe "Voidshard" (1d8, ×3) — its own meaty axe report.
   voidshard: { key: 'voidshard', name: 'Voidshard', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'S', group: 'axes', prof: 'martial', custom: true, atkSound: '/audio/voidshard.mp3' },
   // Farrus Richton's TWIN battleaxes — two-weapon fighting (2 swings/turn, one

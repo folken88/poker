@@ -104,6 +104,7 @@ function weaponOf(gear, weaponKey) {
     custom: !!base.custom,          // named signature weapon (always proficient)
     dual: !!base.dual,              // two-weapon fighting → two swings, one report
     noShield: !!base.noShield,      // dual-wielder carries no shield (no shield AC)
+    boltAction: !!base.boltAction,  // single-shot sniper rifle → can't Rapid Shot
     atkSound: base.atkSound || null,
   };
 }
