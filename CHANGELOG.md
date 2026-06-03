@@ -21,6 +21,14 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-02
 
+### 🎶 Bard Haste & laughter-into-sneak synergy
+- **Bards** can now cast **Haste** (a 3rd-level spell) — and the AI loves to buff
+  the party up with it (bots cast Haste after their other buffs).
+- **Hideous Laughter** leaves a foe **helpless** (paralyzed), which makes it open
+  to **Sneak Attack** — and rogues now hunt those laughing targets.
+- Fixed: a hasted caster's free bonus swing no longer **drowns out the spell
+  they cast** (the bonus attack is silent so the spell's sound is what you hear).
+
 ### 💨 Haste duration & a smarter dungeon timer
 - **Haste** now lasts **1 turn per 5 caster levels** (rounded down) — each hasted
   turn grants an extra attack, instead of just one.

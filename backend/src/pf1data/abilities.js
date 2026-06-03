@@ -214,7 +214,8 @@ const KITS = {
   ] },
   bard: { atwill: ATTACK('🗡️'), abilities: [
     { key: 'inspire',   name: 'Inspire Courage', icon: '🎶', cost: 'run', uses: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1, dmg: 1 }, sticky: true, sound: S.bardsong, desc: 'Strike up a song — you and all allies get +1 to hit and damage for the ENTIRE dungeon (struck up once).' },
-    { key: 'hideouslaughter', name: 'Hideous Laughter', icon: '😂', cost: 'free', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', sound: S.hideous, desc: 'A foe collapses in helpless laughter — Will save or lose its turns (helpless).' },
+    { key: 'haste',     name: 'Haste',           icon: '💨', cost: 'room', uses: 1, minLevel: 7, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 turn per 5 caster levels. (Bard 3rd-level spell.)' },
+    { key: 'hideouslaughter', name: 'Hideous Laughter', icon: '😂', cost: 'free', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', sound: S.hideous, desc: 'A foe collapses in helpless laughter — Will save or lose its turns (HELPLESS, so it can be Sneak Attacked).' },
     { key: 'fascinate', name: 'Fascinate',       icon: '🎵', cost: 'free', effect: 'fascinate', target: 'aoe', maxTargets: 3, sound: S.fascinate, desc: 'Up to 3 foes stand fascinated and lose their turns — until something hits them.' },
   ] },
   // DRUID — prepared nature caster: one casting of each spell per room.

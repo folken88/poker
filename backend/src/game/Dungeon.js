@@ -1108,6 +1108,10 @@ class Dungeon {
     if (smite) return { slot: slot(smite), payload: {} };
     const buff = avail.find(a => a.effect === 'buff' && a.sticky && !(m.buffApplied && m.buffApplied[a.key]));
     if (buff) return { slot: slot(buff), payload: {} };
+    // 2b) Haste — a powerful party buff (bards & wizards love it). Cast it once
+    //     while there are foes to fight and the party isn't already hasted.
+    const haste = avail.find(a => a.effect === 'haste');
+    if (haste && !(m.hasted > 0)) return { slot: slot(haste), payload: {} };
     // 3+4) Offense — gather usable options in priority order (group blast →
     //      single-target spell → maneuver), then prefer one we did NOT use last
     //      turn. That variety stops a bot from spamming ONE ability — and its one
@@ -1532,9 +1536,9 @@ class Dungeon {
     m.hasted -= 1;   // spend one of the hasted turns
     const foes = this.livingEnemies();
     if (!foes.length) return;
-    const awake = foes.filter(e => !e.fascinated);
+    const tgt = this._preferredFoe(m, foes) || foes[0];
     this._note(`💨 ${m.nickname} blurs with Haste — an extra strike!`);
-    this._playerAttack(m, (awake.length ? awake : foes)[0].uid);
+    this._playerAttack(m, tgt.uid, true);   // quiet: don't clobber the turn's main-action sound
   }
   // Breath of Life (revive a DYING ally + big heal) / Raise Dead + Resurrection
   // (bring a SLAIN ally back into the run). High-level cleric prayers.
@@ -1781,7 +1785,7 @@ class Dungeon {
 
   // At-will attack. Rogues with daggers strike TWICE (two-weapon style); a rogue
   // with any other weapon strikes once. Sneak Attack applies via _swingVsAC.
-  _playerAttack(m, targetUid) {
+  _playerAttack(m, targetUid, quiet = false) {
     m.flatFooted = false;   // acting ends flat-footed
     m.invisible = false;    // attacking breaks Invisibility
     const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
@@ -1799,6 +1803,7 @@ class Dungeon {
       const r = this._swingVsAC(m, this._enemyAC(tgt), tgt);
       if (m.weapon.dual) r.sound = (i === 0) ? baseSound : null;   // one report for the whole flurry
       else if (baseSound) r.sound = baseSound;                     // signature / blunt report (e.g. Rovadra)
+      if (quiet) r.sound = null;   // secondary swing (Haste bonus) — stay silent so the main action's sound is heard
       // Rogue Sneak Attack with a light blade (dagger/kukri/shortsword) → Riki.
       if (r.sneakDice && m.cls === 'rogue' && ['dagger', 'kukri', 'shortsword'].includes(m.weaponKey)) r.sound = '/audio/sneak_riki.mp3';
       const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '');
