@@ -124,7 +124,8 @@ function acOf(gear, cls) {
   const heavyBase = (cls === 'barbarian') ? 6 : 9;   // breastplate vs full plate
   const armorAC = armor >= 1 ? (heavyBase + armor) : 4;
   ac += armorAC; physical += armorAC;
-  if (shield >= 1) { const v = 2 + shield; ac += v; physical += v; }
+  // Swashbucklers fight with a hand free (finesse + parry) — no shield AC for them.
+  if (shield >= 1 && cls !== 'swashbuckler') { const v = 2 + shield; ac += v; physical += v; }
   if (ring >= 1)   { ac += ring; }
   return { ac, physical };
 }

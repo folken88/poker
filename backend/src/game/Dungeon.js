@@ -2462,18 +2462,26 @@ class Dungeon {
       this._echoToTable(sound);
       return;
     }
-    // POWER ATTACK (feat toggle) — trade accuracy for power: −1 to hit per +4 BAB,
-    // +2 damage per −1 (×1.5 with a two-handed weapon), like PF1e.
+    // POWER ATTACK — a FREE toggle (costs no action): trade accuracy for power
+    // (−1 to hit per +4 BAB, +2 damage per −1, ×1.5 two-handed). Flip on or off.
     if (ab.powerattack) {
       m.buffApplied = m.buffApplied || {};
-      if (m.buffApplied.powerattack) return;
-      m.buffApplied.powerattack = true;
+      m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+      if (m.buffApplied.powerattack) {   // toggle OFF — back out exactly what we put on
+        m.buffApplied.powerattack = false;
+        m.buffs.toHit += (m._paPen || 0); m.buffs.dmg -= (m._paBonus || 0);
+        m._paPen = 0; m._paBonus = 0;
+        this._note(`💥 ${m.nickname} eases off Power Attack — back to a measured guard.`, sound);
+        this._echoToTable(sound);
+        return;
+      }
       const w = weaponOf(m.gear, m.weaponKey);
       const pen = 1 + Math.floor(babFor(m.cls || 'fighter', lvl) / 4);   // −1 per +4 BAB
       const bonus = Math.floor(pen * 2 * (w.cat === '2h' ? 1.5 : 1));     // +2 per −1, ×1.5 two-handed
-      m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+      m.buffApplied.powerattack = true;
+      m._paPen = pen; m._paBonus = bonus;
       m.buffs.toHit -= pen; m.buffs.dmg += bonus;
-      this._note(`💥 ${m.nickname} hauls into Power Attack — −${pen} to hit, +${bonus} damage on every blow this room.`, sound);
+      this._note(`💥 ${m.nickname} hauls into Power Attack — −${pen} to hit, +${bonus} damage on every blow.`, sound);
       this._echoToTable(sound);
       return;
     }
