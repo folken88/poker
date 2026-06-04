@@ -521,6 +521,7 @@ class Dungeon {
     if (o.asleep)        c.push({ key: 'asleep',     label: 'Asleep',     desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
     else if (o.fascinated) c.push({ key: 'fascinated', label: 'Fascinated', desc: 'enthralled — loses turns; the first hit snaps it out', icon: `${I}fascinated.webp` });
     if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
+    if (o.markedEvil)    c.push({ key: 'markedevil', label: 'Marked',   desc: 'revealed by Detect Evil — smite-able', icon: `${I}markedevil.webp` });
     return c;
   }
 
@@ -690,7 +691,7 @@ class Dungeon {
       ac: base.ac, toHit: base.toHit,
       dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus,
       fort: base.fort, reflex: base.reflex,
-      align: base.align || 'NE', evil: !!base.evil, type: base.type || 'humanoid',
+      align: base.align || 'NE', evil: !!base.evil, markedEvil: false, type: base.type || 'humanoid',
       flatFooted: true, prone: false, fascinated: false, asleep: false, loseTurn: false,
       paralyze: !!base.paralyze, paralyzeDC: base.paralyzeDC || PARALYZE_DC, sickened: 0,
       attacks: base.attacks || 1,
@@ -1087,7 +1088,7 @@ class Dungeon {
     const pbs = (cls === 'ranger' && weapon && weapon.ranged) ? 1 : 0;
     // Smite Evil: an ACTIVATED smite (paladin's ability) vs an evil foe adds a
     // to-hit bump + bonus (un-multiplied) damage equal to level.
-    const smite = !!(attacker.smiteActive && target && target.evil);
+    const smite = !!(attacker.smiteActive && target && (target.evil || target.markedEvil));   // Detect Evil marks neutral foes smite-able
     // Sneak Attack: rogue-likes add precision dice vs a target that's denied its
     // defenses — flat-footed, prone, sickened, or paralyzed (PF1e). NOT crit-multiplied.
     const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated));
@@ -1604,6 +1605,10 @@ class Dungeon {
     //    bane, divine favor, inspire). Sticky guard stops re-casting.
     const smite = avail.find(a => a.effect === 'smite' && !m.smiteActive);
     if (smite) return { slot: slot(smite), payload: {} };
+    // Paladin: Detect Evil reveals NON-evil foes (animals/constructs) so Smite
+    // bites them — a standard action, worth it when not every foe is already evil.
+    const detectEvil = avail.find(a => a.effect === 'detectevil');
+    if (detectEvil && this.livingEnemies().some(e => !e.evil && !e.markedEvil)) return { slot: slot(detectEvil), payload: {} };
     // Don't waste a turn re-casting a NON-STACKING buff that's already up. A buff
     // is "fully up" when every recipient already has it: the whole party for a
     // party buff (Inspire/Prayer/Bless), or the caster for a self buff (Rage/
@@ -1942,6 +1947,7 @@ class Dungeon {
       buff:        () => this._abBuff(m, ab, payload),
       taunt:       () => this._abTaunt(m, ab),
       smite:       () => this._abSmite(m, ab),
+      detectevil:  () => this._abDetectEvil(m, ab),
       heal:        () => this._abHeal(m, ab),
       revive:      () => this._abRevive(m, ab),
       haste:       () => this._abHaste(m, ab),
@@ -2653,6 +2659,17 @@ class Dungeon {
     m.smiteActive = true;
     const sound = ab.sound || pick(SND.flesh);
     this._note(`${ab.icon} ${m.nickname} calls a Smite — righteous fury against evil this room!`, sound);
+    this._echoToTable(sound);
+  }
+  // Detect Evil (paladin): a standard action that MARKS every living foe as evil
+  // (sets markedEvil), so Smite Evil applies to ALL of them this room — including
+  // the true-neutral ones (animals, constructs). Plays the "into the light" cue.
+  _abDetectEvil(m, ab) {
+    const foes = this.livingEnemies();
+    let n = 0;
+    for (const e of foes) { if (!e.markedEvil) { e.markedEvil = true; n++; } }
+    const sound = ab.sound || '/audio/into_the_light.mp3';
+    this._note(`${ab.icon || '🎯'} ${m.nickname} calls DETECT EVIL — the room floods with revealing light; ${n || foes.length} foe(s) MARKED for Smite!`, sound);
     this._echoToTable(sound);
   }
   // Trip: an ATTACK ROLL (no damage). On a hit the foe is knocked prone, LOSES

@@ -203,7 +203,8 @@ const KITS = {
   ] },
   // ── Divine (channels) ──
   paladin: { atwill: ATTACK('⚔️'), abilities: [
-    { key: 'smite',   name: 'Smite Evil',     icon: '⚜️', cost: 'room', uses: smiteUses, effect: 'smite', target: 'self', sound: S.holy, desc: 'Once per 5 levels per room: your strikes smite evil foes (+to-hit, +double your level to damage).' },
+    { key: 'smite',   name: 'Smite Evil',     icon: '⚜️', cost: 'room', uses: smiteUses, freeAction: true, effect: 'smite', target: 'self', sound: S.holy, desc: 'A FREE action (no action cost): your strikes smite EVIL foes this room — +to-hit and +double your level to damage, but ONLY vs creatures of evil alignment. Use Detect Evil first to mark neutral foes (animals, constructs). Once per 5 levels per room.' },
+    { key: 'detectevil', name: 'Detect Evil', img: '/dungeon/conditions/markedevil.webp', icon: '🎯', cost: 'free', effect: 'detectevil', target: 'aoe', sound: '/audio/into_the_light.mp3', desc: 'Bathe the room in revealing light (a standard action) — MARK every enemy as evil, so your Smite strikes ALL of them, even animals and constructs. Lasts the room.' },
     { key: 'channel', name: 'Channel Positive', icon: '💖', cost: 'room', uses: channelUses, effect: 'heal', heal: 'party', target: 'ally', sound: S.charge, desc: 'Channel positive energy — heal the whole party (scales with level).' },
   ] },
   // CLERIC — prepared divine caster with SPELL SLOTS PER LEVEL (PF1 progression).
@@ -383,7 +384,7 @@ const SLVL_BY_KEY = {
 for (const kit of Object.values(KITS)) {
   if (kit.atwill) kit.atwill.img = imgFor(kit.atwill.key);
   for (const ab of kit.abilities) {
-    ab.img = imgFor(ab.key);
+    ab.img = ab.img || imgFor(ab.key);   // keep an explicitly-set img (e.g. Detect Evil's bullseye)
     if (ab.slvl == null && SLVL_BY_KEY[ab.key] != null) ab.slvl = SLVL_BY_KEY[ab.key];
   }
 }

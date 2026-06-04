@@ -32,6 +32,7 @@
  */
 
 const elevenlabs = require('../util/elevenlabs');
+const linePool = require('../util/linePool');   // replay past good lines (saves LLM + 11labs)
 const { voiceFor, settingsFor } = require('./character_voices');
 const { numWords } = require('../util/numwords');
 
@@ -137,6 +138,9 @@ function speakable(text) {
 // brackets through), and strip it from the text shown in chat. v2 ignores this
 // (no tags generated) so flipping ELEVENLABS_MODEL back to v2 fully reverts.
 const TTS_V3 = /v3/i.test(process.env.ELEVENLABS_MODEL || '');
+// Model VERSION tag stamped onto every saved mp3 in the line pool, so reused
+// audio can be told apart (v3 sounds better but costs more — see linePool).
+const TTS_VERSION = TTS_V3 ? 'v3' : 'v2';
 const V3_TAG_GUIDE =
   ' VOICE DELIVERY: you MAY lead your line with ONE inline bracketed audio tag to set emotion — ' +
   'e.g. [laughs], [scoffs], [mischievously], [whispers], [shouting], [sighs], [angry], [excited], [deadpan], [crying]. ' +
@@ -780,7 +784,7 @@ async function callLLM(messages, maxWords = 16) {
  *         react to it" events where we want the loser's voice
  *         specifically, not a random tablemate's commentary.
  */
-function maybeSpeak(table, event) {
+async function maybeSpeak(table, event) {
   const prob = (typeof event.prob === 'number') ? event.prob : PROB;
   if (!shouldSpeak(table.id, prob, !!event.bypassCooldown)) return;
   const speaker = pickSpeaker(table, event.actorIds, event.speakerHint);
@@ -857,6 +861,25 @@ function maybeSpeak(table, event) {
     return;
   }
 
+  // ─── Reuse a saved line? ──────────────────────────────────────────────────
+  // Before paying for a fresh LLM + 11labs call, maybe REPLAY one of this
+  // character's past lines for this event kind. Table chatter has no single
+  // subject, so generic past lines are perfect-match-eligible; a hit skips BOTH
+  // the model and the voice synth. (Specific lines — names/amounts — only replay
+  // rarely; see linePool.)
+  const reuseNick = speaker.player?.nickname || speakerNick;
+  try {
+    const saved = await linePool.choose(reuseNick, event.kind || 'table', null);
+    if (saved && saved.text) {
+      if (typeof table.findSeat === 'function' && !table.findSeat(speaker.playerId)) return;
+      const chatNick0 = ((typeof speaker.displayNickname === 'function' && speaker.displayNickname()) || speaker.player?.nickname || speakerNick);
+      const wantVoice = elevenlabs.ENABLED && table.anyVoiceListener();
+      const extras0 = (wantVoice && saved.base64) ? { audio: saved.base64, audioMime: 'audio/mpeg' } : null;
+      table.chat('banter', `💬 ${chatNick0}: ${stripAudioTags(saved.text)}`, extras0);
+      return;
+    }
+  } catch (_) { /* fall through to fresh generation */ }
+
   const messages = buildMessages(speaker, event.description, table);
   if (TTS_V3 && messages[0] && messages[0].role === 'system') messages[0].content += V3_TAG_GUIDE;
   // Capture a good name NOW — by the time the async LLM reply lands the speaker
@@ -913,6 +936,9 @@ function maybeSpeak(table, event) {
     const extras = audioUrl
       ? { audioUrl }
       : audio ? { audio, audioMime: 'audio/mpeg' } : null;
+    // Save this freshly-voiced line so it can be replayed later (only when we
+    // actually synthesized audio — a stored-pool/text-only line isn't recorded).
+    if (audio) linePool.record(nick, event.kind || 'table', { text: stripAudioTags(line), version: TTS_VERSION, subject: null, base64: audio });
     table.chat('banter', `💬 ${chatNick}: ${stripAudioTags(line)}`, extras);
   }).catch(() => { /* silent */ });
 }
@@ -931,6 +957,17 @@ async function dungeonLine(nick, eventType, ctx = {}) {
     loot_lose: `you LOST the roll for a +${ctx.tier} ${ctx.item} — ${ctx.winner || 'someone else'} grabbed it`,
     chat:      `${ctx.from || 'a party-mate'} just said to you, here in the dungeon: "${ctx.said || '...'}" — answer them directly`,
   })[eventType] || 'something just happened down here';
+  // Reuse a saved dungeon line? Down/damage barks are tied to the MONSTER, so a
+  // saved one only counts as a perfect match when its subject is the same foe;
+  // loot/chat lines are generic. A hit skips both the LLM and 11labs.
+  const subject = (eventType === 'down' || eventType === 'damage') ? (ctx.enemy || null) : null;
+  try {
+    const saved = await linePool.choose(nick, eventType, subject);
+    if (saved && saved.text) {
+      const a = (elevenlabs.ENABLED && saved.base64) ? saved.base64 : null;
+      return { line: stripAudioTags(saved.text), audio: a, audioMime: 'audio/mpeg' };
+    }
+  } catch (_) { /* fall through to fresh generation */ }
   const messages = [
     { role: 'system', content:
       `You are ${nick}, ${flavor} RIGHT NOW you are crawling a monster-infested dungeon with a party (NOT at the poker table). ` +
@@ -957,7 +994,12 @@ async function dungeonLine(nick, eventType, ctx = {}) {
     const settings = { ...(settingsFor(vNick) || {}), ...COMBAT_VOICE };
     if (voiceId) { try { audio = await elevenlabs.synthesize(speakable(line), voiceId, settings); } catch (_) {} }
   }
+  if (audio) linePool.record(nick, eventType, { text: stripAudioTags(line), version: TTS_VERSION, subject, base64: audio });
   return { line: stripAudioTags(line), audio, audioMime: 'audio/mpeg' };
 }
+
+// Names that make a pooled line instance-specific (so it's only replayed when it
+// fits) — every character a line might address by name.
+linePool.setNames(Object.keys(CHARACTER_FLAVOR));
 
 module.exports = { maybeSpeak, detectAddressedBot, dungeonLine, CHARACTER_FLAVOR };
