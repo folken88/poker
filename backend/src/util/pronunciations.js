@@ -13,7 +13,7 @@
 const PRONUNCIATIONS = [
   ['Mandore',    'Man door'],
   ['Conchobar',  'Con cho barr'],
-  ['Lirienne',   'Leery ehn'],
+  ['Lirienne',   'leery-ehn'],    // one three-syllable word (hyphen → no mid-name pause)
   ['Rissa',      'Riss-uh'],      // short for Clarissa Caromarc — RIH-suh, short 'i'
   ['Bujon',      'Boo han'],
   ['Casandalee', 'Cassan dah-lee'],
@@ -21,7 +21,7 @@ const PRONUNCIATIONS = [
   ['Adimarus',   'Add ih mare us'],
   ['Mylez',      'Miles'],
   ['Taelys',     'Tay liss'],
-  ['Rhyarca',    'Ree ark ah'],
+  ['Rhyarca',    'ree-arka'],     // one three-syllable word (hyphen → no mid-name pause)
   ['Kovira',     'Koh vee rah'],
   ['Kai Ginn',   'Kai Jinn'],
   ['Kai Gin',    'Kai Jinn'],      // bio sometimes spells it "Kai Gin"

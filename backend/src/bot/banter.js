@@ -160,6 +160,7 @@ function fillAmounts(line, amounts) {
   }
   // Drop any token we couldn't fill, then tidy the seams it leaves behind.
   out = out.replace(/\{[a-z_]+\}/gi, '')
+           .replace(/\bgp(?=[a-z])/gi, '')     // kill "gp" glued to a word — the "gpteen" garble (legit "250 gp" is space-separated, so safe)
            .replace(/\s+([?!.,])/g, '$1')
            .replace(/\s{2,}/g, ' ')
            .trim();
@@ -591,14 +592,13 @@ function buildMessages(speaker, eventDescription, table) {
         `"Down to scraps, are we?", "Can you even afford to be here?", "That's not a stack, that's a tip.", ` +
         `"Skint already, [name]?", "Playing on fumes, I see.", "Borrow from the dealer, peasant?", "Abadar owns you now.", ` +
         `"[name] probably has a potion of cure light on layaway at Dungeon-Mart.", "shopping the clearance rack at Dungeon-Mart, are we?", "financing their gear through Abadar at thirty percent." ` +
-        `NUMBERS: getting a money figure wrong looks stupid, so we make it foolproof. To restate the EXACT ` +
-        `amount of the bet / raise / call / pot you are reacting to, write the placeholder token {amount} (or ` +
-        `{pot}, or {call}) VERBATIM — it is auto-replaced with the precise figure, so you never render a number ` +
-        `yourself. Example: "Throwing around {amount}? Cope." or "{pot} on a busted draw — pathetic." The ` +
-        `amounts are also spelled out in words above so you know how big they are. If you ever type a figure ` +
-        `instead of a token, copy those words exactly and NEVER re-chunk into digits ("one hundred fifty-two", ` +
-        `never "fifteen two"). When unsure, stay qualitative ("a big bet", "deep in debt") — a token or a vibe, ` +
-        `never a guessed number. ` +
+        `NUMBERS — USUALLY SKIP THEM. Most lines are pure attitude and mention NO amount at all; a bare ` +
+        `play-by-play of a bet ("raising to 250?") is a non-line. ONLY reach for a figure when the SIZE ITSELF ` +
+        `is the joke — a trivial bet treated as life-or-death, or a huge one shrugged off. When you do, write the ` +
+        `placeholder token {amount} (or {pot}, or {call}) VERBATIM — it is auto-replaced with the exact figure, so ` +
+        `you never type a number yourself (e.g. "{amount}? A life-or-death decision, truly." or "{pot} on a busted ` +
+        `draw — pathetic."). NEVER type a digit or a spelled-out figure yourself — token or nothing. When unsure, ` +
+        `stay qualitative ("a big bet", "deep in debt") — a vibe, never a guessed number. ` +
         `POKER SENSE — make your read CORRECT or you are the fool at the table. A SMALL call, ESPECIALLY into ` +
         `a big pot, is normal, easy, often the RIGHT play (great pot odds) — do NOT mock someone for "calling ` +
         `50 into a fat pot," that is just sound poker, and sneering at it makes YOU look clueless. Posting ` +
@@ -679,6 +679,11 @@ function buildMessages(speaker, eventDescription, table) {
         `Conversations at a poker table are quick volleys. If you can't land it in a short phrase, you ` +
         `probably shouldn't say it at all. No quotes, no stage directions, no asterisks, no actions — ` +
         `just the words you'd actually say out loud at the table. Stay in character. \n` +
+        `CRITICAL — REACT, DON'T RESTATE: the action is already on the table — never just repeat or rephrase ` +
+        `it. "Bujon raising to 250g?", "she calls", "he folds" are NON-LINES. Don't announce what happened — give ` +
+        `your TAKE on it: a joke, a jab, a brag, an opinion, a flash of personality. "Just keeping it interesting, ` +
+        `darlings." or "50 gold, a life-or-death decision?" LAND; a play-by-play does not. If your line would only ` +
+        `narrate someone's action or its amount, say nothing at all. \n` +
         `CRITICAL — SPEAK, DON'T NARRATE: output ONLY the words spoken aloud. NEVER describe the scene, ` +
         `the air/smell, your posture, your hands, or your thoughts. Banned openings: "Casually…", ` +
         `"Watching X…", "Observing…", "Leaning back…", "The silence…", "The stale air…", "I lean…", ` +
