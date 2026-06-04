@@ -161,8 +161,8 @@ const MON = {
                        hook: { dmgDie: 8, dmgCount: 2, dmgBonus: 7, constrict: 14, sound: '/audio/slorr_grapple.mp3' },   // chain hook → grapple the weakest hero, then constrict each turn
                        hellfire: { count: 3, dice: 5, die: 6, dc: 19, sound: '/audio/spell_hellfire.mp3' } },           // Hellfire Blast — fire AoE, Reflex for half
 
-  vampire:           { name: 'Vampire',           glyph: '🧛', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 6,  dmgBonus: 8, fort: 8,  reflex: 11, attacks: 2, gold: [100, 200], evil: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' } },   // dominating gaze → Will or frozen in terror
-  lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' } },                 // sinister gaze → fear
+  vampire:           { name: 'Vampire',           glyph: '🧛', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 6,  dmgBonus: 8, fort: 8,  reflex: 11, attacks: 2, gold: [100, 200], evil: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 4, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // magus of its level: dominating gaze + Vampiric Touch spellstrike (drains life)
+  lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' }, arcane: { dice: 10, die: 6, dc: 20, count: 3, sound: '/audio/spell_fireball.mp3' } },                 // wizard of its level: sinister gaze + Fireball (level d6 AoE)
 };
 // Real token art from the Foundry library (public/dungeon/monsters/). dire_rat
 // has no token in the library, so it falls back to its emoji glyph.
@@ -643,6 +643,9 @@ class Dungeon {
       hook: base.hook || null,             // barbed devil: chain hook → grapple + constrict
       hellfire: base.hellfire || null,     // barbed devil: hellfire blast (fire AoE)
       hellfireLeft: base.hellfire ? 2 : 0,
+      arcane: base.arcane || null,         // lich (wizard of its level): Fireball-style AoE blasts
+      arcaneLeft: base.arcane ? 3 : 0,
+      spellstrike: base.spellstrike || null, // vampire (magus of its level): Vampiric Touch on its strike
       prayed: 0,                           // cleric Prayer: −1 to this enemy's attacks/damage/saves
       acid: null,                          // Acid Arrow lingering burn: { rounds, dice, die }
       resist: base.resist || null,         // energy resistances / vulnerabilities (see RESIST_BY_KEY)
@@ -1099,6 +1102,15 @@ class Dungeon {
         const awake = this._targetableParty().filter(m => !(m.stunned > 0) && !(m.paralyzed > 0));
         if (awake.length) return this._enemyShout(e, pick(awake));
       }
+      // Lich (wizard of its level): hurl a Fireball at a handful of heroes — area
+      // damage reaches even flyers. Favoured when 2+ heroes are bunched up.
+      if (e.arcane && e.arcaneLeft > 0 && this._targetableParty().length >= 2 && dRoll(2) === 1) return this._enemyArcane(e);
+      // Vampire (magus of its level): a Vampiric Touch spellstrike — a draining
+      // melee blow that heals it. (Needs a grounded hero to touch.)
+      if (e.spellstrike && dRoll(2) === 1) {
+        const reach = this._targetableParty().filter(m => !m.flying);
+        if (reach.length) return this._enemySpellstrike(e, pick(reach.filter(m => m.paralyzed > 0).length ? reach.filter(m => m.paralyzed > 0) : reach));
+      }
       // Goblin Barbarian: roar a taunt (once) to pull the party's AI onto it.
       if (e.taunt && e.tauntsLeft > 0 && this.livingParty().some(m => m.isBot)) return this._enemyTaunt(e);
       // Barbed Devil: occasionally a Hellfire Blast; otherwise chain-hook the
@@ -1267,6 +1279,45 @@ class Dungeon {
     }
     this._note(`🔥 ${e.glyph} ${e.name} unleashes a HELLFIRE BLAST (${cfg.dice || 5}d${cfg.die || 6} → ${full}) — ${parts.join(', ')}! [Ref DC ${dc}]`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
+  }
+  // Lich's Fireball (it casts as a wizard of its level): a roaring blast on a
+  // random handful of heroes — Reflex for half, rolled once. Area damage, so it
+  // reaches flyers too; Evasion negates a made save; Fire Ward halves it.
+  _enemyArcane(e) {
+    e.arcaneLeft -= 1;
+    const cfg = e.arcane || {};
+    const live = this._targetableParty().slice();
+    for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
+    const hit = live.slice(0, Math.max(1, dRoll(cfg.count || 3)));
+    const dc = cfg.dc || 18, full = dRollN(cfg.dice || 8, cfg.die || 6), parts = [];
+    for (const t of hit) {
+      const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
+      const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
+      let dmg = (saved && t.evasion) ? 0 : saved ? Math.floor(full / 2) : full;   // Evasion: no damage on a made save
+      if (t.protectFire) dmg = Math.max(t.evasion && saved ? 0 : 1, Math.floor(dmg / 2));   // fire ward halves it
+      this._dmgToMember(t, dmg);
+      parts.push(`${t.nickname} ${saved ? (t.evasion ? 'evades ' : 'half ') : ''}−${dmg}${t.protectFire ? ' 🔥½' : ''}`);
+    }
+    this._note(`🔥 ${e.glyph} ${e.name} hurls a FIREBALL (${cfg.dice || 8}d${cfg.die || 6} → ${full}) — ${parts.join(', ')}! [Ref DC ${dc}]`, cfg.sound, { side: 'enemy' });
+    this._echoToTable(cfg.sound); this._broadcast();
+  }
+  // Vampire's Vampiric Touch spellstrike (it fights as a magus of its level): a
+  // draining blow — weapon damage (DR applies) plus negative energy (it doesn't),
+  // and the vampire HEALS the energy it drains.
+  _enemySpellstrike(e, target) {
+    const cfg = e.spellstrike || {};
+    const effAC = acOf(target.gear, target.cls).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);
+    const r = this._monsterSwing(e, effAC);
+    const snd = cfg.sound || null;
+    if (!r.hit) { this._note(`🩸 ${e.glyph} ${e.name}'s draining touch misses ${target.nickname}. ${this._atkStr(r)}`, snd, { side: 'enemy' }); this._echoToTable(snd); this._broadcast(); return; }
+    const [phys, drTag] = this._physDR(target, r.damage);   // Stoneskin soaks the weapon part only
+    const bonus = dRollN(cfg.dice || 4, cfg.die || 6);       // negative energy ignores DR
+    const total = phys + bonus;
+    this._dmgToMember(target, total);
+    let lifeTag = '';
+    if (cfg.lifesteal && e.hp > 0) { const healed = Math.min(bonus, e.maxHp - e.hp); if (healed > 0) { e.hp += healed; lifeTag = ` and drinks ${healed} life (${e.hp}/${e.maxHp})`; } }
+    this._note(`🩸 ${e.glyph} ${e.name}'s VAMPIRIC TOUCH rips ${target.nickname} for ${phys}${drTag}+${bonus} = ${total}${lifeTag}! ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, snd, { side: 'enemy' });
+    this._echoToTable(snd); this._broadcast();
   }
   // A living foe this member is compelled (taunted) to attack, or null.
   _forcedFoe(m) {
@@ -1996,6 +2047,12 @@ class Dungeon {
     this._dmgE(e, total);
     let extra = '';
     if (ab.debuff === 'sickened' && e.hp > 0) { e.sickened = SICKENED_ROUNDS; extra = ' — staggered!'; }
+    // Vampiric Touch: the negative energy heals the magus for what it drained.
+    if (ab.lifesteal && bonus > 0) {
+      const healed = Math.min(bonus, m.maxHp - m.hp);
+      if (healed > 0) { m.hp += healed; extra += ` — drains ${healed} life (${m.hp}/${m.maxHp})!`; }
+      else extra += ' — but is already at full vigor.';
+    }
     this._note(`${ab.icon} ${m.nickname} ${ab.name}s ${e.name} for ${r.damage}+${bonus} ${ab.dtype || ''} = ${total}.${extra}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);

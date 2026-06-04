@@ -265,10 +265,16 @@ const KITS = {
   // cap 5d6), usable once per room per 5 levels (like Smite). Shield = a sticky
   // +4 AC ward for the rest of the room. (Per-magus Spell Strike SFX — Kate's
   // "boudicca", Vaughan's anime sword, Toni's axe — are wired in Dungeon.js.)
+  // SPELL STRIKE = channel a touch spell through the weapon hit. The magus picks
+  // which spell to fire each strike; the buttons use short "SS …" labels to fit:
+  //   SS Shock (Shocking Grasp, 1st) · SS Frigid (Frigid Touch, 2nd) ·
+  //   SS Max SG (Intensified Shocking Grasp, 3rd) · SS Vamp (Vampiric Touch, 4th).
   magus: { atwill: ATTACK('⚔️'), abilities: [
-    { key: 'spellstrike', name: 'Spell Strike', icon: '⚡', cost: 'room', uses: smiteUses, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level', dcap: 5, dtype: 'electricity', sound: S.shock, desc: 'Channel Shocking Grasp through your weapon — your normal attack PLUS up to +5d6 electricity (level d6, cap 5d6). Usable once per room per 5 levels.' },
-    { key: 'frigidtouch', name: 'Frigid Touch', icon: '🧊', cost: 'room', uses: smiteUses, minLevel: 3, effect: 'spellstrike', target: 'enemy', die: 6, dice: 4, dtype: 'cold', debuff: 'sickened', sound: S.frostbite, desc: 'A freezing spellstrike — your attack +4d6 cold that staggers the foe (sickened).' },
-    { key: 'shield',      name: 'Shield',       icon: '🛡️', cost: 'free', effect: 'buff', target: 'self', buff: { ac: 4 }, sticky: true, sound: S.inspire, desc: 'Raise an arcane Shield — +4 AC for the rest of the room.' },
+    { key: 'spellstrike',  name: 'SS Shock',  icon: '⚡',  cost: 'room', uses: smiteUses, minLevel: 1, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 5,  dtype: 'electricity', sound: S.shock,     desc: 'Spell Strike — Shocking Grasp (1st): your weapon hit PLUS level d6 electricity (cap 5d6).' },
+    { key: 'frigidtouch',  name: 'SS Frigid', icon: '🧊', cost: 'room', uses: smiteUses, minLevel: 3, effect: 'spellstrike', target: 'enemy', die: 6, dice: 4,            dtype: 'cold', debuff: 'sickened', sound: S.frostbite, desc: 'Spell Strike — Frigid Touch (2nd): your weapon hit +4d6 cold; the foe is staggered (sickened).' },
+    { key: 'intenseshock', name: 'SS Max SG', icon: '🌩️', cost: 'room', uses: smiteUses, minLevel: 5, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 10, dtype: 'electricity', sound: S.shock,     desc: 'Spell Strike — Intensified Shocking Grasp (3rd): your weapon hit PLUS level d6 electricity, cap raised to 10d6.' },
+    { key: 'vampirictouch',name: 'SS Vamp',   icon: '🩸', cost: 'room', uses: smiteUses, minLevel: 7, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'halflevel', dcap: 10, dtype: 'negative', lifesteal: true, sound: S.umbral, desc: 'Spell Strike — Vampiric Touch (4th): your weapon hit +½level d6 negative energy (cap 10d6); you HEAL the energy damage dealt.' },
+    { key: 'shield',       name: 'Shield',    icon: '🛡️', cost: 'free', effect: 'buff', target: 'self', buff: { ac: 4 }, sticky: true, sound: S.inspire, desc: 'Raise an arcane Shield — +4 AC for the rest of the room.' },
   ] },
   // INQUISITOR — Bane + Searing Light, plus JUDGEMENTS: a free-action toggle (only
   // ONE active at a time, switchable on your turn at no action cost).
