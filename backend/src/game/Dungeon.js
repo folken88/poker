@@ -30,7 +30,25 @@ const HP_PER_LEVEL   = 10;   // legacy fallback (used only if a class has no Hit
 // d10, rogue/cleric/bard d8, wizard/sorcerer d6 …). So a level-6 fighter has 60
 // HP, a level-6 wizard 36.
 function hdFor(cls) { return (CLASSES[cls] && CLASSES[cls].hd) || HP_PER_LEVEL; }
-function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1); }
+// PF1 FIGHTER bonus feats, earned as the fighter levels — folded into the game's
+// unified hit / damage / AC / HP / save / initiative numbers (the game has no
+// per-weapon-group or per-save granularity, so the three save feats collapse to
+// one all-saves bonus and Weapon Focus/Spec apply to every weapon).
+const FF_NONE = { hit: 0, dmg: 0, ac: 0, hp: 0, save: 0, init: 0, impCleave: false };
+function fighterFeats(cls, level) {
+  if (cls !== 'fighter') return FF_NONE;
+  const L = Math.max(1, level || 1);
+  return {
+    hit: 1,                              // Weapon Focus — +1 to hit, every weapon
+    dmg: L >= 4 ? 2 : 0,                 // Weapon Specialization — +2 damage
+    ac:  L >= 2 ? 1 : 0,                 // Dodge — +1 AC
+    hp:  L >= 3 ? Math.max(3, L) : 0,    // Toughness — +1 HP per Hit Die (min 3)
+    save: L >= 8 ? 2 : L >= 6 ? 1 : 0,   // Great Fortitude / Lightning Reflexes / Iron Will
+    init: L >= 5 ? 4 : 0,                // Improved Initiative
+    impCleave: L >= 9,                   // Improved Cleave — auto-cleave like the barbarian
+  };
+}
+function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fighterFeats(cls, level).hp; }
 function levelOf(gear) { return Math.max(1, 1 + totalMagicBonus(gear)); }
 const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
@@ -80,6 +98,7 @@ const BUFF_META = {
   heroism:       { label: 'Heroism',         desc: '+2 to hit & +2 on saves (this room)' },
   goodhope:      { label: 'Good Hope',       desc: 'allies +2 hit, damage & saves (this room)' },
   deadlyaim:     { label: 'Deadly Aim',      desc: 'trading aim for power — −hit, +damage' },
+  powerattack:   { label: 'Power Attack',    desc: 'trading accuracy for power — −hit, +damage' },
   fly:           { label: 'Flying',          desc: 'airborne — grounded foes cannot reach you' },
   protectfire:   { label: 'Fire Ward',       desc: 'fire damage halved (Protection from Fire)' },
   bless:         { label: 'Bless',           desc: '+1 to hit — whole dungeon' },
@@ -699,7 +718,7 @@ class Dungeon {
   _rollInitiative() {
     const order = [];
     // Characters add ½ their level (rounded down) to initiative, on top of the base +2.
-    for (const m of this.alivePresent()) order.push({ kind: 'party', id: m.playerId, init: dRoll(20) + 2 + Math.floor((m.level || 1) / 2) });
+    for (const m of this.alivePresent()) order.push({ kind: 'party', id: m.playerId, init: dRoll(20) + 2 + Math.floor((m.level || 1) / 2) + fighterFeats(m.cls, m.level).init });   // + fighter Improved Initiative
     for (const e of this.livingEnemies()) order.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });
     order.sort((a, b) => b.init - a.init);
     this.turnOrder = order;
@@ -1004,12 +1023,12 @@ class Dungeon {
     m.level = nl; m.maxHp = nmax;
     if (gain > 0) m.hp += gain;   // leveling up heals the new HP; never drains current HP
   }
-  _partySaveMod(m) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0); }   // saves scale with level (+ rage's +Will)
+  _partySaveMod(m) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level).save; }   // saves scale with level (+ rage's +Will, + fighter save feats)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
   _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
-  _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection
-    return ((m.buffs && m.buffs.ac) || 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0);
+  _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1)
+    return ((m.buffs && m.buffs.ac) || 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level).ac;
   }
   _atkStr(r) { return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`; }
   _swingVsAC(attacker, ac, target, extraToHit = 0) {
@@ -1044,17 +1063,18 @@ class Dungeon {
     // NPCs are hand-assigned their signature weapons, so they're always
     // proficient; the −4 penalty only guides human weapon choices.
     const notProf = (attacker.isBot || weaponProficient(cls, weapon)) ? 0 : NON_PROFICIENT_PENALTY;
-    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0);
+    const ff = fighterFeats(cls, lvl);   // fighter bonus feats: Weapon Focus (+hit), Weapon Specialization (+dmg)
+    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit;
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
     // Damage = weapon dice (NdX) + enhancement + ½ level + ability mod + buff dmg (+ Point Blank).
     const judgDmg = attacker.judgment === 'destruction' ? Math.max(1, Math.floor(lvl / 3)) : 0;   // inquisitor Judgement: Destruction
-    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + pbs + judgDmg;
+    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + pbs + judgDmg + ff.dmg;
     const rollDmg = () => dRollN(weapon.dmgCount, weapon.dmgDie) + weapon.dmgBonus + flatDmg;
     let dmg = rollDmg() - sick, crit = false;
-    if (roll >= weapon.critRange) { const conf = dRoll(20) + bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
+    if (roll >= weapon.critRange) { const conf = dRoll(20) + bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
     // Precision (sneak), smite, and bane dice ride on top — NOT multiplied by a crit.
     let sneakDmg = 0;
     if (sneakDice) { sneakDmg = dRollN(sneakDice, 6); dmg += sneakDmg; }
@@ -1784,7 +1804,9 @@ class Dungeon {
     if (forced) targetUid = forced.uid;
     const at = kitFor(m.cls).atwill;
     if (at && at.effect === 'bolt') return this._abBolt(m, at, targetUid);
-    if (m.cls === 'barbarian') {
+    // Barbarians, and fighters with Improved Cleave (level 9+), carve through —
+    // every foe their swing FELLS grants another swing (chains on kills only).
+    if (m.cls === 'barbarian' || fighterFeats(m.cls, m.level).impCleave) {
       const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
       if (e) return this._cleaveSweep(m, e, { followThrough: false });
       return;
@@ -2399,6 +2421,21 @@ class Dungeon {
       m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
       m.buffs.toHit -= 2; m.buffs.dmg += dmg;
       this._note(`🎯 ${m.nickname} sets Deadly Aim — −2 to hit, +${dmg} damage on every shot this room.`, sound);
+      this._echoToTable(sound);
+      return;
+    }
+    // POWER ATTACK (feat toggle) — trade accuracy for power: −1 to hit per +4 BAB,
+    // +2 damage per −1 (×1.5 with a two-handed weapon), like PF1e.
+    if (ab.powerattack) {
+      m.buffApplied = m.buffApplied || {};
+      if (m.buffApplied.powerattack) return;
+      m.buffApplied.powerattack = true;
+      const w = weaponOf(m.gear, m.weaponKey);
+      const pen = 1 + Math.floor(babFor(m.cls || 'fighter', lvl) / 4);   // −1 per +4 BAB
+      const bonus = Math.floor(pen * 2 * (w.cat === '2h' ? 1.5 : 1));     // +2 per −1, ×1.5 two-handed
+      m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+      m.buffs.toHit -= pen; m.buffs.dmg += bonus;
+      this._note(`💥 ${m.nickname} hauls into Power Attack — −${pen} to hit, +${bonus} damage on every blow this room.`, sound);
       this._echoToTable(sound);
       return;
     }

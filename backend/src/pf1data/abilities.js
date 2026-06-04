@@ -162,7 +162,11 @@ const RAY_OF_FROST = { key: 'rayoffrost', name: 'Ray of Frost', icon: '❄️', 
 
 const KITS = {
   // ── Martials (conditional maneuvers) ──
+  // FIGHTER — earns PF1 bonus feats as it levels (Weapon Focus/Specialization,
+  // Dodge, Toughness, the save feats, Improved Initiative, Improved Cleave) folded
+  // into its combat numbers automatically. Power Attack is a toggle it can throw on.
   fighter: { atwill: ATTACK('⚔️'), abilities: [
+    { key: 'powerattack', name: 'Power Attack', icon: '💥', cost: 'free', effect: 'buff', target: 'self', powerattack: true, sticky: true, sound: S.rage, desc: 'Throw your weight into every blow — trade accuracy for power (−1 to hit per +4 BAB, +2 damage each, ×1.5 with a two-handed weapon) for the rest of the room.' },
     { key: 'trip',   name: 'Trip',   icon: '🦵', cost: 'free', effect: 'trip',   target: 'enemy', desc: 'Attack to trip (no damage). On a hit the foe is knocked prone, loses its turn, and you get a free attack. Prone = +4 for everyone to hit it.' },
     { key: 'cleave', name: 'Cleave', icon: '🪓', cost: 'free', effect: 'cleave', target: 'enemy', desc: 'Swing through — hit your target, then a second foe (−2). Great Cleave: every foe you DROP grants another swing, chaining until you stop felling them.' },
   ] },
