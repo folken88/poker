@@ -1150,29 +1150,10 @@ class Table {
       this.chat('rebuy', `🛒 ${nick} ${verb} ${itemName} for ${cost.toLocaleString()} gp.`);
     }
 
-    // ---- Cash cap (20,000 gp) ----
-    // No player can hoard more than CASH_CAP in unspent chips at
-    // hand-end. The winnings still pay out fully, but any excess
-    // above the cap gets burned with a chat callout. Players are
-    // expected to bank their wins into gear via the Loot Bank — the
-    // cap is the pressure that nudges them toward the LOOT LORD
-    // win condition instead of just stockpiling cash to bully with.
-    // (Bots get itchy to buy gear as they approach 15k via the auto-invest
-    // loop above, so they rarely climb anywhere near this cap.)
-    // Cap = the most expensive single item (+5 Longsword, 50,315 gp) so a
-    // player can always save up for the priciest piece of gear. Computed
-    // from the price table so it tracks any future price changes.
-    const CASH_CAP = Math.max(...Object.keys(db.GEAR_BY_KEY).map(k => db.gearPrice(k, 5)));
-    for (const seat of this.seats) {
-      if (seat.isEmpty()) continue;
-      if (seat.chipsAtTable > CASH_CAP) {
-        const overflow = seat.chipsAtTable - CASH_CAP;
-        seat.chipsAtTable = CASH_CAP;
-        db.setChips(seat.playerId, CASH_CAP);
-        const nick = seat.displayNickname();
-        this.chat('debt', `💸 ${nick} hit the ${CASH_CAP.toLocaleString()} gp cash cap — ${overflow.toLocaleString()} gp lost (buy magic items to keep your winnings!).`);
-      }
-    }
+    // ---- No cash cap ----
+    // Players and AI may hoard unlimited chips — winnings are never burned.
+    // (The old "most-expensive-item" cash cap was removed by request, so the
+    // Loot Lord win condition is now the only thing chasing the rich.)
 
     // Loot Lord check — if anyone now holds +5 in every gear slot, they
     // win the entire game. _declareLootLord posts the celebration and

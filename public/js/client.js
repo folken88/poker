@@ -2271,20 +2271,12 @@
     const all = (state.roster || []).slice();
     const meId = state.me?.player_id;
     function wealthOf(p) {
-      // Net worth = chips + market value of all gear − outstanding
-      // First Bank of Abadar debt. Debt drags the score down so the
-      // leaderboard truthfully reflects "what you'd be worth if you
-      // settled up tomorrow." Bots have rebuy_debt always = 0.
-      let total = Number(p.chips || 0);
-      try {
-        const gear = JSON.parse(p.gear || '{}') || {};
-        for (const slot of GEAR_SLOTS) {
-          const tier = gear[slot] || 0;
-          if (tier) total += gearPrice(slot, tier);
-        }
-      } catch (_) {}
-      total -= Number(p.rebuy_debt || 0);
-      return total;
+      // CASH ONLY — chips minus outstanding First Bank of Abadar debt.
+      // Magic-item (gear) value is deliberately NOT counted on the
+      // leaderboard; only spendable gold ranks you. Debt drags the score
+      // down so the board reflects what you'd actually have if you settled
+      // up tomorrow. Bots have rebuy_debt always = 0.
+      return Number(p.chips || 0) - Number(p.rebuy_debt || 0);
     }
     // Hide players sitting at exactly 5,000 net worth — that's the
     // default starting stack, so a flat 5,000 almost always means
@@ -2394,20 +2386,12 @@
     if (all.length === 0) { el.innerHTML = '<li class="lb__empty">No players yet…</li>'; return; }
     const meId = state.me?.player_id;
     function wealthOf(p) {
-      // Net worth = chips + market value of all gear − outstanding
-      // First Bank of Abadar debt. Debt drags the score down so the
-      // leaderboard truthfully reflects "what you'd be worth if you
-      // settled up tomorrow." Bots have rebuy_debt always = 0.
-      let total = Number(p.chips || 0);
-      try {
-        const gear = JSON.parse(p.gear || '{}') || {};
-        for (const slot of GEAR_SLOTS) {
-          const tier = gear[slot] || 0;
-          if (tier) total += gearPrice(slot, tier);
-        }
-      } catch (_) {}
-      total -= Number(p.rebuy_debt || 0);
-      return total;
+      // CASH ONLY — chips minus outstanding First Bank of Abadar debt.
+      // Magic-item (gear) value is deliberately NOT counted on the
+      // leaderboard; only spendable gold ranks you. Debt drags the score
+      // down so the board reflects what you'd actually have if you settled
+      // up tomorrow. Bots have rebuy_debt always = 0.
+      return Number(p.chips || 0) - Number(p.rebuy_debt || 0);
     }
     // Same 5,000-flat filter as the popup leaderboard — hide players
     // sitting at the default starting stack with zero gear/debt; that
