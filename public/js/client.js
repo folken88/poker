@@ -3295,11 +3295,26 @@
     const selected = meta.weapons.find(w => w.key === wsel.value);
     wsel.classList.toggle('is-nonprof', !!selected && !isProficient(cls, selected));
   }
+  // Per-class level from that class's XP, using the thresholds shipped in pf1meta.
+  function classLevelFromXp(xp) {
+    const tbl = state.pf1meta && state.pf1meta.xpToLevel; if (!tbl) return 1;
+    xp = Math.max(0, Number(xp) || 0); let lvl = 1;
+    for (let L = 2; L <= 20; L++) { if (tbl[L] != null && xp >= tbl[L]) lvl = L; else break; }
+    return lvl;
+  }
   function syncClassWeapon(p) {
     const meta = state.pf1meta;
     if (!meta || !p) return;
-    fillSelect($('#meClass'), meta.classes.map(c => ({ key: c.key, label: c.name })), p.class || 'fighter');
-    buildWeaponSelect($('#meWeapon'), p.class || 'fighter', p.weapon || 'dagger');
+    let cxp = {}; try { cxp = JSON.parse(p.class_xp || '{}') || {}; } catch (_) {}
+    const cur = p.class || 'fighter';
+    // Label each class with the player's LEVEL in that class (XP is per-class). The
+    // closed select shows the current class's level too. Current class shows Lv 1
+    // even before earning any XP; others only if the player has played them.
+    fillSelect($('#meClass'), meta.classes.map(c => {
+      const lvl = (cxp[c.key] != null) ? classLevelFromXp(cxp[c.key]) : (c.key === cur ? 1 : null);
+      return { key: c.key, label: c.name + (lvl != null ? ` · Lv ${lvl}` : '') };
+    }), cur);
+    buildWeaponSelect($('#meWeapon'), cur, p.weapon || 'dagger');
   }
   (function wireClassWeaponDropdowns() {
     const csel = $('#meClass'), wsel = $('#meWeapon');

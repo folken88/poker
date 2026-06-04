@@ -12,6 +12,7 @@ const { humanRebuyMessage } = require('../util/flavor');
 const { CLASSES, PROFICIENCY, NON_PROFICIENT_PENALTY } = require('../pf1data/classes');
 const { STAPLE_BY_KEY } = require('../pf1data/staples');
 const { SELECTABLE_CLASSES } = require('../pf1data/abilities');
+const { XP_TO_LEVEL } = require('../pf1data/xp');   // ship thresholds so the client can label per-class levels
 
 function tableFor(socket, tables) {
   return tables.get(socket.data.tableId || 'main') || null;
@@ -111,7 +112,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
       .map(w => ({ key: w.key, name: w.name, dmg: `${w.dmgCount}d${w.dmgDie}`, prof: w.prof }));
     // Ship the proficiency map + penalty so the client can sort/colour the
     // weapon dropdown by the player's current class without a round-trip.
-    ack?.({ ok: true, classes, weapons, proficiency: PROFICIENCY, profPenalty: NON_PROFICIENT_PENALTY });
+    ack?.({ ok: true, classes, weapons, proficiency: PROFICIENCY, profPenalty: NON_PROFICIENT_PENALTY, xpToLevel: XP_TO_LEVEL });
   });
 
   socket.on('lobby:setAvatar', ({ avatarId } = {}, ack) => {
