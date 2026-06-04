@@ -2688,12 +2688,14 @@ class Dungeon {
     this._echoToTable(r.sound);
   }
 
-  // One bow shot at a to-hit modifier (rangers). Uses the bow's report sound.
+  // One ranged shot at a to-hit modifier (rangers). The WEAPON's signature report
+  // wins (so a rifle cracks like a rifle — e.g. Duristan's bolt-action Lapua);
+  // the ability's generic bow sound is only the fallback for a plain bow.
   _bowShot(m, ab, payload, hitMod, label) {
     const e = this._oneEnemy(payload); if (!e) return;
     m.weapon = weaponOf(m.gear, m.weaponKey);
     const r = this._swingVsAC(m, this._enemyAC(e), e, hitMod);
-    if (ab.sound) r.sound = ab.sound; else if (m.weapon.atkSound) r.sound = m.weapon.atkSound;
+    if (m.weapon.atkSound) r.sound = m.weapon.atkSound; else if (ab.sound) r.sound = ab.sound;
     if (r.hit) { this._dmgE(e, r.damage); this._note(`${ab.icon} ${m.nickname}${label} ${r.crit ? 'CRITS' : 'hits'} ${e.name} for ${r.damage}. ${this._atkStr(r)}${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     else this._note(`${ab.icon} ${m.nickname}${label} misses ${e.name}. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
