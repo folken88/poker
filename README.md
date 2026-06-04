@@ -56,9 +56,12 @@ poker-game/
 │   │   │   ├── schema.sql
 │   │   │   └── logger.js          # JSONL hand history + bot-decision logs
 │   │   ├── util/
-│   │   │   └── elevenlabs.js      # 11labs TTS client (server-side only; API key in .env,
-│   │   │                          #   never client-bound; rate-limited; pronunciation
-│   │   │                          #   overrides applied before API call)
+│   │   │   ├── elevenlabs.js      # 11labs TTS client (server-side only; API key in .env,
+│   │   │   │                      #   never client-bound; rate-limited; pronunciation
+│   │   │   │                      #   overrides applied before API call)
+│   │   │   ├── ttsCache.js        # on-disk exact-text mp3 cache (per voice+model+settings)
+│   │   │   └── linePool.js        # per-(character,event) pool of past voiced lines —
+│   │   │                          #   replays saved mp3s (v2/v3-tagged) to skip LLM+11labs
 │   │   └── sockets/
 │   │       ├── lobby.js           # choose player, set avatar, set pronouns, gear buy/sell,
 │   │       │                      #   audio prefs broadcast, reset, debt
@@ -292,6 +295,19 @@ synthesis. Two modules drive the routing:
 - **`backend/src/bot/character_sounds.js`** — for characters whose "voice" isn't
   speech: Crisp the velociraptor (4 chirp/hiss/snarl clips), with Elfrip's burp
   pool exported separately so `banter.js` can pick the burp/talk path explicitly.
+
+**Saving credits — the line-reuse pool (`backend/src/util/linePool.js`).** v3 voices
+sound far better but cost more, so before paying for a fresh LLM + 11labs call,
+`banter.js` may **replay one of a character's past lines** for the same event kind.
+Each saved clip is a `{ text, mp3 }` pair, **tagged with its model version** (v2/v3)
+and its specificity. The replay only fires when it fits: ~70% on a **perfect match**
+(a generic line, or a dungeon bark against the same foe) once the pool has enough
+variety, and only ~10% when it might not match (lines with a name/amount, or a
+different enemy) — i.e. mostly generate-new when uncertain. Fresh lines are recorded
+after a successful synth, so the pool (and the savings) grows over a session. Tunable
+via `LINE_REUSE_PROB_MATCH` / `LINE_REUSE_PROB_LOOSE` / `LINE_POOL_MIN` /
+`LINE_POOL_MAX`. The older `util/ttsCache.js` still does exact-text mp3 dedup beneath
+this (a line voiced verbatim twice never re-synthesizes).
 
 **Vorkstag's impersonation** — the skinwalker steals a tablemate's face AND voice
 on sit-down. `Table.seatBot` picks a random other seat at sit-time, sets

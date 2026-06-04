@@ -161,11 +161,17 @@ The MVP has grown into a full PF1e-flavoured combat side-game. Source of truth:
 
 ### Ability cost models
 - **`free`** — martial maneuvers, usable every turn (Trip, Cleave, Feint, Rapid
-  Shot, bard songs). Some are **free actions** (`freeAction: true`) that don't end
-  the turn: barbarian **Rage**, inquisitor **Judgements**.
-- **`room`** — own per-room use count; refreshes each room (paladin Smite/Channel,
-  every **prepared** wizard/cleric/druid spell at `uses:1`).
-- **`pool`** — shared per-room cast pool (`spellSlots(level)`): the **sorcerer**.
+  Shot, bard songs, paladin **Detect Evil**). Some are **free actions**
+  (`freeAction: true`) that don't end the turn: barbarian **Rage**, inquisitor
+  **Judgements** & **Bane**, paladin **Smite Evil**.
+- **`room`** — own per-room use count; refreshes each room (paladin Channel; the
+  inquisitor's **Bane** and paladin's **Smite** are room-counted but cost no
+  action; every **prepared** wizard/druid spell at `uses:1`).
+- **`slot`** — per-spell-level slots (`slotsFor`), refreshed each room: **cleric**,
+  **bard**, **sorcerer**, and the **inquisitor** (spontaneous divine, slower
+  6-level table).
+- **`pool`** — legacy shared per-room cast pool (`spellSlots(level)`); unused now
+  that the sorcerer is slot-based.
 - **`run`** — once per WHOLE dungeon, never refreshed: **Bless**, bard **Inspire
   Courage**. Pairs with **`persist`** buffs stored in `m.runBuffs` (survive room
   resets).
@@ -174,20 +180,36 @@ The MVP has grown into a full PF1e-flavoured combat side-game. Source of truth:
 - **Wizard** — prepared; 1 cast of each spell/room. Shocking Grasp, Grease, Sleep,
   Invisibility, Acid Arrow, Scorching Ray, Hold Person, Dispel Magic, Haste,
   Fireball, Lightning Bolt, Cone of Cold, Disintegrate.
-- **Sorcerer** — spontaneous; few spells from a shared pool (Magic Missile,
-  Burning Hands, Acid Arrow, Gust of Wind, Scorching Ray, Fireball, Cone of Cold,
-  Disintegrate).
+- **Sorcerer** — spontaneous; few known spells cast from per-level slots (Magic
+  Missile, Burning Hands, Acid Arrow, Gust of Wind, Scorching Ray, Fireball, Cone
+  of Cold, Disintegrate).
 - **Cleric** — prepared; Cure Light/Moderate, Divine Favor, Holy Smite, Searing
   Light, Prayer, Bless, Channel Positive (½lvl d6, 1/5 levels/room), Boneshatter,
   **Breath of Life / Raise Dead / Resurrection** (level-gated revives).
 - **Druid** — prepared; Entangle, Cure Light Wounds, Call Lightning.
+- **Inquisitor** — spontaneous divine on a **slower 6-level** progression
+  (`INQ_SLOTS_BY_LEVEL`); a curated cleric-list repertoire (Cure
+  Light/Moderate/Serious/Critical, Shield of Faith, Divine Favor, Hold Person,
+  Bull's Strength, Spiritual Weapon, Dispel Magic, Prayer, Searing Light, Holy
+  Smite). Fights with steel alongside **Bane** + **Judgements**, and earns the
+  fighter bonus-feat ladder at **half rate** (a feat every odd level).
 
 ### Notable mechanics
 - **Scorching Ray** splits (1 ray, 2 at CL7, 3 at CL11) with a split sound.
 - **Invisibility** — untargetable (`_targetableParty`) until you attack.
 - **Haste** — party gets one extra attack next turn (`m.hasted`, `_hasteBonus`).
 - **Inquisitor Judgements** — one active at a time (Destruction +dmg / Protection
-  +AC / Healing regen), switched free.
+  +AC / Healing regen), switched free and lasting the whole room.
+- **Inquisitor Bane** — a free action that declares ONE **creature type**; +2
+  to-hit / +2d6+2 damage **only vs that type** (`m.bane.type` vs `target.type`),
+  until re-declared. 1 per 5 levels per room.
+- **Creature types & alignment** — every monster carries a PF1 `type`
+  (undead/humanoid/animal/giant/magical beast/aberration/construct/ooze/outsider)
+  for Bane, and an `align` + derived `evil` flag for Smite.
+- **Paladin Smite Evil** — a **free action**; +to-hit and +2×level damage, but
+  **only vs evil-aligned foes**. **Detect Evil** (a standard action) sets
+  `markedEvil` on every foe so Smite applies to all of them (even true-neutral
+  animals/constructs); marked foes show a bullseye condition icon.
 - **Sound pools** — abilities with `sounds:[...]` pick a random clip per cast
   (Fireball, Lightning Bolt, Haste).
 - **Conditions** shown as PF1 icons: sickened, paralyzed, stunned, asleep, prone.
@@ -197,8 +219,9 @@ The MVP has grown into a full PF1e-flavoured combat side-game. Source of truth:
   Vampire fear-gaze, Fire Skeleton death-explosion.
 
 ### Bot ability AI (`Dungeon._botAbility`)
-Priority: revive fallen → dispel/heal the hurt → declare a judgement → raise
-buffs (once) → group-blast → spell/maneuver at the weakest foe → basic attack.
+Priority: revive fallen → dispel/heal the hurt → declare a judgement / **Bane** →
+Smite → **Detect Evil** (when neutral foes are present) → raise buffs (once) →
+group-blast → spell/maneuver at the weakest foe → basic attack.
 Won't repeat the same ability twice in a row when alternatives exist.
 
 ### Compound interest

@@ -19,7 +19,46 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
-## 2026-06-03 (newest)
+## 2026-06-04 (newest)
+
+### 🔨 The Inquisitor, reforged
+- **A real spellbook.** The Inquisitor is now a **spontaneous divine caster** drawing
+  a curated **cleric-list repertoire** (Cure Light/Moderate/Serious/Critical, Shield
+  of Faith, Divine Favor, Hold Person, Bull's Strength, Spiritual Weapon, Dispel
+  Magic, Prayer, Searing Light, Holy Smite) on the slower **6-level** progression —
+  2nd-level spells from L4, 3rd from L7, 4th from L10.
+- **Bane targets a creature TYPE.** Declaring Bane is now a **free action** (1 per 5
+  levels per room): you pick a type present in the room (select a foe, then Bane) and
+  the **+2 to-hit / +2d6+2 damage applies only to that type** until you re-declare.
+  Every monster is now tagged with its PF1 creature type (undead, humanoid, animal,
+  giant, magical beast, aberration, construct, ooze, outsider…).
+- **Bonus feats.** The Inquisitor earns the fighter feat ladder at **half rate** — a
+  feat every odd level (Weapon Focus, Dodge, Toughness, Weapon Specialization,
+  Improved Initiative, Iron Will, Improved Critical, Critical Focus).
+- Judgements are unchanged — free to switch, and they last the whole room.
+
+### ⚜️ Paladin — Smite & Detect Evil
+- **Smite Evil is now a free action** — declare it without spending your turn. It
+  still strikes only **evil-aligned** foes (alignment is tracked for every monster),
+  for +to-hit and +double-level damage, once per 5 levels per room.
+- **New: Detect Evil** (a standard action) **marks every foe in the room as evil**,
+  so your Smite lands on all of them — even true-neutral animals and constructs.
+  Marked foes show a bullseye icon, and it plays an "into the light" cue.
+
+### 🔁 Voice lines get cheaper to repeat
+- **A line-reuse pool** (`util/linePool.js`). Now that ElevenLabs **v3** voices sound
+  great (but cost more), characters **replay a past voiced line** instead of paying
+  for a fresh LLM + 11labs call when it fits: ~**70%** of the time on a perfect match
+  (a generic line for that moment, or a dungeon bark against the same foe), and only
+  ~**10%** when the line might not fit (it names someone, carries an amount, or it's a
+  different enemy) — so it mostly generates fresh when unsure. Saved clips are
+  **tagged with their model version** (v2/v3). The pool fills as bots talk, so the
+  savings grow over a session. Tunable via `LINE_REUSE_PROB_MATCH` /
+  `LINE_REUSE_PROB_LOOSE` / `LINE_POOL_MIN` / `LINE_POOL_MAX`.
+
+---
+
+## 2026-06-03
 
 ### ⚔️ Classes, feats & enemy casters
 - **Swashbucklers** join the roster (Concetta & Holden, rapier in hand) — finesse
