@@ -121,8 +121,12 @@ function acOf(gear, cls) {
   // free. Buying armor (+N) upgrades them: Full Plate is 9+N. BARBARIANS are
   // restricted to MEDIUM armor — a Breastplate (6+N) — they can't fight freely
   // in heavy plate. Hocking the armor (back to 0) reverts to the chain shirt.
+  // Arcane casters (wizard/sorcerer) wear NO armor — not even a chain shirt. They
+  // get ONLY the +N MAGIC bonus of an owned armor and rely on Mage Armor for the
+  // rest. Everyone else: free chain shirt (+4), upgraded by armor (heavyBase + N).
+  const arcaneNoArmor = (cls === 'wizard' || cls === 'sorcerer');
   const heavyBase = (cls === 'barbarian') ? 6 : 9;   // breastplate vs full plate
-  const armorAC = armor >= 1 ? (heavyBase + armor) : 4;
+  const armorAC = arcaneNoArmor ? armor : (armor >= 1 ? (heavyBase + armor) : 4);
   ac += armorAC; physical += armorAC;
   // Swashbucklers fight with a hand free (finesse + parry) — no shield AC for them.
   if (shield >= 1 && cls !== 'swashbuckler') { const v = 2 + shield; ac += v; physical += v; }

@@ -65,6 +65,10 @@ function fighterFeats(cls, level) {
 const BANE_TOHIT = 2, BANE_DMG = 2, BANE_DICE = 2;
 // Title-case a creature type for display ("magical beast" → "Magical Beast").
 function titleCase(s) { return String(s || '').replace(/\b\w/g, c => c.toUpperCase()); }
+// Undead & constructs are immune to mind-affecting magic — sleep, fascinate, hold
+// person, hideous laughter (PF1: no mind to affect / no Con).
+const MIND_IMMUNE_TYPES = new Set(['undead', 'construct']);
+function mindImmune(e) { return !!e && MIND_IMMUNE_TYPES.has(e.type); }
 // A "finessable" melee weapon (light, or a one-handed fencing blade) — what a
 // swashbuckler's Precise Strike, Weapon Focus/Specialization and Improved
 // Critical key off of.
@@ -1635,6 +1639,10 @@ class Dungeon {
     // Taunted → compelled to go straight for the taunter (cleared at turn's end).
     const forced = this._forcedFoe(m);
     if (forced) return forced;
+    // Melee fighters can't reach flyers — prefer grounded foes (fall back to flyers
+    // only if that's all that's left, so the wasted-swing message still fires).
+    const _w = weaponOf(m.gear, m.weaponKey);
+    if (_w && !_w.ranged) { const grounded = foes.filter(e => !e.flying); if (grounded.length) foes = grounded; }
     if (m.cls === 'rogue') {
       const helpless = foes.filter(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated);
       return (helpless.length ? helpless : foes).slice().sort((a, b) => a.hp - b.hp)[0];   // weakest sneakable foe
@@ -2512,6 +2520,7 @@ class Dungeon {
   // Save-or-be-disabled (Hold Person): Will save or paralyzed.
   _abSaveDebuff(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
+    if (ab.debuff === 'paralyzed' && mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — undead and constructs have no mind to seize.`); this._echoToTable(); return; }
     const dc = this._spellDC(m);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
     const sound = ab.sound || pick(SND.stink);
@@ -2577,7 +2586,8 @@ class Dungeon {
   // helpless (flat-footed) and losing turns until something strikes them.
   _abSleep(m, ab, payload) {
     const dc = this._spellDC(m);
-    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !e.fascinated).slice().sort((a, b) => a.hp - b.hp);   // skip foes already asleep/fascinated
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !e.fascinated && !mindImmune(e)).slice().sort((a, b) => a.hp - b.hp);   // skip already-asleep/fascinated + mind-immune (undead/construct)
+    if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name}, but those foes are immune or already entranced.`); this._echoToTable(); return; }
     const sound = ab.sound || pick(SND.flesh), parts = [];
     for (const e of chosen) {
       const sv = this._saveVs(this._enemySave(e, 'will'), dc);
@@ -2608,8 +2618,8 @@ class Dungeon {
   }
   // Fascinate: up to maxTargets foes stand enthralled, losing turns until struck.
   _abFascinate(m, ab, payload) {
-    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !e.fascinated);   // skip foes already asleep/fascinated
-    if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} begins ${ab.name}, but those foes are already entranced.`); return; }
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !e.fascinated && !mindImmune(e));   // skip already-entranced + mind-immune (undead/construct)
+    if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} begins ${ab.name}, but those foes are immune or already entranced.`); return; }
     for (const e of chosen) e.fascinated = true;
     const sound = ab.sound || pick(SND.flesh);
     this._note(`${ab.icon} ${m.nickname} performs ${ab.name} — ${chosen.map(e => e.name).join(', ')} stand fascinated (until struck).`, sound);
@@ -2992,6 +3002,8 @@ class Dungeon {
     const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
     if (!e) return;
     m.weapon = weaponOf(m.gear, m.weaponKey);
+    // Melee can't reach a flyer — only ranged weapons or spells hit airborne foes.
+    if (e.flying && !m.weapon.ranged) { this._note(`🪽 ${m.nickname} can't reach the airborne ${e.name} — need a ranged weapon or a spell!`); this._broadcast(); return; }
     // Two swings for a dual-wield weapon (Farrus's twin axes) or a rogue's dagger.
     const swings = m.weapon.dual ? 2 : ((m.cls === 'rogue' && m.weaponKey === 'dagger') ? 2 : 1);
     // Sound: signature atkSound > a blunt "bap" for B-type weapons (quarterstaff,

@@ -78,6 +78,16 @@ ensureColumn('players', 'experience', 'INTEGER NOT NULL DEFAULT 0');
 // set, and NEVER cleared (it is deliberately left out of every reset, so the crown
 // shows over their token forever, through full wipes and Loot-Lord resets alike).
 ensureColumn('players', 'crowned', 'INTEGER NOT NULL DEFAULT 0');
+// PER-CLASS experience — XP is tracked separately for each PF1 class a player has
+// played: switching class shows THAT class's level (start at 1 if new), switching
+// back restores the prior class's XP. JSON map { <class>: xp }. Gear is unaffected.
+ensureColumn('players', 'class_xp', "TEXT NOT NULL DEFAULT '{}'");
+// One-time backfill: fold any legacy single `experience` into the per-class map.
+try {
+  const _bf = db.prepare("SELECT player_id, class, experience FROM players WHERE experience > 0 AND (class_xp IS NULL OR class_xp = '{}')").all();
+  const _bfUp = db.prepare('UPDATE players SET class_xp = ? WHERE player_id = ?');
+  for (const r of _bf) _bfUp.run(JSON.stringify({ [r.class || 'fighter']: r.experience }), r.player_id);
+} catch (_) {}
 
 // One-time fix-up (2026-06-02 PNG→WebP asset conversion): avatar_id stores the
 // token's served PATH, and the old .png token files were converted to .webp and
@@ -541,6 +551,8 @@ const _setClassStmt = db.prepare('UPDATE players SET class = ? WHERE player_id =
 function setClass(playerId, cls) {
   if (!CLASSES[cls]) return;
   _setClassStmt.run(cls, playerId);
+  // Point the legacy `experience` mirror at the NEW class's XP (per-class leveling).
+  try { const p = stmts.getPlayer.get(playerId); if (p) db.prepare('UPDATE players SET experience = ? WHERE player_id = ?').run(Math.max(0, Number(_classXp(p)[cls] || 0)), playerId); } catch (_) {}
 }
 /** Set a player's chosen base weapon — validated against the staple list. */
 const _setWeaponStmt = db.prepare('UPDATE players SET weapon = ? WHERE player_id = ?');
@@ -579,21 +591,30 @@ function setGear(playerId, gear) {
 }
 
 // ---- Experience / leveling API (PF1 medium track — see pf1data/xp.js) ----
-const _setXpStmt = db.prepare('UPDATE players SET experience = ? WHERE player_id = ?');
-const _addXpStmt = db.prepare('UPDATE players SET experience = MAX(0, experience + ?) WHERE player_id = ?');
+// XP is PER CLASS — keyed by the player's CURRENT class. `experience` is kept as a
+// mirror of the current class's XP for legacy/display. _setClassXpStmt writes both.
+const _setClassXpStmt = db.prepare('UPDATE players SET class_xp = ?, experience = ? WHERE player_id = ?');
+function _classXp(p) { try { return JSON.parse(p.class_xp || '{}') || {}; } catch { return {}; } }
 function getXp(playerId) {
   const p = stmts.getPlayer.get(playerId);
-  return p ? Math.max(0, Number(p.experience || 0)) : 0;
+  if (!p) return 0;
+  return Math.max(0, Number(_classXp(p)[p.class || 'fighter'] || 0));
 }
 function setXp(playerId, xp) {
-  _setXpStmt.run(Math.max(0, Math.floor(Number(xp) || 0)), playerId);
+  const p = stmts.getPlayer.get(playerId); if (!p) return;
+  const cls = p.class || 'fighter';
+  const map = _classXp(p); map[cls] = Math.max(0, Math.floor(Number(xp) || 0));
+  _setClassXpStmt.run(JSON.stringify(map), map[cls], playerId);
 }
-/** Add (or subtract) XP, clamped at 0. Returns the new total. */
+/** Add (or subtract) XP for the player's CURRENT class, clamped at 0. Returns new total. */
 function addXp(playerId, amount) {
   const amt = Math.floor(Number(amount) || 0);
   if (!amt) return getXp(playerId);
-  _addXpStmt.run(amt, playerId);
-  return getXp(playerId);
+  const p = stmts.getPlayer.get(playerId); if (!p) return 0;
+  const cls = p.class || 'fighter';
+  const map = _classXp(p); map[cls] = Math.max(0, Number(map[cls] || 0) + amt);
+  _setClassXpStmt.run(JSON.stringify(map), map[cls], playerId);
+  return map[cls];
 }
 
 // ---- Champions API ----

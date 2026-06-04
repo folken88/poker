@@ -983,6 +983,13 @@ async function maybeSpeak(table, event) {
 // Generate ONE short in-character reaction line for an AI party member to a
 // dungeon event (downing a monster, loot win/loss, taking a hit), plus an
 // optional 11labs voice clip. Returns { line, audio, audioMime } or null.
+// Hand-picked FAVORITE lines kept in a character's rotation — used occasionally
+// instead of the LLM, then voiced + recorded into the reuse pool like any line, so
+// a great one sticks around. Add more here as they come up.
+const SIGNATURE_LINES = {
+  'Danger': { damage: ['Well shoot, that one bites!'] },
+};
+
 async function dungeonLine(nick, eventType, ctx = {}) {
   const flavor = CHARACTER_FLAVOR[nick];
   if (!flavor) return null;
@@ -1004,14 +1011,21 @@ async function dungeonLine(nick, eventType, ctx = {}) {
       return { line: stripAudioTags(saved.text), audio: a, audioMime: 'audio/mpeg' };
     }
   } catch (_) { /* fall through to fresh generation */ }
-  const messages = [
-    { role: 'system', content:
-      `You are ${nick}, ${flavor} RIGHT NOW you are crawling a monster-infested dungeon with a party (NOT at the poker table). ` +
-      `Bark ONE short, in-character battle line (MAX ~14 words). You are IN THE THICK OF COMBAT — put real HEAT into it: excitement, fury, triumph, alarm, bloodlust, or pain, whatever the moment calls for. SHOUT it — exclaim! Cocky, funny, or pissed off, true to your personality. ` +
-      `No quotes, no stage directions, no emoji — just the spoken line. Golarion only (no Earth gods; "god" filler is banned).` + (TTS_V3 ? V3_TAG_GUIDE : '') },
-    { role: 'user', content: `React to this: ${ev}.` },
-  ];
-  let line = await callLLM(messages);
+  // A hand-picked signature line ~30% of the time (skips the LLM), else generate.
+  let line;
+  const sig = (SIGNATURE_LINES[nick] || {})[eventType];
+  if (sig && sig.length && Math.random() < 0.30) {
+    line = sig[Math.floor(Math.random() * sig.length)];
+  } else {
+    const messages = [
+      { role: 'system', content:
+        `You are ${nick}, ${flavor} RIGHT NOW you are crawling a monster-infested dungeon with a party (NOT at the poker table). ` +
+        `Bark ONE short, in-character battle line (MAX ~14 words). You are IN THE THICK OF COMBAT — put real HEAT into it: excitement, fury, triumph, alarm, bloodlust, or pain, whatever the moment calls for. SHOUT it — exclaim! Cocky, funny, or pissed off, true to your personality. ` +
+        `No quotes, no stage directions, no emoji — just the spoken line. Golarion only (no Earth gods; "god" filler is banned).` + (TTS_V3 ? V3_TAG_GUIDE : '') },
+      { role: 'user', content: `React to this: ${ev}.` },
+    ];
+    line = await callLLM(messages);
+  }
   if (!line) return null;
   line = scrubHiccup(scrubEarthGod(String(line)).replace(/^["']+|["']+$/g, '').trim());
   if (nick === 'Elfrip') line = line.replace(/\bhee+\b/gi, 'heh');   // his giggle is "heh", never "HEE!"
