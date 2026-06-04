@@ -1735,7 +1735,11 @@ class Dungeon {
     if (heal && someoneHurt) return { slot: slot(heal), payload: {} };
     // 1b) Dispel Magic — cleanse a debuffed ally (paralysis / stun / sickness).
     const cleanse = avail.find(a => a.effect === 'cleanse');
-    if (cleanse && allies.some(a => a.paralyzed > 0 || a.stunned > 0 || a.sickened > 0)) return { slot: slot(cleanse), payload: {} };
+    if (cleanse) {
+      const allyDebuffed = allies.some(a => a.paralyzed > 0 || a.stunned > 0 || a.slowed > 0 || a.sickened > 0 || a.grappled);
+      const foeBuffed = this._targetableEnemies().some(e => e.hasted > 0 || (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)));
+      if (allyDebuffed || foeBuffed) return { slot: slot(cleanse), payload: {} };
+    }
     // 2) Put up buffs once — Smite, then sticky self/party buffs (rage, shield,
     //    bane, divine favor, inspire). Sticky guard stops re-casting.
     const smite = avail.find(a => a.effect === 'smite' && !m.smiteActive);
@@ -2440,16 +2444,35 @@ class Dungeon {
     this._echoToTable(sound);
   }
   // Dispel Magic — strip the worst debuff off an afflicted ally (or self).
+  // Dispel Magic auto-targets: the WORST-afflicted ally (strip their debuffs); or
+  // if no ally is debuffed, strip the strongest BUFF off a foe (haste / combat
+  // bonuses), if any.
   _abCleanse(m, ab) {
     const sound = ab.sound;
-    const allies = this.livingParty();
-    const target = allies.find(a => (a.paralyzed > 0 || a.stunned > 0 || a.sickened > 0 || a.grappled)) || m;
-    const cleared = [];
-    if (target.paralyzed > 0) { target.paralyzed = 0; target.heldDC = null; cleared.push('paralysis'); }
-    if (target.stunned > 0)   { target.stunned = 0;   cleared.push('stun'); }
-    if (target.sickened > 0)  { target.sickened = 0;  cleared.push('sickness'); }
-    if (target.grappled)      { target.grappled = false; target.grappledBy = null; cleared.push('grapple'); }
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${target.nickname} — ${cleared.length ? 'clears ' + cleared.join(', ') + '!' : 'nothing to dispel'}.`, sound);
+    const sev = (a) => (a.paralyzed > 0 ? 5 : 0) + (a.stunned > 0 ? 4 : 0) + (a.slowed > 0 ? 2 : 0) + (a.grappled ? 2 : 0) + (a.sickened > 0 ? 1 : 0);
+    // 1) Worst debuff on an ally.
+    const hurt = this.livingParty().filter(a => sev(a) > 0).sort((x, y) => sev(y) - sev(x))[0];
+    if (hurt) {
+      const cleared = [];
+      if (hurt.paralyzed > 0) { hurt.paralyzed = 0; hurt.heldDC = null; cleared.push('paralysis'); }
+      if (hurt.stunned > 0)   { hurt.stunned = 0;   cleared.push('stun'); }
+      if (hurt.slowed > 0)    { hurt.slowed = 0; hurt._slowTick = 0; cleared.push('slow'); }
+      if (hurt.grappled)      { hurt.grappled = false; hurt.grappledBy = null; cleared.push('grapple'); }
+      if (hurt.sickened > 0)  { hurt.sickened = 0;  cleared.push('sickness'); }
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — clears ${cleared.join(', ')}!`, sound);
+      this._echoToTable(sound); return;
+    }
+    // 2) No ally debuff → strip the strongest buff off a foe (if any).
+    const foeScore = (e) => (e.hasted > 0 ? 3 : 0) + (e.buffs ? ((e.buffs.toHit || 0) + (e.buffs.dmg || 0) + (e.buffs.ac || 0) + (e.buffs.bonusDice || 0)) : 0);
+    const foe = this._targetableEnemies().filter(e => foeScore(e) > 0).sort((x, y) => foeScore(y) - foeScore(x))[0];
+    if (foe) {
+      const stripped = [];
+      if (foe.hasted > 0) { foe.hasted = 0; stripped.push('haste'); }
+      if (foe.buffs) { foe.buffs = null; stripped.push('combat buffs'); }
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${foe.name} — strips its ${stripped.join(' & ')}!`, sound);
+      this._echoToTable(sound); return;
+    }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — but there's nothing to dispel.`, sound);
     this._echoToTable(sound);
   }
   // Invisibility — enemies can't target you until you attack (see _targetableParty
