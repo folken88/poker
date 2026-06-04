@@ -34,20 +34,27 @@ function hdFor(cls) { return (CLASSES[cls] && CLASSES[cls].hd) || HP_PER_LEVEL; 
 // unified hit / damage / AC / HP / save / initiative numbers (the game has no
 // per-weapon-group or per-save granularity, so the three save feats collapse to
 // one all-saves bonus and Weapon Focus/Spec apply to every weapon).
-const FF_NONE = { hit: 0, dmg: 0, ac: 0, hp: 0, save: 0, init: 0, impCleave: false };
+const FF_NONE = { hit: 0, dmg: 0, ac: 0, hp: 0, save: 0, init: 0, impCrit: false, critFocus: false, impCleave: false };
 function fighterFeats(cls, level) {
   if (cls !== 'fighter') return FF_NONE;
   const L = Math.max(1, level || 1);
-  return {
-    hit: 1,                              // Weapon Focus — +1 to hit, every weapon
-    dmg: L >= 4 ? 2 : 0,                 // Weapon Specialization — +2 damage
-    ac:  L >= 2 ? 1 : 0,                 // Dodge — +1 AC
-    hp:  L >= 3 ? Math.max(3, L) : 0,    // Toughness — +1 HP per Hit Die (min 3)
-    save: L >= 8 ? 2 : L >= 6 ? 1 : 0,   // Great Fortitude / Lightning Reflexes / Iron Will
-    init: L >= 5 ? 4 : 0,                // Improved Initiative
-    impCleave: L >= 9,                   // Improved Cleave — auto-cleave like the barbarian
+  return {                               // one bonus feat per level, PF1-style
+    hit:  1,                             // L1  Weapon Focus — +1 to hit, every weapon
+    ac:   L >= 2 ? 1 : 0,                // L2  Dodge — +1 AC
+    hp:   L >= 3 ? Math.max(3, L) : 0,   // L3  Toughness — +1 HP per Hit Die (min 3)
+    dmg:  L >= 4 ? 2 : 0,                // L4  Weapon Specialization — +2 damage
+    init: L >= 5 ? 4 : 0,               // L5  Improved Initiative
+    save: L >= 7 ? 2 : L >= 6 ? 1 : 0,  // L6 Lightning Reflexes, L7 Great Fortitude, L10 Iron Will (unified +2)
+    impCrit:   L >= 8,                   // L8  Improved Critical — doubled threat range
+    critFocus: L >= 9,                   // L9  Critical Focus — +4 to confirm crits
+    impCleave: L >= 11,                  // L11 Improved Cleave — auto-cleave like the barbarian
   };
 }
+// A "finessable" melee weapon (light, or a one-handed fencing blade) — what a
+// swashbuckler's Precise Strike, Weapon Focus/Specialization and Improved
+// Critical key off of.
+const FINESSE_KEYS = new Set(['rapier', 'scimitar', 'shortsword', 'dagger', 'kukri', 'cutlass', 'estoc', 'sword_cane', 'starknife', 'sap', 'radiance', 'curator']);
+function isFinesseWeapon(w) { return !!w && !w.ranged && (w.cat === 'light' || FINESSE_KEYS.has(w.key)); }
 function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fighterFeats(cls, level).hp; }
 function levelOf(gear) { return Math.max(1, 1 + totalMagicBonus(gear)); }
 const LIGHTNING_MAX_TARGETS = 2;
@@ -1064,19 +1071,32 @@ class Dungeon {
     // proficient; the −4 penalty only guides human weapon choices.
     const notProf = (attacker.isBot || weaponProficient(cls, weapon)) ? 0 : NON_PROFICIENT_PENALTY;
     const ff = fighterFeats(cls, lvl);   // fighter bonus feats: Weapon Focus (+hit), Weapon Specialization (+dmg)
-    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit;
+    // Swashbuckler — only with a finessable weapon: Weapon Focus, Weapon
+    // Specialization, Precise Strike (+level, NOT crit-multiplied), Improved Critical.
+    const swashFin = cls === 'swashbuckler' && isFinesseWeapon(weapon);
+    const swashWF = swashFin ? 1 : 0;
+    const swashSpec = (swashFin && lvl >= 4) ? 2 : 0;
+    const preciseDmg = (swashFin && lvl >= 3) ? lvl : 0;   // Precise Strike: +swashbuckler level
+    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit + swashWF;
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
     // Damage = weapon dice (NdX) + enhancement + ½ level + ability mod + buff dmg (+ Point Blank).
     const judgDmg = attacker.judgment === 'destruction' ? Math.max(1, Math.floor(lvl / 3)) : 0;   // inquisitor Judgement: Destruction
-    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + pbs + judgDmg + ff.dmg;
+    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + pbs + judgDmg + ff.dmg + swashSpec;
     const rollDmg = () => dRollN(weapon.dmgCount, weapon.dmgDie) + weapon.dmgBonus + flatDmg;
     let dmg = rollDmg() - sick, crit = false;
-    if (roll >= weapon.critRange) { const conf = dRoll(20) + bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
-    // Precision (sneak), smite, and bane dice ride on top — NOT multiplied by a crit.
+    // Improved Critical doubles the weapon's threat range (fighter L8; swashbuckler
+    // L5 with a finesse blade). Critical Focus (fighter L9) adds +4 to confirm.
+    const impCrit = (cls === 'fighter' && ff.impCrit) || (swashFin && lvl >= 5);
+    const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
+    const critFocus = (cls === 'fighter' && ff.critFocus) ? 4 : 0;
+    if (roll >= effCritRange) { const conf = dRoll(20) + bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
+    // Precision (sneak / swashbuckler Precise Strike), smite, and bane dice ride on
+    // top — NOT multiplied by a crit.
     let sneakDmg = 0;
+    if (preciseDmg) dmg += preciseDmg;   // swashbuckler Precise Strike
     if (sneakDice) { sneakDmg = dRollN(sneakDice, 6); dmg += sneakDmg; }
     if (buff.bonusDice) dmg += dRollN(buff.bonusDice, 6);   // Bane
     if (smite) dmg += 2 * lvl;   // Smite Evil: +double level damage
@@ -1171,6 +1191,23 @@ class Dungeon {
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);   // monk's randomized "bruce" kiai (hit or miss)
     else if (r.hit && e.atkSound) r.sound = e.atkSound;                    // rogue's "riki" stab (hit only)
     if (r.hit) {
+      // Swashbuckler PARRY — the first melee attack against them each round can be
+      // turned aside (parry roll vs the foe's attack total). On success: NO damage
+      // and a free RIPOSTE. The attempt is spent for the round either way.
+      if (target.cls === 'swashbuckler' && target._parryRound !== this.round && target.hp > 0 && !(target.paralyzed > 0) && !(target.stunned > 0)) {
+        target._parryRound = this.round;
+        const pRoll = dRoll(20) + babFor('swashbuckler', target.level || 1) + ABILITY_MOD + ((target.buffs && target.buffs.toHit) || 0);
+        if (pRoll >= r.total) {
+          this._note(`🤺 ${target.nickname} PARRIES ${e.glyph} ${e.name}'s strike [${pRoll} vs ${r.total}] — no damage, and RIPOSTES!`, '/audio/sneak_riki.mp3');
+          target.weapon = weaponOf(target.gear, target.weaponKey);
+          const rr = this._swingVsAC(target, this._enemyAC(e), e);
+          if (rr.hit) { this._dmgE(e, rr.damage); this._note(`🗡️ ${target.nickname}'s riposte hits ${e.name} for ${rr.damage}.${this._afterEnemyHit(e)}`, rr.sound); if (e.hp <= 0) this._tryBanter(target, 'down', { enemy: e.name }); }
+          else this._note(`🗡️ ${target.nickname}'s riposte misses ${e.name}. ${this._atkStr(rr)}`, rr.sound);
+          this._echoToTable(rr.sound);
+          return;   // the incoming attack is fully negated
+        }
+        this._note(`🤺 ${target.nickname} tries to parry, but ${e.name}'s blow beats the blade. [${pRoll} vs ${r.total}]`, null);
+      }
       let dmg = r.damage, sneakTag = '';
       // Enemy Sneak Attack (goblin/kobold rogues): +Xd6 vs a hero who's denied
       // their defenses — flat-footed (hasn't acted yet) or HELD by a shaman.
@@ -1625,7 +1662,7 @@ class Dungeon {
         offense.push({ ab: a, payload: { targetUid: weakestFoe.uid } });
       }
       const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // can't Rapid Shot a bolt-action rifle
-      for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint'].includes(a.effect)) {
+      for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint', 'disarm'].includes(a.effect)) {
         if (a.needsRepeating && boltAction) continue;
         offense.push({ ab: a, payload: { targetUid: weakestFoe.uid } });
       }
@@ -1837,6 +1874,7 @@ class Dungeon {
     m.flatFooted = false;   // acting ends flat-footed
     const D = {
       trip:        () => this._abTrip(m, payload),
+      disarm:      () => this._abDisarm(m, payload),
       cleave:      () => this._abCleave(m, ab, payload),
       feint:       () => this._abFeint(m, payload),
       reckless:    () => this._abReckless(m, payload),
@@ -2534,6 +2572,22 @@ class Dungeon {
     const r = this._swingVsAC(m, this._enemyAC(e), e);   // prone (−4 AC) folded into _enemyAC
     if (r.hit) { this._dmgE(e, r.damage); this._note(`⚔️ free hit on ${e.name} for ${r.damage}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     else this._note(`⚔️ the free hit misses. ${this._atkStr(r)}`, r.sound);
+    this._echoToTable(r.sound);
+  }
+  // Disarm (swashbuckler): an opposed maneuver (the duelist's combat roll vs the
+  // foe's CMD). On a success the foe loses its next turn scrambling for its weapon
+  // and the swashbuckler lands a free strike.
+  _abDisarm(m, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const cmb = dRoll(20) + babFor(m.cls || 'swashbuckler', m.level || 1) + ABILITY_MOD + ((m.buffs && m.buffs.toHit) || 0);
+    const cmd = 10 + (e.toHit || 0);   // rough CMD from the foe's offense (scales with CR via toHit)
+    if (cmb < cmd) { this._note(`🌀 ${m.nickname} lunges to disarm ${e.name}, but it keeps its grip. [${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword)); return this._echoToTable(); }
+    e.loseTurn = true;
+    this._note(`🌀 ${m.nickname} DISARMS ${e.name}! [${cmb} vs CMD ${cmd}] — it scrambles for its weapon (loses its next turn) — free strike!`);
+    const r = this._swingVsAC(m, this._enemyAC(e), e);
+    if (r.hit) { this._dmgE(e, r.damage); this._note(`🗡️ ${m.nickname} skewers the off-balance ${e.name} for ${r.damage}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    else this._note(`🗡️ the follow-up misses ${e.name}. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
   }
   // Cleave: hit the target; then swing at a second foe (−2). A barbarian's
