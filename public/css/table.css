@@ -228,7 +228,11 @@ button, input { font: inherit; color: inherit; }
 }
 .dungeon__recruit-pop.is-open { display: block; }
 .dungeon__recruit-head { font-size: 0.78rem; color: var(--brass-bright); letter-spacing: 0.04em; margin-bottom: 0.4rem; position: sticky; top: -0.5rem; background: rgba(14,12,18,0.98); padding: 0.25rem 0; }
-.bot-picker__grid--dungeon { max-height: none; overflow: visible; }   /* the popover scrolls instead */
+/* In the dungeon recruit popover the GRID must not scroll — the popover scrolls
+   instead. Doubled class so this beats the later base `.bot-picker__grid` rule
+   (overflow-y:auto) by specificity, not source order — otherwise the grid AND the
+   popover both show a scrollbar (the "two scrollbars on the right" bug). */
+.bot-picker__grid.bot-picker__grid--dungeon { max-height: none; overflow: visible; }
 /* Two side-by-side scroll panes — party left, monsters right. */
 .dungeon__logs { display: flex; gap: 0.5rem; flex: 1; min-height: 120px; }
 .dungeon__logcol { flex: 1; min-width: 0; display: flex; flex-direction: column; }
