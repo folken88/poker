@@ -64,7 +64,7 @@ const CHARACTER_VOICES = {
 
   // ===== Defaults picked from your 11labs library — adjust as desired =====
   // Carrion Crown / Caliphas crowd
-  'Storgrim':          'oCXdm5WkYoKVEdlbPLev', // Paul — Deep & Warm Yorkshire (shared library) — northern English dwarf captain
+  'Storgrim':          'xytDFh9V3d1GsWzN9QtU', // Arnold2 (user pick; also Conchobar's voice) — replaced Paul (Yorkshire)
   'Ulfred':            'Yj3XGMd9w2H4C0P0L28M', // Sean (user pick; also Kai Ginn's voice) — replaced Adam
   'Tamsin':            'dAlhI9qAHVIjXuVppzhW', // Tamsin — Engaging British storyteller (name-match!)
   'Toni':              'pFZP5JQG7iQjIQuC4Bku', // Lily — Velvety Actress (British, mid-aged) — vampire velvet
