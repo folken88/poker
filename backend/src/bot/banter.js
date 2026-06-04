@@ -668,10 +668,10 @@ function buildMessages(speaker, eventDescription, table) {
         `  • The pot / felt: "the pot", "the middle", "the felt", "the chips in the center", "table ` +
         `stakes", "the whole pile". \n` +
         styleOverlay +
-        `LENGTH — SUCCINCT IS THE DEFAULT: most of your reactions should be 1-6 words. A grunt, a single ` +
+        `LENGTH — SUCCINCT IS THE DEFAULT: most of your reactions should be 1-3 words. A grunt, a single ` +
         `word, a quick phrase. "Bullshit!", "No way.", "Yuck.", "Call.", "Fold.", "Ha.", "About time.", ` +
         `"Mine.", "Fish.", "Pillock.", "Bilge rat." Occasionally — maybe one time in five — a fuller jab ` +
-        `up to ~12 words is fine if the line actually lands. Beyond that is too long. NEVER speeches. ` +
+        `up to ~6 words is fine if the line actually lands. Beyond that is too long. NEVER speeches. ` +
         `Conversations at a poker table are quick volleys. If you can't land it in a short phrase, you ` +
         `probably shouldn't say it at all. No quotes, no stage directions, no asterisks, no actions — ` +
         `just the words you'd actually say out loud at the table. Stay in character. \n` +
@@ -712,7 +712,7 @@ function trimToSpoken(s, maxWords = 16) {
  *    - applies the model's chat template automatically
  *    - accepts `think: false` to skip Gemma 4 reasoning preamble
  *    - returns { message: { content, role, thinking? } } */
-async function callLLM(messages) {
+async function callLLM(messages, maxWords = 16) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
@@ -756,7 +756,7 @@ async function callLLM(messages) {
       .replace(/\s+/g, ' ')
       .trim();
     if (!/[A-Za-z]/.test(out)) return null;         // reject junk ("{", lone punctuation, pure sound smears)
-    return trimToSpoken(out) || null;               // clip the rambling tail to ~16 words
+    return trimToSpoken(out, maxWords) || null;     // clip the rambling tail (table=8, dungeon=16)
   } catch (_) {
     return null;
   } finally {
@@ -863,7 +863,7 @@ function maybeSpeak(table, event) {
   // may have left their seat (e.g. wandered into the dungeon), making
   // displayNickname() return null and the line post as "null: …".
   const safeNick = ((typeof speaker.displayNickname === 'function' && speaker.displayNickname()) || speaker.player?.nickname || speakerNick);
-  callLLM(messages).then(async line => {
+  callLLM(messages, 8).then(async line => {   // table chatter: hard 8-word backstop (~50% shorter)
     if (!line) return;
     // Substitute exact gp figures the model marked with {amount}/{pot}/
     // {call} tokens. Code inserts the precise value so a number is never

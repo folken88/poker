@@ -23,7 +23,7 @@ services:
       - LLM_MODEL=${LLM_MODEL:-gemma4:e4b}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_BANTER_COOLDOWN_MS=18000
-      - LLM_BANTER_PROB=0.30
+      - LLM_BANTER_PROB=0.24
       - LLM_BANTER_TIMEOUT_MS=8000
       # ---- 11labs TTS (voice the AI banter aloud) ----
       # Key is loaded from .env (gitignored) via docker-compose

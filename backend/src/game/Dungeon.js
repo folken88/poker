@@ -359,8 +359,8 @@ class Dungeon {
     if (this.status === 'combat') {
       if (this.round === this._bantRound) return;   // round already used its one chance
       this._bantRound = this.round;
-      if (Math.random() > 0.45) return;
-    } else if (Math.random() > 0.5) return;
+      if (Math.random() > 0.36) return;
+    } else if (Math.random() > 0.40) return;
     this._emitBanter(member, eventType, ctx);
   }
   _emitBanter(member, eventType, ctx) {
