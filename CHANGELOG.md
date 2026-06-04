@@ -56,6 +56,17 @@ Thanks to the regulars whose suggestions made it into the game:
   savings grow over a session. Tunable via `LINE_REUSE_PROB_MATCH` /
   `LINE_REUSE_PROB_LOOSE` / `LINE_POOL_MIN` / `LINE_POOL_MAX`.
 
+### 🩹 Follow-ups
+- **Banter is now one sentence.** Lines were capped by *word* count, not *sentence*
+  count, so a punchy multi-exclamation style (Farrus, bellowing) could slip through
+  as 2–3 sentences — tripling the voice time + 11labs cost. Every banter line is now
+  clipped to a single sentence (with a min-word floor so a tiny "Ha!" keeps its
+  follow-up, and an honorific guard so "Mr. Brow" isn't split), at the table and in
+  the dungeon. The line-reuse pool was cleared so older multi-sentence clips don't
+  replay.
+- **Inquisitor gains Bless** — the run-long party **+1 to hit** (cast once, lasts the
+  whole dungeon), rounding out his cleric-list repertoire.
+
 ---
 
 ## 2026-06-03

@@ -695,6 +695,28 @@ function buildMessages(speaker, eventDescription, table) {
 // only the rambling tail needs clipping. Cap at maxWords, preferring to end on a
 // complete sentence within that budget; otherwise trail off with "…". (Never a
 // mid-word chop — the old slice(0,200) used to cut "…like a cloak of vic".)
+// Clip a line to a SINGLE spoken sentence. Banter is meant to be one quick
+// one-liner, but the word cap alone lets a punchy multi-exclamation style (e.g.
+// Farrus's "THE FIELD IS MINE! KNEEL, PEASANT! THAT'S MY GIRL!") slip through as
+// 2-3 sentences — tripling the TTS length/cost. We keep everything up to the
+// first sentence-ender, but accrete a second short clause if the first is a tiny
+// fragment ("Ha!"), and never split on an honorific ("Mr.", "Dr."). minWords is
+// the floor before we'll stop at a boundary.
+const _HONORIFIC = /\b(mr|mrs|ms|dr|sr|jr|st|vs|lt|sgt|gen|capt|prof)$/i;
+function clipToOneSentence(s, minWords = 4) {
+  s = String(s || '').trim();
+  if (!s) return s;
+  const re = /[.!?…]+["'”’)]*/g;
+  let m, end = -1;
+  while ((m = re.exec(s))) {
+    const upto = s.slice(0, m.index + m[0].length);
+    const core = (upto.split(/\s+/).pop() || '').replace(/[.!?…"'”’)]+$/g, '');
+    if (_HONORIFIC.test(core)) continue;                       // "Mr." etc. — not a real boundary
+    end = m.index + m[0].length;
+    if (upto.split(/\s+/).filter(Boolean).length >= minWords) break;   // enough words → stop here
+  }
+  return (end > 0 && end < s.length) ? s.slice(0, end).trim() : s;
+}
 function trimToSpoken(s, maxWords = 16) {
   s = String(s || '').trim();
   if (!s) return s;
@@ -760,7 +782,7 @@ async function callLLM(messages, maxWords = 16) {
       .replace(/\s+/g, ' ')
       .trim();
     if (!/[A-Za-z]/.test(out)) return null;         // reject junk ("{", lone punctuation, pure sound smears)
-    return trimToSpoken(out, maxWords) || null;     // clip the rambling tail (table=8, dungeon=16)
+    return trimToSpoken(clipToOneSentence(out), maxWords) || null;   // one sentence, then word cap (table=8, dungeon=16)
   } catch (_) {
     return null;
   } finally {
