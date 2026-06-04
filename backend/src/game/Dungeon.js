@@ -93,6 +93,11 @@ const HIGH_GROUND_AC  = 2;
 // damage (the latter doubles on a crit, like any static damage mod in PF1e). This
 // is the missing "STR/DEX" piece on top of level (BAB-ish) and gear.
 const ABILITY_MOD = 4;
+// Casting-stat modifier — an 18 Int/Wis/Cha, mirroring the 18 STR/DEX behind
+// attacks (ABILITY_MOD). Drives hero spell save DCs; the matching PF1 bonus
+// spells live in abilities._tableSlots. Kept separate from ABILITY_MOD so the
+// spell stat can diverge from the attack stat later as we approach full PF1.
+const CAST_MOD = 4;
 // Class conditionals (powered by the alignment / flat-footed tracking).
 const SNEAK_CLASSES = new Set(['rogue', 'ninja', 'slayer']);  // gain Sneak Attack
 const SNEAK_DICE_CAP = 5;     // cap precision dice so it stays flavorful, not silly
@@ -2139,7 +2144,7 @@ class Dungeon {
     };
   }
   // Spell save DC + caster level for this member (level = 1 + gear).
-  _spellDC(m) { return 10 + (m.level || 1) + ABILITY_MOD; }
+  _spellDC(m) { return 10 + (m.level || 1) + CAST_MOD; }   // 10 + level + 18-stat casting mod
   _spellDice(ab, m) { return diceCount(ab, m.level || 1); }
   _enemyTargets(payload, max) {
     let chosen = ((payload && payload.targetUids) || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0)).filter(Boolean);

@@ -63,8 +63,11 @@ const INQ_SLOTS_BY_LEVEL = {
 function _tableSlots(table, level) {
   const arr = table[Math.max(1, Math.min(20, level || 1))] || table[1];
   const out = {};
-  arr.forEach((n, i) => { out[i + 1] = n; });
-  return out;   // { 1: n, 2: n, … } slots per spell level
+  // An 18 CASTING STAT (Int/Wis/Cha) — assumed for every caster, mirroring the
+  // 18 STR/DEX behind attacks — grants PF1 BONUS SPELLS: +1 per day to spell
+  // levels 1–4. The base tables don't include it, so fold it in here.
+  arr.forEach((n, i) => { const sl = i + 1; out[sl] = n + (sl <= 4 ? 1 : 0); });
+  return out;   // { 1: n, 2: n, … } slots per spell level (incl. the 18-stat bonus)
 }
 function spontaneousSlots(level) { return _tableSlots(SORC_SLOTS_BY_LEVEL, level); }
 // Slot table for any per-level slot caster (null = not a slot caster).
