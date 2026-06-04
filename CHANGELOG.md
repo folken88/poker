@@ -19,6 +19,28 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-06-03 (latest+)
+
+### 🎭 Caster polish, buff icons & class smarts
+- **Inspire Courage scales** with the bard's level (PF1-style): **+1**, rising to
+  **+2 / +3 / +4** at levels **5 / 11 / 17**.
+- **Bards** learn **Dispel Magic** (3rd-level) and now play the controller: once
+  the party buffs are up they **pin a boss with Hideous Laughter** (Held — it
+  survives being hit, so the team keeps focus-firing while the boss wastes turns).
+- **Wizards & sorcerers** gain two **4th-level** spells: **Fire Snake** (a flaming
+  serpent — 1d6/level fire, up to 4 foes, Reflex half) and **Stoneskin** (**DR 10
+  vs physical blows** on a front-liner — energy and spells punch through).
+- **Barbarians** now swing at the **lowest-HP foe first**, fishing for the kill
+  that carries a **Cleave** chain into the pack.
+- **Every buff shows its own icon** on a hero's buff strip — Bull's Strength,
+  Cat's Grace, Bear's Endurance, Heroism, Good Hope, Shield of Faith, Deadly Aim,
+  and Stoneskin all joined the lineup (they were applying invisibly before). The
+  **Rage** badge is now Bobby B's glowing-eyed war face.
+- **Fascinate** gets its own **"Fascinated"** debuff icon (no longer mislabeled
+  "Asleep"), and casters **won't waste Sleep or Fascinate** on a foe already
+  asleep/fascinated — the cast is refused (slot kept) and group versions skip
+  anyone already entranced. Non-rogues leave the entranced alone; rogues pounce.
+
 ## 2026-06-03 (latest)
 
 ### 🪄 The spellcaster overhaul
