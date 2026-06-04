@@ -722,13 +722,17 @@ function trimToSpoken(s, maxWords = 16) {
   if (!s) return s;
   const words = s.split(/\s+/);
   if (words.length <= maxWords) return s;
+  // Over the soft cap: prefer to end on a COMPLETE sentence within the slice…
   const slice = words.slice(0, maxWords);
-  // Cut back to the last word that ends a sentence (keeps it clean), if it's not
-  // a tiny 1-2 word fragment.
   for (let i = slice.length - 1; i >= 2; i--) {
-    if (/[.!?]["'”’)]?$/.test(slice[i])) return slice.slice(0, i + 1).join(' ');
+    if (/[.!?…]["'”’)]?$/.test(slice[i])) return slice.slice(0, i + 1).join(' ');
   }
-  return slice.join(' ').replace(/[,;:—-]+$/, '').trim() + '…';
+  // …otherwise it's a single unbroken sentence — let it FINISH rather than leave a
+  // clipped "don't keep us all…" fragment, up to a generous hard ceiling that only
+  // catches a genuine run-on (clipToOneSentence already holds it to one sentence).
+  const HARD = 26;
+  if (words.length <= HARD) return s;
+  return words.slice(0, HARD).join(' ').replace(/[,;:—-]+$/, '').trim() + '…';
 }
 
 /** Async fetch with timeout. Returns generated text, or null on
