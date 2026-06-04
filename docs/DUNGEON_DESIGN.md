@@ -175,6 +175,22 @@ gear (`weaponOf`/`acOf`) only adds to-hit / AC / damage.
   (`db.setGear({})`) and drops pending loot. Clearing the room keeps the loot.
 - Encounter budgeting uses `rawXpForCR` (un-multiplied) so room sizing is unaffected
   by `XP_AWARD_MULT`. Bots level identically (their XP persists too).
+- **XP is per-class.** `db.getXp/addXp/setXp` key on the player's *current* class via a
+  `players.class_xp` JSON map (mirrored to `experience` for the active class). Switch
+  class and you start at that class's own level; switch back and the prior level returns.
+  Gear is untouched by a class switch.
+- **Full Wipe** (the table's 5,000gp reset) now also zeroes `experience` + `class_xp`,
+  clears gear, and runs `db.resetChampions()` — a true fresh start including the Hall of
+  Records.
+
+### Armor-class types (`combat.js acOf`, `Dungeon._enemyAC`)
+Monsters track **normal / touch / flat-footed AC**, surfaced on the monster tile.
+- **Touch AC** = `base.touch || max(10, ac − 5)`; **flat-footed** = AC − 2.
+- **Spells and firearms** resolve vs touch AC (`_enemyAC(e, {touch:true})`) — a ranged
+  touch attack ignores armor + shield, so guns/rays connect far more often than steel.
+- **Arcane casters wear no armor** (`acOf` `arcaneNoArmor` for wizard/sorcerer): they get
+  only the *magic bonus* of owned armor (a "+1 chain shirt" = +1, not +4) and **never**
+  benefit from a shield. They auto-cast **Mage Armor** at the start of each fight.
 
 ### Ability cost models
 - **`free`** — martial maneuvers, usable every turn (Trip, Cleave, Feint, Rapid
@@ -211,8 +227,24 @@ gear (`weaponOf`/`acOf`) only adds to-hit / AC / damage.
   Smite). Fights with steel alongside **Bane** + **Judgements**, and earns the
   fighter bonus-feat ladder at **half rate** (a feat every odd level).
 
+### Spell math (full-PF1 casting stat)
+Spells now assume an **18 casting stat** (matching attacks' assumed 18 Str/Dex): save
+**DC = 10 + spell level + `CAST_MOD` (4)**, and casters gain **bonus 1st–4th level
+slots** (`_tableSlots` adds +1 to spell levels 1–4 for the 18 stat).
+
 ### Notable mechanics
 - **Scorching Ray** splits (1 ray, 2 at CL7, 3 at CL11) with a split sound.
+- **Mage Armor** (`MAGE_ARMOR`) — wizards/sorcerers cast it free, run-long, at fight
+  start; it's their substitute for worn armor.
+- **Protection from Evil** (`SPELL.protevil`) — personal +2 AC / +2 saves ward.
+- **Darkness** (`SPELL.darkness`) — blinds **1d4+1 foes** at once (`randBase:1
+  randDie:4`); darkened enemies are excluded from `_targetableEnemies()` (can't be
+  targeted or struck) until it lifts.
+- **Dispel Magic** auto-targets: strips the **worst debuff on an ally**, or — if none —
+  the **best buff on an enemy** (`_abCleanse`).
+- **Mind-affecting immunity** — Sleep/Fascinate/Hold Person can't touch **undead or
+  constructs** (`mindImmune`); a melee weapon **can't hit flyers** (need ranged/reach/
+  spell).
 - **Invisibility** — untargetable (`_targetableParty`) until you attack.
 - **Haste** — party gets one extra attack next turn (`m.hasted`, `_hasteBonus`).
 - **Inquisitor Judgements** — one active at a time (Destruction +dmg / Protection

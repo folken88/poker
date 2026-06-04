@@ -21,6 +21,54 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-04 (newest)
 
+### 🎚️ Per-class XP + a permanent crown
+- **XP is now tracked PER CLASS.** Switch class and you start fresh at *that* class's
+  own level — a level-3 Wizard who swaps to Barbarian begins at Barbarian level 1, and
+  swapping back restores the Wizard's level 3. **Gear is unchanged by the switch.** Each
+  class keeps its own XP total in a per-character `class_xp` map.
+- **The Loot Lord wears a permanent crown.** Whoever holds the most gold gets a 👑 over
+  their token — and it now **persists forever**, surviving wipes and resets (no more
+  ceremony / auto-reset). The crown follows the gold.
+- **Full Wipe really wipes.** The "zero everyone to 5,000gp" reset now also clears
+  **levels, all XP, equipment, and the Hall of Records** — a true fresh start.
+
+### 🛡️ PF1 armor-class types (touch & flat-footed)
+- The dungeon now tracks **normal AC, touch AC, and flat-footed AC** for every monster,
+  the way Pathfinder does. The monster tile shows all three.
+- **Spells and firearms resolve against touch AC** (a ranged touch attack ignores armor
+  and shield), so a gun or a Scorching Ray connects far more often than a sword would.
+- **Flat-footed** foes (caught before they act) lose their Dex to AC.
+
+### 🪄 New caster spells & full-PF1 spell stat
+- **Spells now assume an 18 casting stat**, just as attacks already assumed 18 Str/Dex
+  — so save DCs and bonus spell slots follow the real PF1 math (DC = 10 + spell level +
+  4), and casters gain **bonus 1st–4th level slots**.
+- **Wizards & sorcerers cast Mage Armor** at the start of every fight (free action,
+  run-long) — because **arcane casters wear no armor**: they gain only the *magic bonus*
+  of any armor they own (a "+1 chain shirt" gives +1, not +4) and **never benefit from a
+  shield**.
+- **Protection from Evil** — a personal +2 AC / +2 saves ward.
+- **Darkness** now blankets **1d4+1 foes** at once (was one), blinding them out of the
+  fight; darkened enemies can't be targeted or attacked until it lifts.
+- **Dispel Magic got smart targeting** — it auto-strips the **worst debuff on an ally**,
+  or, if none, the **best buff on an enemy**.
+
+### 🧠 Smarter, more PF1-correct combat
+- **Melee can't hit flyers.** A melee weapon can no longer strike a flying creature —
+  you need reach, a ranged option, or a spell.
+- **Mind-affecting magic respects immunity.** Sleep, Fascinate, and Hold Person no
+  longer work on **undead or constructs**.
+- **AI heroes finish the room.** A bot that decides to leave now waits until the current
+  fight resolves instead of bailing mid-swing.
+
+### 🔊 Voice & pronunciation
+- Fixed pronunciations: **Conchobar** ("con-cho-barr"), **Lirienne** ("leery-ehn"),
+  **Rhyarca** ("ree-arka"), and **Rissa** ("riss-uh", short for Clarissa Caromarc).
+
+---
+
+## 2026-06-04 (leveling & inquisitor)
+
 ### 🎚️ Pathfinder XP leveling — the dungeon's biggest change yet
 The dungeon abandons the old "your gear IS your level" system for real **Pathfinder
 1e experience** (medium track). **Everyone resets to level 1** — gear is kept, but
