@@ -12,7 +12,8 @@
  */
 const PRONUNCIATIONS = [
   ['Mandore',    'Man door'],
-  ['Lirienne',   'Leery in'],
+  ['Conchobar',  'Con cho barr'],
+  ['Lirienne',   'Leery ehn'],
   ['Bujon',      'Boo han'],
   ['Casandalee', 'Cassan dah-lee'],
   ['Tobis',      'Toe biss'],
