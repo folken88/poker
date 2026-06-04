@@ -128,8 +128,10 @@ function acOf(gear, cls) {
   const heavyBase = (cls === 'barbarian') ? 6 : 9;   // breastplate vs full plate
   const armorAC = arcaneNoArmor ? armor : (armor >= 1 ? (heavyBase + armor) : 4);
   ac += armorAC; physical += armorAC;
-  // Swashbucklers fight with a hand free (finesse + parry) — no shield AC for them.
-  if (shield >= 1 && cls !== 'swashbuckler') { const v = 2 + shield; ac += v; physical += v; }
+  // No shield AC for swashbucklers (a hand free for finesse + parry) or arcane
+  // casters (a wizard/sorcerer needs free hands to cast — they gain NOTHING from a
+  // shield, not even its magic bonus, and shouldn't buy one).
+  if (shield >= 1 && cls !== 'swashbuckler' && !arcaneNoArmor) { const v = 2 + shield; ac += v; physical += v; }
   if (ring >= 1)   { ac += ring; }
   return { ac, physical };
 }

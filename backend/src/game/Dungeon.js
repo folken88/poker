@@ -69,6 +69,9 @@ function titleCase(s) { return String(s || '').replace(/\b\w/g, c => c.toUpperCa
 // person, hideous laughter (PF1: no mind to affect / no Con).
 const MIND_IMMUNE_TYPES = new Set(['undead', 'construct']);
 function mindImmune(e) { return !!e && MIND_IMMUNE_TYPES.has(e.type); }
+// "Already taken out of the fight" by crowd control — don't waste fresh CC on them
+// (asleep / fascinated / held / prone / stunned). Used to target CC intelligently.
+function ccd(o) { return !!o && (o.asleep || o.fascinated || (o.paralyzed > 0) || o.prone || (o.stunned > 0)); }
 // A "finessable" melee weapon (light, or a one-handed fencing blade) — what a
 // swashbuckler's Precise Strike, Weapon Focus/Specialization and Improved
 // Critical key off of.
@@ -1615,6 +1618,23 @@ class Dungeon {
       this._hasteBonus(m);
       return;
     }
+    // An INVISIBLE ally stays hidden: it takes a NON-offensive support action
+    // (heal/buff) if it has one, else it holds — it will NOT attack (attacking
+    // would break invisibility).
+    if (m.invisible) {
+      const c = this._botAbility(m);
+      if (c) {
+        const ab = kitFor(m.cls).abilities[c.slot];
+        if (ab && ab.target !== 'enemy' && ab.target !== 'aoe' && ab.effect !== 'attack') {
+          const r = this._useAbility(m, c.slot, c.payload);
+          if (r && r.ok && ab) m._lastAbilityKey = ab.key;
+          if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }
+        }
+      }
+      this._note(`👻 ${m.nickname} stays hidden, holding for the right moment.`);
+      this._broadcast();
+      return;
+    }
     // First see if a class ability is the smart play this turn (heal, buff,
     // blast, spell). If so, use it; otherwise fall back to a basic attack.
     const choice = this._botAbility(m);
@@ -1741,6 +1761,13 @@ class Dungeon {
     if (protect && fireFoes && this.livingParty().some(p => !p.protectFire)) return { slot: slot(protect), payload: {} };
     const buff = avail.find(a => a.effect === 'buff' && a.sticky && !a.protectFire && !buffFullyUp(a));
     if (buff) return { slot: slot(buff), payload: {} };
+    // Invisibility — shields the most-hurt ally (it lands on the lowest-HP ally in
+    // _abInvisible). Cast when an ally is badly hurt and nobody's hidden yet.
+    const invis = avail.find(a => a.effect === 'invisible');
+    if (invis && !this.livingParty().some(p => p.invisible)) {
+      const hurt = allies.slice().sort((a, b) => a.hp - b.hp)[0];
+      if (hurt && hurt.hp < hurt.maxHp * 0.5) return { slot: slot(invis), payload: {} };
+    }
     // 2a) Taunt — a barbarian roars to pull a pack's fire onto themselves (once
     //     per room, only worth it against 2+ foes). With multiple barbarians,
     //     DON'T pile on if a team-mate's taunt already gripped most foes — but if
@@ -2419,8 +2446,11 @@ class Dungeon {
   // Invisibility — enemies can't target you until you attack (see _targetableParty
   // and the m.invisible=false clears in _playerAttack / offensive _useAbility).
   _abInvisible(m, ab) {
-    m.invisible = true;
-    this._note(`${ab.icon} ${m.nickname} fades from view — unseen until they strike!`, ab.sound);
+    // Cloak the MOST-HURT ally (least current HP) — not necessarily the caster.
+    const target = this.livingParty().slice().sort((a, b) => a.hp - b.hp)[0] || m;
+    target.invisible = true;
+    const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
+    this._note(`${ab.icon} ${m.nickname} cloaks ${who} in INVISIBILITY — unseen until they strike.`, ab.sound);
     this._echoToTable(ab.sound);
   }
   // Mage Armor — a run-long +4 armor AC (see _acBonus). A free action; the flag is
@@ -2586,7 +2616,7 @@ class Dungeon {
   // helpless (flat-footed) and losing turns until something strikes them.
   _abSleep(m, ab, payload) {
     const dc = this._spellDC(m);
-    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !e.fascinated && !mindImmune(e)).slice().sort((a, b) => a.hp - b.hp);   // skip already-asleep/fascinated + mind-immune (undead/construct)
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !ccd(e) && !mindImmune(e)).slice().sort((a, b) => a.hp - b.hp);   // skip already-CC'd foes + mind-immune (undead/construct)
     if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name}, but those foes are immune or already entranced.`); this._echoToTable(); return; }
     const sound = ab.sound || pick(SND.flesh), parts = [];
     for (const e of chosen) {
@@ -2618,7 +2648,7 @@ class Dungeon {
   }
   // Fascinate: up to maxTargets foes stand enthralled, losing turns until struck.
   _abFascinate(m, ab, payload) {
-    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !e.fascinated && !mindImmune(e));   // skip already-entranced + mind-immune (undead/construct)
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !ccd(e) && !mindImmune(e));   // skip already-CC'd foes + mind-immune (undead/construct)
     if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} begins ${ab.name}, but those foes are immune or already entranced.`); return; }
     for (const e of chosen) e.fascinated = true;
     const sound = ab.sound || pick(SND.flesh);
