@@ -37,12 +37,22 @@ Thanks to the regulars whose suggestions made it into the game:
   Cone of Cold / Chain Lightning, Disintegrate, Finger of Death and Magic Missile,
   with smart target-picking and DCs/damage that scale with depth. **Vampires**
   drain life with a magus **Vampiric Touch**. Liches are cold-immune (undead).
-- **Stoneskin** is now cast on whoever has the **least HP**.
+- **Clerics learn Spiritual Weapon** — conjure a force-blade over a foe and it
+  **attacks that foe on every one of your turns** (with your buffs, feats & Haste,
+  re-targeting if it dies) for **1 round per 2 caster levels** — so the cleric can
+  cast and heal while it fights on.
+- **Sorcerers learn Haste**, and **Stoneskin** is now cast on whoever has the
+  **least HP**.
 
 ### 🃏 Poker & UI
 - **Preflop is snappier** — bots decide their opening hands **50% quicker**.
 - **Fixed bots folding preflop** — they no longer **bluff-raise into a full
   table**, so far more hands actually reach a flop. (Post-flop bluffing unchanged.)
+- **The dungeon spellbook is now a fixed, always-on-screen panel** with its own
+  scrollbar — no more zooming the browser out to reach your higher-level spells.
+- **Ranged heroes use their real weapon sounds** — Duristan's bolt-action Lapua
+  cracks like a rifle instead of twanging like a bow (and crossbows sound like
+  crossbows).
 - **Fixed the double scrollbar** in the dungeon hero-select (recruit) popover.
 
 ## 2026-06-03 (latest+)
