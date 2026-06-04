@@ -2661,7 +2661,8 @@ class Dungeon {
   _abDarkness(m, ab) {
     const living = this._targetableEnemies().slice();   // don't re-darken already-shrouded foes
     for (let i = living.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [living[i], living[j]] = [living[j], living[i]]; }
-    const chosen = living.slice(0, dRoll(ab.randFoes || 3));
+    const n = (ab.randBase || 0) + dRoll(ab.randDie || ab.randFoes || 3);   // Darkness: 1d4+1 foes
+    const chosen = living.slice(0, n);
     if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} conjures ${ab.name}, but there's no one to shroud.`); this._echoToTable(); return; }
     for (const e of chosen) { e.darkened = 2; e.flatFooted = true; }
     const sound = ab.sound || pick(SND.stink);

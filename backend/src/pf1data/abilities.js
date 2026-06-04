@@ -165,7 +165,7 @@ const SPELL = {
   // Protection from Evil (Communal) — a 2nd-level party ward. No cost key here;
   // each kit sets it (wizard prepared 'room', sorcerer/cleric/inquisitor 'slot').
   protevil:      { key: 'protevil',      name: 'Protection from Evil (Communal)', icon: '🛡️', img: '/dungeon/buffs/protevil.webp', effect: 'buff', target: 'self', party: true, sticky: true, buff: { ac: 2, save: 2 }, slvl: 2, sound: S.invoke, desc: 'Ward the whole party — +2 AC and +2 to all saves for EVERY ally, for the rest of the room.' },
-  darkness:      { key: 'darkness',      name: 'Darkness',       icon: '🌑', effect: 'darkness', target: 'aoe', randFoes: 3, slvl: 2, sound: S.umbral, desc: 'Shroud a RANDOM 1d3 foes in magical darkness — they CANNOT attack and CANNOT be attacked for 2 rounds.' },
+  darkness:      { key: 'darkness',      name: 'Darkness',       icon: '🌑', effect: 'darkness', target: 'aoe', randBase: 1, randDie: 4, slvl: 2, sound: S.umbral, desc: 'Shroud a RANDOM 1d4+1 foes in magical darkness — they CANNOT attack and CANNOT be attacked for 2 rounds.' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
