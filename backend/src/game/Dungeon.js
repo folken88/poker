@@ -473,6 +473,9 @@ class Dungeon {
   // attack). If EVERY living hero is invisible, fall back so combat can resolve.
   _targetableParty() { const live = this.alivePresent(); const seen = live.filter(m => !m.invisible); return seen.length ? seen : live; }
   livingEnemies() { return this.enemies.filter(e => e.hp > 0); }
+  // Foes a hero can actually hit — excludes those shrouded in DARKNESS (can't be
+  // attacked for 2 rounds). They're still "alive" (room stays active until it lifts).
+  _targetableEnemies() { return this.enemies.filter(e => e.hp > 0 && !(e.darkened > 0)); }
 
   hasMember(playerId) { const m = this.member(playerId); return !!(m && !m.left && m.hp > 0); }
   botCount() { return this.party.filter(m => m.isBot && !m.left && m.hp > 0).length; }
@@ -541,6 +544,7 @@ class Dungeon {
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
     if (o.asleep)        c.push({ key: 'asleep',     label: 'Asleep',     desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
     else if (o.fascinated) c.push({ key: 'fascinated', label: 'Fascinated', desc: 'enthralled — loses turns; the first hit snaps it out', icon: `${I}fascinated.webp` });
+    if (o.darkened > 0)  c.push({ key: 'darkened',  label: 'Darkness',  desc: 'shrouded in darkness — cannot act or be attacked (2 rounds)', icon: `${I}darkened.webp` });
     if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
     if (o.markedEvil)    c.push({ key: 'markedevil', label: 'Marked',   desc: 'revealed by Detect Evil — smite-able', icon: `${I}markedevil.webp` });
     return c;
@@ -602,7 +606,7 @@ class Dungeon {
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
         align: e.align || 'NE', evil: !!e.evil, type: e.type || null,
         ac: e.ac, touchAC: (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)), ffAC: Math.max(10, e.ac - 2),
-        flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep,
+        flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep, darkened: (e.darkened > 0),
         conditions: e.hp > 0 ? this._condList(e) : [],
       })),
       turn: this._currentTurn(),
@@ -808,6 +812,9 @@ class Dungeon {
     if (t.kind === 'enemy') {
       const e = this.enemies.find(x => x.uid === t.id);
       if (!e || e.hp <= 0) return this._nextTurn();
+      // Darkness (wizard/sorcerer): shrouded foes can't act (and can't be hit) for
+      // 2 of their turns. Tick it down here; the shroud lifts at 0.
+      if (e.darkened > 0) { e.darkened -= 1; this._note(`🌑 ${e.name} is lost in magical darkness — does nothing${e.darkened <= 0 ? ' (the shroud lifts!)' : ''}.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       // Acid Arrow keeps eating away at the start of the foe's turn (whatever it
       // then does). If the acid finishes it off, its turn just ends.
       if (e.acid && e.acid.rounds > 0) {
@@ -1609,7 +1616,7 @@ class Dungeon {
     return this.enemies.find(x => x.uid === m.tauntedBy && x.hp > 0) || null;
   }
   _allyAct(m) {
-    const foes = this.livingEnemies();
+    const foes = this._targetableEnemies();   // can't target Darkness-shrouded foes
     if (!foes.length) return;
     // Taunted by a goblin barbarian → drop the clever play and just go hit it.
     if (m.tauntedBy && foes.some(e => e.uid === m.tauntedBy)) {
@@ -1679,7 +1686,7 @@ class Dungeon {
     const kit = kitFor(m.cls);
     if (!kit.abilities || !kit.abilities.length) return null;
     const lvl = m.level || 1;
-    const foes = this.livingEnemies();
+    const foes = this._targetableEnemies();   // can't target Darkness-shrouded foes
     if (!foes.length) return null;
     // Rogue: if a foe is already HELPLESS (flat-footed at the open, prone, asleep,
     // held…) it's a free Sneak target — skip Feint and just stab it (basic attack).
@@ -2116,6 +2123,7 @@ class Dungeon {
       fascinate:   () => this._abFascinate(m, ab, payload),
       sleep:       () => this._abSleep(m, ab, payload),
       slow:        () => this._abSlow(m, ab, payload),
+      darkness:    () => this._abDarkness(m, ab),
       rapidshot:   () => this._abRapidShot(m, ab, payload),
       bullseye:    () => this._abBullseye(m, ab, payload),
     }[ab.effect];
@@ -2201,12 +2209,13 @@ class Dungeon {
   _spellDC(m) { return 10 + (m.level || 1) + CAST_MOD; }   // 10 + level + 18-stat casting mod
   _spellDice(ab, m) { return diceCount(ab, m.level || 1); }
   _enemyTargets(payload, max) {
-    let chosen = ((payload && payload.targetUids) || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0)).filter(Boolean);
-    if (!chosen.length) chosen = this.livingEnemies();
+    let chosen = ((payload && payload.targetUids) || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0 && !(e.darkened > 0))).filter(Boolean);
+    if (!chosen.length) chosen = this._targetableEnemies();   // Darkness-shrouded foes can't be hit
     return max ? chosen.slice(0, max) : chosen;
   }
   _oneEnemy(payload) {
-    return this.enemies.find(x => x.uid === (payload && payload.targetUid) && x.hp > 0) || this.livingEnemies()[0] || null;
+    const t = this.enemies.find(x => x.uid === (payload && payload.targetUid) && x.hp > 0 && !(x.darkened > 0));
+    return t || this._targetableEnemies()[0] || null;
   }
   _saveVs(bonus, dc) { const r = dRoll(20); return { roll: r, total: r + bonus, saved: r === 20 ? true : r === 1 ? false : (r + bonus) >= dc }; }
   _afterEnemyHit(e) { if (e.hp <= 0) return ' ☠️'; return ` (${Math.max(0, e.hp)}/${e.maxHp})`; }
@@ -2311,7 +2320,7 @@ class Dungeon {
     if (ab.randFoes || ab.randBase) {
       // Fireball-style: a RANDOM 1dN of the living enemies. Cone of Cold uses
       // randBase+randDie → 2+1d3 foes.
-      const living = this.livingEnemies().slice();
+      const living = this._targetableEnemies().slice();
       for (let i = living.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [living[i], living[j]] = [living[j], living[i]]; }
       const n = ab.randBase ? ((ab.randBase || 0) + dRoll(ab.randDie || 1)) : dRoll(ab.randFoes);
       chosen = living.slice(0, n);
@@ -2594,7 +2603,7 @@ class Dungeon {
     // ones. Save type is configurable (Grease=Reflex, Gust=Fort).
     let chosen;
     if (ab.randFoes) {
-      const living = this.livingEnemies().slice();
+      const living = this._targetableEnemies().slice();
       for (let i = living.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [living[i], living[j]] = [living[j], living[i]]; }
       chosen = living.slice(0, dRoll(ab.randFoes));
     } else {
@@ -2632,7 +2641,7 @@ class Dungeon {
   // hit (−1 AC). Plays the Evil Morty theme.
   _abSlow(m, ab, payload) {
     const dc = this._spellDC(m);
-    const living = this.livingEnemies().slice();
+    const living = this._targetableEnemies().slice();
     for (let i = living.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [living[i], living[j]] = [living[j], living[i]]; }
     const n = dRollN(ab.randN || 2, ab.randDie || 4);   // 2d4 targets
     const chosen = living.slice(0, n);
@@ -2647,6 +2656,18 @@ class Dungeon {
     this._echoToTable(sound);
   }
   // Fascinate: up to maxTargets foes stand enthralled, losing turns until struck.
+  // Darkness (wizard/sorcerer): shroud a RANDOM 1d3 foes — they can't act AND can't
+  // be targeted for 2 of their turns (see _advanceToActor decrement + _targetableEnemies).
+  _abDarkness(m, ab) {
+    const living = this._targetableEnemies().slice();   // don't re-darken already-shrouded foes
+    for (let i = living.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [living[i], living[j]] = [living[j], living[i]]; }
+    const chosen = living.slice(0, dRoll(ab.randFoes || 3));
+    if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} conjures ${ab.name}, but there's no one to shroud.`); this._echoToTable(); return; }
+    for (const e of chosen) { e.darkened = 2; e.flatFooted = true; }
+    const sound = ab.sound || pick(SND.stink);
+    this._note(`${ab.icon} ${m.nickname} drowns ${chosen.map(e => e.name).join(', ')} in DARKNESS — gone for 2 rounds (can't act, can't be hit).`, sound);
+    this._echoToTable(sound);
+  }
   _abFascinate(m, ab, payload) {
     const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !ccd(e) && !mindImmune(e));   // skip already-CC'd foes + mind-immune (undead/construct)
     if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} begins ${ab.name}, but those foes are immune or already entranced.`); return; }
@@ -3032,6 +3053,7 @@ class Dungeon {
     const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
     if (!e) return;
     m.weapon = weaponOf(m.gear, m.weaponKey);
+    if (e.darkened > 0) { this._note(`🌑 ${m.nickname} can't find ${e.name} in the magical darkness!`); this._broadcast(); return; }
     // Melee can't reach a flyer — only ranged weapons or spells hit airborne foes.
     if (e.flying && !m.weapon.ranged) { this._note(`🪽 ${m.nickname} can't reach the airborne ${e.name} — need a ranged weapon or a spell!`); this._broadcast(); return; }
     // Two swings for a dual-wield weapon (Farrus's twin axes) or a rogue's dagger.
