@@ -2614,7 +2614,7 @@ class Dungeon {
   // 1 round per ½ caster level, and it swings the moment it's summoned.
   _abSpiritWeapon(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
-    const rounds = Math.max(1, Math.floor((m.level || 1) / 0.5));   // 1 round per ½ level
+    const rounds = Math.max(1, Math.floor((m.level || 1) / 2));   // 1 round per 2 caster levels
     m.spiritWeapon = { targetUid: e.uid, rounds };
     this._note(`🗡️✨ ${m.nickname} conjures a SPIRITUAL WEAPON over ${e.name} — it will strike on every turn for ${rounds} rounds!`, ab.sound || '/audio/spell_holy_smite.mp3');
     this._echoToTable(ab.sound || '/audio/spell_holy_smite.mp3');
