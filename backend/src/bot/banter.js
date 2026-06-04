@@ -130,6 +130,21 @@ function speakable(text) {
   return out;
 }
 
+// ── Eleven v3 audio-tag support ──────────────────────────────────────────────
+// When ELEVENLABS_MODEL is an Eleven v3 model, it interprets inline [audio tags]
+// like [laughs] / [shouting] / [mischievously] for emotional delivery. We ask
+// the LLM to optionally lead with ONE tag, keep it for TTS (speakable() passes
+// brackets through), and strip it from the text shown in chat. v2 ignores this
+// (no tags generated) so flipping ELEVENLABS_MODEL back to v2 fully reverts.
+const TTS_V3 = /v3/i.test(process.env.ELEVENLABS_MODEL || '');
+const V3_TAG_GUIDE =
+  ' VOICE DELIVERY: you MAY lead your line with ONE inline bracketed audio tag to set emotion — ' +
+  'e.g. [laughs], [scoffs], [mischievously], [whispers], [shouting], [sighs], [angry], [excited], [deadpan], [crying]. ' +
+  'Use at most one (rarely two), only when it genuinely fits the moment. These are performed as emotion, never read aloud.';
+function stripAudioTags(text) {
+  return String(text || '').replace(/\[[^\]\n]{1,40}\]/g, '').replace(/\s{2,}/g, ' ').trim();
+}
+
 function fillAmounts(line, amounts) {
   if (!line) return line;
   let out = scrubStrayMoney(line, amounts);
@@ -707,7 +722,15 @@ async function callLLM(messages) {
         'Content-Type': 'application/json',
         ...(API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {}),
       },
-      body: JSON.stringify({
+      body: JSON.stringify(API_KEY ? {
+        // OpenAI-compatible endpoint (OpenAI/OpenRouter): only standard params
+        model: MODEL,
+        messages,
+        temperature: 0.9,
+        top_p: 0.92,
+        max_tokens: 80,
+      } : {
+        // Local Ollama: chat template + tuning via options
         model: MODEL,
         stream: false,
         think: false,                              // skip reasoning preamble (Gemma 4)
@@ -835,6 +858,7 @@ function maybeSpeak(table, event) {
   }
 
   const messages = buildMessages(speaker, event.description, table);
+  if (TTS_V3 && messages[0] && messages[0].role === 'system') messages[0].content += V3_TAG_GUIDE;
   // Capture a good name NOW — by the time the async LLM reply lands the speaker
   // may have left their seat (e.g. wandered into the dungeon), making
   // displayNickname() return null and the line post as "null: …".
@@ -889,7 +913,7 @@ function maybeSpeak(table, event) {
     const extras = audioUrl
       ? { audioUrl }
       : audio ? { audio, audioMime: 'audio/mpeg' } : null;
-    table.chat('banter', `💬 ${chatNick}: ${line}`, extras);
+    table.chat('banter', `💬 ${chatNick}: ${stripAudioTags(line)}`, extras);
   }).catch(() => { /* silent */ });
 }
 
@@ -911,7 +935,7 @@ async function dungeonLine(nick, eventType, ctx = {}) {
     { role: 'system', content:
       `You are ${nick}, ${flavor} RIGHT NOW you are crawling a monster-infested dungeon with a party (NOT at the poker table). ` +
       `Bark ONE short, in-character battle line (MAX ~14 words). You are IN THE THICK OF COMBAT — put real HEAT into it: excitement, fury, triumph, alarm, bloodlust, or pain, whatever the moment calls for. SHOUT it — exclaim! Cocky, funny, or pissed off, true to your personality. ` +
-      `No quotes, no stage directions, no emoji — just the spoken line. Golarion only (no Earth gods; "god" filler is banned).` },
+      `No quotes, no stage directions, no emoji — just the spoken line. Golarion only (no Earth gods; "god" filler is banned).` + (TTS_V3 ? V3_TAG_GUIDE : '') },
     { role: 'user', content: `React to this: ${ev}.` },
   ];
   let line = await callLLM(messages);
@@ -933,7 +957,7 @@ async function dungeonLine(nick, eventType, ctx = {}) {
     const settings = { ...(settingsFor(vNick) || {}), ...COMBAT_VOICE };
     if (voiceId) { try { audio = await elevenlabs.synthesize(speakable(line), voiceId, settings); } catch (_) {} }
   }
-  return { line, audio, audioMime: 'audio/mpeg' };
+  return { line: stripAudioTags(line), audio, audioMime: 'audio/mpeg' };
 }
 
 module.exports = { maybeSpeak, detectAddressedBot, dungeonLine, CHARACTER_FLAVOR };

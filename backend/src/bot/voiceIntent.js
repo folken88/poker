@@ -62,7 +62,15 @@ async function interpretVoiceCommand(transcript, ctx = {}) {
         'Content-Type': 'application/json',
         ...(API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {}),
       },
-      body: JSON.stringify({
+      body: JSON.stringify(API_KEY ? {
+        // OpenAI-compatible endpoint: JSON mode via response_format
+        model: MODEL,
+        messages,
+        temperature: 0.1,
+        max_tokens: 60,
+        response_format: { type: 'json_object' },
+      } : {
+        // Local Ollama
         model: MODEL,
         stream: false,
         think: false,            // skip Gemma 4 reasoning preamble

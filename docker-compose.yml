@@ -34,7 +34,7 @@ services:
       # pitched-up delivery the flash model gave on short banter lines).
       # ~1s slower per line than eleven_flash_v2_5 — fine for ambient chat.
       # Bump ELEVENLABS_TIMEOUT_MS if lines start getting dropped on timeout.
-      - ELEVENLABS_MODEL=eleven_multilingual_v2
+      - ELEVENLABS_MODEL=${ELEVENLABS_MODEL:-eleven_multilingual_v2}
       - ELEVENLABS_TIMEOUT_MS=12000
     extra_hosts:
       # Required on Linux Docker so host.docker.internal resolves

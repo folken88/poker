@@ -124,7 +124,13 @@ async function synthesize(text, voiceId, settings) {
   // part of the key. A hit returns the saved MP3 and costs ZERO 11labs
   // characters; it also doesn't count against our rate window.
   const mergedSettings = { ...DEFAULT_VOICE_SETTINGS, ...(settings || {}) };
-  const cacheKey = ttsCache.keyFor(voiceId, MODEL, mergedSettings, clean);
+  // Eleven v3 rejects `speed`/`style` voice_settings (delivery comes from inline
+  // [audio tags] instead) — send only the supported knobs to avoid a 422.
+  const isV3 = /v3/i.test(MODEL);
+  const sendSettings = isV3
+    ? { stability: mergedSettings.stability, similarity_boost: mergedSettings.similarity_boost, use_speaker_boost: mergedSettings.use_speaker_boost }
+    : mergedSettings;
+  const cacheKey = ttsCache.keyFor(voiceId, MODEL, sendSettings, clean);
   if (cacheKey) {
     const hit = await ttsCache.get(voiceId, cacheKey);
     if (hit) return hit;
@@ -151,7 +157,7 @@ async function synthesize(text, voiceId, settings) {
         model_id: MODEL,
         // Per-character overrides already merged over the global defaults
         // above (and folded into the cache key).
-        voice_settings: mergedSettings,
+        voice_settings: sendSettings,
       }),
       signal: ctrl.signal,
     });
