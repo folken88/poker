@@ -162,7 +162,7 @@ const MON = {
                        hellfire: { count: 3, dice: 5, die: 6, dc: 19, sound: '/audio/spell_hellfire.mp3' } },           // Hellfire Blast — fire AoE, Reflex for half
 
   vampire:           { name: 'Vampire',           glyph: '🧛', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 6,  dmgBonus: 8, fort: 8,  reflex: 11, attacks: 2, gold: [100, 200], evil: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 4, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // magus of its level: dominating gaze + Vampiric Touch spellstrike (drains life)
-  lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' }, arcane: { dice: 10, die: 6, dc: 20, count: 3, sound: '/audio/spell_fireball.mp3' } },                 // wizard of its level: sinister gaze + Fireball (level d6 AoE)
+  lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' }, arcane: true },                 // a full wizard of its level: Hold Monster, Fireball/Cone/Chain Lightning, Disintegrate, Finger of Death, Magic Missile (see _lichCast)
 };
 // Real token art from the Foundry library (public/dungeon/monsters/). dire_rat
 // has no token in the library, so it falls back to its emoji glyph.
@@ -1097,14 +1097,17 @@ class Dungeon {
         const free = this._targetableParty().filter(m => !(m.paralyzed > 0));
         if (free.length) return this._enemyCastHold(e, pick(free));
       }
+      // Lich — a full WIZARD of its level. It casts every turn; its spellbook and
+      // save DCs scale with the dungeon depth. _lichCast plays the controller:
+      // lock a bruiser (Hold Monster), blast a cluster (Fireball/Cone/Chain),
+      // delete the toughest (Disintegrate/Finger of Death), finish the wounded
+      // (Magic Missile), or freeze one with its dread gaze.
+      if (e.arcane && this._targetableParty().length) return this._lichCast(e);
       // Skeletal Champion: a bone-rattling shout — 1d8 + save-or-stunned.
       if (e.shout && e.shoutsLeft > 0 && dRoll(2) === 1) {
         const awake = this._targetableParty().filter(m => !(m.stunned > 0) && !(m.paralyzed > 0));
         if (awake.length) return this._enemyShout(e, pick(awake));
       }
-      // Lich (wizard of its level): hurl a Fireball at a handful of heroes — area
-      // damage reaches even flyers. Favoured when 2+ heroes are bunched up.
-      if (e.arcane && e.arcaneLeft > 0 && this._targetableParty().length >= 2 && dRoll(2) === 1) return this._enemyArcane(e);
       // Vampire (magus of its level): a Vampiric Touch spellstrike — a draining
       // melee blow that heals it. (Needs a grounded hero to touch.)
       if (e.spellstrike && dRoll(2) === 1) {
@@ -1283,23 +1286,94 @@ class Dungeon {
   // Lich's Fireball (it casts as a wizard of its level): a roaring blast on a
   // random handful of heroes — Reflex for half, rolled once. Area damage, so it
   // reaches flyers too; Evasion negates a made save; Fire Ward halves it.
-  _enemyArcane(e) {
-    e.arcaneLeft -= 1;
-    const cfg = e.arcane || {};
+  // ── Lich: a full wizard of its level ───────────────────────────────────────
+  // Its caster level scales with depth; save DCs = 10 + spell level + Int mod.
+  // Each turn it reads the board and picks the strongest play. Spells unlock with
+  // level, just like a real wizard climbing through the spell tiers.
+  _lichCast(e) {
+    const heroes = this._targetableParty();
+    if (!heroes.length) return;
+    const cl = Math.min(30, Math.max(12, this.depth || 12));   // caster level by depth
+    const im = 4 + Math.floor(cl / 4);                          // Intelligence modifier
+    const dc = (slvl) => 10 + slvl + im;                        // PF1 spell save DC
+    const MART = new Set(['fighter', 'barbarian', 'paladin', 'antipaladin', 'ranger', 'rogue', 'monk', 'magus', 'cavalier', 'inquisitor', 'slayer', 'bloodrager']);
+    const byHp = heroes.slice().sort((a, b) => b.hp - a.hp);
+    const strongest = byHp[0], weakest = byHp[byHp.length - 1];
+
+    // ~1-in-6: freeze a hero with the dread gaze (its limited fear attack).
+    if (e.shout && e.shoutsLeft > 0 && dRoll(6) === 1) {
+      const awake = heroes.filter(m => !(m.stunned > 0) && !(m.paralyzed > 0));
+      if (awake.length) return this._enemyShout(e, pick(awake));
+    }
+    // 1) Lock down a dangerous, un-held melee bruiser with Hold Monster (5th) —
+    //    only if nobody's already held (don't waste it).
+    const bruiser = heroes.find(m => !(m.paralyzed > 0) && MART.has(m.cls) && m.hp > m.maxHp * 0.4);
+    if (cl >= 9 && bruiser && !heroes.some(m => m.paralyzed > 0)) return this._enemyHoldHero(e, bruiser, dc(5), 'Hold Monster');
+    // 2) Finish a badly-wounded hero with auto-hitting Magic Missile (1st).
+    if (weakest.hp <= weakest.maxHp * 0.28) return this._enemyMissiles(e, weakest, Math.min(5, Math.floor((cl + 1) / 2)));
+    // 3) A cluster of foes → a rotating elemental blast (mostly), else a nuke.
+    if (heroes.length >= 2 && dRoll(5) <= 3) {
+      const blasts = [{ verb: 'hurls a FIREBALL', icon: '🔥', dtype: 'fire', dice: Math.min(10, cl), slvl: 3, count: () => dRoll(3) + 1, sound: '/audio/spell_fireball.mp3' }];
+      if (cl >= 9)  blasts.push({ verb: 'breathes a CONE OF COLD', icon: '❄️', dtype: 'cold', dice: Math.min(15, cl), slvl: 5, count: () => dRoll(3) + 1, sound: '/audio/spell_coneofcold.mp3' });
+      if (cl >= 11) blasts.push({ verb: 'looses CHAIN LIGHTNING', icon: '⚡', dtype: 'electricity', dice: Math.min(20, cl), slvl: 6, count: () => dRoll(4), sound: '/audio/spell_lightning.mp3' });
+      const b = pick(blasts);
+      return this._enemyBlast(e, { ...b, die: 6, dc: dc(b.slvl) });
+    }
+    // 4) Delete the toughest hero with a big single-target nuke — Finger of Death
+    //    (7th, negative) at high level, else a Disintegrate ray (6th, force).
+    if (cl >= 13 && dRoll(2) === 1) {
+      return this._enemyNuke(e, strongest, { verb: 'speaks a FINGER OF DEATH at', icon: '💀', dtype: 'negative', dice: Math.min(25, cl), die: 8, dc: dc(7), saveLbl: 'Fort', partialDice: Math.floor(cl / 2), sound: '/audio/spell_umbral_bolt.mp3' });
+    }
+    return this._enemyNuke(e, strongest, { verb: 'fires a DISINTEGRATE ray at', icon: '☢️', dtype: 'force', dice: Math.min(40, cl * 2), die: 6, dc: dc(6), saveLbl: 'Fort', partialDice: 5, dust: true, sound: '/audio/spell_disintegrate.mp3' });
+  }
+  // A lich AoE blast on a random handful of heroes — save for half (Evasion = none
+  // on a made save; Fire Ward halves fire). Damage rolled once for the whole burst.
+  _enemyBlast(e, cfg) {
     const live = this._targetableParty().slice();
     for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
-    const hit = live.slice(0, Math.max(1, dRoll(cfg.count || 3)));
-    const dc = cfg.dc || 18, full = dRollN(cfg.dice || 8, cfg.die || 6), parts = [];
+    const hit = live.slice(0, Math.max(1, cfg.count ? cfg.count() : dRoll(3) + 1));
+    const full = dRollN(cfg.dice, cfg.die || 6), parts = [];
     for (const t of hit) {
       const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
-      const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
+      const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= cfg.dc;
       let dmg = (saved && t.evasion) ? 0 : saved ? Math.floor(full / 2) : full;   // Evasion: no damage on a made save
-      if (t.protectFire) dmg = Math.max(t.evasion && saved ? 0 : 1, Math.floor(dmg / 2));   // fire ward halves it
+      if (cfg.dtype === 'fire' && t.protectFire) dmg = Math.max(saved && t.evasion ? 0 : 1, Math.floor(dmg / 2));
       this._dmgToMember(t, dmg);
-      parts.push(`${t.nickname} ${saved ? (t.evasion ? 'evades ' : 'half ') : ''}−${dmg}${t.protectFire ? ' 🔥½' : ''}`);
+      parts.push(`${t.nickname} ${saved ? (t.evasion ? 'evades ' : 'half ') : ''}−${dmg}${cfg.dtype === 'fire' && t.protectFire ? ' 🔥½' : ''}`);
     }
-    this._note(`🔥 ${e.glyph} ${e.name} hurls a FIREBALL (${cfg.dice || 8}d${cfg.die || 6} → ${full}) — ${parts.join(', ')}! [Ref DC ${dc}]`, cfg.sound, { side: 'enemy' });
+    this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} (${cfg.dice}d${cfg.die || 6} ${cfg.dtype} → ${full}) — ${parts.join(', ')}! [Ref DC ${cfg.dc}]`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
+  }
+  // A lich single-target nuke — optional save for partial (Disintegrate / Finger
+  // of Death). A foe reduced past −10 by Disintegrate crumbles to dust.
+  _enemyNuke(e, target, cfg) {
+    const full = dRollN(cfg.dice, cfg.die || 6);
+    let dmg = full, tag = '';
+    const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
+    const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= cfg.dc;
+    if (saved) { dmg = (saved && target.evasion) ? 0 : dRollN(cfg.partialDice || 5, cfg.die || 6); tag = ` [${cfg.saveLbl || 'Fort'} ${stot} vs ${cfg.dc}: ${target.evasion ? 'evaded' : 'partial'}]`; }
+    else tag = ` [${cfg.saveLbl || 'Fort'} ${stot} vs ${cfg.dc}: fail]`;
+    this._dmgToMember(target, dmg);
+    const dust = cfg.dust && target.hp <= -10;
+    this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} ${target.nickname} for ${dmg} ${cfg.dtype || ''}${tag}!${target.hp <= 0 ? (dust ? ` ☠️ ${target.nickname} crumbles to DUST!` : ' ☠️') : ` (${Math.max(0, target.hp)}/${target.maxHp})`}`, cfg.sound, { side: 'enemy' });
+    this._echoToTable(cfg.sound); this._broadcast();
+  }
+  // Lich Hold Monster — a hero fails a Will save or is HELD (re-saves each turn,
+  // the attempt costing the turn). Same mechanic as the shaman's Hold Person.
+  _enemyHoldHero(e, target, dc, label) {
+    const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
+    const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
+    const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
+    if (!saved) { target.paralyzed = Math.max(target.paralyzed || 0, 3); target.heldDC = dc; this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — HELD! ${roll} (re-save each turn to break free)`, '/audio/spell_dimensional_anchor.mp3', { side: 'enemy' }); }
+    else this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname}, who resists. ${roll}`, null, { side: 'enemy' });
+    this._broadcast();
+  }
+  // Lich Magic Missile — N unerring bolts (no save, no attack roll), 1d4+1 each.
+  _enemyMissiles(e, target, n) {
+    const dmg = dRollN(n, 4) + n;
+    this._dmgToMember(target, dmg);
+    this._note(`✨ ${e.glyph} ${e.name} looses ${n} Magic Missile${n > 1 ? 's' : ''} at ${target.nickname} — ${dmg} force, unerring.${target.hp <= 0 ? ' ☠️' : ` (${Math.max(0, target.hp)}/${target.maxHp})`}`, '/audio/spell_magicmissile.mp3', { side: 'enemy' });
+    this._echoToTable('/audio/spell_magicmissile.mp3'); this._broadcast();
   }
   // Vampire's Vampiric Touch spellstrike (it fights as a magus of its level): a
   // draining blow — weapon damage (DR applies) plus negative energy (it doesn't),
@@ -2309,7 +2383,7 @@ class Dungeon {
     if (ab.key === 'bearsendurance') return allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
     if (ab.key === 'catsgrace')      return allies.find(a => a.cls === 'ranger' || a.cls === 'rogue') || allies.find(a => MARTIAL.includes(a.cls)) || m;
     if (ab.key === 'bullsstrength')  return allies.find(a => MARTIAL.includes(a.cls) && a.playerId !== m.playerId) || allies.find(a => MARTIAL.includes(a.cls)) || m;
-    if (ab.key === 'stoneskin')      return allies.find(a => MARTIAL.includes(a.cls) && !a.flying && !a.dr) || allies.find(a => MARTIAL.includes(a.cls)) || m;   // shield the front-line melee
+    if (ab.key === 'stoneskin')      return allies.filter(a => !a.dr).slice().sort((a, b) => a.hp - b.hp)[0] || allies.slice().sort((a, b) => a.hp - b.hp)[0] || m;   // shield whoever has the least HP right now
     return m;
   }
   _abBuff(m, ab, payload) {
