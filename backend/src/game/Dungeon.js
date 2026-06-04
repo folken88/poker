@@ -121,6 +121,8 @@ const BUFF_META = {
   prayer:        { label: 'Prayer',          desc: 'allies +1 hit, damage & saves (this room)' },
   shield:        { label: 'Shield',          desc: '+4 AC (this room)' },
   shieldoffaith: { label: 'Shield of Faith', desc: '+2 deflection AC (this room)' },
+  protevil:      { label: 'Protection from Evil', desc: '+2 AC & +2 saves (this room)' },
+  magearmor:     { label: 'Mage Armor',      desc: '+4 armor AC (this dungeon)' },
   stoneskin:     { label: 'Stoneskin',       desc: 'DR 10 vs physical blows (this room)' },
   catsgrace:     { label: "Cat's Grace",     desc: '+2 AC & +1 to hit — Dexterity (this room)' },
   bullsstrength: { label: "Bull's Strength", desc: '+2 hit & damage — Strength (this room)' },
@@ -555,6 +557,7 @@ class Dungeon {
     if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection', '+AC');
     if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing', 'regenerate HP each turn');
     if (m.bane)                       push('bane', `Bane: ${titleCase(m.bane.type)}`, `+2 hit, +2d6+2 vs ${titleCase(m.bane.type)} (this room)`);
+    if (m.mageArmor)                  push('magearmor', 'Mage Armor', '+4 armor AC (this dungeon)');
     return c;
   }
 
@@ -1149,7 +1152,7 @@ class Dungeon {
   // this-turn penalty (reckless / barbarian cleave drop their guard).
   _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
   _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1)
-    return ((m.buffs && m.buffs.ac) || 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level).ac;
+    return ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level).ac;
   }
   _atkStr(r) { return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`; }
   _swingVsAC(attacker, ac, target, extraToHit = 0) {
@@ -1682,6 +1685,9 @@ class Dungeon {
     // bites them — a standard action, worth it when not every foe is already evil.
     const detectEvil = avail.find(a => a.effect === 'detectevil');
     if (detectEvil && this.livingEnemies().some(e => !e.evil && !e.markedEvil)) return { slot: slot(detectEvil), payload: {} };
+    // Mage Armor — a free, run-long +4 AC; put it up once if not already on.
+    const mageArmor = avail.find(a => a.effect === 'magearmor');
+    if (mageArmor && !m.mageArmor) return { slot: slot(mageArmor), payload: {} };
     // Don't waste a turn re-casting a NON-STACKING buff that's already up. A buff
     // is "fully up" when every recipient already has it: the whole party for a
     // party buff (Inspire/Prayer/Bless), or the caster for a self buff (Rage/
@@ -2035,6 +2041,7 @@ class Dungeon {
       revive:      () => this._abRevive(m, ab),
       haste:       () => this._abHaste(m, ab),
       invisible:   () => this._abInvisible(m, ab),
+      magearmor:   () => this._abMageArmor(m, ab),
       judgment:    () => this._abJudgment(m, ab),
       bane:        () => this._abBane(m, ab, payload),
       cleanse:     () => this._abCleanse(m, ab),
@@ -2375,6 +2382,13 @@ class Dungeon {
   _abInvisible(m, ab) {
     m.invisible = true;
     this._note(`${ab.icon} ${m.nickname} fades from view — unseen until they strike!`, ab.sound);
+    this._echoToTable(ab.sound);
+  }
+  // Mage Armor — a run-long +4 armor AC (see _acBonus). A free action; the flag is
+  // NOT cleared on room reset, so it lasts the whole dungeon.
+  _abMageArmor(m, ab) {
+    m.mageArmor = true;
+    this._note(`${ab.icon} ${m.nickname} weaves MAGE ARMOR — +4 armor AC for the rest of the dungeon.`, ab.sound);
     this._echoToTable(ab.sound);
   }
   // Judgement (inquisitor): set the one active judgement. Switching is a FREE

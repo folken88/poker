@@ -159,7 +159,13 @@ const SPELL = {
   disintegrate:  { key: 'disintegrate',  name: 'Disintegrate',   icon: '☢️', cost: 'pool', effect: 'disintegrate', target: 'enemy', maxTargets: 1, save: 'fort', die: 6, dice: 'level', dcap: 20, minLevel: 11, dtype: 'force', slvl: 6, sound: S.disintegrate, desc: 'A thin green ray — ranged touch attack, then 2d6 per caster level (max 40d6). Fort partial: a made save still takes 5d6. Reduced to 0 HP → disintegrated to dust.' },
   firesnake:     { key: 'firesnake',     name: 'Fire Snake',     icon: '🐍', cost: 'pool', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, minLevel: 7, dtype: 'fire', slvl: 4, sounds: FIREBALL_SFX, desc: 'A serpent of flame weaves through up to 4 foes — 1d6 fire per caster level (max 15d6), Reflex for half.' },
   stoneskin:     { key: 'stoneskin',     name: 'Stoneskin',      icon: '🪨', cost: 'pool', effect: 'buff', target: 'ally', buff: {}, dr: 10, slvl: 4, minLevel: 7, sticky: true, sound: S.invoke, desc: 'An ally\'s skin turns to stone — DR 10 against physical blows (melee/claws/chains) for the rest of the room.' },
+  // Protection from Evil (Communal) — a 2nd-level party ward. No cost key here;
+  // each kit sets it (wizard prepared 'room', sorcerer/cleric/inquisitor 'slot').
+  protevil:      { key: 'protevil',      name: 'Protection from Evil (Communal)', icon: '🛡️', img: '/dungeon/buffs/protevil.webp', effect: 'buff', target: 'self', party: true, sticky: true, buff: { ac: 2, save: 2 }, slvl: 2, sound: S.invoke, desc: 'Ward the whole party — +2 AC and +2 to all saves for EVERY ally, for the rest of the room.' },
 };
+// Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
+// by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
+const MAGE_ARMOR = { key: 'magearmor', name: 'Mage Armor', img: '/dungeon/buffs/magearmor.webp', icon: '🛡️', cost: 'run', uses: 1, freeAction: true, slvl: 1, effect: 'magearmor', target: 'self', sound: S.invoke, desc: '+4 armor AC for the ENTIRE dungeon — a FREE action (no turn cost), cast once.' };
 const ATTACK = (icon) => ({ key: 'attack', name: 'Attack', icon: icon || '⚔️', effect: 'attack', target: 'enemy' });
 // A WIZARD's prepared spell: one casting per room (own 'room' use of 1).
 const preparedSpell   = (spell, minLevel) => ({ ...spell, cost: 'room', uses: 1, minLevel });
@@ -218,6 +224,7 @@ const KITS = {
     { key: 'divinefavor',  name: 'Divine Favor',         icon: '🙏', cost: 'slot', slvl: 1, effect: 'buff', target: 'self', buff: { toHit: 3, dmg: 3 }, sticky: true, sound: S.invoke,   desc: '+3 to hit and +3 damage to yourself for the rest of the room.' },
     { key: 'bless',        name: 'Bless',                icon: '✨', cost: 'run',  uses: 1, slvl: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1 }, sticky: true, sound: S.cure, desc: 'All allies gain +1 to hit for the ENTIRE dungeon — cast once; it never fades between rooms.' },
     // ── 2nd-level prayers ──
+    { ...SPELL.protevil, cost: 'slot', minLevel: 3 },
     { key: 'curemoderate', name: 'Cure Moderate Wounds', icon: '💚', cost: 'slot', slvl: 2, minLevel: 3, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
     { key: 'holdperson',   name: 'Hold Person',          icon: '🖐️', cost: 'slot', slvl: 2, minLevel: 3, effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', sound: S.anchor, desc: 'A foe must save or be HELD (helpless). Each turn it may re-save to break free — the attempt costs its turn.' },
     { key: 'bullsstrength', name: "Bull's Strength",     icon: '💪', cost: 'slot', slvl: 2, minLevel: 3, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'Bull-strong — one ally gets +2 to hit and +2 melee damage for the rest of the room.' },
@@ -247,6 +254,8 @@ const KITS = {
     preparedSpell(SPELL.grease,        1),
     preparedSpell(SPELL.sleep,         1),
     preparedSpell(SPELL.shield,        1),
+    { ...MAGE_ARMOR },
+    preparedSpell(SPELL.protevil,      3),
     preparedSpell(SPELL.invisibility,  3),
     preparedSpell(SPELL.aciddart,      3),
     preparedSpell(SPELL.scorchingray,  3),
@@ -269,6 +278,8 @@ const KITS = {
     spontaneousSpell(SPELL.magicmissile, 1),
     spontaneousSpell(SPELL.burninghands, 1),
     spontaneousSpell(SPELL.shield,       1),
+    { ...MAGE_ARMOR },
+    spontaneousSpell(SPELL.protevil,     4),
     spontaneousSpell(SPELL.sleep,        1),
     spontaneousSpell(SPELL.aciddart,     4),
     spontaneousSpell(SPELL.gustofwind,   4),
@@ -320,6 +331,7 @@ const KITS = {
     { key: 'divinefavor',   name: 'Divine Favor',         icon: '🙏', cost: 'slot', slvl: 1, effect: 'buff', target: 'self', buff: { toHit: 3, dmg: 3 }, sticky: true, sound: S.invoke, desc: '+3 to hit and +3 damage to yourself for the rest of the room.' },
     { key: 'bless',         name: 'Bless',                icon: '✨', cost: 'run',  uses: 1, slvl: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1 }, sticky: true, sound: S.cure, desc: 'All allies gain +1 to hit for the ENTIRE dungeon — cast once; it never fades between rooms.' },
     // 2nd level (slots from L4)
+    { ...SPELL.protevil, cost: 'slot', minLevel: 4 },
     { key: 'curemoderate',  name: 'Cure Moderate Wounds', icon: '💚', cost: 'slot', slvl: 2, minLevel: 4, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
     { key: 'holdperson',    name: 'Hold Person',          icon: '🖐️', cost: 'slot', slvl: 2, minLevel: 4, effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', sound: S.anchor, desc: 'A foe must save or be HELD (helpless). Each turn it may re-save to break free — the attempt costs its turn.' },
     { key: 'bullsstrength', name: "Bull's Strength",       icon: '💪', cost: 'slot', slvl: 2, minLevel: 4, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'Bull-strong — one ally gets +2 to hit and +2 melee damage for the rest of the room.' },
