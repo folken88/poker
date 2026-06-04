@@ -74,6 +74,10 @@ ensureColumn('players', 'weapon',     "TEXT NOT NULL DEFAULT 'dagger'");
 // existing player (and bot) starts fresh at level 1 / 0 XP. Gear still affects
 // to-hit / damage / AC, but no longer grants levels.
 ensureColumn('players', 'experience', 'INTEGER NOT NULL DEFAULT 0');
+// PERMANENT Loot Lord crown — set once when a player first assembles a full +5
+// set, and NEVER cleared (it is deliberately left out of every reset, so the crown
+// shows over their token forever, through full wipes and Loot-Lord resets alike).
+ensureColumn('players', 'crowned', 'INTEGER NOT NULL DEFAULT 0');
 
 // One-time fix-up (2026-06-02 PNG→WebP asset conversion): avatar_id stores the
 // token's served PATH, and the old .png token files were converted to .webp and
@@ -609,6 +613,10 @@ function listChampions(limit = 50) {
 function resetChampions() {
   db.prepare('DELETE FROM champions').run();
 }
+/** Crown a player as Loot Lord — PERMANENT, survives every reset. */
+const _setCrownedStmt = db.prepare('UPDATE players SET crowned = 1 WHERE player_id = ?');
+function setCrowned(playerId) { _setCrownedStmt.run(playerId); }
+function isCrowned(playerId) { const p = stmts.getPlayer.get(playerId); return !!(p && p.crowned); }
 function recordWin(playerId, amount)  { stmts.recordWin.run(amount, playerId); }
 function recordLoss(playerId, amount) { stmts.recordLoss.run(amount, playerId); }
 function insertHand({ tableId, board, players, winners }) {
@@ -646,6 +654,8 @@ module.exports = {
   recordChampion,
   listChampions,
   resetChampions,
+  setCrowned,
+  isCrowned,
   // Players
   getPlayer,
   listPlayers,

@@ -479,6 +479,7 @@ class Dungeon {
       avatarId: player.avatar_id || null,
       isBot: !!isBot,
       gear, level, xp,
+      crowned: !!(db.getPlayer(playerId)?.crowned),   // permanent Loot Lord crown
       cls,                                     // PF1e class → drives BAB + Hit Die
       weaponKey: player.weapon || 'dagger',    // chosen base weapon (dropdown)
       hp: maxHp, maxHp,
@@ -566,7 +567,7 @@ class Dungeon {
       status: this.status,
       runGold: this.runGold,
       party: this.party.map(m => ({
-        playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot,
+        playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot, crowned: !!m.crowned,
         cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
         level: m.level, ...this._xpInfo(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
         dead: !!m.dead, downed: !m.dead && !m.left && m.hp <= 0,

@@ -902,7 +902,7 @@
         ? `<span class="dpc__afk" data-afk-at="${m.afkAt}" title="You'll auto-skip if idle">⏱ ${Math.max(0, Math.ceil((m.afkAt - Date.now()) / 1000))}s</span>`
         : '';
       return `<div class="${cls.join(' ')}">
-        <div class="dpc__avatar">${renderAvatar(m.avatarId)}</div>${afk}
+        <div class="dpc__avatar"${m.crowned ? ' style="position:relative"' : ''}>${renderAvatar(m.avatarId)}${m.crowned ? `<span class="dpc__crown" title="Loot Lord" style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>${afk}
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${tag}</div>
         ${condIcons(m.conditions)}${buffIcons(m.buffs)}
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
@@ -2017,7 +2017,7 @@
           ${badgeHtml}
           ${swordsHtml}
           <div class="seat__plate ${myTurn ? 'seat__plate--acting' : ''}">
-            <div class="seat__avatar${intelClass}">${renderAvatar(seat.avatarId)}${avatarBadge}</div>
+            <div class="seat__avatar${intelClass}">${renderAvatar(seat.avatarId)}${avatarBadge}${seat.crowned ? `<span class="seat__crown" title="Loot Lord — assembled a full +5 set" style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:1.15em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>
             <div class="seat__nick" title="${escapeAttr(seat.nickname)}">${escapeText(seat.nickname)}${isAllIn ? ' · ALL-IN' : ''}</div>
             ${botTag}
             <div class="seat__chips">💰 ${formatChips(handPlayer ? handPlayer.stack : seat.chips)} gp</div>

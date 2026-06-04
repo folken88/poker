@@ -1373,7 +1373,7 @@ class Table {
     for (const seat of this.seats) {
       if (seat.isEmpty()) continue;
       const gear = db.getGear(seat.playerId);
-      if (db.gearIsLootLord(gear)) winners.push(seat);
+      if (db.gearIsLootLord(gear) && !db.isCrowned(seat.playerId)) winners.push(seat);   // crown each player only once (it's permanent)
     }
     if (winners.length === 0) return null;
     winners.sort((a, b) => b.chipsAtTable - a.chipsAtTable);
@@ -1389,12 +1389,11 @@ class Table {
    *  the line on the same hand), the first winner stays — this is a
    *  no-op for subsequent calls. */
   _declareLootLord(seat) {
-    if (this.lootLord) return;   // already crowned this game
-
     const nick = seat.player?.nickname || seat.playerId;
-    const CEREMONY_MS = parseInt(process.env.LOOT_LORD_CEREMONY_MS || '20000', 10);
-    const resetAt = Date.now() + CEREMONY_MS;
-
+    if (db.isCrowned(seat.playerId)) return;   // already wears the crown — crown each player once
+    // PERMANENT crown — survives every reset (full wipe included). No game reset,
+    // no ceremony pause: play just continues, and the crown now rides over their token.
+    db.setCrowned(seat.playerId);
     db.recordChampion({
       playerId:    seat.playerId,
       nickname:    nick,
@@ -1402,28 +1401,8 @@ class Table {
       handsToWin:  this.handCount,
       finalChips:  seat.chipsAtTable,
     });
-    this.chat('lootlord', `👑 LOOTMAXXING LOOT LORD: ${nick}! Full +5 set assembled after ${this.handCount} hand${this.handCount===1?'':'s'}.`);
-    this.chat('lootlord', `🎲 Game resets in ${Math.round(CEREMONY_MS/1000)} seconds — savor the crown.`);
-
-    // Pause the action-timer machinery so no auto-fold fires during the show.
-    this._clearHumanActionTimer();
-    if (this._botActionTimer) { clearTimeout(this._botActionTimer); this._botActionTimer = null; }
-    this.actionDeadline = null;
-
-    this.lootLord = {
-      playerId:  seat.playerId,
-      nickname:  nick,
-      avatarId:  seat.player?.avatar_id || null,
-      handCount: this.handCount,
-      finalChips: seat.chipsAtTable,
-      resetAt,
-    };
-
-    this._lootLordTimer = setTimeout(() => {
-      this._lootLordTimer = null;
-      this._resetForNextRun();
-    }, CEREMONY_MS);
-
+    this.chat('lootlord', `👑 LOOT LORD: ${nick}! A full +5 set assembled after ${this.handCount} hand${this.handCount===1?'':'s'} — they wear the crown FOREVER.`);
+    if (this.io) this.io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });   // push the new crown flag to clients
     this._broadcast();
   }
 
@@ -1528,6 +1507,8 @@ class Table {
         // Gear inventory (PF1e). Map of slot → tier (1..5) or null.
         gear: s.isEmpty() ? null : db.getGear(s.playerId),
         gearValue: s.isEmpty() ? 0 : db.gearTotalValue(db.getGear(s.playerId)),
+        crowned: s.isEmpty() ? false : db.isCrowned(s.playerId),   // permanent Loot Lord crown
+
         // Cosmetic "sickened" status from a failed Stinking Cloud save —
         // wall-clock ms until it wears off. Pure flavor, no poker effect.
         sickenedUntil: (!s.isEmpty() && s.sickenedUntil && s.sickenedUntil > Date.now()) ? s.sickenedUntil : null,
