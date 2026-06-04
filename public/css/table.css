@@ -175,17 +175,23 @@ button, input { font: inherit; color: inherit; }
 /* The toggle + popover live in this inline-block wrapper so the popover anchors
    to the BUTTON (drops straight down from it), not the whole action panel. */
 .dungeon__sb-wrap { position: relative; display: inline-block; }
-/* Opens DOWN and to the RIGHT from the toggle, grouped by level and scrolling
-   vertically when there are many spells. */
+/* The spellbook is a FIXED, viewport-anchored panel pinned just above the bottom
+   of the screen and centered. Because the action bar sits mid-screen (chat/logs
+   below it), an absolutely-positioned popover would run off the top OR bottom; a
+   fixed panel is always fully on-screen, capped to the viewport height, with a
+   real internal scrollbar — no browser-zoom needed to reach the higher levels. */
 .dungeon__spellbook {
-  display: none; position: absolute; z-index: 60; left: 0; right: auto; top: calc(100% + 0.3rem);
-  min-width: 280px; max-width: min(360px, 92vw);
+  display: none; position: fixed; z-index: 200;
+  left: 50%; transform: translateX(-50%); right: auto; top: auto; bottom: 14px;
+  width: min(440px, 94vw); min-width: 280px; max-width: 94vw;
+  max-height: 82vh; box-sizing: border-box; flex-direction: column;
   padding: 0.5rem; background: linear-gradient(180deg, rgba(20,24,18,0.98), rgba(10,14,10,0.99));
-  border: 1px solid rgba(217,176,106,0.4); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+  border: 1px solid rgba(217,176,106,0.4); border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.8);
 }
-.dungeon__spellbook.is-open { display: block; }
-.dungeon__sb-head { font-size: 0.78rem; color: var(--brass-bright); margin-bottom: 0.4rem; text-align: center; }
-.dungeon__sb-scroll { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; }
+.dungeon__spellbook.is-open { display: flex; }
+.dungeon__sb-head { font-size: 0.78rem; color: var(--brass-bright); margin-bottom: 0.4rem; text-align: center; flex: 0 0 auto; }
+/* fills the panel and scrolls; min-height:0 lets the flex child actually shrink */
+.dungeon__sb-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 0.5rem; padding-right: 2px; }
 .dungeon__sb-lvlhead {
   font-size: 0.68rem; color: var(--brass-bright); letter-spacing: 0.06em; text-transform: uppercase;
   opacity: 0.85; margin-bottom: 0.25rem; padding: 2px 0;
