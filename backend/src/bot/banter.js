@@ -157,6 +157,7 @@ const ENABLED        = process.env.LLM_BANTER_ENABLED === '1';
 // preamble and never producing visible output.
 const ENDPOINT       = process.env.LLM_ENDPOINT || 'http://host.docker.internal:11434/api/chat';
 const MODEL          = process.env.LLM_MODEL || 'gemma4:e4b';
+const API_KEY        = process.env.LLM_API_KEY || '';   // Bearer auth for OpenRouter / OpenAI-compatible endpoints (blank for local Ollama)
 const COOLDOWN_MS    = parseInt(process.env.LLM_BANTER_COOLDOWN_MS || '18000', 10);
 const PROB           = parseFloat(process.env.LLM_BANTER_PROB || '0.30');
 const TIMEOUT_MS     = parseInt(process.env.LLM_BANTER_TIMEOUT_MS || '8000', 10);
@@ -702,7 +703,10 @@ async function callLLM(messages) {
   try {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {}),
+      },
       body: JSON.stringify({
         model: MODEL,
         stream: false,

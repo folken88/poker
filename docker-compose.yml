@@ -17,8 +17,11 @@ services:
       # output on the host. host.docker.internal points at the host
       # network from inside the container.
       - LLM_BANTER_ENABLED=1
-      - LLM_ENDPOINT=http://host.docker.internal:11434/api/chat
-      - LLM_MODEL=gemma4:e4b
+      # Defaults to local Ollama; override LLM_ENDPOINT/MODEL/API_KEY in .env
+      # (e.g. OpenRouter) when no local model server is available.
+      - LLM_ENDPOINT=${LLM_ENDPOINT:-http://host.docker.internal:11434/api/chat}
+      - LLM_MODEL=${LLM_MODEL:-gemma4:e4b}
+      - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_BANTER_COOLDOWN_MS=18000
       - LLM_BANTER_PROB=0.30
       - LLM_BANTER_TIMEOUT_MS=8000
