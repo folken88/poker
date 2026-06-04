@@ -17,8 +17,9 @@
 
 const db = require('../persistence/db');
 const { weaponOf, acOf, totalMagicBonus, SND, dRoll, dRollN, pick } = require('./combat');
-const { CLASSES, babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../pf1data/classes');
+const { CLASSES, babFor, saveFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../pf1data/classes');
 const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, spontaneousSlots, slotsFor, diceCount } = require('../pf1data/abilities');
+const { levelFromXp, xpFloorForLevel, xpForCR, rawXpForCR, xpProgress } = require('../pf1data/xp');
 const { logDungeon, recordSound } = require('../persistence/logger');
 const banter = require('../bot/banter');
 
@@ -70,7 +71,15 @@ function titleCase(s) { return String(s || '').replace(/\b\w/g, c => c.toUpperCa
 const FINESSE_KEYS = new Set(['rapier', 'scimitar', 'shortsword', 'dagger', 'kukri', 'cutlass', 'estoc', 'sword_cane', 'starknife', 'sap', 'radiance', 'curator']);
 function isFinesseWeapon(w) { return !!w && !w.ranged && (w.cat === 'light' || FINESSE_KEYS.has(w.key)); }
 function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fighterFeats(cls, level).hp; }
-function levelOf(gear) { return Math.max(1, 1 + totalMagicBonus(gear)); }
+// Level now comes from XP (see pf1data/xp.js), NOT from gear. The gating level at
+// which fighter/inquisitor earn each bonus feat (fighter: every level; inquisitor:
+// every odd level) — used to NAME the feat gained on a level-up announcement.
+function gatingLevel(cls, L) { return cls === 'fighter' ? L : cls === 'inquisitor' ? Math.floor((L + 1) / 2) : 0; }
+const FEAT_AT = {
+  1: 'Weapon Focus (+1 to hit)', 2: 'Dodge (+1 AC)', 3: 'Toughness (+HP)', 4: 'Weapon Specialization (+2 dmg)',
+  5: 'Improved Initiative', 6: 'a save feat (+1 saves)', 7: 'a save feat (+2 saves)',
+  8: 'Improved Critical', 9: 'Critical Focus', 11: 'Improved Cleave',
+};
 const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
 const SICKENED_PENALTY = 2;
@@ -309,12 +318,8 @@ const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 // PF1e XP value by CR — the currency for building balanced encounters. The
 // total XP of a room's monsters ≈ the XP of a single creature at the target
 // encounter CR (that's how PF1 turns "2× CR n = CR n+2" into simple addition).
-const XP_BY_CR = { 1: 400, 2: 600, 3: 800, 4: 1200, 5: 1600, 6: 2400, 7: 3200, 8: 4800, 9: 6400, 10: 9600, 11: 12800, 12: 19200, 13: 25600, 14: 38400, 15: 51200 };
-function xpForCR(cr) {
-  if (cr <= 0) return 50;
-  if (cr < 1) return cr <= 0.25 ? 100 : cr <= 0.34 ? 135 : 200;   // 1/4, 1/3, 1/2
-  return XP_BY_CR[Math.min(15, Math.round(cr))] || 400;
-}
+// XP-per-CR for character progression (xpForCR, × multiplier) and encounter
+// budgeting (rawXpForCR, un-multiplied) both live in pf1data/xp.js now.
 // Legacy gentle-creep target (kept as a fallback for the budget builder).
 function targetCR(depth) { return 0.25 * depth; }
 function pickByCR(depth) {
@@ -464,7 +469,8 @@ class Dungeon {
     if (idx >= 0 && !this.party[idx].left && this.party[idx].hp > 0) return this.party[idx];  // already active
     if (idx >= 0) this.party.splice(idx, 1);   // drop a stale (downed/bailed) entry → rejoin fresh
     const gear = db.getGear(playerId);
-    const level = levelOf(gear);
+    const xp = db.getXp(playerId);
+    const level = levelFromXp(xp);             // level now comes from XP (not gear)
     const cls = player.class || 'fighter';
     const maxHp = maxHpFor(cls, level);        // HP = class Hit Die × level (max roll)
     const m = {
@@ -472,7 +478,7 @@ class Dungeon {
       nickname: player.nickname || playerId,
       avatarId: player.avatar_id || null,
       isBot: !!isBot,
-      gear, level,
+      gear, level, xp,
       cls,                                     // PF1e class → drives BAB + Hit Die
       weaponKey: player.weapon || 'dagger',    // chosen base weapon (dropdown)
       hp: maxHp, maxHp,
@@ -562,7 +568,7 @@ class Dungeon {
       party: this.party.map(m => ({
         playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot,
         cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
-        level: m.level, hp: Math.max(0, m.hp), maxHp: m.maxHp,
+        level: m.level, ...this._xpInfo(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
         dead: !!m.dead, downed: !m.dead && !m.left && m.hp <= 0,
         dyingHp: (!m.dead && !m.left && m.hp <= 0) ? m.hp : null,
         left: !!m.left,
@@ -673,10 +679,10 @@ class Dungeon {
   // goblins, kobolds, their sneaky rogues and Hold-Person shamans — instead of a
   // few tough ones. Falls back to anything affordable.
   _pickForBudget(budget, floorCR, capCR) {
-    let cand = SPAWNABLE.filter(k => MON[k].crNum >= floorCR && MON[k].crNum <= capCR && xpForCR(MON[k].crNum) <= budget);
-    if (!cand.length) cand = SPAWNABLE.filter(k => MON[k].crNum <= capCR && xpForCR(MON[k].crNum) <= budget);
+    let cand = SPAWNABLE.filter(k => MON[k].crNum >= floorCR && MON[k].crNum <= capCR && rawXpForCR(MON[k].crNum) <= budget);
+    if (!cand.length) cand = SPAWNABLE.filter(k => MON[k].crNum <= capCR && rawXpForCR(MON[k].crNum) <= budget);
     if (!cand.length) return null;
-    const weights = cand.map(k => 1 / Math.max(1, xpForCR(MON[k].crNum)));
+    const weights = cand.map(k => 1 / Math.max(1, rawXpForCR(MON[k].crNum)));
     const tot = weights.reduce((a, b) => a + b, 0);
     let r = Math.random() * tot;
     for (let i = 0; i < cand.length; i++) { r -= weights[i]; if (r <= 0) return cand[i]; }
@@ -738,17 +744,17 @@ class Dungeon {
         const key = this._pickForBudget(budget, floorCR, capCR);
         if (!key) break;
         keys.push(key);
-        budget -= xpForCR(MON[key].crNum);
+        budget -= rawXpForCR(MON[key].crNum);
       }
     };
     if (boss) {
       keys.push(this._pickBoss(encCR));   // one strong foe
       // Boss rooms also mob a big party — minions at a notch below the room CR.
       const baseCR = this._minLevel() + Math.floor(this.depth / 4);
-      fill(Math.round(xpForCR(baseCR) * Math.max(0, partyN - 1) * 0.6),
+      fill(Math.round(rawXpForCR(baseCR) * Math.max(0, partyN - 1) * 0.6),
            Math.max(0.25, encCR - 6), Math.max(1, encCR - 2), 1 + partyN);
     } else {
-      fill(Math.round(xpForCR(encCR) * sizeMult),
+      fill(Math.round(rawXpForCR(encCR) * sizeMult),
            Math.max(0.25, encCR - 4), encCR, Math.min(14, 4 + partyN * 2));
     }
     if (!keys.length) keys.push(pickByCR(this.depth));
@@ -879,6 +885,7 @@ class Dungeon {
   // even share of what's left, announce it, then end.
   _wrapUp() {
     if (this.status === 'over') return;
+    if (this.status === 'combat') this._runFailed = true;   // last human fell mid-fight (room unwon) → gear loss
     const allies = this.party.filter(m => m.isBot && !m.left && !m.dead);
     const share = allies.length ? Math.floor(this.runGold / allies.length) : 0;
     for (const m of allies) {
@@ -894,6 +901,7 @@ class Dungeon {
   // each banking an even share. (A voluntary retreat, NOT a combat wipe.)
   _groupExtract() {
     if (this.status === 'over') return;
+    if (this.status === 'combat') this._runFailed = true;   // fled an uncleared room with no one left to win it → gear loss
     const members = this.party.filter(m => !m.left && !m.dead);
     if (!members.length) return this._runOver();
     const share = Math.floor(this.runGold / members.length);
@@ -921,18 +929,73 @@ class Dungeon {
     this.runGold += gold;
     this._note(`✨ Room cleared! +${gold} gp (pool ${this.runGold} gp).`);
     this._log('clear', { gold, runGold: this.runGold });
+    this._awardRoomXp();         // PF1 XP for the vanquished foes → split among the survivors
     this._maybeDropLoot();
     this._maybeDropPotion();     // can revive a downed ally before they bleed
     this._bleedDowned();         // the still-dying lose 1 HP this room (toward −10)
     if (!this._humansInRun()) { this._wrapUp(); return; }   // last human bled out → AI allies cash out
     this._broadcast();
   }
+  // Grant standard PF1 XP for the foes cleared this room, split among the heroes
+  // still in the run (alive OR downed — being downed still earns XP), and apply
+  // any level-ups. Persisted per player (humans AND bots level the same way).
+  _awardRoomXp() {
+    const roomXp = this.enemies.reduce((s, e) => s + xpForCR(crToNum(e.cr)), 0);
+    if (roomXp <= 0) return;
+    const recips = this.party.filter(m => !m.left && !m.dead);   // alive + downed
+    if (!recips.length) return;
+    const per = Math.floor(roomXp / recips.length);
+    if (per <= 0) return;
+    const ups = [];
+    for (const m of recips) {
+      const from = m.level || 1;
+      const newXp = db.addXp(m.playerId, per);
+      if (this._applyLevelFromXp(m, newXp) > 0) ups.push({ m, from, to: m.level });
+    }
+    this._note(`✨ Foes vanquished — the party earns ${roomXp} XP (${per} each).`);
+    for (const u of ups) this._announceLevelUp(u.m, u.from, u.to);
+  }
+  // Announce a level-up with a short summary of what the hero gained.
+  _announceLevelUp(m, from, to) {
+    const cls = m.cls;
+    const parts = [`BAB +${babFor(cls, to) - babFor(cls, from)}`, `+${maxHpFor(cls, to) - maxHpFor(cls, from)} HP`];
+    const sv = ['fort', 'ref', 'will'].reduce((a, w) => a + (saveFor(cls, w, to) - saveFor(cls, w, from)), 0);
+    if (sv > 0) parts.push(`saves +${sv}`);
+    const feats = [];
+    for (let g = gatingLevel(cls, from) + 1; g <= gatingLevel(cls, to); g++) if (FEAT_AT[g]) feats.push(FEAT_AT[g]);
+    if (feats.length) parts.push(`feat: ${feats.join(', ')}`);
+    const kit = kitFor(cls), spells = [];
+    if (kit && kit.abilities) for (const ab of kit.abilities) if (ab.minLevel && ab.minLevel > from && ab.minLevel <= to) spells.push(ab.name);
+    const s0 = slotsFor(cls, from) || {}, s1 = slotsFor(cls, to) || {};
+    const newSlot = Object.keys(s1).filter(L => !s0[L]).map(L => `${L}${({ 1: 'st', 2: 'nd', 3: 'rd' })[L] || 'th'}-level`);
+    if (newSlot.length) parts.push(`new ${newSlot.join(' & ')} spell slots`);
+    if (spells.length) parts.push(`spells: ${spells.slice(0, 4).join(', ')}`);
+    this._note(`⭐ LEVEL UP! ${m.nickname} reaches level ${to} (${cls})! ${parts.join(' · ')}`, '/audio/spell_channel_charge.mp3');
+    this._echoToTable('/audio/spell_channel_charge.mp3');
+    this._log('levelup', { who: m.playerId, from, to });
+  }
   _runOver() {
     clearTimeout(this._turnTimer); clearTimeout(this._stepTimer); clearTimeout(this._lootTimer);
     this.lootRoll = null;
+    if (this._runFailed) this._loseAllGear();   // no-win wipe / full retreat → the party loses all gear
     this.status = 'over';
     this._broadcast();
     if (this._onEmpty) try { this._onEmpty(); } catch (_) {}
+  }
+  // No-win wipe / full retreat from an UNCLEARED room: every participant loses ALL
+  // gear (had even one hero cleared the room, they'd have hauled the loot upstairs
+  // — but nobody did). Gear no longer drives level, so this costs equipment power
+  // (to-hit / AC / damage), not levels.
+  _loseAllGear() {
+    let any = false;
+    for (const m of this.party) {
+      if (m._gearLost) continue;
+      m._gearLost = true; any = true;
+      try { db.setGear(m.playerId, {}); } catch (_) {}
+      m.gear = {};
+    }
+    this.pendingLoot = [];
+    if (any) this._note('💀 No one survived to win the room — the party LOSES ALL GEAR to the dungeon.');
   }
   _maybeDropLoot() {
     const eligible = this.party.filter(m => !m.left && !m.dead);   // up OR dying — the downed can still roll/win loot
@@ -1048,7 +1111,7 @@ class Dungeon {
       // AI: equip if it's a real upgrade (needs it), else hock for the pool.
       if (cur < tier) {
         gear[slot] = tier; db.setGear(playerId, gear); m.gear = gear;
-        this._relevel(m);   // any upgrade raises level → +10 max HP, +to-hit, +to-save
+        // (gear no longer changes level — level is from XP; gear only adds to-hit/AC/dmg)
         this._note(`🛡️ ${m.nickname} equips the +${tier} ${db.GEAR_BY_KEY[slot]?.label || slot}. (Lv ${m.level})`);
       } else {
         const v = db.gearHockValue(slot, tier); this.runGold += v;
@@ -1064,12 +1127,21 @@ class Dungeon {
   // ── Combat math (rolls shown in the log) ─────────────────────────────────
   _fmtBonus(n) { return (n >= 0 ? '+' : '') + n; }
   // Recompute a member's level + HP from current gear (level = 1 + gear bonuses).
-  _relevel(m) {
-    const nl = levelOf(m.gear);
+  // XP progress fields for the client (current band into/span + XP to next level).
+  _xpInfo(m) { const p = xpProgress(m.xp || 0); return { xp: p.xp, xpInto: p.into, xpSpan: p.span, xpToNext: p.toNext, maxLevel: p.next == null }; }
+  // Apply a hero's level + HP from their XP total — handles level UP (room-clear
+  // awards) and the death-penalty level DOWN. Returns the signed level delta.
+  _applyLevelFromXp(m, xp) {
+    m.xp = xp;
+    const nl = levelFromXp(xp);
+    const old = m.level || 1;
+    if (nl === old) return 0;
     const nmax = maxHpFor(m.cls, nl);
     const gain = nmax - m.maxHp;
     m.level = nl; m.maxHp = nmax;
-    if (gain > 0) m.hp += gain;   // leveling up heals the new HP; never drains current HP
+    if (gain > 0) m.hp += gain;             // level up heals the new HP
+    else if (m.hp > nmax) m.hp = nmax;      // level down caps current HP to the new max
+    return nl - old;
   }
   _partySaveMod(m) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level).save; }   // saves scale with level (+ rage's +Will, + fighter save feats)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
@@ -1772,12 +1844,22 @@ class Dungeon {
     this._note(`☠️ ${m.nickname} drops past −10 — slain in the dungeon, out of the run.`, '/audio/hero_death.mp3');
     this._echoToTable('/audio/hero_death.mp3');
     this._log('death', { who: m.playerId, hp: m.hp, depthReached: this.depth });
+    // Death penalty: lose a level — back to the START of the previous level (a hero
+    // who was about to advance can lose nearly two). Persisted for the next run.
+    const lvl = m.level || 1;
+    if (lvl > 1) {
+      const newXp = xpFloorForLevel(lvl - 1);
+      db.setXp(m.playerId, newXp);
+      this._applyLevelFromXp(m, newXp);
+      this._note(`📉 ${m.nickname} loses a level — dragged back to the start of level ${m.level}.`);
+    }
     this._emitMemberExit(m, { reason: 'dead', goldBanked: 0 });
   }
   // Total party incapacitation — everyone still in the run is down/dying, so they
   // all bleed out and the run ends.
   _wipe() {
     if (this.status === 'over') return;
+    this._runFailed = true;   // total wipe in an uncleared room → gear loss (see _runOver)
     this._note('💀 The whole party is down — the dungeon claims them. The run ends.');
     for (const m of this.party.filter(x => !x.left && !x.dead)) this._memberDown(m);
     this._runOver();
@@ -2898,7 +2980,7 @@ class Dungeon {
     gear[loot.slot] = loot.tier;
     db.setGear(playerId, gear);
     m.gear = gear;
-    this._relevel(m);   // any upgrade raises level → +10 max HP, +to-hit, +to-save
+    // (gear no longer changes level — level is from XP; gear only adds to-hit/AC/dmg)
     this.pendingLoot.splice(idx, 1);
     this._note(`🛡️ ${m.nickname} equipped the +${loot.tier} ${db.GEAR_BY_KEY[loot.slot]?.label || loot.slot}. (Lv ${m.level})`);
     return { ok: true };

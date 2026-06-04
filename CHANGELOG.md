@@ -21,6 +21,26 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-04 (newest)
 
+### 🎚️ Pathfinder XP leveling — the dungeon's biggest change yet
+The dungeon abandons the old "your gear IS your level" system for real **Pathfinder
+1e experience** (medium track). **Everyone resets to level 1** — gear is kept, but
+now only adds to-hit / AC / damage; it no longer grants levels, HP, or feats.
+- **Earn XP by fighting.** Each room awards the standard PF1 XP for the foes you
+  vanquish (by CR), **split among the heroes still in the run** at room-clear — and
+  being *downed* still earns your share. Humans and bots level the exact same way.
+  (Pace is tunable via `XP_AWARD_MULT`, default 1.0 = true PF1.)
+- **Level-ups are announced** with what you gained — BAB, HP, saves, new feats, and
+  new spells / spell slots.
+- **Death has teeth.** Die in the dungeon and you **lose a level**, dropping to the
+  *start* of the previous level — so a hero who was about to advance can lose nearly
+  two. (Get raised / Breath-of-Life'd before you actually die to avoid it.)
+- **Wipe and you lose everything.** If the party is wiped — or flees an uncleared
+  room with no one left to win it — **everyone loses ALL their gear**. If even one
+  hero survives to clear the room, the party keeps its loot (they haul the fallen,
+  and the loot, back upstairs).
+- The party panel shows your **level and XP-to-next**; the room-clear line shows the
+  XP earned.
+
 ### 🔨 The Inquisitor, reforged
 - **A real spellbook.** The Inquisitor is now a **spontaneous divine caster** drawing
   a curated **cleric-list repertoire** (Cure Light/Moderate/Serious/Critical, Shield

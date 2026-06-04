@@ -157,7 +157,24 @@ random slot you don't already have at that tier → Hock (sell value from
 
 The MVP has grown into a full PF1e-flavoured combat side-game. Source of truth:
 `backend/src/pf1data/abilities.js` (class kits), `backend/src/game/Dungeon.js`
-(engine), `backend/src/pf1data/staples.js` (weapons).
+(engine), `backend/src/pf1data/staples.js` (weapons), `backend/src/pf1data/xp.js`
+(experience & leveling).
+
+### Experience & leveling (`pf1data/xp.js`)
+Level comes from **persisted XP** (`players.experience`), PF1 **medium track** —
+NOT from gear. `levelFromXp(xp)` drives BAB / HP / saves / feats / spell slots;
+gear (`weaponOf`/`acOf`) only adds to-hit / AC / damage.
+- **Award:** at room-clear, `_awardRoomXp` grants `xpForCR(cr)` for each vanquished
+  foe (× `XP_AWARD_MULT`, default 1.0), **split among members still in the run**
+  (`!left && !dead` — alive OR downed). Persisted via `db.addXp`; `_applyLevelFromXp`
+  applies level-ups (HP bump) and `_announceLevelUp` posts the BAB/HP/feat/spell gains.
+- **Death (`_memberDown`):** `db.setXp(playerId, xpFloorForLevel(level − 1))` — back
+  to the START of the previous level (a near-2-level loss if they were about to advance).
+- **No-win wipe (`_runFailed` → `_loseAllGear`):** a total wipe, or a full retreat
+  from an uncleared room with no one left to win it, zeroes every participant's `gear`
+  (`db.setGear({})`) and drops pending loot. Clearing the room keeps the loot.
+- Encounter budgeting uses `rawXpForCR` (un-multiplied) so room sizing is unaffected
+  by `XP_AWARD_MULT`. Bots level identically (their XP persists too).
 
 ### Ability cost models
 - **`free`** — martial maneuvers, usable every turn (Trip, Cleave, Feint, Rapid

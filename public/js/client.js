@@ -895,7 +895,7 @@
       const tag = m.dead ? ' ☠️' : m.downed ? ' 🩸' : m.left ? ' 🪜' : '';
       const hpText = m.downed
         ? `${typeof m.dyingHp === 'number' ? m.dyingHp : 0}/${m.maxHp} HP · 🩸 DYING`
-        : `${Math.max(0, m.hp)}/${m.maxHp} HP${m.level ? ` · Lv ${m.level}` : ''}`;
+        : `${Math.max(0, m.hp)}/${m.maxHp} HP${m.level ? ` · Lv ${m.level}${m.maxLevel ? ' (max)' : (typeof m.xpToNext === 'number' ? ` · ${m.xpToNext.toLocaleString()} XP→next` : '')}` : ''}`;
       // Auto-skip countdown badge — only on the human whose turn it is, just to
       // the right of their token. Live-ticked by the interval below.
       const afk = m.afkAt

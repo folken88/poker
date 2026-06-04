@@ -68,6 +68,12 @@ ensureColumn('players', 'gender',     "TEXT NOT NULL DEFAULT 'they'");
 // bots are pinned from BOT_CLASSES below and re-synced each boot.
 ensureColumn('players', 'class',      "TEXT NOT NULL DEFAULT 'fighter'");
 ensureColumn('players', 'weapon',     "TEXT NOT NULL DEFAULT 'dagger'");
+// PF1e dungeon EXPERIENCE — now the SOLE source of a hero's level (see
+// pf1data/xp.js, medium track), replacing the old gear-derived level. Adding this
+// column with DEFAULT 0 IS the one-time reset off the item-leveled system: every
+// existing player (and bot) starts fresh at level 1 / 0 XP. Gear still affects
+// to-hit / damage / AC, but no longer grants levels.
+ensureColumn('players', 'experience', 'INTEGER NOT NULL DEFAULT 0');
 
 // One-time fix-up (2026-06-02 PNG→WebP asset conversion): avatar_id stores the
 // token's served PATH, and the old .png token files were converted to .webp and
@@ -568,6 +574,24 @@ function setGear(playerId, gear) {
   db.prepare('UPDATE players SET gear = ? WHERE player_id = ?').run(json, playerId);
 }
 
+// ---- Experience / leveling API (PF1 medium track — see pf1data/xp.js) ----
+const _setXpStmt = db.prepare('UPDATE players SET experience = ? WHERE player_id = ?');
+const _addXpStmt = db.prepare('UPDATE players SET experience = MAX(0, experience + ?) WHERE player_id = ?');
+function getXp(playerId) {
+  const p = stmts.getPlayer.get(playerId);
+  return p ? Math.max(0, Number(p.experience || 0)) : 0;
+}
+function setXp(playerId, xp) {
+  _setXpStmt.run(Math.max(0, Math.floor(Number(xp) || 0)), playerId);
+}
+/** Add (or subtract) XP, clamped at 0. Returns the new total. */
+function addXp(playerId, amount) {
+  const amt = Math.floor(Number(amount) || 0);
+  if (!amt) return getXp(playerId);
+  _addXpStmt.run(amt, playerId);
+  return getXp(playerId);
+}
+
 // ---- Champions API ----
 const insertChampion = db.prepare(`
   INSERT INTO champions (player_id, nickname, avatar_id, won_at, hands_to_win, final_chips)
@@ -610,6 +634,9 @@ module.exports = {
   gearIsLootLord,
   getGear,
   setGear,
+  getXp,
+  setXp,
+  addXp,
   recordChampion,
   listChampions,
   // Players
