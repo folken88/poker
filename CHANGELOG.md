@@ -19,6 +19,32 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
+## 2026-06-03 (newest)
+
+### ⚔️ Classes, feats & enemy casters
+- **Swashbucklers** join the roster (Concetta & Holden, rapier in hand) — finesse
+  duelists who **Parry** the first attack on them each round (success = no damage
+  + a free **riposte**), **Disarm** a foe to cost it a turn, and pile on **Precise
+  Strike** (+level damage), Weapon Focus/Specialization and **Improved Critical**
+  with a finesse blade. They take **no AC from a shield** — they fight a hand free.
+- **Fighters earn PF1 bonus feats as they level** — Weapon Focus, Dodge,
+  Toughness, Weapon Specialization, Improved Initiative, the save feats, **Improved
+  Critical (8)**, **Critical Focus (9)** and **Improved Cleave (11)** — plus a
+  **Power Attack** free on/off toggle (flip it without spending your turn).
+- **The Magus** channels four **Spell Strikes** — SS Shock, SS Frigid, SS Max SG
+  (Intensified Shocking Grasp), and SS Vamp (**Vampiric Touch**, which heals you).
+- **Liches now fight as full wizards of their level** — Hold Monster, Fireball /
+  Cone of Cold / Chain Lightning, Disintegrate, Finger of Death and Magic Missile,
+  with smart target-picking and DCs/damage that scale with depth. **Vampires**
+  drain life with a magus **Vampiric Touch**. Liches are cold-immune (undead).
+- **Stoneskin** is now cast on whoever has the **least HP**.
+
+### 🃏 Poker & UI
+- **Preflop is snappier** — bots decide their opening hands **50% quicker**.
+- **Fixed bots folding preflop** — they no longer **bluff-raise into a full
+  table**, so far more hands actually reach a flop. (Post-flop bluffing unchanged.)
+- **Fixed the double scrollbar** in the dungeon hero-select (recruit) popover.
+
 ## 2026-06-03 (latest+)
 
 ### 🎭 Caster polish, buff icons & class smarts
