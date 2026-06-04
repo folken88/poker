@@ -577,7 +577,7 @@ class Dungeon {
       party: this.party.map(m => ({
         playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot, crowned: !!m.crowned,
         cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
-        level: m.level, ...this._xpInfo(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
+        level: m.level, ...this._xpInfo(m), ...this._heroACs(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
         dead: !!m.dead, downed: !m.dead && !m.left && m.hp <= 0,
         dyingHp: (!m.dead && !m.left && m.hp <= 0) ? m.hp : null,
         left: !!m.left,
@@ -593,7 +593,9 @@ class Dungeon {
         uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
         flying: !!e.flying,
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
-        align: e.align || 'NE', evil: !!e.evil, type: e.type || null, flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep,
+        align: e.align || 'NE', evil: !!e.evil, type: e.type || null,
+        ac: e.ac, touchAC: (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)), ffAC: Math.max(10, e.ac - 2),
+        flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep,
         conditions: e.hp > 0 ? this._condList(e) : [],
       })),
       turn: this._currentTurn(),
@@ -703,7 +705,12 @@ class Dungeon {
       name: boss ? `Boss: ${base.name}` : base.name,
       glyph: base.glyph, art: base.tokenPool ? pick(base.tokenPool) : (base.art || null), boss, cr: base.cr || null,
       hp: base.hp, maxHp: base.hp,
-      ac: base.ac, toHit: base.toHit,
+      ac: base.ac,
+      // PF1 AC types. touchAC: spells/firearms ignore armor & natural armor (an
+      // optional per-monster `touch` overrides the heuristic). Flat-footed AC is
+      // derived (−2, denied Dex) in _enemyAC. Refine per-monster touch values later.
+      touchAC: (base.touch != null ? base.touch : Math.max(10, base.ac - 5)),
+      toHit: base.toHit,
       dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus,
       fort: base.fort, reflex: base.reflex,
       align: base.align || 'NE', evil: !!base.evil, markedEvil: false, type: base.type || 'humanoid',
@@ -1158,6 +1165,17 @@ class Dungeon {
   _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
   _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1)
     return ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level).ac;
+  }
+  // A hero's three PF1 AC values (base, no situational mods) — for display + touch
+  // resolution. touch drops armor/shield/mage-armor; flat-footed drops Dodge.
+  _heroACs(m) {
+    const a = acOf(m.gear, m.cls);
+    const ac = a.ac + this._acBonus(m);
+    return {
+      ac,
+      touchAC: Math.max(10, ac - a.physical - (m.mageArmor ? 4 : 0)),
+      ffAC:    Math.max(10, ac - fighterFeats(m.cls, m.level).ac),
+    };
   }
   _atkStr(r) { return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`; }
   _swingVsAC(attacker, ac, target, extraToHit = 0) {
@@ -2159,7 +2177,14 @@ class Dungeon {
   // Effective melee AC of an enemy: sickened = +2 to be hit, prone = +4 to be hit.
   // A flying creature holds the HIGH GROUND over the grounded party: +2 AC (hard
   // to reach a flyer from the floor). All heroes are grounded, so it always applies.
-  _enemyAC(e) { return e.ac - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0) - (e.slowed > 0 ? 1 : 0) + (e.flying ? HIGH_GROUND_AC : 0); }
+  // Effective AC for an attack. opts.touch → TOUCH AC (spells & firearms ignore
+  // armor / natural armor). A FLAT-FOOTED enemy (hasn't acted yet) loses its Dex
+  // (≈ −2). Situational mods (prone/sickened/slowed/flying) apply to every type.
+  _enemyAC(e, opts = {}) {
+    let base = opts.touch ? (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)) : e.ac;
+    if (e.flatFooted) base = Math.max(10, base - 2);   // flat-footed: denied Dex
+    return base - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0) - (e.slowed > 0 ? 1 : 0) + (e.flying ? HIGH_GROUND_AC : 0);
+  }
   // Energy-resistance multiplier for a damage type (see RESIST_BY_KEY): 0 immune,
   // 0.5 resistant, 1.5 vulnerable, 1 (default) unchanged. Physical/untyped (no
   // dtype) is never modified.
@@ -2231,7 +2256,7 @@ class Dungeon {
     m.flatFooted = false;
     const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
     if (!e) return;
-    const touchAC = Math.max(10, e.ac - 5);   // touch attacks ignore most armor
+    const touchAC = this._enemyAC(e, { touch: true });   // ranged touch — ignores armor & natural armor
     const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
@@ -2281,7 +2306,7 @@ class Dungeon {
   _abDisintegrate(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     const sound = ab.sound || pick(SND.lightning);
-    const touchAC = Math.max(10, this._enemyAC(e) - 5);
+    const touchAC = this._enemyAC(e, { touch: true });
     const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
     const roll = dRoll(20), total = roll + toHit;
     if (roll !== 20 && (roll === 1 || total < touchAC)) {
@@ -2323,7 +2348,7 @@ class Dungeon {
     // 3 at CL11. Each ray rolls to hit (4d6 fire). When it SPLITS (2+), use the
     // dramatic fire-combo sound instead of the single-ray report.
     const rays = Math.max(1, Math.min(3, 1 + Math.floor(((m.level || 1) - 3) / 4)));
-    const touchAC = Math.max(10, e.ac - 5), toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
+    const touchAC = this._enemyAC(e, { touch: true }), toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
     let dmg = 0, hits = 0;
     for (let i = 0; i < rays; i++) { const roll = dRoll(20); if (roll === 20 || (roll !== 1 && roll + toHit >= touchAC)) { dmg += dRollN(ab.dice || 4, ab.die || 6); hits++; } }
     const sound = (rays >= 2 && ab.splitSound) ? ab.splitSound : (ab.sound || pick(SND.lightning));
@@ -2500,7 +2525,7 @@ class Dungeon {
   // Touch spell (Shocking Grasp): a ranged touch attack for level d6.
   _abTouch(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
-    const touchAC = Math.max(10, this._enemyAC(e) - 5);
+    const touchAC = this._enemyAC(e, { touch: true });
     const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD + ((m.buffs && m.buffs.toHit) || 0);
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
@@ -2940,7 +2965,7 @@ class Dungeon {
   _bowShot(m, ab, payload, hitMod, label) {
     const e = this._oneEnemy(payload); if (!e) return;
     m.weapon = weaponOf(m.gear, m.weaponKey);
-    const r = this._swingVsAC(m, this._enemyAC(e), e, hitMod);
+    const r = this._swingVsAC(m, this._enemyAC(e, { touch: m.weapon.group === 'firearms' }), e, hitMod);   // firearms hit vs touch AC
     if (m.weapon.atkSound) r.sound = m.weapon.atkSound; else if (ab.sound) r.sound = ab.sound;
     if (r.hit) { this._dmgE(e, r.damage); this._note(`${ab.icon} ${m.nickname}${label} ${r.crit ? 'CRITS' : 'hits'} ${e.name} for ${r.damage}. ${this._atkStr(r)}${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     else this._note(`${ab.icon} ${m.nickname}${label} misses ${e.name}. ${this._atkStr(r)}`, r.sound);
@@ -2975,7 +3000,7 @@ class Dungeon {
     for (let i = 0; i < swings; i++) {
       const tgt = (e.hp > 0) ? e : this.livingEnemies()[0];
       if (!tgt) break;
-      const r = this._swingVsAC(m, this._enemyAC(tgt), tgt);
+      const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms' }), tgt);   // firearms hit vs touch AC
       if (m.weapon.dual) r.sound = (i === 0) ? baseSound : null;   // one report for the whole flurry
       else if (baseSound) r.sound = baseSound;                     // signature / blunt report (e.g. Rovadra)
       if (quiet) r.sound = null;   // secondary swing (Haste bonus) — stay silent so the main action's sound is heard
