@@ -773,6 +773,9 @@ class Dungeon {
     // party member
     const m = this.member(t.id);
     if (!m || m.left || m.hp <= 0) return this._nextTurn();
+    // Spiritual Weapon fights independently — it strikes at the start of the
+    // cleric's turn (even if they're held), then the cleric does their own thing.
+    if (m.spiritWeapon && m.spiritWeapon.rounds > 0) { this._spiritWeaponStrike(m); if (this._endIfResolved()) return; }
     if (m.paralyzed > 0) {
       if (m.heldDC) {   // Hold Person on a hero: re-save each turn, costs the turn either way (PF1e).
         m.paralyzed -= 1; const hdc = m.heldDC;
@@ -1661,6 +1664,12 @@ class Dungeon {
       for (const a of avail) if (['bolt', 'missile', 'touch', 'rays', 'spellstrike', 'save_debuff'].includes(a.effect)) {
         offense.push({ ab: a, payload: { targetUid: weakestFoe.uid } });
       }
+      // Spiritual Weapon — conjure it onto the TOUGHEST foe (sustained damage) and
+      // never re-cast while one is already fighting; the cleric then does other things.
+      if (!(m.spiritWeapon && m.spiritWeapon.rounds > 0)) {
+        const sw = avail.find(a => a.effect === 'spiritweapon');
+        if (sw) { const tough = targets.slice().sort((a, b) => b.maxHp - a.maxHp)[0] || weakestFoe; offense.push({ ab: sw, payload: { targetUid: tough.uid } }); }
+      }
       const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // can't Rapid Shot a bolt-action rifle
       for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint', 'disarm'].includes(a.effect)) {
         if (a.needsRepeating && boltAction) continue;
@@ -1875,6 +1884,7 @@ class Dungeon {
     const D = {
       trip:        () => this._abTrip(m, payload),
       disarm:      () => this._abDisarm(m, payload),
+      spiritweapon: () => this._abSpiritWeapon(m, ab, payload),
       cleave:      () => this._abCleave(m, ab, payload),
       feint:       () => this._abFeint(m, payload),
       reckless:    () => this._abReckless(m, payload),
@@ -1926,7 +1936,7 @@ class Dungeon {
     m.smiteActive = false;
     m.hasted = 0; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0;   // taunt / grapple / fire ward / flight / stoneskin clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null;   // taunt / grapple / fire ward / flight / stoneskin / spiritual weapon clear between rooms
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
   }
@@ -2597,6 +2607,44 @@ class Dungeon {
     if (r.hit) { this._dmgE(e, r.damage); this._note(`🗡️ ${m.nickname} skewers the off-balance ${e.name} for ${r.damage}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     else this._note(`🗡️ the follow-up misses ${e.name}. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
+  }
+  // Spiritual Weapon (cleric): conjure a force-blade over a chosen foe. It strikes
+  // that foe on EACH of the cleric's turns — see _spiritWeaponStrike, fired from
+  // _advanceToActor — so the cleric can do other things while it fights on. Lasts
+  // 1 round per ½ caster level, and it swings the moment it's summoned.
+  _abSpiritWeapon(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    const rounds = Math.max(1, Math.floor((m.level || 1) / 0.5));   // 1 round per ½ level
+    m.spiritWeapon = { targetUid: e.uid, rounds };
+    this._note(`🗡️✨ ${m.nickname} conjures a SPIRITUAL WEAPON over ${e.name} — it will strike on every turn for ${rounds} rounds!`, ab.sound || '/audio/spell_holy_smite.mp3');
+    this._echoToTable(ab.sound || '/audio/spell_holy_smite.mp3');
+    this._spiritWeaponStrike(m);   // it lashes out the instant it appears
+  }
+  // One round of the spiritual weapon's attacks. It uses the cleric's weapon and
+  // ALL their combat math (buffs, feats, Prayer/Bless/Divine Favor) via _swingVsAC,
+  // and gets an extra swing while the cleric is Hasted. Re-targets if its foe dies,
+  // so the blade keeps fighting until its duration runs out.
+  _spiritWeaponStrike(m) {
+    const sw = m.spiritWeapon; if (!sw) return;
+    sw.rounds -= 1;
+    let e = this.enemies.find(x => x.uid === sw.targetUid && x.hp > 0);
+    if (!e) { e = this.livingEnemies().slice().sort((a, b) => a.hp - b.hp)[0]; if (e) sw.targetUid = e.uid; }
+    if (e) {
+      m.weapon = weaponOf(m.gear, m.weaponKey);
+      const swings = 1 + (m.hasted > 0 ? 1 : 0);   // benefits from Haste — an extra strike
+      const snd = '/audio/spell_holy_smite.mp3';    // its own ringing note
+      const parts = [];
+      for (let i = 0; i < swings && e.hp > 0; i++) {
+        const r = this._swingVsAC(m, this._enemyAC(e), e);
+        if (r.hit) { this._dmgE(e, r.damage); parts.push(`${r.crit ? 'CRIT ' : ''}${r.damage}`); }
+        else parts.push('miss');
+      }
+      this._note(`🗡️✨ ${m.nickname}'s Spiritual Weapon strikes ${e.name} — ${parts.join(', ')}.${this._afterEnemyHit(e)} (${sw.rounds} rd left)`, snd);
+      this._echoToTable(snd);
+      if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+    }
+    if (sw.rounds <= 0) { m.spiritWeapon = null; this._note(`🗡️✨ ${m.nickname}'s Spiritual Weapon dissolves into motes of light.`); }
+    this._broadcast();
   }
   // Cleave: hit the target; then swing at a second foe (−2). A barbarian's
   // cleave (ab.acPen) also drops their guard −2 AC until their next turn.
