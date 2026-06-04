@@ -148,6 +148,7 @@ class Bot {
 
     const trueStrength = strengthOf(hole, board);
     const v = this._perceivedStrength(trueStrength);
+    const street = board?.length || 0;   // 0 preflop, 3 flop, 4 turn, 5 river
     const tag = `${this.mode}/${this.intelligence}`;
 
     // Today's mood (see maybeShiftMode): braver (>0) folds a touch less and opens a
@@ -252,10 +253,13 @@ class Bot {
     // this; cautious almost never bluffs; low-intel never deliberately bluffs.
     const bluffMul = this.mode === 'risky' ? 1.8 : this.mode === 'standard' ? 1.0 : 0.3;
     const cheapBluff = toCall < Math.max(bigBlind * 2, stack * 0.20);
-    // High-intel doesn't bluff into a crowd — a bluff only gets through when few
-    // opponents are still live (heads-up to ~4-handed). Firing into a multiway
-    // pot is spew: someone usually has a hand. Other tiers keep prior behavior.
-    const bluffCrowdOk = this.intelligence !== 'high' || oppsLive.length <= 3;
+    // Don't bluff into a crowd — a bluff only gets through when few opponents are
+    // still live (heads-up to ~4-handed). Firing into a multiway pot is spew:
+    // someone usually has a hand. PREFLOP this applies to EVERY bot (a preflop
+    // bluff-raise into a full table just folds everyone and kills the hand before
+    // a flop); post-flop, only high-intel is gated (other tiers keep firing).
+    const fewOpps = oppsLive.length <= 3;
+    const bluffCrowdOk = fewOpps || (this.intelligence !== 'high' && street > 0);
     if (
       this.intelligence !== 'low' &&
       v < 0.45 &&
@@ -278,7 +282,6 @@ class Bot {
     //     fall through to the normal value/jam logic below)
     // Without this, high-intel cautious bots monster-shove on flop and
     // scare everyone out, leaving them with a tiny pot for a huge hand.
-    const street = board?.length || 0;
     if (this.intelligence === 'high' && v >= tuning.monsterThresh && street <= 3) {
       if (toCall === 0) {
         // Mix check (60%) with a small probe bet (40% at 0.35× pot).
