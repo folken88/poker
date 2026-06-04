@@ -877,7 +877,11 @@ class Table {
     // Hidden, mode-flavored think time (risky ~1-4s, standard ~1-10s, cautious
     // longer) — when the bot ACTUALLY acts. Capped just inside the allotment so it
     // never acts after the displayed timer would hit zero.
-    const delay = Math.min(rollBotDelayMs(bot.mode), AI_TURN_MS - 300);
+    let delay = rollBotDelayMs(bot.mode);
+    // Preflop, bots snap-decide their starting hands 50% quicker — less waiting
+    // through the part of the hand with the least to think about.
+    if (this.hand.board && this.hand.board.length === 0) delay = Math.round(delay / 2);
+    delay = Math.min(delay, AI_TURN_MS - 300);
     // Surface the FULL allotment (not `delay`) so the topbar clock ticks down the
     // fixed 15s max for everyone — not the bot's real think time. Callers broadcast
     // after timer setup, so we never emit a half-updated state here.
