@@ -14,6 +14,7 @@ const PRONUNCIATIONS = [
   ['Mandore',    'Man door'],
   ['Conchobar',  'Con cho barr'],
   ['Lirienne',   'Leery ehn'],
+  ['Rissa',      'Riss-uh'],      // short for Clarissa Caromarc — RIH-suh, short 'i'
   ['Bujon',      'Boo han'],
   ['Casandalee', 'Cassan dah-lee'],
   ['Tobis',      'Toe biss'],
