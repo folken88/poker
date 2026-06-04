@@ -35,21 +35,35 @@ function hdFor(cls) { return (CLASSES[cls] && CLASSES[cls].hd) || HP_PER_LEVEL; 
 // per-weapon-group or per-save granularity, so the three save feats collapse to
 // one all-saves bonus and Weapon Focus/Spec apply to every weapon).
 const FF_NONE = { hit: 0, dmg: 0, ac: 0, hp: 0, save: 0, init: 0, impCrit: false, critFocus: false, impCleave: false };
-function fighterFeats(cls, level) {
-  if (cls !== 'fighter') return FF_NONE;
-  const L = Math.max(1, level || 1);
-  return {                               // one bonus feat per level, PF1-style
-    hit:  1,                             // L1  Weapon Focus — +1 to hit, every weapon
-    ac:   L >= 2 ? 1 : 0,                // L2  Dodge — +1 AC
-    hp:   L >= 3 ? Math.max(3, L) : 0,   // L3  Toughness — +1 HP per Hit Die (min 3)
-    dmg:  L >= 4 ? 2 : 0,                // L4  Weapon Specialization — +2 damage
-    init: L >= 5 ? 4 : 0,               // L5  Improved Initiative
-    save: L >= 7 ? 2 : L >= 6 ? 1 : 0,  // L6 Lightning Reflexes, L7 Great Fortitude, L10 Iron Will (unified +2)
-    impCrit:   L >= 8,                   // L8  Improved Critical — doubled threat range
-    critFocus: L >= 9,                   // L9  Critical Focus — +4 to confirm crits
-    impCleave: L >= 11,                  // L11 Improved Cleave — auto-cleave like the barbarian
+// The fighter bonus-feat ladder, evaluated at a GATING level `g` (which feats are
+// earned so far) with the Toughness HP bonus scaling on actual Hit Dice `hd`.
+function featLadder(g, hd) {
+  return {
+    hit:  1,                              // Weapon Focus — +1 to hit, every weapon
+    ac:   g >= 2 ? 1 : 0,                 // Dodge — +1 AC
+    hp:   g >= 3 ? Math.max(3, hd) : 0,   // Toughness — +1 HP per Hit Die (min 3)
+    dmg:  g >= 4 ? 2 : 0,                 // Weapon Specialization — +2 damage
+    init: g >= 5 ? 4 : 0,                 // Improved Initiative
+    save: g >= 7 ? 2 : g >= 6 ? 1 : 0,    // Lightning Reflexes / Great Fortitude / Iron Will (unified +2)
+    impCrit:   g >= 8,                    // Improved Critical — doubled threat range
+    critFocus: g >= 9,                    // Critical Focus — +4 to confirm crits
+    impCleave: g >= 11,                   // Improved Cleave — auto-cleave like the barbarian
   };
 }
+// FIGHTER takes one bonus feat per level (g = level). The INQUISITOR earns the
+// SAME ladder at HALF rate — a feat every ODD level (g = floor((level+1)/2)) — so
+// L1 Weapon Focus, L3 Dodge, L5 Toughness, L7 Weapon Spec, L9 Improved Init,
+// L11/13 the save feats (incl. Iron Will), L15 Improved Crit, L17 Critical Focus.
+function fighterFeats(cls, level) {
+  const L = Math.max(1, level || 1);
+  if (cls === 'fighter')    return featLadder(L, L);
+  if (cls === 'inquisitor') return featLadder(Math.floor((L + 1) / 2), L);
+  return FF_NONE;
+}
+// Bane's flat bonuses (the +2d6 rides on top, not crit-multiplied). See _abBane.
+const BANE_TOHIT = 2, BANE_DMG = 2, BANE_DICE = 2;
+// Title-case a creature type for display ("magical beast" → "Magical Beast").
+function titleCase(s) { return String(s || '').replace(/\b\w/g, c => c.toUpperCase()); }
 // A "finessable" melee weapon (light, or a one-handed fencing blade) — what a
 // swashbuckler's Precise Strike, Weapon Focus/Specialization and Improved
 // Critical key off of.
@@ -211,6 +225,28 @@ const MON_ART = {
   blood_caimon: 'blood_caimon',
 };
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
+
+// PF1 creature TYPE per monster — drives the Inquisitor's BANE (declared against
+// ONE type; the bane bonus applies only to foes of that type). Every MON key
+// should be covered; anything missed defaults to 'humanoid' below.
+const MON_TYPE = {
+  dire_rat: 'animal', badger: 'animal', dire_ape: 'animal', dire_boar: 'animal', blood_caimon: 'animal', dire_bear: 'animal',
+  giant_centipede: 'vermin', giant_spider: 'vermin',
+  goblin: 'humanoid', goblin_rogue: 'humanoid', goblin_shaman: 'humanoid', goblin_barbarian: 'humanoid',
+  kobold: 'humanoid', kobold_spearman: 'humanoid', kobold_shaman: 'humanoid', kobold_rogue: 'humanoid',
+  cultist: 'humanoid', monk: 'humanoid',
+  skeleton: 'undead', zombie: 'undead', ghoul: 'undead', ghast: 'undead', skeletal_champion: 'undead',
+  shadow: 'undead', fire_skeleton: 'undead', wight: 'undead', vampire: 'undead', lich: 'undead',
+  ogre: 'giant', ettin: 'giant', hill_giant: 'giant', stone_giant: 'giant',
+  harpy: 'monstrous humanoid', gargoyle: 'monstrous humanoid', minotaur: 'monstrous humanoid', medusa: 'monstrous humanoid',
+  basilisk: 'magical beast', winter_wolf: 'magical beast', chimera: 'magical beast',
+  ettercap: 'aberration', gibbering_mouther: 'aberration', bog_brute: 'aberration', abyssal_horror: 'aberration',
+  wood_golem: 'construct', brass_golem: 'construct',
+  gray_ooze: 'ooze',
+  barbed_devil: 'outsider',
+};
+for (const [k, t] of Object.entries(MON_TYPE)) if (MON[k]) MON[k].type = t;
+for (const k of Object.keys(MON)) if (!MON[k].type) MON[k].type = 'humanoid';   // default → Bane always has a target
 
 // ── Energy resistances / vulnerabilities ────────────────────────────────────
 // A damage MULTIPLIER per energy type: 0 = immune, 0.5 = resistant (half),
@@ -510,6 +546,7 @@ class Dungeon {
     if (m.judgment === 'destruction') push('judg_destruction', 'Judgement: Destruction', '+damage on your strikes');
     if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection', '+AC');
     if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing', 'regenerate HP each turn');
+    if (m.bane)                       push('bane', `Bane: ${titleCase(m.bane.type)}`, `+2 hit, +2d6+2 vs ${titleCase(m.bane.type)} (this room)`);
     return c;
   }
 
@@ -540,7 +577,7 @@ class Dungeon {
         uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
         flying: !!e.flying,
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
-        align: e.align || 'NE', evil: !!e.evil, flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep,
+        align: e.align || 'NE', evil: !!e.evil, type: e.type || null, flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep,
         conditions: e.hp > 0 ? this._condList(e) : [],
       })),
       turn: this._currentTurn(),
@@ -653,7 +690,7 @@ class Dungeon {
       ac: base.ac, toHit: base.toHit,
       dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus,
       fort: base.fort, reflex: base.reflex,
-      align: base.align || 'NE', evil: !!base.evil,
+      align: base.align || 'NE', evil: !!base.evil, type: base.type || 'humanoid',
       flatFooted: true, prone: false, fascinated: false, asleep: false, loseTurn: false,
       paralyze: !!base.paralyze, paralyzeDC: base.paralyzeDC || PARALYZE_DC, sickened: 0,
       attacks: base.attacks || 1,
@@ -1065,6 +1102,10 @@ class Dungeon {
       dmg: (rbuff.dmg || 0) + (rb.dmg || 0),
       bonusDice: rbuff.bonusDice || 0,
     };
+    // Inquisitor BANE — declared against ONE creature type (see _abBane). Its
+    // +2 hit / +2d6+2 damage applies ONLY when THIS target is that type.
+    const baneOn = !!(attacker.bane && target && target.type && target.type === attacker.bane.type);
+    const baneHit = baneOn ? BANE_TOHIT : 0;
     // PF1e to-hit = class BAB (level-scaled) + ability mod + weapon bonus
     // (masterwork +1 / +N enhancement, carried on weapon.toHit) + smite + buffs,
     // minus a non-proficiency penalty if the class can't use this weapon.
@@ -1080,28 +1121,29 @@ class Dungeon {
     const swashWF = swashFin ? 1 : 0;
     const swashSpec = (swashFin && lvl >= 4) ? 2 : 0;
     const preciseDmg = (swashFin && lvl >= 3) ? lvl : 0;   // Precise Strike: +swashbuckler level
-    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit + swashWF;
+    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit + swashWF;
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
     // Damage = weapon dice (NdX) + enhancement + ½ level + ability mod + buff dmg (+ Point Blank).
     const judgDmg = attacker.judgment === 'destruction' ? Math.max(1, Math.floor(lvl / 3)) : 0;   // inquisitor Judgement: Destruction
-    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + pbs + judgDmg + ff.dmg + swashSpec;
+    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + (baneOn ? BANE_DMG : 0) + pbs + judgDmg + ff.dmg + swashSpec;
     const rollDmg = () => dRollN(weapon.dmgCount, weapon.dmgDie) + weapon.dmgBonus + flatDmg;
     let dmg = rollDmg() - sick, crit = false;
     // Improved Critical doubles the weapon's threat range (fighter L8; swashbuckler
     // L5 with a finesse blade). Critical Focus (fighter L9) adds +4 to confirm.
-    const impCrit = (cls === 'fighter' && ff.impCrit) || (swashFin && lvl >= 5);
+    const impCrit = ff.impCrit || (swashFin && lvl >= 5);   // fighter / inquisitor bonus feat, or swashbuckler
     const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
-    const critFocus = (cls === 'fighter' && ff.critFocus) ? 4 : 0;
-    if (roll >= effCritRange) { const conf = dRoll(20) + bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
+    const critFocus = ff.critFocus ? 4 : 0;
+    if (roll >= effCritRange) { const conf = dRoll(20) + bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
     // Precision (sneak / swashbuckler Precise Strike), smite, and bane dice ride on
     // top — NOT multiplied by a crit.
     let sneakDmg = 0;
     if (preciseDmg) dmg += preciseDmg;   // swashbuckler Precise Strike
     if (sneakDice) { sneakDmg = dRollN(sneakDice, 6); dmg += sneakDmg; }
-    if (buff.bonusDice) dmg += dRollN(buff.bonusDice, 6);   // Bane
+    if (buff.bonusDice) dmg += dRollN(buff.bonusDice, 6);   // misc bonus dice
+    if (baneOn) dmg += dRollN(BANE_DICE, 6);                // Inquisitor Bane — +2d6 vs the declared type
     if (smite) dmg += 2 * lvl;   // Smite Evil: +double level damage
     return { hit: true, crit, smite, sneakDice, sneakDmg, damage: Math.max(1, dmg), roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
@@ -1540,6 +1582,15 @@ class Dungeon {
     // 0b) Inquisitor: declare a Judgement if none is up (free action, then attack).
     const judg = avail.find(a => a.effect === 'judgment');
     if (judg && !m.judgment) return { slot: slot(judg), payload: {} };
+    // 0c) Inquisitor: declare BANE (free action) vs the most common foe type when we
+    //     have a use and our current declaration isn't aimed at a type that's present.
+    const baneAb = avail.find(a => a.effect === 'bane');
+    if (baneAb) {
+      const present = new Set(foes.map(e => e.type).filter(Boolean));
+      if (present.size && (!m.bane || !present.has(m.bane.type))) {
+        return { slot: slot(baneAb), payload: { baneType: this._autoBaneType() } };
+      }
+    }
     // 1) Heal when an ally (or self) is meaningfully hurt — or CHANNEL to pull a
     //    downed ally back up (a party channel revives the dying).
     const heal = avail.find(a => a.effect === 'heal');
@@ -1896,6 +1947,7 @@ class Dungeon {
       haste:       () => this._abHaste(m, ab),
       invisible:   () => this._abInvisible(m, ab),
       judgment:    () => this._abJudgment(m, ab),
+      bane:        () => this._abBane(m, ab, payload),
       cleanse:     () => this._abCleanse(m, ab),
       aoe:         () => this._abAoe(m, ab, payload),
       disintegrate: () => this._abDisintegrate(m, ab, payload),
@@ -1931,7 +1983,8 @@ class Dungeon {
     m.abilityUses = {};
     for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1);
     if (m.tempHp) { m.maxHp -= m.tempHp; if (m.hp > m.maxHp) m.hp = m.maxHp; m.tempHp = 0; }   // rage / Bear's Endurance temp HP fades
-    m.buffs = null;          // rage / bane / divine favor / inspire clear
+    m.buffs = null;          // rage / divine favor / inspire clear
+    m.bane = null;           // inquisitor Bane declaration clears between rooms
     m.buffApplied = {};      // which sticky buffs are already active (no stacking)
     m.smiteActive = false;
     m.hasted = 0; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
@@ -2243,6 +2296,32 @@ class Dungeon {
     const what = { destruction: '⚔️ Destruction (+damage)', protection: '🛡️ Protection (+AC)', healing: '💗 Healing (regen)' }[ab.judgmentType] || ab.judgmentType;
     this._note(`${ab.icon} ${m.nickname} pronounces Judgement — ${what}.`, ab.sound);
     this._echoToTable(ab.sound);
+  }
+  // Bane (inquisitor): declare a creature TYPE (a FREE action — see _useAbility
+  // returning freeAction; 1 use per 5 levels per room). The bane bonus (+2 to hit,
+  // +2d6+2 damage) then applies ONLY to foes of that type, until you re-declare.
+  // The bonus math lives in _playerAttack (baneOn). A human picks by selecting a
+  // foe (the client sends its type as payload.baneType); bots auto-pick.
+  _abBane(m, ab, payload) {
+    const type = (payload && payload.baneType) || this._autoBaneType();
+    if (!type) { this._note(`🗡️ ${m.nickname} finds no foe worth naming for Bane.`); return; }
+    m.bane = { type };
+    this._note(`${ab.icon} ${m.nickname} pronounces BANE against ${titleCase(type)} — +2 to hit and +2d6+2 damage vs ${titleCase(type)} this room.`, ab.sound);
+    this._echoToTable(ab.sound);
+  }
+  // Auto-pick a Bane type from the foes on the field: the most COMMON type present,
+  // breaking ties toward the TOUGHEST foe's type.
+  _autoBaneType() {
+    const foes = this.livingEnemies();
+    if (!foes.length) return null;
+    const counts = new Map();
+    for (const e of foes) if (e.type) counts.set(e.type, (counts.get(e.type) || 0) + 1);
+    if (!counts.size) return null;
+    let best = null, bestN = -1;
+    for (const [t, n] of counts) if (n > bestN) { best = t; bestN = n; }
+    const toughest = foes.slice().sort((a, b) => b.maxHp - a.maxHp)[0];   // tie-break → toughest foe's type
+    if (toughest && toughest.type && counts.get(toughest.type) === bestN) best = toughest.type;
+    return best;
   }
   // If `m` is hasted, spend it on one bonus attack against a living foe. Called
   // right after the member's normal action resolves (human + bot paths).

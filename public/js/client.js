@@ -1003,7 +1003,7 @@
           const count = (ab.cost === 'room' || ab.cost === 'run')
             ? ` <span class="dungeon__uses" title="${ab.cost === 'run' ? 'once per dungeon' : 'per room'}">${ab.remaining}/${ab.max}</span>` : '';
           const tgt = ab.maxTargets > 1 ? ` <span class="dungeon__uses">×${ab.maxTargets}</span>` : '';
-          return `<button class="btn btn--ghost" data-dact="ability" data-slot="${slot}"${(myTurn && ok) ? '' : ' disabled'} title="${escapeAttr(ab.desc || '')}">${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
+          return `<button class="btn btn--ghost" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(ab.key || '')}"${(myTurn && ok) ? '' : ' disabled'} title="${escapeAttr(ab.desc || '')}">${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
         };
         // Spellbook tile: icon ONLY (name + short description show on hover).
         // A corner badge carries the uses-left count, or 🔒 when level-locked.
@@ -1151,7 +1151,16 @@
     const b = ev.target.closest('[data-dact]'); if (!b || b.disabled) return;
     const act = b.dataset.dact;
     if (act === 'attack')       dungeonAction('attack', { targetUid: _dungeonSel[0] });
-    else if (act === 'ability') { dungeonAction('ability', { slot: Number(b.dataset.slot) || 0, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6) }); _spellbookOpen = false; }
+    else if (act === 'ability') {
+      const payload = { slot: Number(b.dataset.slot) || 0, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6) };
+      // Inquisitor Bane declares a creature TYPE: take it from the selected foe
+      // (if any). With nothing selected the server auto-picks the commonest type.
+      if (b.dataset.abkey === 'bane') {
+        const sel = (state.dungeon?.enemies || []).find(e => e.uid === _dungeonSel[0] && e.alive);
+        if (sel && sel.type) payload.baneType = sel.type;
+      }
+      dungeonAction('ability', payload); _spellbookOpen = false;
+    }
     else if (act === 'door')    dungeonAction('door');
     else if (act === 'bail')    dungeonAction('bail');
     else if (act === 'join')    enterDungeon();        // spectator → combatant
