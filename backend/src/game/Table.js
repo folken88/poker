@@ -658,8 +658,9 @@ class Table {
     try {
       db.db.prepare(
         "UPDATE players SET chips = ?, swords = '{}', gear = '{}', rebuy_debt = 0, " +
-        "total_won = 0, total_lost = 0, hands_played = 0"
+        "total_won = 0, total_lost = 0, hands_played = 0, experience = 0"   // experience=0 → everyone back to level 1
       ).run(DEFAULT);
+      db.resetChampions();   // full wipe → also clear the Champions Board (a true clean slate)
     } catch (e) { console.error('[resetGame] bulk reset failed', e); }
     // Reset dealer button so next hand starts fresh
     this.dealerButtonSeatIndex = -1;
@@ -1432,7 +1433,7 @@ class Table {
   _resetForNextRun() {
     resetRecords();   // new game after a Loot Lord win — Hall of Records starts fresh
     const resetAll = db.db.prepare(`
-      UPDATE players SET chips = ?, gear = '{}', swords = '{}', rebuy_debt = 0
+      UPDATE players SET chips = ?, gear = '{}', swords = '{}', rebuy_debt = 0, experience = 0
     `);
     resetAll.run(db.DEFAULT_STACK);
     for (const s of this.seats) {

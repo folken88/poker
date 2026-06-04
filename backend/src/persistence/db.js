@@ -603,6 +603,12 @@ function recordChampion({ playerId, nickname, avatarId, handsToWin, finalChips }
 function listChampions(limit = 50) {
   return db.prepare('SELECT * FROM champions ORDER BY won_at DESC LIMIT ?').all(limit);
 }
+/** Wipe the Champions Board (past Loot Lords). Called on a manual Full Reset so a
+ *  full wipe is a true clean slate. NOT called on the Loot-Lord auto-reset (that
+ *  win was just recorded). */
+function resetChampions() {
+  db.prepare('DELETE FROM champions').run();
+}
 function recordWin(playerId, amount)  { stmts.recordWin.run(amount, playerId); }
 function recordLoss(playerId, amount) { stmts.recordLoss.run(amount, playerId); }
 function insertHand({ tableId, board, players, winners }) {
@@ -639,6 +645,7 @@ module.exports = {
   addXp,
   recordChampion,
   listChampions,
+  resetChampions,
   // Players
   getPlayer,
   listPlayers,
