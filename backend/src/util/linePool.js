@@ -137,9 +137,14 @@ async function choose(char, kind, subject) {
     const c = await _load(char, kind);
     if (!c.entries.length) return null;
     const subj = subject || null;
+    // Never replay a CUT-OFF line — its clipped audio breaks immersion. Only
+    // consider entries that end on a real sentence terminator (defense in depth;
+    // banter.js already refuses to record incomplete ones).
+    const usable = c.entries.filter(e => /[.!?]["'”’)]?$/.test(String(e.text || '').trim()));
+    if (!usable.length) return null;
     // perfect = generic lines, or specific lines whose subject matches the moment
-    const perfect = c.entries.filter(e => !e.specific || (e.subject && subj && e.subject === subj));
-    const loose = c.entries.filter(e => !perfect.includes(e));
+    const perfect = usable.filter(e => !e.specific || (e.subject && subj && e.subject === subj));
+    const loose = usable.filter(e => !perfect.includes(e));
     let bucket = null, prob = 0;
     if (perfect.length >= MIN) { bucket = perfect; prob = REUSE_PROB_MATCH; }
     else if (loose.length)     { bucket = loose;   prob = REUSE_PROB_LOOSE; }

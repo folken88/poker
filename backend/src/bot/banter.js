@@ -734,6 +734,11 @@ function trimToSpoken(s, maxWords = 16) {
   if (words.length <= HARD) return s;
   return words.slice(0, HARD).join(' ').replace(/[,;:—-]+$/, '').trim() + '…';
 }
+// A line is "complete" — and therefore safe to SAVE to the reuse pool — only if it
+// ends on a real sentence terminator (. ! ?), not a "…" truncation or a dangling
+// fragment. A cut-off clip replayed later is awkward and breaks immersion, so we
+// never pool one (it still gets spoken once; it just isn't kept).
+function isCompleteLine(s) { return /[.!?]["'”’)]?$/.test(String(s || '').trim()); }
 
 /** Async fetch with timeout. Returns generated text, or null on
  *  any error (server down, malformed response, timed out).
@@ -964,7 +969,7 @@ async function maybeSpeak(table, event) {
       : audio ? { audio, audioMime: 'audio/mpeg' } : null;
     // Save this freshly-voiced line so it can be replayed later (only when we
     // actually synthesized audio — a stored-pool/text-only line isn't recorded).
-    if (audio) linePool.record(nick, event.kind || 'table', { text: stripAudioTags(line), version: TTS_VERSION, subject: null, base64: audio });
+    if (audio && isCompleteLine(line)) linePool.record(nick, event.kind || 'table', { text: stripAudioTags(line), version: TTS_VERSION, subject: null, base64: audio });
     table.chat('banter', `💬 ${chatNick}: ${stripAudioTags(line)}`, extras);
   }).catch(() => { /* silent */ });
 }
@@ -1020,7 +1025,7 @@ async function dungeonLine(nick, eventType, ctx = {}) {
     const settings = { ...(settingsFor(vNick) || {}), ...COMBAT_VOICE };
     if (voiceId) { try { audio = await elevenlabs.synthesize(speakable(line), voiceId, settings); } catch (_) {} }
   }
-  if (audio) linePool.record(nick, eventType, { text: stripAudioTags(line), version: TTS_VERSION, subject, base64: audio });
+  if (audio && isCompleteLine(line)) linePool.record(nick, eventType, { text: stripAudioTags(line), version: TTS_VERSION, subject, base64: audio });
   return { line: stripAudioTags(line), audio, audioMime: 'audio/mpeg' };
 }
 
