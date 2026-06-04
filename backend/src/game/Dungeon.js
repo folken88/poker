@@ -893,8 +893,9 @@ class Dungeon {
     if (this.livingEnemies().length === 0) { this._clearRoom(); return true; }
     // Nobody left standing (all downed or dead) while foes remain → party wipe.
     if (!this._anyUp()) { this._wipe(); return true; }
-    // No human left in the run at all (dead or bailed) → AI allies cash out and end.
-    if (!this._humansInRun()) { this._wrapUp(); return true; }
+    // NOTE: when no humans remain mid-fight we deliberately do NOT cash the AI out
+    // here — they FINISH the current room first. The wrap-up happens on the room
+    // clear (_clearRoom) or a wipe (above), so the AI leave at the end of the room.
     return false;
   }
   // Pay remaining AI allies (standing OR dying — the downed get their cut too) an
@@ -3060,7 +3061,14 @@ class Dungeon {
     // Last conscious member out → drag any remaining dying allies out with their
     // share (voluntary retreat). Otherwise, if only AI remain, cash them out.
     if (!this._anyUp()) { this._groupExtract(); return { ok: true, goldBanked: share }; }
-    if (!this._humansInRun()) { this._wrapUp(); return { ok: true, goldBanked: share }; }
+    // Last human out (left OR went to spectator): if we're BETWEEN rooms, the AI
+    // cash out now (nothing to finish). If a fight is in progress, let the AI
+    // FINISH the current room — _clearRoom wraps them up on the clear.
+    if (!this._humansInRun()) {
+      if (this.status !== 'combat') { this._wrapUp(); return { ok: true, goldBanked: share }; }
+      if (wasActor) { clearTimeout(this._turnTimer); this._nextTurn(); } else this._broadcast();   // keep the bots fighting
+      return { ok: true, goldBanked: share };
+    }
     // Only nudge the turn cycle if the bailer was the one we were waiting on.
     if (this.status === 'combat' && wasActor) { clearTimeout(this._turnTimer); this._nextTurn(); }
     else this._broadcast();
