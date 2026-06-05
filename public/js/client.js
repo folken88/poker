@@ -3612,6 +3612,18 @@
       return el.isContentEditable === true;
     };
     const pttCode = () => window.BlindMode.getPttCode?.() || 'Space';
+    // Diagnostic (capture phase, runs first): record whether our shortcut keys
+    // even reach the page. If a key Josh presses NEVER shows up here, the OS /
+    // screen reader intercepted it before the browser. We log key CODES only
+    // (not characters) and skip typing fields so chat text is never captured.
+    const WATCH_KEYS = new Set(['Backquote','Space','KeyH','KeyC','KeyB','KeyP','BracketLeft','BracketRight']);
+    document.addEventListener('keydown', (e) => {
+      if (!window.BlindMode?.log) return;
+      if (isTypingTarget(e.target)) return;
+      if (WATCH_KEYS.has(e.code) || /^Digit[1-9]$/.test(e.code)) {
+        window.BlindMode.log(`keydown code=${e.code} blindOn=${!!window.BlindMode.isOn?.()} target=${e.target?.tagName || '?'}`);
+      }
+    }, true);
     document.addEventListener('keydown', (e) => {
       // PTT rebind capture takes priority: the very next key (other than
       // a modifier) becomes the new push-to-talk binding. Runs even over

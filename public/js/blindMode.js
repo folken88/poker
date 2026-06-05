@@ -53,7 +53,8 @@
   // via  window.BlindMode.getLogs()  so the tester can copy/paste them.
   let DEBUG = true;
   try { if (localStorage.getItem('blindModeDebug') === '0') DEBUG = false; } catch (_) {}
-  const _logs = [];
+  const _logs = [];   // ring buffer for getLogs() (local console retrieval)
+  const _ship = [];   // pending entries to stream to the server (allow-listed players)
   function blog(...args) {
     let body;
     try {
@@ -65,9 +66,45 @@
     const entry = `${stamp} ${body}`;
     _logs.push(entry);
     if (_logs.length > 800) _logs.shift();
+    _ship.push(entry);
+    if (_ship.length > 1200) _ship.shift();
     if (DEBUG) { try { console.log('[blindMode]', entry); } catch (_) {} }
   }
   function getLogs() { return _logs.join('\n'); }
+
+  // --- Server-side log shipping (for remote blind testers like Josh) ---
+  // Allow-listed players' blind-mode activity is streamed to the backend
+  // (blind:log event) so we can read their session in backend/logs/blind.jsonl
+  // WITHOUT asking a blind, remote user to copy their browser console. Gated by
+  // player id client-side (LOG_SHIP_PLAYERS) AND server-side (BLIND_LOG_PLAYERS
+  // env, default 'josh'). Fire-and-forget: emitting to a backend without the
+  // handler is a harmless no-op, so the client can ship safely before the
+  // server side is deployed.
+  const LOG_SHIP_PLAYERS = ['josh'];
+  let _shipTimer = null;
+  function _shipEnabled() {
+    try {
+      const me = state.deps?.state?.me;
+      const id = String(me?.player_id || me?.nickname || '').toLowerCase();
+      return !!id && LOG_SHIP_PLAYERS.includes(id);
+    } catch (_) { return false; }
+  }
+  function _flushShip() {
+    if (!_ship.length || !_shipEnabled()) return;
+    const socket = state.deps?.socket;
+    if (!socket || socket.connected === false) return;
+    const batch = _ship.splice(0, 120);
+    const me = state.deps?.state?.me || {};
+    try {
+      socket.emit('blind:log', { playerId: me.player_id || null, nickname: me.nickname || null, entries: batch });
+    } catch (_) { _ship.unshift(...batch); }  // put them back; retry next tick
+  }
+  function startShipping() {
+    if (_shipTimer) return;
+    try { _shipTimer = setInterval(_flushShip, 2500); } catch (_) {}
+    try { window.addEventListener('beforeunload', _flushShip); } catch (_) {}
+  }
+
   // Log the environment once at module load — this alone usually explains a
   // dead microphone (no SR API, or a non-secure origin where Chrome blocks it).
   blog('module loaded', JSON.stringify({
@@ -1025,6 +1062,7 @@
       supportsTTS, supportsSR, rate: state.rate, pttCode: state.pttCode,
       restoredOn: state.on,
     }));
+    startShipping();
     return { supportsTTS, supportsSR };
   }
 
