@@ -3646,6 +3646,8 @@
       // recognition (which may be unavailable in their browser).
       if (e.code === 'BracketLeft')  { e.preventDefault(); window.BlindMode.nudgeRate?.(-0.1); return; }
       if (e.code === 'BracketRight') { e.preventDefault(); window.BlindMode.nudgeRate?.(+0.1); return; }
+      // S — stop talking now (works on every screen).
+      if (e.code === 'KeyS') { e.preventDefault(); window.BlindMode.stopSpeaking?.(); return; }
       // ----- Explore hotkeys (poker table only) -----
       // C / B / P read your cards / the board / the pot. Number keys 1–9 read a
       // seat: the occupant's name, or (if empty) arm it and say "Sit N" so

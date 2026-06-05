@@ -492,7 +492,7 @@
         // Suppressed thereafter to keep the per-turn cue snappy.
         if (!state.announcedControls) {
           state.announcedControls = true;
-          line += ` Hold ${pttLabel()} and say fold, call, or raise; press H to hear your hand again; C for your cards, B for the board, P for the pot, or a seat number one to nine to hear that seat; left and right bracket slow down or speed up this voice.`;
+          line += ` Hold ${pttLabel()} and say fold, call, or raise; press H to hear your hand again; C for your cards, B for the board, P for the pot, or a seat number one to nine to hear that seat; S to stop talking; left and right bracket slow down or speed up this voice.`;
         }
         speak(line, 'urgent');
       }
@@ -918,6 +918,22 @@
     if (hole && hole.length) speak(`Your cards: ${cardListWords(hole)}.`, 'urgent');
     else speak('You have no cards right now.', 'urgent');
   }
+  /** Stop talking NOW (the S key). Cancels the in-flight utterance, empties the
+   *  queue, and cuts any character-voice/banter clip — so a blind player can
+   *  silence a long readout the instant they've heard enough. A short blip
+   *  confirms the key registered. */
+  function stopSpeaking() {
+    if (!state.on) return;
+    blog('stopSpeaking (user pressed stop)');
+    try { TTS.cancel(); } catch (_) {}
+    state.queue.length = 0;
+    state.speaking = false;
+    if (state.banterAudio) {
+      try { state.banterAudio.pause(); state.banterAudio.currentTime = 0; } catch (_) {}
+      state.banterAudio = null;
+    }
+    earcon('close');
+  }
   function announceActor() {
     const st = state.deps?.state?.table;
     const a = currentActorId(st);
@@ -1286,6 +1302,8 @@
     readHand, sit,
     // Explore hotkeys (C/B/P + seat numbers 1–9) and the Return-to-sit confirm.
     readMyCards, announceBoard, announcePot, announceSeat, confirmPendingSit,
+    // Stop/silence the current announcement (the S key).
+    stopSpeaking,
     // Configurable push-to-talk binding
     getPttCode, isRebinding, beginRebind, consumeRebind, pttLabel,
     // Reading-speed control (bound to [ and ] in client.js) + diagnostics.
