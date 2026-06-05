@@ -27,6 +27,10 @@ const HAND_LOG = path.join(LOG_DIR, 'hands.jsonl');
 const BOT_LOG  = path.join(LOG_DIR, 'bot-decisions.jsonl');
 const CHAT_LOG = path.join(LOG_DIR, 'conversation.jsonl');
 const DUNGEON_LOG = path.join(LOG_DIR, 'dungeon.jsonl');
+// Blind-mode accessibility telemetry — one row per client log entry, streamed
+// up from allow-listed blind testers (e.g. Josh) so we can read their session
+// without asking a blind user to copy their browser console.
+const BLIND_LOG = path.join(LOG_DIR, 'blind.jsonl');
 
 function appendLine(file, obj) {
   try {
@@ -35,6 +39,9 @@ function appendLine(file, obj) {
     console.error('[logger]', file, e.message);
   }
 }
+
+/** Append one blind-mode telemetry row (server timestamp + player + message). */
+function logBlind(row) { appendLine(BLIND_LOG, row); }
 
 function logHand({ tableId, hand, durationMs }) {
   const row = {
@@ -280,4 +287,4 @@ function recentSounds(n = 10) {
   return { last, tally, bufferSize: _recentSounds.length };
 }
 
-module.exports = { logHand, logBotDecision, logChat, logDungeon, getRecords, resetRecords, recordSound, recentSounds, HAND_LOG, BOT_LOG, CHAT_LOG, DUNGEON_LOG, LOG_DIR };
+module.exports = { logHand, logBotDecision, logChat, logDungeon, logBlind, getRecords, resetRecords, recordSound, recentSounds, HAND_LOG, BOT_LOG, CHAT_LOG, DUNGEON_LOG, BLIND_LOG, LOG_DIR };

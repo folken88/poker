@@ -11,8 +11,17 @@
 const db = require('../persistence/db');
 const { interpretVoiceCommand } = require('../bot/voiceIntent');
 const fightDirector = require('../game/fightDirector');
+const { logBlind } = require('../persistence/logger');
 
 function meOf(socket) { return socket.data.player; }
+
+// Players whose blind-mode activity is streamed to backend/logs/blind.jsonl
+// (blind:log handler below). Lowercased player ids. Defaults to Josh, our
+// blind tester; extend via BLIND_LOG_PLAYERS="josh,someone" in the env.
+const BLIND_LOG_PLAYERS = new Set(
+  (process.env.BLIND_LOG_PLAYERS || 'josh')
+    .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+);
 
 // Fight narration + execution lives in game/fightDirector.js (shared with
 // bot-initiated revenge swings). This handler just validates + delegates.
@@ -427,6 +436,25 @@ function registerTableHandlers(io, socket, { tables }) {
     catch (_) { intent = null; }
     if (!intent) return ack?.({ ok: true, action: 'none' });
     ack?.({ ok: true, action: intent.action, amount: intent.amount ?? null, isActor });
+  });
+
+  // Blind-mode activity logging. Allow-listed players (default: josh) stream
+  // their blind-mode diagnostic log here so we can read the session
+  // server-side in backend/logs/blind.jsonl — a blind, remote tester can't
+  // copy their own browser console. Fire-and-forget (no ack); silently
+  // ignored for anyone not on the allowlist. Capped per emit so a runaway
+  // client can't bloat the log.
+  socket.on('blind:log', ({ entries } = {}) => {
+    const me = meOf(socket);
+    if (!me) return;
+    const id = String(me.player_id || '').toLowerCase();
+    if (!BLIND_LOG_PLAYERS.has(id)) return;
+    if (!Array.isArray(entries) || !entries.length) return;
+    const ts = new Date().toISOString();
+    for (const e of entries.slice(0, 200)) {
+      const msg = String(e == null ? '' : e).slice(0, 500);
+      if (msg) logBlind({ ts, player: id, nick: me.nickname || null, msg });
+    }
   });
 }
 
