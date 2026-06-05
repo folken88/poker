@@ -303,29 +303,13 @@ const KITS = {
     spontaneousSpell(SPELL.coneofcold,   10),
     spontaneousSpell(SPELL.disintegrate, 12),
   ] },
-  // ORACLE (Flame mystery) — spontaneous DIVINE caster (per-spell-level slots).
-  // Elfrip's class: he packs the Flame mystery's bonus fire spells (Burning Hands,
-  // Scorching Ray, Fireball, Fire Snake) alongside cures + a couple of buffs, and
-  // LOVES to blast when nobody needs healing or warding. The bot AI checks heals
-  // and buffs first, then (as an arcane-style controller) picks the widest blast —
-  // so Fireball/Fire Snake naturally become his favorites in a crowd.
-  oracle: { atwill: { ...PRODUCE_FLAME }, abilities: [
-    // ── Heals ──
-    { key: 'curelight',    name: 'Cure Light Wounds',    icon: '💚', cost: 'slot', slvl: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5,  target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5).' },
-    { key: 'curemoderate', name: 'Cure Moderate Wounds', icon: '💚', cost: 'slot', slvl: 2, minLevel: 3, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
-    { key: 'cureserious',  name: 'Cure Serious Wounds',  icon: '💚', cost: 'slot', slvl: 3, minLevel: 5, effect: 'heal', heal: 'single', healDice: 3, healCap: 15, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 3d8 + caster level (max +15).' },
-    // ── Buffs ──
-    { key: 'bless',        name: 'Bless',                icon: '✨', cost: 'run',  uses: 1, slvl: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1 }, sticky: true, sound: S.cure, desc: 'All allies gain +1 to hit for the ENTIRE dungeon — cast once; it never fades between rooms.' },
-    { key: 'shieldoffaith',name: 'Shield of Faith',      icon: '🛡️', cost: 'slot', slvl: 1, effect: 'buff', target: 'ally', buff: { ac: 2 }, sticky: true, sound: S.invoke, desc: '+2 deflection AC to an ally (the one with the LOWEST AC) for the rest of the room.' },
-    { key: 'dispelmagic',  name: 'Dispel Magic',         icon: '🌀', cost: 'slot', slvl: 3, minLevel: 5, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'Strip a debuff off an afflicted ally, or strip an enemy buff.' },
-    // ── Fire blasts (Flame mystery) — his favorites ──
-    spontaneousSpell(SPELL.burninghands, 1),
-    spontaneousSpell(SPELL.scorchingray, 4),
-    spontaneousSpell(SPELL.fireball,     7),
-    spontaneousSpell(SPELL.firesnake,    8),
-    // ── High-level rescue ──
-    { key: 'breathoflife', name: 'Breath of Life',       icon: '🌬️', cost: 'slot', slvl: 5, minLevel: 9, effect: 'revive', reviveDice: 5, reviveCap: 25, target: 'ally', sound: S.revive, desc: 'Snatch a DYING ally back — revive & heal them 5d8 + caster level (max +25).' },
-  ] },
+  // ORACLE — spontaneous DIVINE caster on the CLERIC spell list, at oracle (full
+  // spontaneous caster) progression: per-spell-level slots from the SORC table via
+  // slotsFor(). Its repertoire is built right after this KITS literal (a clone of
+  // the cleric list + Channel Positive + Flame-mystery fire spells + Haste/Slow),
+  // so cleric and oracle stay in sync. Elfrip (Flame) leans on the fire blasts;
+  // Rhyarca & Casandalee play the full divine toolkit. At-will: Produce Flame.
+  oracle: { atwill: { ...PRODUCE_FLAME }, abilities: [] },
   // ── Hybrids ──
   // MAGUS — basic attack with the player's chosen weapon (martial proficiency).
   // Spell Strike = that same attack PLUS Shocking Grasp (+level d6 electricity,
@@ -406,6 +390,23 @@ const KITS = {
     { key: 'calllightning', name: 'Call Lightning', icon: '⚡', cost: 'room', uses: 1, minLevel: 5, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 6, dice: 'halflevel', dcap: 5, dtype: 'electricity', sounds: THUNDER_SFX, desc: 'A bolt from the storm strikes 2 foes — Reflex for half (½level d6).' },
   ] },
 };
+
+// ── ORACLE repertoire = the CLERIC spell list (cloned so the two stay in sync)
+// PLUS the Flame-mystery fire spells and Haste/Slow. Channel Positive rides along
+// with the cleric list, so oracles channel exactly like a cleric of their level.
+// Oracle is a full SPONTANEOUS caster: cost:'slot' + slotsFor('oracle') already
+// gives the oracle (SORC-table) slot progression. We DROP cleric's Blessing of
+// Fervor (a haste-clone) since oracles now get real Haste. Built here, before the
+// img/slvl post-processing loop below, so the new abilities are processed too.
+KITS.oracle.abilities = [
+  ...KITS.cleric.abilities.filter(a => a.key !== 'blessingoffervor').map(a => ({ ...a })),
+  spontaneousSpell(SPELL.burninghands, 1),
+  spontaneousSpell(SPELL.scorchingray, 3),
+  { key: 'haste', name: 'Haste', icon: '💨', cost: 'slot', slvl: 3, minLevel: 5, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 round per caster level.' },
+  spontaneousSpell(SPELL.slow,      5),
+  spontaneousSpell(SPELL.fireball,  5),
+  spontaneousSpell(SPELL.firesnake, 7),
+];
 
 // Spell/ability art (PF1 stock icons copied into public/icons/spells/). Keyed
 // by ability key; anything not listed falls back to its emoji glyph.
