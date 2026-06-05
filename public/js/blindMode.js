@@ -43,6 +43,40 @@
   const supportsTTS = !!TTS;
   const supportsSR  = !!SR;
 
+  // ---------- Diagnostic logging ----------
+  // Thorough, prefixed console logging so a (possibly remote) blind tester's
+  // session can be debugged after the fact — ESPECIALLY *why* push-to-talk
+  // speech recognition fails to start (capability flags, secure-context,
+  // mic-permission error codes). On by default; silence with
+  //   localStorage.blindModeDebug = '0'
+  // Recent entries are also kept in a ring buffer reachable from the console
+  // via  window.BlindMode.getLogs()  so the tester can copy/paste them.
+  let DEBUG = true;
+  try { if (localStorage.getItem('blindModeDebug') === '0') DEBUG = false; } catch (_) {}
+  const _logs = [];
+  function blog(...args) {
+    let body;
+    try {
+      body = args.map(a => (a == null || typeof a === 'string' || typeof a === 'number' || typeof a === 'boolean')
+        ? String(a) : JSON.stringify(a)).join(' ');
+    } catch (_) { body = args.join(' '); }
+    let stamp = '';
+    try { stamp = new Date().toLocaleTimeString(); } catch (_) {}
+    const entry = `${stamp} ${body}`;
+    _logs.push(entry);
+    if (_logs.length > 800) _logs.shift();
+    if (DEBUG) { try { console.log('[blindMode]', entry); } catch (_) {} }
+  }
+  function getLogs() { return _logs.join('\n'); }
+  // Log the environment once at module load — this alone usually explains a
+  // dead microphone (no SR API, or a non-secure origin where Chrome blocks it).
+  blog('module loaded', JSON.stringify({
+    supportsTTS, supportsSR,
+    secureContext: (typeof isSecureContext !== 'undefined') ? isSecureContext : 'unknown',
+    proto: location.protocol,
+    ua: navigator.userAgent,
+  }));
+
   // ---------- Pronunciation overrides ----------
   // Written → phonetic spelling for names the TTS voice mispronounces,
   // applied as a word-boundary case-insensitive replace in speak().
@@ -70,7 +104,11 @@
   // ---------- State ----------
   const state = {
     on: false,
-    rate: 1.7,                // TTS speed multiplier — Josh's sweet spot
+    // TTS speed multiplier. Lowered from 1.7 → 1.2: 1.7 was tuned for one
+    // power user but reads the cards too fast for most blind players. Now
+    // PERSISTED to localStorage and adjustable live with [ (slower) and
+    // ] (faster), so anyone can dial in their own pace and it sticks.
+    rate: 1.2,
     pitch: 1.0,
     voice: null,              // chosen voice object once available
     queue: [],                // [{text, prio}, ...]
@@ -184,6 +222,7 @@
       state.queue = state.queue.filter(it => PRIO[it.prio] >= PRIO.event);
     }
     state.queue.push({ text, prio });
+    blog('speak', `[${prio}]`, text.length > 90 ? text.slice(0, 90) + '…' : text);
     if (prio === 'event') state.lastEventText = text;
     pump();
   }
@@ -217,7 +256,21 @@
                || en[0]
                || vs[0]
                || null;
+    blog('pickVoice', state.voice ? `${state.voice.name} (${state.voice.lang}${state.voice.localService ? ', local' : ''})` : 'none', `of ${vs.length} voices`);
   }
+
+  // ---------- Reading-speed control (persisted + live-adjustable) ----------
+  // Clamped to the same 0.8–2.5 band the voice commands used. Persisted to
+  // localStorage so a player's chosen pace survives reloads. `announce` reads
+  // the new rate back so an adjustment is audible feedback even with no screen.
+  function setRate(newRate, announce = true) {
+    const r = Math.max(0.8, Math.min(2.5, Number(newRate) || state.rate));
+    state.rate = Math.round(r * 100) / 100;
+    try { localStorage.setItem('blindRate', String(state.rate)); } catch (_) {}
+    blog('setRate', state.rate);
+    if (announce) speak(`Reading speed ${state.rate.toFixed(2)}.`, 'urgent');
+  }
+  function nudgeRate(delta) { setRate(state.rate + delta); }
 
   // ---------- Mode toggle ----------
   function toggle() {
@@ -226,6 +279,7 @@
       return;
     }
     state.on = !state.on;
+    blog('toggle ->', state.on ? 'ON' : 'OFF');
     try { sessionStorage.setItem('blindMode', state.on ? '1' : '0'); } catch (_) {}
     updateChip();
     if (state.on) {
@@ -400,7 +454,7 @@
         // Suppressed thereafter to keep the per-turn cue snappy.
         if (!state.announcedControls) {
           state.announcedControls = true;
-          line += ` Hold ${pttLabel()} and say fold, call, or raise; press H to hear your hand again.`;
+          line += ` Hold ${pttLabel()} and say fold, call, or raise; press H to hear your hand again; left and right bracket slow down or speed up this voice.`;
         }
         speak(line, 'urgent');
       }
@@ -492,7 +546,10 @@
   // the top guess. Covers actions, queries, and confirm words.
   const COMMAND_HINT = /\b(fold|check|call|raise|bet|all\s*in|shove|jam|min|pot|stack|cash|board|hand|cards|hole|repeat|sit|seat|faster|slower|confirm|yes|no|cancel|change|push)\b/;
   function startListening() {
-    if (!state.on || !supportsSR || state.listening) return;
+    blog('startListening called', JSON.stringify({ on: state.on, supportsSR, listening: state.listening }));
+    if (!state.on) { blog('startListening abort: mode off'); return; }
+    if (!supportsSR) { blog('startListening abort: NO speech-recognition API in this browser'); return; }
+    if (state.listening) { blog('startListening abort: already listening'); return; }
     // BARGE-IN: silence our own narration the instant the mic opens, so
     // the player can talk OVER a long cue ("Your turn. Hand... Board...
     // Pot... Cash...") and interrupt with "check". Essential because:
@@ -526,24 +583,41 @@
           const tr = (res[i]?.transcript || '').trim();
           if (tr) alts.push(tr);
         }
-        if (!alts.length) return;
+        if (!alts.length) { blog('SR onresult: no transcript'); return; }
+        blog('SR onresult', JSON.stringify(alts));
         const chosen = alts.find(a => COMMAND_HINT.test(a.toLowerCase())) || alts[0];
         processCommand(chosen);
       };
+      // Full lifecycle logging — these handlers are how we tell apart "mic
+      // never opened" (no onstart), "mic opened but no audio" (no
+      // onaudiostart), "permission denied" (onerror not-allowed), etc.
+      rec.onstart       = () => blog('SR onstart (recognition session began)');
+      rec.onaudiostart  = () => blog('SR onaudiostart (microphone capturing)');
+      rec.onspeechstart = () => blog('SR onspeechstart (speech detected)');
+      rec.onspeechend   = () => blog('SR onspeechend');
+      rec.onnomatch     = () => blog('SR onnomatch (heard speech, no confident match)');
       rec.onerror = (e) => {
+        // Log EVERY error code — 'not-allowed'/'service-not-allowed' = mic
+        // permission blocked; 'audio-capture' = no microphone; 'network' =
+        // STT backend unreachable; 'no-speech'/'aborted' are benign timeouts.
+        blog('SR onerror', JSON.stringify({ error: e.error, message: e.message || '' }));
         if (e.error === 'no-speech' || e.error === 'aborted') return;
         earcon('error');
       };
-      rec.onend = () => { state.listening = false; state.rec = null; };
+      rec.onend = () => { blog('SR onend'); state.listening = false; state.rec = null; };
       rec.start();
       state.listening = true;
       state.rec = rec;
       earcon('open');
-    } catch (_) { /* swallow */ }
+      blog('SR rec.start() issued ok');
+    } catch (err) {
+      blog('startListening EXCEPTION', String(err && err.message || err));
+    }
   }
   function stopListening() {
+    blog('stopListening called', JSON.stringify({ listening: state.listening }));
     if (!state.listening || !state.rec) return;
-    try { state.rec.stop(); } catch (_) {}
+    try { state.rec.stop(); } catch (err) { blog('stopListening EXCEPTION', String(err && err.message || err)); }
     earcon('close');
   }
 
@@ -595,6 +669,7 @@
   // ---------- Command parsing & dispatch ----------
   function processCommand(transcript) {
     const raw = transcript.toLowerCase().trim();
+    blog('processCommand', JSON.stringify(raw), `screen=${document.body.dataset.screen || '?'}`);
     // Pending confirm: only the literal "confirm" or "yes" goes through.
     if (state.pendingConfirm && Date.now() < state.pendingConfirm.expiresAt) {
       if (/^(confirm|yes|do it|go)$/.test(raw)) {
@@ -621,8 +696,8 @@
 
     // Mode + rate controls
     if (/^blind\s+off$/.test(raw)) { toggle(); return; }
-    if (/^(faster|speed up)$/.test(raw)) { state.rate = Math.min(2.5, state.rate + 0.2); speak(`Rate ${state.rate.toFixed(1)}.`, 'urgent'); return; }
-    if (/^(slower|slow down)$/.test(raw)) { state.rate = Math.max(0.8, state.rate - 0.2); speak(`Rate ${state.rate.toFixed(1)}.`, 'urgent'); return; }
+    if (/^(faster|speed up)$/.test(raw)) { nudgeRate(+0.2); return; }
+    if (/^(slower|slow down)$/.test(raw)) { nudgeRate(-0.2); return; }
     // Rebind the push-to-talk key by voice.
     if (/^(change|set|rebind)\s+(my\s+)?(push[\s-]?to[\s-]?talk|talk|mic|ptt)(\s+key)?$/.test(raw)) { beginRebind(); return; }
 
@@ -751,10 +826,12 @@
   }
   function dispatchAction(kind, amount) {
     const socket = state.deps?.socket;
+    blog('dispatchAction', JSON.stringify({ kind, amount: amount ?? null, hasSocket: !!socket }));
     if (!socket) { earcon('error'); return; }
     const payload = { action: kind };
     if (kind === 'raise' && Number.isFinite(amount)) payload.amount = amount;
     socket.emit('table:action', payload, (resp) => {
+      blog('dispatchAction ack', JSON.stringify({ ok: !!resp?.ok, error: resp?.error || null }));
       if (!resp?.ok) {
         earcon('error');
         speak(resp?.error || 'Action rejected.', 'urgent');
@@ -917,6 +994,12 @@
       const savedPtt = localStorage.getItem('blindPttCode');
       if (savedPtt) state.pttCode = savedPtt;
     } catch (_) {}
+    // Restore the saved reading speed (localStorage). Falls back to the
+    // gentler default (1.2) when unset.
+    try {
+      const savedRate = parseFloat(localStorage.getItem('blindRate'));
+      if (Number.isFinite(savedRate)) state.rate = Math.max(0.8, Math.min(2.5, savedRate));
+    } catch (_) {}
     // Restore mode from sessionStorage
     try {
       const stored = sessionStorage.getItem('blindMode');
@@ -938,6 +1021,10 @@
     if (!supportsSR) {
       console.warn('[blindMode] speech recognition unavailable — PTT disabled');
     }
+    blog('init done', JSON.stringify({
+      supportsTTS, supportsSR, rate: state.rate, pttCode: state.pttCode,
+      restoredOn: state.on,
+    }));
     return { supportsTTS, supportsSR };
   }
 
@@ -1112,5 +1199,7 @@
     readHand, sit,
     // Configurable push-to-talk binding
     getPttCode, isRebinding, beginRebind, consumeRebind, pttLabel,
+    // Reading-speed control (bound to [ and ] in client.js) + diagnostics.
+    setRate, nudgeRate, getLogs, log: blog,
   };
 })();

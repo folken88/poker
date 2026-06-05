@@ -3629,6 +3629,10 @@
       // Push-to-talk (configurable key; default Space). Checked before H
       // so a player who rebinds PTT to H still gets the mic, not a re-read.
       if (e.code === pttCode()) {
+        // Log that the key reached us. If PTT seems dead, the ABSENCE of
+        // this line in the logs means the key never arrived (e.g. a screen
+        // reader swallowed it) — vs. it arriving but recognition failing.
+        window.BlindMode.log?.('PTT keydown received: ' + e.code);
         e.preventDefault();
         const chip = $('#blindModeChip');
         if (chip) chip.classList.add('is-listening');
@@ -3639,7 +3643,13 @@
       if (e.code === 'KeyH') {
         e.preventDefault();
         window.BlindMode.readHand?.();
+        return;
       }
+      // [ / ] — adjust the reading speed live (persisted). Gives a blind
+      // player a way to slow the voice down WITHOUT needing speech
+      // recognition (which may be unavailable in their browser).
+      if (e.code === 'BracketLeft')  { e.preventDefault(); window.BlindMode.nudgeRate?.(-0.1); return; }
+      if (e.code === 'BracketRight') { e.preventDefault(); window.BlindMode.nudgeRate?.(+0.1); return; }
     });
     document.addEventListener('keyup', (e) => {
       if (!window.BlindMode.isOn() || isTypingTarget(e.target)) return;
