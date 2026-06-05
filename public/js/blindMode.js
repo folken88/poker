@@ -159,6 +159,7 @@
     // exposed notifyBanterStart/End hooks.
     banterAudio: null,        // current Audio element, or null
     pendingConfirm: null,     // { kind:'raise', amount, expiresAt }
+    pendingSit: null,         // { idx, expiresAt } — empty seat armed by a number key; Return confirms
     lastEventText: null,      // for "repeat" command
     prevState: null,          // last seen table state, for diffing
     prevBoardLen: 0,          // last board card count
@@ -491,7 +492,7 @@
         // Suppressed thereafter to keep the per-turn cue snappy.
         if (!state.announcedControls) {
           state.announcedControls = true;
-          line += ` Hold ${pttLabel()} and say fold, call, or raise; press H to hear your hand again; left and right bracket slow down or speed up this voice.`;
+          line += ` Hold ${pttLabel()} and say fold, call, or raise; press H to hear your hand again; C for your cards, B for the board, P for the pot, or a seat number one to nine to hear that seat; left and right bracket slow down or speed up this voice.`;
         }
         speak(line, 'urgent');
       }
@@ -888,6 +889,7 @@
 
   // ---------- Read-only voice queries ----------
   function announcePot() {
+    state.pendingSit = null;
     const hand = state.deps?.state?.table?.hand;
     const pot = hand?.potTotal ?? 0;
     speak(`Pot ${Number(pot).toLocaleString()}.`, 'urgent');
@@ -902,9 +904,19 @@
     speak(`Cash ${chips.toLocaleString()}.`, 'urgent');
   }
   function announceBoard() {
+    state.pendingSit = null;
     const board = state.deps?.state?.table?.hand?.board || [];
-    if (!board.length) { speak('No board yet.', 'urgent'); return; }
+    if (!board.length) { speak('Preflop. No community cards yet.', 'urgent'); return; }
     speak(`Board: ${cardListWords(board)}.`, 'urgent');
+  }
+  /** Read ONLY my hole cards (the C key) — "what am I holding?" without the
+   *  board. (H reads hole + board; this is the terser, card-focused query.) */
+  function readMyCards() {
+    if (!state.on) return;
+    state.pendingSit = null;
+    const hole = state.deps?.state?.myHole;
+    if (hole && hole.length) speak(`Your cards: ${cardListWords(hole)}.`, 'urgent');
+    else speak('You have no cards right now.', 'urgent');
   }
   function announceActor() {
     const st = state.deps?.state?.table;
@@ -920,6 +932,7 @@
    *  was I holding?" without waiting for the next turn cue. */
   function readHand() {
     if (!state.on) return;
+    state.pendingSit = null;
     const hole = state.deps?.state?.myHole;
     if (hole && hole.length) {
       const board = state.deps?.state?.table?.hand?.board || [];
@@ -951,6 +964,42 @@
     }
     speak(`Taking seat ${idx + 1}.`, 'urgent');
     doSit(idx);
+  }
+
+  /** Number keys 1–9 at the table. Occupied seat → speak who's there. Empty
+   *  seat → ARM it (state.pendingSit) and say "Sit N"; the player then presses
+   *  Return (their affirmative key) to actually sit. We arm-then-confirm rather
+   *  than focus the DOM seat button because the table re-renders constantly
+   *  (every opponent action), which would drop real focus before they confirm.
+   *  No visual cue needed — the spoken "Sit N" IS the selection. */
+  function announceSeat(n) {
+    if (!state.on) return;
+    state.pendingSit = null;
+    const seats = state.deps?.state?.table?.seats || [];
+    const idx = n - 1;
+    const seat = seats.find(s => s.index === idx) || seats[idx];
+    if (!seat) { speak(`No seat ${n}.`, 'urgent'); return; }
+    if (seat.occupied && seat.playerId) {
+      const mePid = state.deps?.state?.me?.player_id;
+      const you = seat.playerId === mePid ? ', you' : '';
+      speak(`Seat ${n}: ${seat.nickname || 'someone'}${you}.`, 'urgent');
+      return;
+    }
+    // Empty seat → arm it; Return confirms (see confirmPendingSit).
+    state.pendingSit = { idx, expiresAt: Date.now() + 20000 };
+    speak(`Sit ${n}. Press return to take it.`, 'urgent');
+  }
+
+  /** Confirm an armed empty seat (Return key, wired in client.js). Returns true
+   *  if it handled a pending sit, so the caller can swallow the keypress. Routes
+   *  through sit(), which re-validates the seat is still open. */
+  function confirmPendingSit() {
+    const p = state.pendingSit;
+    if (!p) return false;
+    state.pendingSit = null;
+    if (Date.now() >= p.expiresAt) { speak('Seat selection expired.', 'urgent'); return true; }
+    sit(p.idx);
+    return true;
   }
 
   // ---------- Push-to-talk key (configurable) ----------
@@ -1235,6 +1284,8 @@
     notifyBanterStart,
     // Turn-controls + seating helpers (bound to keys in client.js)
     readHand, sit,
+    // Explore hotkeys (C/B/P + seat numbers 1–9) and the Return-to-sit confirm.
+    readMyCards, announceBoard, announcePot, announceSeat, confirmPendingSit,
     // Configurable push-to-talk binding
     getPttCode, isRebinding, beginRebind, consumeRebind, pttLabel,
     // Reading-speed control (bound to [ and ] in client.js) + diagnostics.

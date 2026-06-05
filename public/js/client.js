@@ -3646,6 +3646,22 @@
       // recognition (which may be unavailable in their browser).
       if (e.code === 'BracketLeft')  { e.preventDefault(); window.BlindMode.nudgeRate?.(-0.1); return; }
       if (e.code === 'BracketRight') { e.preventDefault(); window.BlindMode.nudgeRate?.(+0.1); return; }
+      // ----- Explore hotkeys (poker table only) -----
+      // C / B / P read your cards / the board / the pot. Number keys 1–9 read a
+      // seat: the occupant's name, or (if empty) arm it and say "Sit N" so
+      // Return takes the seat. Skipped on the dungeon screen, which has its own
+      // command set.
+      if (document.body.dataset.screen !== 'dungeon') {
+        if ((e.code === 'Enter' || e.code === 'NumpadEnter') && window.BlindMode.confirmPendingSit?.()) {
+          e.preventDefault();
+          return;
+        }
+        if (e.code === 'KeyC') { e.preventDefault(); window.BlindMode.readMyCards?.();  return; }
+        if (e.code === 'KeyB') { e.preventDefault(); window.BlindMode.announceBoard?.(); return; }
+        if (e.code === 'KeyP') { e.preventDefault(); window.BlindMode.announcePot?.();   return; }
+        const seatKey = e.code.match(/^(?:Digit|Numpad)([1-9])$/);
+        if (seatKey) { e.preventDefault(); window.BlindMode.announceSeat?.(parseInt(seatKey[1], 10)); return; }
+      }
     });
     document.addEventListener('keyup', (e) => {
       if (!window.BlindMode.isOn() || isTypingTarget(e.target)) return;
