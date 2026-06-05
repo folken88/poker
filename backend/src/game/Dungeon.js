@@ -1813,7 +1813,7 @@ class Dungeon {
     //     hardest single-target nuke (Disintegrate / Cone of Cold) or pin it with
     //     a save-or-suck debuff (Hold Person). NOTE: some 'aoe'-tagged spells only
     //     hit one target (maxTargets 1), so coverage = min(foes, maxTargets).
-    if (m.cls === 'wizard' || m.cls === 'sorcerer') {
+    if (m.cls === 'wizard' || m.cls === 'sorcerer' || m.cls === 'oracle') {
       const SPELLISH = ['aoe', 'disintegrate', 'grease', 'sleep', 'slow', 'fascinate', 'bolt', 'missile', 'touch', 'rays', 'save_debuff'];
       const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
       const cand = [];
@@ -2138,6 +2138,11 @@ class Dungeon {
     else if (ab.cost === 'room') m.abilityUses[ab.key] = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 0) - 1);
     else if (ab.cost === 'run') m.runAbilityUses[ab.key] = Math.max(0, ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) - 1);
     if (ab.target === 'enemy' || ab.target === 'aoe') m.invisible = false;   // attacking breaks Invisibility
+    // A blaster (Elfrip the flame oracle) sometimes whoops "BOOM!" when a big
+    // fire spell lands. Throttled like all dungeon banter (≤1/round, a chance).
+    if (m.isBot && (ab.key === 'fireball' || ab.key === 'firesnake')) {
+      try { this._tryBanter(m, 'cast_fire', { spell: ab.name }); } catch (_) {}
+    }
     if (ab.effect === 'judgment' || ab.freeAction) return { ok: true, freeAction: true };   // judgement switch / barbarian Rage cost no action
     return { ok: true };
   }

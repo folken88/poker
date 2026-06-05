@@ -390,7 +390,7 @@ const BOT_CLASSES = {
   'Auren Vrood': 'wizard', 'Casandalee': 'wizard', 'Meyanda': 'cleric', 'Daramid': 'wizard',
   'Kovira': 'wizard', 'Tokala': 'barbarian', 'Mr. Brow': 'investigator', 'Tamsin': 'bard',
   'Concetta': 'swashbuckler', 'Farrah': 'sorcerer', 'Fera': 'rogue',
-  'Elfrip': 'sorcerer', 'Rodney Smith': 'ranger',   // Elfrip favors fire; Rodney "Danger" Smith is an archer
+  'Elfrip': 'oracle', 'Rodney Smith': 'ranger',   // Elfrip is a Flame-mystery oracle (fire blaster); Rodney "Danger" Smith is an archer
   'Vesorianna': 'cleric', 'Farrus Richton': 'barbarian', 'Dinvaya': 'cleric', 'Storgrim Thunderbeard': 'fighter',
   'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'rogue', 'Kai Ginn': 'ranger', 'Lirienne': 'ranger',
   'Rissa': 'druid', 'Taelys': 'ranger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'ranger',

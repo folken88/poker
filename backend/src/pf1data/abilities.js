@@ -180,6 +180,8 @@ const spontaneousSpell = (spell, minLevel) => ({ ...spell, cost: 'slot', minLeve
 // unlimited ranged touch attack for 1d6+4 (cold). Used in the dungeon AND for
 // poker-table harassment. (Ice-punch sound.)
 const RAY_OF_FROST = { key: 'rayoffrost', name: 'Ray of Frost', icon: '❄️', effect: 'bolt', target: 'enemy', die: 6, dice: 1, flat: 4, dtype: 'cold', sound: S.frost, desc: 'Elemental Ray — a ranged touch attack for 1d6+4 cold (unlimited).' };
+// Flame-oracle at-will — the fiery counterpart to Ray of Frost (Produce Flame).
+const PRODUCE_FLAME = { key: 'produceflame', name: 'Produce Flame', icon: '🔥', effect: 'bolt', target: 'enemy', die: 6, dice: 1, flat: 4, dtype: 'fire', sound: S.fire, desc: 'Produce Flame — a flickering flame hurled at a foe for 1d6+4 fire (ranged touch, unlimited).' };
 
 const KITS = {
   // ── Martials (conditional maneuvers) ──
@@ -301,6 +303,29 @@ const KITS = {
     spontaneousSpell(SPELL.coneofcold,   10),
     spontaneousSpell(SPELL.disintegrate, 12),
   ] },
+  // ORACLE (Flame mystery) — spontaneous DIVINE caster (per-spell-level slots).
+  // Elfrip's class: he packs the Flame mystery's bonus fire spells (Burning Hands,
+  // Scorching Ray, Fireball, Fire Snake) alongside cures + a couple of buffs, and
+  // LOVES to blast when nobody needs healing or warding. The bot AI checks heals
+  // and buffs first, then (as an arcane-style controller) picks the widest blast —
+  // so Fireball/Fire Snake naturally become his favorites in a crowd.
+  oracle: { atwill: { ...PRODUCE_FLAME }, abilities: [
+    // ── Heals ──
+    { key: 'curelight',    name: 'Cure Light Wounds',    icon: '💚', cost: 'slot', slvl: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5,  target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5).' },
+    { key: 'curemoderate', name: 'Cure Moderate Wounds', icon: '💚', cost: 'slot', slvl: 2, minLevel: 3, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
+    { key: 'cureserious',  name: 'Cure Serious Wounds',  icon: '💚', cost: 'slot', slvl: 3, minLevel: 5, effect: 'heal', heal: 'single', healDice: 3, healCap: 15, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 3d8 + caster level (max +15).' },
+    // ── Buffs ──
+    { key: 'bless',        name: 'Bless',                icon: '✨', cost: 'run',  uses: 1, slvl: 1, effect: 'buff', target: 'self', party: true, persist: true, buff: { toHit: 1 }, sticky: true, sound: S.cure, desc: 'All allies gain +1 to hit for the ENTIRE dungeon — cast once; it never fades between rooms.' },
+    { key: 'shieldoffaith',name: 'Shield of Faith',      icon: '🛡️', cost: 'slot', slvl: 1, effect: 'buff', target: 'ally', buff: { ac: 2 }, sticky: true, sound: S.invoke, desc: '+2 deflection AC to an ally (the one with the LOWEST AC) for the rest of the room.' },
+    { key: 'dispelmagic',  name: 'Dispel Magic',         icon: '🌀', cost: 'slot', slvl: 3, minLevel: 5, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'Strip a debuff off an afflicted ally, or strip an enemy buff.' },
+    // ── Fire blasts (Flame mystery) — his favorites ──
+    spontaneousSpell(SPELL.burninghands, 1),
+    spontaneousSpell(SPELL.scorchingray, 4),
+    spontaneousSpell(SPELL.fireball,     7),
+    spontaneousSpell(SPELL.firesnake,    8),
+    // ── High-level rescue ──
+    { key: 'breathoflife', name: 'Breath of Life',       icon: '🌬️', cost: 'slot', slvl: 5, minLevel: 9, effect: 'revive', reviveDice: 5, reviveCap: 25, target: 'ally', sound: S.revive, desc: 'Snatch a DYING ally back — revive & heal them 5d8 + caster level (max +25).' },
+  ] },
   // ── Hybrids ──
   // MAGUS — basic attack with the player's chosen weapon (martial proficiency).
   // Spell Strike = that same attack PLUS Shocking Grasp (+level d6 electricity,
@@ -411,7 +436,7 @@ for (const kit of Object.values(KITS)) {
 const DEFAULT_KIT = KITS.fighter;
 // Classes a human may pick in the dropdown. Ranger has a kit (Danger uses it)
 // but isn't offered — its bow isn't in the staple weapon list.
-const SELECTABLE_CLASSES = ['fighter', 'barbarian', 'rogue', 'paladin', 'cleric', 'wizard', 'sorcerer', 'magus', 'inquisitor', 'bard', 'druid'];
+const SELECTABLE_CLASSES = ['fighter', 'barbarian', 'rogue', 'paladin', 'cleric', 'wizard', 'sorcerer', 'magus', 'inquisitor', 'bard', 'druid', 'oracle'];
 function kitFor(classKey) { return KITS[classKey] || DEFAULT_KIT; }
 const isPoolClass = (cls) => POOL_CLASSES.has(cls);
 const isCaster    = (cls) => CASTER_CLASSES.has(cls);

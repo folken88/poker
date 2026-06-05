@@ -993,6 +993,8 @@ async function maybeSpeak(table, event) {
 // a great one sticks around. Add more here as they come up.
 const SIGNATURE_LINES = {
   'Danger': { damage: ['Well shoot, that one bites!'] },
+  // Elfrip the flame oracle gleefully shouts when a big fire spell connects.
+  'Elfrip': { cast_fire: ['[excited] BOOM!', '[excited] BOOM, baby!', '[excited] KABOOM!', '[excited] Burn, burn, BURN!'] },
 };
 
 async function dungeonLine(nick, eventType, ctx = {}) {
@@ -1004,6 +1006,7 @@ async function dungeonLine(nick, eventType, ctx = {}) {
     loot_win:  `you won the party roll for a +${ctx.tier} ${ctx.item} you all found`,
     loot_lose: `you LOST the roll for a +${ctx.tier} ${ctx.item} — ${ctx.winner || 'someone else'} grabbed it`,
     chat:      `${ctx.from || 'a party-mate'} just said to you, here in the dungeon: "${ctx.said || '...'}" — answer them directly`,
+    cast_fire: `you just hurled a roaring ${ctx.spell || 'fireball'} and it EXPLODED across the enemy — whoop with fiery glee`,
   })[eventType] || 'something just happened down here';
   // Reuse a saved dungeon line? Down/damage barks are tied to the MONSTER, so a
   // saved one only counts as a perfect match when its subject is the same foe;
@@ -1019,7 +1022,10 @@ async function dungeonLine(nick, eventType, ctx = {}) {
   // A hand-picked signature line ~30% of the time (skips the LLM), else generate.
   let line;
   const sig = (SIGNATURE_LINES[nick] || {})[eventType];
-  if (sig && sig.length && Math.random() < 0.30) {
+  // Fire-cast whoops ("BOOM!") are the whole point of the moment, so lean on the
+  // signature line more often there; other events keep the gentle 30%.
+  const sigChance = eventType === 'cast_fire' ? 0.6 : 0.30;
+  if (sig && sig.length && Math.random() < sigChance) {
     line = sig[Math.floor(Math.random() * sig.length)];
   } else {
     const messages = [
