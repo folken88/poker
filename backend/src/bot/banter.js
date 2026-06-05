@@ -904,6 +904,11 @@ async function maybeSpeak(table, event) {
   // the model and the voice synth. (Specific lines — names/amounts — only replay
   // rarely; see linePool.)
   const reuseNick = speaker.player?.nickname || speakerNick;
+  // Refresh the line-pool's name set with EVERYONE currently at the table
+  // (humans included — not just bot characters), so a line that names a human
+  // like "Tobias" is recognised as addressing a person and never replayed at
+  // someone else. (See linePool.choose's person-name guard.)
+  _refreshLineNames(table);
   try {
     const saved = await linePool.choose(reuseNick, event.kind || 'table', null);
     if (saved && saved.text) {
@@ -1049,7 +1054,28 @@ async function dungeonLine(nick, eventType, ctx = {}) {
 }
 
 // Names that make a pooled line instance-specific (so it's only replayed when it
-// fits) — every character a line might address by name.
+// fits) — every character a line might address by name. Seeded with the bot
+// roster at load; _refreshLineNames() below tops it up with whoever (humans
+// included) is actually seated when a line is chosen/recorded.
 linePool.setNames(Object.keys(CHARACTER_FLAVOR));
+
+/** Re-seed the line-pool name set with the bot roster PLUS everyone currently
+ *  seated (humans + bots), so person-name detection in linePool covers real
+ *  players like "Tobias"/"Josh" — not just scripted characters. Cheap; called
+ *  right before a table line is chosen. Best-effort. */
+function _refreshLineNames(table) {
+  try {
+    const names = new Set(Object.keys(CHARACTER_FLAVOR));
+    if (table && Array.isArray(table.seats)) {
+      for (const s of table.seats) {
+        if (typeof s.isEmpty === 'function' && s.isEmpty()) continue;
+        const n = (typeof s.displayNickname === 'function' && s.displayNickname())
+          || s.player?.nickname || s.playerId;
+        if (n) names.add(n);
+      }
+    }
+    linePool.setNames([...names]);
+  } catch (_) { /* keep whatever name set we had */ }
+}
 
 module.exports = { maybeSpeak, detectAddressedBot, dungeonLine, CHARACTER_FLAVOR };

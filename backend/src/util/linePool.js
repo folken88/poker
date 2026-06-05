@@ -49,10 +49,23 @@ const stats = { reuseHits: 0, fresh: 0, records: 0, evictions: 0 };
 // particular tablemate). Set by banter.js via setNames(); a digit also marks
 // a line specific (a gp amount, a count — tied to one moment).
 let _nameRe = null;
+let _namesReSrc = null;   // escaped alternation source, for building a global matcher on demand
 function escapeRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function setNames(names) {
   const ns = (names || []).filter(n => n && String(n).length >= 3).map(escapeRe);
   _nameRe = ns.length ? new RegExp(`\\b(${ns.join('|')})\\b`, 'i') : null;
+  _namesReSrc = ns.length ? ns.join('|') : null;
+}
+/** Distinct person-names (lowercased) that appear in `text`, per the current
+ *  name set — empty when the line names nobody. A fresh RegExp per call keeps
+ *  it free of lastIndex state; this runs only on reuse decisions. */
+function _namesIn(text) {
+  if (!_namesReSrc) return [];
+  const re = new RegExp(`\\b(${_namesReSrc})\\b`, 'gi');
+  const out = new Set();
+  let m;
+  while ((m = re.exec(String(text || ''))) !== null) out.add(m[1].toLowerCase());
+  return [...out];
 }
 function _isSpecific(text) {
   if (/\d/.test(text)) return true;
@@ -142,9 +155,21 @@ async function choose(char, kind, subject) {
     // banter.js already refuses to record incomplete ones).
     const usable = c.entries.filter(e => /[.!?]["'”’)]?$/.test(String(e.text || '').trim()));
     if (!usable.length) return null;
+    // NEVER replay a line that NAMES a person unless that exact person is the
+    // current subject/addressee — otherwise a saved "facts, Tobias" gets said to
+    // someone who isn't Tobias. When the addressee is unknown (table chatter,
+    // subj=null), any person-named line is dropped here → the caller rerolls
+    // (generates fresh). Lines that name nobody are unaffected.
+    const subjL = subj ? String(subj).toLowerCase() : null;
+    const addressable = usable.filter(e => {
+      const names = _namesIn(e.text);
+      if (!names.length) return true;
+      return names.length === 1 && subjL != null && names[0] === subjL;
+    });
+    if (!addressable.length) return null;
     // perfect = generic lines, or specific lines whose subject matches the moment
-    const perfect = usable.filter(e => !e.specific || (e.subject && subj && e.subject === subj));
-    const loose = usable.filter(e => !perfect.includes(e));
+    const perfect = addressable.filter(e => !e.specific || (e.subject && subj && e.subject === subj));
+    const loose = addressable.filter(e => !perfect.includes(e));
     let bucket = null, prob = 0;
     if (perfect.length >= MIN) { bucket = perfect; prob = REUSE_PROB_MATCH; }
     else if (loose.length)     { bucket = loose;   prob = REUSE_PROB_LOOSE; }
