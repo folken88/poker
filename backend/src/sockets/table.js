@@ -117,6 +117,17 @@ function registerTableHandlers(io, socket, { tables, dungeons }) {
     socket.data.player = fresh;
     const result = table.sit({ playerId: fresh.player_id, socketId: socket.id, player: fresh, seatIndex });
     if (!result.ok) return ack?.(result);
+    // Sitting down to play poker means you are NOT in the dungeon. Pull the
+    // player out of any run they're still listed in — bail() banks their share
+    // and, if they were the last human, kicks off the dungeon's "AI finish the
+    // room, then the run ends" flow. Prevents a player being in both at once.
+    if (dungeons) {
+      try {
+        for (const d of dungeons.values()) {
+          if (d.hasMember(fresh.player_id)) { try { d.bail(fresh.player_id); } catch (_) {} }
+        }
+      } catch (_) {}
+    }
     io.to(table.roomName()).emit('table:state', table.publicState());
     ack?.({ ok: true, seatIndex: result.seatIndex });
   });

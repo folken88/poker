@@ -3673,6 +3673,8 @@
         if (e.code === 'KeyC') { e.preventDefault(); window.BlindMode.readMyCards?.();  return; }
         if (e.code === 'KeyB') { e.preventDefault(); window.BlindMode.announceBoard?.(); return; }
         if (e.code === 'KeyP') { e.preventDefault(); window.BlindMode.announcePot?.();   return; }
+        if (e.code === 'KeyM') { e.preventDefault(); window.BlindMode.announceStack?.();  return; }  // money: total cash
+        if (e.code === 'KeyN') { e.preventDefault(); window.BlindMode.announceMyBet?.();  return; }  // bet invested this hand
         const seatKey = e.code.match(/^(?:Digit|Numpad)([1-9])$/);
         if (seatKey) { e.preventDefault(); window.BlindMode.announceSeat?.(parseInt(seatKey[1], 10)); return; }
       }

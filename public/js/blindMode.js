@@ -492,7 +492,7 @@
         // Suppressed thereafter to keep the per-turn cue snappy.
         if (!state.announcedControls) {
           state.announcedControls = true;
-          line += ` Hold ${pttLabel()} and say fold, call, or raise; press H to hear your hand again; C for your cards, B for the board, P for the pot, or a seat number one to nine to hear that seat; S to stop talking; left and right bracket slow down or speed up this voice.`;
+          line += ` Hold ${pttLabel()} and say fold, call, or raise; press H to hear your hand again; C for your cards, B for the board, P for the pot, M for your cash, N for your bet this hand, or a seat number one to nine to hear that seat; S to stop talking; left and right bracket slow down or speed up this voice.`;
         }
         speak(line, 'urgent');
       }
@@ -895,6 +895,7 @@
     speak(`Pot ${Number(pot).toLocaleString()}.`, 'urgent');
   }
   function announceStack() {
+    state.pendingSit = null;
     const mePid = state.deps?.state?.me?.player_id;
     const hand  = state.deps?.state?.table?.hand;
     const inHand = hand?.players?.find(p => p.playerId === mePid)?.stack;
@@ -902,6 +903,20 @@
     const seat = state.deps?.state?.table?.seats?.find(s => s.playerId === mePid);
     const chips = Number(seat?.chips || state.deps?.state?.me?.chips || 0);
     speak(`Cash ${chips.toLocaleString()}.`, 'urgent');
+  }
+  /** How much I've put into THIS hand so far, plus what it'd cost to call (the N
+   *  key). "Current bet invested" — distinct from total cash (the M key). */
+  function announceMyBet() {
+    state.pendingSit = null;
+    const mePid = state.deps?.state?.me?.player_id;
+    const hand  = state.deps?.state?.table?.hand;
+    const p = hand?.players?.find(pp => pp.playerId === mePid);
+    if (!p) { speak('You are not in this hand.', 'urgent'); return; }
+    const invested = Number(p.invested || 0);
+    const toCall = Math.max(0, Number(hand.currentBet || 0) - invested);
+    let line = `You've bet ${invested.toLocaleString()}.`;
+    line += toCall > 0 ? ` To call ${toCall.toLocaleString()}.` : ' You can check.';
+    speak(line, 'urgent');
   }
   function announceBoard() {
     state.pendingSit = null;
@@ -1302,6 +1317,8 @@
     readHand, sit,
     // Explore hotkeys (C/B/P + seat numbers 1–9) and the Return-to-sit confirm.
     readMyCards, announceBoard, announcePot, announceSeat, confirmPendingSit,
+    // Money shortcuts: M = total cash, N = bet invested this hand.
+    announceStack, announceMyBet,
     // Stop/silence the current announcement (the S key).
     stopSpeaking,
     // Configurable push-to-talk binding
