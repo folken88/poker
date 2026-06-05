@@ -19,7 +19,55 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
-## 2026-06-04 (newest)
+## 2026-06-05 (newest)
+
+### ♿ Blind-support overhaul — explore the table by keyboard
+A big accessibility pass, shaped by a blind tester (Josh) playing live with a
+screen reader.
+- **Slower, adjustable narration.** The screen-reader voice now defaults to a
+  gentler **1.2×** (was 1.7×, too fast for the cards), and you can fine-tune it
+  live with **`[`** (slower) / **`]`** (faster) — persisted across reloads, no
+  microphone needed.
+- **Explore hotkeys** (table, blind mode on): **`C`** your cards · **`B`** the
+  board (or "Preflop") · **`P`** the pot · **`M`** your cash · **`N`** your bet
+  this hand · **`1`–`9`** a seat — says who's there, or, if empty, **arms it and
+  says "Sit N"** so **Return** takes the seat (it stays armed through the table's
+  re-renders, so a slow confirm still works).
+- **`S` stops the talking instantly** — cancels the current readout, the queue,
+  and any character-voice clip.
+- **Diagnostics.** Blind mode logs its activity (capabilities, speech, the full
+  speech-recognition lifecycle with error codes); allow-listed testers stream it
+  to the server (`backend/logs/blind.jsonl`) so a remote, blind user never has to
+  copy a console.
+
+### 🗡️ Dungeon — escape hatches & no more double-booking
+- **Two ways out, plus a kill-switch.** Delvers now have **↩ Leave dungeon**
+  (bank your share, back to the felt) and **🛑 Cancel run** (force-end the whole
+  run — everyone banks their share and returns upstairs; no gear lost), on top of
+  the existing 👁 Spectate.
+- **You can't be in two places at once.** The poker table no longer seats a bot
+  who's currently delving, and **sitting down at poker pulls you out of any run**
+  you were in — fixing a bug where a character showed up in the dungeon *and* at
+  the table.
+- **Clean wind-down.** When the last human leaves a run, the AI allies finish the
+  current room and then leave, ending the dungeon on their own.
+
+### 💰 Economy
+- **Leaderboard ranks on CASH only.** Magic-item (gear) value no longer inflates
+  your standing — only spendable gold (minus Abadar debt) counts.
+- **No more cash cap.** Players and AI can hoard unlimited chips; winnings are
+  never burned. The Loot Lord (+5 in every slot) is the only thing chasing wealth.
+
+### 🔊 Voice
+- **Storgrim** now speaks with the **Arnold2** voice.
+- **Banter never names the wrong person.** A reused line that names someone (e.g.
+  "facts, Tobias") is no longer replayed at a *different* person — the line-reuse
+  pool now recognises real player names (humans included) and rerolls a fresh line
+  when the addressee doesn't match.
+
+---
+
+## 2026-06-04 (per-class XP & AC types)
 
 ### 🎚️ Per-class XP + a permanent crown
 - **XP is now tracked PER CLASS.** Switch class and you start fresh at *that* class's

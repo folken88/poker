@@ -273,6 +273,21 @@ Smite → **Detect Evil** (when neutral foes are present) → raise buffs (once)
 group-blast → spell/maneuver at the weakest foe → basic attack.
 Won't repeat the same ability twice in a row when alternatives exist.
 
+### Leaving a run & poker/dungeon exclusivity
+A delver has three ways out, all of which bank their split share via `bail()`:
+- **👁 Spectate** (`dungeon:bailWatch`) — leave the fight, keep watching/heckling.
+- **↩ Leave dungeon** (`dungeon:leave`) — bank and return to the poker table.
+- **🛑 Cancel run** (`dungeon:cancel` → `Dungeon.cancelRun()`) — force-end the WHOLE
+  run: every remaining member is bailed (each banks their share) and the run ends.
+  A clean group retreat — **not** a wipe, so no gear is lost.
+
+**A player is never in both places at once.** Entering the dungeon vacates the
+poker seat; conversely **sitting down at poker pulls the player out of any run**
+(`table:sit` bails them). The poker table also **won't seat a bot that's currently
+delving** (`sockets/table.js` `inAnyDungeon` guard), mirroring the dungeon's own
+"don't recruit a seated bot" rule. When the **last human leaves**, `bail()` lets
+the AI allies finish the current room, then they cash out and the run ends.
+
 ### Compound interest
 Abadar's loan (`rebuy_debt`) compounds +5%/10 turns played (poker actions AND
 dungeon combat turns) while in debt — see `db.tickDebtTurn`.
