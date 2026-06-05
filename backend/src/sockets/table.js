@@ -26,7 +26,15 @@ const BLIND_LOG_PLAYERS = new Set(
 // Fight narration + execution lives in game/fightDirector.js (shared with
 // bot-initiated revenge swings). This handler just validates + delegates.
 
-function registerTableHandlers(io, socket, { tables }) {
+function registerTableHandlers(io, socket, { tables, dungeons }) {
+  // A bot already delving in ANY dungeon must NOT be seated at the poker table,
+  // or it shows up in both places at once. Mirrors the dungeon's own guard
+  // (it refuses to recruit a seated bot) — this is the reverse direction.
+  const inAnyDungeon = (id) => {
+    if (!dungeons) return false;
+    try { for (const d of dungeons.values()) if (d.hasMember(id)) return true; } catch (_) {}
+    return false;
+  };
 
   socket.on('table:join', ({ tableId, fromDungeon } = {}, ack) => {
     const me = meOf(socket);
@@ -132,7 +140,7 @@ function registerTableHandlers(io, socket, { tables }) {
       // belts-and-suspenders the same invariant.
       const seatedIds = new Set(table.seats.filter(s => s.playerId).map(s => s.playerId));
       const candidates = db.listBots()
-        .filter(b => b.is_bot === 1 && !seatedIds.has(b.player_id) && b.chips > 0);
+        .filter(b => b.is_bot === 1 && !seatedIds.has(b.player_id) && b.chips > 0 && !inAnyDungeon(b.player_id));
       if (candidates.length === 0) return ack?.({ ok: false, error: 'no available bots' });
       botId = candidates[Math.floor(Math.random() * candidates.length)].player_id;
     }
@@ -143,6 +151,8 @@ function registerTableHandlers(io, socket, { tables }) {
     if (candidate.is_bot !== 1) {
       return ack?.({ ok: false, error: `${candidate.nickname} is a reserved human; AI cannot play them` });
     }
+    // Don't seat a bot that's currently delving — it would double-book them.
+    if (inAnyDungeon(botId)) return ack?.({ ok: false, error: `${candidate.nickname} is in the dungeon right now` });
     const result = table.seatBot(botId);
     if (!result.ok) return ack?.(result);
     io.to(table.roomName()).emit('table:state', table.publicState());
@@ -158,7 +168,7 @@ function registerTableHandlers(io, socket, { tables }) {
     if (emptyCount === 0) return ack?.({ ok: false, error: 'no empty seats' });
     const seatedIds = new Set(table.seats.filter(s => s.playerId).map(s => s.playerId));
     // Available bots (is_bot=1, not already seated, with chips), shuffled.
-    const pool = db.listBots().filter(b => b.is_bot === 1 && !seatedIds.has(b.player_id) && b.chips > 0);
+    const pool = db.listBots().filter(b => b.is_bot === 1 && !seatedIds.has(b.player_id) && b.chips > 0 && !inAnyDungeon(b.player_id));
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];

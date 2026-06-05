@@ -3162,6 +3162,22 @@ class Dungeon {
     else this._broadcast();
     return { ok: true, goldBanked: share };
   }
+  /** Hard-cancel the ENTIRE run — the "Cancel Dungeon" escape hatch for a stuck
+   *  or broken run. Bails out every remaining member (each banks their split
+   *  share and is surfaced back to the table via dungeon:exit), then ends the
+   *  run. NOT a wipe: no gear is lost — this is a clean group retreat. */
+  cancelRun() {
+    if (this.status === 'over') return { ok: true };
+    this._note('🛑 The run was cancelled — the party retreats upstairs.');
+    this._runFailed = false;   // a cancel is a clean retreat, never a gear-loss wipe
+    // Snapshot ids first: bail() mutates party entries and may end the run.
+    for (const id of this.present().map(m => m.playerId)) {
+      const m = this.member(id);
+      if (m && !m.left) { try { this.bail(id); } catch (_) {} }
+    }
+    if (this.status !== 'over') { try { this._runOver(); } catch (_) {} }
+    return { ok: true };
+  }
   // Tell THIS player's client to surface back to the table; notify the table.
   _emitMemberExit(m, exit) {
     // Abadar's interest: ONE dungeon RUN = ONE tick of the compound-interest

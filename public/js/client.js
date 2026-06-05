@@ -739,6 +739,15 @@
     socket.emit('table:join', { tableId: 'main', fromDungeon: true }, () => {});
     setScreen('table');
   }
+  // Force-cancel the ENTIRE run for everyone (escape hatch for a stuck run).
+  // The server bails out every delver — each banks their share — and ends the
+  // run; our own dungeon:exit then surfaces us back to the table.
+  function cancelDungeon() {
+    socket.emit('dungeon:cancel', null, (resp) => {
+      if (!resp?.ok) { toast(resp?.error || 'Could not cancel the dungeon.', true); return; }
+      toast('🛑 Dungeon run cancelled — everyone heads back upstairs.');
+    });
+  }
 
   socket.on('dungeon:state', (st) => {
     state.dungeon = st;
@@ -1079,6 +1088,8 @@
           `<div class="dungeon__actrow dungeon__actrow--nav">` +
             B('door', '🚪 Open door', !combat && !rolling, !combat) +
             `<button class="btn btn--ghost" data-dact="spectate" title="Bank your gold and leave the fight — but keep watching from the sidelines">👁 Spectate</button>` +
+            `<button class="btn btn--ghost" data-dact="leave" title="Bank your gold and go back to the poker table">↩ Leave dungeon</button>` +
+            `<button class="btn btn--ghost" data-dact="cancel" title="End the whole run for everyone — all delvers bank their share and return upstairs">🛑 Cancel run</button>` +
           `</div>`;
       }
     }
@@ -1166,7 +1177,8 @@
     else if (act === 'bail')    dungeonAction('bail');
     else if (act === 'join')    enterDungeon();        // spectator → combatant
     else if (act === 'spectate') bailToSpectate();     // combatant → spectator (keeps watching)
-    else if (act === 'leave')   returnFromDungeon();
+    else if (act === 'leave')   returnFromDungeon();   // self bails + back to table
+    else if (act === 'cancel')  cancelDungeon();       // force-end the whole run
     if (act === 'attack' || act === 'ability') _dungeonSel = [];
   });
   // The Spellbook is a popover that overlays the other action buttons, so it

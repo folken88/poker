@@ -174,6 +174,18 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     ack?.({ ok: true });
   });
 
+  // Hard-cancel the whole run — escape hatch for a stuck/broken run. Any player
+  // at the table may trigger it; cancelRun() bails out everyone (each banks
+  // their share and is surfaced back upstairs) and ends the run cleanly.
+  socket.on('dungeon:cancel', (_p, ack) => {
+    const me = meOf();
+    if (!me) return ack?.({ ok: false, error: 'no player' });
+    const d = dungeons.get(tableIdOf());
+    if (!d) return ack?.({ ok: false, error: 'no dungeon to cancel' });
+    try { d.cancelRun(); } catch (e) { return ack?.({ ok: false, error: e.message }); }
+    ack?.({ ok: true });
+  });
+
   socket.on('disconnect', () => {
     const me = meOf();
     if (!me) return;

@@ -97,7 +97,7 @@ const dungeons = new Map();
 
 io.on('connection', (socket) => {
   registerLobbyHandlers(io, socket, { tables });
-  registerTableHandlers(io, socket, { tables });
+  registerTableHandlers(io, socket, { tables, dungeons });
   registerDungeonHandlers(io, socket, { tables, dungeons });
   socket.on('disconnect', () => {
     const pid = socket.data.player?.player_id;
