@@ -21,6 +21,19 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-05 (newest)
 
+### 🔮 New class — the Oracle
+- **Oracles** join the dungeon roster: a **spontaneous divine** caster on the
+  **cleric spell list** (cures, Shield of Faith, Bless, Prayer, Hold Person,
+  Bull's Strength, Spiritual Weapon, Dispel Magic, Holy Smite, the revives…) at
+  full-caster slot progression, **plus Channel Positive** (heals like a cleric of
+  their level) and the ability to cast **Haste** and **Slow**.
+- **Elfrip is a Flame oracle** — he also packs the Flame mystery's fire spells
+  (**Burning Hands, Scorching Ray, Fireball, Fire Snake**) and *loves* to blast:
+  his AI heals and buffs first, then hurls the widest fire it can, favoring
+  Fireball and Fire Snake in a crowd. When one lands he gleefully shouts an
+  excited **"BOOM!"**
+- **Rhyarca** (Oracle of Besmara) and **Casandalee** are now oracles too.
+
 ### ♿ Blind-support overhaul — explore the table by keyboard
 A big accessibility pass, shaped by a blind tester (Josh) playing live with a
 screen reader.

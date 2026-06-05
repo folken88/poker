@@ -226,6 +226,14 @@ Monsters track **normal / touch / flat-footed AC**, surfaced on the monster tile
   Bull's Strength, Spiritual Weapon, Dispel Magic, Prayer, Searing Light, Holy
   Smite). Fights with steel alongside **Bane** + **Judgements**, and earns the
   fighter bonus-feat ladder at **half rate** (a feat every odd level).
+- **Oracle** — spontaneous divine on the **cleric spell list** at full-caster
+  progression (`slotsFor('oracle')` → SORC slot table). Built from a clone of the
+  cleric kit (`KITS.oracle.abilities`) so the two stay in sync — including
+  **Channel Positive** — plus **Haste**, **Slow**, and the Flame-mystery fire
+  spells (Burning Hands, Scorching Ray, Fireball, Fire Snake). At-will: Produce
+  Flame. Bots blast via the arcane-controller path (heals/buffs first, then the
+  widest blast). Elfrip (Flame) leans on fire and shouts "BOOM!" on a big hit
+  (`SIGNATURE_LINES`, `cast_fire` event); Rhyarca & Casandalee play the full kit.
 
 ### Spell math (full-PF1 casting stat)
 Spells now assume an **18 casting stat** (matching attacks' assumed 18 Str/Dex): save
