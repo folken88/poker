@@ -3228,13 +3228,20 @@ class Dungeon {
     const wasActor = this._currentActorId() === playerId;
     const fled = this.status === 'combat';   // bailing mid-fight = running away
     const denom = Math.max(1, this.party.filter(x => !x.left && !x.dead).length);   // split among everyone in the run, incl. the dying
-    const share = Math.floor(this.runGold / denom);
-    this.runGold -= share;
-    const p = db.getPlayer(playerId);
-    if (p) db.setChips(playerId, p.chips + share);
+    // A SLAIN hero (dead, not merely downed) forfeits their cut — they get no
+    // gold when carried out. The living/dying split the pool among themselves.
+    const share = m.dead ? 0 : Math.floor(this.runGold / denom);
+    if (share > 0) {
+      this.runGold -= share;
+      const p = db.getPlayer(playerId);
+      if (p) db.setChips(playerId, p.chips + share);
+    }
     m.left = true;   // turn loop skips left members; entry stays for index integrity
-    const how = m.downed ? 'is dragged out of the dungeon' : fled ? 'flees the fight and climbs out' : 'climbed out';
-    this._note(`${m.downed ? '🩸' : fled ? '🏃' : '🪜'} ${m.nickname} ${how} with ${share} gp.`);
+    const how = m.dead ? 'is carried out, slain — no share of the gold'
+              : m.downed ? `is dragged out of the dungeon with ${share} gp`
+              : fled ? `flees the fight and climbs out with ${share} gp`
+              : `climbed out with ${share} gp`;
+    this._note(`${m.dead ? '☠️' : m.downed ? '🩸' : fled ? '🏃' : '🪜'} ${m.nickname} ${how}.`);
     this._log('bail', { who: playerId, share, poolLeft: this.runGold, fled, downed: !!m.downed });
     this._emitMemberExit(m, { reason: 'bailed', goldBanked: share, fled });
     // Last conscious member out → drag any remaining dying allies out with their

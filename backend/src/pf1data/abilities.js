@@ -135,6 +135,8 @@ const S = {
 const FIREBALL_SFX = ['/audio/fireball_1.mp3', '/audio/fireball_2.mp3', '/audio/fireball_3.mp3', '/audio/fireball_4.mp3'];
 const THUNDER_SFX  = ['/audio/thunder_1.mp3', '/audio/thunder_2.mp3', '/audio/thunder_3.mp3', '/audio/thunder_4.mp3', '/audio/thunder_5.mp3'];
 const HASTE_SFX    = ['/audio/spell_haste.mp3', '/audio/spell_haste2.mp3'];
+// Blessing of Fervor incants ABBA's "Gimme! Gimme! Gimme!" — one of three clips.
+const FERVOR_SFX   = ['/audio/abba_gimme_intro.mp3', '/audio/abba_gimme_chorus.mp3', '/audio/abba_gimme_chorus2.mp3'];
 
 // Reusable spell defs (shared by wizard + sorcerer). `slvl` = the PF1e SPELL
 // level (1st–9th), used to organise the spellbook; `minLevel` is the CHARACTER
@@ -224,7 +226,7 @@ const KITS = {
     { key: 'shieldoffaith',    name: 'Shield of Faith',     icon: '🛡️', cost: 'room', uses: 1, minLevel: 1,  slvl: 1, effect: 'buff', target: 'ally', buff: { ac: 2 }, sticky: true, sound: S.invoke, desc: '+2 deflection AC to the ally with the LOWEST AC (who doesn\'t already have it) for the rest of the room. (1st-level paladin spell.)' },
     { key: 'bullsstrength',    name: "Bull's Strength",     icon: '💪', cost: 'room', uses: 1, minLevel: 4,  slvl: 2, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'One martial ally gets +2 to hit and +2 melee damage for the rest of the room. (2nd-level paladin spell, level 4.)' },
     { key: 'prayer',           name: 'Prayer',              icon: '📿', cost: 'room', uses: 1, minLevel: 7,  slvl: 3, effect: 'buff', target: 'self', party: true, buff: { toHit: 1, dmg: 1, save: 1 }, enemyPenalty: 1, sticky: true, sound: S.prayer, desc: 'ALL allies +1 to hit, damage & saves; ALL enemies −1, for the rest of the room. (3rd-level paladin spell, level 7.)' },
-    { key: 'blessingoffervor', name: 'Blessing of Fervor',  icon: '💨', cost: 'room', uses: 1, minLevel: 10, slvl: 4, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (the haste choice). (4th-level paladin spell, level 10.)' },
+    { key: 'blessingoffervor', name: 'Blessing of Fervor',  icon: '💨', cost: 'room', uses: 1, minLevel: 10, slvl: 4, effect: 'haste', target: 'self', party: true, sounds: FERVOR_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (the haste choice). (4th-level paladin spell, level 10.)' },
   ] },
   // CLERIC — prepared divine caster with SPELL SLOTS PER LEVEL (PF1 progression).
   // Each spell spends a slot of its level; with extra slots the AI prepares more
@@ -251,7 +253,7 @@ const KITS = {
     // ── 4th-level prayers ──
     { key: 'curecritical', name: 'Cure Critical Wounds', icon: '💚', cost: 'slot', slvl: 4, minLevel: 7, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20).' },
     { key: 'protectfire',  name: 'Protection from Fire',  icon: '🔥', cost: 'slot', slvl: 4, minLevel: 7, effect: 'buff', target: 'self', party: true, protectFire: true, sticky: true, sound: S.invoke, desc: 'Ward the whole party against FIRE — fire damage they take is HALVED for the rest of the room. (Cast it when fiery foes loom.)' },
-    { key: 'blessingoffervor', name: 'Blessing of Fervor', icon: '💨', cost: 'slot', slvl: 4, minLevel: 7, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (like Haste).' },
+    { key: 'blessingoffervor', name: 'Blessing of Fervor', icon: '💨', cost: 'slot', slvl: 4, minLevel: 7, effect: 'haste', target: 'self', party: true, sounds: FERVOR_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (like Haste).' },
     { key: 'holysmite',    name: 'Holy Smite',           icon: '🌟', cost: 'slot', slvl: 4, minLevel: 7, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
     // ── High-level prayers (revives), gated by level + slot availability ──
     { key: 'breathoflife', name: 'Breath of Life',       icon: '🌬️', cost: 'slot', slvl: 5, minLevel: 9,  effect: 'revive', reviveDice: 5, reviveCap: 25, target: 'ally', sound: S.revive, desc: 'Snatch a DYING ally back — revive & heal them 5d8 + caster level (max +25).' },
@@ -366,7 +368,7 @@ const KITS = {
     // 4th level (slots from L10)
     { key: 'curecritical',  name: 'Cure Critical Wounds', icon: '💚', cost: 'slot', slvl: 4, minLevel: 10, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20).' },
     { key: 'holysmite',     name: 'Holy Smite',           icon: '🌟', cost: 'slot', slvl: 4, minLevel: 10, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
-    { key: 'blessingoffervor', name: 'Blessing of Fervor', icon: '💨', cost: 'slot', slvl: 4, minLevel: 10, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (the haste choice).' },
+    { key: 'blessingoffervor', name: 'Blessing of Fervor', icon: '💨', cost: 'slot', slvl: 4, minLevel: 10, effect: 'haste', target: 'self', party: true, sounds: FERVOR_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (the haste choice).' },
   ] },
   // BARD — spontaneous caster (spell SLOTS per level). The bardic-performance
   // CLASS FEATURES (Inspire Courage, Fascinate) are NOT spells and sit beside the
