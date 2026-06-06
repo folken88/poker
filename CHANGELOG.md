@@ -21,6 +21,47 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-05 (newest)
 
+### ⚜️ Paladin overhaul
+- **Spellcasting from level 1** (home-rule) — paladins (and antipaladins) no longer
+  wait until 4th for spells; their slow progression just starts at 1st. New spell
+  level every 3 character levels: **Shield of Faith (1)**, **Bull's Strength (4)**,
+  **Prayer (7)**, **Blessing of Fervor (10)**, one casting each per room. *(Same
+  home-rule onset is intended for bloodragers when they get a kit.)*
+- **Hero's Defiance** — when a paladin is dropped to 0 HP or below (but not slain),
+  on their turn they **refuse to fall**: a lay-on-hands heal auto-fires, putting
+  them back on their feet. Once per room.
+- **A fighter-feat tree on odd levels** — **L1 Toughness**, **L3 Power Attack** (the
+  free on/off toggle), then **L5 Weapon Focus**, L7 Dodge, L9 Weapon Specialization,
+  L11 Improved Initiative, L13 a save feat, L15 Improved Critical, L17 Critical
+  Focus, L19 Improved Cleave. Each folds into the paladin's combat math.
+
+### 💨 Haste, Blessing of Fervor & buffs
+- **Haste now grants its full PF1 package** — the extra attack **plus +1 to hit, +1
+  dodge AC, and +1 Reflex**, active only while hasted. It can't stack with itself,
+  and stacks cross-type with other buffs (its dodge AC adds to Shield of Faith's
+  deflection AC, etc.).
+- **Blessing of Fervor** now works for **clerics, oracles, and inquisitors** (and
+  paladins at 10) — granting the **haste extra attack** (its haste choice). It
+  incants **ABBA's "Gimme! Gimme! Gimme!"** (one of three clips). It does NOT grant
+  Haste's +1s — that's the Haste spell's job.
+- **Shield of Faith (and the other single-ally buffs)** no longer waste a re-cast on
+  an ally who already has the buff — they pick the next-most-vulnerable ally instead.
+
+### 🩹 Dungeon fixes
+- **Slain heroes forfeit their gold.** A hero who is **dead** (not merely downed)
+  when the party leaves gets **no share** of the run's gold; the living and the
+  dying split it.
+- **Cure spells heal the most-hurt ally who isn't dead** — including the **downed**
+  (a cure can now pull a bleeding-out ally back to their feet), instead of skipping
+  them for someone barely scratched.
+- **Random helpers** — a 🎲 button hires up to 3 random AI allies at 50g each, as
+  many as you can afford (150g → 3, 100g → 2, 50g → 1).
+- **You can't be in two places at once** — taking a poker seat pulls you out of any
+  dungeon run, the table won't seat a bot who's delving, and a human who takes over
+  an AI character now keeps the table "occupied" so it keeps dealing. Delvers also
+  get **↩ Leave** and **🛑 Cancel run** buttons.
+- **Agu** is pronounced "ag-yew."
+
 ### 🔮 New class — the Oracle
 - **Oracles** join the dungeon roster: a **spontaneous divine** caster on the
   **cleric spell list** (cures, Shield of Faith, Bless, Prayer, Hold Person,

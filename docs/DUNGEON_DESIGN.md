@@ -289,12 +289,36 @@ A delver has three ways out, all of which bank their split share via `bail()`:
   run: every remaining member is bailed (each banks their share) and the run ends.
   A clean group retreat — **not** a wipe, so no gear is lost.
 
+Gold splits an even share among everyone **not dead** (`!left && !dead`) — the
+living and the *dying* (downed, hp ≤ 0 but not slain) get hauled out with their
+cut, but a **SLAIN hero forfeits their share** (`bail()` pays a dead member 0).
+
 **A player is never in both places at once.** Entering the dungeon vacates the
 poker seat; conversely **sitting down at poker pulls the player out of any run**
 (`table:sit` bails them). The poker table also **won't seat a bot that's currently
 delving** (`sockets/table.js` `inAnyDungeon` guard), mirroring the dungeon's own
-"don't recruit a seated bot" rule. When the **last human leaves**, `bail()` lets
-the AI allies finish the current room, then they cash out and the run ends.
+"don't recruit a seated bot" rule, and a human who has **taken over an AI character**
+still counts as present (`anyHumanPresent` no longer filters on `is_bot`) so the
+table keeps dealing. When the **last human leaves**, `bail()` lets the AI allies
+finish the current room, then they cash out and the run ends.
+
+### Paladin (home-rules)
+- **Spellcasting from level 1** (not 4): Shield of Faith (1), Bull's Strength (4),
+  Prayer (7), Blessing of Fervor (10) — one casting each per room.
+- **Hero's Defiance** — a downed (not dead) paladin auto-heals on their turn
+  (lay-on-hands, once/room) via `_tryHeroesDefiance`, fired from the turn loop.
+- **Fighter-feat tree on odd levels** (`paladinFeats`): Toughness (1), Power Attack
+  (3, the toggle), Weapon Focus (5), Dodge (7), Weapon Spec (9), Improved Init (11),
+  a save feat (13), Improved Crit (15), Critical Focus (17), Improved Cleave (19).
+
+### Haste vs Blessing of Fervor
+- **Haste** (`key:'haste'`): the extra attack PLUS +1 to hit, +1 dodge AC, +1 Reflex
+  (`_hasteMod`, gated on `hasted && hasteFull` — auto-ends with Haste, never
+  self-stacks, stacks cross-type with other buffs).
+- **Blessing of Fervor** (`key:'blessingoffervor'`): the haste **extra attack only**.
+  Available to cleric / oracle / inquisitor / paladin; incants ABBA's "Gimme!" (3
+  clips). Two extra-attack sources never stack the extra attack (`m.hasted` is set,
+  not added).
 
 ### Compound interest
 Abadar's loan (`rebuy_debt`) compounds +5%/10 turns played (poker actions AND
