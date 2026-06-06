@@ -112,7 +112,7 @@ function weaponOf(gear, weaponKey) {
 /** Derive Armor Class from a gear object. `physical` is the armor+shield
  *  portion — the part that CLANGS (distinguishes a blocked hit from a whiff).
  *  Ring of Protection is deflection: it raises AC but isn't a physical block. */
-function acOf(gear, cls) {
+function acOf(gear, cls, opts = {}) {
   let ac = 10, physical = 0;
   const armor = Number(gear?.armor) || 0;
   const shield = Number(gear?.shield) || 0;
@@ -127,10 +127,12 @@ function acOf(gear, cls) {
   const armorBase = (cls === 'barbarian' || cls === 'oracle') ? 6 : 9;   // breastplate vs full plate
   const armorAC = arcaneNoArmor ? armor : (armorBase + armor);
   ac += armorAC; physical += armorAC;
-  // No shield AC for swashbucklers (a hand free for finesse + parry) or arcane
-  // casters (a wizard/sorcerer needs free hands to cast — they gain NOTHING from a
-  // shield, not even its magic bonus, and shouldn't buy one).
-  if (shield >= 1 && cls !== 'swashbuckler' && !arcaneNoArmor) { const v = 2 + shield; ac += v; physical += v; }
+  // No shield AC for swashbucklers (a hand free for finesse + parry), arcane
+  // casters (need free hands to cast), or anyone whose WEAPON precludes a shield —
+  // a dual-wielder or a two-handed RANGED weapon (bow / crossbow / gun). They can
+  // still OWN a shield (it has treasure value and they can roll for drops); it just
+  // grants no AC. `opts.noShield` carries that from the wielder's weapon.
+  if (shield >= 1 && cls !== 'swashbuckler' && !arcaneNoArmor && !opts.noShield) { const v = 2 + shield; ac += v; physical += v; }
   if (ring >= 1)   { ac += ring; }
   return { ac, physical };
 }

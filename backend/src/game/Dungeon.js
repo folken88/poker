@@ -1242,8 +1242,15 @@ class Dungeon {
   }
   // A hero's three PF1 AC values (base, no situational mods) — for display + touch
   // resolution. touch drops armor/shield/mage-armor; flat-footed drops Dodge.
+  // acOf for a hero, weapon-aware: a RANGED weapon (bow/crossbow/gun) or a
+  // dual-wield/no-shield weapon grants no shield AC (they can still own the shield
+  // for its treasure value). Centralizes the shield-AC exclusion in one place.
+  _acOf(m) {
+    const w = m.weapon || weaponOf(m.gear, m.weaponKey);
+    return acOf(m.gear, m.cls, { noShield: !!(w && (w.noShield || w.ranged)) });
+  }
   _heroACs(m) {
-    const a = acOf(m.gear, m.cls);
+    const a = this._acOf(m);
     const ac = a.ac + this._acBonus(m);
     return {
       ac,
@@ -1402,10 +1409,8 @@ class Dungeon {
   }
   // One enemy swing at a chosen target (handles the paralysis rider + signature sound).
   _enemyMelee(e, target) {
-    // Dual-wielders (Farrus's twin axes) carry no shield — strip any shield AC.
-    const tw = weaponOf(target.gear, target.weaponKey);
-    const noShield = (tw && tw.noShield && (Number(target.gear && target.gear.shield) || 0) >= 1) ? (2 + Number(target.gear.shield)) : 0;
-    const effAC = acOf(target.gear, target.cls).ac + this._acBonus(target) - noShield - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);   // Shield: +4 (barbarians cap at breastplate); helpless / rage / reckless / cleave: easier to hit
+    // _acOf strips shield AC for dual-wielders AND ranged-weapon wielders.
+    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);   // helpless / rage / reckless / cleave: easier to hit
     const r = this._monsterSwing(e, effAC);
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);   // monk's randomized "bruce" kiai (hit or miss)
     else if (r.hit && e.atkSound) r.sound = e.atkSound;                    // rogue's "riki" stab (hit only)
@@ -1519,7 +1524,7 @@ class Dungeon {
   _enemyHook(e, target) {
     const cfg = e.hook || {};
     const snd = cfg.sound || null;
-    const effAC = acOf(target.gear, target.cls).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);
+    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);
     const r = this._monsterSwing(e, effAC);
     if (!r.hit) {
       this._note(`⛓️ ${e.glyph} ${e.name} hurls its barbed chain at ${target.nickname} — the hook scrapes past. ${this._atkStr(r)}`, snd, { side: 'enemy' });
@@ -1656,7 +1661,7 @@ class Dungeon {
   // and the vampire HEALS the energy it drains.
   _enemySpellstrike(e, target) {
     const cfg = e.spellstrike || {};
-    const effAC = acOf(target.gear, target.cls).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);
+    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);
     const r = this._monsterSwing(e, effAC);
     const snd = cfg.sound || null;
     if (!r.hit) { this._note(`🩸 ${e.glyph} ${e.name}'s draining touch misses ${target.nickname}. ${this._atkStr(r)}`, snd, { side: 'enemy' }); this._echoToTable(snd); this._broadcast(); return; }
@@ -2883,7 +2888,7 @@ class Dungeon {
     const has = (a) => !!(a.buffApplied && a.buffApplied[ab.key]);
     const eligible = allies.filter(a => !has(a));
     const pool = eligible.length ? eligible : allies;
-    const acScore = (a) => acOf(a.gear, a.cls).ac + this._acBonus(a) - this._acPenalty(a);
+    const acScore = (a) => this._acOf(a).ac + this._acBonus(a) - this._acPenalty(a);
     if (ab.key === 'shieldoffaith') return pool.slice().sort((a, b) => acScore(a) - acScore(b))[0] || m;   // lowest-AC ally WITHOUT it
     if (ab.key === 'bearsendurance') return pool.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
     if (ab.key === 'catsgrace')      return pool.find(a => a.cls === 'ranger' || a.cls === 'rogue') || pool.find(a => MARTIAL.includes(a.cls)) || m;
