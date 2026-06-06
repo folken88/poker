@@ -220,17 +220,18 @@ button, input { font: inherit; color: inherit; }
 .dungeon__recruit:empty { display: none; }
 .dungeon__recruit-toggle { align-self: flex-start; }
 .dungeon__recruit-count { opacity: 0.7; font-variant-numeric: tabular-nums; }
-/* Collapsed by default — a dropdown popover (doesn't eat screen space) that
-   overlays just above the log when opened, like the poker Pick AI picker. */
+/* Collapsed by default. When opened it CENTERS on screen (not anchored to its
+   button — anchoring pushed the top off-screen so the first bots couldn't be
+   picked) and scrolls internally if the roster is long. */
 .dungeon__recruit-pop {
   display: none;
-  position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 0.35rem;
-  z-index: 12;
-  background: linear-gradient(180deg, rgba(20,18,26,0.98), rgba(10,10,14,0.99));
-  border: 1px solid rgba(217,176,106,0.4); border-radius: 10px;
-  padding: 0.5rem 0.6rem;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
-  max-height: 52vh; overflow-y: auto;          /* scroll when there are many bots */
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(94vw, 560px); max-height: 85vh; overflow-y: auto;   /* scroll when there are many bots */
+  z-index: 1000;
+  background: linear-gradient(180deg, rgba(20,18,26,0.99), rgba(10,10,14,0.995));
+  border: 1px solid rgba(217,176,106,0.5); border-radius: 12px;
+  padding: 0.6rem 0.7rem;
+  box-shadow: 0 0 0 100vmax rgba(0,0,0,0.55), 0 12px 32px rgba(0,0,0,0.8);   /* dim backdrop */
 }
 .dungeon__recruit-pop.is-open { display: block; }
 .dungeon__recruit-head { font-size: 0.78rem; color: var(--brass-bright); letter-spacing: 0.04em; margin-bottom: 0.4rem; position: sticky; top: -0.5rem; background: rgba(14,12,18,0.98); padding: 0.25rem 0; }

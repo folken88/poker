@@ -1198,6 +1198,23 @@
       renderDungeon();
     }
   });
+  // The recruit picker now centers on screen (modal-like with a dim backdrop), so
+  // it must be dismissable by clicking outside it or pressing Escape.
+  const closeRecruit = () => {
+    _recruitOpen = false;
+    const pop = $('#dungeonRecruit')?.querySelector('.dungeon__recruit-pop');
+    if (pop) pop.classList.remove('is-open');
+    const tog = $('#dungeonRecruit')?.querySelector('[data-recruit-toggle]');
+    if (tog) tog.setAttribute('aria-expanded', 'false');
+  };
+  document.addEventListener('click', (ev) => {
+    if (!_recruitOpen || document.body.dataset.screen !== 'dungeon') return;
+    if (ev.target.closest('.dungeon__recruit')) return;   // inside the panel/popover/toggle — keep it
+    closeRecruit();
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && _recruitOpen && document.body.dataset.screen === 'dungeon') closeRecruit();
+  });
   $('#dungeonRecruit')?.addEventListener('click', (ev) => {
     if (ev.target.closest('[data-recruit-toggle]')) {
       _recruitOpen = !_recruitOpen;
