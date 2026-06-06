@@ -203,7 +203,13 @@ class Table {
     if (!room) return false;
     for (const sid of room) {
       const s = this.io.sockets.sockets.get(sid);
-      if (!s?.data?.player?.is_bot) return true; // any non-bot socket = human at the table
+      // Bots are driven server-side and NEVER hold a socket, so any live socket
+      // that has chosen a player is a real human browser at the table — INCLUDING
+      // a human who has taken over a D&D / bot character (their chosen player
+      // record is is_bot, but a real person is driving it). We must NOT filter on
+      // is_bot here, or a human playing an AI character reads as "nobody home" and
+      // the table sends the bots away / stops dealing.
+      if (s?.data?.player) return true;
     }
     return false;
   }
