@@ -21,6 +21,26 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-06 (newest)
 
+### 🐾 Druids & Wild Shape
+- **Druids now shapeshift for combat.** New **Wild Shape forms** — toggle on/off, each
+  usable **once per room**, lasting until you change back:
+  - **Tiger Form** — dire-tiger: claws + bite (3 attacks), +2 hit, +4 dmg, +1 AC.
+  - **Bear Form** — dire-bear tank: 3 attacks, +2 hit, +4 dmg, +3 natural-armor AC, +2 HP/level.
+  - **Hawk Form** — **fly** out of reach of grounded foes (and still cast spells from the air).
+- **Rissa's forms are her own:** she shares **Hawk Form**, but in place of Tiger/Bear she
+  gets — **Beast Mode** (the **Beast of Lepidstadt**: LARGE, +3 hit, +6 dmg, **DR 10/adamantine**,
+  swats flyers out of the sky — roars *What Could Have Been*) and **Promethean** (a
+  multi-tentacled horror: **15-ft reach** that hits flyers, **4 attacks**, and every hit
+  **GRAPPLES** the foe helpless until it breaks free — bellows *Dragon-Roar*).
+- **Shillelagh** — every druid's signature club (1d10, ×2, blunt).
+- **Expanded druid spell list:** buffs (**Barkskin, Iron Skin** DR 10, **Magic Fang, Bull's
+  Strength, Bear's Endurance, Cat's Grace**), offense (**Entangle** — roots a random **2d4**
+  foes, **Lightning Bolt, Shocking Grasp, Call Lightning**), and restoration (**Cure Light/
+  Moderate, Remove Paralysis, Dispel Magic**).
+- Engine: long-reach / winged natural weapons can now strike **airborne** foes; a hit from a
+  grappling weapon seizes the foe; multi-natural-attack routines (also fixes Crisp the
+  deinonychus) all swing at full strength.
+
 ### ⚜️ Paladin free actions
 - **Detect Evil** and **Smite** activation are now **free actions** — flipping them
   on no longer eats your turn, so a paladin can mark the room (or light up a smite)
