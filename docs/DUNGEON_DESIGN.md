@@ -311,10 +311,24 @@ finish the current room, then they cash out and the run ends.
   (3, the toggle), Weapon Focus (5), Dodge (7), Weapon Spec (9), Improved Init (11),
   a save feat (13), Improved Crit (15), Critical Focus (17), Improved Cleave (19).
 
+### Iterative attacks & two-weapon fighting (`_attackOffsets`)
+A basic attack builds a list of per-swing to-hit OFFSETS:
+- **Full attack** = attacking the SAME target as last turn (`m._lastAtkTarget`,
+  reset each room). It adds PF1 **iteratives**: −5 at BAB 6, −10 at 11, −15 at 16.
+  Switching targets = a single swing (you "moved").
+- **Dual-wielders** (`_isDualWielding`: a `dual`/double weapon, or a rogue with a
+  dagger/kukri) add an off-hand swing, with the **Two-Weapon Fighting** penalty (−6,
+  or −2 with the feat) on every swing, and a second off-hand swing with **Improved
+  Two-Weapon Fighting**. **Two-Weapon Defense** adds +1 AC while two-weapon fighting.
+- The TWF feats live on the fighter feat ladder (`featLadder`); **fighter** gets the
+  ladder every level, **inquisitor & barbarian** every odd level, **paladin** on its
+  own odd-level tree (`paladinFeats`).
+
 ### Haste vs Blessing of Fervor
 - **Haste** (`key:'haste'`): the extra attack PLUS +1 to hit, +1 dodge AC, +1 Reflex
   (`_hasteMod`, gated on `hasted && hasteFull` — auto-ends with Haste, never
-  self-stacks, stacks cross-type with other buffs).
+  self-stacks, stacks cross-type with other buffs). Lasts **1 round per caster
+  level** (PF1) and clears at room end — like all our buffs, we use PF1 durations.
 - **Blessing of Fervor** (`key:'blessingoffervor'`): the haste **extra attack only**.
   Available to cleric / oracle / inquisitor / paladin; incants ABBA's "Gimme!" (3
   clips). Two extra-attack sources never stack the extra attack (`m.hasted` is set,

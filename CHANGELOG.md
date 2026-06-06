@@ -21,6 +21,39 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-05 (newest)
 
+### ⚔️ Two-weapon fighting & PF1 iterative attacks
+- **Iterative attacks** — when a hero **full-attacks the same target as last turn**,
+  they add extra swings as their BAB grows (**−5** at BAB 6, **−10** at 11, **−15**
+  at 16). Switch targets and you get just your base swing. Resets each room.
+- **Dual-wielders** get the full treatment. **Lou Candlebean** is now a **fighter**
+  swinging a **gnome hooked hammer** (a double weapon → 2 swings); **Farrus** (twin
+  axes) and **rogues** (Nomkath → kukri, Kelda → dagger; rogue default is now the
+  dagger) all dual-wield.
+- **Two-weapon feats on the feat ladders** — Two-Weapon Fighting (cuts the dual
+  penalty to −2), Two-Weapon Defense (+1 AC while two-weapon fighting), and Improved
+  Two-Weapon Fighting (an extra off-hand swing). **Barbarians** now earn the fighter
+  feat ladder on **odd levels** (like the inquisitor), so Farrus gets them too.
+
+### 🛡️ Gear & UI
+- **Magic items are generic** — drops and the Loot Bank now say **+N Weapon / Armor /
+  Shield** (the bonus rides on whatever your class actually wields).
+- **Everyone starts with masterwork armor** for their class (no more free chain
+  shirt): heavy classes a Full Plate (AC 9), medium (barbarian, **oracle**) a
+  Breastplate (6); arcane casters wear none. +N magic armor adds on top.
+- **Hero cards show current AC** (🛡 N, top-right) at a glance on the battleboard.
+- **The recruit-AI picker centers on screen** (it used to run off the top), scrolls
+  if long, and dismisses on outside-click/Escape — alongside the 🎲 Random helpers
+  button.
+- **The audio-settings menu is now on the dungeon screen too** (the same control as
+  the poker topbar).
+
+### 💨 Buffs & sound
+- **Haste lasts 1 round per caster level** (PF1) and clears at room end like other
+  buffs — we use PF1 buff durations throughout.
+- **Slain heroes forfeit their gold** share on the way out (the living and dying
+  split it); **cure potions** now play the cure sound; **Blessing of Fervor** shouts
+  ABBA's "Gimme! Gimme! Gimme!"
+
 ### ⚜️ Paladin overhaul
 - **Spellcasting from level 1** (home-rule) — paladins (and antipaladins) no longer
   wait until 4th for spells; their slow progression just starts at 1st. New spell
