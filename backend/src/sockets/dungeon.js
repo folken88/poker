@@ -150,6 +150,44 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     ack?.({ ok: true });
   });
 
+  // Hire a RANDOM batch of AI allies in one click (the dungeon's answer to the
+  // poker table's "Fill" button). Fills the open party slots with random unseated
+  // bots at RECRUIT_FEE each — but only as many as the player can afford: 150g
+  // hires 3, 100g hires 2, 50g hires 1. Affordability + availability + the
+  // 3-ally cap are all respected.
+  socket.on('dungeon:recruitRandom', (_p, ack) => {
+    const me = meOf();
+    if (!me) return ack?.({ ok: false, error: 'no player' });
+    const d = dungeons.get(tableIdOf());
+    if (!d || !d.hasMember(me.player_id)) return ack?.({ ok: false, error: 'not in a dungeon' });
+    const slots = MAX_BOT_ALLIES - d.botCount();
+    if (slots <= 0) return ack?.({ ok: false, error: `party is full (${MAX_BOT_ALLIES} AI allies max)` });
+    const affordable = Math.floor((db.getPlayer(me.player_id)?.chips || 0) / RECRUIT_FEE);
+    const want = Math.min(slots, affordable);
+    if (want <= 0) return ack?.({ ok: false, error: `not enough gold (need ${RECRUIT_FEE}g each)` });
+    // Shuffle the unseated, not-already-in-party bots and hire down the list.
+    const pool = computeRecruitable(d);
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    let hired = 0;
+    for (const c of pool) {
+      if (hired >= want) break;
+      const bot = db.getPlayer(c.playerId);
+      if (!bot || !bot.is_bot) continue;
+      if (isSeatedAnywhere(c.playerId) || d.hasMember(c.playerId)) continue;
+      const cur = db.getPlayer(me.player_id);
+      if ((cur?.chips || 0) < RECRUIT_FEE) break;
+      db.setChips(me.player_id, cur.chips - RECRUIT_FEE);
+      db.setChips(c.playerId, (bot.chips || 0) + RECRUIT_FEE);
+      d.addMember(bot, true);
+      d._note(`🤝 ${me.nickname} recruited ${bot.nickname} for ${RECRUIT_FEE}g.`);
+      hired++;
+    }
+    if (hired === 0) return ack?.({ ok: false, error: 'no available allies to hire' });
+    d._broadcast();
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, hired });
+  });
+
   // Bail out of the FIGHT but keep WATCHING — banks your gold, leaves the run,
   // and stays in the dungeon room as a spectator (you can re-Join later).
   socket.on('dungeon:bailWatch', (_p, ack) => {

@@ -2731,10 +2731,17 @@ class Dungeon {
       }
       this._note(`${ab.icon} ${m.nickname} channels positive energy — +${h} to the party (${parts.join(', ')}).`, sound);
     } else {
-      const allies = this.livingParty();
-      const target = allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
+      // Target the MOST-HURT ally who is NOT dead — INCLUDING a downed/dying ally
+      // (hp <= 0 but not slain at -10). (Was livingParty() = hp>0, so a cure could
+      // skip a bleeding-out ally and land on someone barely scratched.) A cure
+      // that lifts a downed ally above 0 puts them back on their feet.
+      const cands = this.present().filter(a => !a.dead);
+      const target = cands.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
+      const wasDown = target.hp <= 0;
       const h = cureAmt(); target.hp = Math.min(target.maxHp, target.hp + h);
-      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${target.nickname} heals ${h} (${target.hp}/${target.maxHp}).`, sound);
+      const up = wasDown && target.hp > 0;
+      if (up) target.downed = false;   // healed back to consciousness
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${target.nickname} heals ${h} (${target.hp}/${target.maxHp})${up ? ' ⤴up!' : ''}.`, sound);
     }
     this._echoToTable(sound);
   }

@@ -1103,6 +1103,7 @@
       if (d.status === 'over' || !list.length || _spectating) { recruit.innerHTML = ''; _recruitOpen = false; }
       else recruit.innerHTML =
         `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-toggle" data-recruit-toggle aria-expanded="${_recruitOpen}">🤝 Recruit AI ▾ <span class="dungeon__recruit-count">${list.length}</span></button>` +
+        `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-random" data-recruit-random ${full ? 'disabled' : ''} title="Hire up to 3 random allies — 50g each (150g = 3, 100g = 2, 50g = 1)">🎲 Random helpers</button>` +
         `<div class="dungeon__recruit-pop ${_recruitOpen ? 'is-open' : ''}">` +
           `<div class="dungeon__recruit-head">Unseated allies — 50g each${full ? ' · party full' : ''}</div>` +
           `<div class="bot-picker__grid bot-picker__grid--dungeon">` +
@@ -1204,6 +1205,13 @@
       if (pop) pop.classList.toggle('is-open', _recruitOpen);
       const tog = $('#dungeonRecruit')?.querySelector('[data-recruit-toggle]');
       if (tog) tog.setAttribute('aria-expanded', String(_recruitOpen));
+      return;
+    }
+    if (ev.target.closest('[data-recruit-random]')) {
+      socket.emit('dungeon:recruitRandom', null, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not hire helpers', true); return; }
+        toast(`🎲 Hired ${resp.hired} random ${resp.hired === 1 ? 'helper' : 'helpers'} (50g each).`);
+      });
       return;
     }
     const b = ev.target.closest('[data-recruit]'); if (!b) return;
