@@ -911,7 +911,8 @@
       const afk = m.afkAt
         ? `<span class="dpc__afk" data-afk-at="${m.afkAt}" title="You'll auto-skip if idle">⏱ ${Math.max(0, Math.ceil((m.afkAt - Date.now()) / 1000))}s</span>`
         : '';
-      return `<div class="${cls.join(' ')}">
+      return `<div class="${cls.join(' ')}" style="position:relative">
+        <div class="dpc__ac" title="Armor Class — current total" style="position:absolute;top:3px;right:5px;font-size:0.7rem;font-weight:700;color:var(--brass-bright);background:rgba(0,0,0,0.45);border-radius:6px;padding:0 5px;line-height:1.45;pointer-events:none;z-index:5">🛡 ${Number.isFinite(m.ac) ? m.ac : '?'}</div>
         <div class="dpc__avatar"${m.crowned ? ' style="position:relative"' : ''}>${renderAvatar(m.avatarId)}${m.crowned ? `<span class="dpc__crown" title="Loot Lord" style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>${afk}
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${tag}</div>
         ${condIcons(m.conditions)}${buffIcons(m.buffs)}

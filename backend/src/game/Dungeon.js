@@ -82,7 +82,9 @@ function paladinFeats(level) {
 function fighterFeats(cls, level) {
   const L = Math.max(1, level || 1);
   if (cls === 'fighter')    return featLadder(L, L);
-  if (cls === 'inquisitor') return featLadder(Math.floor((L + 1) / 2), L);
+  // Inquisitor AND barbarian earn the fighter ladder at HALF rate — a feat every
+  // ODD level (incl. the two-weapon feats, which Farrus's twin axes lean on).
+  if (cls === 'inquisitor' || cls === 'barbarian') return featLadder(Math.floor((L + 1) / 2), L);
   if (cls === 'paladin')    return paladinFeats(L);
   return FF_NONE;
 }
@@ -106,7 +108,7 @@ function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fi
 // Level now comes from XP (see pf1data/xp.js), NOT from gear. The gating level at
 // which fighter/inquisitor earn each bonus feat (fighter: every level; inquisitor:
 // every odd level) — used to NAME the feat gained on a level-up announcement.
-function gatingLevel(cls, L) { return cls === 'fighter' ? L : cls === 'inquisitor' ? Math.floor((L + 1) / 2) : cls === 'paladin' ? Math.ceil(L / 2) : 0; }
+function gatingLevel(cls, L) { return cls === 'fighter' ? L : (cls === 'inquisitor' || cls === 'barbarian') ? Math.floor((L + 1) / 2) : cls === 'paladin' ? Math.ceil(L / 2) : 0; }
 const FEAT_AT = {
   1: 'Weapon Focus (+1 to hit)', 2: 'Dodge (+1 AC)', 3: 'Toughness (+HP)', 4: 'Weapon Specialization (+2 dmg)',
   5: 'Improved Initiative', 6: 'a save feat (+1 saves)', 7: 'a save feat (+2 saves)',
@@ -1108,7 +1110,7 @@ class Dungeon {
       const gained = m.hp - before;
       const revived = before <= 0 && m.hp > 0;
       if (m.hp > 0) m.downed = false;
-      this._note(`🧪 A Potion of ${p.name} drops — ${m.nickname} ${revived ? 'is revived' : 'quaffs it'} (rolled ${p.count}d${p.die}+${p.bonus}): +${gained} HP (now ${m.hp}/${m.maxHp})${revived ? ' — back on their feet!' : ''}.`);
+      this._note(`🧪 A Potion of ${p.name} drops — ${m.nickname} ${revived ? 'is revived' : 'quaffs it'} (rolled ${p.count}d${p.die}+${p.bonus}): +${gained} HP (now ${m.hp}/${m.maxHp})${revived ? ' — back on their feet!' : ''}.`, '/audio/spell_cure.mp3');
       this._log('potion', { name: p.name, who: m.playerId, rolled: heal, gained, revived });
     } else {
       const sell = Math.floor(p.gp / 2); this.runGold += sell;
@@ -1229,7 +1231,7 @@ class Dungeon {
   // paired daggers)? Drives Two-Weapon Defense and the TWF attack sequence.
   _isDualWielding(m) {
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
-    return !!(w && (w.dual || (m.cls === 'rogue' && m.weaponKey === 'dagger')));
+    return !!(w && (w.dual || (m.cls === 'rogue' && (m.weaponKey === 'dagger' || m.weaponKey === 'kukri'))));
   }
   _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1) + Haste (+1 dodge)
     let b = ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level).ac + this._hasteMod(m);

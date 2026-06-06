@@ -15,6 +15,7 @@ const UNARMED = { name: 'Unarmed Strike', cat: 'light', ranged: false, dmgCount:
 // weapon your class isn't proficient with is −4 to hit (see classes.js).
 const STAPLE_DEFS = [
   ['dagger',       'Dagger',       'simple'],
+  ['kukri',        'Kukri',        'martial'],   // light slashing blade (1d4, 18–20) — a rogue's off-hand
   ['shortsword',   'Shortsword',   'martial'],
   ['longsword',    'Longsword',    'martial'],
   ['greatsword',   'Greatsword',   'martial'],

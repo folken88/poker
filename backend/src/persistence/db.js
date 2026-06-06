@@ -400,7 +400,7 @@ const BOT_CLASSES = {
 const CLASS_WEAPON = {
   fighter:'longsword', paladin:'longsword', antipaladin:'scimitar', cavalier:'longsword',
   samurai:'katana', bloodrager:'greatsword', slayer:'longsword', warpriest:'warhammer',
-  barbarian:'greataxe', ranger:'longsword', rogue:'shortsword', ninja:'shortsword',
+  barbarian:'greataxe', ranger:'longsword', rogue:'dagger', ninja:'shortsword',   // rogues dual-wield daggers/kukris
   monk:'unarmed', brawler:'unarmed', bard:'rapier', skald:'longsword', swashbuckler:'rapier',
   magus:'longsword', cleric:'warhammer', inquisitor:'longsword', druid:'scimitar',
   oracle:'scimitar', shaman:'quarterstaff', wizard:'quarterstaff', sorcerer:'quarterstaff',
@@ -420,6 +420,7 @@ const BOT_WEAPONS = {
   'Holden': 'rapier', 'Rhyarca': 'rapier', 'Concetta': 'rapier', 'Kovira': 'unarmed',   // Kovira (wizard) attacks with her Elemental Ray at-will
   'Tokala': 'chainsaw',   // 3d6 slashing two-hander, crits on 18
   'Lou Candlebean': 'gnomehammer',   // fighter dual-wielder — gnome hooked hammer (2 swings + TWF feats)
+  'Nomkath': 'kukri', 'Kelda': 'dagger',   // rogues — dual-wield light blades (dagger / kukri)
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 
