@@ -385,7 +385,7 @@ migrateRemoveAmulet();
 const BOT_CLASSES = {
   'Sirona': 'paladin', 'Gaspar': 'inquisitor', 'Tar Baphon': 'wizard', 'Bujon, Storm of Cheliax': 'sorcerer',
   'Kelda': 'rogue', 'Kate Blackwood': 'magus', 'Toni': 'magus', 'Adimarus': 'antipaladin',
-  'Rhyarca': 'oracle', 'Conchobar': 'bard', 'Nomkath': 'rogue', 'Lou Candlebean': 'cavalier',
+  'Rhyarca': 'oracle', 'Conchobar': 'bard', 'Nomkath': 'rogue', 'Lou Candlebean': 'fighter',
   'Elodie': 'bard', 'Dismas': 'paladin', 'Vorkstag': 'rogue', 'Estovion': 'wizard',
   'Auren Vrood': 'wizard', 'Casandalee': 'oracle', 'Meyanda': 'cleric', 'Daramid': 'wizard',
   'Kovira': 'wizard', 'Tokala': 'barbarian', 'Mr. Brow': 'investigator', 'Tamsin': 'bard',
@@ -419,6 +419,7 @@ const BOT_WEAPONS = {
   'Rissa': 'claws', 'Taelys': 'dvl', 'Ulfred': 'voidshard', 'Vaughan': 'radiance', 'Duristan Silvio': 'lapua',
   'Holden': 'rapier', 'Rhyarca': 'rapier', 'Concetta': 'rapier', 'Kovira': 'unarmed',   // Kovira (wizard) attacks with her Elemental Ray at-will
   'Tokala': 'chainsaw',   // 3d6 slashing two-hander, crits on 18
+  'Lou Candlebean': 'gnomehammer',   // fighter dual-wielder — gnome hooked hammer (2 swings + TWF feats)
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 

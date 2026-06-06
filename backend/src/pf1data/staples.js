@@ -73,6 +73,9 @@ const CUSTOM_WEAPONS = {
   // Farrus Richton's TWIN battleaxes — two-weapon fighting (2 swings/turn, one
   // report), and no shield (dual-wield → no shield AC).
   twoaxes: { key: 'twoaxes', name: 'Twin Battleaxes', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'S', group: 'axes', prof: 'martial', custom: true, dual: true, noShield: true, atkSound: '/audio/weapon_double_axe.mp3' },
+  // Lou Candlebean's GNOME HOOKED HAMMER — a DOUBLE weapon she two-weapon fights
+  // with (2 swings/turn, one report; no shield). Hammer head: 1d8 B, ×3 crit.
+  gnomehammer: { key: 'gnomehammer', name: 'Gnome Hooked Hammer', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'B', group: 'hammers', prof: 'exotic', custom: true, dual: true, noShield: true, atkSound: '/audio/weapon_warhammer.mp3' },
   // Tokala's CHAINSAW — a roaring 3d6 slashing two-hander that crits on an 18.
   chainsaw: { key: 'chainsaw', name: 'Chainsaw', cat: '2h', ranged: false, dmgCount: 3, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'axes', prof: 'exotic', custom: true, atkSound: '/audio/weapon_chainsaw.mp3' },
 };

@@ -35,7 +35,7 @@ function hdFor(cls) { return (CLASSES[cls] && CLASSES[cls].hd) || HP_PER_LEVEL; 
 // unified hit / damage / AC / HP / save / initiative numbers (the game has no
 // per-weapon-group or per-save granularity, so the three save feats collapse to
 // one all-saves bonus and Weapon Focus/Spec apply to every weapon).
-const FF_NONE = { hit: 0, dmg: 0, ac: 0, hp: 0, save: 0, init: 0, impCrit: false, critFocus: false, impCleave: false };
+const FF_NONE = { hit: 0, dmg: 0, ac: 0, hp: 0, save: 0, init: 0, impCrit: false, critFocus: false, impCleave: false, twf: false, twDef: false, itwf: false };
 // The fighter bonus-feat ladder, evaluated at a GATING level `g` (which feats are
 // earned so far) with the Toughness HP bonus scaling on actual Hit Dice `hd`.
 function featLadder(g, hd) {
@@ -49,6 +49,10 @@ function featLadder(g, hd) {
     impCrit:   g >= 8,                    // Improved Critical — doubled threat range
     critFocus: g >= 9,                    // Critical Focus — +4 to confirm crits
     impCleave: g >= 11,                   // Improved Cleave — auto-cleave like the barbarian
+    // Two-weapon feats (only matter to dual-wielders — harmless on a single weapon):
+    twf:   g >= 2,                        // Two-Weapon Fighting — dual penalty −6 → −2
+    twDef: g >= 4,                        // Two-Weapon Defense — +1 AC while two-weapon fighting
+    itwf:  g >= 6,                        // Improved Two-Weapon Fighting — a 2nd off-hand swing (−5)
   };
 }
 // FIGHTER takes one bonus feat per level (g = level). The INQUISITOR earns the
@@ -1221,8 +1225,16 @@ class Dungeon {
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
   _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
+  // Is this hero fighting with two weapons (a double/dual weapon, or a rogue's
+  // paired daggers)? Drives Two-Weapon Defense and the TWF attack sequence.
+  _isDualWielding(m) {
+    const w = m.weapon || weaponOf(m.gear, m.weaponKey);
+    return !!(w && (w.dual || (m.cls === 'rogue' && m.weaponKey === 'dagger')));
+  }
   _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1) + Haste (+1 dodge)
-    return ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level).ac + this._hasteMod(m);
+    let b = ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level).ac + this._hasteMod(m);
+    if (fighterFeats(m.cls, m.level).twDef && this._isDualWielding(m)) b += 1;   // Two-Weapon Defense
+    return b;
   }
   // A hero's three PF1 AC values (base, no situational mods) — for display + touch
   // resolution. touch drops armor/shield/mage-armor; flat-footed drops Dodge.
@@ -2208,6 +2220,7 @@ class Dungeon {
     m.buffApplied = {};      // which sticky buffs are already active (no stacking)
     m.smiteActive = false;
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
+    m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
     m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null;   // taunt / grapple / fire ward / flight / stoneskin / spiritual weapon clear between rooms
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
@@ -3162,6 +3175,28 @@ class Dungeon {
 
   // At-will attack. Rogues with daggers strike TWICE (two-weapon style); a rogue
   // with any other weapon strikes once. Sneak Attack applies via _swingVsAC.
+  // Per-swing to-hit OFFSETS for a hero's basic attack. A standard attack on a
+  // NEW target is a single swing (a dual-wielder still gets their off-hand). On a
+  // FULL attack — staying on the SAME target as last turn — every martial adds PF1
+  // iteratives (−5/−10/−15 as BAB reaches 6/11/16), and a dual-wielder adds their
+  // Two-Weapon Fighting / Improved Two-Weapon Fighting off-hand swing. The TWF
+  // penalty (−6, or −2 with the Two-Weapon Fighting feat) rides on every swing.
+  _attackOffsets(m, e) {
+    const bab = babFor(m.cls || 'fighter', m.level || 1);
+    const ff = fighterFeats(m.cls, m.level);
+    const dual = this._isDualWielding(m);
+    const sameTarget = (m._lastAtkTarget === e.uid);
+    const twfPen = dual ? (ff.twf ? -2 : -6) : 0;
+    const off = [twfPen];                       // primary / main-hand swing
+    if (dual) off.push(twfPen);                 // base off-hand swing (the 2nd weapon)
+    if (sameTarget) {
+      if (bab >= 6)  off.push(twfPen - 5);      // main-hand iterative
+      if (bab >= 11) off.push(twfPen - 10);
+      if (bab >= 16) off.push(twfPen - 15);
+      if (dual && ff.itwf && bab >= 6) off.push(twfPen - 5);   // Improved Two-Weapon Fighting
+    }
+    return off;
+  }
   _playerAttack(m, targetUid, quiet = false) {
     m.flatFooted = false;   // acting ends flat-footed
     m.invisible = false;    // attacking breaks Invisibility
@@ -3171,21 +3206,24 @@ class Dungeon {
     if (e.darkened > 0) { this._note(`🌑 ${m.nickname} can't find ${e.name} in the magical darkness!`); this._broadcast(); return; }
     // Melee can't reach a flyer — only ranged weapons or spells hit airborne foes.
     if (e.flying && !m.weapon.ranged) { this._note(`🪽 ${m.nickname} can't reach the airborne ${e.name} — need a ranged weapon or a spell!`); this._broadcast(); return; }
-    // Two swings for a dual-wield weapon (Farrus's twin axes) or a rogue's dagger.
-    const swings = m.weapon.dual ? 2 : ((m.cls === 'rogue' && m.weaponKey === 'dagger') ? 2 : 1);
+    // Build the swing sequence as a list of to-hit OFFSETS (see _attackOffsets):
+    // dual-wielders attack twice; staying on the same target adds PF1 iteratives.
+    // A Haste bonus swing (quiet) is always a single strike at full to-hit.
+    const offsets = quiet ? [0] : this._attackOffsets(m, e);
+    if (!quiet) m._lastAtkTarget = e.uid;   // remember the target → next turn's full-attack check
+    const swings = offsets.length;
     // Sound: signature atkSound > a blunt "bap" for B-type weapons (quarterstaff,
-    // warhammer…) > the swing's own hit/whiff. A dual weapon plays its report ONCE.
+    // warhammer…) > the swing's own hit/whiff. Plays ONCE for the whole flurry.
     let baseSound = m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null);
     if (m.smiteActive && m.weaponKey === 'warhammer') baseSound = '/audio/weapon_warhammer_smite.mp3';   // holy hammer-ring on a smite
     for (let i = 0; i < swings; i++) {
       const tgt = (e.hp > 0) ? e : this.livingEnemies()[0];
       if (!tgt) break;
-      const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms' }), tgt);   // firearms hit vs touch AC
-      if (m.weapon.dual) r.sound = (i === 0) ? baseSound : null;   // one report for the whole flurry
-      else if (baseSound) r.sound = baseSound;                     // signature / blunt report (e.g. Rovadra)
-      if (quiet) r.sound = null;   // secondary swing (Haste bonus) — stay silent so the main action's sound is heard
+      const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms' }), tgt, offsets[i]);   // firearms hit vs touch AC; offset = iterative/TWF penalty
+      if (i > 0 || quiet) r.sound = null;            // one report for the whole flurry; haste swing silent
+      else if (baseSound) r.sound = baseSound;       // signature / blunt report on the first swing
       // Rogue Sneak Attack with a light blade (dagger/kukri/shortsword) → Riki.
-      if (r.sneakDice && m.cls === 'rogue' && ['dagger', 'kukri', 'shortsword'].includes(m.weaponKey)) r.sound = '/audio/sneak_riki.mp3';
+      if (r.sneakDice && m.cls === 'rogue' && ['dagger', 'kukri', 'shortsword'].includes(m.weaponKey) && i === 0) r.sound = '/audio/sneak_riki.mp3';
       const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '');
       const lead = swings > 1 ? `${m.nickname} (hit ${i + 1})` : m.nickname;
       if (r.fumble) this._note(`${lead} fumbles the attack! ${this._atkStr(r)}`, r.sound);
