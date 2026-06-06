@@ -162,12 +162,22 @@ const SPELL = {
   fly:           { key: 'fly',           name: 'Fly',            icon: '🪽', cost: 'pool', effect: 'buff', target: 'self', fly: true, slvl: 3, sticky: true, sound: S.invis, desc: 'Take to the air — grounded foes CANNOT reach you (immune to non-ranged attacks) for the rest of the room.' },
   coneofcold:    { key: 'coneofcold',    name: 'Cone of Cold',   icon: '🥶', cost: 'pool', effect: 'aoe', target: 'aoe', randBase: 2, randDie: 3, save: 'reflex', die: 6, dice: 'level', dcap: 15, minLevel: 9, dtype: 'cold', slvl: 5, sound: S.coldcone, desc: 'A blast of frost engulfs 2+1d3 foes — Reflex for half (level d6).' },
   disintegrate:  { key: 'disintegrate',  name: 'Disintegrate',   icon: '☢️', cost: 'pool', effect: 'disintegrate', target: 'enemy', maxTargets: 1, save: 'fort', die: 6, dice: 'level', dcap: 20, minLevel: 11, dtype: 'force', slvl: 6, sound: S.disintegrate, desc: 'A thin green ray — ranged touch attack, then 2d6 per caster level (max 40d6). Fort partial: a made save still takes 5d6. Reduced to 0 HP → disintegrated to dust.' },
-  firesnake:     { key: 'firesnake',     name: 'Fire Snake',     icon: '🐍', cost: 'pool', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, minLevel: 7, dtype: 'fire', slvl: 4, sounds: FIREBALL_SFX, desc: 'A serpent of flame weaves through up to 4 foes — 1d6 fire per caster level (max 15d6), Reflex for half.' },
+  firesnake:     { key: 'firesnake',     name: 'Fire Snake',     icon: '🐍', cost: 'pool', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, minLevel: 7, dtype: 'fire', slvl: 5, sounds: FIREBALL_SFX, desc: 'A serpent of flame weaves through up to 4 foes — 1d6 fire per caster level (max 15d6), Reflex for half.' },
   stoneskin:     { key: 'stoneskin',     name: 'Stoneskin',      icon: '🪨', cost: 'pool', effect: 'buff', target: 'ally', buff: {}, dr: 10, slvl: 4, minLevel: 7, sticky: true, sound: S.invoke, desc: 'An ally\'s skin turns to stone — DR 10 against physical blows (melee/claws/chains) for the rest of the room.' },
   // Protection from Evil (Communal) — a 2nd-level party ward. No cost key here;
   // each kit sets it (wizard prepared 'room', sorcerer/cleric/inquisitor 'slot').
   protevil:      { key: 'protevil',      name: 'Protection from Evil (Communal)', icon: '🛡️', img: '/dungeon/buffs/protevil.webp', effect: 'buff', target: 'self', party: true, sticky: true, buff: { ac: 2, save: 2 }, slvl: 2, sound: S.invoke, desc: 'Ward the whole party — +2 AC and +2 to all saves for EVERY ally, for the rest of the room.' },
   darkness:      { key: 'darkness',      name: 'Darkness',       icon: '🌑', effect: 'darkness', target: 'aoe', randBase: 1, randDie: 4, slvl: 2, sound: S.umbral, desc: 'Shroud a RANDOM 1d4+1 foes in magical darkness — they CANNOT attack and CANNOT be attacked for 2 rounds.' },
+  // ── 4th-level ──
+  blacktentacles: { key: 'blacktentacles', name: 'Black Tentacles', icon: '🦑', effect: 'blacktentacles', target: 'aoe', slvl: 4, sound: '/audio/slorr_grapple.mp3', desc: 'Writhing tentacles erupt across the room — EACH ROUND they grapple a random 1d4+1 foes (CMB vs CMD); the grappled are helpless until they tear free. Lasts the room.' },
+  infernalhealgreater: { key: 'infernalhealgreater', name: 'Infernal Healing, Greater', icon: '🩸', effect: 'infernalheal', target: 'ally', heal: 4, sticky: true, slvl: 4, sound: S.cure, desc: 'Diabolic ichor knits the MOST-WOUNDED ally — fast healing 4 (heals 4 HP at the start of each of their turns) for the rest of the room.' },
+  invisgreater:  { key: 'invisgreater',  name: 'Invisibility, Greater', icon: '🫥', effect: 'invisible', greater: true, target: 'ally', slvl: 4, sound: S.invis, desc: 'Total concealment for the whole fight — you STAY invisible even when you attack. Cast it on a rogue ally and they Sneak Attack every foe that cannot see them.' },
+  riverofwind:   { key: 'riverofwind',   name: 'River of Wind',  icon: '🌬️', effect: 'grease', target: 'aoe', randN: 3, randDie: 4, save: 'fort', slvl: 4, sound: S.gust, desc: 'A roaring torrent of air bowls over a RANDOM 3d4 foes — Fortitude save or be knocked prone.' },
+  // ── 5th-level ──
+  stoneskincomm: { key: 'stoneskincomm', name: 'Stoneskin (Communal)', icon: '🪨', effect: 'buff', target: 'self', party: true, buff: {}, dr: 10, sticky: true, slvl: 5, sound: S.invoke, desc: 'The WHOLE party\'s skin turns to stone — DR 10 vs physical blows for every ally, for the rest of the room.' },
+  cloudkill:     { key: 'cloudkill',     name: 'Cloudkill',      icon: '☠️', effect: 'aoe', target: 'aoe', randN: 3, randDie: 4, maxTargets: 8, save: 'fort', die: 4, dice: 'level', dcap: 10, dtype: 'poison', slvl: 5, sound: S.acid, desc: 'A roiling bank of poison gas engulfs a RANDOM 3d4 foes — Fortitude for half (level d4 poison).' },
+  suffocation:   { key: 'suffocation',   name: 'Suffocation',    icon: '🫁', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 5, sound: S.umbral, desc: 'Rip the air from one creature\'s lungs (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy damage.' },
+  overlandflight:{ key: 'overlandflight',name: 'Overland Flight', icon: '🕊️', effect: 'overlandflight', target: 'self', slvl: 5, sound: S.invis, desc: 'Soar for the REST OF THE DUNGEON — grounded foes cannot reach you, and you can still cast on the wing.' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
@@ -282,8 +292,18 @@ const KITS = {
     preparedSpell(SPELL.slow,          5),
     preparedSpell(SPELL.fireball,      5),
     preparedSpell(SPELL.lightningbolt, 5),
-    preparedSpell(SPELL.firesnake,     7),
     preparedSpell(SPELL.stoneskin,     7),
+    // 4th-level additions
+    preparedSpell(SPELL.blacktentacles,      7),
+    preparedSpell(SPELL.infernalhealgreater, 7),
+    preparedSpell(SPELL.invisgreater,        7),
+    preparedSpell(SPELL.riverofwind,         7),
+    // 5th-level additions (Fire Snake is now a 5th-level spell)
+    preparedSpell(SPELL.firesnake,     9),
+    preparedSpell(SPELL.stoneskincomm, 9),
+    preparedSpell(SPELL.cloudkill,     9),
+    preparedSpell(SPELL.suffocation,   9),
+    preparedSpell(SPELL.overlandflight, 9),
     preparedSpell(SPELL.coneofcold,    9),
     preparedSpell(SPELL.disintegrate,  11),
   ] },
@@ -307,8 +327,18 @@ const KITS = {
     spontaneousSpell(SPELL.slow,         6),
     spontaneousSpell(SPELL.fireball,     6),
     { key: 'haste', name: 'Haste', icon: '💨', cost: 'slot', slvl: 3, minLevel: 6, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 turn per 5 caster levels.' },
-    spontaneousSpell(SPELL.firesnake,    8),
     spontaneousSpell(SPELL.stoneskin,    8),
+    // 4th-level additions
+    spontaneousSpell(SPELL.blacktentacles,      8),
+    spontaneousSpell(SPELL.infernalhealgreater, 8),
+    spontaneousSpell(SPELL.invisgreater,        8),
+    spontaneousSpell(SPELL.riverofwind,         8),
+    // 5th-level additions (Fire Snake is now a 5th-level spell)
+    spontaneousSpell(SPELL.firesnake,    10),
+    spontaneousSpell(SPELL.stoneskincomm, 10),
+    spontaneousSpell(SPELL.cloudkill,    10),
+    spontaneousSpell(SPELL.suffocation,  10),
+    spontaneousSpell(SPELL.overlandflight, 10),
     spontaneousSpell(SPELL.coneofcold,   10),
     spontaneousSpell(SPELL.disintegrate, 12),
   ] },
@@ -425,6 +455,8 @@ const KITS = {
     { key: 'shockinggrasp', name: 'Shocking Grasp', icon: '⚡', cost: 'room', uses: 1, minLevel: 1, effect: 'touch', target: 'enemy', die: 6, dice: 'level', dcap: 5, dtype: 'electricity', slvl: 1, sound: S.shock, desc: 'A charged touch — ranged touch attack (level d6, cap 5d6 electricity).' },
     { key: 'lightningbolt', name: 'Lightning Bolt', icon: '⚡', cost: 'room', uses: 1, minLevel: 5, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 6, dice: 'level', dcap: 10, dtype: 'electricity', sounds: THUNDER_SFX, desc: 'A bolt skewering 2 foes — Reflex for half (level d6).' },
     { key: 'calllightning', name: 'Call Lightning', icon: '🌩️', cost: 'room', uses: 1, minLevel: 5, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 6, dice: 'halflevel', dcap: 5, dtype: 'electricity', sounds: THUNDER_SFX, desc: 'A bolt from the storm strikes 2 foes — Reflex for half (½level d6).' },
+    { key: 'riverofwind', name: 'River of Wind', icon: '🌬️', cost: 'room', uses: 1, minLevel: 5, effect: 'grease', target: 'aoe', randN: 3, randDie: 4, save: 'fort', slvl: 4, sound: S.gust, desc: 'A roaring torrent of air bowls over a RANDOM 3d4 foes — Fortitude save or be knocked prone.' },
+    { key: 'firesnake', name: 'Fire Snake', icon: '🐍', cost: 'room', uses: 1, minLevel: 7, effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'fire', slvl: 5, sounds: FIREBALL_SFX, desc: 'A serpent of flame weaves through up to 4 foes — 1d6 fire per caster level (max 15d6), Reflex for half.' },
     // ── Healing & restoration ──
     { key: 'curelight',  name: 'Cure Light Wounds', icon: '💚', cost: 'room', uses: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5).' },
     { key: 'curemoderate',name: 'Cure Moderate Wounds', icon: '💚', cost: 'room', uses: 1, minLevel: 4, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
@@ -448,7 +480,7 @@ KITS.oracle.abilities = [
   { key: 'haste', name: 'Haste', icon: '💨', cost: 'slot', slvl: 3, minLevel: 5, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 round per caster level.' },
   spontaneousSpell(SPELL.slow,      5),
   spontaneousSpell(SPELL.fireball,  5),
-  spontaneousSpell(SPELL.firesnake, 7),
+  spontaneousSpell(SPELL.firesnake, 10),
 ];
 
 // Spell/ability art (PF1 stock icons copied into public/icons/spells/). Keyed

@@ -696,6 +696,7 @@ class Dungeon {
     if (this.lootRoll) return { ok: false, error: 'finish the loot roll first' };
     this.depth += 1;
     this._spawnRoom();
+    this.blackTentacles = null;   // the tentacle field doesn't carry between rooms
     for (const m of this.present()) { this._resetAbilities(m); m.flatFooted = true; }  // refresh per-room spells/channels + flat-footed until they act
     if (Math.random() < 0.05) { try { this._reskinVorkstag(); } catch (_) {} }   // skinwalker drifts to a new face between rooms (rare)
     this._maintainBardSongs();   // Inspire Courage is a passive aura — always up, no action spent
@@ -874,20 +875,27 @@ class Dungeon {
         } else { e.paralyzed -= 1; this._note(`🖐️ ${e.name} is paralyzed — loses its turn.`, null, { side: 'enemy' }); }
         this._broadcast(); return this._nextTurn();
       }
-      // GRAPPLED by a Promethean: helpless, loses its turn. Each turn it may struggle
-      // free (its attack bonus vs the grappler's level-based DC); the grip also drops
-      // if the grappler is gone (left / dead / no longer in Promethean form).
+      // GRAPPLED (by a Promethean OR by Black Tentacles): helpless, loses its turn.
+      // Each turn it may struggle free (its attack bonus vs the grappler's CMD); the
+      // grip drops if the source is gone (grappler left/dead/un-shifted, or the
+      // tentacle field has lapsed).
       if (e.grappled) {
-        const grappler = this.member(e.grappledBy);
-        const stillHeld = grappler && !grappler.left && grappler.hp > 0 && grappler.form && grappler.form.key === 'promethean';
-        if (!stillHeld) { e.grappled = false; e.grappledBy = null; e.grappleRounds = 0; this._note(`🐙 ${e.name} wrenches loose — the tentacles release it.`, null, { side: 'enemy' }); }
+        let cmd, srcGlyph = '🐙', stillHeld;
+        if (e.grappledBy === 'tentacles') {
+          const bt = this.blackTentacles; srcGlyph = '🦑';
+          stillHeld = !!bt; cmd = bt ? 10 + bt.cmb : 0;
+        } else {
+          const grappler = this.member(e.grappledBy);
+          stillHeld = !!(grappler && !grappler.left && grappler.hp > 0 && grappler.form && grappler.form.key === 'promethean');
+          cmd = stillHeld ? 12 + (grappler.level || 1) : 0;
+        }
+        if (!stillHeld) { e.grappled = false; e.grappledBy = null; e.grappleRounds = 0; this._note(`${srcGlyph} ${e.name} wrenches loose — the grip releases it.`, null, { side: 'enemy' }); }
         else {
           e.grappleRounds = (e.grappleRounds || 1) - 1;
-          const dc = 12 + (grappler.level || 1);
           const roll = dRoll(20), tot = roll + (e.toHit || 0);
-          const broke = roll === 20 || tot >= dc;
-          if (broke || e.grappleRounds <= 0) { e.grappled = false; e.grappledBy = null; this._note(`🐙 ${e.name} ${broke ? 'tears free' : 'finally slips'} of the grapple! [Str ${tot} vs ${dc}] — but the struggle cost its turn.`, null, { side: 'enemy' }); }
-          else this._note(`🐙 ${e.name} is held fast in the tentacles — helpless, loses its turn. [Str ${tot} vs ${dc}]`, null, { side: 'enemy' });
+          const broke = roll === 20 || tot >= cmd;
+          if (broke || e.grappleRounds <= 0) { e.grappled = false; e.grappledBy = null; this._note(`${srcGlyph} ${e.name} ${broke ? 'tears free' : 'finally slips'} of the grapple! [Str ${tot} vs ${cmd}] — but the struggle cost its turn.`, null, { side: 'enemy' }); }
+          else this._note(`${srcGlyph} ${e.name} is held fast — helpless, loses its turn. [Str ${tot} vs ${cmd}]`, null, { side: 'enemy' });
           this._broadcast(); return this._nextTurn();
         }
       }
@@ -932,6 +940,10 @@ class Dungeon {
       const h = Math.max(1, Math.floor((m.level || 1) / 3)); m.hp = Math.min(m.maxHp, m.hp + h);
       this._note(`💗 ${m.nickname}'s Judgement of Healing mends ${h} HP.`);
     }
+    if (m.infernalHeal > 0 && m.hp > 0 && m.hp < m.maxHp) {   // Infernal Healing (Greater): fast healing each turn
+      const before = m.hp; m.hp = Math.min(m.maxHp, m.hp + m.infernalHeal);
+      this._note(`🩸 ${m.nickname}'s infernal ichor knits ${m.hp - before} HP.`);
+    }
     if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, ENEMY_STEP_MS); this._broadcast(); }
     else { this._armAfkTimer(m); this._broadcast(); }   // human — wait for input
   }
@@ -940,7 +952,7 @@ class Dungeon {
     this.turnIdx += 1;
     // Initiative is rolled ONCE per combat (per room, in openDoor) — Pathfinder
     // keeps the same order each round; we just wrap back to the top.
-    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; }
+    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; if (this.blackTentacles) this._blackTentaclesTick(); }   // tentacles re-grab at the top of each round
     this._advanceToActor();
   }
   _armAfkTimer(m) {
@@ -1293,7 +1305,9 @@ class Dungeon {
     const smite = !!(attacker.smiteActive && target && (target.evil || target.markedEvil));   // Detect Evil marks neutral foes smite-able
     // Sneak Attack: rogue-likes add precision dice vs a target that's denied its
     // defenses — flat-footed, prone, sickened, or paralyzed (PF1e). NOT crit-multiplied.
-    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated));
+    // A target is denied its Dex vs an UNSEEN attacker too — Greater Invisibility
+    // keeps a rogue striking from concealment, so every hit is a Sneak Attack.
+    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated)) || !!attacker.greaterInvis;
     const sneakOk = SNEAK_CLASSES.has(cls) && denied;
     const sneakDice = sneakOk ? Math.min(SNEAK_DICE_CAP, Math.max(1, Math.ceil(lvl / 2))) : 0;
     // Sticky room buffs (Rage / Judgment / Bane / Inspire Courage / Prayer)
@@ -1929,6 +1943,25 @@ class Dungeon {
         if (laugh) return { slot: slot(laugh), payload: { targetUid: boss.uid } };
       }
     }
+    // 2b3) Black Tentacles — drop a control field when 2+ foes and none is up yet.
+    const tentacles = avail.find(a => a.effect === 'blacktentacles');
+    if (tentacles && !this.blackTentacles && foes.length >= 2) return { slot: slot(tentacles), payload: {} };
+    // 2b4) Suffocation — try to outright kill a dangerous non-undead foe (boss/elite,
+    //      or a lone target). A made save still deals heavy damage, so it's never wasted.
+    const suffocate = avail.find(a => a.effect === 'savedie');
+    if (suffocate) {
+      const prey = targets.filter(e => e.type !== 'undead' && e.type !== 'construct').slice().sort((a, b) => b.maxHp - a.maxHp)[0];
+      if (prey && (prey.boss || targets.length <= 2)) return { slot: slot(suffocate), payload: { targetUid: prey.uid } };
+    }
+    // 2b5) Infernal Healing (Greater) — fast-heal a badly-hurt ally not already under it.
+    const infheal = avail.find(a => a.effect === 'infernalheal');
+    if (infheal) {
+      const hurt = allies.filter(a => !a.infernalHeal).slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
+      if (hurt && hurt.hp < hurt.maxHp * 0.55) return { slot: slot(infheal), payload: { targetUid: hurt.playerId } };
+    }
+    // 2b6) Overland Flight — rise above grounded foes (defensive), once, if not flying.
+    const overland = avail.find(a => a.effect === 'overlandflight');
+    if (overland && !m.flying) return { slot: slot(overland), payload: {} };
     // 2c) Arcane controllers (wizard, sorcerer) play the battlefield: by default
     //     they pick the spell that AFFECTS THE MOST foes — a wide blast (Fireball,
     //     Lightning Bolt, Burning Hands) or a mass lockdown (Sleep, Grease). But
@@ -2177,7 +2210,7 @@ class Dungeon {
   // ── Ability system ───────────────────────────────────────────────────────
   // At-will: a weapon swing (martials) or a cantrip (full casters), every turn.
   _useAtwill(m, payload) {
-    m.invisible = false;   // attacking (even a cantrip ray) breaks Invisibility
+    if (!m.greaterInvis) m.invisible = false;   // attacking breaks Invisibility — but NOT Greater Invisibility
     return this._basicAttack(m, payload.targetUid);
   }
   // The basic attack for any combatant (human input, bot turn, or AFK auto-swing)
@@ -2237,8 +2270,12 @@ class Dungeon {
       heal:        () => this._abHeal(m, ab),
       revive:      () => this._abRevive(m, ab),
       haste:       () => this._abHaste(m, ab),
-      invisible:   () => this._abInvisible(m, ab),
+      invisible:   () => this._abInvisible(m, ab, payload),
       magearmor:   () => this._abMageArmor(m, ab),
+      overlandflight: () => this._abOverlandFlight(m, ab),
+      infernalheal: () => this._abInfernalHeal(m, ab, payload),
+      blacktentacles: () => this._abBlackTentacles(m, ab),
+      savedie:     () => this._abSaveDie(m, ab, payload),
       judgment:    () => this._abJudgment(m, ab),
       bane:        () => this._abBane(m, ab, payload),
       cleanse:     () => this._abCleanse(m, ab),
@@ -2264,7 +2301,7 @@ class Dungeon {
     else if (ab.cost === 'slot') { m.slots = m.slots || {}; m.slots[ab.slvl] = Math.max(0, (m.slots[ab.slvl] || 0) - 1); }
     else if (ab.cost === 'room' && !formOff) m.abilityUses[ab.key] = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 0) - 1);
     else if (ab.cost === 'run') m.runAbilityUses[ab.key] = Math.max(0, ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) - 1);
-    if (ab.target === 'enemy' || ab.target === 'aoe') m.invisible = false;   // attacking breaks Invisibility
+    if ((ab.target === 'enemy' || ab.target === 'aoe') && !m.greaterInvis) m.invisible = false;   // attacking breaks Invisibility (Greater persists)
     // A blaster (Elfrip the flame oracle) sometimes whoops "BOOM!" when a big
     // fire spell lands. Throttled like all dungeon banter (≤1/round, a chance).
     if (m.isBot && (ab.key === 'fireball' || ab.key === 'firesnake')) {
@@ -2362,7 +2399,9 @@ class Dungeon {
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
     m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null;   // taunt / grapple / fire ward / flight / stoneskin / spiritual weapon clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
-    m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
+    m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
+    m.infernalHeal = 0;   // Infernal Healing fast-healing ends between rooms
+    if (m.overlandFlight) m.flying = true;   // Overland Flight is RUN-long — re-assert it after the per-room flight clear
     m.acPenRound = -1; m.acPenAmt = 0;
   }
   // Inspire Courage is a passive bard AURA — it costs the bard NO action and is
@@ -2528,12 +2567,15 @@ class Dungeon {
   _abAoe(m, ab, payload) {
     const dc = this._spellDC(m), dice = this._spellDice(ab, m);
     let chosen;
-    if (ab.randFoes || ab.randBase) {
+    if (ab.randFoes || ab.randBase || ab.randN) {
       // Fireball-style: a RANDOM 1dN of the living enemies. Cone of Cold uses
-      // randBase+randDie → 2+1d3 foes.
+      // randBase+randDie → 2+1d3 foes; Cloudkill uses randN d randDie → 3d4 foes.
       const living = this._targetableEnemies().slice();
       for (let i = living.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [living[i], living[j]] = [living[j], living[i]]; }
-      const n = ab.randBase ? ((ab.randBase || 0) + dRoll(ab.randDie || 1)) : dRoll(ab.randFoes);
+      let n;
+      if (ab.randN) { n = 0; for (let i = 0; i < ab.randN; i++) n += dRoll(ab.randDie || 4); }
+      else if (ab.randBase) n = (ab.randBase || 0) + dRoll(ab.randDie || 1);
+      else n = dRoll(ab.randFoes);
       chosen = living.slice(0, n);
     } else {
       chosen = this._enemyTargets(payload, ab.maxTargets || 2);
@@ -2691,7 +2733,21 @@ class Dungeon {
   }
   // Invisibility — enemies can't target you until you attack (see _targetableParty
   // and the m.invisible=false clears in _playerAttack / offensive _useAbility).
-  _abInvisible(m, ab) {
+  _abInvisible(m, ab, payload) {
+    if (ab.greater) {
+      // GREATER INVISIBILITY — stays up the whole fight, even when attacking. Best
+      // on a ROGUE ally (constant Sneak Attack); else the caster, or a chosen ally.
+      const party = this.livingParty();
+      let target = null;
+      if (payload && payload.targetUid) target = party.find(a => a.playerId === payload.targetUid || a.uid === payload.targetUid);
+      if (!target) target = party.find(a => a.cls === 'rogue' && a.playerId !== m.playerId) || m;
+      target.invisible = true; target.greaterInvis = true;
+      const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
+      const bonus = (target.cls === 'rogue') ? ' — and every strike a Sneak Attack!' : '';
+      this._note(`${ab.icon} ${m.nickname} wraps ${who} in GREATER INVISIBILITY — unseen for the whole fight${bonus}`, ab.sound);
+      this._echoToTable(ab.sound);
+      return;
+    }
     // Cloak the MOST-HURT ally (least current HP) — not necessarily the caster.
     const target = this.livingParty().slice().sort((a, b) => a.hp - b.hp)[0] || m;
     target.invisible = true;
@@ -2705,6 +2761,74 @@ class Dungeon {
     m.mageArmor = true;
     this._note(`${ab.icon} ${m.nickname} weaves MAGE ARMOR — +4 armor AC for the rest of the dungeon.`, ab.sound);
     this._echoToTable(ab.sound);
+  }
+  // Overland Flight — a RUN-long flight (m.overlandFlight; re-asserted each room in
+  // _resetAbilities). Grounded foes can't reach the caster; they can still cast.
+  _abOverlandFlight(m, ab) {
+    m.overlandFlight = true; m.flying = true;
+    this._note(`${ab.icon} ${m.nickname} rises on OVERLAND FLIGHT — airborne for the rest of the dungeon (grounded foes can't reach them).`, ab.sound);
+    this._echoToTable(ab.sound);
+  }
+  // Infernal Healing, Greater — fast healing 4 on the most-wounded ally (or a chosen
+  // ally). Ticks at the start of that ally's turn (see _advanceToActor); lasts the room.
+  _abInfernalHeal(m, ab, payload) {
+    const party = this.livingParty();
+    let target = null;
+    if (payload && payload.targetUid) target = party.find(a => a.playerId === payload.targetUid || a.uid === payload.targetUid);
+    if (!target) target = party.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
+    target.infernalHeal = ab.heal || 4;
+    const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
+    this._note(`${ab.icon} ${m.nickname} anoints ${who} with infernal ichor — fast healing ${target.infernalHeal} HP/turn for the rest of the room.`, ab.sound);
+    this._echoToTable(ab.sound);
+  }
+  // Black Tentacles — a room hazard: each round (and on the cast) it grapples a
+  // random 1d4+1 ungrappled foes (PF1 grapple: CMB vs CMD). Grappled = helpless,
+  // losing turns until they break free (see _enemyAct). Lasts the room.
+  _abBlackTentacles(m, ab) {
+    const cl = m.level || 1;
+    this.blackTentacles = { cmb: cl + 5, caster: m.playerId, sound: ab.sound };   // CMB ≈ caster level + Str/size
+    this._note(`${ab.icon} ${m.nickname} conjures BLACK TENTACLES — the floor erupts with grasping limbs!`, ab.sound);
+    this._echoToTable(ab.sound);
+    this._blackTentaclesTick();   // grab immediately on the cast
+  }
+  _blackTentaclesTick() {
+    const bt = this.blackTentacles; if (!bt) return;
+    const free = this._targetableEnemies().filter(e => !e.grappled && e.hp > 0);
+    if (!free.length) return;
+    for (let i = free.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [free[i], free[j]] = [free[j], free[i]]; }
+    const grabbed = free.slice(0, dRoll(4) + 1), parts = [];   // 1d4+1 foes
+    for (const e of grabbed) {
+      const ecmd = 10 + (e.toHit || 0) + 2;                    // foe's CMD (rough)
+      const roll = dRoll(20), tot = roll + bt.cmb;
+      if (roll === 20 || tot >= ecmd) { e.grappled = true; e.grappledBy = 'tentacles'; e.grappleRounds = 99; parts.push(`${e.name} SEIZED [${tot} vs ${ecmd}]`); }
+      else parts.push(`${e.name} resists [${tot} vs ${ecmd}]`);
+    }
+    if (parts.length) { this._note(`🦑 The black tentacles lash out — ${parts.join('; ')}.`, bt.sound); this._broadcast(); }
+  }
+  // Suffocation — single living target (not undead/constructs): Fort save or DIE.
+  // A made save (or a boss too tough to fell outright) still takes heavy damage.
+  _abSaveDie(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    const sound = ab.sound || pick(SND.lightning);
+    // Only living, breathing creatures can be suffocated — undead, constructs,
+    // oozes and elementals are immune (by type, with a name fallback).
+    const immune = e.type === 'undead' || e.type === 'construct'
+      || /golem|skelet|zombie|wraith|ghost|lich|vampire|wight|ghoul|ghast|shadow|ooze|elemental|construct|undead/i.test(e.name || '');
+    if (immune) {
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — but it doesn't breathe. No effect.`, sound);
+      this._echoToTable(sound); return;
+    }
+    const dc = this._spellDC(m);
+    const sv = this._saveVs(this._enemySave(e, ab.save || 'fort'), dc);
+    if (!sv.saved && !e.boss) {
+      this._dmgE(e, e.hp + 20, ab.dtype);   // lethal
+      this._note(`${ab.icon} ${m.nickname} SUFFOCATES ${e.name}! [Fort ${sv.total} vs ${dc}] — it collapses, airless and lifeless. ☠️`, sound);
+    } else {
+      const frac = !sv.saved ? 0.5 : 0.25;   // boss-failed = half max HP; made save = a quarter
+      const dmg = this._dmgE(e, Math.max(6, Math.floor((e.maxHp || 20) * frac)), ab.dtype);
+      this._note(`${ab.icon} ${m.nickname}'s ${ab.name} chokes ${e.name} — ${!sv.saved ? 'too mighty to fell outright' : 'it claws in a breath'}: ${dmg} damage. [Fort ${sv.total} vs ${dc}]${e.hp <= 0 ? ' ☠️' : ''}`, sound);
+    }
+    this._echoToTable(sound);
   }
   // Judgement (inquisitor): set the one active judgement. Switching is a FREE
   // action (see _useAbility returning freeAction). destruction=+dmg, protection=
@@ -3367,7 +3491,7 @@ class Dungeon {
   }
   _playerAttack(m, targetUid, quiet = false) {
     m.flatFooted = false;   // acting ends flat-footed
-    m.invisible = false;    // attacking breaks Invisibility
+    if (!m.greaterInvis) m.invisible = false;    // attacking breaks Invisibility (Greater persists)
     const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
     if (!e) return;
     m.weapon = weaponOf(m.gear, m.weaponKey);
