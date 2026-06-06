@@ -19,7 +19,28 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
-## 2026-06-05 (newest)
+## 2026-06-06 (newest)
+
+### ⚜️ Paladin free actions
+- **Detect Evil** and **Smite** activation are now **free actions** — flipping them
+  on no longer eats your turn, so a paladin can mark the room (or light up a smite)
+  and still attack the same round. (Smite already worked this way; Detect Evil was
+  the one consuming the turn.)
+
+### 🗡️ Exotic one-handers for warriors (home-rule)
+- **Full-BAB and 3/4-BAB classes** (fighters through rogues, clerics, oracles —
+  everyone but the 1/2-BAB arcane casters) now wield one-handed **exotic blades**
+  like the **bastard sword** and **katana** as if they had Exotic Weapon
+  Proficiency: **no −4 penalty**, and one-handed so they **keep their shield**.
+  Wizards and sorcerers still take the penalty.
+- **Bastard Sword** (1d10, 19–20) added to the weapon dropdown.
+
+### 📖 Curator — Gaspar's bastard sword
+- Gaspar's named blade **Curator** quickens the **first buff spell each turn** to a
+  **swift action** — cast it for free and still take your real action (a second buff
+  or a strike). In effect, a Curator-wielder can stack **two buffs in one turn**.
+
+## 2026-06-05
 
 ### ⚔️ Two-weapon fighting & PF1 iterative attacks
 - **Iterative attacks** — when a hero **full-attacks the same target as last turn**,
