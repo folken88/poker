@@ -55,8 +55,9 @@ const CUSTOM_WEAPONS = {
   longbow: { key: 'longbow', name: 'Composite Longbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'P', group: 'bows', prof: 'martial', custom: true, atkSound: '/audio/bow_silent_hits.mp3' },   // Danger's longbow — near-silent loose, sound lands on the hit
   // Vesorianna's spectral Ghost Touch — a chilling 2d6 melee strike.
   ghosttouch: { key: 'ghosttouch', name: 'Ghost Touch', cat: '1h', ranged: false, dmgCount: 2, dmgDie: 6, crit: 20, mult: 2, type: 'B', group: 'natural', prof: 'simple', custom: true },
-  // Crisp's bite (natural weapon, 1d6).
-  bite: { key: 'bite', name: 'Bite', cat: 'light', ranged: false, dmgCount: 1, dmgDie: 6, crit: 20, mult: 2, type: 'P', group: 'natural', prof: 'simple', custom: true },
+  // Crisp the deinonychus — a natural full attack: bite + 2 raking talons (1d6
+  // each), all at full BAB (see _attackOffsets naturalAttacks). No shield.
+  bite: { key: 'bite', name: 'Talons & Bite', cat: 'light', ranged: false, dmgCount: 1, dmgDie: 6, crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 3, noShield: true },
   // Rissa's claws (natural, 1d6).
   claws: { key: 'claws', name: 'Claws', cat: 'light', ranged: false, dmgCount: 1, dmgDie: 6, crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true },
   // Vaughan's named scimitar "Radiance" (1d6, 18–20/×2).

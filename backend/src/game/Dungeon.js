@@ -82,9 +82,11 @@ function paladinFeats(level) {
 function fighterFeats(cls, level) {
   const L = Math.max(1, level || 1);
   if (cls === 'fighter')    return featLadder(L, L);
-  // Inquisitor AND barbarian earn the fighter ladder at HALF rate — a feat every
-  // ODD level (incl. the two-weapon feats, which Farrus's twin axes lean on).
-  if (cls === 'inquisitor' || cls === 'barbarian') return featLadder(Math.floor((L + 1) / 2), L);
+  // Inquisitor, barbarian AND ranger earn the fighter ladder at HALF rate — a feat
+  // every ODD level: Weapon Focus/Specialization (all weapons), Toughness, the
+  // two-weapon feats, etc. (Rangers also get Point Blank Shot baked into _swingVsAC,
+  // and Rapid Shot / Bullseye Shot in their kit.)
+  if (cls === 'inquisitor' || cls === 'barbarian' || cls === 'ranger') return featLadder(Math.floor((L + 1) / 2), L);
   if (cls === 'paladin')    return paladinFeats(L);
   return FF_NONE;
 }
@@ -108,7 +110,7 @@ function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fi
 // Level now comes from XP (see pf1data/xp.js), NOT from gear. The gating level at
 // which fighter/inquisitor earn each bonus feat (fighter: every level; inquisitor:
 // every odd level) — used to NAME the feat gained on a level-up announcement.
-function gatingLevel(cls, L) { return cls === 'fighter' ? L : (cls === 'inquisitor' || cls === 'barbarian') ? Math.floor((L + 1) / 2) : cls === 'paladin' ? Math.ceil(L / 2) : 0; }
+function gatingLevel(cls, L) { return cls === 'fighter' ? L : (cls === 'inquisitor' || cls === 'barbarian' || cls === 'ranger') ? Math.floor((L + 1) / 2) : cls === 'paladin' ? Math.ceil(L / 2) : 0; }
 const FEAT_AT = {
   1: 'Weapon Focus (+1 to hit)', 2: 'Dodge (+1 AC)', 3: 'Toughness (+HP)', 4: 'Weapon Specialization (+2 dmg)',
   5: 'Improved Initiative', 6: 'a save feat (+1 saves)', 7: 'a save feat (+2 saves)',
@@ -1784,12 +1786,22 @@ class Dungeon {
         return { slot: slot(baneAb), payload: { baneType: this._autoBaneType() } };
       }
     }
-    // 1) Heal when an ally (or self) is meaningfully hurt — or CHANNEL to pull a
-    //    downed ally back up (a party channel revives the dying).
-    const heal = avail.find(a => a.effect === 'heal');
+    // 1) Healing. CHANNEL (party heal) is the better call when MULTIPLE allies are
+    //    hurt or anyone's DOWNED (it revives the dying); a single big CURE is better
+    //    when exactly ONE ally is badly hurt (more HP on one target). If nobody's
+    //    hurt but UNDEAD are present, CHANNEL anyway — _abHeal sears them (PF1).
     const channelHeal = avail.find(a => a.effect === 'heal' && a.heal === 'party');
-    if (channelHeal && anyDowned) return { slot: slot(channelHeal), payload: {} };
-    if (heal && someoneHurt) return { slot: slot(heal), payload: {} };
+    const bigCure = avail.filter(a => a.effect === 'heal' && a.heal === 'single')
+                         .sort((x, y) => (y.healDice || 0) - (x.healDice || 0))[0];   // largest castable cure (e.g. Cure Serious)
+    const hurtCount = allies.filter(a => a.hp < a.maxHp * 0.6).length + (anyDowned ? 1 : 0);
+    if (channelHeal && (anyDowned || hurtCount >= 2)) return { slot: slot(channelHeal), payload: {} };   // many hurt / dying → channel
+    if (bigCure && hurtCount === 1) {
+      const worst = allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
+      if (worst && worst.hp < worst.maxHp * 0.5) return { slot: slot(bigCure), payload: {} };   // one badly hurt → big single cure
+    }
+    if ((channelHeal || bigCure) && someoneHurt) return { slot: slot(channelHeal || bigCure), payload: {} };
+    // Nobody hurt, but undead on the field → channel to HARM them (PF1 cleric).
+    if (channelHeal && !someoneHurt && targets.some(e => e.type === 'undead')) return { slot: slot(channelHeal), payload: {} };
     // 1b) Dispel Magic — cleanse a debuffed ally (paralysis / stun / sickness).
     const cleanse = avail.find(a => a.effect === 'cleanse');
     if (cleanse) {
@@ -2804,6 +2816,23 @@ class Dungeon {
     // Cure X Wounds — healDice d8 + caster level (capped: +5 light, +10 moderate).
     const cureAmt = () => Math.max(1, dRollN(ab.healDice || 1, 8) + Math.min(ab.healCap || lvl, lvl));
     if (ab.heal === 'party') {
+      // Offensive channel (PF1 cleric): if NOBODY needs healing but UNDEAD are on
+      // the field, channeling positive energy SEARS them instead — ½ level d6, a
+      // Will save (DC 10 + ½ level + casting mod) for half. Auto-decided so both
+      // bots and humans channel sensibly: heal the living, else harm the undead.
+      const woundedAllies = this.present().filter(a => !a.dead && a.hp < a.maxHp);
+      const undead = this._targetableEnemies().filter(e => e.type === 'undead');
+      if (!woundedAllies.length && undead.length) {
+        const dmg = channelAmt(), dc = 10 + Math.floor(lvl / 2) + CAST_MOD, parts = [];
+        for (const e of undead) {
+          const sv = this._saveVs(this._enemySave(e, 'will'), dc);
+          const taken = this._dmgE(e, sv.saved ? Math.floor(dmg / 2) : dmg, 'positive');
+          parts.push(`${e.name} ${taken}${sv.saved ? ' (Will ' + sv.total + ' — half)' : ''}${e.hp <= 0 ? ' ☠️' : ''}`);
+        }
+        this._note(`${ab.icon} ${m.nickname} channels positive energy — it SEARS the undead for ${dmg} (${parts.join(', ')}).`, sound);
+        this._echoToTable(sound);
+        return;
+      }
       // PF1e: a channel rolls its healing ONCE and heals EVERY hero in the burst.
       // That includes the DOWNED/dying (negative HP but not dead at −10) — a
       // channel is positive energy and can pull a dying ally back onto their feet.
@@ -3188,6 +3217,10 @@ class Dungeon {
   _attackOffsets(m, e) {
     const bab = babFor(m.cls || 'fighter', m.level || 1);
     const ff = fighterFeats(m.cls, m.level);
+    // Natural multi-attackers (Crisp the deinonychus: bite + 2 talons) make their
+    // FULL natural routine every turn — Pounce-style, even on a fresh target — all
+    // at full BAB. No iteratives/TWF on top.
+    if (m.weapon && m.weapon.naturalAttacks > 1) return Array(m.weapon.naturalAttacks).fill(0);
     const dual = this._isDualWielding(m);
     const sameTarget = (m._lastAtkTarget === e.uid);
     const twfPen = dual ? (ff.twf ? -2 : -6) : 0;

@@ -392,7 +392,7 @@ const BOT_CLASSES = {
   'Concetta': 'swashbuckler', 'Farrah': 'sorcerer', 'Fera': 'rogue',
   'Elfrip': 'oracle', 'Rodney Smith': 'ranger',   // Elfrip is a Flame-mystery oracle (fire blaster); Rodney "Danger" Smith is an archer
   'Vesorianna': 'cleric', 'Farrus Richton': 'barbarian', 'Dinvaya': 'cleric', 'Storgrim Thunderbeard': 'fighter',
-  'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'rogue', 'Kai Ginn': 'ranger', 'Lirienne': 'ranger',
+  'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'barbarian', 'Kai Ginn': 'ranger', 'Lirienne': 'ranger',   // Crisp = deinonychus: melee multi-attacker + odd-level fighter feats
   'Rissa': 'druid', 'Taelys': 'ranger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'ranger',
   'Holden': 'swashbuckler',
 };
