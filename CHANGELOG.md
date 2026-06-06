@@ -21,6 +21,19 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-06 (newest)
 
+### 📖 New arcane spells (Wizard & Sorcerer)
+- **4th level:** **Black Tentacles** (a room-long field that grapples a random 1d4+1
+  foes *each round* — CMB vs CMD — leaving them helpless until they tear free),
+  **Greater Invisibility** (stays up the whole fight even when you attack; cast it on a
+  rogue ally for a Sneak Attack on every strike), **Infernal Healing, Greater** (fast
+  healing 4/turn on the most-wounded ally), **River of Wind** (knocks down a random 3d4 foes).
+- **5th level:** **Stoneskin (Communal)** (DR 10 for the WHOLE party), **Cloudkill** (poison
+  gas over a random 3d4 foes), **Suffocation** (one living, breathing foe — Fort save or
+  **die**; a made save still takes heavy damage; no effect on undead/constructs),
+  **Overland Flight** (flight for the rest of the dungeon).
+- **Fire Snake** is now correctly a **5th-level** spell (was 4th).
+- **Druids** also gain **River of Wind** and **Fire Snake**.
+
 ### 🐾 Druids & Wild Shape
 - **Druids now shapeshift for combat.** New **Wild Shape forms** — toggle on/off, each
   usable **once per room**, lasting until you change back:
