@@ -55,10 +55,31 @@ function featLadder(g, hd) {
 // SAME ladder at HALF rate — a feat every ODD level (g = floor((level+1)/2)) — so
 // L1 Weapon Focus, L3 Dodge, L5 Toughness, L7 Weapon Spec, L9 Improved Init,
 // L11/13 the save feats (incl. Iron Will), L15 Improved Crit, L17 Critical Focus.
+// PALADIN home-rule bonus-feat tree — one fighter feat every ODD level, in a
+// paladin-flavored order: 1 Toughness, 3 Power Attack (a toggle ability granted
+// via the kit, not a passive bonus here), then the rest of the fighter ladder.
+// `n` = feats earned so far = ceil(level/2) (L1→1, L3→2, L5→3, L7→4 …).
+function paladinFeats(level) {
+  const L = Math.max(1, level || 1);
+  const n = Math.ceil(L / 2);
+  const f = { ...FF_NONE };
+  if (n >= 1) f.hp = Math.max(3, L);   // Toughness
+  // n >= 2 → Power Attack (kit toggle, minLevel 3) — no passive bonus here
+  if (n >= 3) f.hit = 1;               // Weapon Focus
+  if (n >= 4) f.ac = 1;                // Dodge
+  if (n >= 5) f.dmg = 2;               // Weapon Specialization
+  if (n >= 6) f.init = 4;              // Improved Initiative
+  if (n >= 7) f.save = 2;              // a save feat (+2)
+  if (n >= 8) f.impCrit = true;        // Improved Critical
+  if (n >= 9) f.critFocus = true;      // Critical Focus
+  if (n >= 10) f.impCleave = true;     // Improved Cleave
+  return f;
+}
 function fighterFeats(cls, level) {
   const L = Math.max(1, level || 1);
   if (cls === 'fighter')    return featLadder(L, L);
   if (cls === 'inquisitor') return featLadder(Math.floor((L + 1) / 2), L);
+  if (cls === 'paladin')    return paladinFeats(L);
   return FF_NONE;
 }
 // Bane's flat bonuses (the +2d6 rides on top, not crit-multiplied). See _abBane.
@@ -81,11 +102,18 @@ function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fi
 // Level now comes from XP (see pf1data/xp.js), NOT from gear. The gating level at
 // which fighter/inquisitor earn each bonus feat (fighter: every level; inquisitor:
 // every odd level) — used to NAME the feat gained on a level-up announcement.
-function gatingLevel(cls, L) { return cls === 'fighter' ? L : cls === 'inquisitor' ? Math.floor((L + 1) / 2) : 0; }
+function gatingLevel(cls, L) { return cls === 'fighter' ? L : cls === 'inquisitor' ? Math.floor((L + 1) / 2) : cls === 'paladin' ? Math.ceil(L / 2) : 0; }
 const FEAT_AT = {
   1: 'Weapon Focus (+1 to hit)', 2: 'Dodge (+1 AC)', 3: 'Toughness (+HP)', 4: 'Weapon Specialization (+2 dmg)',
   5: 'Improved Initiative', 6: 'a save feat (+1 saves)', 7: 'a save feat (+2 saves)',
   8: 'Improved Critical', 9: 'Critical Focus', 11: 'Improved Cleave',
+};
+// Paladin's reordered tree (by feat index n). Index 2 (Power Attack) is omitted
+// here — it's a kit toggle (minLevel 3) and gets announced via the ability path.
+const PALADIN_FEAT_AT = {
+  1: 'Toughness (+HP)', 3: 'Weapon Focus (+1 to hit)', 4: 'Dodge (+1 AC)',
+  5: 'Weapon Specialization (+2 dmg)', 6: 'Improved Initiative', 7: 'a save feat (+2 saves)',
+  8: 'Improved Critical', 9: 'Critical Focus', 10: 'Improved Cleave',
 };
 const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
@@ -1001,7 +1029,8 @@ class Dungeon {
     const sv = ['fort', 'ref', 'will'].reduce((a, w) => a + (saveFor(cls, w, to) - saveFor(cls, w, from)), 0);
     if (sv > 0) parts.push(`saves +${sv}`);
     const feats = [];
-    for (let g = gatingLevel(cls, from) + 1; g <= gatingLevel(cls, to); g++) if (FEAT_AT[g]) feats.push(FEAT_AT[g]);
+    const featNames = cls === 'paladin' ? PALADIN_FEAT_AT : FEAT_AT;
+    for (let g = gatingLevel(cls, from) + 1; g <= gatingLevel(cls, to); g++) if (featNames[g]) feats.push(featNames[g]);
     if (feats.length) parts.push(`feat: ${feats.join(', ')}`);
     const kit = kitFor(cls), spells = [];
     if (kit && kit.abilities) for (const ab of kit.abilities) if (ab.minLevel && ab.minLevel > from && ab.minLevel <= to) spells.push(ab.name);
@@ -2163,8 +2192,10 @@ class Dungeon {
     m.abilityUses = {};
     for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
-    // from the turn loop when downed). Paladins gain spellcasting at 4th in PF1.
-    m.heroDefiance = ((m.cls === 'paladin' || m.cls === 'antipaladin') && (m.level || 1) >= 4) ? 1 : 0;
+    // from the turn loop when downed). HOME-RULE: paladins (and antipaladins) get
+    // their spellcasting from LEVEL 1, not 4 — still the slowest progression in the
+    // game, just without the dead first three levels.
+    m.heroDefiance = (m.cls === 'paladin' || m.cls === 'antipaladin') ? 1 : 0;
     if (m.tempHp) { m.maxHp -= m.tempHp; if (m.hp > m.maxHp) m.hp = m.maxHp; m.tempHp = 0; }   // rage / Bear's Endurance temp HP fades
     m.buffs = null;          // rage / divine favor / inspire clear
     m.bane = null;           // inquisitor Bane declaration clears between rooms
@@ -2720,12 +2751,12 @@ class Dungeon {
   // heals the most-wounded ally (or self).
   // Hero's Defiance — a downed paladin's clutch self-rescue, auto-fired from the
   // turn loop when they're at 0 HP or below but NOT dead. PF1: they instantly
-  // receive a lay-on-hands worth of healing (½ level d6). Once per room, from
-  // level 4 (when paladins gain spellcasting). Guaranteed to bring them to at
-  // least 1 HP so they return to functionality. Returns true if it fired.
+  // receive a lay-on-hands worth of healing (½ level d6, min 1d6). Once per room,
+  // from LEVEL 1 (home-rule: paladin spellcasting starts at 1st). Guaranteed to
+  // bring them to at least 1 HP so they return to functionality. Returns true if
+  // it fired.
   _tryHeroesDefiance(m) {
     if (!m || (m.cls !== 'paladin' && m.cls !== 'antipaladin')) return false;
-    if ((m.level || 1) < 4) return false;
     if (!m.heroDefiance || m.heroDefiance <= 0) return false;
     m.heroDefiance -= 1;
     const lvl = m.level || 1;

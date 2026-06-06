@@ -215,6 +215,7 @@ const KITS = {
   ] },
   // ── Divine (channels) ──
   paladin: { atwill: ATTACK('⚔️'), abilities: [
+    { key: 'powerattack', name: 'Power Attack', icon: '💥', cost: 'free', freeAction: true, effect: 'buff', target: 'self', powerattack: true, sticky: true, minLevel: 3, sound: S.rage, desc: 'Throw your weight into every blow — trade accuracy for power (−1 to hit per +4 BAB, +2 damage each, ×1.5 two-handed). A FREE toggle, flip it on or off without spending your turn. (Paladin bonus feat, gained at level 3.)' },
     { key: 'smite',   name: 'Smite Evil',     icon: '⚜️', cost: 'room', uses: smiteUses, freeAction: true, effect: 'smite', target: 'self', sound: S.holy, desc: 'A FREE action (no action cost): your strikes smite EVIL foes this room — +to-hit and +double your level to damage, but ONLY vs creatures of evil alignment. Use Detect Evil first to mark neutral foes (animals, constructs). Once per 5 levels per room.' },
     { key: 'detectevil', name: 'Detect Evil', img: '/dungeon/conditions/markedevil.webp', icon: '🎯', cost: 'free', effect: 'detectevil', target: 'aoe', sound: '/audio/into_the_light.mp3', desc: 'Bathe the room in revealing light (a standard action) — MARK every enemy as evil, so your Smite strikes ALL of them, even animals and constructs. Lasts the room.' },
     { key: 'channel', name: 'Channel Positive', icon: '💖', cost: 'room', uses: channelUses, effect: 'heal', heal: 'party', target: 'ally', sound: S.charge, desc: 'Channel positive energy — heal the whole party (scales with level).' },
