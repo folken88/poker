@@ -606,8 +606,20 @@
 
   let _chatIdleTimer = null;   // drifts the chat back to newest after the reader idles
   let _chatStuck = true;       // sticky-to-bottom; only a deliberate scroll-up clears it
+  // The audio-settings menu (#audioMenu) is a SINGLE shared element. We move it
+  // into the dungeon header while delving and back to the poker topbar otherwise,
+  // so both screens get the identical control with one set of handlers (no
+  // duplicate IDs). Only one screen is visible at a time, so one menu suffices.
+  let _audioHome = null;
+  function placeAudioMenu(name) {
+    const am = $('#audioMenu'); if (!am) return;
+    if (!_audioHome) _audioHome = am.parentNode;   // its table-topbar home (captured before any move)
+    const slot = name === 'dungeon' ? $('#dungeonAudioSlot') : _audioHome;
+    if (slot && am.parentNode !== slot) { slot.appendChild(am); am.classList.remove('is-open'); }
+  }
   function setScreen(name) {
     document.body.dataset.screen = name;
+    placeAudioMenu(name);
     // Landing on the table (incl. returning from the dungeon) → snap chat to newest.
     if (name === 'table') requestAnimationFrame(scrollChatToBottom);
   }

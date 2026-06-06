@@ -2498,12 +2498,14 @@ class Dungeon {
     this._echoToTable(sound);
   }
   // Haste — the whole party blurs with speed. Each ally gets ONE extra attack on
-  // their next turn (see _hasteBonus), consumed when they act. Lasts ~1 round.
+  // their turn (see _hasteBonus), consumed when they act.
   _abHaste(m, ab) {
     const sound = ab.sounds ? pick(ab.sounds) : ab.sound;
-    // Lasts 1 turn per 5 caster levels (rounded down, min 1). Each hasted turn
-    // grants one extra attack (see _hasteBonus, which decrements the counter).
-    const turns = Math.max(1, Math.floor((m.level || 1) / 5));
+    // PF1 duration: 1 round per caster level (each hasted turn grants an extra
+    // attack; _hasteBonus decrements the counter). It always clears at room end
+    // with the other buffs, so a long-enough fight is the only thing that ends it
+    // early — which almost never happens (rooms rarely run past ~10 rounds).
+    const turns = Math.max(1, m.level || 1);
     // The real HASTE spell (key 'haste') grants the extra attack PLUS +1 to hit,
     // +1 dodge AC, +1 Reflex (via _hasteMod). Blessing of Fervor (key
     // 'blessingoffervor') grants ONLY the extra attack — its PF1 haste choice.

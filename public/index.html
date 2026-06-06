@@ -307,6 +307,10 @@
       <header class="dungeon__top">
         <div class="dungeon__title">🗡️ The Dungeon</div>
         <div class="dungeon__meta" id="dungeonMeta">Depth 0</div>
+        <!-- The shared audio-settings menu (#audioMenu) is re-parented here while on
+             the dungeon screen, then moved back to the poker topbar — one element,
+             one set of handlers (see placeAudioMenu in client.js). -->
+        <span class="dungeon__audioslot" id="dungeonAudioSlot"></span>
         <button class="btn btn--ghost btn--sm" id="dungeonBankToggle"
                 aria-expanded="false" aria-haspopup="dialog" aria-controls="bankDoll"
                 title="Equip, buy, or hock your magic gear">🎒 My Loot Bank</button>
@@ -487,6 +491,6 @@
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
   <script src="/js/cards.js?v=20260602-abadar"></script>
   <script src="/js/blindMode.js?v=20260605-money"></script>
-  <script src="/js/client.js?v=20260605-acbadge"></script>
+  <script src="/js/client.js?v=20260605-dungaudio"></script>
 </body>
 </html>
