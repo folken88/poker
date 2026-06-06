@@ -22,6 +22,7 @@ const PRONUNCIATIONS = [
   ['Mylez',      'Miles'],
   ['Taelys',     'Tay liss'],
   ['Rhyarca',    'ree-arka'],     // one three-syllable word (hyphen → no mid-name pause)
+  ['Agu',        'ag-yew'],       // AG-yew
   ['Kovira',     'Koh vee rah'],
   ['Kai Ginn',   'Kai Jinn'],
   ['Kai Gin',    'Kai Jinn'],      // bio sometimes spells it "Kai Gin"
