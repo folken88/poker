@@ -394,10 +394,42 @@ const KITS = {
     { key: 'dispelmagic', name: 'Dispel Magic',  icon: '🌀', cost: 'slot', slvl: 3, minLevel: 7, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'Strip a debuff off an afflicted ally (paralysis / hold / grapple / stun / sickness) — or tear a buff off a foe.' },
   ] },
   // DRUID — prepared nature caster: one casting of each spell per room.
-  druid: { atwill: ATTACK('🌿'), note: 'One casting of each spell, per room.', abilities: [
-    { key: 'entangle',   name: 'Entangle',          icon: '🌿', cost: 'room', uses: 1, effect: 'grease', target: 'aoe', randFoes: 4, save: 'reflex', sound: S.entangle, desc: 'Grasping vines erupt — a RANDOM 1d4 foes Reflex or are rooted (knocked prone).' },
+  druid: { atwill: ATTACK('🌿'), note: 'One casting of each spell, per room. WILD SHAPE forms last until you drop them (each usable once per room).', abilities: [
+    // ── WILD SHAPE forms (effect:'form'; see Dungeon._abForm). Toggle on/off; each
+    // form is usable once per room. Generic druids get Tiger/Bear/Hawk; Rissa gets
+    // her own Beast Mode + Promethean in place of Tiger/Bear (Hawk is shared). ──
+    { key: 'tigerform', name: 'Tiger Form', icon: '🐯', cost: 'room', uses: 1, effect: 'form', target: 'self', notChar: 'Rissa',
+      form: { key: 'tiger', label: 'Tiger Form', glyph: '🐯', art: '/tokens/form_tiger.png', weapon: 'form_tiger', ac: 1, toHit: 2, dmg: 4, sound: '/audio/enemy_yak.mp3' },
+      desc: 'Become a DIRE TIGER — pounce on prey with claws + bite (3 attacks at full strength), +2 to hit, +4 damage, +1 AC. Lasts until you change back.' },
+    { key: 'bearform', name: 'Bear Form', icon: '🐻', cost: 'room', uses: 1, effect: 'form', target: 'self', notChar: 'Rissa',
+      form: { key: 'bear', label: 'Bear Form', glyph: '🐻', art: '/tokens/token-animal-great-spirit-bear-dd-monster-resembles-griz.webp', weapon: 'form_bear', ac: 3, toHit: 2, dmg: 4, tempHpPerLevel: 2, sound: '/audio/enemy_yak.mp3' },
+      desc: 'Become a DIRE BEAR — a wall of muscle: claws + bite (3 attacks), +2 to hit, +4 damage, +3 natural-armor AC, and +2 HP per level. Lasts until you change back.' },
+    { key: 'hawkform', name: 'Hawk Form', icon: '🦅', cost: 'room', uses: 1, effect: 'form', target: 'self',
+      form: { key: 'hawk', label: 'Hawk Form', glyph: '🦅', fly: true, ac: 1, toHit: 1, sound: S.invis },
+      desc: 'Take to the sky — FLY out of reach of grounded foes (they cannot hit you), with +1 to hit & AC. You can STILL cast your spells from the air. Lasts until you change back.' },
+    { key: 'beastmode', name: 'Beast Mode', icon: '🐲', cost: 'room', uses: 1, effect: 'form', target: 'self', char: 'Rissa',
+      form: { key: 'beast', label: 'Beast Mode', glyph: '🐲', art: '/tokens/beast-of-lepidstadt.webp', weapon: 'form_beast', ac: 2, toHit: 3, dmg: 6, tempHpPerLevel: 2, dr: 10, sound: '/audio/rissa_beast.mp3' },
+      desc: 'Rissa becomes the BEAST OF LEPIDSTADT — LARGE and monstrously strong: +3 to hit, +6 damage, +2 AC, +2 HP/level, DR 10/adamantine (like Stoneskin), and she can SWAT airborne foes out of the sky. Lasts until she changes back.' },
+    { key: 'promethean', name: 'Promethean', icon: '🐙', cost: 'room', uses: 1, effect: 'form', target: 'self', char: 'Rissa',
+      form: { key: 'promethean', label: 'Promethean', glyph: '🐙', art: '/tokens/form_promethean.webp', weapon: 'form_promethean', ac: 1, toHit: 2, dmg: 4, sound: '/audio/dragon_roar_rivozair.mp3' },
+      desc: 'Rissa unfurls into a MULTI-TENTACLED HORROR — 15-ft reach (strikes flyers too), FOUR tentacle attacks, and every hit GRAPPLES the foe: helpless until it breaks free. Lasts until she changes back.' },
+    // ── Buff prayers (sticky room buffs) ──
+    { key: 'barkskin',     name: 'Barkskin',         icon: '🌳', cost: 'room', uses: 1, minLevel: 1, effect: 'buff', target: 'ally', buff: { ac: 3 }, sticky: true, sound: S.invoke, desc: 'Bark-tough hide — +3 natural-armor AC to an ally for the rest of the room.' },
+    { key: 'magicfang',    name: 'Magic Fang',       icon: '🐾', cost: 'room', uses: 1, minLevel: 1, effect: 'buff', target: 'self', buff: { toHit: 1, dmg: 1 }, sticky: true, sound: S.invoke, desc: 'Bless your natural weapons — +1 to hit and +1 damage for the rest of the room.' },
+    { key: 'bullsstrength',name: "Bull's Strength",  icon: '💪', cost: 'room', uses: 1, minLevel: 3, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'One ally gets +2 to hit and +2 melee damage for the rest of the room.' },
+    { key: 'bearsendurance',name: "Bear's Endurance",icon: '🐻', cost: 'room', uses: 1, minLevel: 3, effect: 'buff', target: 'ally', buff: { conHp: 2 }, sticky: true, sound: S.invoke, desc: 'Bear-hardy — one ally gains temporary HP (+2 per level) for the rest of the room.' },
+    { key: 'catsgrace',    name: "Cat's Grace",      icon: '🐈', cost: 'room', uses: 1, minLevel: 3, effect: 'buff', target: 'ally', buff: { ac: 2, toHit: 1 }, sticky: true, sound: S.invoke, desc: 'Feline-quick — one ally gets +2 AC and +1 to hit for the rest of the room.' },
+    { key: 'ironskin',     name: 'Iron Skin',        icon: '🪨', cost: 'room', uses: 1, minLevel: 7, effect: 'buff', target: 'ally', buff: {}, dr: 10, sticky: true, sound: S.invoke, desc: "An ally's skin turns to iron — DR 10 against physical blows for the rest of the room." },
+    // ── Offensive nature magic ──
+    { key: 'entangle',   name: 'Entangle',          icon: '🌿', cost: 'room', uses: 1, effect: 'grease', target: 'aoe', randN: 2, randDie: 4, save: 'reflex', sound: S.entangle, desc: 'Grasping vines erupt — a RANDOM 2d4 foes must make a Reflex save or be ROOTED (rendered prone, losing the turn).' },
+    { key: 'shockinggrasp', name: 'Shocking Grasp', icon: '⚡', cost: 'room', uses: 1, minLevel: 1, effect: 'touch', target: 'enemy', die: 6, dice: 'level', dcap: 5, dtype: 'electricity', slvl: 1, sound: S.shock, desc: 'A charged touch — ranged touch attack (level d6, cap 5d6 electricity).' },
+    { key: 'lightningbolt', name: 'Lightning Bolt', icon: '⚡', cost: 'room', uses: 1, minLevel: 5, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 6, dice: 'level', dcap: 10, dtype: 'electricity', sounds: THUNDER_SFX, desc: 'A bolt skewering 2 foes — Reflex for half (level d6).' },
+    { key: 'calllightning', name: 'Call Lightning', icon: '🌩️', cost: 'room', uses: 1, minLevel: 5, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 6, dice: 'halflevel', dcap: 5, dtype: 'electricity', sounds: THUNDER_SFX, desc: 'A bolt from the storm strikes 2 foes — Reflex for half (½level d6).' },
+    // ── Healing & restoration ──
     { key: 'curelight',  name: 'Cure Light Wounds', icon: '💚', cost: 'room', uses: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5).' },
-    { key: 'calllightning', name: 'Call Lightning', icon: '⚡', cost: 'room', uses: 1, minLevel: 5, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 6, dice: 'halflevel', dcap: 5, dtype: 'electricity', sounds: THUNDER_SFX, desc: 'A bolt from the storm strikes 2 foes — Reflex for half (½level d6).' },
+    { key: 'curemoderate',name: 'Cure Moderate Wounds', icon: '💚', cost: 'room', uses: 1, minLevel: 4, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
+    { key: 'removeparalysis', name: 'Remove Paralysis', icon: '🩹', cost: 'room', uses: 1, minLevel: 3, effect: 'cleanse', target: 'ally', sound: S.cure, desc: 'Free an ally from paralysis / hold / stun (and other debuffs).' },
+    { key: 'dispelmagic', name: 'Dispel Magic',     icon: '🌀', cost: 'room', uses: 1, minLevel: 5, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'Strip a debuff off an afflicted ally — or a buff off a foe, if any.' },
   ] },
 };
 
@@ -435,6 +467,8 @@ const SLVL_BY_KEY = {
   curelight: 1, curemoderate: 2, divinefavor: 1, bless: 1, prayer: 3, searinglight: 3,
   holysmite: 4, boneshatter: 4, breathoflife: 5, raisedead: 5, resurrection: 7,
   entangle: 1, calllightning: 3,
+  barkskin: 2, magicfang: 1, bullsstrength: 2, bearsendurance: 2, catsgrace: 2, ironskin: 6,
+  shockinggrasp: 1, lightningbolt: 3, curemoderate: 2, removeparalysis: 2, dispelmagic: 3,
 };
 // Attach an `img` (and a divine `slvl` fallback) to every ability + at-will.
 for (const kit of Object.values(KITS)) {

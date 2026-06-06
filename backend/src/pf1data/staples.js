@@ -81,6 +81,20 @@ const CUSTOM_WEAPONS = {
   gnomehammer: { key: 'gnomehammer', name: 'Gnome Hooked Hammer', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'B', group: 'hammers', prof: 'exotic', custom: true, dual: true, noShield: true, atkSound: '/audio/weapon_warhammer.mp3' },
   // Tokala's CHAINSAW — a roaring 3d6 slashing two-hander that crits on an 18.
   chainsaw: { key: 'chainsaw', name: 'Chainsaw', cat: '2h', ranged: false, dmgCount: 3, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'axes', prof: 'exotic', custom: true, atkSound: '/audio/weapon_chainsaw.mp3' },
+  // The DRUID's Shillelagh — a club a druid empowers with nature's strength
+  // (1d10, ×2, blunt). Simple/always-proficient; the druid's signature weapon.
+  shillelagh: { key: 'shillelagh', name: 'Shillelagh', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 2, type: 'B', group: 'clubs', prof: 'simple', custom: true, atkSound: '/audio/weapon_blunt.mp3' },
+  // ── WILD SHAPE natural-attack weapons (set on a member while a form is active;
+  // the member's base weapon is restored when the form drops). All are natural
+  // (noShield), strike at full BAB per attack (naturalAttacks), and play a meaty
+  // bite/slam report. ──
+  form_tiger:      { key: 'form_tiger',      name: 'Tiger Claws & Bite',    cat: 'light', ranged: false, dmgCount: 1, dmgDie: 8,  crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 3, noShield: true, atkSound: '/audio/enemy_yak.mp3' },
+  form_bear:       { key: 'form_bear',       name: 'Bear Claws & Bite',     cat: 'light', ranged: false, dmgCount: 1, dmgDie: 8,  crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 3, noShield: true, atkSound: '/audio/enemy_yak.mp3' },
+  // Rissa — the Beast of Lepidstadt: huge slams, can swat airborne foes (reachFly).
+  form_beast:      { key: 'form_beast',      name: 'Beast Slams',           cat: '2h',    ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 2, type: 'B', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 2, noShield: true, reachFly: true, atkSound: '/audio/weapon_blunt.mp3' },
+  // Rissa — Promethean horror: FOUR tentacle strikes, 15' reach (hits flyers), and
+  // every hit GRAPPLES the foe (grappled + helpless until it breaks free).
+  form_promethean: { key: 'form_promethean', name: 'Promethean Tentacles',  cat: 'light', ranged: false, dmgCount: 1, dmgDie: 8,  crit: 20, mult: 2, type: 'B', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 4, noShield: true, reachFly: true, grapple: true, atkSound: '/audio/slorr_grapple.mp3' },
 };
 
 // Combined lookup used by combat.weaponOf — staples + custom signature weapons.

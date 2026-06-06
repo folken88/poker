@@ -610,6 +610,9 @@ class Dungeon {
     if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing', 'regenerate HP each turn');
     if (m.bane)                       push('bane', `Bane: ${titleCase(m.bane.type)}`, `+2 hit, +2d6+2 vs ${titleCase(m.bane.type)} (this room)`);
     if (m.mageArmor)                  push('magearmor', 'Mage Armor', '+4 armor AC (this dungeon)');
+    // Wild Shape — show the form's token as a buff badge (hawk has no token, but its
+    // Flying badge already covers it above).
+    if (m.form && m.form.art && !pushed.has('form_' + m.form.key)) { pushed.add('form_' + m.form.key); c.push({ key: 'form_' + m.form.key, label: m.form.label, desc: `Wild Shape: ${m.form.label}`, icon: m.form.art }); }
     return c;
   }
 
@@ -624,6 +627,7 @@ class Dungeon {
       party: this.party.map(m => ({
         playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot, crowned: !!m.crowned,
         cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
+        form: m.form ? { key: m.form.key, label: m.form.label, glyph: m.form.glyph, art: m.form.art } : null,   // active Wild Shape (drives the token swap on the hero card)
         level: m.level, ...this._xpInfo(m), ...this._heroACs(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
         dead: !!m.dead, downed: !m.dead && !m.left && m.hp <= 0,
         dyingHp: (!m.dead && !m.left && m.hp <= 0) ? m.hp : null,
@@ -869,6 +873,23 @@ class Dungeon {
           else this._note(`🖐️ ${e.name} stays HELD — struggles in vain and loses its turn. [Will ${sv.total} vs ${hdc}]`, null, { side: 'enemy' });
         } else { e.paralyzed -= 1; this._note(`🖐️ ${e.name} is paralyzed — loses its turn.`, null, { side: 'enemy' }); }
         this._broadcast(); return this._nextTurn();
+      }
+      // GRAPPLED by a Promethean: helpless, loses its turn. Each turn it may struggle
+      // free (its attack bonus vs the grappler's level-based DC); the grip also drops
+      // if the grappler is gone (left / dead / no longer in Promethean form).
+      if (e.grappled) {
+        const grappler = this.member(e.grappledBy);
+        const stillHeld = grappler && !grappler.left && grappler.hp > 0 && grappler.form && grappler.form.key === 'promethean';
+        if (!stillHeld) { e.grappled = false; e.grappledBy = null; e.grappleRounds = 0; this._note(`🐙 ${e.name} wrenches loose — the tentacles release it.`, null, { side: 'enemy' }); }
+        else {
+          e.grappleRounds = (e.grappleRounds || 1) - 1;
+          const dc = 12 + (grappler.level || 1);
+          const roll = dRoll(20), tot = roll + (e.toHit || 0);
+          const broke = roll === 20 || tot >= dc;
+          if (broke || e.grappleRounds <= 0) { e.grappled = false; e.grappledBy = null; this._note(`🐙 ${e.name} ${broke ? 'tears free' : 'finally slips'} of the grapple! [Str ${tot} vs ${dc}] — but the struggle cost its turn.`, null, { side: 'enemy' }); }
+          else this._note(`🐙 ${e.name} is held fast in the tentacles — helpless, loses its turn. [Str ${tot} vs ${dc}]`, null, { side: 'enemy' });
+          this._broadcast(); return this._nextTurn();
+        }
       }
       if (e.loseTurn) { e.loseTurn = false; this._note(`${e.glyph} ${e.name} is off-balance — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       if (e.sickened > 0) { e.sickened -= 1; this._note(`${e.glyph} ${e.name} retches in the cloud — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
@@ -1744,8 +1765,8 @@ class Dungeon {
     if (forced) return forced;
     // Melee fighters can't reach flyers — prefer grounded foes (fall back to flyers
     // only if that's all that's left, so the wasted-swing message still fires).
-    const _w = weaponOf(m.gear, m.weaponKey);
-    if (_w && !_w.ranged) { const grounded = foes.filter(e => !e.flying); if (grounded.length) foes = grounded; }
+    const _w = m.weapon || weaponOf(m.gear, m.weaponKey);
+    if (_w && !_w.ranged && !_w.reachFly) { const grounded = foes.filter(e => !e.flying); if (grounded.length) foes = grounded; }
     if (m.cls === 'rogue') {
       const helpless = foes.filter(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated);
       return (helpless.length ? helpless : foes).slice().sort((a, b) => a.hp - b.hp)[0];   // weakest sneakable foe
@@ -1772,6 +1793,8 @@ class Dungeon {
     const targets = awake.length ? awake : foes;          // don't wake sleepers
     const usable = (ab) => {
       if (!ab || lvl < (ab.minLevel || 1)) return false;
+      if (!this._charAllows(ab, m)) return false;   // char-gated forms (Rissa vs generic druids)
+      if (ab.effect === 'form' && m.form && m.form.key === (ab.form && ab.form.key)) return false;   // already in this form
       if (ab.cost === 'pool') return (m.spellPool || 0) > 0;
       if (ab.cost === 'slot') return ((m.slots && m.slots[ab.slvl]) || 0) > 0;   // spontaneous: a slot of that level
       if (ab.cost === 'room') return ((m.abilityUses && m.abilityUses[ab.key]) || 0) > 0;
@@ -1825,6 +1848,20 @@ class Dungeon {
       const allyDebuffed = allies.some(a => a.paralyzed > 0 || a.stunned > 0 || a.slowed > 0 || a.sickened > 0 || a.grappled);
       const foeBuffed = this._targetableEnemies().some(e => e.hasted > 0 || (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)));
       if (allyDebuffed || foeBuffed) return { slot: slot(cleanse), payload: {} };
+    }
+    // 1c) Druid WILD SHAPE — most druids fight shapeshifted. If not already in a
+    //     form, shift into a combat shape: prefer a reach form when every foe is
+    //     airborne, else the strongest melee form (Beast > Promethean > Bear > Tiger).
+    //     Hawk is a defensive/flight form, so the AI doesn't auto-pick it for combat.
+    if (m.cls === 'druid' && !m.form) {
+      const forms = avail.filter(a => a.effect === 'form' && a.form && a.form.key !== 'hawk');
+      if (forms.length) {
+        const allAirborne = targets.length && targets.every(e => e.flying);
+        let chosen = null;
+        if (allAirborne) chosen = forms.find(a => a.form.weapon === 'form_promethean' || a.form.weapon === 'form_beast');
+        if (!chosen) chosen = ['beast', 'promethean', 'bear', 'tiger'].map(k => forms.find(a => a.form.key === k)).find(Boolean) || forms[0];
+        if (chosen) return { slot: slot(chosen), payload: {} };
+      }
     }
     // 2) Put up buffs once — Smite, then sticky self/party buffs (rage, shield,
     //    bane, divine favor, inspire). Sticky guard stops re-casting.
@@ -2166,11 +2203,14 @@ class Dungeon {
     const kit = kitFor(m.cls);
     const ab = kit.abilities[slot];
     if (!ab) return { ok: false, error: 'no such ability' };
+    if (!this._charAllows(ab, m)) return { ok: false, error: 'not your ability' };   // char-gated form (e.g. Rissa's Beast Mode)
     const lvl = m.level || 1;
     if (ab.minLevel && lvl < ab.minLevel) return { ok: false, error: `${ab.name} needs level ${ab.minLevel}` };
+    // Dropping a Wild Shape form you're already in is FREE (no use spent, always allowed).
+    const formOff = ab.effect === 'form' && ab.form && m.form && m.form.key === ab.form.key;
     if (ab.cost === 'pool' && (m.spellPool || 0) <= 0) return { ok: false, error: 'out of spell casts this room' };
     if (ab.cost === 'slot' && ((m.slots && m.slots[ab.slvl]) || 0) <= 0) return { ok: false, error: `no level-${ab.slvl || '?'} spell slots left this room` };
-    if (ab.cost === 'room' && ((m.abilityUses && m.abilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is spent for this room` };
+    if (ab.cost === 'room' && !formOff && ((m.abilityUses && m.abilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is spent for this room` };
     if (ab.cost === 'run'  && ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is already cast for this dungeon` };
     // Don't waste Sleep/Fascinate on a foe that's already asleep OR fascinated —
     // they share the same "out of the fight" state, so re-casting either one on
@@ -2190,6 +2230,7 @@ class Dungeon {
       feint:       () => this._abFeint(m, payload),
       reckless:    () => this._abReckless(m, payload),
       buff:        () => this._abBuff(m, ab, payload),
+      form:        () => this._abForm(m, ab),
       taunt:       () => this._abTaunt(m, ab),
       smite:       () => this._abSmite(m, ab),
       detectevil:  () => this._abDetectEvil(m, ab),
@@ -2221,7 +2262,7 @@ class Dungeon {
     D();
     if (ab.cost === 'pool') m.spellPool = Math.max(0, (m.spellPool || 0) - 1);
     else if (ab.cost === 'slot') { m.slots = m.slots || {}; m.slots[ab.slvl] = Math.max(0, (m.slots[ab.slvl] || 0) - 1); }
-    else if (ab.cost === 'room') m.abilityUses[ab.key] = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 0) - 1);
+    else if (ab.cost === 'room' && !formOff) m.abilityUses[ab.key] = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 0) - 1);
     else if (ab.cost === 'run') m.runAbilityUses[ab.key] = Math.max(0, ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) - 1);
     if (ab.target === 'enemy' || ab.target === 'aoe') m.invisible = false;   // attacking breaks Invisibility
     // A blaster (Elfrip the flame oracle) sometimes whoops "BOOM!" when a big
@@ -2249,6 +2290,55 @@ class Dungeon {
     if (!ab || ab.freeAction || ab.cost === 'free') return false;
     return ab.effect === 'buff' || ab.effect === 'haste';
   }
+  /** Per-character ability gating: `char` restricts an ability to one named hero
+   *  (Rissa's Beast Mode / Promethean); `notChar` hides it from that hero (the
+   *  generic Tiger/Bear forms she replaces). Matched by nickname or playerId. */
+  _charAllows(ab, m) {
+    if (!ab || (!ab.char && !ab.notChar)) return true;
+    const who = (m.trueNick || m.nickname || '').toLowerCase();
+    const pid = (m.playerId || '').toLowerCase();
+    if (ab.char)    { const c = ab.char.toLowerCase();    if (who !== c && pid !== c) return false; }
+    if (ab.notChar) { const c = ab.notChar.toLowerCase(); if (who === c || pid === c) return false; }
+    return true;
+  }
+  /** Wild Shape: toggle a druid form on/off. Re-casting the active form reverts;
+   *  casting a different form swaps. Forms override the weapon (natural attacks),
+   *  add a stat package to m.buffs, and may grant flight / DR / temp HP. */
+  _abForm(m, ab) {
+    const f = ab.form; if (!f) return;
+    const sound = f.sound || pick(SND.flesh);
+    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+    if (m.form && m.form.key === f.key) {   // toggle OFF
+      this._revertForm(m);
+      this._note(`🔄 ${m.nickname} sheds ${f.label} and returns to their normal shape.`, sound);
+      this._echoToTable(sound);
+      return;
+    }
+    if (m.form) this._revertForm(m);        // switching forms — back the old one out first
+    m._baseWeaponKey = m._baseWeaponKey || m.weaponKey;
+    m.form = { key: f.key, label: f.label, glyph: f.glyph || '🐾', art: f.art || null };
+    if (f.weapon) { m.weaponKey = f.weapon; m.weapon = weaponOf(m.gear, m.weaponKey); }
+    const fb = { toHit: f.toHit || 0, dmg: f.dmg || 0, ac: f.ac || 0 };
+    m.buffs.toHit += fb.toHit; m.buffs.dmg += fb.dmg; m.buffs.ac += fb.ac;
+    m._formBuff = fb;
+    if (f.dr)  { m._formDr = f.dr; m.dr = Math.max(m.dr || 0, f.dr); }
+    if (f.fly) m.flying = true;
+    const thp = (f.tempHpPerLevel || 0) * (m.level || 1) + (f.tempHp || 0);
+    if (thp > 0) this._grantTempHp(m, thp);
+    const extra = [f.dr ? `DR ${f.dr}` : '', f.fly ? 'AIRBORNE' : '', f.weapon ? (weaponOf(m.gear, m.weaponKey).naturalAttacks + ' attacks') : ''].filter(Boolean).join(', ');
+    this._note(`${ab.icon} ${m.nickname} shifts into ${f.label.toUpperCase()}!${extra ? ` (${extra})` : ''}`, sound);
+    this._echoToTable(sound);
+  }
+  _revertForm(m) {
+    if (!m.form) return;
+    if (m._formBuff && m.buffs) { m.buffs.toHit -= m._formBuff.toHit; m.buffs.dmg -= m._formBuff.dmg; m.buffs.ac -= m._formBuff.ac; }
+    m._formBuff = null;
+    if (m._formDr) { m.dr = 0; m._formDr = 0; }   // form DR drops (re-cast Iron Skin if you want DR back)
+    m.flying = false;                              // hawk-form flight ends
+    m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.weapon = null;
+    m.form = null;
+    // (any temp HP the form granted lingers until the room resets — same as Rage/Bear's Endurance)
+  }
   // Per-room reset: refill the shared spell pool (full casters) + own-count
   // abilities, and clear sticky room buffs. Called each room and on join.
   _resetAbilities(m) {
@@ -2271,6 +2361,7 @@ class Dungeon {
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
     m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null;   // taunt / grapple / fire ward / flight / stoneskin / spiritual weapon clear between rooms
+    if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
     m.acPenRound = -1; m.acPenAmt = 0;
   }
@@ -2315,8 +2406,10 @@ class Dungeon {
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
       // Per-spell-level slots for spontaneous casters: { 1: {remaining,max}, … }.
       slots: maxSlots ? Object.fromEntries(Object.keys(maxSlots).map(L => [L, { remaining: (m.slots && m.slots[L]) || 0, max: maxSlots[L] }])) : null,
-      abilities: kit.abilities.map(ab => ({
+      abilities: kit.abilities.filter(ab => this._charAllows(ab, m)).map(ab => ({
         key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, maxTargets: ab.maxTargets || 1,
+        slot: kit.abilities.indexOf(ab),   // stable index into kit.abilities (the action payload `slot`) — survives the char filter
+        active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction) && !(ab.cost === 'slot' && !(maxSlots && maxSlots[ab.slvl])), desc: ab.desc || '',
         remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'slot' ? ((m.slots && m.slots[ab.slvl]) || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
         max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'slot' ? ((maxSlots && maxSlots[ab.slvl]) || 0) : ab.cost === 'room' ? roomUses(ab, lvl) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl) : (ab.uses || 1)) : null,
@@ -2746,10 +2839,14 @@ class Dungeon {
     // Gust of Wind hits a RANDOM 1d3 foes (randFoes); Grease targets the picked
     // ones. Save type is configurable (Grease=Reflex, Gust=Fort).
     let chosen;
-    if (ab.randFoes) {
+    if (ab.randN || ab.randFoes) {
       const living = this._targetableEnemies().slice();
       for (let i = living.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [living[i], living[j]] = [living[j], living[i]]; }
-      chosen = living.slice(0, dRoll(ab.randFoes));
+      // randN d randDie (e.g. Entangle = 2d4) OR a single 1dN (randFoes).
+      let count = 0;
+      if (ab.randN) { for (let i = 0; i < ab.randN; i++) count += dRoll(ab.randDie || 4); }
+      else count = dRoll(ab.randFoes);
+      chosen = living.slice(0, count);
     } else {
       chosen = this._enemyTargets(payload, ab.maxTargets || 2);
     }
@@ -3276,7 +3373,7 @@ class Dungeon {
     m.weapon = weaponOf(m.gear, m.weaponKey);
     if (e.darkened > 0) { this._note(`🌑 ${m.nickname} can't find ${e.name} in the magical darkness!`); this._broadcast(); return; }
     // Melee can't reach a flyer — only ranged weapons or spells hit airborne foes.
-    if (e.flying && !m.weapon.ranged) { this._note(`🪽 ${m.nickname} can't reach the airborne ${e.name} — need a ranged weapon or a spell!`); this._broadcast(); return; }
+    if (e.flying && !m.weapon.ranged && !m.weapon.reachFly) { this._note(`🪽 ${m.nickname} can't reach the airborne ${e.name} — need a ranged weapon or a spell!`); this._broadcast(); return; }
     // Build the swing sequence as a list of to-hit OFFSETS (see _attackOffsets):
     // dual-wielders attack twice; staying on the same target adds PF1 iteratives.
     // A Haste bonus swing (quiet) is always a single strike at full to-hit.
@@ -3298,7 +3395,10 @@ class Dungeon {
       const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '');
       const lead = swings > 1 ? `${m.nickname} (hit ${i + 1})` : m.nickname;
       if (r.fumble) this._note(`${lead} fumbles the attack! ${this._atkStr(r)}`, r.sound);
-      else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${lead} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name} for ${r.damage}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, tgt.hp)}/${tgt.maxHp})`}`, r.sound); }
+      else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${lead} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name} for ${r.damage}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, tgt.hp)}/${tgt.maxHp})`}`, r.sound);
+        // Promethean tentacles GRAB on a hit — the foe is grappled & helpless until it breaks free.
+        if (m.weapon.grapple && tgt.hp > 0 && !tgt.grappled) { tgt.grappled = true; tgt.grappledBy = m.playerId; tgt.grappleRounds = 2; this._note(`🐙 ${tgt.name} is SEIZED in ${m.nickname}'s tentacles — grappled and helpless!`); }
+      }
       else this._note(`${lead} misses ${tgt.name}. ${this._atkStr(r)}`, r.sound);
       if (r.hit && tgt.hp <= 0) this._tryBanter(m, 'down', { enemy: tgt.name });
       this._echoToTable(r.sound);

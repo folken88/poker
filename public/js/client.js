@@ -925,8 +925,8 @@
         : '';
       return `<div class="${cls.join(' ')}" style="position:relative">
         <div class="dpc__ac" title="Armor Class — current total" style="position:absolute;top:3px;right:5px;font-size:0.7rem;font-weight:700;color:var(--brass-bright);background:rgba(0,0,0,0.45);border-radius:6px;padding:0 5px;line-height:1.45;pointer-events:none;z-index:5">🛡 ${Number.isFinite(m.ac) ? m.ac : '?'}</div>
-        <div class="dpc__avatar"${m.crowned ? ' style="position:relative"' : ''}>${renderAvatar(m.avatarId)}${m.crowned ? `<span class="dpc__crown" title="Loot Lord" style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>${afk}
-        <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${tag}</div>
+        <div class="dpc__avatar"${m.crowned ? ' style="position:relative"' : ''}>${renderAvatar((m.form && m.form.art) ? m.form.art : m.avatarId)}${m.form ? `<span class="dpc__form" title="Wild Shape: ${escapeAttr(m.form.label)}" style="position:absolute;bottom:-4px;right:-2px;font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.8))">${m.form.glyph || '🐾'}</span>` : ''}${m.crowned ? `<span class="dpc__crown" title="Loot Lord" style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>${afk}
+        <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${m.form ? ` <span class="dpc__formtag" style="color:var(--brass-bright);font-size:.82em">${escapeText(m.form.label)}</span>` : ''}${tag}</div>
         ${condIcons(m.conditions)}${buffIcons(m.buffs)}
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
         <div class="dpc__hp">${hpText}</div>
@@ -1022,11 +1022,15 @@
           if (!ab.available) {
             return `<button class="btn btn--ghost" disabled title="${escapeAttr(ab.desc || '')}\n(unlocks at level ${ab.minLevel})">🔒 ${ic(ab)}${escapeText(ab.name)} <span class="dungeon__uses">Lv${ab.minLevel}</span></button>`;
           }
-          const ok = ab.cost === 'free' ? true : (ab.remaining > 0);
+          // An active Wild Shape form stays clickable (to revert) even at 0 uses.
+          const ok = ab.active ? true : (ab.cost === 'free' ? true : (ab.remaining > 0));
           const count = (ab.cost === 'room' || ab.cost === 'run')
             ? ` <span class="dungeon__uses" title="${ab.cost === 'run' ? 'once per dungeon' : 'per room'}">${ab.remaining}/${ab.max}</span>` : '';
           const tgt = ab.maxTargets > 1 ? ` <span class="dungeon__uses">×${ab.maxTargets}</span>` : '';
-          return `<button class="btn btn--ghost" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(ab.key || '')}"${(myTurn && ok) ? '' : ' disabled'} title="${escapeAttr(ab.desc || '')}">${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
+          const cls = ab.active ? 'btn btn--primary' : 'btn btn--ghost';
+          const mark = ab.active ? '✓ ' : '';
+          const ttl = ab.active ? `${ab.desc || ''}\n(active — click to revert to normal)` : (ab.desc || '');
+          return `<button class="${cls}" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(ab.key || '')}"${(myTurn && ok) ? '' : ' disabled'} title="${escapeAttr(ttl)}">${mark}${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
         };
         // Spellbook tile: icon ONLY (name + short description show on hover).
         // A corner badge carries the uses-left count, or 🔒 when level-locked.
@@ -1059,9 +1063,10 @@
           // grouped by level. Keep each ability's ORIGINAL index for data-slot.
           const features = [], spellsByLvl = new Map();
           (kit.abilities || []).forEach((ab, i) => {
-            if (ab.slvl == null) { features.push({ ab, i }); return; }
+            const sl = ab.slot != null ? ab.slot : i;   // server-provided stable index (survives char filtering)
+            if (ab.slvl == null) { features.push({ ab, i: sl }); return; }
             if (!spellsByLvl.has(ab.slvl)) spellsByLvl.set(ab.slvl, []);
-            spellsByLvl.get(ab.slvl).push(spellIcon(ab, i));
+            spellsByLvl.get(ab.slvl).push(spellIcon(ab, sl));
           });
           const sections = [...spellsByLvl.keys()].sort((a, b) => a - b).map(k => {
             const sl = kit.slots && kit.slots[k];   // spontaneous: per-level slot count
@@ -1090,7 +1095,7 @@
               `</div>` +
             `</span>`;
         } else {
-          abilHtml = (kit.abilities || []).map((ab, i) => abilBtn(ab, i)).join('');
+          abilHtml = (kit.abilities || []).map((ab, i) => abilBtn(ab, ab.slot != null ? ab.slot : i)).join('');
         }
         acts.innerHTML =
           `<div class="dungeon__actstatus">${status}</div>` +

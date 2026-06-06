@@ -402,7 +402,7 @@ const CLASS_WEAPON = {
   samurai:'katana', bloodrager:'greatsword', slayer:'longsword', warpriest:'warhammer',
   barbarian:'greataxe', ranger:'longsword', rogue:'dagger', ninja:'shortsword',   // rogues dual-wield daggers/kukris
   monk:'unarmed', brawler:'unarmed', bard:'rapier', skald:'longsword', swashbuckler:'rapier',
-  magus:'longsword', cleric:'warhammer', inquisitor:'longsword', druid:'scimitar',
+  magus:'longsword', cleric:'warhammer', inquisitor:'longsword', druid:'shillelagh',
   oracle:'scimitar', shaman:'quarterstaff', wizard:'quarterstaff', sorcerer:'quarterstaff',
   witch:'quarterstaff', arcanist:'quarterstaff', psychic:'dagger', alchemist:'dagger',
   investigator:'shortsword', gunslinger:'longsword', summoner:'longspear', hunter:'longspear',

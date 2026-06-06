@@ -105,6 +105,9 @@ function weaponOf(gear, weaponKey) {
     dual: !!base.dual,              // two-weapon fighting → two swings, one report
     noShield: !!base.noShield,      // dual-wielder carries no shield (no shield AC)
     boltAction: !!base.boltAction,  // single-shot sniper rifle → can't Rapid Shot
+    naturalAttacks: base.naturalAttacks || 0,   // multi natural attacks (claws/bite/tentacles), all at full BAB
+    reachFly: !!base.reachFly,      // long reach (15') / wings — CAN strike airborne foes
+    grapple: !!base.grapple,        // a hit GRABS the foe (Promethean tentacles) — grappled & helpless
     atkSound: base.atkSound || null,
   };
 }
