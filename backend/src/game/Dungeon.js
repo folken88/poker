@@ -846,7 +846,15 @@ class Dungeon {
     }
     // party member
     const m = this.member(t.id);
-    if (!m || m.left || m.hp <= 0) return this._nextTurn();
+    if (!m || m.left) return this._nextTurn();
+    if (m.hp <= 0) {
+      // A DOWNED (but not dead) paladin refuses to fall: on their turn, Hero's
+      // Defiance auto-fires — a lay-on-hands heal that brings them back to their
+      // feet, after which they take their turn normally (it's an immediate action
+      // in PF1). If it's unavailable/used or fails, the turn is skipped as usual.
+      if (m.dead || !this._tryHeroesDefiance(m)) return this._nextTurn();
+      this._broadcast();   // back up — fall through and act this turn
+    }
     // Spiritual Weapon fights independently — it strikes at the start of the
     // cleric's turn (even if they're held), then the cleric does their own thing.
     if (m.spiritWeapon && m.spiritWeapon.rounds > 0) { this._spiritWeaponStrike(m); if (this._endIfResolved()) return; }
@@ -2154,6 +2162,9 @@ class Dungeon {
     m.slots = slotsFor(m.cls, m.level || 1);   // per-spell-level slots (sorcerer/bard/oracle/cleric)
     m.abilityUses = {};
     for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1);
+    // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
+    // from the turn loop when downed). Paladins gain spellcasting at 4th in PF1.
+    m.heroDefiance = ((m.cls === 'paladin' || m.cls === 'antipaladin') && (m.level || 1) >= 4) ? 1 : 0;
     if (m.tempHp) { m.maxHp -= m.tempHp; if (m.hp > m.maxHp) m.hp = m.maxHp; m.tempHp = 0; }   // rage / Bear's Endurance temp HP fades
     m.buffs = null;          // rage / divine favor / inspire clear
     m.bane = null;           // inquisitor Bane declaration clears between rooms
@@ -2707,6 +2718,24 @@ class Dungeon {
   }
   // Heal: 'party' (channel) heals all living allies; 'channel' (lay on hands)
   // heals the most-wounded ally (or self).
+  // Hero's Defiance — a downed paladin's clutch self-rescue, auto-fired from the
+  // turn loop when they're at 0 HP or below but NOT dead. PF1: they instantly
+  // receive a lay-on-hands worth of healing (½ level d6). Once per room, from
+  // level 4 (when paladins gain spellcasting). Guaranteed to bring them to at
+  // least 1 HP so they return to functionality. Returns true if it fired.
+  _tryHeroesDefiance(m) {
+    if (!m || (m.cls !== 'paladin' && m.cls !== 'antipaladin')) return false;
+    if ((m.level || 1) < 4) return false;
+    if (!m.heroDefiance || m.heroDefiance <= 0) return false;
+    m.heroDefiance -= 1;
+    const lvl = m.level || 1;
+    const heal = Math.max(1, dRollN(Math.max(1, Math.ceil(lvl / 2)), 6));   // lay-on-hands worth
+    m.hp = Math.min(m.maxHp, Math.max(1, m.hp + heal));   // always back on their feet (>= 1 HP)
+    m.downed = false;
+    this._note(`✨ ${m.nickname} refuses to fall — HERO'S DEFIANCE! Heals ${heal} and rises (${m.hp}/${m.maxHp}).`, '/audio/spell_revive.mp3');
+    this._echoToTable('/audio/spell_revive.mp3');
+    return true;
+  }
   _abHeal(m, ab) {
     const lvl = m.level || 1;
     const sound = ab.sound || pick(SND.flesh);
