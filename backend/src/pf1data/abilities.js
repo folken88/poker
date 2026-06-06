@@ -169,7 +169,7 @@ const SPELL = {
   protevil:      { key: 'protevil',      name: 'Protection from Evil (Communal)', icon: '🛡️', img: '/dungeon/buffs/protevil.webp', effect: 'buff', target: 'self', party: true, sticky: true, buff: { ac: 2, save: 2 }, slvl: 2, sound: S.invoke, desc: 'Ward the whole party — +2 AC and +2 to all saves for EVERY ally, for the rest of the room.' },
   darkness:      { key: 'darkness',      name: 'Darkness',       icon: '🌑', effect: 'darkness', target: 'aoe', randBase: 1, randDie: 4, slvl: 2, sound: S.umbral, desc: 'Shroud a RANDOM 1d4+1 foes in magical darkness — they CANNOT attack and CANNOT be attacked for 2 rounds.' },
   // ── 4th-level ──
-  blacktentacles: { key: 'blacktentacles', name: 'Black Tentacles', icon: '🦑', effect: 'blacktentacles', target: 'aoe', slvl: 4, sound: '/audio/slorr_grapple.mp3', desc: 'Writhing tentacles erupt across the room — EACH ROUND they grapple a random 1d4+1 foes (CMB vs CMD); the grappled are helpless until they tear free. Lasts the room.' },
+  blacktentacles: { key: 'blacktentacles', name: 'Black Tentacles', icon: '🦑', effect: 'blacktentacles', target: 'aoe', slvl: 4, sound: '/audio/kraken_crush.mp3', desc: 'Writhing tentacles erupt across the room — EACH ROUND they grapple a random 1d4+1 foes (CMB vs CMD); the grappled are helpless until they tear free. Lasts the room.' },
   infernalhealgreater: { key: 'infernalhealgreater', name: 'Infernal Healing, Greater', icon: '🩸', effect: 'infernalheal', target: 'ally', heal: 4, sticky: true, slvl: 4, sound: S.cure, desc: 'Diabolic ichor knits the MOST-WOUNDED ally — fast healing 4 (heals 4 HP at the start of each of their turns) for the rest of the room.' },
   invisgreater:  { key: 'invisgreater',  name: 'Invisibility, Greater', icon: '🫥', effect: 'invisible', greater: true, target: 'ally', slvl: 4, sound: S.invis, desc: 'Total concealment for the whole fight — you STAY invisible even when you attack. Cast it on a rogue ally and they Sneak Attack every foe that cannot see them.' },
   riverofwind:   { key: 'riverofwind',   name: 'River of Wind',  icon: '🌬️', effect: 'grease', target: 'aoe', randN: 3, randDie: 4, save: 'fort', slvl: 4, sound: S.gust, desc: 'A roaring torrent of air bowls over a RANDOM 3d4 foes — Fortitude save or be knocked prone.' },
@@ -428,19 +428,19 @@ const KITS = {
     // ── WILD SHAPE forms (effect:'form'; see Dungeon._abForm). Toggle on/off; each
     // form is usable once per room. Generic druids get Tiger/Bear/Hawk; Rissa gets
     // her own Beast Mode + Promethean in place of Tiger/Bear (Hawk is shared). ──
-    { key: 'tigerform', name: 'Tiger Form', icon: '🐯', cost: 'room', uses: 1, effect: 'form', target: 'self', notChar: 'Rissa',
+    { key: 'tigerform', name: 'Tiger Form', icon: '🐯', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
       form: { key: 'tiger', label: 'Tiger Form', glyph: '🐯', art: '/tokens/form_tiger.png', weapon: 'form_tiger', ac: 1, toHit: 2, dmg: 4, sound: '/audio/enemy_yak.mp3' },
       desc: 'Become a DIRE TIGER — pounce on prey with claws + bite (3 attacks at full strength), +2 to hit, +4 damage, +1 AC. Lasts until you change back.' },
-    { key: 'bearform', name: 'Bear Form', icon: '🐻', cost: 'room', uses: 1, effect: 'form', target: 'self', notChar: 'Rissa',
+    { key: 'bearform', name: 'Bear Form', icon: '🐻', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
       form: { key: 'bear', label: 'Bear Form', glyph: '🐻', art: '/tokens/token-animal-great-spirit-bear-dd-monster-resembles-griz.webp', weapon: 'form_bear', ac: 3, toHit: 2, dmg: 4, tempHpPerLevel: 2, sound: '/audio/enemy_yak.mp3' },
       desc: 'Become a DIRE BEAR — a wall of muscle: claws + bite (3 attacks), +2 to hit, +4 damage, +3 natural-armor AC, and +2 HP per level. Lasts until you change back.' },
-    { key: 'hawkform', name: 'Hawk Form', icon: '🦅', cost: 'room', uses: 1, effect: 'form', target: 'self',
+    { key: 'hawkform', name: 'Hawk Form', icon: '🦅', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self',
       form: { key: 'hawk', label: 'Hawk Form', glyph: '🦅', fly: true, ac: 1, toHit: 1, sound: S.invis },
       desc: 'Take to the sky — FLY out of reach of grounded foes (they cannot hit you), with +1 to hit & AC. You can STILL cast your spells from the air. Lasts until you change back.' },
-    { key: 'beastmode', name: 'Beast Mode', icon: '🐲', cost: 'room', uses: 1, effect: 'form', target: 'self', char: 'Rissa',
+    { key: 'beastmode', name: 'Beast Mode', icon: '🐲', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', char: 'Rissa',
       form: { key: 'beast', label: 'Beast Mode', glyph: '🐲', art: '/tokens/beast-of-lepidstadt.webp', weapon: 'form_beast', ac: 2, toHit: 3, dmg: 6, tempHpPerLevel: 2, dr: 10, sound: '/audio/rissa_beast.mp3' },
       desc: 'Rissa becomes the BEAST OF LEPIDSTADT — LARGE and monstrously strong: +3 to hit, +6 damage, +2 AC, +2 HP/level, DR 10/adamantine (like Stoneskin), and she can SWAT airborne foes out of the sky. Lasts until she changes back.' },
-    { key: 'promethean', name: 'Promethean', icon: '🐙', cost: 'room', uses: 1, effect: 'form', target: 'self', char: 'Rissa',
+    { key: 'promethean', name: 'Promethean', icon: '🐙', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', char: 'Rissa',
       form: { key: 'promethean', label: 'Promethean', glyph: '🐙', art: '/tokens/form_promethean.webp', weapon: 'form_promethean', ac: 1, toHit: 2, dmg: 4, sound: '/audio/dragon_roar_rivozair.mp3' },
       desc: 'Rissa unfurls into a MULTI-TENTACLED HORROR — 15-ft reach (strikes flyers too), FOUR tentacle attacks, and every hit GRAPPLES the foe: helpless until it breaks free. Lasts until she changes back.' },
     // ── Buff prayers (sticky room buffs) ──
