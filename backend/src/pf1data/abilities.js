@@ -134,7 +134,7 @@ const S = {
 // repeated spell doesn't drone the same clip (Fireball / Lightning Bolt / Haste).
 const FIREBALL_SFX = ['/audio/fireball_1.mp3', '/audio/fireball_2.mp3', '/audio/fireball_3.mp3', '/audio/fireball_4.mp3'];
 const THUNDER_SFX  = ['/audio/thunder_1.mp3', '/audio/thunder_2.mp3', '/audio/thunder_3.mp3', '/audio/thunder_4.mp3', '/audio/thunder_5.mp3'];
-const HASTE_SFX    = ['/audio/spell_haste.mp3', '/audio/spell_haste2.mp3'];
+const HASTE_SFX    = ['/audio/spell_haste.mp3', '/audio/spell_haste2.mp3', '/audio/ghosts_n_stuff_intro.mp3'];
 // Blessing of Fervor incants ABBA's "Gimme! Gimme! Gimme!" — one of three clips.
 const FERVOR_SFX   = ['/audio/abba_gimme_intro.mp3', '/audio/abba_gimme_chorus.mp3', '/audio/abba_gimme_chorus2.mp3'];
 
@@ -475,6 +475,7 @@ for (const kit of Object.values(KITS)) {
   if (kit.atwill) kit.atwill.img = imgFor(kit.atwill.key);
   for (const ab of kit.abilities) {
     ab.img = ab.img || imgFor(ab.key);   // keep an explicitly-set img (e.g. Detect Evil's bullseye)
+    if (!ab.img && ab.key === 'haste') ab.img = '/dungeon/buffs/haste.webp';   // Haste spell reuses the green-boots buff icon for consistency
     if (ab.slvl == null && SLVL_BY_KEY[ab.key] != null) ab.slvl = SLVL_BY_KEY[ab.key];
   }
 }
