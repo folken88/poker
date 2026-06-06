@@ -883,6 +883,7 @@ class Dungeon {
     // party member
     const m = this.member(t.id);
     if (!m || m.left) return this._nextTurn();
+    m._curatorBuffUsed = false;   // Curator: the once-per-turn swift buff resets each turn
     if (m.hp <= 0) {
       // A DOWNED (but not dead) paladin refuses to fall: on their turn, Hero's
       // Defiance auto-fires — a lay-on-hands heal that brings them back to their
@@ -1714,6 +1715,17 @@ class Dungeon {
       const r = this._useAbility(m, choice.slot, choice.payload);
       if (r && r.ok && ab) m._lastAbilityKey = ab.key;
       if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }   // free action (judgement) → keep acting
+      // Curator: after a quickened (swift) buff, immediately try ONE more support
+      // action — a second buff — before falling through to a melee strike.
+      if (r && r.ok && r.freeAction && this._wieldsCurator(m)) {
+        const c2 = this._botAbility(m);
+        if (c2) {
+          const ab2 = kitFor(m.cls).abilities[c2.slot];
+          const r2 = this._useAbility(m, c2.slot, c2.payload);
+          if (r2 && r2.ok && ab2) m._lastAbilityKey = ab2.key;
+          if (r2 && r2.ok && !r2.freeAction) { this._hasteBonus(m); return; }
+        }
+      }
     }
     // Basic attack — class-aware target pick (see _preferredFoe).
     const tgt = this._preferredFoe(m, foes);
@@ -2217,8 +2229,25 @@ class Dungeon {
     if (m.isBot && (ab.key === 'fireball' || ab.key === 'firesnake')) {
       try { this._tryBanter(m, 'cast_fire', { spell: ab.name }); } catch (_) {}
     }
+    // Curator (Gaspar's bastard sword): the FIRST buff SPELL each turn is quickened
+    // to a SWIFT action — it's cast for free and the wielder keeps their turn for a
+    // second buff or a strike. The second buff (or any other action) takes the turn
+    // as normal. So a Curator-wielder can stack TWO buffs in a single turn.
+    if (this._wieldsCurator(m) && this._isBuffSpell(ab) && !m._curatorBuffUsed) {
+      m._curatorBuffUsed = true;
+      this._note(`📖 ${m.nickname}'s Curator quickens the casting — a swift action! (cast again or strike this turn)`);
+      return { ok: true, freeAction: true };
+    }
     if (ab.effect === 'judgment' || ab.freeAction) return { ok: true, freeAction: true };   // judgement switch / barbarian Rage cost no action
     return { ok: true };
+  }
+  /** True if this member wields Gaspar's bastard sword "Curator". */
+  _wieldsCurator(m) { return !!(m && m.weaponKey === 'curator'); }
+  /** A real BUFF SPELL (not a free combat toggle like Power Attack / Rage / Deadly
+   *  Aim, and not a 0-cost trick) — what Curator's swift-cast applies to. */
+  _isBuffSpell(ab) {
+    if (!ab || ab.freeAction || ab.cost === 'free') return false;
+    return ab.effect === 'buff' || ab.effect === 'haste';
   }
   // Per-room reset: refill the shared spell pool (full casters) + own-count
   // abilities, and clear sticky room buffs. Called each room and on join.

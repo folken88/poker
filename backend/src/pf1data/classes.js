@@ -98,6 +98,14 @@ const PROFICIENCY = {
 };
 const NON_PROFICIENT_PENALTY = -4;
 
+// HOME-RULE: one-handed EXOTIC blades that any martially-capable warrior can pick
+// up and swing well. Full-BAB and 3/4-BAB classes (fighters … through rogues and
+// clerics — i.e. everyone but the 1/2-BAB arcane casters) treat these as if they
+// had the Exotic Weapon Proficiency feat: NO −4 penalty, and wielded ONE-HANDED
+// so they still benefit from a shield. (Gaspar's Curator is a custom bastard
+// sword and is always proficient via the `custom` flag below.)
+const EXOTIC_ONEHAND_FREE = new Set(['bastardsword', 'katana']);
+
 /** Is `staple` (a staple weapon object with .key/.prof, or a bare key) wielded
  *  proficiently by `classKey`? Unarmed is universal; unknown classes default to
  *  full martial proficiency so we never wrongly penalize. */
@@ -110,6 +118,11 @@ function weaponProficient(classKey, staple) {
   const p = PROFICIENCY[classKey] || { cats: _MARTIAL };
   if (prof && (p.cats || []).includes(prof)) return true;
   if ((p.weapons || []).includes(key)) return true;
+  // Home-rule exotic one-handers: granted to full & 3/4 BAB classes for free.
+  if (EXOTIC_ONEHAND_FREE.has(key)) {
+    const bab = (CLASSES[classKey] || {}).bab;
+    if (bab === 'full' || bab === '3/4') return true;
+  }
   return false;
 }
 
@@ -129,4 +142,4 @@ function saveFor(classKey, which, level) {
   return c[which] === 'good' ? Math.floor(lvl / 2) + 2 : Math.floor(lvl / 3);
 }
 
-module.exports = { CLASSES, DEFAULT_CLASS, babFor, saveFor, PROFICIENCY, NON_PROFICIENT_PENALTY, weaponProficient };
+module.exports = { CLASSES, DEFAULT_CLASS, babFor, saveFor, PROFICIENCY, NON_PROFICIENT_PENALTY, weaponProficient, EXOTIC_ONEHAND_FREE };

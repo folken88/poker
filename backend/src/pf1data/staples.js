@@ -26,6 +26,7 @@ const STAPLE_DEFS = [
   ['quarterstaff', 'Quarterstaff', 'simple'],
   ['unarmed',      null,           'simple'],   // SRD entry (UNARMED above) — everyone is proficient
   ['katana',       'Katana',       'exotic'],
+  ['bastardsword', 'Bastard Sword','exotic'],   // 1d10, 19–20 — exotic one-hander; full/¾-BAB classes wield it proficiently (home-rule)
   ['scimitar',     'Scimitar',     'martial'],
   ['rapier',       'Rapier',       'martial'],
   ['glaive',       'Glaive',       'martial'],  // representative polearm
