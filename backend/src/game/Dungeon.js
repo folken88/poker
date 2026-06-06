@@ -2759,11 +2759,19 @@ class Dungeon {
     const allies = this.livingParty();
     if (payload && payload.targetUid) { const t = allies.find(a => a.playerId === payload.targetUid); if (t) return t; }
     const MARTIAL = ['fighter', 'barbarian', 'paladin', 'antipaladin', 'ranger', 'rogue', 'magus', 'cavalier', 'monk', 'inquisitor'];
-    if (ab.key === 'shieldoffaith') return allies.slice().sort((a, b) => (acOf(a.gear, a.cls).ac + this._acBonus(a) - this._acPenalty(a)) - (acOf(b.gear, b.cls).ac + this._acBonus(b) - this._acPenalty(b)))[0] || m;   // lowest-AC ally
-    if (ab.key === 'bearsendurance') return allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
-    if (ab.key === 'catsgrace')      return allies.find(a => a.cls === 'ranger' || a.cls === 'rogue') || allies.find(a => MARTIAL.includes(a.cls)) || m;
-    if (ab.key === 'bullsstrength')  return allies.find(a => MARTIAL.includes(a.cls) && a.playerId !== m.playerId) || allies.find(a => MARTIAL.includes(a.cls)) || m;
-    if (ab.key === 'stoneskin')      return allies.filter(a => !a.dr).slice().sort((a, b) => a.hp - b.hp)[0] || allies.slice().sort((a, b) => a.hp - b.hp)[0] || m;   // shield whoever has the least HP right now
+    // A sticky buff WON'T stack — re-casting it on an ally who already has it is a
+    // wasted slot/turn. So pick only from allies who DON'T have THIS buff yet; if
+    // everyone already has it, fall back to the full list (the bot's buffFullyUp
+    // gate, which calls this too, then sees the buff is up and skips the cast).
+    const has = (a) => !!(a.buffApplied && a.buffApplied[ab.key]);
+    const eligible = allies.filter(a => !has(a));
+    const pool = eligible.length ? eligible : allies;
+    const acScore = (a) => acOf(a.gear, a.cls).ac + this._acBonus(a) - this._acPenalty(a);
+    if (ab.key === 'shieldoffaith') return pool.slice().sort((a, b) => acScore(a) - acScore(b))[0] || m;   // lowest-AC ally WITHOUT it
+    if (ab.key === 'bearsendurance') return pool.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
+    if (ab.key === 'catsgrace')      return pool.find(a => a.cls === 'ranger' || a.cls === 'rogue') || pool.find(a => MARTIAL.includes(a.cls)) || m;
+    if (ab.key === 'bullsstrength')  return pool.find(a => MARTIAL.includes(a.cls) && a.playerId !== m.playerId) || pool.find(a => MARTIAL.includes(a.cls)) || m;
+    if (ab.key === 'stoneskin')      return pool.filter(a => !a.dr).slice().sort((a, b) => a.hp - b.hp)[0] || pool.slice().sort((a, b) => a.hp - b.hp)[0] || m;   // least-HP ally without it
     return m;
   }
   _abBuff(m, ab, payload) {
