@@ -1211,12 +1211,18 @@ class Dungeon {
     else if (m.hp > nmax) m.hp = nmax;      // level down caps current HP to the new max
     return nl - old;
   }
-  _partySaveMod(m) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level).save; }   // saves scale with level (+ rage's +Will, + fighter save feats)
+  // HASTE's secondary bonuses (PF1): +1 to attack rolls, +1 dodge AC, +1 Reflex —
+  // active ONLY while the FULL Haste spell is up (m.hasteFull), NOT for Blessing of
+  // Fervor's extra-attack-only choice. A flat +1 gated on `hasted` means it can't
+  // stack with itself and ends exactly when Haste does. (Engine saves are generic,
+  // so the Reflex bonus reads as +1 to all saves — a small, benign approximation.)
+  _hasteMod(m) { return (m && m.hasted > 0 && m.hasteFull) ? 1 : 0; }
+  _partySaveMod(m) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level).save + this._hasteMod(m); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
   _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
-  _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1)
-    return ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level).ac;
+  _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1) + Haste (+1 dodge)
+    return ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level).ac + this._hasteMod(m);
   }
   // A hero's three PF1 AC values (base, no situational mods) — for display + touch
   // resolution. touch drops armor/shield/mage-armor; flat-footed drops Dodge.
@@ -1393,7 +1399,7 @@ class Dungeon {
       // and a free RIPOSTE. The attempt is spent for the round either way.
       if (target.cls === 'swashbuckler' && target._parryRound !== this.round && target.hp > 0 && !(target.paralyzed > 0) && !(target.stunned > 0)) {
         target._parryRound = this.round;
-        const pRoll = dRoll(20) + babFor('swashbuckler', target.level || 1) + ABILITY_MOD + ((target.buffs && target.buffs.toHit) || 0);
+        const pRoll = dRoll(20) + babFor('swashbuckler', target.level || 1) + ABILITY_MOD + ((target.buffs && target.buffs.toHit) || 0) + this._hasteMod(target);
         if (pRoll >= r.total) {
           this._note(`🤺 ${target.nickname} PARRIES ${e.glyph} ${e.name}'s strike [${pRoll} vs ${r.total}] — no damage, and RIPOSTES!`, '/audio/sneak_riki.mp3');
           target.weapon = weaponOf(target.gear, target.weaponKey);
@@ -2201,7 +2207,7 @@ class Dungeon {
     m.bane = null;           // inquisitor Bane declaration clears between rooms
     m.buffApplied = {};      // which sticky buffs are already active (no stacking)
     m.smiteActive = false;
-    m.hasted = 0; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
+    m.hasted = 0; m.hasteFull = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
     m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null;   // taunt / grapple / fire ward / flight / stoneskin / spiritual weapon clear between rooms
     m.invisible = false; m.judgment = null;   // invisibility ends; judgement re-declared per encounter
@@ -2341,7 +2347,7 @@ class Dungeon {
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
     const lvl = m.level || 1, cls = m.cls || 'fighter';
     const notProf = (m.isBot || weaponProficient(cls, w)) ? 0 : NON_PROFICIENT_PENALTY;
-    const toHit = babFor(cls, lvl) + ABILITY_MOD + (w.toHit || 0) + ((m.buffs && m.buffs.toHit) || 0) + notProf - (m.sickened > 0 ? SICKENED_PENALTY : 0);
+    const toHit = babFor(cls, lvl) + ABILITY_MOD + (w.toHit || 0) + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m) + notProf - (m.sickened > 0 ? SICKENED_PENALTY : 0);
     const roll = dRoll(20), total = roll + toHit;
     return { hit: roll === 20 || (roll !== 1 && total >= this._enemyAC(e)), roll, total, toHit, weapon: w };
   }
@@ -2483,11 +2489,16 @@ class Dungeon {
     // Lasts 1 turn per 5 caster levels (rounded down, min 1). Each hasted turn
     // grants one extra attack (see _hasteBonus, which decrements the counter).
     const turns = Math.max(1, Math.floor((m.level || 1) / 5));
-    for (const a of this.livingParty()) a.hasted = turns;
+    // The real HASTE spell (key 'haste') grants the extra attack PLUS +1 to hit,
+    // +1 dodge AC, +1 Reflex (via _hasteMod). Blessing of Fervor (key
+    // 'blessingoffervor') grants ONLY the extra attack — its PF1 haste choice.
+    const full = ab.key === 'haste';
+    for (const a of this.livingParty()) { a.hasted = turns; a.hasteFull = full; }
     // The caster spent THIS turn casting — their own extra attack waits until
     // their next turn (so the cast plays the Haste sound, not an immediate swing).
     m._justHasted = true;
-    this._note(`${ab.icon} ${m.nickname} casts Haste — the party blurs with speed for ${turns} turn${turns > 1 ? 's' : ''}! (an extra attack each turn)`, sound);
+    const extra = full ? ' (extra attack, +1 to hit, +1 AC, +1 Reflex)' : ' (an extra attack each turn)';
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — the party blurs with speed for ${turns} turn${turns > 1 ? 's' : ''}!${extra}`, sound);
     this._echoToTable(sound);
   }
   // Dispel Magic — strip the worst debuff off an afflicted ally (or self).
@@ -2987,7 +2998,7 @@ class Dungeon {
   _abDisarm(m, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     m.weapon = weaponOf(m.gear, m.weaponKey);
-    const cmb = dRoll(20) + babFor(m.cls || 'swashbuckler', m.level || 1) + ABILITY_MOD + ((m.buffs && m.buffs.toHit) || 0);
+    const cmb = dRoll(20) + babFor(m.cls || 'swashbuckler', m.level || 1) + ABILITY_MOD + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m);
     const cmd = 10 + (e.toHit || 0);   // rough CMD from the foe's offense (scales with CR via toHit)
     if (cmb < cmd) { this._note(`🌀 ${m.nickname} lunges to disarm ${e.name}, but it keeps its grip. [${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword)); return this._echoToTable(); }
     e.loseTurn = true;

@@ -219,6 +219,12 @@ const KITS = {
     { key: 'smite',   name: 'Smite Evil',     icon: '⚜️', cost: 'room', uses: smiteUses, freeAction: true, effect: 'smite', target: 'self', sound: S.holy, desc: 'A FREE action (no action cost): your strikes smite EVIL foes this room — +to-hit and +double your level to damage, but ONLY vs creatures of evil alignment. Use Detect Evil first to mark neutral foes (animals, constructs). Once per 5 levels per room.' },
     { key: 'detectevil', name: 'Detect Evil', img: '/dungeon/conditions/markedevil.webp', icon: '🎯', cost: 'free', effect: 'detectevil', target: 'aoe', sound: '/audio/into_the_light.mp3', desc: 'Bathe the room in revealing light (a standard action) — MARK every enemy as evil, so your Smite strikes ALL of them, even animals and constructs. Lasts the room.' },
     { key: 'channel', name: 'Channel Positive', icon: '💖', cost: 'room', uses: channelUses, effect: 'heal', heal: 'party', target: 'ally', sound: S.charge, desc: 'Channel positive energy — heal the whole party (scales with level).' },
+    // ── Paladin spells (home-rule: spellcasting from level 1, the slowest pace —
+    //    a new spell level every 3 character levels). One casting each per room. ──
+    { key: 'shieldoffaith',    name: 'Shield of Faith',     icon: '🛡️', cost: 'room', uses: 1, minLevel: 1,  slvl: 1, effect: 'buff', target: 'ally', buff: { ac: 2 }, sticky: true, sound: S.invoke, desc: '+2 deflection AC to the ally with the LOWEST AC (who doesn\'t already have it) for the rest of the room. (1st-level paladin spell.)' },
+    { key: 'bullsstrength',    name: "Bull's Strength",     icon: '💪', cost: 'room', uses: 1, minLevel: 4,  slvl: 2, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'One martial ally gets +2 to hit and +2 melee damage for the rest of the room. (2nd-level paladin spell, level 4.)' },
+    { key: 'prayer',           name: 'Prayer',              icon: '📿', cost: 'room', uses: 1, minLevel: 7,  slvl: 3, effect: 'buff', target: 'self', party: true, buff: { toHit: 1, dmg: 1, save: 1 }, enemyPenalty: 1, sticky: true, sound: S.prayer, desc: 'ALL allies +1 to hit, damage & saves; ALL enemies −1, for the rest of the room. (3rd-level paladin spell, level 7.)' },
+    { key: 'blessingoffervor', name: 'Blessing of Fervor',  icon: '💨', cost: 'room', uses: 1, minLevel: 10, slvl: 4, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (the haste choice). (4th-level paladin spell, level 10.)' },
   ] },
   // CLERIC — prepared divine caster with SPELL SLOTS PER LEVEL (PF1 progression).
   // Each spell spends a slot of its level; with extra slots the AI prepares more
@@ -360,6 +366,7 @@ const KITS = {
     // 4th level (slots from L10)
     { key: 'curecritical',  name: 'Cure Critical Wounds', icon: '💚', cost: 'slot', slvl: 4, minLevel: 10, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20).' },
     { key: 'holysmite',     name: 'Holy Smite',           icon: '🌟', cost: 'slot', slvl: 4, minLevel: 10, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
+    { key: 'blessingoffervor', name: 'Blessing of Fervor', icon: '💨', cost: 'slot', slvl: 4, minLevel: 10, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (the haste choice).' },
   ] },
   // BARD — spontaneous caster (spell SLOTS per level). The bardic-performance
   // CLASS FEATURES (Inspire Courage, Fascinate) are NOT spells and sit beside the
@@ -396,11 +403,12 @@ const KITS = {
 // PLUS the Flame-mystery fire spells and Haste/Slow. Channel Positive rides along
 // with the cleric list, so oracles channel exactly like a cleric of their level.
 // Oracle is a full SPONTANEOUS caster: cost:'slot' + slotsFor('oracle') already
-// gives the oracle (SORC-table) slot progression. We DROP cleric's Blessing of
-// Fervor (a haste-clone) since oracles now get real Haste. Built here, before the
-// img/slvl post-processing loop below, so the new abilities are processed too.
+// gives the oracle (SORC-table) slot progression. Built here, before the img/slvl
+// post-processing loop below, so the new abilities are processed too. Oracles KEEP
+// Blessing of Fervor from the cleric list (its haste-choice extra attack) AND get
+// the full Haste spell below — two distinct options.
 KITS.oracle.abilities = [
-  ...KITS.cleric.abilities.filter(a => a.key !== 'blessingoffervor').map(a => ({ ...a })),
+  ...KITS.cleric.abilities.map(a => ({ ...a })),
   spontaneousSpell(SPELL.burninghands, 1),
   spontaneousSpell(SPELL.scorchingray, 3),
   { key: 'haste', name: 'Haste', icon: '💨', cost: 'slot', slvl: 3, minLevel: 5, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 round per caster level.' },
