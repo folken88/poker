@@ -2189,9 +2189,9 @@
   // costs without a round-trip. Keep in sync with db.js GEAR_SLOTS.
   // `short` is the column label used in the bank UI.
   const GEAR_META = {
-    weapon: { label: 'Longsword',              short: 'Weapon', mw: 315,  mult: 2000 },
-    armor:  { label: 'Full Plate',             short: 'Armor',  mw: 1650, mult: 1000 },
-    shield: { label: 'Heavy Steel Shield',     short: 'Shield', mw: 170,  mult: 1000 },
+    weapon: { label: 'Weapon', short: 'Weapon', mw: 315,  mult: 2000 },
+    armor:  { label: 'Armor',  short: 'Armor',  mw: 1650, mult: 1000 },
+    shield: { label: 'Shield', short: 'Shield', mw: 170,  mult: 1000 },
     cloak:  { label: 'Cloak of Resistance',    short: 'Cloak',  mw: 0,    mult: 1000 },
     ring:   { label: 'Ring of Protection',     short: 'Ring',   mw: 0,    mult: 2000 },
   };
@@ -2208,7 +2208,7 @@
     const cells = GEAR_SLOTS.map(slot => {
       const tier = gear[slot] || 0;
       if (!tier) {
-        const t = slot === 'armor' ? 'Chain Shirt (+4 AC) — Full Plate not owned' : `${GEAR_META[slot].label}: not owned`;
+        const t = slot === 'armor' ? 'Masterwork armor (your class baseline) — no magic enhancement yet' : `${GEAR_META[slot].label}: not owned`;
         return `<span class="seat__gear-cell seat__gear-cell--empty" title="${t}">${GEAR_SVGS[slot]}</span>`;
       }
       const cls = tier === 5 ? 'seat__gear-cell--max' : '';
@@ -2247,7 +2247,7 @@
       const tierBadge = cur
         ? `<span class="bank__tier bank__tier--${cur===5?'max':'on'}">+${cur}</span>`
         : (slot === 'armor'
-            ? `<span class="bank__tier bank__tier--off" title="Chain Shirt — free baseline armor (+4 AC) until you buy Full Plate">Chain</span>`
+            ? `<span class="bank__tier bank__tier--off" title="Masterwork armor — your class baseline; buy +N to add a magic enhancement">MW</span>`
             : `<span class="bank__tier bank__tier--off">—</span>`);
       const upgradeBtn = next
         ? `<button type="button" class="bank__btn bank__btn--buy" ${canAfford?'':'disabled'} data-buy-slot="${slot}" data-buy-tier="${next}" title="${cur?'Upgrade to':'Buy a'} +${next} ${meta.label} for ${upgradeCost.toLocaleString()} gp">${cur?'+':'Buy +'}${next}<br><small>${formatChips(upgradeCost)} gp</small></button>`

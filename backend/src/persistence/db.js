@@ -244,9 +244,9 @@ const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
 // Multipliers: weapon/ring ×2000, armor/shield/cloak ×1000.
 // (5-slot game — amulet slot was removed to save space on seat cards.)
 const GEAR_SLOTS = [
-  { key: 'weapon', label: 'Longsword',           short: 'Weapon',  mw: 315,  multiplier: 2000 },
-  { key: 'armor',  label: 'Full Plate',          short: 'Armor',   mw: 1650, multiplier: 1000 },
-  { key: 'shield', label: 'Heavy Steel Shield',  short: 'Shield',  mw: 170,  multiplier: 1000 },
+  { key: 'weapon', label: 'Weapon',  short: 'Weapon',  mw: 315,  multiplier: 2000 },   // +N rides on the player's chosen weapon
+  { key: 'armor',  label: 'Armor',   short: 'Armor',   mw: 1650, multiplier: 1000 },   // +N rides on the class's worn armor
+  { key: 'shield', label: 'Shield',  short: 'Shield',  mw: 170,  multiplier: 1000 },
   { key: 'cloak',  label: 'Cloak of Resistance', short: 'Cloak',   mw: 0,    multiplier: 1000 },
   { key: 'ring',   label: 'Ring of Protection',  short: 'Ring',    mw: 0,    multiplier: 2000 },
 ];

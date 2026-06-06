@@ -117,16 +117,15 @@ function acOf(gear, cls) {
   const armor = Number(gear?.armor) || 0;
   const shield = Number(gear?.shield) || 0;
   const ring = Number(gear?.ring) || 0;
-  // Everyone — human and AI — wears at least a mundane Chain Shirt (+4 AC) for
-  // free. Buying armor (+N) upgrades them: Full Plate is 9+N. BARBARIANS are
-  // restricted to MEDIUM armor — a Breastplate (6+N) — they can't fight freely
-  // in heavy plate. Hocking the armor (back to 0) reverts to the chain shirt.
-  // Arcane casters (wizard/sorcerer) wear NO armor — not even a chain shirt. They
-  // get ONLY the +N MAGIC bonus of an owned armor and rely on Mage Armor for the
-  // rest. Everyone else: free chain shirt (+4), upgraded by armor (heavyBase + N).
+  // Every class STARTS with MASTERWORK armor for whatever it can wear — no more
+  // free chain shirt. HEAVY classes (fighter / paladin / cleric / inquisitor / …)
+  // wear Full Plate (base 9); MEDIUM classes (barbarian, oracle) a Breastplate
+  // (base 6). A +N magic "Armor" item adds its enhancement on top (9+N / 6+N).
+  // Arcane casters (wizard / sorcerer) wear NO armor at all — they get ONLY the +N
+  // MAGIC bonus of an owned piece and rely on Mage Armor for the rest.
   const arcaneNoArmor = (cls === 'wizard' || cls === 'sorcerer');
-  const heavyBase = (cls === 'barbarian') ? 6 : 9;   // breastplate vs full plate
-  const armorAC = arcaneNoArmor ? armor : (armor >= 1 ? (heavyBase + armor) : 4);
+  const armorBase = (cls === 'barbarian' || cls === 'oracle') ? 6 : 9;   // breastplate vs full plate
+  const armorAC = arcaneNoArmor ? armor : (armorBase + armor);
   ac += armorAC; physical += armorAC;
   // No shield AC for swashbucklers (a hand free for finesse + parry) or arcane
   // casters (a wizard/sorcerer needs free hands to cast — they gain NOTHING from a
