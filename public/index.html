@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260607-a11y" />
+  <link rel="stylesheet" href="/css/table.css?v=20260607-a11y2" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -120,9 +120,9 @@
              reveals a popover with finer-grained toggles (incl. the 11labs
              AI-character-voice playback). Wrapper has tabindex=0 so
              keyboard users can also Tab in. -->
-        <span class="audio-menu" id="audioMenu" tabindex="0">
-          <button class="btn btn--ghost btn--sm" id="muteBtn" aria-label="Open audio settings" aria-haspopup="true" title="Audio settings — card sounds and AI character voices">🔊</button>
-          <div class="audio-menu__pop" id="audioMenuPop" role="menu" aria-label="Audio settings">
+        <span class="audio-menu" id="audioMenu">
+          <button class="btn btn--ghost btn--sm" id="muteBtn" aria-label="Audio settings" aria-haspopup="true" aria-expanded="false" aria-controls="audioMenuPop" title="Audio settings — card sounds and AI character voices">🔊</button>
+          <div class="audio-menu__pop" id="audioMenuPop" role="group" aria-label="Audio settings">
             <label class="audio-menu__row">
               <input type="checkbox" id="audioMute" /> <span>Card sounds</span>
             </label>
@@ -496,6 +496,6 @@
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
   <script src="/js/cards.js?v=20260602-abadar"></script>
   <script src="/js/blindMode.js?v=20260605-money"></script>
-  <script src="/js/client.js?v=20260607-humanctrl"></script>
+  <script src="/js/client.js?v=20260607-a11ymenu"></script>
 </body>
 </html>

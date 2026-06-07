@@ -528,12 +528,27 @@
   // speaker icon) to reveal the menu. Outside click closes it.
   const audioMenu = $('#audioMenu');
   if (audioMenu) {
-    audioMenu.addEventListener('click', (e) => {
-      audioMenu.classList.toggle('is-open');
+    const audioBtn = $('#muteBtn');
+    // Proper disclosure semantics for screen readers: the 🔊 button reports
+    // aria-expanded, opening MOVES FOCUS into the panel (so a SR user is
+    // "inside" the dropdown), and Escape closes it + returns focus to the button.
+    const setAudioOpen = (open) => {
+      audioMenu.classList.toggle('is-open', open);
+      if (audioBtn) audioBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) { const f = audioMenuPop && audioMenuPop.querySelector('input, a, button, select'); if (f) f.focus(); }
+    };
+    (audioBtn || audioMenu).addEventListener('click', (e) => {
+      e.stopPropagation();
+      setAudioOpen(!audioMenu.classList.contains('is-open'));
+    });
+    audioMenu.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && audioMenu.classList.contains('is-open')) {
+        e.stopPropagation(); setAudioOpen(false); if (audioBtn) audioBtn.focus();
+      }
     });
     document.addEventListener('click', (e) => {
       if (audioMenu.contains(e.target)) return;
-      audioMenu.classList.remove('is-open');
+      setAudioOpen(false);
     });
   }
 

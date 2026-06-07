@@ -1536,8 +1536,11 @@ option.weapon-nonprof { color: #cc5500; }
   position: absolute;
   top: -8px;
   right: -8px;
-  background: linear-gradient(180deg, var(--brass-bright), var(--brass));
-  color: #2a1a05;
+  /* Silver/black (was gold) so the D/SB/BB position chips read distinctly from
+     the gold AI / green human controller markers. */
+  background: linear-gradient(180deg, #eef1f5, #b6bcc6);
+  color: #14171c;
+  border: 1px solid rgba(255,255,255,0.55);
   font-size: 0.6rem;
   font-weight: 800;
   padding: 2px 6px;
