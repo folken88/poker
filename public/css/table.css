@@ -46,7 +46,7 @@ button, input { font: inherit; color: inherit; }
 
 /* ===== 🗡️ Dungeon side-game ===== */
 .screen[data-show-on="dungeon"] { align-items: stretch; justify-content: flex-start; height: 100vh; }
-.dungeon { max-width: 980px; width: 100%; margin: 0 auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem; height: 100%; box-sizing: border-box; color: var(--ivory); }
+.dungeon { max-width: 980px; width: 100%; margin: 0 auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.8rem; height: 100%; min-height: 0; box-sizing: border-box; color: var(--ivory); }
 .dungeon__top { display: flex; align-items: center; gap: 1rem; }
 .dungeon__title { font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0.12em; color: var(--brass-bright); }
 .dungeon__meta { flex: 1; color: var(--ivory-dim); font-variant-numeric: tabular-nums; }
@@ -57,6 +57,10 @@ button, input { font: inherit; color: inherit; }
     url('/dungeon/maps/harrowstone.webp') center / cover no-repeat;
   border: 1px solid rgba(217,176,106,0.25); border-radius: 12px; padding: 1rem;
   display: flex; flex-direction: column; gap: 0.9rem;
+  /* Don't let the stage grow past its (capped) content — the enemy field and
+     party row each cap + scroll internally, so the combat logs below always
+     keep their space. */
+  flex: 0 1 auto; min-height: 0;
 }
 /* The enemy field is a STATIC-height box — when it fills up the cards shrink
    (is-compact / is-packed, set in JS by enemy count) and, as a last-resort
@@ -134,7 +138,7 @@ button, input { font: inherit; color: inherit; }
 .dmon__hp { font-size: 0.7rem; font-variant-numeric: tabular-nums; color: var(--ivory-dim); }
 .dmon__none { color: var(--ivory-dim); opacity: 0.6; font-style: italic; align-self: center; }
 .dungeon__turn { text-align: center; font-weight: 600; color: var(--brass-bright); min-height: 1.2em; }
-.dungeon__party { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; }
+.dungeon__party { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; align-content: flex-start; max-height: 24vh; overflow-y: auto; }
 .dpc { position: relative; width: 190px; background: rgba(0,0,0,0.4); border: 1px solid rgba(217,176,106,0.3); border-radius: 10px; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
 .dpc.is-low { border-color: rgba(220,80,80,0.7); }
 .dpc.is-me { border-color: rgba(241,207,131,0.7); }
@@ -241,7 +245,7 @@ button, input { font: inherit; color: inherit; }
    popover both show a scrollbar (the "two scrollbars on the right" bug). */
 .bot-picker__grid.bot-picker__grid--dungeon { max-height: none; overflow: visible; }
 /* Two side-by-side scroll panes — party left, monsters right. */
-.dungeon__logs { display: flex; gap: 0.5rem; flex: 1; min-height: 120px; }
+.dungeon__logs { display: flex; gap: 0.5rem; flex: 1 1 auto; min-height: 150px; }
 .dungeon__logcol { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .dungeon__loghead { font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 6px 3px; opacity: 0.9; }
 .dungeon__logcol--hero  .dungeon__loghead { color: #9fd29f; }
