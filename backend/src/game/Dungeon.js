@@ -35,7 +35,20 @@ function hdFor(cls) { return (CLASSES[cls] && CLASSES[cls].hd) || HP_PER_LEVEL; 
 // unified hit / damage / AC / HP / save / initiative numbers (the game has no
 // per-weapon-group or per-save granularity, so the three save feats collapse to
 // one all-saves bonus and Weapon Focus/Spec apply to every weapon).
-const FF_NONE = { hit: 0, dmg: 0, ac: 0, hp: 0, save: 0, init: 0, impCrit: false, critFocus: false, impCleave: false, twf: false, twDef: false, itwf: false };
+const FF_NONE = { hit: 0, dmg: 0, ac: 0, hp: 0, save: 0, init: 0, impCrit: false, critFocus: false, impCleave: false, twf: false, twDef: false, itwf: false, inw: false };
+// PF1 weapon-damage-by-size table (Enlarge Person / Improved Natural Attack), one
+// step UP per entry. Used to grow a druid's natural-attack dice when they enlarge
+// into a bigger form and/or take Improved Natural Weapon.
+const DMG_STEP = {
+  '1d2': [1, 3], '1d3': [1, 4], '1d4': [1, 6], '1d6': [1, 8], '1d8': [2, 6], '1d10': [2, 8], '1d12': [3, 6],
+  '2d6': [3, 6], '2d8': [3, 8], '2d10': [4, 8], '3d6': [4, 6], '3d8': [4, 8], '4d6': [6, 6], '4d8': [6, 8],
+  '6d6': [8, 6], '6d8': [8, 8], '8d6': [12, 6],
+};
+function stepDamage(count, die, steps) {
+  let c = count || 1, d = die || 4;
+  for (let i = 0; i < (steps || 0); i++) { const nx = DMG_STEP[`${c}d${d}`]; if (!nx) break; c = nx[0]; d = nx[1]; }
+  return { count: c, die: d };
+}
 // The fighter bonus-feat ladder, evaluated at a GATING level `g` (which feats are
 // earned so far) with the Toughness HP bonus scaling on actual Hit Dice `hd`.
 function featLadder(g, hd) {
@@ -79,9 +92,24 @@ function paladinFeats(level) {
   if (n >= 10) f.impCleave = true;     // Improved Cleave
   return f;
 }
+// DRUID bonus-feat tree — one feat every ODD level (n = ceil(level/2)): 1 Toughness,
+// 3 Weapon Focus (all), 5 Improved Initiative, 7 Dodge, 9 Improved Natural Weapon
+// (steps the dice of their form's claws/bite up one size — see stepDamage).
+function druidFeats(level) {
+  const L = Math.max(1, level || 1);
+  const n = Math.ceil(L / 2);
+  const f = { ...FF_NONE };
+  if (n >= 1) f.hp  = Math.max(3, L);   // Toughness
+  if (n >= 2) f.hit = 1;                // Weapon Focus (all weapons)
+  if (n >= 3) f.init = 4;               // Improved Initiative
+  if (n >= 4) f.ac  = 1;                // Dodge
+  if (n >= 5) f.inw = true;             // Improved Natural Weapon (+1 die step on natural attacks)
+  return f;
+}
 function fighterFeats(cls, level) {
   const L = Math.max(1, level || 1);
   if (cls === 'fighter')    return featLadder(L, L);
+  if (cls === 'druid')      return druidFeats(L);
   // Inquisitor, barbarian AND ranger earn the fighter ladder at HALF rate — a feat
   // every ODD level: Weapon Focus/Specialization (all weapons), Toughness, the
   // two-weapon feats, etc. (Rangers also get Point Blank Shot baked into _swingVsAC,
@@ -110,7 +138,7 @@ function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fi
 // Level now comes from XP (see pf1data/xp.js), NOT from gear. The gating level at
 // which fighter/inquisitor earn each bonus feat (fighter: every level; inquisitor:
 // every odd level) — used to NAME the feat gained on a level-up announcement.
-function gatingLevel(cls, L) { return cls === 'fighter' ? L : (cls === 'inquisitor' || cls === 'barbarian' || cls === 'ranger') ? Math.floor((L + 1) / 2) : cls === 'paladin' ? Math.ceil(L / 2) : 0; }
+function gatingLevel(cls, L) { return cls === 'fighter' ? L : (cls === 'inquisitor' || cls === 'barbarian' || cls === 'ranger') ? Math.floor((L + 1) / 2) : (cls === 'paladin' || cls === 'druid') ? Math.ceil(L / 2) : 0; }
 const FEAT_AT = {
   1: 'Weapon Focus (+1 to hit)', 2: 'Dodge (+1 AC)', 3: 'Toughness (+HP)', 4: 'Weapon Specialization (+2 dmg)',
   5: 'Improved Initiative', 6: 'a save feat (+1 saves)', 7: 'a save feat (+2 saves)',
@@ -122,6 +150,12 @@ const PALADIN_FEAT_AT = {
   1: 'Toughness (+HP)', 3: 'Weapon Focus (+1 to hit)', 4: 'Dodge (+1 AC)',
   5: 'Weapon Specialization (+2 dmg)', 6: 'Improved Initiative', 7: 'a save feat (+2 saves)',
   8: 'Improved Critical', 9: 'Critical Focus', 10: 'Improved Cleave',
+};
+// Druid's feat tree (by feat index n = ceil(level/2)): Toughness, Weapon Focus,
+// Improved Initiative, Dodge, Improved Natural Weapon.
+const DRUID_FEAT_AT = {
+  1: 'Toughness (+HP)', 2: 'Weapon Focus (+1 to hit)', 3: 'Improved Initiative',
+  4: 'Dodge (+1 AC)', 5: 'Improved Natural Weapon (bigger claws)',
 };
 const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
@@ -1071,7 +1105,7 @@ class Dungeon {
     const sv = ['fort', 'ref', 'will'].reduce((a, w) => a + (saveFor(cls, w, to) - saveFor(cls, w, from)), 0);
     if (sv > 0) parts.push(`saves +${sv}`);
     const feats = [];
-    const featNames = cls === 'paladin' ? PALADIN_FEAT_AT : FEAT_AT;
+    const featNames = cls === 'paladin' ? PALADIN_FEAT_AT : cls === 'druid' ? DRUID_FEAT_AT : FEAT_AT;
     for (let g = gatingLevel(cls, from) + 1; g <= gatingLevel(cls, to); g++) if (featNames[g]) feats.push(featNames[g]);
     if (feats.length) parts.push(`feat: ${feats.join(', ')}`);
     const kit = kitFor(cls), spells = [];
@@ -1346,7 +1380,15 @@ class Dungeon {
     // Damage = weapon dice (NdX) + enhancement + ½ level + ability mod + buff dmg (+ Point Blank).
     const judgDmg = attacker.judgment === 'destruction' ? Math.max(1, Math.floor(lvl / 3)) : 0;   // inquisitor Judgement: Destruction
     const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + (baneOn ? BANE_DMG : 0) + pbs + judgDmg + ff.dmg + swashSpec;
-    const rollDmg = () => dRollN(weapon.dmgCount, weapon.dmgDie) + weapon.dmgBonus + flatDmg;
+    // Natural attacks (a druid's claws/bite) grow their DICE with the wielder's SIZE
+    // (the bigger combat forms enlarge them) and with Improved Natural Weapon — both
+    // step the dice up the PF1 size table (1d6→1d8→2d6→…), stacking.
+    let dmgCount = weapon.dmgCount, dmgDie = weapon.dmgDie;
+    if (weapon.group === 'natural') {
+      const steps = ((attacker.form && attacker.form.sizeSteps) || 0) + (ff.inw ? 1 : 0);
+      if (steps > 0) { const st = stepDamage(weapon.dmgCount, weapon.dmgDie, steps); dmgCount = st.count; dmgDie = st.die; }
+    }
+    const rollDmg = () => dRollN(dmgCount, dmgDie) + weapon.dmgBonus + flatDmg;
     let dmg = rollDmg() - sick, crit = false;
     // Improved Critical doubles the weapon's threat range (fighter L8; swashbuckler
     // L5 with a finesse blade). Critical Focus (fighter L9) adds +4 to confirm.
@@ -2353,7 +2395,7 @@ class Dungeon {
     }
     if (m.form) this._revertForm(m);        // switching forms — back the old one out first
     m._baseWeaponKey = m._baseWeaponKey || m.weaponKey;
-    m.form = { key: f.key, label: f.label, glyph: f.glyph || '🐾', art: f.art || null };
+    m.form = { key: f.key, label: f.label, glyph: f.glyph || '🐾', art: f.art || null, sizeSteps: f.sizeSteps || 0 };
     if (f.weapon) { m.weaponKey = f.weapon; m.weapon = weaponOf(m.gear, m.weaponKey); }
     const fb = { toHit: f.toHit || 0, dmg: f.dmg || 0, ac: f.ac || 0 };
     m.buffs.toHit += fb.toHit; m.buffs.dmg += fb.dmg; m.buffs.ac += fb.ac;
@@ -2362,7 +2404,14 @@ class Dungeon {
     if (f.fly) m.flying = true;
     const thp = (f.tempHpPerLevel || 0) * (m.level || 1) + (f.tempHp || 0);
     if (thp > 0) this._grantTempHp(m, thp);
-    const extra = [f.dr ? `DR ${f.dr}` : '', f.fly ? 'AIRBORNE' : '', f.weapon ? (weaponOf(m.gear, m.weaponKey).naturalAttacks + ' attacks') : ''].filter(Boolean).join(', ');
+    let atkStr = '';
+    if (f.weapon) {
+      const w = weaponOf(m.gear, m.weaponKey);
+      const steps = (f.sizeSteps || 0) + (fighterFeats(m.cls, m.level).inw ? 1 : 0);
+      const d = w.group === 'natural' && steps > 0 ? stepDamage(w.dmgCount, w.dmgDie, steps) : { count: w.dmgCount, die: w.dmgDie };
+      atkStr = `${w.naturalAttacks} × ${d.count}d${d.die} attacks`;
+    }
+    const extra = [f.dr ? `DR ${f.dr}` : '', f.fly ? 'AIRBORNE' : '', atkStr].filter(Boolean).join(', ');
     this._note(`${ab.icon} ${m.nickname} shifts into ${f.label.toUpperCase()}!${extra ? ` (${extra})` : ''}`, sound);
     this._echoToTable(sound);
   }

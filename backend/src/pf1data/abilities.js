@@ -429,19 +429,19 @@ const KITS = {
     // form is usable once per room. Generic druids get Tiger/Bear/Hawk; Rissa gets
     // her own Beast Mode + Promethean in place of Tiger/Bear (Hawk is shared). ──
     { key: 'tigerform', name: 'Tiger Form', icon: '🐯', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
-      form: { key: 'tiger', label: 'Tiger Form', glyph: '🐯', art: '/tokens/form_tiger.png', weapon: 'form_tiger', ac: 1, toHit: 2, dmg: 4, sound: '/audio/enemy_yak.mp3' },
+      form: { key: 'tiger', label: 'Tiger Form', glyph: '🐯', art: '/tokens/form_tiger.png', weapon: 'form_tiger', sizeSteps: 1, ac: 1, toHit: 2, dmg: 4, sound: '/audio/enemy_yak.mp3' },
       desc: 'Become a DIRE TIGER — pounce on prey with claws + bite (3 attacks at full strength), +2 to hit, +4 damage, +1 AC. Lasts until you change back.' },
     { key: 'bearform', name: 'Bear Form', icon: '🐻', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
-      form: { key: 'bear', label: 'Bear Form', glyph: '🐻', art: '/tokens/token-animal-great-spirit-bear-dd-monster-resembles-griz.webp', weapon: 'form_bear', ac: 3, toHit: 2, dmg: 4, tempHpPerLevel: 2, sound: '/audio/enemy_yak.mp3' },
+      form: { key: 'bear', label: 'Bear Form', glyph: '🐻', art: '/tokens/token-animal-great-spirit-bear-dd-monster-resembles-griz.webp', weapon: 'form_bear', sizeSteps: 1, ac: 3, toHit: 2, dmg: 4, tempHpPerLevel: 2, sound: '/audio/enemy_yak.mp3' },
       desc: 'Become a DIRE BEAR — a wall of muscle: claws + bite (3 attacks), +2 to hit, +4 damage, +3 natural-armor AC, and +2 HP per level. Lasts until you change back.' },
     { key: 'hawkform', name: 'Hawk Form', icon: '🦅', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self',
       form: { key: 'hawk', label: 'Hawk Form', glyph: '🦅', fly: true, ac: 1, toHit: 1, sound: S.invis },
       desc: 'Take to the sky — FLY out of reach of grounded foes (they cannot hit you), with +1 to hit & AC. You can STILL cast your spells from the air. Lasts until you change back.' },
     { key: 'beastmode', name: 'Beast Mode', icon: '🐲', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', char: 'Rissa',
-      form: { key: 'beast', label: 'Beast Mode', glyph: '🐲', art: '/tokens/beast-of-lepidstadt.webp', weapon: 'form_beast', ac: 2, toHit: 3, dmg: 6, tempHpPerLevel: 2, dr: 10, sound: '/audio/rissa_beast.mp3' },
+      form: { key: 'beast', label: 'Beast Mode', glyph: '🐲', art: '/tokens/beast-of-lepidstadt.webp', weapon: 'form_beast', sizeSteps: 1, ac: 2, toHit: 3, dmg: 6, tempHpPerLevel: 2, dr: 10, sound: '/audio/rissa_beast.mp3' },
       desc: 'Rissa becomes the BEAST OF LEPIDSTADT — LARGE and monstrously strong: +3 to hit, +6 damage, +2 AC, +2 HP/level, DR 10/adamantine (like Stoneskin), and she can SWAT airborne foes out of the sky. Lasts until she changes back.' },
     { key: 'promethean', name: 'Promethean', icon: '🐙', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', char: 'Rissa',
-      form: { key: 'promethean', label: 'Promethean', glyph: '🐙', art: '/tokens/form_promethean.webp', weapon: 'form_promethean', ac: 1, toHit: 2, dmg: 4, sound: '/audio/dragon_roar_rivozair.mp3' },
+      form: { key: 'promethean', label: 'Promethean', glyph: '🐙', art: '/tokens/form_promethean.webp', weapon: 'form_promethean', sizeSteps: 2, ac: 1, toHit: 2, dmg: 4, sound: '/audio/dragon_roar_rivozair.mp3' },
       desc: 'Rissa unfurls into a MULTI-TENTACLED HORROR — 15-ft reach (strikes flyers too), FOUR tentacle attacks, and every hit GRAPPLES the foe: helpless until it breaks free. Lasts until she changes back.' },
     // ── Buff prayers (sticky room buffs) ──
     { key: 'barkskin',     name: 'Barkskin',         icon: '🌳', cost: 'room', uses: 1, minLevel: 1, effect: 'buff', target: 'ally', buff: { ac: 3 }, sticky: true, sound: S.invoke, desc: 'Bark-tough hide — +3 natural-armor AC to an ally for the rest of the room.' },
