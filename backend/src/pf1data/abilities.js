@@ -177,7 +177,7 @@ const SPELL = {
   stoneskincomm: { key: 'stoneskincomm', name: 'Stoneskin (Communal)', icon: '🪨', effect: 'buff', target: 'self', party: true, buff: {}, dr: 10, sticky: true, slvl: 5, sound: S.invoke, desc: 'The WHOLE party\'s skin turns to stone — DR 10 vs physical blows for every ally, for the rest of the room.' },
   cloudkill:     { key: 'cloudkill',     name: 'Cloudkill',      icon: '☠️', effect: 'aoe', target: 'aoe', randN: 3, randDie: 4, maxTargets: 8, save: 'fort', die: 4, dice: 'level', dcap: 10, dtype: 'poison', slvl: 5, sound: S.acid, desc: 'A roiling bank of poison gas engulfs a RANDOM 3d4 foes — Fortitude for half (level d4 poison).' },
   suffocation:   { key: 'suffocation',   name: 'Suffocation',    icon: '🫁', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 5, sound: S.umbral, desc: 'Rip the air from one creature\'s lungs (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy damage.' },
-  overlandflight:{ key: 'overlandflight',name: 'Overland Flight', icon: '🕊️', effect: 'overlandflight', target: 'self', slvl: 5, sound: S.invis, desc: 'Soar for the REST OF THE DUNGEON — grounded foes cannot reach you, and you can still cast on the wing.' },
+  overlandflight:{ key: 'overlandflight',name: 'Overland Flight', icon: '🕊️', effect: 'overlandflight', target: 'self', slvl: 5, sound: S.invis, desc: 'Soar for the REST OF THE DUNGEON — grounded foes cannot reach you, and you can still cast on the wing. A FREE action, cast once per dungeon (like Mage Armor).' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
@@ -303,7 +303,7 @@ const KITS = {
     preparedSpell(SPELL.stoneskincomm, 9),
     preparedSpell(SPELL.cloudkill,     9),
     preparedSpell(SPELL.suffocation,   9),
-    preparedSpell(SPELL.overlandflight, 9),
+    { ...SPELL.overlandflight, cost: 'run', uses: 1, freeAction: true, minLevel: 9 },   // once per dungeon (run-long, like Mage Armor)
     preparedSpell(SPELL.coneofcold,    9),
     preparedSpell(SPELL.disintegrate,  11),
   ] },
@@ -338,7 +338,7 @@ const KITS = {
     spontaneousSpell(SPELL.stoneskincomm, 10),
     spontaneousSpell(SPELL.cloudkill,    10),
     spontaneousSpell(SPELL.suffocation,  10),
-    spontaneousSpell(SPELL.overlandflight, 10),
+    { ...SPELL.overlandflight, cost: 'run', uses: 1, freeAction: true, minLevel: 10 },   // once per dungeon (run-long, like Mage Armor)
     spontaneousSpell(SPELL.coneofcold,   10),
     spontaneousSpell(SPELL.disintegrate, 12),
   ] },
