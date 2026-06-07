@@ -179,8 +179,8 @@ const CAST_MOD = 4;
 const SNEAK_CLASSES = new Set(['rogue', 'ninja', 'slayer']);  // gain Sneak Attack
 const SNEAK_DICE_CAP = 5;     // cap precision dice so it stays flavorful, not silly
 const SMITE_TOHIT    = 2;     // paladin Smite Evil: to-hit bump vs an evil foe (+level dmg)
-const AFK_PASS_MS    = 30_000; // idle on your turn → auto-ATTACK after 30s
-const ENEMY_STEP_MS  = 1000;   // ~1s pacing between auto-resolved enemy/ally turns (slowed slightly for readability)
+const AFK_PASS_MS    = 60_000; // idle on your turn → auto-ATTACK after 60s (extra time for screen-reader play)
+const aiStepMs = () => dRoll(4) * 1000;   // AI (enemy + ally) turns take 1d4 seconds — varied, natural pacing
 const CHAIN_SFX_GAP_MS = 320;  // audible gap between staggered cleave/chain swing sounds
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
@@ -943,7 +943,7 @@ class Dungeon {
         e.slowed -= 1; e._slowTick = (e._slowTick || 0) + 1;
         if (e._slowTick % 2 === 1) { this._note(`🐌 ${e.name} is slowed — too sluggish to act this turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       }
-      this._stepTimer = setTimeout(() => { this._withSide('enemy', () => this._enemyAct(e)); this._nextTurn(); }, ENEMY_STEP_MS);
+      this._stepTimer = setTimeout(() => { this._withSide('enemy', () => this._enemyAct(e)); this._nextTurn(); }, aiStepMs());
       this._broadcast();
       return;
     }
@@ -982,7 +982,7 @@ class Dungeon {
       const before = m.hp; m.hp = Math.min(m.maxHp, m.hp + m.infernalHeal);
       this._note(`🩸 ${m.nickname}'s infernal ichor knits ${m.hp - before} HP.`);
     }
-    if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, ENEMY_STEP_MS); this._broadcast(); }
+    if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, aiStepMs()); this._broadcast(); }
     else { this._armAfkTimer(m); this._broadcast(); }   // human — wait for input
   }
   _nextTurn() {
