@@ -1226,6 +1226,27 @@ option.weapon-nonprof { color: #cc5500; }
 .felt              { order: 0; }
 .help-panel--right { order: 1; }
 
+/* Top-center action-timer banner — whose turn + their countdown, at a glance. */
+.action-timer {
+  position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+  z-index: 70; pointer-events: none;
+  display: flex; align-items: baseline; gap: 10px; white-space: nowrap;
+  padding: 4px 18px; border-radius: 999px;
+  background: rgba(8, 12, 9, 0.82); border: 1.5px solid rgba(217,176,106,0.45);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+  font-family: 'Bebas Neue', system-ui, sans-serif; letter-spacing: 0.05em;
+  color: var(--ivory);
+}
+.action-timer[hidden] { display: none; }
+.action-timer .at-who  { font-size: 1.05rem; color: var(--ivory-dim); text-transform: uppercase; }
+.action-timer .at-secs { font-size: 1.5rem; font-weight: 800; color: var(--brass-bright); }
+.action-timer[data-mode="action"] { border-color: var(--brass-bright); }
+.action-timer[data-mode="next"]   { border-color: #4fb8c9; }
+.action-timer[data-mode="next"] .at-secs { color: #9fe8f3; }
+.action-timer[data-mode="urgent"] { border-color: #e25555; animation: at-pulse 1s ease-in-out infinite; }
+.action-timer[data-mode="urgent"] .at-secs { color: #ff8a8a; }
+@keyframes at-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(226,85,85,0.45); } 50% { box-shadow: 0 0 14px 4px rgba(226,85,85,0.55); } }
+
 /* ===== Perimeter help panels ===== */
 .help-panel {
   width: 240px;

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260607-a11y4" />
+  <link rel="stylesheet" href="/css/table.css?v=20260607-actiontimer" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -493,11 +493,15 @@
 
   <!-- ===== Toast ===== -->
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <!-- Top-center action-timer banner: whose turn it is + their countdown. aria-hidden
+       so it doesn't spam screen readers (blind players hear the turn via TTS); it's a
+       purely visual at-a-glance clock. -->
+  <div class="action-timer" id="actionTimerBanner" hidden aria-hidden="true"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
   <script src="/js/cards.js?v=20260602-abadar"></script>
   <script src="/js/blindMode.js?v=20260605-money"></script>
-  <script src="/js/client.js?v=20260607-blindtarget"></script>
+  <script src="/js/client.js?v=20260607-actiontimer"></script>
 </body>
 </html>

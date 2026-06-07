@@ -3026,6 +3026,8 @@
     const now = Date.now();
     const actionMs = t?.actionDeadline ? t.actionDeadline - now : 0;
     const nextMs   = t?.nextHandAt ? t.nextHandAt - now : 0;
+    const _atb = document.getElementById('actionTimerBanner');
+    if (_atb) _atb.hidden = true;   // default hidden; the action branch below shows it
 
     // If a Loot Lord ceremony is running, the topbar clock shows the
     // reset countdown and the overlay's countdown updates here too.
@@ -3057,6 +3059,12 @@
           ? `${actorSeat?.nickname || 'Bot'} · thinking`
           : `${actorSeat?.nickname || 'Acting'} · auto-fold in`;
       renderClockDigits(secs);
+      // Top-center banner: whose turn + seconds (table screen only).
+      if (_atb && document.body.dataset.screen === 'table') {
+        _atb.dataset.mode = mode;
+        _atb.innerHTML = `<span class="at-who">${isMe ? 'Your turn' : escapeText(actorSeat?.nickname || 'Acting')}</span><span class="at-secs">${secs}s</span>`;
+        _atb.hidden = false;
+      }
     } else if (nextMs > 0) {
       clock.dataset.mode = 'next';
       label.textContent = 'Next hand in';
