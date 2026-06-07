@@ -712,6 +712,8 @@
   let _blindHelp = false;      // blind "learn mode" (?): keys are SPOKEN, not fired
   let _dunCancelArm = 0;       // blind dungeon: timestamp of an armed "." cancel-run confirm
   let _dunTarget = null;       // blind dungeon: pending action awaiting an enemy pick ({kind, slot, label})
+  let _dunEnemyMode = false;   // blind dungeon: "inspect enemies" browse mode (E toggles; Tab cycles)
+  let _dunEnemyIdx = -1;       // current enemy index while inspecting
   let _spectating = false;     // watching the dungeon (not a combatant) — heckle-only
 
   function playDungeonSound(url, vol) {
@@ -1329,7 +1331,45 @@
     if (window.BlindMode?.isOn?.()) {
       if (e.key !== '.') _dunCancelArm = 0;   // any non-"." key aborts a pending cancel-run confirm
       if (e.key === '?') { e.preventDefault(); _blindHelp = !_blindHelp; window.BlindMode.speak(`Help mode ${_blindHelp ? 'on' : 'off'}.`, 'urgent'); return; }
+      const sayU = (t) => window.BlindMode.speak(t, 'urgent');
+      const aliveE = (d.enemies || []).filter(x => x.alive);
+      const enemyDesc = (en, i) => {
+        const c = (en.conditions || []).map(x => String(x.label || '').toLowerCase()).filter(Boolean);
+        let s = `${i + 1}: ${en.name}, ${Math.max(0, en.hp | 0)} of ${en.maxHp | 0} HP`;
+        if (en.flying) s += ', flying';
+        if (en.boss) s += ', boss';
+        if (c.length) s += ', ' + c.join(', ');
+        return s;
+      };
+      // E = toggle "inspect enemies" browse mode.
+      if (k === 'e') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('E: inspect enemies — Tab to cycle, E to exit.'); return; }
+        _dunEnemyMode = !_dunEnemyMode; _dunEnemyIdx = -1;
+        if (_dunEnemyMode) sayU(`Enemy inspect: ${aliveE.length} ${aliveE.length === 1 ? 'enemy' : 'enemies'}. Tab to cycle, a number to jump, E to exit.`);
+        else sayU('Exited enemy inspect.');
+        return;
+      }
+      // In inspect mode: Tab / Shift+Tab cycle through enemies; Esc or E exits.
+      if (_dunEnemyMode && e.key === 'Tab') {
+        e.preventDefault();
+        if (!aliveE.length) { sayU('No enemies.'); return; }
+        _dunEnemyIdx = (e.shiftKey ? _dunEnemyIdx - 1 : _dunEnemyIdx + 1);
+        if (_dunEnemyIdx < 0) _dunEnemyIdx = aliveE.length - 1;
+        if (_dunEnemyIdx >= aliveE.length) _dunEnemyIdx = 0;
+        sayU(enemyDesc(aliveE[_dunEnemyIdx], _dunEnemyIdx));
+        return;
+      }
+      if (_dunEnemyMode && e.key === 'Escape') { e.preventDefault(); _dunEnemyMode = false; sayU('Exited enemy inspect.'); return; }
+      // Treasure: R = roll a d20, P = pass — when it's mine to decide (spoken).
       const meId = state.me?.player_id;
+      if ((k === 'r' || k === 'p') && d.lootRoll && (d.lootRoll.eligible || []).includes(meId) && (d.lootRoll.decided || {})[meId] === undefined) {
+        e.preventDefault();
+        if (_blindHelp) { sayU(k === 'r' ? 'R: roll for the treasure.' : 'P: pass on the treasure.'); return; }
+        if (k === 'r') { sayU('Rolling for it.'); dungeonAction('lootroll', { roll: true }); }
+        else { sayU('Passing.'); dungeonAction('lootroll', { roll: false }); }
+        return;
+      }
       const meM = (d.party || []).find(m => m.playerId === meId) || {};
       const kit = meM.kit || { atwill: { name: 'Attack' }, abilities: [] };
       const myTurn = d.status === 'combat' && d.turn && d.turn.kind === 'party' && d.turn.id === meId;
@@ -1353,6 +1393,12 @@
         e.preventDefault();
         const n = parseInt(k, 10);
         const alive = (d.enemies || []).filter(x => x.alive);
+        // (0) In enemy-inspect mode, a number jumps to + describes that enemy.
+        if (_dunEnemyMode) {
+          const en = alive[n - 1];
+          if (!en) { sayU(`No enemy ${n}.`); return; }
+          _dunEnemyIdx = n - 1; sayU(enemyDesc(en, n - 1)); return;
+        }
         // (a) In "select a target" mode, the number picks the enemy and fires the
         //     pending action on it.
         if (_dunTarget) {

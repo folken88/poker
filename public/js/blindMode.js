@@ -1214,7 +1214,7 @@
     if (st.depth !== _dun.depth) {
       _dun.depth = st.depth;
       if (st.depth === 0) speak('You enter the dungeon. Say open to descend, or bail to leave.', 'event');
-      else speak(`Room ${st.depth}. ${_dunEnemyPhrase(st)}`, 'event');
+      else { const ne = (st.enemies || []).filter(e => e.alive).length; speak(`Room ${st.depth}. ${ne} ${ne === 1 ? 'enemy' : 'enemies'}. Press E to inspect them.`, 'event'); }
     }
     // New combat-log lines (results) — speak the freshest, stripped of emoji.
     if (Array.isArray(st.log) && st.log.length) {
@@ -1246,7 +1246,7 @@
     if (lrKey !== _dun.lootKey) {
       _dun.lootKey = lrKey;
       if (lr && (lr.eligible || []).includes(meId) && (lr.decided || {})[meId] === undefined) {
-        speak(`A plus ${lr.tier} ${lr.label} dropped. Say roll to roll a d20 for it, or pass.`, 'urgent');
+        speak(`A plus ${lr.tier} ${lr.label} dropped. Press R to roll a d20 for it, or P to pass.`, 'urgent');
       }
     }
   }
