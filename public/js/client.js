@@ -714,6 +714,8 @@
   let _dunTarget = null;       // blind dungeon: pending action awaiting an enemy pick ({kind, slot, label})
   let _dunEnemyMode = false;   // blind dungeon: "inspect enemies" browse mode (E toggles; Tab cycles)
   let _dunEnemyIdx = -1;       // current enemy index while inspecting
+  let _dunQueuedAttack = null; // blind dungeon: enemy uid chosen (Return in E-mode) to attack when your turn comes
+  let _dunPrevMyTurn = false;  // edge-detect the start of the blind player's dungeon turn
   let _spectating = false;     // watching the dungeon (not a combatant) — heckle-only
 
   function playDungeonSound(url, vol) {
@@ -896,6 +898,15 @@
     const meId = state.me?.player_id;
     const turnId = (d.turn && d.turn.kind === 'party') ? d.turn.id : null;
     const isMyTurn = turnId === meId;
+    // Blind: when it becomes your turn, auto-attack the target you locked from the
+    // E (enemy-inspect) menu. Fires once on the not-your-turn → your-turn edge.
+    if (window.BlindMode?.isOn?.() && isMyTurn && !_dunPrevMyTurn && _dunQueuedAttack) {
+      const q = (d.enemies || []).find(en => en.uid === _dunQueuedAttack && en.alive);
+      _dunQueuedAttack = null;
+      if (q) { window.BlindMode.speak(`Your turn — attacking ${q.name}.`, 'urgent'); dungeonAction('attack', { targetUid: q.uid }); }
+      else window.BlindMode.speak('Your locked target is gone.', 'urgent');
+    }
+    _dunPrevMyTurn = isMyTurn;
     const turnName = turnId ? ((d.party || []).find(m => m.playerId === turnId)?.nickname || 'someone') : null;
 
     const meta = $('#dungeonMeta');
@@ -1348,9 +1359,9 @@
       // E = toggle "inspect enemies" browse mode.
       if (k === 'e') {
         e.preventDefault();
-        if (_blindHelp) { sayU('E: inspect enemies — Tab to cycle, E to exit.'); return; }
+        if (_blindHelp) { sayU('E: inspect enemies — Tab to cycle, Return to target, E to exit.'); return; }
         _dunEnemyMode = !_dunEnemyMode; _dunEnemyIdx = -1;
-        if (_dunEnemyMode) sayU(`Enemy inspect: ${aliveE.length} ${aliveE.length === 1 ? 'enemy' : 'enemies'}. Tab to cycle, a number to jump, E to exit.`);
+        if (_dunEnemyMode) sayU(`Enemy inspect: ${aliveE.length} ${aliveE.length === 1 ? 'enemy' : 'enemies'}. Tab to cycle, a number to jump, Return to target it, E to exit.`);
         else sayU('Exited enemy inspect.');
         return;
       }
@@ -1377,6 +1388,19 @@
       const meM = (d.party || []).find(m => m.playerId === meId) || {};
       const kit = meM.kit || { atwill: { name: 'Attack' }, abilities: [] };
       const myTurn = d.status === 'combat' && d.turn && d.turn.kind === 'party' && d.turn.id === meId;
+      // Return while INSPECTING enemies (E mode): lock the current enemy as your
+      // target — attack it now if it's your turn, otherwise queue it to auto-attack
+      // the moment your turn begins.
+      if ((e.key === 'Enter' || e.code === 'NumpadEnter') && _dunEnemyMode) {
+        e.preventDefault();
+        if (!aliveE.length) { sayU('No enemies.'); return; }
+        const en = aliveE[_dunEnemyIdx >= 0 ? _dunEnemyIdx : 0];
+        _dunEnemyMode = false;
+        if (_blindHelp) { sayU(`Return: target ${en.name}.`); return; }
+        if (myTurn) { _dunQueuedAttack = null; sayU(`Attacking ${en.name}.`); dungeonAction('attack', { targetUid: en.uid }); }
+        else { _dunQueuedAttack = en.uid; sayU(`${en.name} locked as your target — you'll attack it on your turn.`); }
+        return;
+      }
       // L = Life: your current HP and any status (e.g. "5 of 35 HP, paralyzed").
       if (k === 'l') {
         e.preventDefault();
