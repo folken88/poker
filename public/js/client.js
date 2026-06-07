@@ -3457,6 +3457,41 @@
     });
   })();
 
+  // ===== Global Escape — collapse the topmost open dropdown / popover / modal,
+  //       for keyboard AND screen-reader users (one layer per press). This is the
+  //       catch-all so EVERY overlay closes on Esc — including the modals/popovers
+  //       that previously only closed via a click (Help, Reset, Pick-AI, purse) and
+  //       the audio menu (which only closed on Esc when focus was inside it). =====
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    // 1) Modal dialogs (Help, Reset, Pick-AI).
+    const modal = document.querySelector('.modal:not([hidden])');
+    if (modal) {
+      if (modal.id === 'botPickerModal' && typeof closeBotPicker === 'function') closeBotPicker();
+      else modal.hidden = true;
+      return;
+    }
+    // 2) Loot Bank dialog (returns focus to its toggle).
+    if (_bankDollOpen) { closeBankDoll(); return; }
+    // 3) Money / Bank-of-Abadar purse popover.
+    const purseEl = $('#mePurse');
+    if (purseEl && purseEl.classList.contains('is-open')) { purseEl.classList.remove('is-open'); return; }
+    // 4) Dungeon spellbook / recruit dropdowns (module state → re-render to reflect).
+    if (_spellbookOpen) { _spellbookOpen = false; if (document.body.dataset.screen === 'dungeon') renderDungeon(); return; }
+    if (_recruitOpen) {
+      _recruitOpen = false;
+      const pop = $('#dungeonRecruit')?.querySelector('.dungeon__recruit-pop'); if (pop) pop.classList.remove('is-open');
+      const tog = $('#dungeonRecruit')?.querySelector('[data-recruit-toggle]'); if (tog) tog.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    // 5) Audio settings menu (close regardless of where focus is).
+    const am = $('#audioMenu');
+    if (am && am.classList.contains('is-open')) { am.classList.remove('is-open'); const b = $('#muteBtn'); if (b) b.setAttribute('aria-expanded', 'false'); return; }
+    // 6) Topbar overflow (hamburger) menu.
+    const tm = $('#topbarMenu');
+    if (tm && tm.classList.contains('is-open')) { tm.classList.remove('is-open'); const t = $('#topbarMenuToggle'); if (t) t.setAttribute('aria-expanded', 'false'); return; }
+  });
+
   // ===== Topbar =====
   // Re-buy a fresh stack — invoked from the 💰 money-menu button (see the
   // [data-rebuy] delegate above). A function declaration so that earlier-bound
