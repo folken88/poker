@@ -1314,6 +1314,20 @@
       const meM = (d.party || []).find(m => m.playerId === meId) || {};
       const kit = meM.kit || { atwill: { name: 'Attack' }, abilities: [] };
       const myTurn = d.status === 'combat' && d.turn && d.turn.kind === 'party' && d.turn.id === meId;
+      // L = Life: your current HP and any status (e.g. "5 of 35 HP, paralyzed").
+      if (k === 'l') {
+        e.preventDefault();
+        if (_blindHelp) { window.BlindMode.speak('L: your life and status.', 'urgent'); return; }
+        if (!meM.playerId) { window.BlindMode.speak('You are not in the party.', 'urgent'); return; }
+        const hp = Math.max(0, meM.hp | 0), max = meM.maxHp | 0;
+        const conds = (meM.conditions || []).map(c => String(c.label || '').toLowerCase()).filter(Boolean);
+        let s = `${hp} of ${max} HP`;
+        if (meM.dead) s += ', dead';
+        else if (meM.downed || hp <= 0) s += ', downed';
+        if (conds.length) s += ', ' + conds.join(', ');
+        window.BlindMode.speak(s + '.', 'urgent');
+        return;
+      }
       if (/^[1-9]$/.test(k)) {
         e.preventDefault();
         const n = parseInt(k, 10);
@@ -1334,8 +1348,22 @@
         if (_blindHelp) { window.BlindMode.speak('Return: open the next door.', 'urgent'); return; }
         window.BlindMode.speak('Opening the door.', 'urgent'); dungeonAction('door'); return;
       }
-      // Esc falls through to the global overlay-closer; the Spectate / Leave /
-      // Cancel buttons live in the labelled "Navigation and session" group.
+      // Esc → session controls. If a dropdown/overlay is open, let the global Esc
+      // handler close that first; otherwise jump focus to the Spectate / Leave /
+      // Cancel group and announce it.
+      if (e.key === 'Escape') {
+        const overlayOpen = _spellbookOpen || _recruitOpen || _bankDollOpen
+          || !!document.querySelector('.modal:not([hidden])')
+          || !!$('#audioMenu')?.classList.contains('is-open');
+        if (overlayOpen) return;
+        e.preventDefault();
+        if (_blindHelp) { window.BlindMode.speak('Escape: session controls — spectate, leave, or cancel.', 'urgent'); return; }
+        const nav = $('#dungeonActions')?.querySelector('.dungeon__actrow--nav');
+        const btn = nav?.querySelector('[data-dact="spectate"]') || nav?.querySelector('button:not([disabled])');
+        window.BlindMode.speak('Session controls: spectate, leave dungeon, or cancel run. Tab to choose, Enter to activate.', 'urgent');
+        if (btn) btn.focus();
+        return;
+      }
     }
     // Loot roll: R = roll d20, P = pass (only when it's mine to decide).
     if (d.lootRoll) {
