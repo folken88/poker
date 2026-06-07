@@ -3646,6 +3646,20 @@ class Dungeon {
     else this._broadcast();
     return { ok: true, goldBanked: share };
   }
+  // A human delver dismisses an AI ally from the party (the dungeon's answer to
+  // the poker table's "× kick"). Routes through bail() so turn order, the gold
+  // split, and group-extract edge cases are all handled. Only human sockets call
+  // this; any member in the run may dismiss an AI ally.
+  kickBot(requesterId, botId) {
+    const r = this.member(requesterId);
+    if (!r || r.left) return { ok: false, error: 'not in this run' };
+    const b = this.member(botId);
+    if (!b || b.left) return { ok: false, error: 'not in the party' };
+    if (!b.isBot) return { ok: false, error: 'you can only dismiss AI allies' };
+    if (b.playerId === requesterId) return { ok: false, error: 'cannot dismiss yourself' };
+    this._note(`👋 ${r.nickname} dismissed ${b.nickname} from the party.`);
+    return this.bail(botId);
+  }
   /** Hard-cancel the ENTIRE run — the "Cancel Dungeon" escape hatch for a stuck
    *  or broken run. Bails out every remaining member (each banks their split
    *  share and is surfaced back to the table via dungeon:exit), then ends the

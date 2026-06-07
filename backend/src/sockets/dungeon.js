@@ -188,6 +188,21 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     ack?.({ ok: true, hired });
   });
 
+  // Dismiss (kick) an AI ally from the party — the dungeon's answer to the poker
+  // table's "× kick". Any human delver in the run may dismiss an AI ally.
+  socket.on('dungeon:kick', ({ botId } = {}, ack) => {
+    const me = meOf();
+    if (!me) return ack?.({ ok: false, error: 'no player' });
+    const d = dungeons.get(tableIdOf());
+    if (!d || !d.hasMember(me.player_id)) return ack?.({ ok: false, error: 'not in a dungeon' });
+    let res;
+    try { res = d.kickBot(me.player_id, botId); } catch (e) { return ack?.({ ok: false, error: e.message }); }
+    if (!res || !res.ok) return ack?.(res || { ok: false, error: 'could not dismiss ally' });
+    d._broadcast();
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true });
+  });
+
   // Bail out of the FIGHT but keep WATCHING — banks your gold, leaves the run,
   // and stays in the dungeon room as a spectator (you can re-Join later).
   socket.on('dungeon:bailWatch', (_p, ack) => {

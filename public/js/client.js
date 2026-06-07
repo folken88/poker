@@ -927,6 +927,7 @@
     }
 
     const party = $('#dungeonParty');
+    const meInRun = (d.party || []).some(x => x.playerId === meId && !x.left);
     if (party) party.innerHTML = (d.party || []).map(m => {
       const pct = m.maxHp ? Math.max(0, Math.round(100 * m.hp / m.maxHp)) : 0;
       const isMe = m.playerId === meId;
@@ -941,7 +942,13 @@
       const afk = m.afkAt
         ? `<span class="dpc__afk" data-afk-at="${m.afkAt}" title="You'll auto-skip if idle">⏱ ${Math.max(0, Math.ceil((m.afkAt - Date.now()) / 1000))}s</span>`
         : '';
-      return `<div class="${cls.join(' ')}" style="position:relative">
+      // × kick: any human delver in the run can dismiss an AI ally (same idea as
+      // the poker "× kick"). Hidden for yourself, humans, and already-departed.
+      const canKick = m.isBot && meInRun && !_spectating && !m.left;
+      const kickHtml = canKick
+        ? `<button type="button" class="dpc__remove" data-dungeon-kick="${escapeAttr(m.playerId)}" title="Dismiss ${escapeAttr(m.nickname)} from the party" aria-label="Dismiss ${escapeAttr(m.nickname)} from the party">×</button>`
+        : '';
+      return `<div class="${cls.join(' ')}" style="position:relative">${kickHtml}
         <div class="dpc__ac" title="Armor Class — current total" style="position:absolute;top:3px;right:5px;font-size:0.7rem;font-weight:700;color:var(--brass-bright);background:rgba(0,0,0,0.45);border-radius:6px;padding:0 5px;line-height:1.45;pointer-events:none;z-index:5">🛡 ${Number.isFinite(m.ac) ? m.ac : '?'}</div>
         <div class="dpc__avatar"${m.crowned ? ' style="position:relative"' : ''}>${renderAvatar((m.form && m.form.art) ? m.form.art : m.avatarId)}${m.form ? `<span class="dpc__form" title="Wild Shape: ${escapeAttr(m.form.label)}" style="position:absolute;bottom:-4px;right:-2px;font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.8))">${m.form.glyph || '🐾'}</span>` : ''}${m.crowned ? `<span class="dpc__crown" title="Loot Lord" style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>${afk}
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${m.form ? ` <span class="dpc__formtag" style="color:var(--brass-bright);font-size:.82em">${escapeText(m.form.label)}</span>` : ''}${tag}</div>
@@ -1191,6 +1198,15 @@
     else if (ev.target.closest('[data-spectate-dungeon]')) spectateDungeon();
   });
   $('#dungeonLeaveBtn')?.addEventListener('click', returnFromDungeon);
+  // × kick on an AI party member — dismiss them from the dungeon run.
+  $('#dungeonParty')?.addEventListener('click', (ev) => {
+    const k = ev.target.closest?.('[data-dungeon-kick]');
+    if (!k) return;
+    ev.preventDefault();
+    socket.emit('dungeon:kick', { botId: k.dataset.dungeonKick }, (resp) => {
+      if (!resp?.ok) toast(resp?.error || 'Could not dismiss ally', true);
+    });
+  });
   $('#dungeonEnemies')?.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-enemy]'); if (!b) return;
     const uid = b.dataset.enemy;
