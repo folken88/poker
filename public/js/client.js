@@ -710,6 +710,7 @@
   let _recruitOpen = false;    // dungeon "Recruit AI ▾" dropdown open/closed
   let _spellbookOpen = false;  // caster "📖 Spellbook ▾" dropdown open/closed
   let _blindHelp = false;      // blind "learn mode" (?): keys are SPOKEN, not fired
+  let _dunCancelArm = 0;       // blind dungeon: timestamp of an armed "." cancel-run confirm
   let _spectating = false;     // watching the dungeon (not a combatant) — heckle-only
 
   function playDungeonSound(url, vol) {
@@ -1309,6 +1310,7 @@
     //       is untouched). 1 = Attack, 2..N = your abilities in kit order, ? = help
     //       mode (speak keys without firing), Return = open the next door. -----
     if (window.BlindMode?.isOn?.()) {
+      if (e.key !== '.') _dunCancelArm = 0;   // any non-"." key aborts a pending cancel-run confirm
       if (e.key === '?') { e.preventDefault(); _blindHelp = !_blindHelp; window.BlindMode.speak(`Help mode ${_blindHelp ? 'on' : 'off'}.`, 'urgent'); return; }
       const meId = state.me?.player_id;
       const meM = (d.party || []).find(m => m.playerId === meId) || {};
@@ -1320,11 +1322,13 @@
         if (_blindHelp) { window.BlindMode.speak('L: your life and status.', 'urgent'); return; }
         if (!meM.playerId) { window.BlindMode.speak('You are not in the party.', 'urgent'); return; }
         const hp = Math.max(0, meM.hp | 0), max = meM.maxHp | 0;
+        const buffs = (meM.buffs || []).map(b => String(b.label || '').toLowerCase()).filter(Boolean);
         const conds = (meM.conditions || []).map(c => String(c.label || '').toLowerCase()).filter(Boolean);
         let s = `${hp} of ${max} HP`;
         if (meM.dead) s += ', dead';
         else if (meM.downed || hp <= 0) s += ', downed';
-        if (conds.length) s += ', ' + conds.join(', ');
+        const statuses = [...buffs, ...conds];   // buffs (boons) then conditions (debuffs)
+        if (statuses.length) s += ', ' + statuses.join(', ');
         window.BlindMode.speak(s + '.', 'urgent');
         return;
       }
@@ -1343,10 +1347,25 @@
         else dungeonAction('ability', { slot: (ab.slot != null ? ab.slot : n - 2), targetUid, targetUids: alive.slice(0, 6).map(x => x.uid) });
         return;
       }
-      if ((e.key === 'Enter' || e.code === 'NumpadEnter') && d.status !== 'combat') {
+      // 0 (or Return) = open the next door between rooms.
+      if (k === '0' || ((e.key === 'Enter' || e.code === 'NumpadEnter') && d.status !== 'combat')) {
         e.preventDefault();
-        if (_blindHelp) { window.BlindMode.speak('Return: open the next door.', 'urgent'); return; }
+        if (_blindHelp) { window.BlindMode.speak('0: open the next door.', 'urgent'); return; }
+        if (d.status === 'combat') { window.BlindMode.speak('Cannot open a door during combat.', 'urgent'); return; }
         window.BlindMode.speak('Opening the door.', 'urgent'); dungeonAction('door'); return;
+      }
+      // . (period) = cancel the whole run — confirm by pressing it again (any other
+      // key aborts; the arm is cleared at the top of this handler for non-"." keys).
+      if (e.key === '.') {
+        e.preventDefault();
+        if (_blindHelp) { window.BlindMode.speak('Period: cancel the run for everyone, with confirmation.', 'urgent'); return; }
+        if (_dunCancelArm && (Date.now() - _dunCancelArm) < 6000) {
+          _dunCancelArm = 0;
+          window.BlindMode.speak('Cancelling the run.', 'urgent'); dungeonAction('cancel'); return;
+        }
+        _dunCancelArm = Date.now();
+        window.BlindMode.speak('Cancel the run for everyone? Press period again to confirm, or any other key to abort.', 'urgent');
+        return;
       }
       // Esc → session controls. If a dropdown/overlay is open, let the global Esc
       // handler close that first; otherwise jump focus to the Spectate / Leave /
