@@ -19,7 +19,29 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
-## 2026-06-06 (newest)
+## 2026-06-07 (newest)
+
+### ♿ Blind dungeon: keyboard spellbook (for Josh)
+A spellcasting flow that mirrors the sighted **📖 Spellbook ▾** popover, built for
+screen-reader play. Casters now get a single **"Spellbook"** entry in their numbered
+action list (after Attack and any class features) instead of every spell taking its
+own number — so the spellbook is always just "the last number."
+
+- **Open it** — press the spellbook's number (you'll hear *"Spellbook. Levels: 1st,
+  2nd, 3rd…"*). It announces which spell levels you actually have.
+- **Pick a level** — press **1–9** for the spell *level* (e.g. press **3** → *"3rd
+  level: Fireball, Fly, Lightning Bolt. Tab through spells, Return to cast."*).
+- **Browse spells** — **Tab** / **Shift+Tab** cycles the spells at that level, each
+  spoken by name (and *"no slots"* if it's spent).
+- **Cast** — **Return** casts the focused spell **and closes the book**. Targeting is
+  automatic: single-target spells hit your locked target (or the deadliest foe), AoE
+  hits the room, and self/ally spells (like healing) let the engine pick the best target.
+- **Back out** — **Escape** steps back a level, then closes the book.
+
+The book is browsable off-turn (so you can plan ahead); the cast itself still waits
+for your turn. Purely a client-side addition — no rule or balance changes.
+
+## 2026-06-06
 
 ### 📖 New arcane spells (Wizard & Sorcerer)
 - **4th level:** **Black Tentacles** (a room-long field that grapples a random 1d4+1

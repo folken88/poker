@@ -716,6 +716,9 @@
   let _dunEnemyIdx = -1;       // current enemy index while inspecting
   let _dunQueuedAttack = null; // blind dungeon: enemy uid chosen (Return in E-mode) to attack when your turn comes
   let _dunPrevMyTurn = false;  // edge-detect the start of the blind player's dungeon turn
+  let _dunSbMode = false;      // blind dungeon: spellbook open (numbers pick a spell LEVEL, Tab cycles spells)
+  let _dunSbLevel = null;      // blind spellbook: currently-chosen spell level
+  let _dunSbIdx = -1;          // blind spellbook: current spell index within the chosen level (Tab cycles)
   let _spectating = false;     // watching the dungeon (not a combatant) — heckle-only
 
   function playDungeonSound(url, vol) {
@@ -1356,6 +1359,91 @@
         if (c.length) s += ', ' + c.join(', ');
         return s;
       };
+      const meId = state.me?.player_id;
+      const meM = (d.party || []).find(m => m.playerId === meId) || {};
+      const kit = meM.kit || { atwill: { name: 'Attack' }, abilities: [] };
+      const myTurn = d.status === 'combat' && d.turn && d.turn.kind === 'party' && d.turn.id === meId;
+      // ----- Blind action list -----------------------------------------------
+      // 1 = Attack, then each class FEATURE (no spell level), then a single
+      // "Spellbook" entry for casters. Spells are NOT individually numbered —
+      // they're reached by opening the spellbook and picking a spell LEVEL.
+      const ord = (nn) => { const s = ['th', 'st', 'nd', 'rd'], v = nn % 100; return nn + (s[(v - 20) % 10] || s[v] || s[0]); };
+      const spells = (kit.abilities || []).filter(a => a.slvl != null);
+      const hasSpellbook = !!kit.caster && spells.length > 0;
+      const spellLevels = [...new Set(spells.map(s => s.slvl))].sort((a, b) => a - b);
+      const blindActions = [{ kind: 'attack', label: kit.atwill?.name || 'Attack' }];
+      (kit.abilities || []).forEach((ab, i) => {   // class FEATURES only (spells live in the spellbook)
+        if (ab.slvl != null) return;
+        blindActions.push({ kind: 'ability', ab, slot: (ab.slot != null ? ab.slot : i), label: ab.name });
+      });
+      if (hasSpellbook) blindActions.push({ kind: 'spellbook', label: 'Spellbook' });
+      // Fire a spell with sensible auto-targeting: single-enemy spells hit your
+      // locked target (or the deadliest foe); AoE hits everything; self/ally let
+      // the server pick (e.g. healing finds the lowest-HP ally).
+      const castSpell = (ab) => {
+        const slot = (ab.slot != null ? ab.slot : 0);
+        if (ab.target === 'enemy') {
+          const locked = _dunQueuedAttack && aliveE.find(x => x.uid === _dunQueuedAttack);
+          const tgt = locked || aliveE[0];
+          dungeonAction('ability', { slot, targetUid: tgt?.uid, targetUids: tgt ? [tgt.uid] : [] });
+        } else if (ab.target === 'aoe') {
+          dungeonAction('ability', { slot, targetUid: aliveE[0]?.uid, targetUids: aliveE.slice(0, 6).map(x => x.uid) });
+        } else {
+          dungeonAction('ability', { slot });   // self / ally — server chooses
+        }
+      };
+      // ----- Spellbook sub-mode ----------------------------------------------
+      // Active once the player opens the spellbook. Numbers pick a spell LEVEL,
+      // Tab cycles the spells at that level (spoken by name), Return casts the
+      // focused spell and closes the book, Escape backs out.
+      const closeSb = () => {
+        _dunSbMode = false; _dunSbLevel = null; _dunSbIdx = -1; _spellbookOpen = false;
+        if (document.body.dataset.screen === 'dungeon') renderDungeon();
+      };
+      if (_dunSbMode) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          if (_dunSbLevel != null) { _dunSbLevel = null; _dunSbIdx = -1; sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level, or Escape to close.`); }
+          else { closeSb(); sayU('Spellbook closed.'); }
+          return;
+        }
+        if (/^[1-9]$/.test(k)) {
+          e.preventDefault();
+          const lvl = parseInt(k, 10);
+          const at = spells.filter(s => s.slvl === lvl);
+          if (!at.length) { sayU(`No level ${ord(lvl)} spells.`); return; }
+          _dunSbLevel = lvl; _dunSbIdx = -1;
+          const names = at.map(s => s.name).join(', ');
+          sayU(`${ord(lvl)} level: ${names}. Tab through spells, Return to cast.`);
+          return;
+        }
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          if (_dunSbLevel == null) { sayU(`Pick a spell level first: ${spellLevels.map(ord).join(', ')}.`); return; }
+          const at = spells.filter(s => s.slvl === _dunSbLevel);
+          if (!at.length) { sayU('No spells at this level.'); return; }
+          _dunSbIdx = e.shiftKey ? _dunSbIdx - 1 : _dunSbIdx + 1;
+          if (_dunSbIdx < 0) _dunSbIdx = at.length - 1;
+          if (_dunSbIdx >= at.length) _dunSbIdx = 0;
+          const sp = at[_dunSbIdx];
+          sayU(`${sp.name}${sp.available === false ? ', no slots' : ''}.`);
+          return;
+        }
+        if (e.key === 'Enter' || e.code === 'NumpadEnter') {
+          e.preventDefault();
+          if (_dunSbLevel == null || _dunSbIdx < 0) { sayU('Tab to a spell first, then Return to cast.'); return; }
+          const at = spells.filter(s => s.slvl === _dunSbLevel);
+          const sp = at[_dunSbIdx];
+          if (!sp) { sayU('No spell selected.'); return; }
+          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (sp.available === false) { sayU(`${sp.name} is out of slots.`); return; }
+          closeSb();
+          sayU(`Casting ${sp.name}.`);
+          castSpell(sp);
+          return;
+        }
+        // Any other key falls through to the normal handlers below.
+      }
       // E = toggle "inspect enemies" browse mode.
       if (k === 'e') {
         e.preventDefault();
@@ -1377,7 +1465,6 @@
       }
       if (_dunEnemyMode && e.key === 'Escape') { e.preventDefault(); _dunEnemyMode = false; sayU('Exited enemy inspect.'); return; }
       // Treasure: R = roll a d20, P = pass — when it's mine to decide (spoken).
-      const meId = state.me?.player_id;
       if ((k === 'r' || k === 'p') && d.lootRoll && (d.lootRoll.eligible || []).includes(meId) && (d.lootRoll.decided || {})[meId] === undefined) {
         e.preventDefault();
         if (_blindHelp) { sayU(k === 'r' ? 'R: roll for the treasure.' : 'P: pass on the treasure.'); return; }
@@ -1385,9 +1472,6 @@
         else { sayU('Passing.'); dungeonAction('lootroll', { roll: false }); }
         return;
       }
-      const meM = (d.party || []).find(m => m.playerId === meId) || {};
-      const kit = meM.kit || { atwill: { name: 'Attack' }, abilities: [] };
-      const myTurn = d.status === 'combat' && d.turn && d.turn.kind === 'party' && d.turn.id === meId;
       // Return while INSPECTING enemies (E mode): lock the current enemy as your
       // target — attack it now if it's your turn, otherwise queue it to auto-attack
       // the moment your turn begins.
@@ -1438,26 +1522,36 @@
           else dungeonAction('ability', { slot: pend.slot, targetUid: tgt.uid, targetUids: [tgt.uid] });
           return;
         }
-        // (b) Otherwise the number chooses an action: 1 = Attack, 2..N = abilities.
-        const ab = n === 1 ? null : (kit.abilities || [])[n - 2];
-        const label = n === 1 ? (kit.atwill?.name || 'Attack') : (ab?.name || null);
-        if (!label) { window.BlindMode.speak(`No action ${n}.`, 'urgent'); return; }
-        if (_blindHelp) { window.BlindMode.speak(`${n}: ${label}.`, 'urgent'); return; }
+        // (b) Otherwise the number chooses an action from the blind action list:
+        //     1 = Attack, then each class FEATURE, then "Spellbook" (casters).
+        const act = blindActions[n - 1];
+        if (!act) { window.BlindMode.speak(`No action ${n}.`, 'urgent'); return; }
+        if (_blindHelp) { window.BlindMode.speak(`${n}: ${act.label}.`, 'urgent'); return; }
+        // Spellbook → open the sub-mode (numbers pick a spell LEVEL, Tab cycles
+        // spells, Return casts). Browsable off-turn; the cast itself checks turn.
+        if (act.kind === 'spellbook') {
+          _dunSbMode = true; _dunSbLevel = null; _dunSbIdx = -1; _spellbookOpen = true;
+          if (document.body.dataset.screen === 'dungeon') renderDungeon();
+          sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level, Tab through spells, Return to cast, Escape to close.`);
+          return;
+        }
         if (!myTurn) { window.BlindMode.speak('Not your turn.', 'urgent'); return; }
+        const ab = act.ab || null;
+        const label = act.label;
         // Single-enemy-target actions (basic attack, or an ability that targets one
         // enemy) with MORE THAN ONE foe alive → ask which enemy; the next number
         // selects it. One foe (or an AoE/self/ally action) just fires.
-        const singleEnemyTarget = n === 1 || (ab && ab.target === 'enemy');
+        const singleEnemyTarget = act.kind === 'attack' || (ab && ab.target === 'enemy');
         if (singleEnemyTarget && alive.length > 1) {
-          _dunTarget = { kind: n === 1 ? 'attack' : 'ability', slot: (ab && (ab.slot != null ? ab.slot : n - 2)), label };
+          _dunTarget = { kind: act.kind === 'attack' ? 'attack' : 'ability', slot: act.slot, label };
           const list = alive.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.cr ? `, CR ${x.cr}` : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
           window.BlindMode.speak(`${label} — select a target, deadliest first: ${list}.`, 'urgent');
           return;
         }
         const targetUid = alive[0]?.uid;
         window.BlindMode.speak(`${label}.`, 'urgent');
-        if (n === 1) dungeonAction('attack', { targetUid });
-        else dungeonAction('ability', { slot: (ab.slot != null ? ab.slot : n - 2), targetUid, targetUids: alive.slice(0, 6).map(x => x.uid) });
+        if (act.kind === 'attack') dungeonAction('attack', { targetUid });
+        else dungeonAction('ability', { slot: act.slot, targetUid, targetUids: alive.slice(0, 6).map(x => x.uid) });
         return;
       }
       // 0 (or Return) = open the next door between rooms.
