@@ -359,7 +359,7 @@
   <!-- Paper-doll loot-bank popover. Lives at top level (not inside a screen) so
        it floats over EITHER the poker table or the dungeon — opened by
        #sidebarBankToggle (table) or #dungeonBankToggle (dungeon). -->
-  <div id="bankDoll" class="bank-doll" hidden role="dialog" aria-label="My Loot Bank — equipped gear, buy, hock"></div>
+  <div id="bankDoll" class="bank-doll" hidden role="dialog" aria-modal="true" aria-label="My Loot Bank — equipped gear, buy, hock"></div>
 
   <!-- ===== Reset confirm modal ===== -->
   <div class="modal" id="resetModal" hidden role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
@@ -496,6 +496,6 @@
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
   <script src="/js/cards.js?v=20260602-abadar"></script>
   <script src="/js/blindMode.js?v=20260605-money"></script>
-  <script src="/js/client.js?v=20260607-a11ymenu"></script>
+  <script src="/js/client.js?v=20260607-banka11y"></script>
 </body>
 </html>

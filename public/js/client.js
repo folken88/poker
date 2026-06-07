@@ -2499,6 +2499,7 @@
   // doll of the player's equipped gear (buy / hock per slot). Dismisses on a
   // click outside, the ✕, or Escape.
   let _bankDollOpen = false;
+  let _bankOpener = null;   // the toggle that opened the doll — focus returns here on close
   // A compact equipment-slot card: icon + tier badge + buy/hock buttons.
   function bankSlotCard(slot, gear, chips) {
     const meta = GEAR_META[slot];
@@ -2510,10 +2511,10 @@
     const tierTxt = cur ? `+${cur}` : (slot === 'armor' ? 'Chain' : '—');
     const tierCls = cur === 5 ? 'is-max' : cur ? 'is-on' : 'is-off';
     const buyBtn = next
-      ? `<button type="button" class="bank__btn bank__btn--buy" ${canAfford ? '' : 'disabled'} data-buy-slot="${slot}" data-buy-tier="${next}" title="${cur ? 'Upgrade to' : 'Buy a'} +${next} ${meta.label} — ${upgradeCost.toLocaleString()} gp">${cur ? '⬆ +' : 'Buy +'}${next} · ${formatChips(upgradeCost)}</button>`
-      : `<button type="button" class="bank__btn bank__btn--max" disabled>+5 ✓</button>`;
+      ? `<button type="button" class="bank__btn bank__btn--buy" ${canAfford ? '' : 'disabled'} data-buy-slot="${slot}" data-buy-tier="${next}" aria-label="${cur ? 'Upgrade to' : 'Buy'} +${next} ${meta.label}, ${upgradeCost.toLocaleString()} gold${canAfford ? '' : ' — not enough gold'}" title="${cur ? 'Upgrade to' : 'Buy a'} +${next} ${meta.label} — ${upgradeCost.toLocaleString()} gp">${cur ? '⬆ +' : 'Buy +'}${next} · ${formatChips(upgradeCost)}</button>`
+      : `<button type="button" class="bank__btn bank__btn--max" disabled aria-label="${meta.label} at maximum, plus 5">+5 ✓</button>`;
     const sellBtn = cur
-      ? `<button type="button" class="bank__btn bank__btn--sell" data-sell-slot="${slot}" title="Hock for ${sellValue.toLocaleString()} gp (50% market)">Hock +${formatChips(sellValue)}</button>`
+      ? `<button type="button" class="bank__btn bank__btn--sell" data-sell-slot="${slot}" aria-label="Hock +${cur} ${meta.label} for ${sellValue.toLocaleString()} gold" title="Hock for ${sellValue.toLocaleString()} gp (50% market)">Hock +${formatChips(sellValue)}</button>`
       : '';
     return `<div class="doll-slot">
         <div class="doll-slot__icon" title="${meta.label}">${GEAR_SVGS[slot]}<span class="doll-slot__tier ${tierCls}">${tierTxt}</span></div>
@@ -2556,19 +2557,58 @@
       el.style.left = `${Math.round(Math.max(8, Math.min(r.left, window.innerWidth - 312)))}px`;
     }
     _bankToggles().forEach(b => b.setAttribute('aria-expanded', 'true'));
+    // Accessibility: move keyboard/screen-reader focus INTO the dialog so it can
+    // be tabbed through (it lives at the end of the DOM, far from the toggle).
+    _bankOpener = anchor || null;
+    const first = el.querySelector('button:not([disabled]), [href], input, select, [tabindex]:not([tabindex="-1"])');
+    if (first) { try { first.focus(); } catch (_) {} }
   }
   function closeBankDoll() {
     const el = $('#bankDoll'); if (el) el.hidden = true;
     _bankDollOpen = false;
     _bankToggles().forEach(b => b.setAttribute('aria-expanded', 'false'));
+    // Return focus to whichever toggle opened it (Escape / ✕ / outside-click).
+    if (_bankOpener) { try { _bankOpener.focus(); } catch (_) {} _bankOpener = null; }
   }
-  // Re-render the open doll when chips/gear change (called on roster/table state).
-  function renderSidebarBank() { if (_bankDollOpen) { const el = $('#bankDoll'); if (el) el.innerHTML = buildPaperDollHtml(); } }
+  // Re-render the open doll when chips/gear change — PRESERVING which control was
+  // focused, so a keyboard/SR user isn't kicked out when the table state updates.
+  function renderSidebarBank() {
+    if (!_bankDollOpen) return;
+    const el = $('#bankDoll'); if (!el) return;
+    const a = document.activeElement;
+    let key = null;
+    if (a && el.contains(a)) {
+      key = a.dataset.buySlot ? 'buy:' + a.dataset.buySlot
+          : a.dataset.sellSlot ? 'sell:' + a.dataset.sellSlot
+          : a.hasAttribute('data-bank-close') ? 'close' : null;
+    }
+    el.innerHTML = buildPaperDollHtml();
+    if (key) {
+      const sel = key === 'close' ? '[data-bank-close]'
+                : key.startsWith('buy:') ? `[data-buy-slot="${key.slice(4)}"]`
+                : `[data-sell-slot="${key.slice(5)}"]`;
+      const next = el.querySelector(sel); if (next) { try { next.focus(); } catch (_) {} }
+    }
+  }
   function renderBank() { /* legacy no-op — gear bank also lives in the action panel */ }
 
   $('#sidebarBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankDollOpen ? closeBankDoll() : openBankDoll($('#sidebarBankToggle')); });
   $('#dungeonBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankDollOpen ? closeBankDoll() : openBankDoll($('#dungeonBankToggle')); });
   $('#bankDoll')?.addEventListener('click', (e) => { if (e.target.closest('[data-bank-close]')) closeBankDoll(); });
+  // Keep keyboard focus INSIDE the open bank dialog (Tab wraps), and let Escape
+  // close it from anywhere within. So a SR/keyboard user is "contained" in the
+  // bank and tabs cleanly through its controls until they Escape back out.
+  $('#bankDoll')?.addEventListener('keydown', (e) => {
+    if (!_bankDollOpen) return;
+    const el = $('#bankDoll'); if (!el) return;
+    if (e.key === 'Escape') { e.stopPropagation(); closeBankDoll(); return; }
+    if (e.key !== 'Tab') return;
+    const f = [...el.querySelectorAll('button:not([disabled]), [href], input, select, [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
   // Click anywhere outside the doll (and not a toggle / a gear button) closes it.
   document.addEventListener('click', (e) => {
     if (!_bankDollOpen) return;
