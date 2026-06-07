@@ -1999,9 +1999,11 @@
           : (!seat.isBot && seat.isAfk
               ? `<span class="seat__afk-tag" title="Disconnected — sitting out until they return">AFK</span>`
               : '');
-        const avatarBadge = seat.isBot
-          ? `<span class="seat__avatar-ai" title="AI player">AI</span>`
-          : '';
+        const avatarBadge = seat.controlledHuman
+          ? `<span class="seat__avatar-ai" style="background:#2e7d32;border-color:#43a047" title="Human-controlled">${escapeText(seat.controllerName || 'Human')}</span>`
+          : seat.isBot
+            ? `<span class="seat__avatar-ai" title="AI player">AI</span>`
+            : '';
         // Subtle intelligence-tier ring on AI tokens — bronze = low,
         // silver = average, gold = high. Intelligence comes from the roster
         // broadcast (state.roster carries bot_intelligence). Humans keep the

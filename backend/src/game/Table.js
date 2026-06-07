@@ -15,6 +15,11 @@ const { botRebuyMessage, botBorrowMessage, botHockMessage, humanRebuyMessage, bu
 const BOT_DEBT_CEILING = 30000;   // ~6 rebuys deep
 const banter = require('../bot/banter');
 
+// Which human "owns" each AI character — shown on the token (top-right) in place
+// of the "AI" tag while that human is driving the bot's seat. Keyed by playerId
+// (lowercase). Unknown owners fall back to a generic "Human" tag client-side.
+const BOT_OWNERS = { concetta: 'Josh', dinvaya: 'Josh' };
+
 // Showdown pause — how long the final hand stays on screen before clearing.
 // 15 s by default so everyone can read winners, hole cards, and the board.
 // Override per-table via env var HAND_RESULT_PAUSE_MS if you want it shorter.
@@ -1487,6 +1492,11 @@ class Table {
         inHand: s.inHand,
         isBot: s.isBot,
         botMode: s.isBot ? (this.bots.get(s.playerId)?.mode || null) : null,
+        // A human has taken over an AI character's seat (bot record, but not
+        // bot-driven right now). The token shows the controller's name instead of "AI".
+        controlledHuman: !s.isEmpty() && !!s.player?.is_bot && !s.isBot,
+        controllerName: (!s.isEmpty() && !!s.player?.is_bot && !s.isBot)
+          ? (BOT_OWNERS[String(s.playerId).toLowerCase()] || 'Human') : null,
         isAfk: this._isSeatAfk(s),
         // True when a human clicked "× remove this bot" mid-hand. The seat
         // will vacate as soon as the current hand resolves.
