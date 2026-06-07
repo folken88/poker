@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260607-a11y3" />
+  <link rel="stylesheet" href="/css/table.css?v=20260607-a11y4" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -178,38 +178,11 @@
     </header>
 
     <main class="table-wrap">
-      <!-- ===== LEFT perimeter: collapsible Loot Bank + hand rankings =====
-           Loot Bank header is a button — click to expand/collapse the
-           gear rows + purchase buttons. State persists per tab via
-           sessionStorage. Hand rankings stay visible underneath
-           regardless so the reference is always one glance away. -->
-      <aside class="help-panel help-panel--left help-panel--bank" aria-label="My loot bank and hand rankings">
-        <button type="button" class="help-panel__collapser" id="sidebarBankToggle"
-                aria-expanded="false" aria-haspopup="dialog" aria-controls="bankDoll">
-          <span class="help-panel__title">🎒 My Loot Bank</span>
-          <span class="help-panel__chevron" aria-hidden="true">▾</span>
-        </button>
-
-        <!-- Collapsed by default: a native <details> keeps this reference OUT of
-             the screen-reader tree until opened, so VoiceOver doesn't get caught
-             traversing the rankings list every time it passes the sidebar. -->
-        <details class="help-panel__ranks">
-          <summary class="help-panel__title help-panel__title--ranks">Hand rankings</summary>
-          <ol class="help-panel__rankings">
-            <li><strong>Royal Flush</strong> <em>10-J-Q-K-A, same suit</em></li>
-            <li><strong>Straight Flush</strong> <em>5 in a row, same suit</em></li>
-            <li><strong>Four of a Kind</strong></li>
-            <li><strong>Full House</strong> <em>three + a pair</em></li>
-            <li><strong>Flush</strong> <em>5 same suit</em></li>
-            <li><strong>Straight</strong> <em>5 in a row</em></li>
-            <li><strong>Three of a Kind</strong></li>
-            <li><strong>Two Pair</strong></li>
-            <li><strong>One Pair</strong></li>
-            <li><strong>High Card</strong></li>
-          </ol>
-        </details>
-      </aside>
-
+      <!-- ===== Felt FIRST in the DOM so a keyboard / screen-reader player tabs
+           straight to the seats + action panel. The reference asides (loot bank,
+           hand rankings, leaderboard) now come AFTER the felt — pulled back to the
+           perimeter visually with CSS `order` — so they no longer sit in front of
+           the essential play controls in the tab order. -->
       <div class="felt">
         <div class="seat-ring" id="seatRing"></div>
         <!-- Transient card-dealing animation layer. Lives OUTSIDE #seatRing so
@@ -236,13 +209,42 @@
         </div>
       </div>
 
+      <!-- ===== LEFT perimeter: collapsible Loot Bank + hand rankings =====
+           After the felt in the DOM (tab order); CSS `order:-1` keeps it on the
+           left visually. Hand rankings is reference-only, so its summary is taken
+           OUT of the Tab sequence (tabindex=-1) — VoiceOver can still reach it via
+           the rotor/headings, but a player tabbing to act never lands in it. -->
+      <aside class="help-panel help-panel--left help-panel--bank" aria-label="My loot bank and hand rankings">
+        <button type="button" class="help-panel__collapser" id="sidebarBankToggle"
+                aria-expanded="false" aria-haspopup="dialog" aria-controls="bankDoll">
+          <span class="help-panel__title">🎒 My Loot Bank</span>
+          <span class="help-panel__chevron" aria-hidden="true">▾</span>
+        </button>
+
+        <details class="help-panel__ranks">
+          <summary class="help-panel__title help-panel__title--ranks" tabindex="-1">Hand rankings</summary>
+          <ol class="help-panel__rankings">
+            <li><strong>Royal Flush</strong> <em>10-J-Q-K-A, same suit</em></li>
+            <li><strong>Straight Flush</strong> <em>5 in a row, same suit</em></li>
+            <li><strong>Four of a Kind</strong></li>
+            <li><strong>Full House</strong> <em>three + a pair</em></li>
+            <li><strong>Flush</strong> <em>5 same suit</em></li>
+            <li><strong>Straight</strong> <em>5 in a row</em></li>
+            <li><strong>Three of a Kind</strong></li>
+            <li><strong>Two Pair</strong></li>
+            <li><strong>One Pair</strong></li>
+            <li><strong>High Card</strong></li>
+          </ol>
+        </details>
+      </aside>
+
       <!-- ===== RIGHT perimeter: Live wealth leaderboard ===== -->
       <aside class="help-panel help-panel--right help-panel--leaderboard" aria-label="Leaderboard">
         <div class="lb-head">
           <h3 class="help-panel__title">🏆 Leaderboard</h3>
           <div class="lb-records__filter" id="sidebarLbFilter" role="group" aria-label="Filter leaderboard by player type">
-            <button type="button" class="lb-records__fbtn is-active" data-lb-filter="human" aria-label="Humans" title="Humans only">🧑 Hu</button>
-            <button type="button" class="lb-records__fbtn" data-lb-filter="all" title="Everyone (humans + AI)">All</button>
+            <button type="button" tabindex="-1" class="lb-records__fbtn is-active" data-lb-filter="human" aria-label="Humans" title="Humans only">🧑 Hu</button>
+            <button type="button" tabindex="-1" class="lb-records__fbtn" data-lb-filter="all" title="Everyone (humans + AI)">All</button>
           </div>
         </div>
         <p class="help-panel__sub">Chips + magic-item value, updated in real time. Goal: full +5 set = LOOT LORD.</p>
@@ -251,8 +253,8 @@
           <div class="lb-records__head">
             <h4 class="lb-records__title">📜 Hall of Records</h4>
             <div class="lb-records__filter" role="group" aria-label="Filter records by player type">
-              <button type="button" class="lb-records__fbtn is-active" data-rec-filter="human" aria-label="Humans" title="Humans only">🧑 Hu</button>
-              <button type="button" class="lb-records__fbtn" data-rec-filter="all" title="Everyone (humans + AI)">All</button>
+              <button type="button" tabindex="-1" class="lb-records__fbtn is-active" data-rec-filter="human" aria-label="Humans" title="Humans only">🧑 Hu</button>
+              <button type="button" tabindex="-1" class="lb-records__fbtn" data-rec-filter="all" title="Everyone (humans + AI)">All</button>
             </div>
           </div>
           <div class="lb-records__row" id="recordBiggestWin"></div>

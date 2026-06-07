@@ -1219,6 +1219,12 @@ option.weapon-nonprof { color: #cc5500; }
   min-height: 0;
 }
 .felt-col { display: contents; }  /* reserved for future grouping */
+/* The reference asides come AFTER the felt in the DOM (so the felt's seats +
+   action panel lead the tab order for keyboard/screen-reader play); flex `order`
+   pulls them back to the left / right visually. */
+.help-panel--left  { order: -1; }
+.felt              { order: 0; }
+.help-panel--right { order: 1; }
 
 /* ===== Perimeter help panels ===== */
 .help-panel {
