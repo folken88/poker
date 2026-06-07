@@ -2824,11 +2824,11 @@ class Dungeon {
   }
   // Infernal Healing, Greater — fast healing 4 on the most-wounded ally (or a chosen
   // ally). Ticks at the start of that ally's turn (see _advanceToActor); lasts the room.
-  _abInfernalHeal(m, ab, payload) {
-    const party = this.livingParty();
-    let target = null;
-    if (payload && payload.targetUid) target = party.find(a => a.playerId === payload.targetUid || a.uid === payload.targetUid);
-    if (!target) target = party.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
+  _abInfernalHeal(m, ab) {
+    // Always lands on the ally with the LEAST current HP right now; if everyone is
+    // at full HP, the caster takes it themselves.
+    const wounded = this.livingParty().filter(a => a.hp < a.maxHp);
+    const target = wounded.length ? wounded.slice().sort((a, b) => a.hp - b.hp)[0] : m;
     target.infernalHeal = ab.heal || 4;
     const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
     this._note(`${ab.icon} ${m.nickname} anoints ${who} with infernal ichor — fast healing ${target.infernalHeal} HP/turn for the rest of the room.`, ab.sound);
