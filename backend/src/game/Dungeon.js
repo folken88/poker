@@ -553,6 +553,12 @@ class Dungeon {
 
   hasMember(playerId) { const m = this.member(playerId); return !!(m && !m.left && m.hp > 0); }
   botCount() { return this.party.filter(m => m.isBot && !m.left && m.hp > 0).length; }
+  // Orc / half-orc FEROCITY: these characters keep fighting at 0 HP and below
+  // (until slain at −10) instead of dropping when downed. Keyed by name/playerId.
+  _hasFerocity(m) {
+    const id = String((m && (m.trueNick || m.nickname || m.playerId)) || '').toLowerCase();
+    return id === 'tokala' || id === 'kai ginn' || id === 'kai gin';
+  }
 
   addMember(player, isBot = false) {
     const playerId = player.player_id;
@@ -667,8 +673,9 @@ class Dungeon {
         cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
         form: m.form ? { key: m.form.key, label: m.form.label, glyph: m.form.glyph, art: m.form.art } : null,   // active Wild Shape (drives the token swap on the hero card)
         level: m.level, ...this._xpInfo(m), ...this._heroACs(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
-        dead: !!m.dead, downed: !m.dead && !m.left && m.hp <= 0,
-        dyingHp: (!m.dead && !m.left && m.hp <= 0) ? m.hp : null,
+        dead: !!m.dead, downed: !m.dead && !m.left && m.hp <= 0 && !this._hasFerocity(m),
+        dyingHp: (!m.dead && !m.left && m.hp <= 0 && !this._hasFerocity(m)) ? m.hp : null,
+        ferocious: !m.dead && !m.left && m.hp <= 0 && this._hasFerocity(m),   // orc fighting on at/below 0 HP
         left: !!m.left,
         sickened: m.sickened > 0, paralyzed: m.paralyzed > 0,
         // Auto-skip countdown — only for the human whose turn it currently is.
@@ -951,13 +958,27 @@ class Dungeon {
     const m = this.member(t.id);
     if (!m || m.left) return this._nextTurn();
     m._curatorBuffUsed = false;   // Curator: the once-per-turn swift buff resets each turn
+    // Infernal Healing (Greater): fast healing at the START of the turn — BEFORE the
+    // down/skip check, so it can knit a dying ally (below 0 HP) back onto their feet.
+    if (m.infernalHeal > 0 && !m.dead && m.hp < m.maxHp) {
+      const before = m.hp; m.hp = Math.min(m.maxHp, m.hp + m.infernalHeal);
+      const gained = m.hp - before;
+      if (before <= 0 && m.hp > 0) { m.downed = false; this._note(`🩸 ${m.nickname}'s infernal ichor knits ${gained} HP — back on their feet!`); }
+      else this._note(`🩸 ${m.nickname}'s infernal ichor knits ${gained} HP.`);
+    }
     if (m.hp <= 0) {
+      // Orc / half-orc FEROCITY: keep fighting at 0 HP and below (until slain at
+      // −10) — take the turn normally instead of dropping.
+      if (this._hasFerocity(m) && !m.dead && m.hp > -10) {
+        this._note(`💢 ${m.nickname} fights on through the wounds — Ferocity! (${m.hp} HP)`);
+        this._broadcast();
+      }
       // A DOWNED (but not dead) paladin refuses to fall: on their turn, Hero's
       // Defiance auto-fires — a lay-on-hands heal that brings them back to their
       // feet, after which they take their turn normally (it's an immediate action
       // in PF1). If it's unavailable/used or fails, the turn is skipped as usual.
-      if (m.dead || !this._tryHeroesDefiance(m)) return this._nextTurn();
-      this._broadcast();   // back up — fall through and act this turn
+      else if (m.dead || !this._tryHeroesDefiance(m)) return this._nextTurn();
+      else this._broadcast();   // back up — fall through and act this turn
     }
     // Spiritual Weapon fights independently — it strikes at the start of the
     // cleric's turn (even if they're held), then the cleric does their own thing.
@@ -977,10 +998,6 @@ class Dungeon {
     if (m.judgment === 'healing' && m.hp > 0 && m.hp < m.maxHp) {   // Judgement: Healing regen each turn
       const h = Math.max(1, Math.floor((m.level || 1) / 3)); m.hp = Math.min(m.maxHp, m.hp + h);
       this._note(`💗 ${m.nickname}'s Judgement of Healing mends ${h} HP.`);
-    }
-    if (m.infernalHeal > 0 && m.hp > 0 && m.hp < m.maxHp) {   // Infernal Healing (Greater): fast healing each turn
-      const before = m.hp; m.hp = Math.min(m.maxHp, m.hp + m.infernalHeal);
-      this._note(`🩸 ${m.nickname}'s infernal ichor knits ${m.hp - before} HP.`);
     }
     if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, aiStepMs()); this._broadcast(); }
     else { this._armAfkTimer(m); this._broadcast(); }   // human — wait for input
@@ -2831,9 +2848,10 @@ class Dungeon {
   // Infernal Healing, Greater — fast healing 4 on the most-wounded ally (or a chosen
   // ally). Ticks at the start of that ally's turn (see _advanceToActor); lasts the room.
   _abInfernalHeal(m, ab) {
-    // Always lands on the ally with the LEAST current HP right now; if everyone is
-    // at full HP, the caster takes it themselves.
-    const wounded = this.livingParty().filter(a => a.hp < a.maxHp);
+    // Always lands on the ally with the LEAST current HP right now — INCLUDING
+    // downed/dying allies below 0 HP (the fast healing can knit them back up).
+    // If everyone is at full HP, the caster takes it themselves.
+    const wounded = this.party.filter(a => !a.left && !a.dead && a.hp < a.maxHp);
     const target = wounded.length ? wounded.slice().sort((a, b) => a.hp - b.hp)[0] : m;
     target.infernalHeal = ab.heal || 4;
     const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
