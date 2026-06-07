@@ -359,7 +359,7 @@ class Bot {
     // mode fold threshold mucks them even when it's cheap to see a flop. Only pure
     // trash (v < 0.08) still folds; strong hands (v ≥ raiseThresh) fall through to
     // raise; a real raise (toCall above 1.5 BB) routes to the normal fold logic.
-    if (street === 0 && toCall <= bb * 1.5 && v >= 0.08 && v < tuning.raiseThresh) {
+    if (street === 0 && toCall <= bb * 1.5 && v >= 0.15 && v < tuning.raiseThresh) {
       return { action: 'call', reason: `limp v=${v.toFixed(2)} odds=${potOdds.toFixed(2)} ${tag}` };
     }
 

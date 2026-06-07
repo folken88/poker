@@ -1187,6 +1187,9 @@ class Table {
         tableId: this.id,
         hand: this.hand,
         durationMs: (this.hand.completedAt || Date.now()) - this.hand.startedAt,
+        // Mark which seats were AI vs human-driven (seat.isBot is false when a human
+        // has taken over a bot character) so analysis can exclude human-played hands.
+        botByPlayer: Object.fromEntries((this.seats || []).filter(s => s && s.playerId).map(s => [s.playerId, !!s.isBot])),
       });
     } catch (e) { console.error('[hand-log]', e); }
 

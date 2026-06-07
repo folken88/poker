@@ -43,7 +43,7 @@ function appendLine(file, obj) {
 /** Append one blind-mode telemetry row (server timestamp + player + message). */
 function logBlind(row) { appendLine(BLIND_LOG, row); }
 
-function logHand({ tableId, hand, durationMs }) {
+function logHand({ tableId, hand, durationMs, botByPlayer = {} }) {
   const row = {
     ts: new Date().toISOString(),
     table: tableId,
@@ -61,6 +61,10 @@ function logHand({ tableId, hand, durationMs }) {
       totalIn:    p.totalIn,
       folded:     p.folded,
       allIn:      p.allIn,
+      // AI-driven (true) or a HUMAN who took over the character (false) this hand;
+      // null = unknown. Lets offline analysis judge a bot without counting a
+      // human's hands against it.
+      bot:        (p.playerId in botByPlayer) ? botByPlayer[p.playerId] : null,
     })),
     pots: hand.pot.buildSidePots().map(p => ({ amount: p.amount, eligible: [...p.eligible] })),
     winners: hand.winners,
