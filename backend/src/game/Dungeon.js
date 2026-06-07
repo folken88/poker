@@ -206,6 +206,10 @@ const BUFF_META = {
   protevil:      { label: 'Protection from Evil', desc: '+2 AC & +2 saves (this room)' },
   magearmor:     { label: 'Mage Armor',      desc: '+4 armor AC (this dungeon)' },
   stoneskin:     { label: 'Stoneskin',       desc: 'DR 10 vs physical blows (this room)' },
+  stoneskincomm: { label: 'Stoneskin (Communal)', desc: 'DR 10 vs physical blows — whole party (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
+  ironskin:      { label: 'Iron Skin',       desc: 'DR 10 vs physical blows (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
+  barkskin:      { label: 'Barkskin',        desc: '+3 natural-armor AC (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
+  magicfang:     { label: 'Magic Fang',      desc: '+1 to hit & damage — natural weapons (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   catsgrace:     { label: "Cat's Grace",     desc: '+2 AC & +1 to hit — Dexterity (this room)' },
   bullsstrength: { label: "Bull's Strength", desc: '+2 hit & damage — Strength (this room)' },
   bearsendurance:{ label: "Bear's Endurance",desc: '+temporary HP — Constitution (this room)' },
@@ -626,12 +630,12 @@ class Dungeon {
   // their own flags.
   _buffList(m) {
     const I = '/dungeon/buffs/', c = [], pushed = new Set();
-    const push = (k, label, desc) => { if (pushed.has(k)) return; pushed.add(k); c.push({ key: k, label, desc, icon: `${I}${k}.webp` }); };
+    const push = (k, label, desc, icon) => { if (pushed.has(k)) return; pushed.add(k); c.push({ key: k, label, desc, icon: icon || `${I}${k}.webp` }); };
     // Every applied spell/feat buff carries its own icon via BUFF_META — walk the
     // recorded keys so any buff (new ones included) lights up automatically.
     for (const key of [...Object.keys(m.buffApplied || {}), ...Object.keys(m.runBuffApplied || {})]) {
       const meta = BUFF_META[key];
-      if (meta) push(key, meta.label, meta.desc);
+      if (meta) push(key, meta.label, meta.desc, meta.icon);
     }
     // Transient states tracked by their own flags, not in buffApplied:
     if (m.smiteActive)  push('smite', 'Smite', '+hit & +2×level damage vs evil');
