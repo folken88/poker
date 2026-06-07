@@ -960,8 +960,12 @@ option.weapon-nonprof { color: #cc5500; }
   line-height: 1.4;
   text-align: left;
 }
+/* NOTE: deliberately NO :focus-within here — it made the menu pop open the
+   instant the 🔊 button received keyboard/VoiceOver focus (so a blind player
+   tabbing past it got trapped in the open menu). It now opens ONLY on mouse
+   hover or an explicit click/Enter (.is-open, set in JS), and Esc/outside-click
+   closes it. */
 .audio-menu:hover .audio-menu__pop,
-.audio-menu:focus-within .audio-menu__pop,
 .audio-menu.is-open .audio-menu__pop {
   opacity: 1;
   pointer-events: auto;

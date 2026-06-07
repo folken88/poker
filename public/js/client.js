@@ -1114,11 +1114,16 @@
         }
         acts.innerHTML =
           `<div class="dungeon__actstatus">${status}</div>` +
-          `<div class="dungeon__actrow dungeon__actrow--abilities">` +
+          // Two labelled groups (with screen-reader headings) so a blind player can
+          // jump by heading and tab through each set on its own: the combat/play
+          // actions, then the navigation/session controls.
+          `<div class="dungeon__actrow dungeon__actrow--abilities" role="group" aria-label="Combat actions">` +
+            `<h2 class="sr-only">Combat actions</h2>` +
             B('attack', atName, myTurn, combat) +
             abilHtml +
           `</div>` +
-          `<div class="dungeon__actrow dungeon__actrow--nav">` +
+          `<div class="dungeon__actrow dungeon__actrow--nav" role="group" aria-label="Navigation and session controls">` +
+            `<h2 class="sr-only">Navigation and session controls</h2>` +
             B('door', '🚪 Open door', !combat && !rolling, !combat) +
             `<button class="btn btn--ghost" data-dact="spectate" title="Bank your gold and leave the fight — but keep watching from the sidelines">👁 Spectate</button>` +
             `<button class="btn btn--ghost" data-dact="leave" title="Bank your gold and go back to the poker table">↩ Leave dungeon</button>` +
