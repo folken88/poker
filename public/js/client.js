@@ -1332,7 +1332,11 @@
       if (e.key !== '.') _dunCancelArm = 0;   // any non-"." key aborts a pending cancel-run confirm
       if (e.key === '?') { e.preventDefault(); _blindHelp = !_blindHelp; window.BlindMode.speak(`Help mode ${_blindHelp ? 'on' : 'off'}.`, 'urgent'); return; }
       const sayU = (t) => window.BlindMode.speak(t, 'urgent');
-      const aliveE = (d.enemies || []).filter(x => x.alive);
+      // Order foes by CR (highest threat first) for blind enumeration + targeting,
+      // so "enemy 1" is always the most dangerous. Handles fractional CRs ("1/3").
+      const crNum = (cr) => { const s = String(cr ?? ''); if (s.includes('/')) { const p = s.split('/'); const a = parseFloat(p[0]), b = parseFloat(p[1]); return b ? a / b : 0; } const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
+      const byCr = (a, b) => crNum(b.cr) - crNum(a.cr);
+      const aliveE = (d.enemies || []).filter(x => x.alive).sort(byCr);
       const enemyDesc = (en, i) => {
         const c = (en.conditions || []).map(x => String(x.label || '').toLowerCase()).filter(Boolean);
         let s = `${i + 1}: ${en.name}, ${Math.max(0, en.hp | 0)} of ${en.maxHp | 0} HP`;
@@ -1392,7 +1396,7 @@
       if (/^[1-9]$/.test(k)) {
         e.preventDefault();
         const n = parseInt(k, 10);
-        const alive = (d.enemies || []).filter(x => x.alive);
+        const alive = (d.enemies || []).filter(x => x.alive).sort(byCr);   // highest-CR first
         // (0) In enemy-inspect mode, a number jumps to + describes that enemy.
         if (_dunEnemyMode) {
           const en = alive[n - 1];
@@ -1422,8 +1426,8 @@
         const singleEnemyTarget = n === 1 || (ab && ab.target === 'enemy');
         if (singleEnemyTarget && alive.length > 1) {
           _dunTarget = { kind: n === 1 ? 'attack' : 'ability', slot: (ab && (ab.slot != null ? ab.slot : n - 2)), label };
-          const list = alive.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
-          window.BlindMode.speak(`${label} — select a target: ${list}.`, 'urgent');
+          const list = alive.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.cr ? `, CR ${x.cr}` : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
+          window.BlindMode.speak(`${label} — select a target, deadliest first: ${list}.`, 'urgent');
           return;
         }
         const targetUid = alive[0]?.uid;
