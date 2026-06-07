@@ -711,6 +711,7 @@
   let _spellbookOpen = false;  // caster "📖 Spellbook ▾" dropdown open/closed
   let _blindHelp = false;      // blind "learn mode" (?): keys are SPOKEN, not fired
   let _dunCancelArm = 0;       // blind dungeon: timestamp of an armed "." cancel-run confirm
+  let _dunTarget = null;       // blind dungeon: pending action awaiting an enemy pick ({kind, slot, label})
   let _spectating = false;     // watching the dungeon (not a combatant) — heckle-only
 
   function playDungeonSound(url, vol) {
@@ -1335,12 +1336,34 @@
       if (/^[1-9]$/.test(k)) {
         e.preventDefault();
         const n = parseInt(k, 10);
+        const alive = (d.enemies || []).filter(x => x.alive);
+        // (a) In "select a target" mode, the number picks the enemy and fires the
+        //     pending action on it.
+        if (_dunTarget) {
+          const tgt = alive[n - 1];
+          if (!tgt) { window.BlindMode.speak(`No enemy ${n}.`, 'urgent'); return; }
+          const pend = _dunTarget; _dunTarget = null;
+          window.BlindMode.speak(`${pend.label} ${tgt.name}.`, 'urgent');
+          if (pend.kind === 'attack') dungeonAction('attack', { targetUid: tgt.uid });
+          else dungeonAction('ability', { slot: pend.slot, targetUid: tgt.uid, targetUids: [tgt.uid] });
+          return;
+        }
+        // (b) Otherwise the number chooses an action: 1 = Attack, 2..N = abilities.
         const ab = n === 1 ? null : (kit.abilities || [])[n - 2];
         const label = n === 1 ? (kit.atwill?.name || 'Attack') : (ab?.name || null);
         if (!label) { window.BlindMode.speak(`No action ${n}.`, 'urgent'); return; }
         if (_blindHelp) { window.BlindMode.speak(`${n}: ${label}.`, 'urgent'); return; }
         if (!myTurn) { window.BlindMode.speak('Not your turn.', 'urgent'); return; }
-        const alive = (d.enemies || []).filter(x => x.alive);
+        // Single-enemy-target actions (basic attack, or an ability that targets one
+        // enemy) with MORE THAN ONE foe alive → ask which enemy; the next number
+        // selects it. One foe (or an AoE/self/ally action) just fires.
+        const singleEnemyTarget = n === 1 || (ab && ab.target === 'enemy');
+        if (singleEnemyTarget && alive.length > 1) {
+          _dunTarget = { kind: n === 1 ? 'attack' : 'ability', slot: (ab && (ab.slot != null ? ab.slot : n - 2)), label };
+          const list = alive.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
+          window.BlindMode.speak(`${label} — select a target: ${list}.`, 'urgent');
+          return;
+        }
         const targetUid = alive[0]?.uid;
         window.BlindMode.speak(`${label}.`, 'urgent');
         if (n === 1) dungeonAction('attack', { targetUid });
@@ -1371,6 +1394,7 @@
       // handler close that first; otherwise jump focus to the Spectate / Leave /
       // Cancel group and announce it.
       if (e.key === 'Escape') {
+        if (_dunTarget) { e.preventDefault(); _dunTarget = null; window.BlindMode.speak('Target selection cancelled.', 'urgent'); return; }
         const overlayOpen = _spellbookOpen || _recruitOpen || _bankDollOpen
           || !!document.querySelector('.modal:not([hidden])')
           || !!$('#audioMenu')?.classList.contains('is-open');
