@@ -709,6 +709,7 @@
   let _dungeonSoundSeen = 0;   // highest dungeon-log id whose sound we've played
   let _recruitOpen = false;    // dungeon "Recruit AI ▾" dropdown open/closed
   let _spellbookOpen = false;  // caster "📖 Spellbook ▾" dropdown open/closed
+  let _blindHelp = false;      // blind "learn mode" (?): keys are SPOKEN, not fired
   let _spectating = false;     // watching the dungeon (not a combatant) — heckle-only
 
   function playDungeonSound(url, vol) {
@@ -1304,6 +1305,38 @@
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const d = state.dungeon; if (!d) return;
     const k = (e.key || '').toLowerCase();
+    // ----- Blind keyboard play (only when blind mode is on; sighted scheme below
+    //       is untouched). 1 = Attack, 2..N = your abilities in kit order, ? = help
+    //       mode (speak keys without firing), Return = open the next door. -----
+    if (window.BlindMode?.isOn?.()) {
+      if (e.key === '?') { e.preventDefault(); _blindHelp = !_blindHelp; window.BlindMode.speak(`Help mode ${_blindHelp ? 'on' : 'off'}.`, 'urgent'); return; }
+      const meId = state.me?.player_id;
+      const meM = (d.party || []).find(m => m.playerId === meId) || {};
+      const kit = meM.kit || { atwill: { name: 'Attack' }, abilities: [] };
+      const myTurn = d.status === 'combat' && d.turn && d.turn.kind === 'party' && d.turn.id === meId;
+      if (/^[1-9]$/.test(k)) {
+        e.preventDefault();
+        const n = parseInt(k, 10);
+        const ab = n === 1 ? null : (kit.abilities || [])[n - 2];
+        const label = n === 1 ? (kit.atwill?.name || 'Attack') : (ab?.name || null);
+        if (!label) { window.BlindMode.speak(`No action ${n}.`, 'urgent'); return; }
+        if (_blindHelp) { window.BlindMode.speak(`${n}: ${label}.`, 'urgent'); return; }
+        if (!myTurn) { window.BlindMode.speak('Not your turn.', 'urgent'); return; }
+        const alive = (d.enemies || []).filter(x => x.alive);
+        const targetUid = alive[0]?.uid;
+        window.BlindMode.speak(`${label}.`, 'urgent');
+        if (n === 1) dungeonAction('attack', { targetUid });
+        else dungeonAction('ability', { slot: (ab.slot != null ? ab.slot : n - 2), targetUid, targetUids: alive.slice(0, 6).map(x => x.uid) });
+        return;
+      }
+      if ((e.key === 'Enter' || e.code === 'NumpadEnter') && d.status !== 'combat') {
+        e.preventDefault();
+        if (_blindHelp) { window.BlindMode.speak('Return: open the next door.', 'urgent'); return; }
+        window.BlindMode.speak('Opening the door.', 'urgent'); dungeonAction('door'); return;
+      }
+      // Esc falls through to the global overlay-closer; the Spectate / Leave /
+      // Cancel buttons live in the labelled "Navigation and session" group.
+    }
     // Loot roll: R = roll d20, P = pass (only when it's mine to decide).
     if (d.lootRoll) {
       const mine = (d.lootRoll.decided || {})[state.me?.player_id];
@@ -3339,6 +3372,21 @@
       if (!resp?.ok) toast(resp?.error || 'Action rejected', true);
     });
   });
+  // Pressing Enter inside the raise-amount field submits the raise — powers the
+  // blind "5 = raise custom" prompt (type the number, press Return) and is handy
+  // for any keyboard player.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const inp = e.target?.closest?.('[data-raise-input]'); if (!inp) return;
+    e.preventDefault();
+    const v = parseInt(inp.value, 10);
+    const blind = window.BlindMode?.isOn?.();
+    if (!Number.isFinite(v)) { if (blind) window.BlindMode.speak('Enter a number first.', 'urgent'); return; }
+    socket.emit('table:action', { action: 'raise', amount: v }, (r) => {
+      if (!r?.ok) { toast(r?.error || 'Raise rejected', true); if (blind) window.BlindMode.speak(r?.error || 'Raise rejected.', 'urgent'); }
+      else if (blind) window.BlindMode.speak(`Raised to ${v.toLocaleString()}.`, 'urgent');
+    });
+  });
 
   // Pronoun dropdown — pushes the selection up to the server so the
   // banter LLM can use the correct pronouns when referring to this
@@ -3809,6 +3857,38 @@
         if ((e.code === 'Enter' || e.code === 'NumpadEnter') && window.BlindMode.confirmPendingSit?.()) {
           e.preventDefault();
           return;
+        }
+        // ? — toggle help/learn mode: keys are spoken, not fired.
+        if (e.key === '?') { e.preventDefault(); _blindHelp = !_blindHelp; window.BlindMode.speak(`Help mode ${_blindHelp ? 'on' : 'off'}.`, 'urgent'); return; }
+        // On YOUR turn, 1–5 are betting actions (dynamic + legal):
+        //   1 Fold · 2 Check/Call · 3 Raise to min · 4 Raise to pot · 5 Raise custom.
+        // Off-turn (or 6–9) they fall through to the seat reader below.
+        const _h = state.table?.hand;
+        const _meId = state.me?.player_id;
+        const _meP = _h?.players?.find(p => p.playerId === _meId);
+        const _myTurn = !!(_h && _h.actor === _meId && _meP && !_meP.folded && !_meP.allIn);
+        const actKey = e.code.match(/^(?:Digit|Numpad)([1-5])$/);
+        if (actKey && _myTurn) {
+          e.preventDefault();
+          const n = parseInt(actKey[1], 10);
+          const cur = _h.currentBet || 0, inv = _meP.invested || 0, stack = _meP.stack || 0, pot = _h.potTotal || 0;
+          const toCall = Math.max(0, cur - inv);
+          const minTo = Math.max(cur + (_h.minRaise || 1), cur + 1);
+          const potTo = Math.max(minTo, cur === 0 ? pot : pot + toCall + cur);
+          const cap = inv + stack;   // a raise to the cap = all-in
+          const say = (t) => window.BlindMode.speak(t, 'urgent');
+          const send = (action, amount) => socket.emit('table:action', amount != null ? { action, amount } : { action }, (r) => { if (!r?.ok) say(r?.error || 'Action rejected.'); });
+          if (n === 1) { if (_blindHelp) return say('1: Fold.'); say('Fold.'); send('fold'); return; }
+          if (n === 2) { const lbl = toCall === 0 ? 'Check' : `Call ${Math.min(toCall, stack).toLocaleString()}`; if (_blindHelp) return say(`2: ${lbl}.`); say(`${lbl}.`); send(toCall === 0 ? 'check' : 'call'); return; }
+          if (n === 3) { const to = Math.min(minTo, cap); const lbl = to >= cap ? `All in, ${cap.toLocaleString()}` : `Raise to ${to.toLocaleString()}, minimum`; if (_blindHelp) return say(`3: ${lbl}.`); say(`${lbl}.`); if (to >= cap) send('allin'); else send('raise', to); return; }
+          if (n === 4) { const to = Math.min(potTo, cap); const lbl = to >= cap ? `All in, ${cap.toLocaleString()}` : `Raise to ${to.toLocaleString()}, pot`; if (_blindHelp) return say(`4: ${lbl}.`); say(`${lbl}.`); if (to >= cap) send('allin'); else send('raise', to); return; }
+          if (n === 5) {
+            if (_blindHelp) return say('5: Raise a custom amount.');
+            const ri = document.querySelector('[data-raise-input]');
+            if (ri) { ri.focus(); ri.select?.(); say(`Enter raise amount, minimum ${minTo.toLocaleString()}, then press Return.`); }
+            else say('Raise input not available.');
+            return;
+          }
         }
         if (e.code === 'KeyC') { e.preventDefault(); window.BlindMode.readMyCards?.();  return; }
         if (e.code === 'KeyB') { e.preventDefault(); window.BlindMode.announceBoard?.(); return; }
