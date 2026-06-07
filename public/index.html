@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260605-recruitcenter" />
+  <link rel="stylesheet" href="/css/table.css?v=20260607-a11y" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -190,19 +190,24 @@
           <span class="help-panel__chevron" aria-hidden="true">▾</span>
         </button>
 
-        <h3 class="help-panel__title help-panel__title--ranks">Hand rankings</h3>
-        <ol class="help-panel__rankings">
-          <li><strong>Royal Flush</strong> <em>10-J-Q-K-A, same suit</em></li>
-          <li><strong>Straight Flush</strong> <em>5 in a row, same suit</em></li>
-          <li><strong>Four of a Kind</strong></li>
-          <li><strong>Full House</strong> <em>three + a pair</em></li>
-          <li><strong>Flush</strong> <em>5 same suit</em></li>
-          <li><strong>Straight</strong> <em>5 in a row</em></li>
-          <li><strong>Three of a Kind</strong></li>
-          <li><strong>Two Pair</strong></li>
-          <li><strong>One Pair</strong></li>
-          <li><strong>High Card</strong></li>
-        </ol>
+        <!-- Collapsed by default: a native <details> keeps this reference OUT of
+             the screen-reader tree until opened, so VoiceOver doesn't get caught
+             traversing the rankings list every time it passes the sidebar. -->
+        <details class="help-panel__ranks">
+          <summary class="help-panel__title help-panel__title--ranks">Hand rankings</summary>
+          <ol class="help-panel__rankings">
+            <li><strong>Royal Flush</strong> <em>10-J-Q-K-A, same suit</em></li>
+            <li><strong>Straight Flush</strong> <em>5 in a row, same suit</em></li>
+            <li><strong>Four of a Kind</strong></li>
+            <li><strong>Full House</strong> <em>three + a pair</em></li>
+            <li><strong>Flush</strong> <em>5 same suit</em></li>
+            <li><strong>Straight</strong> <em>5 in a row</em></li>
+            <li><strong>Three of a Kind</strong></li>
+            <li><strong>Two Pair</strong></li>
+            <li><strong>One Pair</strong></li>
+            <li><strong>High Card</strong></li>
+          </ol>
+        </details>
       </aside>
 
       <div class="felt">

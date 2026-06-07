@@ -948,8 +948,12 @@ option.weapon-nonprof { color: #cc5500; }
   box-shadow: 0 8px 24px rgba(0,0,0,0.7);
   opacity: 0;
   pointer-events: none;
+  /* visibility:hidden (not just opacity) so the closed menu's controls leave the
+     ACCESSIBILITY TREE — otherwise VoiceOver reads every slider/link/menu item
+     even while the menu is visually closed. visibility still transitions. */
+  visibility: hidden;
   transform: translateY(-4px);
-  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s ease;
   z-index: 50;
   color: var(--ivory);
   font-size: 0.82rem;
@@ -961,6 +965,7 @@ option.weapon-nonprof { color: #cc5500; }
 .audio-menu.is-open .audio-menu__pop {
   opacity: 1;
   pointer-events: auto;
+  visibility: visible;
   transform: translateY(0);
 }
 .audio-menu__row {
@@ -2053,6 +2058,11 @@ option.weapon-nonprof { color: #cc5500; }
   padding-top: 0.5rem;
   border-top: 1px solid rgba(217,176,106,0.18);
 }
+/* Hand rankings is now a collapsed <details> (a11y: keeps the list out of the
+   screen-reader tree until opened). Make the summary read/behave as a toggle. */
+.help-panel__ranks { margin: 0; }
+.help-panel__ranks > summary { cursor: pointer; list-style-position: inside; }
+.help-panel__ranks > summary:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
 
 /* ===== Right-side sidebar leaderboard ===== */
 /* Tighter than the in-actpanel version since the panel is 240px wide
