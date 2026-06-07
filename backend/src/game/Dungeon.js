@@ -1200,12 +1200,16 @@ class Dungeon {
     const label = db.GEAR_BY_KEY[slot]?.label || slot;
     this._note(`💎 A +${tier} ${label} drops! Roll a d20 for it, or pass.`);
     this._log('lootdrop', { slot, tier, eligible: eligibleIds.length });
-    // Bots decide immediately: roll only if it beats what they already wear here.
+    // Decide immediately for anyone who can't benefit, and for bots:
+    //   • ANY delver (human or bot) already wearing an equal-or-better item in this
+    //     slot AUTO-PASSES — no point rolling to keep gear you'd never equip.
+    //   • A bot that WOULD upgrade rolls right away.
+    //   • A human who'd upgrade is left undecided → they get the roll/pass prompt.
     for (const id of eligibleIds) {
       const m = this.member(id);
-      if (!m || !m.isBot) continue;
-      const cur = Number((m.gear || db.getGear(id))[slot]) || 0;
-      this._lootDecide(id, tier > cur);   // upgrade → roll; equal/worse → pass
+      const cur = Number((m?.gear || db.getGear(id))[slot]) || 0;
+      if (cur >= tier) { this._lootDecide(id, false); continue; }   // already have ≥ → auto-pass
+      if (m && m.isBot) this._lootDecide(id, true);                 // bot upgrade → roll
     }
     // Idle humans auto-pass after the window.
     clearTimeout(this._lootTimer);
@@ -1260,7 +1264,9 @@ class Dungeon {
       if (cur < tier) {
         gear[slot] = tier; db.setGear(playerId, gear); m.gear = gear;
         // (gear no longer changes level — level is from XP; gear only adds to-hit/AC/dmg)
-        this._note(`🛡️ ${m.nickname} equips the +${tier} ${db.GEAR_BY_KEY[slot]?.label || slot}. (Lv ${m.level})`);
+        let extra = '';
+        if (cur >= 1) { const v = db.gearHockValue(slot, cur); this.runGold += v; extra = ` (old +${cur} hocked for ${v} gp)`; }
+        this._note(`🛡️ ${m.nickname} equips the +${tier} ${db.GEAR_BY_KEY[slot]?.label || slot}.${extra} (Lv ${m.level})`);
       } else {
         const v = db.gearHockValue(slot, tier); this.runGold += v;
         this._note(`💰 ${m.nickname} doesn't need it — hocks it for ${v} gp (into the pool).`);
@@ -3587,13 +3593,18 @@ class Dungeon {
     if (!loot || loot.owner !== playerId) return { ok: false, error: 'not your loot' };
     const m = this.member(playerId); if (!m) return { ok: false, error: 'gone' };
     const gear = db.getGear(playerId);
-    if ((Number(gear[loot.slot]) || 0) >= loot.tier) { this.pendingLoot.splice(idx, 1); return { ok: false, error: 'already better' }; }
+    const oldTier = Number(gear[loot.slot]) || 0;
+    if (oldTier >= loot.tier) { this.pendingLoot.splice(idx, 1); return { ok: false, error: 'already better' }; }
     gear[loot.slot] = loot.tier;
     db.setGear(playerId, gear);
     m.gear = gear;
     // (gear no longer changes level — level is from XP; gear only adds to-hit/AC/dmg)
     this.pendingLoot.splice(idx, 1);
-    this._note(`🛡️ ${m.nickname} equipped the +${loot.tier} ${db.GEAR_BY_KEY[loot.slot]?.label || loot.slot}. (Lv ${m.level})`);
+    const lbl = db.GEAR_BY_KEY[loot.slot]?.label || loot.slot;
+    // Auto-hock the item this one replaces — its value goes into the run pool.
+    let extra = '';
+    if (oldTier >= 1) { const v = db.gearHockValue(loot.slot, oldTier); this.runGold += v; extra = ` Old +${oldTier} ${lbl} auto-hocked for ${v} gp into the pool.`; }
+    this._note(`🛡️ ${m.nickname} equipped the +${loot.tier} ${lbl}.${extra} (Lv ${m.level})`);
     return { ok: true };
   }
   hockLoot(playerId, idx) {
