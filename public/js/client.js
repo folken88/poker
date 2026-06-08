@@ -973,6 +973,13 @@
         <div class="dpc__hp">${hpText}</div>
       </div>`;
     }).join('');
+    // Shrink the hero cards as the party grows so they ALWAYS fit without scrolling
+    // (mirrors the enemy field's is-compact / is-packed).
+    if (party) {
+      const np = (d.party || []).length;
+      party.classList.toggle('is-compact', np > 4 && np <= 6);
+      party.classList.toggle('is-packed', np > 6);
+    }
 
     const turn = $('#dungeonTurn');
     if (turn) {

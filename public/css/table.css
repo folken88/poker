@@ -57,10 +57,10 @@ button, input { font: inherit; color: inherit; }
     url('/dungeon/maps/harrowstone.webp') center / cover no-repeat;
   border: 1px solid rgba(217,176,106,0.25); border-radius: 12px; padding: 1rem;
   display: flex; flex-direction: column; gap: 0.9rem;
-  /* The stage may shrink when the logs want space, but it CLIPS its overflow so a
-     non-shrinking child (the hero row) can never spill out below the box border and
-     overlap the action bar. The enemy field absorbs the squeeze (it scrolls). */
-  flex: 0 1 auto; min-height: 0; overflow: hidden;
+  /* The battleboard GROWS to take the available vertical space (the chat logs get a
+     fixed, bounded share below) so both the enemy row and the FULL hero row fit
+     without scrolling. overflow:hidden is only a last-resort guard. */
+  flex: 1 1 auto; min-height: 0; overflow: hidden;
 }
 /* The enemy field is a STATIC-height box — when it fills up the cards shrink
    (is-compact / is-packed, set in JS by enemy count) and, as a last-resort
@@ -138,11 +138,16 @@ button, input { font: inherit; color: inherit; }
 .dmon__hp { font-size: 0.7rem; font-variant-numeric: tabular-nums; color: var(--ivory-dim); }
 .dmon__none { color: var(--ivory-dim); opacity: 0.6; font-style: italic; align-self: center; }
 .dungeon__turn { text-align: center; font-weight: 600; color: var(--brass-bright); min-height: 1.2em; }
-/* The hero row never SHRINKS below its cards (flex-shrink:0) — so the party cards
-   are always fully visible. When the stage is tight the ENEMY field (which is built
-   to scroll) gives up the space instead. Caps at 40vh as a last resort for a huge
-   recruited party. */
-.dungeon__party { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; align-content: flex-start; flex: 0 0 auto; max-height: 40vh; overflow-y: auto; }
+/* The hero row shows ALL its cards — no cap, no scrollbar. The battleboard grows to
+   make room; for a big recruited party the cards shrink to fit (is-compact / is-packed,
+   set in JS by party size), exactly like the enemy field. */
+.dungeon__party { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; align-content: flex-start; flex: 0 0 auto; }
+/* Shrink hero cards as the party grows so they always fit without scrolling. */
+.dungeon__party.is-compact .dpc { width: 150px; padding: 0.35rem; gap: 0.2rem; }
+.dungeon__party.is-compact .dpc__avatar { width: 32px; height: 32px; }
+.dungeon__party.is-packed  .dpc { width: 120px; padding: 0.3rem; gap: 0.15rem; }
+.dungeon__party.is-packed  .dpc__avatar { width: 28px; height: 28px; }
+.dungeon__party.is-packed  .dpc__name { font-size: 0.72rem; }
 .dpc { position: relative; width: 190px; background: rgba(0,0,0,0.4); border: 1px solid rgba(217,176,106,0.3); border-radius: 10px; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
 .dpc.is-low { border-color: rgba(220,80,80,0.7); }
 .dpc.is-me { border-color: rgba(241,207,131,0.7); }
@@ -249,7 +254,9 @@ button, input { font: inherit; color: inherit; }
    popover both show a scrollbar (the "two scrollbars on the right" bug). */
 .bot-picker__grid.bot-picker__grid--dungeon { max-height: none; overflow: visible; }
 /* Two side-by-side scroll panes — party left, monsters right. */
-.dungeon__logs { display: flex; gap: 0.5rem; flex: 1 1 auto; min-height: 150px; }
+/* The chat logs take a FIXED, bounded share so they never starve the battleboard
+   above. They scroll INTERNALLY (each column) — that's expected for a chat log. */
+.dungeon__logs { display: flex; gap: 0.5rem; flex: 0 0 16vh; min-height: 110px; }
 .dungeon__logcol { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .dungeon__loghead { font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 6px 3px; opacity: 0.9; }
 .dungeon__logcol--hero  .dungeon__loghead { color: #9fd29f; }
