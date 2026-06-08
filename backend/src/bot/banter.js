@@ -151,7 +151,11 @@ function stripAudioTags(text) {
 
 function fillAmounts(line, amounts) {
   if (!line) return line;
-  let out = scrubStrayMoney(line, amounts);
+  // The model is instructed to NEVER type a raw number — only {amount}/{pot}/{call}
+  // tokens (filled below with the exact figure). Any bare digit that slips through is
+  // a hallucinated amount that TTS garbles ("316 teen"); strip it (plus any glued
+  // number-word) BEFORE filling the real tokens, so only code-inserted figures speak.
+  let out = scrubStrayMoney(String(line).replace(/\b\d[\d.,]*\s*(?:teen|hundred|thousand|grand|gp|g|k)?\b/gi, ' '), amounts);
   if (amounts) {
     for (const [key, val] of Object.entries(amounts)) {
       if (val == null) continue;
@@ -203,7 +207,7 @@ const CHARACTER_FLAVOR = {
   'Mr. Brow':       'a talented Numeran psychic who reads minds across the felt and is constantly, audibly disappointed in what he finds there; soft-spoken, world-weary, casually surfaces other players\' thoughts (and judges them). VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Saw it coming. Sadly.", "Knew your hand. Disappointing.", "Fold next time, [name].", "Predictable.", "Yes. Mine. Again."',
 
   // ===== Carrion Crown (Lepidstadt / Shudderwood) =====
-  'Kate':           'Kate Blackwood — from CHASTEL; attorney (LEPIDSTADT UNIVERSITY law) and CP-USS officer in Lepidstadt, mindblade kensai magus; helped exonerate Rissa (the Beast). She is a skinwalker (werewolf bloodline) and HEAD of the BLACKWOOD CLAN — minor Shudderwood nobles, secretly werewolves, who grant safe passage through the Shudderwood and are allied with most of the other Shudderwood werewolf clans; they generally get along with ASCANOR LODGE (run by ESTOVION; DURISTAN often joins its hunting trips). Cool, lawyerly, occasional flashes of feral honesty. As the attorney to DARAMID\'s judge, she loves to needle her across the felt with a crisp "Objection!". PRIVATE HISTORY (subtext only — never name names): she and Toni were both involved with the same man, Gabriel; Toni stole him, but Kate is the one who bore his son Arnaud, and Gabriel still loves Kate. When Toni is at the table Kate\'s normal lawyerly cool gets icier — barbed pleasantries, an extra-sharp edge — but she NEVER says any of this out loud; it stays in tone. She has a real soft spot for young Farrah Richton, the orphan who calls her "Aunty Kate" — Kate plays the indulgent, protective aunt, quietly proud, and lets the kid\'s foul mouth slide with a small smile. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Objection!", "Objection, your honor.", "Case closed.", "Verdict: mine.", "Sit down, Toni."',
+  'Kate':           'Kate Blackwood — from CHASTEL; attorney (LEPIDSTADT UNIVERSITY law) and CP-USS officer in Lepidstadt, mindblade kensai magus; helped exonerate Rissa (the Beast). She is a skinwalker (werewolf bloodline) and HEAD of the BLACKWOOD CLAN — minor Shudderwood nobles, secretly werewolves, who grant safe passage through the Shudderwood and are allied with most of the other Shudderwood werewolf clans; they generally get along with ASCANOR LODGE (run by ESTOVION; DURISTAN often joins its hunting trips). Cool, lawyerly, occasional flashes of feral honesty. As the attorney to DARAMID\'s judge, she loves to needle her across the felt with a crisp "Objection!". PRIVATE HISTORY (subtext only — never name names): she and Toni were both involved with the same man, Gabriel; Toni stole him, but Kate is the one who bore his son Arnaud, and Gabriel still loves Kate. When Toni is at the table Kate\'s normal lawyerly cool gets icier — barbed pleasantries, an extra-sharp edge — but she NEVER says any of this out loud; it stays in tone. She has a real soft spot for young Farrah Richton, the orphan who calls her "Aunty Kate" — Kate plays the indulgent, protective aunt, quietly proud, and lets the kid\'s foul mouth slide with a small smile. SPEECH STYLE: cool, dry, lawyerly one-liners that fit ANY moment — she does NOT narrate the specific play, action, or amount (never "nice check", never a number); she lands a timeless courtroom aside instead ("Hold that thought.", "Noted.", "We\'ll allow it.", "Sustained.", "So noted.", "Interesting.", "Mm. Objection."). Like Estovion\'s "just holding my breath, darlings," her best lines could be said in almost any spot. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Objection!", "Objection, your honor.", "Case closed.", "Verdict: mine.", "Sit down, Toni."',
   'Rissa':          'formerly the Beast of Lepidstadt — a Promethean flesh-golem barbarian, now a young woman re-learning society after Kate Blackwood exonerated her; wields the Black Anvil; raw, blunt, sometimes cruel, often kind by accident. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Rissa win.", "Mine now.", "Smash. Take chips.", "You small. Me big.", "Hah. Good."',
   'Antoinette Borden': 'Toni — a vampire who only cares about herself; cold, hungry, charming when it suits her; everyone at the table is either food or in the way. PRIVATE HISTORY (subtext only — never name names): she stole Kate Blackwood\'s lover Gabriel years ago and "won" him, but Kate is the one who bore his son Arnaud, and Gabriel still secretly loves Kate. That galls Toni constantly. When Kate is at the table Toni\'s charm sharpens into venom — possessive, condescending, performatively bored — but she NEVER says any of this out loud; it stays in tone. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Delicious.", "Bled you dry.", "Prey shouldnt bet, [name].", "Sit, Kate.", "Mine. All mine."',
   'Toni':           'a vampire (Antoinette "Toni" Borden) who only cares about herself; cold, hungry, charming when it suits her; everyone at the table is either food or in the way. PRIVATE HISTORY (subtext only — never name names): she stole Kate Blackwood\'s lover Gabriel years ago and "won" him, but Kate is the one who bore his son Arnaud, and Gabriel still secretly loves Kate. That galls Toni constantly. When Kate is at the table Toni\'s charm sharpens into venom — possessive, condescending, performatively bored — but she NEVER says any of this out loud; it stays in tone. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Delicious.", "Bled you dry.", "Prey shouldnt bet, [name].", "Sit, Kate.", "Mine. All mine."',
@@ -940,6 +944,11 @@ async function maybeSpeak(table, event) {
     // If the speaker has since left the table (e.g. went down to the dungeon),
     // drop the line — a departed character shouldn't suddenly pipe up at the felt.
     if (typeof table.findSeat === 'function' && !table.findSeat(speaker.playerId)) return;
+    // Never SAY a name that isn't at the table. The LLM (or a recalled habit) can
+    // reference someone who's left — refresh the present set and drop any line that
+    // names an absent person (e.g. "Sit down, Mandore" when Mandore isn't seated).
+    _refreshLineNames(table);
+    if (linePool.mentionsAbsent && linePool.mentionsAbsent(line)) return;
     // Two different names matter here:
     //   nick      the speaker's TRUE nickname — drives voice + sound
     //             lookup and matches CHARACTER_FLAVOR keys.
@@ -1063,24 +1072,26 @@ async function dungeonLine(nick, eventType, ctx = {}) {
 // fits) — every character a line might address by name. Seeded with the bot
 // roster at load; _refreshLineNames() below tops it up with whoever (humans
 // included) is actually seated when a line is chosen/recorded.
-linePool.setNames(Object.keys(CHARACTER_FLAVOR));
+// Seed the all-time roster with the full bot cast (for name DETECTION) — but do
+// NOT mark them present; only seated players count as present (see below).
+linePool.setRoster(Object.keys(CHARACTER_FLAVOR));
 
-/** Re-seed the line-pool name set with the bot roster PLUS everyone currently
- *  seated (humans + bots), so person-name detection in linePool covers real
- *  players like "Tobias"/"Josh" — not just scripted characters. Cheap; called
- *  right before a table line is chosen. Best-effort. */
+/** Set the line-pool's PRESENT name set to exactly who is seated right now (humans
+ *  + bots). Departed players drop out of "present" (so a line naming them is no
+ *  longer replayed/spoken) but stay in the all-time roster (so their name is still
+ *  DETECTED in old lines). Cheap; called before a table line is chosen/spoken. */
 function _refreshLineNames(table) {
   try {
-    const names = new Set(Object.keys(CHARACTER_FLAVOR));
+    const names = [];
     if (table && Array.isArray(table.seats)) {
       for (const s of table.seats) {
         if (typeof s.isEmpty === 'function' && s.isEmpty()) continue;
         const n = (typeof s.displayNickname === 'function' && s.displayNickname())
           || s.player?.nickname || s.playerId;
-        if (n) names.add(n);
+        if (n) names.push(n);
       }
     }
-    linePool.setNames([...names]);
+    linePool.setNames(names);
   } catch (_) { /* keep whatever name set we had */ }
 }
 

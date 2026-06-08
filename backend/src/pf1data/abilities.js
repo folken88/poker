@@ -129,8 +129,8 @@ const S = {
   acid: '/audio/spell_acidarrow.mp3',          // Acid Arrow
   entangle: '/audio/spell_entangle.mp3',       // druid Entangle
   slow: '/audio/spell_slow.mp3',               // Slow (the Evil Morty theme)
-  glitter: '/audio/spell_glitterdust.mp3',     // Glitterdust (blinding sparkle) — ADD ASSET
-  chainlight: '/audio/thunderclap_slow.mp3',   // Chain Lightning (slow thunderclap) — ADD ASSET
+  glitter: '/audio/40mm_glitter_grenade_sound_effect.mp3',   // Glitterdust (blinding sparkle)
+  chainlight: '/audio/thunderclap_slow.mp3',                 // Chain Lightning (slow thunderclap)
 };
 // Sound POOLS — abilities with `sounds: [...]` pick one at random per cast, so a
 // repeated spell doesn't drone the same clip (Fireball / Lightning Bolt / Haste).
@@ -299,6 +299,7 @@ const KITS = {
     preparedSpell(SPELL.protevil,      3),
     preparedSpell(SPELL.darkness,      3),
     preparedSpell(SPELL.invisibility,  3),
+    preparedSpell(SPELL.glitterdust,   3),
     preparedSpell(SPELL.aciddart,      3),
     preparedSpell(SPELL.scorchingray,  3),
     preparedSpell(SPELL.holdperson,    3),
@@ -336,6 +337,7 @@ const KITS = {
     spontaneousSpell(SPELL.sleep,        1),
     spontaneousSpell(SPELL.aciddart,     4),
     spontaneousSpell(SPELL.gustofwind,   4),
+    spontaneousSpell(SPELL.glitterdust,  4),
     spontaneousSpell(SPELL.scorchingray, 4),
     spontaneousSpell(SPELL.catsgrace,    4),
     spontaneousSpell(SPELL.dispelmagic,  6),
@@ -472,6 +474,7 @@ const KITS = {
     { key: 'hideouslaughter', name: 'Hideous Laughter', icon: '😂', cost: 'slot', slvl: 2, minLevel: 4, effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', sound: S.hideous, desc: 'A foe collapses in helpless laughter — Will save or HELD (helpless, Sneak-Attackable). Each turn it may re-save to recover, but the attempt costs its turn.' },
     { key: 'curemoderate', name: 'Cure Moderate Wounds', icon: '💚', cost: 'slot', slvl: 2, minLevel: 4, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
     { key: 'soundburst',   name: 'Sound Burst',          icon: '🔊', cost: 'slot', slvl: 2, minLevel: 4, effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'fort', die: 8, dice: 1, dtype: 'sonic', sounds: THUNDER_SFX, desc: 'A concussive blast of sound — 1d8 sonic to up to 3 foes, Fort for half.' },
+    { ...SPELL.glitterdust, cost: 'slot', minLevel: 4 },
     { key: 'bullsstrength', name: "Bull's Strength",     icon: '💪', cost: 'slot', slvl: 2, minLevel: 4, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'Bull-strong — one ally gets +2 to hit and +2 melee damage for the rest of the room.' },
     { key: 'catsgrace',     name: "Cat's Grace",         icon: '🐈', cost: 'slot', slvl: 2, minLevel: 4, effect: 'buff', target: 'ally', buff: { ac: 2, toHit: 1 }, sticky: true, sound: S.invoke, desc: 'Feline-quick — one ally gets +2 AC and +1 ranged to-hit (Dex) for the rest of the room.' },
     { key: 'bearsendurance', name: "Bear's Endurance",   icon: '🐻', cost: 'slot', slvl: 2, minLevel: 4, effect: 'buff', target: 'ally', buff: { conHp: 2 }, sticky: true, sound: S.invoke, desc: 'Bear-hardy — one ally gains temporary HP (+2 per level, from +4 Con) for the rest of the room.' },

@@ -48,13 +48,30 @@ const stats = { reuseHits: 0, fresh: 0, records: 0, evictions: 0 };
 // Names that make a line instance-SPECIFIC if they appear in it (it referenced a
 // particular tablemate). Set by banter.js via setNames(); a digit also marks
 // a line specific (a gp amount, a count — tied to one moment).
-let _nameRe = null;
+let _nameRe = null;       // detection regex — built from the ALL-TIME roster
 let _namesReSrc = null;   // escaped alternation source, for building a global matcher on demand
+let _present = new Set(); // names CURRENTLY at the table (lowercased) — the presence test
+let _roster  = new Set(); // every name EVER seen (lowercased) — for detection, so a DEPARTED
+                          //   player's name is still recognised in an old line (and thus blocked)
 function escapeRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-function setNames(names) {
-  const ns = (names || []).filter(n => n && String(n).length >= 3).map(escapeRe);
+function _rebuildNameRe() {
+  const ns = [..._roster].filter(n => n && n.length >= 3).map(escapeRe);
   _nameRe = ns.length ? new RegExp(`\\b(${ns.join('|')})\\b`, 'i') : null;
   _namesReSrc = ns.length ? ns.join('|') : null;
+}
+// The people CURRENTLY at the table. Also folds them into the all-time roster, so
+// once someone has been seen their name stays DETECTABLE — letting choose() drop a
+// saved line that names them after they leave.
+function setNames(names) {
+  _present = new Set((names || []).filter(n => n && String(n).length >= 3).map(n => String(n).toLowerCase()));
+  for (const n of _present) _roster.add(n);
+  _rebuildNameRe();
+}
+// Seed the all-time roster (e.g. the full bot cast at load) WITHOUT marking anyone
+// present — so a line naming a bot who isn't seated is still caught.
+function setRoster(names) {
+  for (const n of (names || [])) if (n && String(n).length >= 3) _roster.add(String(n).toLowerCase());
+  _rebuildNameRe();
 }
 /** Distinct person-names (lowercased) that appear in `text`, per the current
  *  name set — empty when the line names nobody. A fresh RegExp per call keeps
@@ -72,6 +89,9 @@ function _isSpecific(text) {
   if (_nameRe && _nameRe.test(text)) return true;
   return false;
 }
+/** True if `text` names a known person who is NOT currently at the table — used to
+ *  block a freshly-generated line from referencing someone who has left/isn't here. */
+function mentionsAbsent(text) { return _namesIn(text).some(n => !_present.has(n)); }
 
 function _safe(s) { return (String(s || '').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 60)) || '_'; }
 function _dir(char, kind) { return path.join(POOL_DIR, _safe(char), _safe(kind)); }
@@ -130,7 +150,7 @@ function record(char, kind, { text, version, subject, base64 } = {}) {
       const dir = _dir(char, kind);
       await fsp.mkdir(dir, { recursive: true });
       await fsp.writeFile(path.join(dir, file), Buffer.from(base64, 'base64'));
-      c.entries.push({ file, text, version: version || 'v2', subject: subject || null, specific: _isSpecific(text), ts: Date.now() });
+      c.entries.push({ file, text, version: version || 'v2', subject: subject || null, specific: _isSpecific(text), names: _namesIn(text), ts: Date.now() });
       stats.records++;
       while (c.entries.length > MAX) {                    // evict oldest beyond the cap
         const old = c.entries.shift();
@@ -162,9 +182,10 @@ async function choose(char, kind, subject) {
     // (generates fresh). Lines that name nobody are unaffected.
     const subjL = subj ? String(subj).toLowerCase() : null;
     const addressable = usable.filter(e => {
-      const names = _namesIn(e.text);
+      const names = Array.isArray(e.names) ? e.names : _namesIn(e.text);
       if (!names.length) return true;
-      return names.length === 1 && subjL != null && names[0] === subjL;
+      // Every person named must be CURRENTLY present (or be the event's subject).
+      return names.every(n => _present.has(n) || (subjL != null && n === subjL));
     });
     if (!addressable.length) return null;
     // perfect = generic lines, or specific lines whose subject matches the moment
@@ -186,4 +207,4 @@ async function choose(char, kind, subject) {
 
 function getStats() { const t = stats.reuseHits + stats.fresh; return { ...stats, decisions: t, reuseRate: t ? +(stats.reuseHits / t).toFixed(4) : 0, enabled: ENABLED }; }
 
-module.exports = { record, choose, setNames, getStats, ENABLED };
+module.exports = { record, choose, setNames, setRoster, mentionsAbsent, getStats, ENABLED };

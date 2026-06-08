@@ -21,6 +21,25 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-07 (newest)
 
+### 🗣️ Banter fixes — no naming absent players, cleaner numbers, Kate
+- **Bots no longer name someone who isn't at the table.** The line-pool now tracks
+  who is *currently seated* separately from an all-time roster, so a saved (or freshly
+  generated) line that names a departed player — "Sit down, Mandore", "Josh is
+  bluffing" after they've left — is detected and dropped instead of spoken.
+- **No more garbled numbers** like "316 teen": any raw digit the model hallucinates is
+  stripped before speech (only code-inserted `{amount}` figures ever reach the voice).
+- **Kate** now favors dry, *timeless* one-liners that fit any moment (in the spirit of
+  Estovion's "just holding my breath, darlings") instead of narrating a specific check
+  or amount.
+- **Glitterdust** is now also a 2nd-level spell for **Wizards, Sorcerers, and Bards**
+  (not just the new Magus list).
+- **Daramid** now pronounced "darramidd" by the voices.
+- Magus audio: Glitterdust → `40mm_glitter_grenade_sound_effect.mp3`, Chain Lightning →
+  `thunderclap_slow.mp3` (drop these into `public/audio/`). The Arcane Pool's keen /
+  flaming / flaming burst were verified against PF1 RAW: keen doubles the threat range
+  (20→19-20, 19-20→17-20, 18-20→15-20); flaming adds 1d6 fire that is **not** multiplied
+  on a crit; flaming burst adds +1d10 (×2) / +2d10 (×3) / +3d10 (×4) fire on a confirmed crit.
+
 ### 🗡️✨ Magus rework — a full spellbook, new Spell Strikes & an Arcane Pool
 The Magus is now a true gish, fighting on **three layers**:
 
