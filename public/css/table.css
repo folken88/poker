@@ -138,7 +138,7 @@ button, input { font: inherit; color: inherit; }
 .dmon__hp { font-size: 0.7rem; font-variant-numeric: tabular-nums; color: var(--ivory-dim); }
 .dmon__none { color: var(--ivory-dim); opacity: 0.6; font-style: italic; align-self: center; }
 .dungeon__turn { text-align: center; font-weight: 600; color: var(--brass-bright); min-height: 1.2em; }
-.dungeon__party { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; align-content: flex-start; max-height: 24vh; overflow-y: auto; }
+.dungeon__party { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; align-content: flex-start; max-height: 29vh; overflow-y: auto; }
 .dpc { position: relative; width: 190px; background: rgba(0,0,0,0.4); border: 1px solid rgba(217,176,106,0.3); border-radius: 10px; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
 .dpc.is-low { border-color: rgba(220,80,80,0.7); }
 .dpc.is-me { border-color: rgba(241,207,131,0.7); }
