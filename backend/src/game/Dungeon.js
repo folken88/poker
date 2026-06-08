@@ -160,6 +160,7 @@ const DRUID_FEAT_AT = {
 const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
 const SICKENED_PENALTY = 2;
+const BLIND_ROUNDS = 3;           // Glitterdust — how long a blinded foe stays blind
 const PARALYZE_DC = 14;
 // A flying creature holds the "high ground" over grounded foes: +1 to hit them,
 // +2 AC against their attacks. (Heroes are always grounded.)
@@ -221,6 +222,12 @@ const BUFF_META = {
   protectfire:   { label: 'Fire Ward',       desc: 'fire damage halved (Protection from Fire)' },
   bless:         { label: 'Bless',           desc: '+1 to hit — whole dungeon' },
   inspire:       { label: 'Inspire Courage', desc: 'allies +1 hit & damage — whole dungeon' },
+  // ── Magus buffs (icons fall back to fitting existing art) ──
+  displacement:  { label: 'Displacement',    desc: '50% of incoming attacks miss (this room)', icon: '/dungeon/buffs/fly.webp' },
+  fireshield:    { label: 'Fire Shield',     desc: 'melee attackers scorched for 1d6+level fire (this room)', icon: '/dungeon/buffs/protevil.webp' },
+  elementalbody: { label: 'Elemental Body',  desc: 'immune to crits, paralysis, stun, sicken & blind (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
+  trueseeing:    { label: 'True Seeing',     desc: 'see through darkness, illusions & invisibility (this room)', icon: '/dungeon/buffs/magearmor.webp' },
+  mirrorimage:   { label: 'Mirror Image',    desc: 'shimmering decoys soak incoming attacks', icon: '/dungeon/buffs/fly.webp' },
 };
 
 // Bruce-Lee-style martial-arts SFX for enemy Monks — kiai screams, flurries and
@@ -545,7 +552,7 @@ class Dungeon {
   livingParty() { return this.alivePresent(); }
   // Heroes the enemy can actually target — invisible ones are unseen (until they
   // attack). If EVERY living hero is invisible, fall back so combat can resolve.
-  _targetableParty() { const live = this.alivePresent(); const seen = live.filter(m => !m.invisible); return seen.length ? seen : live; }
+  _targetableParty() { const live = this.alivePresent(); const seen = live.filter(m => !m.invisible && !m.untargetable); return seen.length ? seen : live; }
   livingEnemies() { return this.enemies.filter(e => e.hp > 0); }
   // Foes a hero can actually hit — excludes those shrouded in DARKNESS (can't be
   // attacked for 2 rounds). They're still "alive" (room stays active until it lifts).
@@ -615,6 +622,7 @@ class Dungeon {
   _condList(o) {
     const I = '/dungeon/conditions/', c = [];
     if (o.sickened > 0)  c.push({ key: 'sickened',  label: 'Sickened',  desc: '−2 to attacks & damage', icon: `${I}sickened.webp` });
+    if (o.blinded > 0)   c.push({ key: 'blinded',   label: 'Blinded',   desc: '−4 to hit, denied Dex (easier to hit, Sneak-Attackable)', icon: `${I}sickened.webp` });
     if (o.paralyzed > 0) c.push(o.heldDC
       ? { key: 'held',      label: 'Held',      desc: 'helpless — re-saves each turn (the attempt costs the turn)', icon: `${I}paralyzed.webp` }
       : { key: 'paralyzed', label: 'Paralyzed', desc: 'frozen — loses turns; easy to hit', icon: `${I}paralyzed.webp` });
@@ -648,6 +656,9 @@ class Dungeon {
     if (m.hasted > 0)   push('haste', 'Haste', `an extra attack each turn (${m.hasted} left)`);
     if (m.invisible)    push('invisible', 'Invisible', 'unseen — until you attack');
     if (m.flying)       push('fly', 'Flying', 'airborne — grounded foes cannot reach you');
+    if (m.images > 0)   push('mirrorimage', 'Mirror Image', `${m.images} decoy${m.images > 1 ? 's' : ''} soaking incoming attacks`);
+    if (m.untargetable) push('blur', 'Blurred', 'untargetable until your next turn (Bladed Dash)', '/dungeon/buffs/fly.webp');
+    if (m.touchStrike > 0) push('dimblade', 'Dimensional Blade', 'your strikes hit on TOUCH this round', '/dungeon/buffs/magearmor.webp');
     if (m.protectFire)  push('protectfire', 'Fire Ward', 'fire damage halved (Protection from Fire)');
     if (m.judgment === 'destruction') push('judg_destruction', 'Judgement: Destruction', '+damage on your strikes');
     if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection', '+AC');
@@ -910,6 +921,7 @@ class Dungeon {
         this._note(`🟢 Acid keeps sizzling on ${e.name} — ${dealt} acid${this._resistTag(e, 'acid')}.${this._afterEnemyHit(e)}`, null, { side: 'enemy' });
         if (e.hp <= 0) { this._broadcast(); return this._nextTurn(); }
       }
+      if (e.blinded > 0) e.blinded -= 1;   // Glitterdust wears off (doesn't cost the turn — just −4 to hit / denied Dex while it lasts)
       if (e.fascinated) { this._note(`${e.glyph} ${e.name} ${e.asleep ? 'sleeps soundly' : 'stands fascinated'} — does nothing.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       if (e.paralyzed > 0) {
         if (e.heldDC) {   // Hold Person / Hideous Laughter: a NEW Will save each turn — costs the turn either way (PF1e).
@@ -958,6 +970,9 @@ class Dungeon {
     const m = this.member(t.id);
     if (!m || m.left) return this._nextTurn();
     m._curatorBuffUsed = false;   // Curator: the once-per-turn swift buff resets each turn
+    if (m.untargetable) m.untargetable = false;   // Bladed Dash blur ends at the start of the magus's next turn
+    if (m.touchStrike > 0) m.touchStrike -= 1;     // Dimensional Blade touch-strikes lapse after the round
+    if (m.blinded > 0) m.blinded -= 1;             // (heroes can be blinded by future foes too)
     // Infernal Healing (Greater): fast healing at the START of the turn — BEFORE the
     // down/skip check, so it can knit a dying ally (below 0 HP) back onto their feet.
     if (m.infernalHeal > 0 && !m.dead && m.hp < m.maxHp) {
@@ -1359,6 +1374,22 @@ class Dungeon {
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
     const lvl = attacker.level || 1;
     const cls = attacker.cls || 'fighter';
+    // MAGUS Arcane Pool — an automatic, level-scaled weapon enhancement (the magus
+    // is always treated as wielding at least this grade): +1@1, +2@5, keen@6,
+    // flaming@8, +3@9, flaming burst@11, +4@13, +5@17. The real weapon's enchant
+    // wins if it's higher; keen/flaming layer on top.
+    let arcEnhDelta = 0, arcKeen = false, arcFlame = 0, arcFlameBurst = false;
+    if (cls === 'magus') {
+      const arcEnh = lvl >= 17 ? 5 : lvl >= 13 ? 4 : lvl >= 9 ? 3 : lvl >= 5 ? 2 : 1;
+      arcEnhDelta = Math.max(0, arcEnh - (weapon.dmgBonus || 0));   // only the part above the real enchant
+      arcKeen = lvl >= 6;
+      arcFlame = lvl >= 8 ? 1 : 0;        // +1d6 fire on each hit
+      arcFlameBurst = lvl >= 11;          // flaming burst: extra fire dice on a crit
+    }
+    // Dimensional Blade — for 1 round the magus's strikes resolve as TOUCH attacks.
+    if (attacker.touchStrike > 0 && target) ac = this._enemyAC(target, { touch: true });
+    // Fly / Overland Flight (magus) — a flyer can melee airborne foes (no high-ground gap).
+    if (attacker.canHitFlyers && attacker.flying && target && target.flying) ac -= HIGH_GROUND_AC;
     // Point Blank Shot: rangers get +1 to hit & damage with ranged weapons.
     const pbs = (cls === 'ranger' && weapon && weapon.ranged) ? 1 : 0;
     // Smite Evil: an ACTIVATED smite (paladin's ability) vs an evil foe adds a
@@ -1368,7 +1399,7 @@ class Dungeon {
     // defenses — flat-footed, prone, sickened, or paralyzed (PF1e). NOT crit-multiplied.
     // A target is denied its Dex vs an UNSEEN attacker too — Greater Invisibility
     // keeps a rogue striking from concealment, so every hit is a Sneak Attack.
-    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated)) || !!attacker.greaterInvis;
+    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated || target.blinded > 0)) || !!attacker.greaterInvis;
     const sneakOk = SNEAK_CLASSES.has(cls) && denied;
     const sneakDice = sneakOk ? Math.min(SNEAK_DICE_CAP, Math.max(1, Math.ceil(lvl / 2))) : 0;
     // Sticky room buffs (Rage / Judgment / Bane / Inspire Courage / Prayer)
@@ -1399,14 +1430,14 @@ class Dungeon {
     const swashWF = swashFin ? 1 : 0;
     const swashSpec = (swashFin && lvl >= 4) ? 2 : 0;
     const preciseDmg = (swashFin && lvl >= 3) ? lvl : 0;   // Precise Strike: +swashbuckler level
-    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit + swashWF;
+    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit + swashWF;
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
     // Damage = weapon dice (NdX) + enhancement + ½ level + ability mod + buff dmg (+ Point Blank).
     const judgDmg = attacker.judgment === 'destruction' ? Math.max(1, Math.floor(lvl / 3)) : 0;   // inquisitor Judgement: Destruction
-    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + (baneOn ? BANE_DMG : 0) + pbs + judgDmg + ff.dmg + swashSpec;
+    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + (baneOn ? BANE_DMG : 0) + pbs + judgDmg + ff.dmg + swashSpec + arcEnhDelta;
     // Natural attacks (a druid's claws/bite) grow their DICE with the wielder's SIZE
     // (the bigger combat forms enlarge them) and with Improved Natural Weapon — both
     // step the dice up the PF1 size table (1d6→1d8→2d6→…), stacking.
@@ -1419,7 +1450,7 @@ class Dungeon {
     let dmg = rollDmg() - sick, crit = false;
     // Improved Critical doubles the weapon's threat range (fighter L8; swashbuckler
     // L5 with a finesse blade). Critical Focus (fighter L9) adds +4 to confirm.
-    const impCrit = ff.impCrit || (swashFin && lvl >= 5);   // fighter / inquisitor bonus feat, or swashbuckler
+    const impCrit = ff.impCrit || (swashFin && lvl >= 5) || arcKeen;   // fighter / swashbuckler / magus arcane-pool keen (don't stack)
     const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
     const critFocus = ff.critFocus ? 4 : 0;
     if (roll >= effCritRange) { const conf = dRoll(20) + bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
@@ -1431,13 +1462,17 @@ class Dungeon {
     if (buff.bonusDice) dmg += dRollN(buff.bonusDice, 6);   // misc bonus dice
     if (baneOn) dmg += dRollN(BANE_DICE, 6);                // Inquisitor Bane — +2d6 vs the declared type
     if (smite) dmg += 2 * lvl;   // Smite Evil: +double level damage
+    // Magus arcane-pool FLAMING: +1d6 fire each hit (not crit-multiplied); FLAMING
+    // BURST adds extra fire dice on a confirmed crit.
+    if (arcFlame) dmg += dRollN(arcFlame, 6);
+    if (crit && arcFlameBurst) dmg += dRollN(Math.max(1, (weapon.critMult || 2) - 1), 10);
     return { hit: true, crit, smite, sneakDice, sneakDmg, damage: Math.max(1, dmg), roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
   _monsterSwing(e, targetAC) {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
-    const toHit = e.toHit - sick - pray + (e.flying ? HIGH_GROUND_HIT : 0);
+    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0);
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
@@ -1537,6 +1572,8 @@ class Dungeon {
         }
         this._note(`🤺 ${target.nickname} tries to parry, but ${e.name}'s blow beats the blade. [${pRoll} vs ${r.total}]`, null);
       }
+      // Mirror Image / Displacement — a decoy soaks, or the blurred form is missed.
+      if (this._evadeIncoming(target, e)) { this._echoToTable(r.sound); return; }
       let dmg = r.damage, sneakTag = '';
       // Enemy Sneak Attack (goblin/kobold rogues): +Xd6 vs a hero who's denied
       // their defenses — flat-footed (hasn't acted yet) or HELD by a shaman.
@@ -1546,9 +1583,11 @@ class Dungeon {
       let drTag = ''; [dmg, drTag] = this._physDR(target, dmg);   // Stoneskin soaks physical blows
       target.hp -= dmg;
       this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${dmg}.${sneakTag}${drTag} ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
+      this._fireShieldRetaliate(target, e);   // Fire Shield scorches a melee attacker
       if (target.hp <= -10) { this._memberDown(target); this._echoToTable(r.sound); return; }   // dead at −10
       if (target.hp <= 0)   { this._downMember(target); this._echoToTable(r.sound); return; }    // 0..−9 = down/dying
-      if (e.paralyze) {
+      if (e.paralyze && target.elemBody) { this._note(`🌪️ ${target.nickname}'s Elemental Body shrugs off the paralysis.`); }
+      else if (e.paralyze) {
         const pdc = e.paralyzeDC || PARALYZE_DC;
         const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
         const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= pdc;
@@ -1590,7 +1629,9 @@ class Dungeon {
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
     const roll = `[${fear ? 'Will' : 'Fort'} d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
     const snd = cfg.sound || null;
-    if (!saved && target.hp > 0) {
+    if (!saved && target.hp > 0 && target.elemBody) {
+      this._note(`🌪️ ${target.nickname}'s Elemental Body shrugs off the ${fear ? 'terror' : 'stun'}. ${roll}`, snd);
+    } else if (!saved && target.hp > 0) {
       target.stunned = Math.max(target.stunned || 0, 1);
       this._note(fear
         ? `👁️ ${e.glyph} ${e.name}'s sinister gaze freezes ${target.nickname} in TERROR — loses a turn! ${roll}`
@@ -2121,6 +2162,28 @@ class Dungeon {
     if (m.hp <= -10) return this._memberDown(m);
     if (m.hp <= 0) return this._downMember(m);
   }
+  // Mirror Image + Displacement (magus defenses): does an incoming attack on this
+  // hero get soaked by a decoy or slip through their blurred form? Returns true
+  // (and logs) when the attack is fully negated.
+  _evadeIncoming(target, attacker) {
+    if (target.images > 0) {
+      target.images -= 1;
+      this._note(`🪞 the blow strikes a mirror image of ${target.nickname} — it pops! (${target.images} left)`, null);
+      return true;
+    }
+    if (target.displaced && dRoll(2) === 1) {
+      this._note(`🌫️ ${target.nickname} is displaced — the attack passes through empty air!`, null);
+      return true;
+    }
+    return false;
+  }
+  // Fire Shield — a foe that lands a MELEE hit on the warded hero is scorched.
+  _fireShieldRetaliate(target, e) {
+    if (!target.fireShield || !(e && e.hp > 0)) return;
+    const fs = target.fireShield;
+    const dealt = this._dmgE(e, dRollN(1, fs.die || 6) + (fs.bonus || 1), 'fire');
+    this._note(`🔥 ${e.name} is scorched by ${target.nickname}'s Fire Shield for ${dealt} fire!${this._afterEnemyHit(e)}`, null, { side: 'enemy' });
+  }
   // Stoneskin DR vs PHYSICAL blows (melee swings, claws, chains — NOT energy/spells).
   // Returns [reducedDamage, tag] where tag annotates how much the stone soaked.
   _physDR(target, dmg) {
@@ -2355,6 +2418,11 @@ class Dungeon {
       touch:       () => this._abTouch(m, ab, payload),
       rays:        () => this._abRays(m, ab, payload),
       spellstrike: () => this._abSpellstrike(m, ab, payload),
+      glitterdust: () => this._abGlitterdust(m, ab, payload),
+      mirrorimage: () => this._abMirrorImage(m, ab),
+      bladelash:   () => this._abBladeLash(m, ab, payload),
+      bladeddash:  () => this._abBladedDash(m, ab, payload),
+      dimensionalblade: () => this._abDimBlade(m, ab),
       save_debuff: () => this._abSaveDebuff(m, ab, payload),
       grease:      () => this._abGrease(m, ab, payload),
       fascinate:   () => this._abFascinate(m, ab, payload),
@@ -2477,7 +2545,11 @@ class Dungeon {
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
     m.infernalHeal = 0;   // Infernal Healing fast-healing ends between rooms
-    if (m.overlandFlight) m.flying = true;   // Overland Flight is RUN-long — re-assert it after the per-room flight clear
+    // Magus per-room effects clear: mirror images, displacement, fire shield,
+    // elemental body, true seeing, touch strikes, blur, blindness, melee-flight.
+    m.images = 0; m.displaced = false; m.fireShield = null; m.elemBody = false; m.trueSeeing = false;
+    m.touchStrike = 0; m.untargetable = false; m.blinded = 0; m.canHitFlyers = false;
+    if (m.overlandFlight) { m.flying = true; m.canHitFlyers = true; }   // Overland Flight is RUN-long — re-assert flight + airborne reach
     m.acPenRound = -1; m.acPenAmt = 0;
   }
   // Inspire Courage is a passive bard AURA — it costs the bard NO action and is
@@ -2554,7 +2626,7 @@ class Dungeon {
   _enemyAC(e, opts = {}) {
     let base = opts.touch ? (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)) : e.ac;
     if (e.flatFooted) base = Math.max(10, base - 2);   // flat-footed: denied Dex
-    return base - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0) - (e.slowed > 0 ? 1 : 0) + (e.flying ? HIGH_GROUND_AC : 0);
+    return base - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) + (e.flying ? HIGH_GROUND_AC : 0);
   }
   // Energy-resistance multiplier for a damage type (see RESIST_BY_KEY): 0 immune,
   // 0.5 resistant, 1.5 vulnerable, 1 (default) unchanged. Physical/untyped (no
@@ -2739,20 +2811,105 @@ class Dungeon {
     const r = this._swingVsAC(m, this._enemyAC(e), e);
     const sound = MAGUS_SPELLSTRIKE_SFX[m.nickname] || ab.sound || r.sound;
     if (!r.hit) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. ${this._atkStr(r)}`, sound); this._echoToTable(sound); return; }
-    const bonus = dRollN(this._spellDice(ab, m), ab.die || 6);
+    const dn = this._spellDice(ab, m);
+    // MAXIMIZED → every die is its max (no roll). EMPOWERED → ×1.5. CAN-CRIT → the
+    // spell damage rides the weapon's crit multiplier too (Maximized Shocking Grasp).
+    let bonus = ab.maximized ? dn * (ab.die || 6) : dRollN(dn, ab.die || 6);
+    if (ab.empowered) bonus = Math.floor(bonus * 1.5);
+    if (ab.canCrit && r.crit) bonus *= (m.weapon.critMult || 2);
     const total = r.damage + bonus;
     this._dmgE(e, total);
     let extra = '';
-    if (ab.debuff === 'sickened' && e.hp > 0) { e.sickened = SICKENED_ROUNDS; extra = ' — staggered!'; }
+    if (r.crit) extra += ' — CRIT!';
+    if (ab.debuff === 'sickened' && e.hp > 0) { e.sickened = SICKENED_ROUNDS; extra += ' — staggered!'; }
     // Vampiric Touch: the negative energy heals the magus for what it drained.
     if (ab.lifesteal && bonus > 0) {
       const healed = Math.min(bonus, m.maxHp - m.hp);
       if (healed > 0) { m.hp += healed; extra += ` — drains ${healed} life (${m.hp}/${m.maxHp})!`; }
       else extra += ' — but is already at full vigor.';
     }
+    // Forceful Strike — BULL RUSH: the foe is shoved, provoking a free attack from
+    // one of the magus's melee allies (the closest stand-in for an attack of opportunity).
+    if (ab.allyAOO && e.hp > 0) {
+      const allies = this.livingParty().filter(a => a.playerId !== m.playerId && !a.flying);
+      const ally = allies.length ? pick(allies) : null;
+      if (ally) {
+        ally.weapon = weaponOf(ally.gear, ally.weaponKey);
+        const ra = this._swingVsAC(ally, this._enemyAC(e), e);
+        if (ra.hit) { this._dmgE(e, ra.damage); extra += ` ${ally.nickname} seizes the opening — ${ra.damage}!`; if (e.hp <= 0) this._tryBanter(ally, 'down', { enemy: e.name }); }
+        else extra += ` ${ally.nickname}'s free swing misses.`;
+      }
+    }
     this._note(`${ab.icon} ${m.nickname} ${ab.name}s ${e.name} for ${r.damage}+${bonus} ${ab.dtype || ''} = ${total}.${extra}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
+  }
+  // ── MAGUS spell handlers ───────────────────────────────────────────────────
+  // Glitterdust — a burst of clinging dust BLINDS a random 1d4 foes (Will negates).
+  // Blinded = −4 to its own attacks, denied Dex (easier to hit, Sneak-Attackable).
+  _abGlitterdust(m, ab, payload) {
+    const sound = ab.sound;
+    const dc = this._spellDC(m);
+    const n = (ab.randBase || 1) + dRoll(ab.randDie || 4);
+    const pool = this._targetableEnemies().slice();
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    const targets = pool.slice(0, n);
+    if (!targets.length) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} settles on no one.`, sound); this._echoToTable(sound); return; }
+    const parts = [];
+    for (const e of targets) {
+      const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
+      if (!sv.saved) { e.blinded = BLIND_ROUNDS; parts.push(`${e.name} BLINDED [${sv.total} vs ${dc}]`); }
+      else parts.push(`${e.name} resists [${sv.total} vs ${dc}]`);
+    }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${parts.join('; ')}.`, sound);
+    this._echoToTable(sound);
+  }
+  // Mirror Image — shimmering decoys soak incoming attacks (1d4 + 1 per 3 levels, max 8).
+  _abMirrorImage(m, ab) {
+    const lvl = m.level || 1;
+    m.images = Math.min(8, dRoll(4) + Math.floor(lvl / 3));
+    this._note(`${ab.icon} ${m.nickname} conjures ${m.images} mirror image${m.images > 1 ? 's' : ''} — decoys to soak incoming attacks!`, ab.sound);
+    this._echoToTable(ab.sound);
+  }
+  // Blade Lash — strike one foe for weapon damage AND attempt to TRIP it (a combat-
+  // maneuver check). On a success it is knocked prone and loses its turn.
+  _abBladeLash(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const r = this._swingVsAC(m, this._enemyAC(e), e);
+    const sound = ab.sound || r.sound;
+    if (!r.hit) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} cracks past ${e.name}. ${this._atkStr(r)}`, sound); this._echoToTable(sound); return; }
+    this._dmgE(e, r.damage);
+    let extra = '';
+    if (e.hp > 0) {
+      if (e.noTrip) extra = ' — too rooted to trip.';
+      else if (e.flying) extra = ' — airborne, cannot be tripped.';
+      else { const a = this._attackRoll(m, e); if (a.hit) { e.prone = true; e.loseTurn = true; extra = ' — TRIPPED prone, it loses its turn!'; } else extra = ' — but it keeps its feet.'; }
+    }
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} whips ${e.name} for ${r.damage}.${extra}${this._afterEnemyHit(e)}`, sound);
+    if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+    this._echoToTable(sound);
+  }
+  // Bladed Dash — strike one foe, then the magus blurs out of reach: UNTARGETABLE
+  // (by attacks, buffs, or heals) until the start of their next turn.
+  _abBladedDash(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const r = this._swingVsAC(m, this._enemyAC(e), e);
+    const sound = ab.sound || r.sound;
+    if (r.hit) { this._dmgE(e, r.damage); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    m.untargetable = true;   // cleared at the start of the magus's next turn (see _advanceToActor)
+    this._note(r.hit
+      ? `${ab.icon} ${m.nickname} DASHES through ${e.name} for ${r.damage} and blurs out of reach — untargetable until next turn!${this._afterEnemyHit(e)}`
+      : `${ab.icon} ${m.nickname} dashes past ${e.name} (a miss) and blurs out of reach — untargetable until next turn. ${this._atkStr(r)}`, sound);
+    this._echoToTable(sound);
+  }
+  // Dimensional Blade — a FREE action: the magus's strikes resolve as TOUCH attacks
+  // (ignore armor & natural armor) for 1 round (see touchStrike in _swingVsAC).
+  _abDimBlade(m, ab) {
+    m.touchStrike = 1;   // active this turn; cleared at the start of the next turn (1 round)
+    this._note(`${ab.icon} ${m.nickname} phases the blade half a step sideways — strikes hit on TOUCH this round!`, ab.sound);
+    this._echoToTable(ab.sound);
   }
   // Haste — the whole party blurs with speed. Each ally gets ONE extra attack on
   // their turn (see _hasteBonus), consumed when they act.
@@ -2781,7 +2938,7 @@ class Dungeon {
   // bonuses), if any.
   _abCleanse(m, ab) {
     const sound = ab.sound;
-    const sev = (a) => (a.paralyzed > 0 ? 5 : 0) + (a.stunned > 0 ? 4 : 0) + (a.slowed > 0 ? 2 : 0) + (a.grappled ? 2 : 0) + (a.sickened > 0 ? 1 : 0);
+    const sev = (a) => (a.paralyzed > 0 ? 5 : 0) + (a.stunned > 0 ? 4 : 0) + (a.slowed > 0 ? 2 : 0) + (a.grappled ? 2 : 0) + (a.blinded > 0 ? 2 : 0) + (a.sickened > 0 ? 1 : 0);
     // 1) Worst debuff on an ally.
     const hurt = this.livingParty().filter(a => sev(a) > 0).sort((x, y) => sev(y) - sev(x))[0];
     if (hurt) {
@@ -2790,6 +2947,7 @@ class Dungeon {
       if (hurt.stunned > 0)   { hurt.stunned = 0;   cleared.push('stun'); }
       if (hurt.slowed > 0)    { hurt.slowed = 0; hurt._slowTick = 0; cleared.push('slow'); }
       if (hurt.grappled)      { hurt.grappled = false; hurt.grappledBy = null; cleared.push('grapple'); }
+      if (hurt.blinded > 0)   { hurt.blinded = 0;   cleared.push('blindness'); }
       if (hurt.sickened > 0)  { hurt.sickened = 0;  cleared.push('sickness'); }
       this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — clears ${cleared.join(', ')}!`, sound);
       this._echoToTable(sound); return;
@@ -2842,6 +3000,7 @@ class Dungeon {
   // _resetAbilities). Grounded foes can't reach the caster; they can still cast.
   _abOverlandFlight(m, ab) {
     m.overlandFlight = true; m.flying = true;
+    if (ab.canHitFlyers) m.canHitFlyers = true;   // magus version — can also melee airborne foes
     this._note(`${ab.icon} ${m.nickname} rises on OVERLAND FLIGHT — airborne for the rest of the dungeon (grounded foes can't reach them).`, ab.sound);
     this._echoToTable(ab.sound);
   }
@@ -3308,6 +3467,11 @@ class Dungeon {
       if (ab.dr) who.dr = Math.max(who.dr || 0, ab.dr);   // Stoneskin — DR vs physical blows
       if (ab.protectFire) who.protectFire = true;   // Protection from Fire — halves fire damage taken
       if (ab.fly) who.flying = true;                // Fly — grounded foes can't melee them
+      if (ab.canHitFlyers) who.canHitFlyers = true; // Magus Fly/Overland Flight — can melee airborne foes
+      if (ab.displace) who.displaced = true;        // Displacement — 50% incoming-miss (this room)
+      if (ab.fireShield) who.fireShield = { die: 6, bonus: who.level || 1 };   // Fire Shield — retaliate on melee hit
+      if (ab.elemBody) who.elemBody = true;         // Elemental Body — crit + CC immunity
+      if (ab.trueSeeing) who.trueSeeing = true;     // True Seeing — pierce darkness/illusion/invisibility
     };
     if (ab.party) {
       for (const a of this.livingParty()) apply(a);

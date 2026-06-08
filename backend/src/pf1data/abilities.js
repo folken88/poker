@@ -79,7 +79,7 @@ function slotsFor(cls, level) {
 }
 
 const POOL_CLASSES   = new Set([]);   // (sorcerer is spontaneous-per-level now)
-const CASTER_CLASSES = new Set(['wizard', 'sorcerer', 'cleric', 'druid', 'bard', 'inquisitor']);
+const CASTER_CLASSES = new Set(['wizard', 'sorcerer', 'cleric', 'druid', 'bard', 'inquisitor', 'magus']);
 const isSpontaneous = (cls) => SPONTANEOUS_CLASSES.has(cls);
 
 // Spell-damage dice count from a level scale.
@@ -129,6 +129,8 @@ const S = {
   acid: '/audio/spell_acidarrow.mp3',          // Acid Arrow
   entangle: '/audio/spell_entangle.mp3',       // druid Entangle
   slow: '/audio/spell_slow.mp3',               // Slow (the Evil Morty theme)
+  glitter: '/audio/spell_glitterdust.mp3',     // Glitterdust (blinding sparkle) — ADD ASSET
+  chainlight: '/audio/thunderclap_slow.mp3',   // Chain Lightning (slow thunderclap) — ADD ASSET
 };
 // Sound POOLS — abilities with `sounds: [...]` pick one at random per cast, so a
 // repeated spell doesn't drone the same clip (Fireball / Lightning Bolt / Haste).
@@ -178,6 +180,20 @@ const SPELL = {
   cloudkill:     { key: 'cloudkill',     name: 'Cloudkill',      icon: '☠️', effect: 'aoe', target: 'aoe', randN: 3, randDie: 4, maxTargets: 8, save: 'fort', die: 4, dice: 'level', dcap: 10, dtype: 'poison', slvl: 5, sound: S.acid, desc: 'A roiling bank of poison gas engulfs a RANDOM 3d4 foes — Fortitude for half (level d4 poison).' },
   suffocation:   { key: 'suffocation',   name: 'Suffocation',    icon: '🫁', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 5, sound: S.umbral, desc: 'Rip the air from one creature\'s lungs (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy damage.' },
   overlandflight:{ key: 'overlandflight',name: 'Overland Flight', icon: '🕊️', effect: 'overlandflight', target: 'self', slvl: 5, sound: S.invis, desc: 'Soar for the REST OF THE DUNGEON — grounded foes cannot reach you, and you can still cast on the wing. A FREE action, cast once per dungeon (like Mage Armor).' },
+  // ── MAGUS spellbook additions (also reuse grease/shield/scorchingray/fly/haste/
+  //    dispelmagic/stoneskin/disintegrate/overlandflight from above) ──
+  vanish:        { key: 'vanish',        name: 'Vanish',         icon: '👻', effect: 'invisible', target: 'self', slvl: 1, sound: S.invis, desc: "Wink out of sight — enemies can't target you until you attack (a short-lived Invisibility)." },
+  bladelash:     { key: 'bladelash',     name: 'Blade Lash',     icon: '🌀', effect: 'bladelash', target: 'enemy', slvl: 1, sound: S.shock, desc: 'Your blade lashes out like a whip — strike one foe and TRIP it (combat-maneuver check); on a success it is knocked prone and loses its turn.' },
+  glitterdust:   { key: 'glitterdust',   name: 'Glitterdust',    icon: '✨', effect: 'glitterdust', target: 'aoe', randBase: 1, randDie: 4, save: 'will', slvl: 2, sound: S.glitter, desc: 'A burst of clinging gold dust — a RANDOM 1d4 foes must make a Will save or be BLINDED: −4 to hit and denied their Dex (easier to hit, Sneak-Attackable) for a few rounds.' },
+  mirrorimage:   { key: 'mirrorimage',   name: 'Mirror Image',   icon: '🪞', effect: 'mirrorimage', target: 'self', slvl: 2, sound: S.invis, desc: 'Conjure shimmering duplicates (1d4 + 1 per 3 levels, max 8) — each enemy attack that would hit you instead destroys an image, until they are all gone. Lasts the room.' },
+  bladeddash:    { key: 'bladeddash',    name: 'Bladed Dash',    icon: '💨', effect: 'bladeddash', target: 'enemy', slvl: 2, sound: S.haste, desc: 'Dash through the fray with a single deadly cut — strike one foe, then you become UNTARGETABLE (no attack, buff, or heal can reach you) until your next turn.' },
+  displacement:  { key: 'displacement',  name: 'Displacement',   icon: '🌫️', effect: 'buff', target: 'self', displace: true, sticky: true, slvl: 3, sound: S.invis, desc: 'Your form blurs and slips aside — 50% of attacks that would hit you MISS instead, for the rest of the room.' },
+  fireshield:    { key: 'fireshield',    name: 'Fire Shield',    icon: '🔥', effect: 'buff', target: 'self', fireShield: true, sticky: true, slvl: 4, sound: S.invoke, desc: 'Wreathe yourself in flame — any foe that hits you in melee is scorched for 1d6 + level fire. Lasts the room.' },
+  elementalbody: { key: 'elementalbody', name: 'Elemental Body',  icon: '🌪️', effect: 'buff', target: 'self', elemBody: true, sticky: true, slvl: 4, sound: S.invoke, desc: 'Become a being of raw element — IMMUNE to critical hits and to paralysis, stun, sickening & blinding, for the rest of the room.' },
+  dimensionalblade: { key: 'dimensionalblade', name: 'Dimensional Blade', icon: '🗡️', effect: 'dimensionalblade', target: 'self', freeAction: true, slvl: 5, sound: S.anchor, desc: 'Fold your weapon a half-step out of phase — a FREE action: your strikes resolve as TOUCH attacks (ignoring armor & natural armor) for 1 round.' },
+  chainlightning:{ key: 'chainlightning',name: 'Chain Lightning', icon: '⚡', effect: 'aoe', target: 'aoe', maxTargets: 6, randFoes: 6, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'electricity', slvl: 6, sound: S.chainlight, desc: 'A bolt arcs from foe to foe — a RANDOM 1d6 enemies, Reflex for half (level d6, cap 15d6).' },
+  dispelmagicgreater: { key: 'dispelmagicgreater', name: 'Dispel Magic, Greater', icon: '🌀', effect: 'cleanse', greater: true, target: 'ally', slvl: 6, sound: S.dispel, desc: 'A sweeping unweaving — strip ALL debuffs off an afflicted ally (paralysis, hold, slow, sicken, blind, grapple), or tear the buffs off a foe.' },
+  trueseeing:    { key: 'trueseeing',    name: 'True Seeing',     icon: '👁️', effect: 'buff', target: 'self', trueSeeing: true, sticky: true, slvl: 6, sound: S.invoke, desc: 'Your eyes pierce all deception — see through darkness, ignore illusions, and strike the invisible. Lasts the room.' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
@@ -359,12 +375,55 @@ const KITS = {
   // which spell to fire each strike; the buttons use short "SS …" labels to fit:
   //   SS Shock (Shocking Grasp, 1st) · SS Frigid (Frigid Touch, 2nd) ·
   //   SS Max SG (Intensified Shocking Grasp, 3rd) · SS Vamp (Vampiric Touch, 4th).
-  magus: { atwill: ATTACK('⚔️'), abilities: [
-    { key: 'spellstrike',  name: 'SS Shock',  icon: '⚡',  cost: 'room', uses: smiteUses, minLevel: 1, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 5,  dtype: 'electricity', sound: S.shock,     desc: 'Spell Strike — Shocking Grasp (1st): your weapon hit PLUS level d6 electricity (cap 5d6).' },
-    { key: 'frigidtouch',  name: 'SS Frigid', icon: '🧊', cost: 'room', uses: smiteUses, minLevel: 3, effect: 'spellstrike', target: 'enemy', die: 6, dice: 4,            dtype: 'cold', debuff: 'sickened', sound: S.frostbite, desc: 'Spell Strike — Frigid Touch (2nd): your weapon hit +4d6 cold; the foe is staggered (sickened).' },
-    { key: 'intenseshock', name: 'SS Max SG', icon: '🌩️', cost: 'room', uses: smiteUses, minLevel: 5, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 10, dtype: 'electricity', sound: S.shock,     desc: 'Spell Strike — Intensified Shocking Grasp (3rd): your weapon hit PLUS level d6 electricity, cap raised to 10d6.' },
-    { key: 'vampirictouch',name: 'SS Vamp',   icon: '🩸', cost: 'room', uses: smiteUses, minLevel: 7, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'halflevel', dcap: 10, dtype: 'negative', lifesteal: true, sound: S.umbral, desc: 'Spell Strike — Vampiric Touch (4th): your weapon hit +½level d6 negative energy (cap 10d6); you HEAL the energy damage dealt.' },
-    { key: 'shield',       name: 'Shield',    icon: '🛡️', cost: 'free', effect: 'buff', target: 'self', buff: { ac: 4 }, sticky: true, sound: S.inspire, desc: 'Raise an arcane Shield — +4 AC for the rest of the room.' },
+  // MAGUS — a gish: martial weapon attacks fused with arcane magic. THREE layers:
+  //   (1) SPELL STRIKES — channel a touch spell through a weapon hit (1 use per 5
+  //       levels per room, like Smite). New metamagic strikes unlock with level.
+  //   (2) SPELLBOOK — a prepared arcane repertoire (one casting of each per room),
+  //       gaining a new spell LEVEL at character levels 1/4/7/10/13/16 (the PF1
+  //       Magus advancement: 6th-level spells by 16th).
+  //   (3) ARCANE POOL — an automatic, level-scaled weapon enhancement applied in
+  //       _swingVsAC: +1@1, +2@5, keen@6, flaming@8, +3@9, flaming burst@11,
+  //       +4@13, +5@17 (the player's real weapon enchant wins if it's higher).
+  // (Per-magus Spell Strike SFX — Kate's "boudicca", Vaughan's anime sword, Toni's
+  // axe — are wired in Dungeon.js via MAGUS_SPELLSTRIKE_SFX.)
+  magus: { atwill: ATTACK('⚔️'), note: 'Spell Strikes channel a touch spell through your weapon. Spellbook: one casting of each prepared spell per room.', abilities: [
+    // ── SPELL STRIKES (class feature; 1 use per 5 levels per room) ──
+    { key: 'spellstrike',    name: 'SS Shock',    icon: '⚡',  cost: 'room', uses: smiteUses, minLevel: 1,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 5,  dtype: 'electricity', sound: S.shock,     desc: 'Spell Strike — Shocking Grasp (1st): your weapon hit PLUS level d6 electricity (cap 5d6).' },
+    { key: 'frigidtouch',    name: 'SS Frigid',   icon: '🧊', cost: 'room', uses: smiteUses, minLevel: 4,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 4,            dtype: 'cold', debuff: 'sickened', sound: S.frostbite, desc: 'Spell Strike — Frigid Touch (2nd): your weapon hit +4d6 cold; the foe is staggered (sickened).' },
+    { key: 'vampirictouch',  name: 'SS Vamp',     icon: '🩸', cost: 'room', uses: smiteUses, minLevel: 7,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 'halflevel', dcap: 10, dtype: 'negative', lifesteal: true, sound: S.umbral, desc: 'Spell Strike — Vampiric Touch (3rd): your weapon hit +½level d6 negative energy (cap 10d6); you HEAL the energy damage dealt.' },
+    { key: 'intenseshock',   name: 'SS Max SG',   icon: '🌩️', cost: 'room', uses: smiteUses, minLevel: 7,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 10, dtype: 'electricity', sound: S.shock,     desc: 'Spell Strike — Intensified Shocking Grasp: your weapon hit PLUS level d6 electricity, cap raised to 10d6.' },
+    { key: 'forcefulstrike', name: 'SS Force',    icon: '💪', cost: 'room', uses: smiteUses, minLevel: 10, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'halflevel', dcap: 5,  dtype: 'force', bullRush: true, allyAOO: true, sound: S.shock, desc: 'Spell Strike — Forceful Strike (4th): your weapon hit +½level d6 force and a BULL RUSH — the foe is shoved, provoking a free attack from one of your melee allies.' },
+    { key: 'empvamp',        name: 'SS Emp Vamp', icon: '🩸', cost: 'room', uses: smiteUses, minLevel: 13, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'halflevel', dcap: 10, dtype: 'negative', lifesteal: true, empowered: true, sound: S.umbral, desc: 'Spell Strike — Empowered Vampiric Touch (5th): your weapon hit +½level d6 negative ×1.5 (cap 10d6); you HEAL the energy dealt.' },
+    { key: 'empshock',       name: 'SS Emp SG',   icon: '🌩️', cost: 'room', uses: smiteUses, minLevel: 13, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 15, dtype: 'electricity', empowered: true, sound: S.shock, desc: 'Spell Strike — Intensified Empowered Shocking Grasp (5th): your weapon hit + level d6 electricity ×1.5 (cap 15d6).' },
+    { key: 'maxshock',       name: 'SS Max!',     icon: '⚡', cost: 'room', uses: smiteUses, minLevel: 16, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 15, dtype: 'electricity', maximized: true, empowered: true, canCrit: true, sound: S.shock, desc: 'Spell Strike — Intensified Empowered Maximized Shocking Grasp (6th): your weapon hit + a NO-ROLL 15d6 (90) electricity that CAN CRIT.' },
+    // ── SPELLBOOK (prepared; one casting of each per room) ──
+    // 1st level (character level 1)
+    preparedSpell(SPELL.bladelash,    1),
+    preparedSpell(SPELL.grease,       1),
+    preparedSpell(SPELL.shield,       1),
+    preparedSpell(SPELL.vanish,       1),
+    // 2nd level (character level 4)
+    preparedSpell(SPELL.bladeddash,   4),
+    preparedSpell(SPELL.glitterdust,  4),
+    preparedSpell(SPELL.mirrorimage,  4),
+    preparedSpell(SPELL.scorchingray, 4),
+    // 3rd level (character level 7)
+    preparedSpell(SPELL.displacement, 7),
+    { ...preparedSpell(SPELL.fly, 7), canHitFlyers: true },
+    { key: 'haste', name: 'Haste', icon: '💨', cost: 'room', uses: 1, minLevel: 7, slvl: 3, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 turn per 5 caster levels.' },
+    preparedSpell(SPELL.dispelmagic,  7),
+    // 4th level (character level 10)
+    preparedSpell(SPELL.elementalbody, 10),
+    preparedSpell(SPELL.fireshield,    10),
+    preparedSpell(SPELL.stoneskin,     10),
+    // 5th level (character level 13)
+    preparedSpell(SPELL.dimensionalblade, 13),
+    { ...SPELL.overlandflight, cost: 'run', uses: 1, freeAction: true, minLevel: 13, canHitFlyers: true },
+    // 6th level (character level 16)
+    preparedSpell(SPELL.disintegrate,       16),
+    preparedSpell(SPELL.chainlightning,     16),
+    preparedSpell(SPELL.dispelmagicgreater, 16),
+    preparedSpell(SPELL.trueseeing,         16),
   ] },
   // INQUISITOR — a SPONTANEOUS divine caster (cleric-list spellbook, slower 6-level
   // progression — see INQ_SLOTS_BY_LEVEL) who fights with steel and zeal. His class

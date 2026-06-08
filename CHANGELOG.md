@@ -21,6 +21,46 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-07 (newest)
 
+### 🗡️✨ Magus rework — a full spellbook, new Spell Strikes & an Arcane Pool
+The Magus is now a true gish, fighting on **three layers**:
+
+**1. Spell Strikes (class feature, 1 use per 5 levels per room)** — the existing
+Shocking Grasp / Frigid Touch / Vampiric Touch, plus four new ones:
+- **SS Force** (Forceful Strike, L10) — a weapon hit + force damage and a **bull rush**:
+  the foe is shoved, provoking a **free attack from one of your melee allies**.
+- **SS Emp Vamp** (Empowered Vampiric Touch, L13) — Vampiric Touch with ×1.5 drain.
+- **SS Emp SG** (Intensified Empowered Shocking Grasp, L13) — up to **15d6** ×1.5.
+- **SS Max!** (Intensified Empowered **Maximized** Shocking Grasp, L16) — a **no-roll
+  90** (15d6 maximized) that **can crit** (riding the weapon's multiplier).
+
+**2. Spellbook (prepared — one casting of each spell per room).** A new spell level
+unlocks at character levels **1 / 4 / 7 / 10 / 13 / 16** (PF1 Magus advancement):
+- **1st:** Blade Lash (strike + trip → prone), Grease, Shield, Vanish.
+- **2nd:** Bladed Dash (strike, then *untargetable* until your next turn), Glitterdust
+  (Will save or **blinded**: −4 to hit, denied Dex), Mirror Image (decoys soak hits),
+  Scorching Ray.
+- **3rd:** Displacement (50% of incoming attacks miss), Fly (and you can melee airborne
+  foes), Haste, Dispel Magic.
+- **4th:** Elemental Body (immune to crits, paralysis, stun, sicken & blind), Fire Shield
+  (melee attackers scorched), Stoneskin.
+- **5th:** Dimensional Blade (free action — strikes hit on **touch AC** for 1 round),
+  Overland Flight (run-long flight; can melee flyers).
+- **6th:** Disintegrate, Chain Lightning, Greater Dispel Magic, True Seeing.
+
+The spellbook shows up automatically in the sighted **📖 Spellbook ▾** popover **and**
+the blind keyboard spellbook (numbers = spell level, Tab through spells, Return to cast).
+
+**3. Arcane Pool (automatic, every fight).** The Magus's weapon is always treated as
+at least: **+1** at L1, **+2** at L5, **keen** at L6, **flaming** (+1d6 fire) at L8,
+**+3** at L9, **flaming burst** at L11, **+4** at L13, **+5** at L17. A better real
+weapon enchant still wins; keen/flaming layer on top.
+
+*Notes:* a few spells are faithful-but-simplified to fit the engine — Displacement is a
+flat 50% incoming-miss; Dimensional Blade resolves against an approximated touch AC;
+True Seeing is mainly forward-looking (enemies rarely conceal). Glitterdust and Chain
+Lightning reference new sound files (`spell_glitterdust.mp3`, `thunderclap_slow.mp3`) —
+drop those into `public/audio/` to give them their cues (they play silently until then).
+
 ### ♿ Blind dungeon: keyboard spellbook (for Josh)
 A spellcasting flow that mirrors the sighted **📖 Spellbook ▾** popover, built for
 screen-reader play. Casters now get a single **"Spellbook"** entry in their numbered
