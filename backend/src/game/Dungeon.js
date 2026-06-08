@@ -2799,19 +2799,31 @@ class Dungeon {
   }
   // Ranged touch rays (Scorching Ray): 1+¼level rays of 4d6 each.
   _abRays(m, ab, payload) {
-    const e = this._oneEnemy(payload); if (!e) return;
+    let e = this._oneEnemy(payload); if (!e) return;
     // PF1e Scorching Ray: 1 ray, +1 per 4 caster levels past 3rd → 2 rays at CL7,
-    // 3 at CL11. Each ray rolls to hit (4d6 fire). When it SPLITS (2+), use the
-    // dramatic fire-combo sound instead of the single-ray report.
+    // 3 at CL11. Each ray rolls to hit (4d6 fire) and is RESOLVED ONE AT A TIME — if
+    // the target drops, the next ray redirects to another foe (you don't pre-commit
+    // all rays to one target). When it SPLITS (2+), use the dramatic fire-combo sound.
     const rays = Math.max(1, Math.min(3, 1 + Math.floor(((m.level || 1) - 3) / 4)));
-    const touchAC = this._enemyAC(e, { touch: true }), toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
-    let dmg = 0, hits = 0;
-    for (let i = 0; i < rays; i++) { const roll = dRoll(20); if (roll === 20 || (roll !== 1 && roll + toHit >= touchAC)) { dmg += dRollN(ab.dice || 4, ab.die || 6); hits++; } }
+    const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
     const sound = (rays >= 2 && ab.splitSound) ? ab.splitSound : (ab.sound || pick(SND.lightning));
-    if (!hits) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} (${rays} ray${rays > 1 ? 's' : ''}) all miss ${e.name}.`, sound); this._echoToTable(sound); return; }
-    const dealt = this._dmgE(e, dmg, ab.dtype);
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} — ${hits}/${rays} rays burn ${e.name} for ${dealt} fire${this._resistTag(e, ab.dtype)}.${this._afterEnemyHit(e)}`, sound);
-    if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+    const tally = new Map();   // uid -> { name, dmg, hits }
+    let anyHit = false;
+    for (let i = 0; i < rays; i++) {
+      if (!e || e.hp <= 0) e = this._targetableEnemies()[0];   // redirect to a fresh foe
+      if (!e) break;                                            // nothing left to burn
+      const rec = tally.get(e.uid) || { name: e.name, dmg: 0, hits: 0 };
+      const roll = dRoll(20);
+      if (roll === 20 || (roll !== 1 && roll + toHit >= this._enemyAC(e, { touch: true }))) {
+        const d = this._dmgE(e, dRollN(ab.dice || 4, ab.die || 6), ab.dtype);
+        rec.dmg += d; rec.hits++; anyHit = true;
+        if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+      }
+      tally.set(e.uid, rec);
+    }
+    if (!anyHit) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} (${rays} ray${rays > 1 ? 's' : ''}) all miss.`, sound); this._echoToTable(sound); return; }
+    const parts = [...tally.values()].filter(r => r.hits).map(r => `${r.hits} ray${r.hits > 1 ? 's' : ''} → ${r.name} for ${r.dmg}`);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} — ${parts.join('; ')} ${ab.dtype || 'fire'}.`, sound);
     this._echoToTable(sound);
   }
   // Spellstrike: a weapon hit carrying bonus elemental dice (+ optional debuff).
@@ -3728,11 +3740,15 @@ class Dungeon {
     // at full BAB. No iteratives/TWF on top.
     if (m.weapon && m.weapon.naturalAttacks > 1) return Array(m.weapon.naturalAttacks).fill(0);
     const dual = this._isDualWielding(m);
-    const sameTarget = (m._lastAtkTarget === e.uid);
+    // RANGED attackers (bows, crossbows, guns) can ALWAYS full-attack — they don't
+    // move to reach a foe. MELEE only get their iteratives when they stay on the SAME
+    // target as last turn (a proxy for not having to charge/move to a new one).
+    const isRanged = !!(m.weapon && m.weapon.ranged);
+    const fullAttack = isRanged || (m._lastAtkTarget === e.uid);
     const twfPen = dual ? (ff.twf ? -2 : -6) : 0;
     const off = [twfPen];                       // primary / main-hand swing
     if (dual) off.push(twfPen);                 // base off-hand swing (the 2nd weapon)
-    if (sameTarget) {
+    if (fullAttack) {
       if (bab >= 6)  off.push(twfPen - 5);      // main-hand iterative
       if (bab >= 11) off.push(twfPen - 10);
       if (bab >= 16) off.push(twfPen - 15);
@@ -3760,7 +3776,9 @@ class Dungeon {
     let baseSound = m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null);
     if (m.smiteActive && m.weaponKey === 'warhammer') baseSound = '/audio/weapon_warhammer_smite.mp3';   // holy hammer-ring on a smite
     for (let i = 0; i < swings; i++) {
-      const tgt = (e.hp > 0) ? e : this.livingEnemies()[0];
+      // Resolve swings ONE AT A TIME: if the target has dropped, the next swing
+      // redirects to another foe (PF1 — you don't pre-commit a full attack).
+      const tgt = (e.hp > 0) ? e : this._targetableEnemies()[0];
       if (!tgt) break;
       const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms' }), tgt, offsets[i]);   // firearms hit vs touch AC; offset = iterative/TWF penalty
       if (i > 0 || quiet) r.sound = null;            // one report for the whole flurry; haste swing silent

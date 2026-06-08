@@ -57,16 +57,16 @@ button, input { font: inherit; color: inherit; }
     url('/dungeon/maps/harrowstone.webp') center / cover no-repeat;
   border: 1px solid rgba(217,176,106,0.25); border-radius: 12px; padding: 1rem;
   display: flex; flex-direction: column; gap: 0.9rem;
-  /* Don't let the stage grow past its (capped) content — the enemy field and
-     party row each cap + scroll internally, so the combat logs below always
-     keep their space. */
-  flex: 0 1 auto; min-height: 0;
+  /* The stage may shrink when the logs want space, but it CLIPS its overflow so a
+     non-shrinking child (the hero row) can never spill out below the box border and
+     overlap the action bar. The enemy field absorbs the squeeze (it scrolls). */
+  flex: 0 1 auto; min-height: 0; overflow: hidden;
 }
 /* The enemy field is a STATIC-height box — when it fills up the cards shrink
    (is-compact / is-packed, set in JS by enemy count) and, as a last-resort
    fallback, it scrolls internally — so a crowded battlefield never pushes the
    action bar / spellbook off the bottom of the screen. */
-.dungeon__enemies { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; align-content: flex-start; min-height: 96px; max-height: 30vh; overflow-y: auto; }
+.dungeon__enemies { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; align-content: flex-start; flex: 1 1 auto; min-height: 64px; max-height: 30vh; overflow-y: auto; }
 .dmon { position: relative; width: 112px; background: rgba(0,0,0,0.4); border: 1px solid rgba(200,80,80,0.4); border-radius: 10px; padding: 0.5rem 0.4rem; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; cursor: pointer; color: inherit; transition: transform .1s, border-color .1s, box-shadow .1s; }
 .dungeon__enemies.is-compact .dmon { width: 88px; padding: 0.3rem 0.25rem; gap: 0.15rem; }
 .dungeon__enemies.is-compact .dmon__art { width: 48px; height: 48px; }
