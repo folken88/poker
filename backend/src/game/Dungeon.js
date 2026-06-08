@@ -181,7 +181,14 @@ const SNEAK_CLASSES = new Set(['rogue', 'ninja', 'slayer']);  // gain Sneak Atta
 const SNEAK_DICE_CAP = 5;     // cap precision dice so it stays flavorful, not silly
 const SMITE_TOHIT    = 2;     // paladin Smite Evil: to-hit bump vs an evil foe (+level dmg)
 const AFK_PASS_MS    = 60_000; // idle on your turn → auto-ATTACK after 60s (extra time for screen-reader play)
-const aiStepMs = () => dRoll(4) * 1000;   // AI (enemy + ally) turns take 1d4 seconds — varied, natural pacing
+// AI "decision time" scales with THREAT: 1s + 0.1s per CR for enemies (so a CR-1
+// rat snaps in ~1.1s and a CR-10 horror broods ~2s), or per LEVEL for AI allies
+// (who have no CR). Clamped to [1s, 5s]. crToNum (hoisted below) parses "1/2" etc.
+const aiStepMs = (actor) => {
+  let n = 0;
+  if (actor) { if (actor.cr != null) n = crToNum(actor.cr); else if (actor.level != null) n = actor.level; }
+  return Math.round(Math.max(1000, Math.min(5000, 1000 + n * 100)));
+};
 const CHAIN_SFX_GAP_MS = 320;  // audible gap between staggered cleave/chain swing sounds
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
@@ -972,7 +979,7 @@ class Dungeon {
         e.slowed -= 1; e._slowTick = (e._slowTick || 0) + 1;
         if (e._slowTick % 2 === 1) { this._note(`🐌 ${e.name} is slowed — too sluggish to act this turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       }
-      this._stepTimer = setTimeout(() => { this._withSide('enemy', () => this._enemyAct(e)); this._nextTurn(); }, aiStepMs());
+      this._stepTimer = setTimeout(() => { this._withSide('enemy', () => this._enemyAct(e)); this._nextTurn(); }, aiStepMs(e));
       this._broadcast();
       return;
     }
@@ -1024,7 +1031,7 @@ class Dungeon {
       const h = Math.max(1, Math.floor((m.level || 1) / 3)); m.hp = Math.min(m.maxHp, m.hp + h);
       this._note(`💗 ${m.nickname}'s Judgement of Healing mends ${h} HP.`);
     }
-    if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, aiStepMs()); this._broadcast(); }
+    if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, aiStepMs(m)); this._broadcast(); }
     else { this._armAfkTimer(m); this._broadcast(); }   // human — wait for input
   }
   _nextTurn() {
