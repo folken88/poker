@@ -3173,8 +3173,40 @@
     el.innerHTML = buildClockDigitsHtml(secs);
   }
 
+  // Top-center turn banner for the DUNGEON: whose turn it is + (for a human on
+  // the clock) their countdown. Reuses the shared #actionTimerBanner element; it
+  // shows ONLY on the dungeon screen during combat, and is hidden everywhere else.
+  function updateDungeonTurnBanner() {
+    const atb = document.getElementById('actionTimerBanner');
+    if (!atb) return;
+    const d = state.dungeon;
+    if (document.body.dataset.screen !== 'dungeon' || !d || d.status !== 'combat' || !d.turn) { atb.hidden = true; return; }
+    const turn = d.turn;
+    let who = 'Acting…', secs = null, mode = 'next';
+    if (turn.kind === 'party') {
+      const m = (d.party || []).find(p => p.playerId === turn.id);
+      const isMe = state.me && turn.id === state.me.player_id;
+      who = isMe ? 'Your turn' : (m?.nickname || 'Acting…');
+      if (m && m.afkAt) {   // a human is on the clock → live countdown
+        const rem = Math.max(0, m.afkAt - Date.now());
+        secs = Math.ceil(rem / 1000);
+        mode = (isMe && rem < 10000) ? 'urgent' : 'action';
+      } else {
+        mode = 'next';   // an AI party member — quick, no precise deadline
+        who = (m?.nickname || 'Ally') + ' acting…';
+      }
+    } else {
+      who = 'Enemies acting…';
+      mode = 'next';
+    }
+    atb.dataset.mode = mode;
+    atb.innerHTML = `<span class="at-who">${escapeText(who)}</span>` + (secs != null ? `<span class="at-secs">${secs}s</span>` : '');
+    atb.hidden = false;
+  }
+
   // ===== Combined timer tick: seat countdowns AND the big topbar clock =====
   function tickTimers() {
+    updateDungeonTurnBanner();   // dungeon top-center turn/timer banner
     // Per-seat countdowns. Bots show "🤔 thinking…" with no urgency
     // pulse — they're not going to time out, they're just deciding.
     // Humans show a precise mm:ss with red pulse under 10s.
@@ -3210,8 +3242,6 @@
     const now = Date.now();
     const actionMs = t?.actionDeadline ? t.actionDeadline - now : 0;
     const nextMs   = t?.nextHandAt ? t.nextHandAt - now : 0;
-    const _atb = document.getElementById('actionTimerBanner');
-    if (_atb) _atb.hidden = true;   // default hidden; the action branch below shows it
 
     // If a Loot Lord ceremony is running, the topbar clock shows the
     // reset countdown and the overlay's countdown updates here too.
@@ -3243,12 +3273,6 @@
           ? `${actorSeat?.nickname || 'Bot'} · thinking`
           : `${actorSeat?.nickname || 'Acting'} · auto-fold in`;
       renderClockDigits(secs);
-      // Top-center banner: whose turn + seconds (table screen only).
-      if (_atb && document.body.dataset.screen === 'table') {
-        _atb.dataset.mode = mode;
-        _atb.innerHTML = `<span class="at-who">${isMe ? 'Your turn' : escapeText(actorSeat?.nickname || 'Acting')}</span><span class="at-secs">${secs}s</span>`;
-        _atb.hidden = false;
-      }
     } else if (nextMs > 0) {
       clock.dataset.mode = 'next';
       label.textContent = 'Next hand in';

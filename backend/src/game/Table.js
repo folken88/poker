@@ -881,22 +881,70 @@ class Table {
     if (!actor) return;
     const bot = this.bots.get(actor);
     if (!bot) return;
+    const me = this.hand.players.find(p => p.playerId === actor);
+    if (!me) return;
 
     // The clock shows every bot the SAME fixed allotment — the MAX time they're
-    // given — regardless of how long they'll actually take, so the countdown can't
-    // telegraph a snap-decision vs a long brood.
+    // given — so the topbar countdown can't telegraph one bot from another.
     const AI_TURN_MS = 15000;
-    // Hidden, mode-flavored think time (risky ~1-4s, standard ~1-10s, cautious
-    // longer) — when the bot ACTUALLY acts. Capped just inside the allotment so it
-    // never acts after the displayed timer would hit zero.
-    let delay = rollBotDelayMs(bot.mode);
-    // Preflop, bots snap-decide their starting hands 50% quicker — less waiting
-    // through the part of the hand with the least to think about.
-    if (this.hand.board && this.hand.board.length === 0) delay = Math.round(delay / 2);
+
+    // ---- Decide NOW, then pace the "thinking" delay by the ACTION ----
+    // The state can't change during the bot's own turn (nobody else acts), so
+    // it's safe to compute the decision up front and APPLY it after a delay
+    // flavored by what the bot will do: a snap check/call, a beat to raise, a
+    // longer brood to shove. (Per design — bots feel quick and lifelike.)
+    const myGear = db.gearTotalValue(db.getGear(actor) || {});
+    const selfWealth = me.stack + myGear;
+    const opponents = [];
+    let aggressorWealth = null;
+    let aggressorId = null;
+    for (let i = 0; i < this.hand.players.length; i++) {
+      const p = this.hand.players[i];
+      if (p.playerId === actor) continue;
+      if (p.folded) continue;
+      const oppGear = db.gearTotalValue(db.getGear(p.playerId) || {});
+      const oppWealth = p.stack + oppGear;
+      opponents.push({ playerId: p.playerId, stack: p.stack, gearValue: oppGear, wealth: oppWealth, invested: p.invested, allIn: p.allIn });
+      if (i === this.hand.lastRaiser) { aggressorWealth = oppWealth; aggressorId = p.playerId; }
+    }
+    const decideCtx = {
+      hole: me.hole,
+      board: this.hand.board,
+      toCall: Math.max(0, this.hand.currentBet - me.invested),
+      potTotal: this.hand.pot.totalSize(),
+      stack: me.stack,
+      currentBet: this.hand.currentBet,
+      invested: me.invested,
+      minRaise: this.hand.minRaise,
+      bigBlind: this.bigBlind,
+      selfWealth,
+      selfGear: myGear,
+      opponents,
+      aggressorWealth,
+      aggressorId,
+    };
+    // Defensive: bot.decide() must never throw (would strand the actor). Force-fold
+    // on any anomaly so the hand keeps moving and the bug surfaces in logs.
+    let decision = null;
+    try {
+      decision = bot.decide(decideCtx);
+    } catch (e) {
+      console.error(`[bot] ${actor} (${bot.mode}) decide() threw — force-folding: ${e?.message || e}`);
+      decision = { action: 'fold', reason: 'decide-threw->force-fold' };
+    }
+    // Action-paced think time: check/call (and a quick muck) ≈ 1-2s, raise 1d4s,
+    // all-in 1d6s. Capped just inside the displayed allotment.
+    const d6 = () => Math.floor(Math.random() * 6) + 1;
+    const d4 = () => Math.floor(Math.random() * 4) + 1;
+    let delay;
+    switch (decision.action) {
+      case 'allin':            delay = d6() * 1000; break;                       // 1d6 seconds
+      case 'raise': case 'bet': delay = d4() * 1000; break;                      // 1d4 seconds
+      default:                 delay = 1000 + Math.floor(Math.random() * 1001);  // check / call / fold: 1-2s
+    }
     delay = Math.min(delay, AI_TURN_MS - 300);
-    // Surface the FULL allotment (not `delay`) so the topbar clock ticks down the
-    // fixed 15s max for everyone — not the bot's real think time. Callers broadcast
-    // after timer setup, so we never emit a half-updated state here.
+    // Surface the FULL allotment so the topbar clock ticks the fixed max for
+    // everyone. Callers broadcast after timer setup.
     this.actionDeadline = Date.now() + AI_TURN_MS;
     const expectedHand = this.hand;
     this._botActionTimer = setTimeout(() => {
@@ -905,71 +953,6 @@ class Table {
       if (this.hand !== expectedHand) return;
       if (this.hand.getCurrentActor() !== actor) return;
 
-      const me = this.hand.players.find(p => p.playerId === actor);
-      if (!me) return;
-
-      // ---- Build opponent wealth picture so the bot can scale risk ----
-      // Wealth = chips at the table + total magic-item value. We pass the
-      // bot's own wealth and a list of still-live opponents (non-folded).
-      // The aggressor (last raiser) is flagged so the bot can weigh how
-      // credible the bet is given who's firing it.
-      const myGear = db.gearTotalValue(db.getGear(actor) || {});
-      const selfWealth = me.stack + myGear;
-      const opponents = [];
-      let aggressorWealth = null;
-      let aggressorId = null;
-      for (let i = 0; i < this.hand.players.length; i++) {
-        const p = this.hand.players[i];
-        if (p.playerId === actor) continue;
-        if (p.folded) continue;
-        const oppGear = db.gearTotalValue(db.getGear(p.playerId) || {});
-        const oppWealth = p.stack + oppGear;
-        opponents.push({
-          playerId: p.playerId,
-          stack: p.stack,
-          gearValue: oppGear,
-          wealth: oppWealth,
-          invested: p.invested,
-          allIn: p.allIn,
-        });
-        if (i === this.hand.lastRaiser) {
-          aggressorWealth = oppWealth;
-          aggressorId = p.playerId;
-        }
-      }
-
-      const decideCtx = {
-        hole: me.hole,
-        board: this.hand.board,
-        toCall: Math.max(0, this.hand.currentBet - me.invested),
-        potTotal: this.hand.pot.totalSize(),
-        stack: me.stack,
-        currentBet: this.hand.currentBet,
-        invested: me.invested,
-        minRaise: this.hand.minRaise,
-        bigBlind: this.bigBlind,
-        // New: wealth-aware fields
-        selfWealth,
-        selfGear: myGear,
-        opponents,
-        aggressorWealth,
-        aggressorId,
-      };
-      // Defensive: bot.decide() must never throw (would silently strand the
-      // actor — the setTimeout already nulled itself, no new timer would be
-      // scheduled, the table sits forever showing "thinking" past the
-      // displayed countdown). If a decision is rejected by validate (e.g.
-      // 'check' when toCall>0) the same dead-end occurs because the bot
-      // driver previously ignored applyAction's return value.
-      // Wrap both calls and force-fold on any anomaly so the hand keeps
-      // moving and the bug surfaces in logs instead of hanging silently.
-      let decision = null;
-      try {
-        decision = bot.decide(decideCtx);
-      } catch (e) {
-        console.error(`[bot] ${actor} (${bot.mode}) decide() threw — force-folding: ${e?.message || e}`);
-        decision = { action: 'fold', reason: 'decide-threw->force-fold' };
-      }
       console.log(`[bot] ${actor} (${bot.mode}) → ${decision.action}${decision.amount != null ? ' to ' + decision.amount : ''}  // ${decision.reason}`);
       // Persist for offline analysis. Strength recomputed for record (cheap).
       logBotDecision({

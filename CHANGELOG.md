@@ -21,6 +21,14 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ## 2026-06-07 (newest)
 
+### ⏱️ Faster bots & the turn-timer moved to the dungeon
+- **Bots act faster, paced by their decision:** a check or call takes ~1-2 seconds,
+  a raise 1d4 seconds, an all-in 1d6 seconds (a fold is a quick ~1-2s muck). Roughly
+  half their old brooding time — the table moves.
+- **The top-center turn/timer banner now lives in the DUNGEON, not the poker table.**
+  It shows whose turn it is and, when a human is on the clock, their countdown
+  (turning red in the last 10s). The poker felt no longer shows it.
+
 ### 🗣️ Banter fixes — no naming absent players, cleaner numbers, Kate
 - **Bots no longer name someone who isn't at the table.** The line-pool now tracks
   who is *currently seated* separately from an all-time roster, so a saved (or freshly
