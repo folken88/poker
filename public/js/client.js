@@ -928,9 +928,9 @@
           return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''}"${shrouded ? ' style="opacity:.45"' : ''} data-enemy="${escapeAttr(e.uid)}" ${(dead || shrouded) ? 'disabled' : ''} title="${shrouded ? 'Shrouded in darkness — cannot be targeted' : ''}">
             ${portrait}
             <div class="dmon__name">${escapeText(e.name)}${e.flying ? ` <span class="dmon__fly" title="Flying — immune to prone (can't be tripped); holds the high ground: +1 to hit and +2 AC vs grounded heroes">🪽</span>` : ''}</div>
-            ${condIcons(e.conditions)}
-            <div class="dmon__hpbar"><span style="width:${pct}%"></span></div>
-            <div class="dmon__hp">${dead ? '☠️' : `${e.hp}/${e.maxHp}`}${e.cr ? ` · CR ${e.cr}` : ''}${(typeof e.ac === 'number') ? ` · <span title="AC ${e.ac} · touch ${e.touchAC} (spells & guns) · flat-footed ${e.ffAC}">AC ${e.ac}<span class="dmon__acsub"> ${e.touchAC}t/${e.ffAC}ff</span></span>` : ''}</div>
+            ${condIcons(e.conditions)}${buffIcons(e.buffs)}
+            <div class="dmon__hpbar" title="${dead ? 'Slain' : `${e.hp}/${e.maxHp} HP`}"><span style="width:${pct}%"></span></div>
+            ${dead ? '<div class="dmon__hp">☠️</div>' : ''}
           </button>`;
         }).join('')
       : '<div class="dmon__none">— the room is quiet —</div>';

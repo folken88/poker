@@ -671,6 +671,15 @@ class Dungeon {
     return c;
   }
 
+  // Active BOONS on an enemy (green-ringed buff icons), so players can see a foe
+  // that's been hasted or pumped with combat buffs. Debuffs ride _condList.
+  _enemyBuffList(e) {
+    const I = '/dungeon/buffs/', c = [];
+    if (e.hasted > 0) c.push({ key: 'haste', label: 'Hasted', desc: 'an extra attack each turn', icon: `${I}haste.webp` });
+    if (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)) c.push({ key: 'buffed', label: 'Strengthened', desc: 'combat buffs active (+hit / +damage / +AC)', icon: `${I}bullsstrength.webp` });
+    return c;
+  }
+
   // ── Broadcasting ──────────────────────────────────────────────────────────
   publicState() {
     return {
@@ -704,6 +713,7 @@ class Dungeon {
         ac: e.ac, touchAC: (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)), ffAC: Math.max(10, e.ac - 2),
         flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep, darkened: (e.darkened > 0),
         conditions: e.hp > 0 ? this._condList(e) : [],
+        buffs: e.hp > 0 ? this._enemyBuffList(e) : [],
       })),
       turn: this._currentTurn(),
       botCount: this.botCount(),
