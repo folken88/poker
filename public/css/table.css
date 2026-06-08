@@ -84,7 +84,7 @@ button, input { font: inherit; color: inherit; }
 .dmon__art { position: relative; width: 64px; height: 64px; border-radius: 50%; background-size: cover; background-position: center; border: 1px solid rgba(0,0,0,0.4); }
 .dmon.is-boss .dmon__art { border-color: rgba(220,170,60,0.9); box-shadow: 0 0 0 2px rgba(220,170,60,0.5); }
 .dmon__crown { position: absolute; top: -8px; right: -4px; font-size: 0.95rem; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6)); }
-.dpc__avatar { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; margin: 0 auto 0.15rem; }
+.dpc__avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; margin: 0 auto 0.1rem; }
 .dpc__avatar img, .dpc__avatar svg { width: 100%; height: 100%; object-fit: cover; display: block; }
 .dpc { align-items: center; text-align: center; }
 .dmon__name { font-size: 0.72rem; text-align: center; }
@@ -139,7 +139,7 @@ button, input { font: inherit; color: inherit; }
 .dmon__none { color: var(--ivory-dim); opacity: 0.6; font-style: italic; align-self: center; }
 .dungeon__turn { text-align: center; font-weight: 600; color: var(--brass-bright); min-height: 1.2em; }
 .dungeon__party { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; align-content: flex-start; max-height: 29vh; overflow-y: auto; }
-.dpc { position: relative; width: 190px; background: rgba(0,0,0,0.4); border: 1px solid rgba(217,176,106,0.3); border-radius: 10px; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
+.dpc { position: relative; width: 150px; background: rgba(0,0,0,0.4); border: 1px solid rgba(217,176,106,0.3); border-radius: 10px; padding: 0.3rem 0.35rem 0.35rem; display: flex; flex-direction: column; gap: 0.15rem; }
 .dpc.is-low { border-color: rgba(220,80,80,0.7); }
 .dpc.is-me { border-color: rgba(241,207,131,0.7); }
 .dpc.is-turn { box-shadow: 0 0 0 2px rgba(241,207,131,0.55); }
@@ -148,7 +148,7 @@ button, input { font: inherit; color: inherit; }
 .dpc.is-down { border-color: rgba(200,40,40,0.95); animation: dpc-dying 1s ease-in-out infinite; }
 .dpc.is-down .dpc__hp { color: #e06a6a; font-weight: 700; }
 @keyframes dpc-dying { 0%,100% { box-shadow: 0 0 0 1px rgba(200,40,40,0.5); } 50% { box-shadow: 0 0 8px 2px rgba(200,40,40,0.85); } }
-.dpc__name { font-size: 0.82rem; font-weight: 600; }
+.dpc__name { font-size: 0.74rem; font-weight: 600; line-height: 1.1; }
 .dpc__hpbar span { display: block; height: 100%; background: linear-gradient(90deg,#3fa34d,#7bd06a); }
 .dpc.is-low .dpc__hpbar span { background: linear-gradient(90deg,#c84a4a,#e8a15b); }
 .dpc__hp { font-size: 0.72rem; color: var(--ivory-dim); font-variant-numeric: tabular-nums; }
@@ -1251,10 +1251,10 @@ option.weapon-nonprof { color: #cc5500; }
 .action-timer[data-mode="urgent"] .at-secs { color: #ff8a8a; }
 @keyframes at-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(226,85,85,0.45); } 50% { box-shadow: 0 0 14px 4px rgba(226,85,85,0.55); } }
 
-/* × dismiss button on an AI party member's card (dungeon kick). Top-left so it
-   never overlaps the top-right AC badge. */
+/* × dismiss button on an AI party member's card (dungeon kick). Bottom-left so it
+   clears the buff icons (top-left) and the AC badge (bottom-right). */
 .dpc__remove {
-  position: absolute; top: 2px; left: 2px; z-index: 7;
+  position: absolute; bottom: 3px; left: 4px; z-index: 7;
   width: 18px; height: 18px; padding: 0; line-height: 15px;
   border-radius: 50%; border: 1px solid rgba(226,85,85,0.6);
   background: rgba(40,10,10,0.7); color: #ff9a9a;
