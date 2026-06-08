@@ -211,9 +211,10 @@
 
       <!-- ===== LEFT perimeter: collapsible Loot Bank + hand rankings =====
            After the felt in the DOM (tab order); CSS `order:-1` keeps it on the
-           left visually. Hand rankings is reference-only, so its summary is taken
-           OUT of the Tab sequence (tabindex=-1) — VoiceOver can still reach it via
-           the rotor/headings, but a player tabbing to act never lands in it. -->
+           left visually. Hand rankings is SHOWN BY DEFAULT (details[open]) but stays
+           collapsible; its summary is taken OUT of the Tab sequence (tabindex=-1) —
+           VoiceOver can still reach it via the rotor/headings, but a player tabbing
+           to act never lands in it. -->
       <aside class="help-panel help-panel--left help-panel--bank" aria-label="My loot bank and hand rankings">
         <button type="button" class="help-panel__collapser" id="sidebarBankToggle"
                 aria-expanded="false" aria-haspopup="dialog" aria-controls="bankDoll">
@@ -221,7 +222,7 @@
           <span class="help-panel__chevron" aria-hidden="true">▾</span>
         </button>
 
-        <details class="help-panel__ranks">
+        <details class="help-panel__ranks" open>
           <summary class="help-panel__title help-panel__title--ranks" tabindex="-1">Hand rankings</summary>
           <ol class="help-panel__rankings">
             <li><strong>Royal Flush</strong> <em>10-J-Q-K-A, same suit</em></li>
