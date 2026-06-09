@@ -1546,6 +1546,23 @@
         window.BlindMode.speak(s + '.', 'urgent');
         return;
       }
+      // H = party Health: a quick HP run-down of every delver (dungeon only — at the
+      // poker table H re-reads your hand; the two key sets are separate by screen).
+      if (k === 'h') {
+        e.preventDefault();
+        if (_blindHelp) { window.BlindMode.speak('H: party health summary.', 'urgent'); return; }
+        const party = (d.party || []).filter(p => !p.left);
+        if (!party.length) { window.BlindMode.speak('No party.', 'urgent'); return; }
+        const parts = party.map(p => {
+          const hp = Math.max(0, p.hp | 0), max = p.maxHp | 0;
+          let s = `${p.nickname}${p.playerId === meId ? ', you,' : ''} ${hp} of ${max}`;
+          if (p.dead) s += ', dead';
+          else if (p.downed || hp <= 0) s += ', down';
+          return s;
+        });
+        window.BlindMode.speak('Party: ' + parts.join('; ') + '.', 'urgent');
+        return;
+      }
       if (/^[1-9]$/.test(k)) {
         e.preventDefault();
         const n = parseInt(k, 10);
@@ -4165,8 +4182,9 @@
         window.BlindMode.startListening();
         return;
       }
-      // H — re-read my hand (hole cards + board) any time.
-      if (e.code === 'KeyH') {
+      // H — re-read my hand (hole cards + board). POKER TABLE ONLY: in the dungeon H
+      // is party-health (handled in the dungeon key set), so the two stay separate.
+      if (e.code === 'KeyH' && document.body.dataset.screen !== 'dungeon') {
         e.preventDefault();
         window.BlindMode.readHand?.();
         return;
