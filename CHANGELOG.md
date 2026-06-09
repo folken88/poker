@@ -19,7 +19,23 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
-## 2026-06-08 (newest)
+## 2026-06-09 (newest)
+
+- **Fixed: a reload/disconnect/kick no longer wipes your dungeon gear.** Only heroes
+  who actually *die* in the dungeon forfeit gear now. **Lost items have been restored**
+  from the logs (Josh, Tobis, BRION).
+- **Blind narration no longer goes silent mid-battle** — rewritten onto the browser's
+  native speech queue (was wedging on a dropped `onend` and only speaking on your turn).
+- **Blind dungeon:** flying foes are now flagged in the attack target list; `H` reads
+  party health; the spellbook is viewable off-turn (cast still on-turn); won loot is
+  auto-claimed; Esc opens a Spectate/Leave/Cancel menu; every hotkey reports itself in
+  help mode (`?`). "spectate" now pronounced correctly; zoomer **"fr" → "for real"**.
+- **AI dungeon turns** now pace by threat (≈1s + 0.1s per CR). Hero cards show a blue
+  **XP-to-next bar** under the HP bar.
+- **Magus:** full spellbook + spell strikes + auto arcane-pool weapon. Glitterdust added
+  for Wizard/Sorcerer/Bard. Faster, action-paced poker bots. Hand rankings show by default.
+
+## 2026-06-08
 
 ### ♿ Blind dungeon fixes (from Josh's feedback)
 - **Speech no longer cuts out mid-battle.** The screen-reader queue could deadlock
