@@ -227,15 +227,17 @@
     else if (kind === 'ack')   make(now, 0.08, 1200);
   }
 
-  // ---------- TTS queue with 3-tier priority ----------
+  // ---------- TTS: 3-tier priority on the browser's NATIVE utterance queue ----------
+  // ROOT-CAUSE NOTE: the previous design kept its OWN queue + a manual `state.speaking`
+  // flag and advanced only when an utterance's `onend` fired. Browsers (Chrome
+  // especially) fire `onend` unreliably — drop it under load, after a `cancel()`, or
+  // after the ~15s auto-pause — so the manual flag would stick "true" and the queue
+  // died. Only the `urgent` path (which calls `cancel()`) still spoke, which is exactly
+  // the "blind support only talks on his turn" symptom. The fix is to NOT depend on
+  // `onend` at all: hand each utterance straight to speechSynthesis, which advances
+  // its OWN queue internally. We only call cancel() to interrupt (urgent), and we
+  // resume() periodically to defeat the documented auto-pause. No manual flag to stick.
   const PRIO = { urgent: 3, event: 2, ambient: 1 };
-  // Self-healing guards against the browser SpeechSynthesis quirks that used to
-  // silently kill blind support mid-battle: a cancelled utterance whose `onend`
-  // never fires, and Chrome's habit of dropping `onend` after sustained speech —
-  // either of which would leave state.speaking stuck true and pump() dead forever.
-  let _watchdog = null;   // timer that force-unsticks a never-ending utterance
-  let _uid = 0;           // token so a late/stale callback can't desync the queue
-  function _clearWatchdog() { if (_watchdog) { clearTimeout(_watchdog); _watchdog = null; } }
   function speak(text, prio = 'event') {
     if (!state.on || !supportsTTS || !text) return;
     text = String(text);
@@ -259,79 +261,35 @@
     // Lengthen the pause after a divine-oath clause (see OATH_RE above).
     text = text.replace(OATH_RE, '$1$2...');
     const p = PRIO[prio] ?? PRIO.event;
-    // ambient: drop if anything else is queued OR currently speaking
-    if (p === PRIO.ambient && (state.queue.length > 0 || state.speaking)) return;
-    // urgent: nuke everything queued + cancel in-flight + cut any
-    // banter audio currently playing (so the cues never overlap).
+    // ambient: only speak if nothing else is talking or queued (ask the ENGINE, not a
+    // manual flag) — never let background chatter pile up.
+    if (p === PRIO.ambient && (TTS.speaking || TTS.pending)) return;
+    // urgent: interrupt — cancel() clears the engine's queue AND whatever is mid-word,
+    // and stops any character banter so the cue lands clean.
     if (p === PRIO.urgent) {
-      state.queue.length = 0;
       try { TTS.cancel(); } catch (_) {}
-      // A cancelled utterance frequently never fires onend → speaking stays stuck.
-      // Clear it ourselves (the stale callback is ignored via the _uid token) so the
-      // new urgent line speaks immediately instead of waiting on the dead callback.
-      _clearWatchdog(); _uid++; state.speaking = false;
       if (state.banterAudio) {
-        try { state.banterAudio.pause(); state.banterAudio.currentTime = 0; }
-        catch (_) {}
+        try { state.banterAudio.pause(); state.banterAudio.currentTime = 0; } catch (_) {}
         state.banterAudio = null;
       }
-    } else {
-      // event: drop in-flight + queued ambients, queue behind any active event
-      state.queue = state.queue.filter(it => PRIO[it.prio] >= PRIO.event);
     }
-    state.queue.push({ text, prio });
-    blog('speak', `[${prio}]`, text.length > 90 ? text.slice(0, 90) + '…' : text);
-    if (prio === 'event') state.lastEventText = text;
-    pump();
-  }
-  function pump() {
-    if (state.speaking || !supportsTTS) return;
-    // If a banter clip is currently playing, hold non-urgent TTS
-    // until it finishes — we don't want the screen-reader voice
-    // talking over a character voice (or vice versa). Urgent
-    // utterances bypass this gate (see speak()'s urgent branch,
-    // which cancels the banter audio outright before queuing).
-    if (state.banterAudio && (state.queue[0]?.prio !== 'urgent')) return;
-    const next = state.queue.shift();
-    if (!next) return;
-    const myId = ++_uid;   // identifies THIS utterance; stale callbacks are ignored
-    const u = new SpeechSynthesisUtterance(next.text);
-    u.rate  = state.rate;
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = state.rate;
     u.pitch = state.pitch;
     if (state.voice) u.voice = state.voice;
-    // Advance the queue exactly once per utterance, whichever fires first:
-    // onend, onerror, or the watchdog. The _uid guard prevents a late callback
-    // from a previous (cancelled/stuck) utterance from double-advancing.
-    const finish = () => { if (myId !== _uid) return; _clearWatchdog(); state.speaking = false; pump(); };
-    u.onend = finish;
-    u.onerror = finish;
-    state.speaking = true;
-    // Watchdog: estimate the spoken duration; if onend never arrives (Chrome drops
-    // it under load / after cancel), self-heal so blind support never goes silent.
-    const ms = Math.min(15000, 1200 + (next.text.length / Math.max(0.8, state.rate)) * 95);
-    _clearWatchdog();
-    _watchdog = setTimeout(() => { _watchdog = null; finish(); }, ms);
-    try { TTS.speak(u); }
-    catch (_) { if (myId === _uid) { _clearWatchdog(); state.speaking = false; } }
+    blog('speak', `[${prio}]`, text.length > 90 ? text.slice(0, 90) + '…' : text);
+    if (prio === 'event') state.lastEventText = text;
+    // Hand it straight to the engine's queue — it plays this after anything already
+    // queued, and advances itself. We do NOT rely on onend, so a dropped onend can
+    // never wedge narration.
+    try { TTS.speak(u); } catch (_) {}
   }
-  // Chrome silently PAUSES speechSynthesis after ~15s of sustained output; a periodic
-  // resume() keeps a busy combat narration flowing. No-op when nothing is speaking.
+  // Chrome silently PAUSES speechSynthesis after ~15s of sustained output; an
+  // UNCONDITIONAL periodic resume() un-pauses it (a no-op when not paused). This is
+  // the one documented engine workaround we still need; it does not depend on any
+  // of our own state, so it can't desync.
   if (typeof window !== 'undefined' && window.speechSynthesis) {
-    setInterval(() => { try { if (state.speaking) window.speechSynthesis.resume(); } catch (_) {} }, 5000);
-    // SELF-HEAL (the real fix for "blind support goes silent mid-battle, only talks
-    // on his turn"): the queue could wedge if a flag stuck true — a cancelled
-    // utterance whose onend never fired, or a banter clip whose end/error/pause
-    // never fired (so banterAudio held non-urgent TTS forever; urgent bypassed it,
-    // hence "only on his turn"). Use the ENGINE'S real state as ground truth: if we
-    // have a backlog but speechSynthesis is actually idle, a flag is stuck — clear
-    // the blockers and pump. Runs every 1.2s so narration can never stay wedged.
-    setInterval(() => {
-      try {
-        if (!state.on || !state.queue.length) return;
-        const busy = window.speechSynthesis.speaking || window.speechSynthesis.pending;
-        if (!busy) { state.banterAudio = null; state.speaking = false; _clearWatchdog(); pump(); }
-      } catch (_) {}
-    }, 1200);
+    setInterval(() => { try { window.speechSynthesis.resume(); } catch (_) {} }, 8000);
   }
   function pickVoice() {
     if (!supportsTTS) return;
@@ -1195,32 +1153,20 @@
     return { supportsTTS, supportsSR };
   }
 
-  // Called by client.js when a banter audio clip starts/ends. While
-  // an audio element is registered as the active banter source,
-  // pump() will hold non-urgent TTS — keeps the character voice and
-  // the screen-reader narration from talking over each other. The
-  // hook is a no-op when blind mode is off, but we still track the
-  // current Audio element so urgent toggle-on doesn't double up.
-  let _banterHoldTimer = null;
+  // Called by client.js when a banter (character-voice) clip starts. We track the
+  // current clip only so an URGENT screen-reader cue can stop it; it does not gate
+  // the TTS queue. No-op when blind mode is off.
   function notifyBanterStart(audioEl) {
     if (!audioEl) return;
+    // We only TRACK the current character-voice clip so an URGENT screen-reader cue
+    // can stop it (see speak()'s urgent branch). It no longer gates the TTS queue —
+    // narration plays on the engine's own queue regardless — so a clip whose events
+    // never fire can't wedge anything.
     state.banterAudio = audioEl;
-    if (_banterHoldTimer) { clearTimeout(_banterHoldTimer); _banterHoldTimer = null; }
-    // Auto-clear on end / error / pause so we don't deadlock the queue if
-    // the play() call rejected silently.
-    const clear = () => {
-      if (_banterHoldTimer) { clearTimeout(_banterHoldTimer); _banterHoldTimer = null; }
-      if (state.banterAudio === audioEl) {
-        state.banterAudio = null;
-        pump();
-      }
-    };
+    const clear = () => { if (state.banterAudio === audioEl) state.banterAudio = null; };
     audioEl.addEventListener('ended', clear, { once: true });
     audioEl.addEventListener('error', clear, { once: true });
     audioEl.addEventListener('pause', clear, { once: true });
-    // FAIL-SAFE: a clip whose end/error/pause never fires (rejected play, GC'd,
-    // replaced) must NEVER permanently hold the TTS queue. Force-clear after a cap.
-    _banterHoldTimer = setTimeout(clear, 8000);
   }
 
   // ====================================================================
