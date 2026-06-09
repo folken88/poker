@@ -123,6 +123,12 @@
   // Starts empty; populated by the fetch in init(). If the fetch fails, names
   // just read literally (no crash).
   let NAME_PRONUNCIATIONS = [];
+  // UI WORDS the browser speech engine mangles (not character names — those come
+  // from /api/pronunciations). Applied the same way in speak(). e.g. some voices
+  // read "spectate" as "speck-tit"; respell it phonetically.
+  const WORD_FIXES = [
+    ['spectate', 'speck tate'],
+  ];
 
   // ---------- Divine-oath pauses ----------
   // "By Rovagug, those damn cards!" — the comma after an oath clause
@@ -245,6 +251,9 @@
     // voice says them correctly. Add new pairs as they surface.
     // Word-boundary match keeps it from corrupting substrings.
     for (const [orig, phon] of NAME_PRONUNCIATIONS) {
+      text = text.replace(new RegExp(`\\b${orig}\\b`, 'gi'), phon);
+    }
+    for (const [orig, phon] of WORD_FIXES) {
       text = text.replace(new RegExp(`\\b${orig}\\b`, 'gi'), phon);
     }
     // Lengthen the pause after a divine-oath clause (see OATH_RE above).
