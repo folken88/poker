@@ -323,6 +323,7 @@ const KITS = {
     { ...SPELL.overlandflight, cost: 'run', uses: 1, freeAction: true, minLevel: 9 },   // once per dungeon (run-long, like Mage Armor)
     preparedSpell(SPELL.coneofcold,    9),
     preparedSpell(SPELL.disintegrate,  11),
+    preparedSpell(SPELL.chainlightning, 11),
   ] },
   // SORCERER — spontaneous caster: knows FEWER spells, drawn from a shared
   // per-room cast pool (his limited casts/day = casts/room). A focused blaster's
@@ -359,6 +360,7 @@ const KITS = {
     { ...SPELL.overlandflight, cost: 'run', uses: 1, freeAction: true, minLevel: 10 },   // once per dungeon (run-long, like Mage Armor)
     spontaneousSpell(SPELL.coneofcold,   10),
     spontaneousSpell(SPELL.disintegrate, 12),
+    spontaneousSpell(SPELL.chainlightning, 12),
   ] },
   // ORACLE — spontaneous DIVINE caster on the CLERIC spell list, at oracle (full
   // spontaneous caster) progression: per-spell-level slots from the SORC table via
@@ -519,6 +521,7 @@ const KITS = {
     { key: 'calllightning', name: 'Call Lightning', icon: '🌩️', cost: 'room', uses: 1, minLevel: 5, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'reflex', die: 6, dice: 'halflevel', dcap: 5, dtype: 'electricity', sounds: THUNDER_SFX, desc: 'A bolt from the storm strikes 2 foes — Reflex for half (½level d6).' },
     { key: 'riverofwind', name: 'River of Wind', icon: '🌬️', cost: 'room', uses: 1, minLevel: 5, effect: 'grease', target: 'aoe', randN: 3, randDie: 4, save: 'fort', slvl: 4, sound: S.gust, desc: 'A roaring torrent of air bowls over a RANDOM 3d4 foes — Fortitude save or be knocked prone.' },
     { key: 'firesnake', name: 'Fire Snake', icon: '🐍', cost: 'room', uses: 1, minLevel: 7, effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'fire', slvl: 5, sounds: FIREBALL_SFX, desc: 'A serpent of flame weaves through up to 4 foes — 1d6 fire per caster level (max 15d6), Reflex for half.' },
+    { ...SPELL.chainlightning, cost: 'room', uses: 1, minLevel: 11 },
     // ── Healing & restoration ──
     { key: 'curelight',  name: 'Cure Light Wounds', icon: '💚', cost: 'room', uses: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5).' },
     { key: 'curemoderate',name: 'Cure Moderate Wounds', icon: '💚', cost: 'room', uses: 1, minLevel: 4, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },

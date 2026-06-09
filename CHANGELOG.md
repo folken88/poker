@@ -20,6 +20,14 @@ Thanks to the regulars whose suggestions made it into the game:
 ---
 
 ## 2026-06-09 (newest)
+- **Dungeon death is no longer an instant kick.** A slain hero stays in the run as a fallen
+  body — you keep **spectating** instead of being booted back to the table, and a cleric or
+  oracle can still bring you back. **Breath of Life** (in combat) now revives the *freshly
+  dead*, not just the dying — back at healthy HP with **no level lost**. **Raise Dead** (end
+  of room) returns you at **1 HP** (lost level stays lost); **Resurrection** (end of room)
+  returns you at **full HP** with the **level restored**. AI clerics/oracles auto-cast these.
+  The death/level penalty is now **deferred** until death is actually final.
+- **Chain Lightning** added to **Wizard** (L11), **Sorcerer** (L12), and **Druid** (L11).
 
 - **Fixed: a reload/disconnect/kick no longer wipes your dungeon gear.** Only heroes
   who actually *die* in the dungeon forfeit gear now. **Lost items have been restored**

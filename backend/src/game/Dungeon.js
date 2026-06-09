@@ -1118,6 +1118,39 @@ class Dungeon {
       else this._note(`🩸 ${m.nickname} bleeds — ${m.hp} HP (slain at −10).`);
     }
   }
+  // Between rooms (out of combat): a present cleric or oracle brings back the SLAIN.
+  // Resurrection (full HP, level restored) is preferred over Raise Dead (1 HP, the lost
+  // level stays lost). Each cast spends a slot; we loop until no corpse remains or nobody
+  // can cast. (Auto-cast — the party always saves a fallen comrade if able.)
+  _endOfRoomRaise() {
+    let guard = 16;
+    while (guard-- > 0 && this.party.some(c => c.dead && !c.left)) {
+      const caster = this.party.find(c => !c.left && !c.dead && c.hp > 0 && this._raiseSlotFor(c) != null);
+      if (!caster) break;
+      const idx = this._raiseSlotFor(caster);
+      const r = this._useAbility(caster, idx, {});
+      if (!r || r.ok === false) break;   // couldn't cast — stop (avoid a spin)
+    }
+  }
+  // Index of the best available Raise-Dead-type prayer a member can cast right now
+  // (prefers Resurrection / full over Raise Dead), or null if they have none ready.
+  _raiseSlotFor(m) {
+    const kit = kitFor(m.cls);
+    if (!kit || !kit.abilities) return null;
+    const lvl = m.level || 1;
+    const ready = (ab) => ab && ab.effect === 'revive' && ab.raiseDead
+      && lvl >= (ab.minLevel || 1)
+      && (ab.cost !== 'slot' || ((m.slots && m.slots[ab.slvl]) || 0) > 0)
+      && (ab.cost !== 'room' || ((m.abilityUses && m.abilityUses[ab.key]) || 0) > 0)
+      && (ab.cost !== 'pool' || (m.spellPool || 0) > 0);
+    let bestIdx = null, bestFull = -1;
+    kit.abilities.forEach((ab, i) => {
+      if (!ready(ab)) return;
+      const f = ab.full ? 1 : 0;
+      if (f > bestFull) { bestFull = f; bestIdx = i; }
+    });
+    return bestIdx;
+  }
   _clearRoom() {
     clearTimeout(this._turnTimer); clearTimeout(this._stepTimer);
     this.status = 'exploring';
@@ -1129,6 +1162,7 @@ class Dungeon {
     this._maybeDropLoot();
     this._maybeDropPotion();     // can revive a downed ally before they bleed
     this._bleedDowned();         // the still-dying lose 1 HP this room (toward −10)
+    this._endOfRoomRaise();      // a cleric/oracle raises the SLAIN now the fight is over
     if (!this._humansInRun()) { this._wrapUp(); return; }   // last human bled out → AI allies cash out
     this._broadcast();
   }
@@ -1175,6 +1209,14 @@ class Dungeon {
     clearTimeout(this._turnTimer); clearTimeout(this._stepTimer); clearTimeout(this._lootTimer);
     this.lootRoll = null;
     if (this._runFailed) this._loseAllGear();   // no-win wipe / full retreat → the party loses all gear
+    // Any hero still DEAD when the run ends never got revived: lock in the death penalty
+    // and surface them back to the table (they were spectating the run until now).
+    for (const m of this.party) {
+      if (m.left || !m.dead) continue;
+      this._applyDeathPenalty(m);
+      this._emitMemberExit(m, { reason: 'dead', goldBanked: 0 });
+      m.left = true;
+    }
     this.status = 'over';
     this._broadcast();
     if (this._onEmpty) try { this._onEmpty(); } catch (_) {}
@@ -1956,7 +1998,9 @@ class Dungeon {
 
     // 0) Revive a fallen ally if we have the prayer for it (Raise Dead/Resurrection
     //    for the slain; Breath of Life for the dying).
-    const revive = avail.find(a => a.effect === 'revive' && (a.raiseDead ? anyDead : anyDowned));
+    // In combat, only Breath of Life (NOT Raise Dead / Resurrection — those are cast
+    // between rooms) revives, and it can now snatch back the DYING or the freshly DEAD.
+    const revive = avail.find(a => a.effect === 'revive' && !a.raiseDead && (anyDowned || anyDead));
     if (revive) return { slot: slot(revive), payload: {} };
     // 0b) Inquisitor: declare a Judgement if none is up (free action, then attack).
     const judg = avail.find(a => a.effect === 'judgment');
@@ -2223,14 +2267,28 @@ class Dungeon {
     }
     this._broadcast();
   }
-  _memberDown(m) {   // −10 or worse, or a total-party wipe: actually dead, out of the run
+  _memberDown(m) {   // −10 or worse, or a total-party wipe: SLAIN — but NOT yet kicked.
     if (m.dead) return;
     m.dead = true; m.downed = false;
-    this._note(`☠️ ${m.nickname} drops past −10 — slain in the dungeon, out of the run.`, '/audio/hero_death.mp3');
+    m._deathPending = true;   // the level-loss penalty is DEFERRED — a Breath of Life
+                              // (in combat) or Resurrection (end of room) can undo it.
+    this._note(`☠️ ${m.nickname} drops past −10 — SLAIN. They lie fallen, awaiting a Breath of Life or a rescue at the end of the room.`, '/audio/hero_death.mp3');
     this._echoToTable('/audio/hero_death.mp3');
     this._log('death', { who: m.playerId, hp: m.hp, depthReached: this.depth });
-    // Death penalty: lose a level — back to the START of the previous level (a hero
-    // who was about to advance can lose nearly two). Persisted for the next run.
+    // The fallen hero STAYS in the run as a corpse (their turn is skipped) so a cleric
+    // or oracle can still revive them, and so the player can keep spectating. The death
+    // penalty and the surfacing-back-to-the-table happen ONLY once death is locked in
+    // (no revive) — see _applyDeathPenalty / _runOver / bail / _abRevive.
+    this._broadcast();
+  }
+  // The death penalty: lose a level — back to the START of the previous level. Applied
+  // ONLY when death is final: stayed dead to the run's end, left the run while dead, or
+  // was brought back by Raise Dead (which does NOT restore the lost level). Breath of
+  // Life and Resurrection clear the pending flag instead, so this never fires for them.
+  // Guarded so it applies at most once per death.
+  _applyDeathPenalty(m) {
+    if (!m || !m._deathPending) return;
+    m._deathPending = false;
     const lvl = m.level || 1;
     if (lvl > 1) {
       const newXp = xpFloorForLevel(lvl - 1);
@@ -2238,7 +2296,6 @@ class Dungeon {
       this._applyLevelFromXp(m, newXp);
       this._note(`📉 ${m.nickname} loses a level — dragged back to the start of level ${m.level}.`);
     }
-    this._emitMemberExit(m, { reason: 'dead', goldBanked: 0 });
   }
   // Total party incapacitation — everyone still in the run is down/dying, so they
   // all bleed out and the run ends.
@@ -2391,6 +2448,8 @@ class Dungeon {
     if (!this._charAllows(ab, m)) return { ok: false, error: 'not your ability' };   // char-gated form (e.g. Rissa's Beast Mode)
     const lvl = m.level || 1;
     if (ab.minLevel && lvl < ab.minLevel) return { ok: false, error: `${ab.name} needs level ${ab.minLevel}` };
+    // Raise Dead / Resurrection are powerful rituals — only between rooms (out of combat).
+    if (ab.raiseDead && this.status === 'combat') return { ok: false, error: `${ab.name} can only be cast between rooms, not during combat.` };
     // Dropping a Wild Shape form you're already in is FREE (no use spent, always allowed).
     const formOff = ab.effect === 'form' && ab.form && m.form && m.form.key === ab.form.key;
     if (ab.cost === 'pool' && (m.spellPool || 0) <= 0) return { ok: false, error: 'out of spell casts this room' };
@@ -3157,12 +3216,22 @@ class Dungeon {
     const sound = ab.sound;
     const healBig = () => Math.max(1, dRollN(ab.reviveDice || 5, 8) + Math.min(ab.reviveCap || lvl, lvl));
     if (ab.raiseDead) {
-      const dead = this.party.find(a => a.dead);
+      // Raise Dead / Resurrection — cast OUT of combat (end of room). Bring a SLAIN ally
+      // back: Raise Dead at 1 HP (the lost level STAYS lost); Resurrection at FULL HP
+      // (the lost level is RESTORED — we simply clear the still-pending penalty).
+      const dead = this.party.find(a => a.dead && !a.left);
       if (dead) {
         dead.dead = false; dead.downed = false; dead.left = false;
-        dead.hp = ab.full ? dead.maxHp : Math.max(1, Math.floor(dead.maxHp / 2));
         dead.flatFooted = true; dead.paralyzed = 0; dead.stunned = 0;
-        this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${dead.nickname} is restored to the run at ${dead.hp}/${dead.maxHp} HP!`, sound);
+        if (ab.full) {
+          dead.hp = dead.maxHp;
+          dead._deathPending = false;   // Resurrection restores the lost level
+          this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${dead.nickname} is RESURRECTED at full health, whole again (level restored)!`, sound);
+        } else {
+          dead.hp = 1;
+          this._applyDeathPenalty(dead);   // Raise Dead does NOT restore the lost level
+          this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${dead.nickname} is dragged back into the run at 1 HP.`, sound);
+        }
         if (this.status === 'combat' && !this.turnOrder.some(t => t.kind === 'party' && t.id === dead.playerId)) {
           this.turnOrder.push({ kind: 'party', id: dead.playerId, init: dRoll(20) });
         }
@@ -3170,11 +3239,23 @@ class Dungeon {
       }
       // No corpse to raise → fall through to a big heal.
     } else {
-      // Breath of Life — snatch a DYING (downed) ally back first.
-      const downed = this.party.find(a => !a.dead && !a.left && a.downed);
-      if (downed) {
-        downed.downed = false; downed.hp = Math.min(downed.maxHp, healBig());
-        this._note(`${ab.icon} ${m.nickname} breathes life into ${downed.nickname} — back up at ${downed.hp}/${downed.maxHp} HP!`, sound);
+      // Breath of Life — snatch a DYING (downed) OR freshly-SLAIN ally back (castable IN
+      // combat). Catching them in time PREVENTS the lost level. Prefer the dying (cheaper
+      // to save) before the dead.
+      const target = this.party.find(a => !a.left && !a.dead && a.downed)
+                  || this.party.find(a => !a.left && a.dead);
+      if (target) {
+        const wasDead = target.dead;
+        target.dead = false; target.downed = false;
+        target.hp = Math.min(target.maxHp, Math.max(1, healBig()));
+        target._deathPending = false;   // revived in time → no level lost
+        if (wasDead) {
+          target.flatFooted = true; target.paralyzed = 0; target.stunned = 0;
+          if (this.status === 'combat' && !this.turnOrder.some(t => t.kind === 'party' && t.id === target.playerId)) {
+            this.turnOrder.push({ kind: 'party', id: target.playerId, init: dRoll(20) });
+          }
+        }
+        this._note(`${ab.icon} ${m.nickname} breathes life into ${target.nickname} — back ${wasDead ? 'from the brink of death ' : ''}up at ${target.hp}/${target.maxHp} HP!`, sound);
         this._echoToTable(sound); this._broadcast(); return;
       }
     }
@@ -3868,6 +3949,7 @@ class Dungeon {
               : `climbed out with ${share} gp`;
     this._note(`${m.dead ? '☠️' : m.downed ? '🩸' : fled ? '🏃' : '🪜'} ${m.nickname} ${how}.`);
     this._log('bail', { who: playerId, share, poolLeft: this.runGold, fled, downed: !!m.downed });
+    if (m.dead) this._applyDeathPenalty(m);   // a slain hero leaving the run locks in the level loss
     this._emitMemberExit(m, { reason: 'bailed', goldBanked: share, fled });
     // Last conscious member out → drag any remaining dying allies out with their
     // share (voluntary retreat). Otherwise, if only AI remain, cash them out.

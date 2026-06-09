@@ -707,6 +707,7 @@
   // ===== 🗡️ Dungeon side-game =====
   let _dungeonSel = [];        // selected enemy uids (combat targeting)
   let _dungeonSoundSeen = 0;   // highest dungeon-log id whose sound we've played
+  let _iFellInDungeon = false;  // my hero is dead-but-present (spectating, awaiting revive)
   let _recruitOpen = false;    // dungeon "Recruit AI ▾" dropdown open/closed
   let _spellbookOpen = false;  // caster "📖 Spellbook ▾" dropdown open/closed
   let _blindHelp = false;      // blind "learn mode" (?): keys are SPOKEN, not fired
@@ -731,7 +732,7 @@
   function enterDungeon() {
     socket.emit('dungeon:enter', null, (resp) => {
       if (!resp?.ok) { toast(resp?.error || 'Could not enter the dungeon.', true); return; }
-      _inDungeon = true; _spectating = false; _dungeonSel = []; _dungeonSoundSeen = 0;
+      _inDungeon = true; _spectating = false; _dungeonSel = []; _dungeonSoundSeen = 0; _iFellInDungeon = false;
       state.dungeon = resp.state || null;
       setScreen('dungeon');
       renderDungeon();
@@ -803,6 +804,26 @@
       _dungeonSoundSeen = maxT;
     }
     if (document.body.dataset.screen === 'dungeon') renderDungeon();
+    // Fallen-but-present: my hero died yet the run continues. We are NO LONGER kicked
+    // out — we stay and spectate, and a cleric/oracle may still revive us (Breath of
+    // Life now, Resurrection at the end of the room). Announce the transitions so a
+    // blind player knows what happened instead of going silent.
+    try {
+      const meId2 = state.me?.player_id;
+      const mine = meId2 && (st.party || []).find(x => x.playerId === meId2);
+      const fellNow = !!(mine && mine.dead && !mine.left);
+      if (fellNow && !_iFellInDungeon) {
+        _iFellInDungeon = true;
+        toast('☠️ You have fallen. Your allies may yet revive you — keep watching.', true);
+        window.BlindMode?.speak?.('You have fallen in the dungeon. You are now spectating. A cleric or oracle may still revive you with a Breath of Life, or raise you at the end of the room.', 'urgent');
+      } else if (!fellNow && _iFellInDungeon && mine && !mine.left && mine.hp > 0) {
+        _iFellInDungeon = false;
+        toast('✨ You are back on your feet!');
+        window.BlindMode?.speak?.('You have been revived and are back in the fight.', 'urgent');
+      } else if (!mine) {
+        _iFellInDungeon = false;
+      }
+    } catch (_) {}
     // Blind-mode narration (no-ops when blind mode is off).
     window.BlindMode?.onDungeonState?.(st);
   });
