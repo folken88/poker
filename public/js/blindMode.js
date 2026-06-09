@@ -318,6 +318,20 @@
   // resume() keeps a busy combat narration flowing. No-op when nothing is speaking.
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     setInterval(() => { try { if (state.speaking) window.speechSynthesis.resume(); } catch (_) {} }, 5000);
+    // SELF-HEAL (the real fix for "blind support goes silent mid-battle, only talks
+    // on his turn"): the queue could wedge if a flag stuck true — a cancelled
+    // utterance whose onend never fired, or a banter clip whose end/error/pause
+    // never fired (so banterAudio held non-urgent TTS forever; urgent bypassed it,
+    // hence "only on his turn"). Use the ENGINE'S real state as ground truth: if we
+    // have a backlog but speechSynthesis is actually idle, a flag is stuck — clear
+    // the blockers and pump. Runs every 1.2s so narration can never stay wedged.
+    setInterval(() => {
+      try {
+        if (!state.on || !state.queue.length) return;
+        const busy = window.speechSynthesis.speaking || window.speechSynthesis.pending;
+        if (!busy) { state.banterAudio = null; state.speaking = false; _clearWatchdog(); pump(); }
+      } catch (_) {}
+    }, 1200);
   }
   function pickVoice() {
     if (!supportsTTS) return;
@@ -1187,12 +1201,15 @@
   // the screen-reader narration from talking over each other. The
   // hook is a no-op when blind mode is off, but we still track the
   // current Audio element so urgent toggle-on doesn't double up.
+  let _banterHoldTimer = null;
   function notifyBanterStart(audioEl) {
     if (!audioEl) return;
     state.banterAudio = audioEl;
-    // Auto-clear on end / error so we don't deadlock the queue if
+    if (_banterHoldTimer) { clearTimeout(_banterHoldTimer); _banterHoldTimer = null; }
+    // Auto-clear on end / error / pause so we don't deadlock the queue if
     // the play() call rejected silently.
     const clear = () => {
+      if (_banterHoldTimer) { clearTimeout(_banterHoldTimer); _banterHoldTimer = null; }
       if (state.banterAudio === audioEl) {
         state.banterAudio = null;
         pump();
@@ -1201,6 +1218,9 @@
     audioEl.addEventListener('ended', clear, { once: true });
     audioEl.addEventListener('error', clear, { once: true });
     audioEl.addEventListener('pause', clear, { once: true });
+    // FAIL-SAFE: a clip whose end/error/pause never fires (rejected play, GC'd,
+    // replaced) must NEVER permanently hold the TTS queue. Force-clear after a cap.
+    _banterHoldTimer = setTimeout(clear, 8000);
   }
 
   // ====================================================================
