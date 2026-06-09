@@ -1073,12 +1073,10 @@
       } else {
         const combat = d.status === 'combat';
         const myTurn = combat && isMyTurn;
-        // Spells are only castable on your turn — so the Spellbook popover has no
-        // reason to stay open when the turn/round ends. Force it shut whenever it
-        // isn't your turn; otherwise a round ending with it open leaves the
-        // popover covering the door/attack/spectate buttons with no way to
-        // dismiss it (soft-lock → had to leave the dungeon).
-        if (!myTurn) _spellbookOpen = false;
+        // Players can OPEN their spellbook any time (to read what they have) — the
+        // spell tiles themselves stay disabled until their turn, so it's view-only
+        // off-turn. It's still freely closeable (the toggle, an outside click, or
+        // Escape), so an open popover never soft-locks the action bar.
         const rolling = !!d.lootRoll;
         const B = (act, label, on, primary) =>
           `<button class="btn ${primary ? 'btn--primary' : 'btn--ghost'}" data-dact="${act}"${on ? '' : ' disabled'}>${label}</button>`;
@@ -1286,8 +1284,8 @@
   });
   // The Spellbook is a popover that overlays the other action buttons, so it
   // must always be dismissable: a click anywhere outside its wrap — or Escape —
-  // closes it. (Belt-and-suspenders with the auto-close on !myTurn above, which
-  // handles the round-ended-with-it-open soft-lock.)
+  // closes it. (This is what keeps an open popover from soft-locking the action
+  // bar now that it can stay open off-turn for viewing.)
   document.addEventListener('click', (ev) => {
     if (!_spellbookOpen || document.body.dataset.screen !== 'dungeon') return;
     if (ev.target.closest('.dungeon__sb-wrap')) return;   // inside the spellbook/toggle — keep it
