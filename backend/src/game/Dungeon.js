@@ -1186,13 +1186,16 @@ class Dungeon {
   _loseAllGear() {
     let any = false;
     for (const m of this.party) {
-      if (m._gearLost) continue;
+      // Only members who DIED in the dungeon (dead, still in the run) forfeit gear.
+      // Anyone who got OUT — bailed, fled, or disconnected/reloaded (m.left) — keeps
+      // everything. A browser reload must NEVER wipe a player's gear (see Josh's bug).
+      if (m._gearLost || m.left || !m.dead) continue;
       m._gearLost = true; any = true;
       try { db.setGear(m.playerId, {}); } catch (_) {}
       m.gear = {};
     }
     this.pendingLoot = [];
-    if (any) this._note('💀 No one survived to win the room — the party LOSES ALL GEAR to the dungeon.');
+    if (any) this._note('💀 No one survived to win the room — the fallen LOSE THEIR GEAR to the dungeon.');
   }
   _maybeDropLoot() {
     const eligible = this.party.filter(m => !m.left && !m.dead);   // up OR dying — the downed can still roll/win loot

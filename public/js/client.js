@@ -1619,7 +1619,7 @@
         const singleEnemyTarget = act.kind === 'attack' || (ab && ab.target === 'enemy');
         if (singleEnemyTarget && alive.length > 1) {
           _dunTarget = { kind: act.kind === 'attack' ? 'attack' : 'ability', slot: act.slot, label };
-          const list = alive.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.cr ? `, CR ${x.cr}` : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
+          const list = alive.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}${x.cr ? `, CR ${x.cr}` : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
           window.BlindMode.speak(`${label} — select a target, deadliest first: ${list}.`, 'urgent');
           return;
         }
