@@ -1408,6 +1408,7 @@
       // locked target (or the deadliest foe); AoE hits everything; self/ally let
       // the server pick (e.g. healing finds the lowest-HP ally).
       const castSpell = (ab) => {
+        if (!myTurn) { sayU('Not your turn.'); return; }   // hard gate — never cast off-turn
         const slot = (ab.slot != null ? ab.slot : 0);
         if (ab.target === 'enemy') {
           const locked = _dunQueuedAttack && aliveE.find(x => x.uid === _dunQueuedAttack);
@@ -1586,6 +1587,8 @@
         // (a) In "select a target" mode, the number picks the enemy and fires the
         //     pending action on it.
         if (_dunTarget) {
+          // The turn may have ended while a target was pending — never fire off-turn.
+          if (!myTurn) { _dunTarget = null; window.BlindMode.speak('Not your turn.', 'urgent'); return; }
           const tgt = alive[n - 1];
           if (!tgt) { window.BlindMode.speak(`No enemy ${n}.`, 'urgent'); return; }
           const pend = _dunTarget; _dunTarget = null;
