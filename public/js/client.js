@@ -1509,10 +1509,16 @@
         return;
       }
       if (_dunEnemyMode && e.key === 'Escape') { e.preventDefault(); _dunEnemyMode = false; sayU('Exited enemy inspect.'); return; }
+      // In help mode R and P announce themselves even when no treasure is on the
+      // table (the real handler below only fires during a loot roll).
+      if (_blindHelp && (k === 'r' || k === 'p')) {
+        e.preventDefault();
+        sayU(k === 'r' ? 'R: roll a d20 for dropped treasure.' : 'P: pass on dropped treasure.');
+        return;
+      }
       // Treasure: R = roll a d20, P = pass — when it's mine to decide (spoken).
       if ((k === 'r' || k === 'p') && d.lootRoll && (d.lootRoll.eligible || []).includes(meId) && (d.lootRoll.decided || {})[meId] === undefined) {
         e.preventDefault();
-        if (_blindHelp) { sayU(k === 'r' ? 'R: roll for the treasure.' : 'P: pass on the treasure.'); return; }
         if (k === 'r') { sayU('Rolling for it.'); dungeonAction('lootroll', { roll: true }); }
         else { sayU('Passing.'); dungeonAction('lootroll', { roll: false }); }
         return;
