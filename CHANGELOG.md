@@ -19,7 +19,24 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
-## 2026-06-07 (newest)
+## 2026-06-08 (newest)
+
+### ♿ Blind dungeon fixes (from Josh's feedback)
+- **Speech no longer cuts out mid-battle.** The screen-reader queue could deadlock
+  during heavy combat (a cancelled or stuck utterance left it permanently silent).
+  It now self-heals: a per-utterance watchdog + token guard recovers a missing
+  `onend`, the urgent path no longer waits on a dead callback, and a periodic
+  `resume()` defeats Chrome's sustained-speech pause. Blind support keeps talking.
+- **Esc session menu actually works.** Esc now opens a key-driven menu — Tab cycles
+  Spectate / Leave dungeon / Cancel run (spoken), Return activates, Esc exits. (It
+  used to rely on button focus, which the constant dungeon re-render destroyed, and
+  Return was being eaten by the open-door hotkey.)
+- **Won loot is auto-claimed for blind players** (no pointer needed): an upgrade is
+  equipped, a redundant item is hocked for gold — and **won loot is never discarded**
+  anymore (equipping something you already out-gear now hocks it into the pool
+  instead of vanishing).
+
+## 2026-06-07
 
 ### ⏱️ Faster bots & the turn-timer moved to the dungeon
 - **Bots act faster, paced by their decision:** a check or call takes ~1-2 seconds,

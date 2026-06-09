@@ -223,6 +223,13 @@
 
   // ---------- TTS queue with 3-tier priority ----------
   const PRIO = { urgent: 3, event: 2, ambient: 1 };
+  // Self-healing guards against the browser SpeechSynthesis quirks that used to
+  // silently kill blind support mid-battle: a cancelled utterance whose `onend`
+  // never fires, and Chrome's habit of dropping `onend` after sustained speech —
+  // either of which would leave state.speaking stuck true and pump() dead forever.
+  let _watchdog = null;   // timer that force-unsticks a never-ending utterance
+  let _uid = 0;           // token so a late/stale callback can't desync the queue
+  function _clearWatchdog() { if (_watchdog) { clearTimeout(_watchdog); _watchdog = null; } }
   function speak(text, prio = 'event') {
     if (!state.on || !supportsTTS || !text) return;
     text = String(text);
@@ -250,6 +257,10 @@
     if (p === PRIO.urgent) {
       state.queue.length = 0;
       try { TTS.cancel(); } catch (_) {}
+      // A cancelled utterance frequently never fires onend → speaking stays stuck.
+      // Clear it ourselves (the stale callback is ignored via the _uid token) so the
+      // new urgent line speaks immediately instead of waiting on the dead callback.
+      _clearWatchdog(); _uid++; state.speaking = false;
       if (state.banterAudio) {
         try { state.banterAudio.pause(); state.banterAudio.currentTime = 0; }
         catch (_) {}
@@ -274,15 +285,30 @@
     if (state.banterAudio && (state.queue[0]?.prio !== 'urgent')) return;
     const next = state.queue.shift();
     if (!next) return;
+    const myId = ++_uid;   // identifies THIS utterance; stale callbacks are ignored
     const u = new SpeechSynthesisUtterance(next.text);
     u.rate  = state.rate;
     u.pitch = state.pitch;
     if (state.voice) u.voice = state.voice;
-    u.onend = () => { state.speaking = false; pump(); };
-    u.onerror = () => { state.speaking = false; pump(); };
+    // Advance the queue exactly once per utterance, whichever fires first:
+    // onend, onerror, or the watchdog. The _uid guard prevents a late callback
+    // from a previous (cancelled/stuck) utterance from double-advancing.
+    const finish = () => { if (myId !== _uid) return; _clearWatchdog(); state.speaking = false; pump(); };
+    u.onend = finish;
+    u.onerror = finish;
     state.speaking = true;
+    // Watchdog: estimate the spoken duration; if onend never arrives (Chrome drops
+    // it under load / after cancel), self-heal so blind support never goes silent.
+    const ms = Math.min(15000, 1200 + (next.text.length / Math.max(0.8, state.rate)) * 95);
+    _clearWatchdog();
+    _watchdog = setTimeout(() => { _watchdog = null; finish(); }, ms);
     try { TTS.speak(u); }
-    catch (_) { state.speaking = false; }
+    catch (_) { if (myId === _uid) { _clearWatchdog(); state.speaking = false; } }
+  }
+  // Chrome silently PAUSES speechSynthesis after ~15s of sustained output; a periodic
+  // resume() keeps a busy combat narration flowing. No-op when nothing is speaking.
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    setInterval(() => { try { if (state.speaking) window.speechSynthesis.resume(); } catch (_) {} }, 5000);
   }
   function pickVoice() {
     if (!supportsTTS) return;

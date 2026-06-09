@@ -719,6 +719,9 @@
   let _dunSbMode = false;      // blind dungeon: spellbook open (numbers pick a spell LEVEL, Tab cycles spells)
   let _dunSbLevel = null;      // blind spellbook: currently-chosen spell level
   let _dunSbIdx = -1;          // blind spellbook: current spell index within the chosen level (Tab cycles)
+  let _dunSessionMode = false; // blind dungeon: Esc "session menu" open (Tab cycles spectate/leave/cancel)
+  let _dunSessionIdx = 0;      // blind session menu: current item index
+  let _dunLootClaiming = 0;    // blind dungeon: timestamp throttle so won loot is auto-claimed without spamming
   let _spectating = false;     // watching the dungeon (not a combatant) — heckle-only
 
   function playDungeonSound(url, vol) {
@@ -1018,6 +1021,19 @@
           <button class="btn btn--ghost btn--sm" data-loot-hock="${l.idx}">Hock ${formatChips(l.hockValue)} gp</button>
         </div>`).join('');
       loot.innerHTML = html;
+      // BLIND auto-claim: sighted players click Equip/Hock, but a blind player has no
+      // pointer — so claim won loot for them. The backend equips a real upgrade or
+      // hocks a redundant one for gold (never discards), and narrates the result.
+      // Throttled so a render storm can't double-send, while still claiming multiple
+      // drops one after another.
+      if (window.BlindMode?.isOn?.()) {
+        const myLoot = (d.pendingLoot || []).filter(l => l.owner === meId);
+        if (myLoot.length && !d.lootRoll && (Date.now() - _dunLootClaiming > 1500)) {
+          _dunLootClaiming = Date.now();
+          window.BlindMode.speak(`You won the plus ${myLoot[0].tier} ${escapeText(myLoot[0].label)} — claiming it.`, 'urgent');
+          dungeonAction('equip', { idx: myLoot[0].idx });
+        }
+      }
     }
 
     // Spectators heckle from the gallery — no combat controls, just a banner.
@@ -1451,6 +1467,28 @@
         }
         // Any other key falls through to the normal handlers below.
       }
+      // ----- Session menu (opened by Esc) ------------------------------------
+      // A self-contained sub-mode for the spectate / leave / cancel controls. Done
+      // as a key-driven menu (not DOM focus) because the dungeon re-renders
+      // constantly — which blew away button focus so Tab/Enter never worked — and
+      // because Return would otherwise be hijacked by the open-door hotkey below.
+      const SESSION_ITEMS = [
+        { label: 'Spectate', fn: () => bailToSpectate() },
+        { label: 'Leave dungeon', fn: () => returnFromDungeon() },
+        { label: 'Cancel run', fn: () => cancelDungeon() },
+      ];
+      if (_dunSessionMode) {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          _dunSessionIdx = (e.shiftKey ? _dunSessionIdx - 1 + SESSION_ITEMS.length : _dunSessionIdx + 1) % SESSION_ITEMS.length;
+          sayU(SESSION_ITEMS[_dunSessionIdx].label + '.'); return;
+        }
+        if (/^[1-3]$/.test(k)) { e.preventDefault(); const it = SESSION_ITEMS[parseInt(k, 10) - 1]; _dunSessionMode = false; sayU(it.label + '.'); it.fn(); return; }
+        if (e.key === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); const it = SESSION_ITEMS[_dunSessionIdx]; _dunSessionMode = false; sayU(it.label + '.'); it.fn(); return; }
+        if (e.key === 'Escape') { e.preventDefault(); _dunSessionMode = false; sayU('Session menu closed.'); return; }
+        // Swallow anything else so you can't accidentally attack while deciding.
+        e.preventDefault(); return;
+      }
       // E = toggle "inspect enemies" browse mode.
       if (k === 'e') {
         e.preventDefault();
@@ -1591,11 +1629,9 @@
           || !!$('#audioMenu')?.classList.contains('is-open');
         if (overlayOpen) return;
         e.preventDefault();
-        if (_blindHelp) { window.BlindMode.speak('Escape: session controls — spectate, leave, or cancel.', 'urgent'); return; }
-        const nav = $('#dungeonActions')?.querySelector('.dungeon__actrow--nav');
-        const btn = nav?.querySelector('[data-dact="spectate"]') || nav?.querySelector('button:not([disabled])');
-        window.BlindMode.speak('Session controls: spectate, leave dungeon, or cancel run. Tab to choose, Enter to activate.', 'urgent');
-        if (btn) btn.focus();
+        if (_blindHelp) { window.BlindMode.speak('Escape: open the session menu — spectate, leave, or cancel.', 'urgent'); return; }
+        _dunSessionMode = true; _dunSessionIdx = 0;
+        window.BlindMode.speak('Session menu. Tab through spectate, leave dungeon, and cancel run; Return to choose; Escape to exit. Spectate.', 'urgent');
         return;
       }
     }

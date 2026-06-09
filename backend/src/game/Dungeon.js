@@ -3811,7 +3811,15 @@ class Dungeon {
     const m = this.member(playerId); if (!m) return { ok: false, error: 'gone' };
     const gear = db.getGear(playerId);
     const oldTier = Number(gear[loot.slot]) || 0;
-    if (oldTier >= loot.tier) { this.pendingLoot.splice(idx, 1); return { ok: false, error: 'already better' }; }
+    const lbl0 = db.GEAR_BY_KEY[loot.slot]?.label || loot.slot;
+    // Already have an equal/better one → HOCK the won item into the pool rather than
+    // silently discarding it (which used to lose the loot — see Josh's report).
+    if (oldTier >= loot.tier) {
+      const v = db.gearHockValue(loot.slot, loot.tier); this.runGold += v;
+      this.pendingLoot.splice(idx, 1);
+      this._note(`💰 ${m.nickname} already has a better ${lbl0} — hocks the +${loot.tier} for ${v} gp into the pool.`);
+      return { ok: true, hocked: true };
+    }
     gear[loot.slot] = loot.tier;
     db.setGear(playerId, gear);
     m.gear = gear;
