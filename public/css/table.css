@@ -135,6 +135,9 @@ button, input { font: inherit; color: inherit; }
 @keyframes dpcAfkPulse { 50% { opacity: 0.35; } }
 .dmon__hpbar, .dpc__hpbar { width: 100%; height: 6px; background: rgba(255,255,255,0.12); border-radius: 3px; overflow: hidden; }
 .dmon__hpbar span { display: block; height: 100%; background: linear-gradient(90deg,#c84a4a,#e87b5b); }
+/* Blue XP-to-next bar under the green HP bar on a hero card (thinner, secondary). */
+.dpc__xpbar { width: 100%; height: 4px; margin-top: 2px; background: rgba(255,255,255,0.10); border-radius: 2px; overflow: hidden; }
+.dpc__xpbar span { display: block; height: 100%; background: linear-gradient(90deg,#3a7bd5,#5fa8ee); }
 .dmon__hp { font-size: 0.7rem; font-variant-numeric: tabular-nums; color: var(--ivory-dim); }
 .dmon__none { color: var(--ivory-dim); opacity: 0.6; font-style: italic; align-self: center; }
 .dungeon__turn { text-align: center; font-weight: 600; color: var(--brass-bright); min-height: 1.2em; }

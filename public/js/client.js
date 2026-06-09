@@ -953,9 +953,14 @@
       const isTurn = m.playerId === turnId;
       const cls = ['dpc']; if (pct <= 30) cls.push('is-low'); if (m.dead || m.left) cls.push('is-out'); if (m.downed) cls.push('is-down'); if (isMe) cls.push('is-me'); if (isTurn) cls.push('is-turn');
       const tag = m.dead ? ' ☠️' : m.downed ? ' 🩸' : m.left ? ' 🪜' : '';
+      // HP + level only — XP-to-next moved to the blue XP bar below (saves the text
+      // space). The exact "XP→next" figure rides on the XP bar's hover tooltip.
       const hpText = m.downed
         ? `${typeof m.dyingHp === 'number' ? m.dyingHp : 0}/${m.maxHp} HP · 🩸 DYING`
-        : `${Math.max(0, m.hp)}/${m.maxHp} HP${m.level ? ` · Lv ${m.level}${m.maxLevel ? ' (max)' : (typeof m.xpToNext === 'number' ? ` · ${m.xpToNext.toLocaleString()} XP→next` : '')}` : ''}`;
+        : `${Math.max(0, m.hp)}/${m.maxHp} HP${m.level ? ` · Lv ${m.level}${m.maxLevel ? ' (max)' : ''}` : ''}`;
+      // XP progress to next level → the blue bar under the green HP bar.
+      const xpPct = m.maxLevel ? 100 : (m.xpSpan ? Math.max(0, Math.min(100, Math.round(100 * (m.xpInto || 0) / m.xpSpan))) : 0);
+      const xpTitle = m.maxLevel ? 'Max level' : (typeof m.xpToNext === 'number' ? `${m.xpToNext.toLocaleString()} XP to next level` : 'Experience');
       // Auto-skip countdown badge — only on the human whose turn it is, just to
       // the right of their token. Live-ticked by the interval below.
       const afk = m.afkAt
@@ -973,6 +978,7 @@
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${m.form ? ` <span class="dpc__formtag" style="color:var(--brass-bright);font-size:.82em">${escapeText(m.form.label)}</span>` : ''}${tag}</div>
         ${condIcons(m.conditions)}${buffIcons(m.buffs)}
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
+        <div class="dpc__xpbar" title="${escapeAttr(xpTitle)}"><span style="width:${xpPct}%"></span></div>
         <div class="dpc__hp">${hpText}</div>
       </div>`;
     }).join('');
