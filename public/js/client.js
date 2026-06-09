@@ -3826,6 +3826,14 @@
         if (state.me) state.me.class = resp.cls;
         // Re-sort/re-colour the weapon list for the new class' proficiencies.
         if (state.me) buildWeaponSelect($('#meWeapon'), resp.cls, state.me.weapon || 'dagger');
+        // Blind hint: confirm the switch + your level in that class (XP is per-class,
+        // so a class you've never played starts at level 1 — gear & gold carry over).
+        if (window.BlindMode?.isOn?.()) {
+          let cxp = {}; try { cxp = JSON.parse(state.me?.class_xp || '{}') || {}; } catch (_) {}
+          const lvl = (cxp[resp.cls] != null) ? classLevelFromXp(cxp[resp.cls]) : 1;
+          const name = state.pf1meta?.classes?.find(c => c.key === resp.cls)?.name || resp.cls;
+          window.BlindMode.speak(`You are now a level ${lvl} ${name}.`, 'urgent');
+        }
       });
     });
     wsel?.addEventListener('change', (e) => {
