@@ -99,8 +99,8 @@ function attackProfile(derived, weapon, opts = {}) {
   const s = mods.str || 0, d = mods.dex || 0;
   let attackStat, m, dexMelee = false;
   if (wc.ranged)         { attackStat = 'dex'; m = d; }
-  else if (wc.twoHanded) { attackStat = 'str'; m = s; }
-  else                   { dexMelee = d >= s; attackStat = dexMelee ? 'dex' : 'str'; m = dexMelee ? d : s; }
+  else if (wc.twoHanded && !(weapon && weapon.finesse2h)) { attackStat = 'str'; m = s; }
+  else                   { dexMelee = d >= s; attackStat = dexMelee ? 'dex' : 'str'; m = dexMelee ? d : s; }   // 1h/light — or a finesse2h blade (elven curved blade): better of STR/DEX, ×1.5 still applies below
   let mult = wc.twoHanded ? 1.5 : 1.0;
   if (opts.offHand) mult = 0.5;            // off-hand swing of a two-weapon fighter
   // Ranged weapons here get the house-rule DEX-to-damage at x1 (no 1.5/0.5).

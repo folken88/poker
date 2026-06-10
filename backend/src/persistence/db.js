@@ -189,7 +189,10 @@ const BOT_ROSTER = [
   { name: 'Mr. Brow',             avatar: '/tokens/augustus-teabrow.webp',       baseMode: 'risky',    intelligence: 'high', gender: 'he'    }, // user: highly intelligent + risky
   { name: 'Nomkath',              avatar: '/tokens/nomkath.webp',                baseMode: 'standard', intelligence: 'average', gender: 'he' }, // catfolk_male rogue/scout in Numeria; user: avg intel + avg risk
   { name: 'Ulfred',               avatar: '/tokens/ulfred-stronginthearm.webp',  baseMode: 'standard', intelligence: 'average', gender: 'he' },
-  { name: 'Kai Ginn',             avatar: '/tokens/kai-gin.webp',                baseMode: 'standard', intelligence: 'average', gender: 'he' }, // user: avg intel + avg risk
+  { name: 'Kai Ginn',             avatar: '/tokens/kai-ginn-2.webp',             baseMode: 'standard', intelligence: 'average', gender: 'he' }, // user: avg intel + avg risk; new detective-slayer art
+  { name: 'Ser Toche',            avatar: '/tokens/ser-toche.webp',              baseMode: 'standard', intelligence: 'average', gender: 'she' }, // tengu rogue — silent but deadly (elven curved blade, DEX 2H)
+  { name: 'El Guapo',             avatar: '/tokens/el-guapo.webp',               baseMode: 'risky',    intelligence: 'high',    gender: 'he' },  // swashbuckler — brilliant gambler, fearless, funloving
+  { name: 'Gabriel',              avatar: '/tokens/gabriel.png',                 baseMode: 'cautious', intelligence: 'average', gender: 'he' },  // paladin — courageous, friendly, wise; careful with cards
   { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky',    intelligence: 'low', gender: 'they'     }, // velociraptor — pure instinct, no thinking
   { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious', intelligence: 'high', gender: 'she'    },
   { name: 'Toni',                 avatar: '/tokens/antoinette-borden.webp',      baseMode: 'risky',    intelligence: 'average', gender: 'she' },
@@ -403,6 +406,7 @@ const BOT_CLASSES = {
   'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'barbarian', 'Kai Ginn': 'ranger', 'Lirienne': 'ranger',   // Crisp = deinonychus: melee multi-attacker + odd-level fighter feats
   'Rissa': 'druid', 'Taelys': 'gunslinger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'gunslinger',   // Taelys + Duristan: PF1 gunslingers (rifles)
   'Holden': 'swashbuckler',
+  'Ser Toche': 'rogue', 'El Guapo': 'swashbuckler', 'Gabriel': 'paladin',
 };
 // Sensible default base weapon per class so AI aren't all daggers in the dungeon.
 const CLASS_WEAPON = {
@@ -429,6 +433,7 @@ const BOT_WEAPONS = {
   'Tokala': 'chainsaw',   // 3d6 slashing two-hander, crits on 18
   'Lou Candlebean': 'gnomehammer',   // fighter dual-wielder — gnome hooked hammer (2 swings + TWF feats)
   'Nomkath': 'kukri', 'Kelda': 'dagger',   // rogues — dual-wield light blades (dagger / kukri)
+  'Ser Toche': 'elvencurve',               // tengu rogue — elven curved blade (DEX two-hander)
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 

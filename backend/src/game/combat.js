@@ -100,6 +100,7 @@ function weaponOf(gear, weaponKey) {
     critRange: base.crit || 20,
     critMult: base.mult || 2,
     cat: base.cat, ranged: !!base.ranged, dtype: base.type, group: base.group,
+    finesse2h: !!base.finesse2h,    // DEX-driven two-hander (elven curved blade)
     prof: base.prof || 'martial',   // proficiency category (simple/martial/exotic)
     custom: !!base.custom,          // named signature weapon (always proficient)
     dual: !!base.dual,              // two-weapon fighting → two swings, one report

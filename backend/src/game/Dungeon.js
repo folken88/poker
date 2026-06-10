@@ -582,6 +582,40 @@ const MON = {
 
   vampire:           { name: 'Vampire',           glyph: '🧛', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 6,  dmgBonus: 8, fort: 8,  reflex: 11, attacks: 2, gold: [100, 200], dr: { amount: 10, bypass: 'magic' }, evil: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 4, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // magus of its level: dominating gaze + Vampiric Touch spellstrike (drains life)
   lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], dr: { amount: 15, bypass: 'B' }, evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' }, arcane: true },                 // a full wizard of its level: Hold Monster, Fireball/Cone/Chain Lightning, Disintegrate, Finger of Death, Magic Missile (see _lichCast)
+
+  // ── THE VAMPIRE COURT — classed vampires (PF1 vampire template: DR 10/magic,
+  //    undead = mind-immune). CR ≈ class level + 1 for the template. ──
+  vampire_spawn:     { name: 'Vampire Spawn',     glyph: '🧛', cr: '4',   hp: 26,  ac: 15, toHit: 7,  dmgDie: 6,  dmgBonus: 4,  fort: 3,  reflex: 5,  gold: [36, 78],   type: 'undead', evil: true, dr: { amount: 5,  bypass: 'magic' } },
+  vamp_knight:       { name: 'Vampire Knight',    glyph: '🧛', cr: '9',   hp: 100, ac: 23, toHit: 15, dmgDie: 8,  dmgBonus: 8,  fort: 9,  reflex: 7,  attacks: 2, gold: [110, 220], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F8 + vampire
+  vamp_inquisitor:   { name: 'Vampire Inquisitor',glyph: '🧛', cr: '10',  hp: 105, ac: 22, toHit: 15, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  attacks: 2, gold: [120, 240], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 17, sound: '/audio/enemy_lich_gaze.mp3' } },   // I9 + vampire — dread judgment
+  vamp_rogue:        { name: 'Vampire Rogue',     glyph: '🧛', cr: '10',  hp: 95,  ac: 23, toHit: 15, dmgDie: 6,  dmgBonus: 6,  fort: 6,  reflex: 11, attacks: 2, sneakDice: 5, evasion: true, gold: [120, 240], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // R9 + vampire
+  vamp_scout:        { name: 'Vampire Scout',     glyph: '🧛', cr: '11',  hp: 105, ac: 24, toHit: 16, dmgDie: 6,  dmgBonus: 6,  fort: 6,  reflex: 12, attacks: 2, sneakDice: 5, evasion: true, gold: [130, 260], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // R10 + vampire
+  vamp_warrior:      { name: 'Vampire Warrior',   glyph: '🧛', cr: '11',  hp: 120, ac: 24, toHit: 17, dmgDie: 8,  dmgBonus: 9,  fort: 10, reflex: 8,  attacks: 2, gold: [130, 260], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F10 + vampire
+  vamp_bodyguard:    { name: 'Vampire Bodyguard', glyph: '🧛', cr: '13',  hp: 140, ac: 26, toHit: 19, dmgDie: 8,  dmgBonus: 10, fort: 11, reflex: 9,  attacks: 2, gold: [170, 320], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F12 + vampire
+  vamp_priest:       { name: 'Vampire Priest',    glyph: '🧛', cr: '13',  hp: 130, ac: 25, toHit: 17, dmgDie: 8,  dmgBonus: 8,  fort: 11, reflex: 8,  attacks: 2, gold: [170, 320], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' } },   // C12 + vampire — profane litany
+  vamp_assassin:     { name: 'Vampire Assassin',  glyph: '🧛', cr: '14',  hp: 140, ac: 27, toHit: 19, dmgDie: 6,  dmgBonus: 8,  fort: 8,  reflex: 13, attacks: 2, sneakDice: 7, evasion: true, gold: [190, 360], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // R13 + vampire
+  vamp_nightguard:   { name: 'Vampire Nightguard',glyph: '🧛', cr: '14',  hp: 160, ac: 27, toHit: 21, dmgDie: 6,  dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 9, attacks: 2, gold: [190, 360], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F14 + vampire — polearm sweeps (2d6+10)
+  vamp_noble:        { name: 'Vampire Noble',     glyph: '🧛', cr: '15',  hp: 160, ac: 27, toHit: 20, dmgDie: 8,  dmgBonus: 9,  fort: 11, reflex: 11, attacks: 2, gold: [220, 420], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 21, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 5, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // Mag14 + vampire — Vampiric Touch spellstrikes
+  vamp_techwitch:    { name: 'Vampire Tech Witch',glyph: '🧛', cr: '12',  hp: 110, ac: 22, toHit: 12, dmgDie: 6,  dmgBonus: 4,  fort: 8,  reflex: 8,  gold: [150, 300], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, arcane: true },   // W11 + vampire — Technic League arcanist, full wizard casting
+  // ── TECHNIC LEAGUE & THRUNE — named villains ──
+  zernibeth:         { name: 'Zernibeth',         glyph: '🤖', cr: '13',  hp: 120, ac: 24, toHit: 12, dmgDie: 6,  dmgBonus: 4,  fort: 9,  reflex: 9,  gold: [280, 480], evil: true, arcane: true },   // android W14 of the Technic League (LE) — full wizard casting
+  barzillai:         { name: 'Barzillai Thrune',  glyph: '😈', cr: '15',  hp: 220, ac: 28, toHit: 22, dmgDie: 6,  dmgCount: 2, dmgBonus: 12, fort: 14, reflex: 9, attacks: 2, gold: [340, 580], evil: true, shout: { fear: true, dc: 22, sound: '/audio/enemy_lich_gaze.mp3' } },   // I16 inquisitor of Asmodeus — greathammer (2d6+12), a deep-room villain
+  abrogail:          { name: 'Abrogail Thrune II',glyph: '👑', cr: '16',  hp: 200, ac: 27, toHit: 14, dmgDie: 4,  dmgBonus: 4,  fort: 11, reflex: 12, gold: [400, 700], evil: true, arcane: true, shout: { fear: true, dc: 23, sound: '/audio/enemy_lich_gaze.mp3' }, art: '/dungeon/monsters/abrogail.png' },   // S17 — Queen of Cheliax, full arcane barrage
+  // ── THE INFERNAL COURT — classed devils (devil template: DR 10/magic, fire-immune,
+  //    resist cold & acid). ──
+  devil_swordsman:   { name: 'Devil Swordsman',   glyph: '😈', cr: '11',  hp: 125, ac: 25, toHit: 17, dmgDie: 8,  dmgBonus: 9,  fort: 11, reflex: 9,  attacks: 2, gold: [130, 260], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 } },   // F10 + devil — katana
+  devil_samurai:     { name: 'Devil Samurai',     glyph: '😈', cr: '13',  hp: 145, ac: 26, toHit: 19, dmgDie: 6,  dmgCount: 2, dmgBonus: 9, fort: 12, reflex: 10, attacks: 2, gold: [170, 320], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 } },   // F12 + devil — naginata (2d6+9)
+  devil_rogue:       { name: '???',               glyph: '😈', cr: '16',  hp: 175, ac: 29, toHit: 22, dmgDie: 6,  dmgBonus: 9,  fort: 10, reflex: 15, attacks: 3, sneakDice: 8, evasion: true, gold: [380, 640], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 } },   // R15 + devil (Mangvhune) — a dual-wielding horror; its name is not spoken
+  bomb_devil:        { name: 'Bomb Devil',        glyph: '💣', cr: '11',  hp: 115, ac: 24, toHit: 16, dmgDie: 6,  dmgBonus: 6,  fort: 10, reflex: 11, gold: [130, 260], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 },
+                       hellfire: { count: 3, dice: 6, die: 6, dc: 20, verb: 'lobs a sputtering FIRE BOMB into the party', sound: '/audio/spell_fireball.mp3' } },   // alchemist-devil — bombs, burning hands, fireball flavor
+  // ── DRAGONS — winged terrors with breath weapons (reuse the hellfire AoE with a
+  //    breath verb + element). ──
+  black_dragon:      { name: 'Black Dragon',      glyph: '🐉', cr: '11',  hp: 150, ac: 26, toHit: 20, dmgDie: 6,  dmgCount: 2, dmgBonus: 9, fort: 12, reflex: 9, attacks: 2, flying: true, gold: [200, 400], evil: true, dr: { amount: 5, bypass: 'magic' }, resist: { acid: 0 }, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' },
+                       hellfire: { count: 3, dice: 8, die: 6, dc: 20, dtype: 'acid', verb: 'breathes a hissing LINE OF ACID across the party', sound: '/audio/spell_acidsplash.mp3' } },   // adult black dragon — acid breath, frightful presence
+  void_dragon:       { name: 'Void Dragon',       glyph: '🐉', cr: '13',  hp: 175, ac: 27, toHit: 21, dmgDie: 8,  dmgCount: 2, dmgBonus: 9, fort: 13, reflex: 10, attacks: 2, flying: true, gold: [260, 480], evil: true, dr: { amount: 5, bypass: 'magic' }, resist: { cold: 0 }, shout: { fear: true, dc: 21, sound: '/audio/enemy_lich_gaze.mp3' },
+                       hellfire: { count: 3, dice: 10, die: 6, dc: 21, dtype: 'cold', verb: 'exhales a freezing GULF OF THE VOID over the party', sound: '/audio/spell_coneofcold.mp3' } },   // void dragon — entropic cold breath
+  // ── HARPY SORCERER — harpy stats + 9 sorcerer levels (full arcane barrage on the wing). ──
+  harpy_sorcerer:    { name: 'Harpy Sorcerer',    glyph: '🦅', cr: '10',  hp: 95,  ac: 21, toHit: 13, dmgDie: 6,  dmgBonus: 4,  fort: 6,  reflex: 10, attacks: 2, flying: true, gold: [120, 240], evil: true, arcane: true },
 };
 // PF1 BODY PLANS — size category + leg count per monster (used by the trip rules:
 // +4 to trip defense per leg beyond two; you can't trip a foe more than ONE size
@@ -602,6 +636,9 @@ const MON_BODY = {
   wood_golem: { size: 'L' }, bog_brute: { size: 'L' }, hill_giant: { size: 'L' }, stone_giant: { size: 'L' },
   brass_golem: { size: 'L' }, barbed_devil: { size: 'L' }, abyssal_horror: { size: 'L', legs: 0 },   // a roil of tentacles
   medusa: { size: 'M' }, vampire: { size: 'M' }, lich: { size: 'M' },
+  // The vampire court / infernal court are classed humanoid shapes (Medium bipeds —
+  // the default — so no entries needed); the dragons are Large quadrupeds.
+  black_dragon: { size: 'L', legs: 4 }, void_dragon: { size: 'L', legs: 4 },
 };
 for (const [k, b] of Object.entries(MON_BODY)) if (MON[k]) Object.assign(MON[k], b);
 // Real token art from the Foundry library (public/dungeon/monsters/). dire_rat
@@ -622,6 +659,16 @@ const MON_ART = {
   gargoyle: 'gargoyle', minotaur: 'minotaur', basilisk: 'basilisk', winter_wolf: 'winter_wolf',
   wood_golem: 'wood_golem', bog_brute: 'swamp_horror', chimera: 'chimera', hill_giant: 'hill_giant',
   medusa: 'medusa', stone_giant: 'stone_giant', abyssal_horror: 'abyssal_horror',
+  // The vampire court, Technic League & Thrune villains, the infernal court, and
+  // dragons (Abrogail is a .png — her art is set inline on the MON entry).
+  vampire_spawn: 'vampire_spawn', vamp_knight: 'vamp_knight', vamp_inquisitor: 'vamp_inquisitor',
+  vamp_rogue: 'vamp_rogue', vamp_scout: 'vamp_scout', vamp_warrior: 'vamp_warrior',
+  vamp_bodyguard: 'vamp_bodyguard', vamp_priest: 'vamp_priest', vamp_assassin: 'vamp_assassin',
+  vamp_nightguard: 'vamp_nightguard', vamp_noble: 'vamp_noble', vamp_techwitch: 'vamp_techwitch',
+  zernibeth: 'zernibeth', barzillai: 'barzillai',
+  devil_swordsman: 'devil_swordsman', devil_samurai: 'devil_samurai', devil_rogue: 'devil_rogue',
+  bomb_devil: 'bomb_devil', black_dragon: 'black_dragon', void_dragon: 'void_dragon',
+  harpy_sorcerer: 'harpy_sorcerer',
   blood_caimon: 'blood_caimon',
 };
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
@@ -2117,11 +2164,13 @@ class Dungeon {
       const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
       let dmg = saved ? Math.floor(full / 2) : full;
-      if (t.protectFire) dmg = Math.max(1, Math.floor(dmg / 2));   // fire ward halves it
+      const fireWarded = t.protectFire && (cfg.dtype || 'fire') === 'fire';   // the fire ward only blunts FIRE (not a dragon's acid/cold breath)
+      if (fireWarded) dmg = Math.max(1, Math.floor(dmg / 2));
       this._dmgToMember(t, dmg);
-      parts.push(`${t.nickname} ${saved ? 'half ' : ''}−${dmg}${t.protectFire ? ' 🔥½' : ''}`);
+      parts.push(`${t.nickname} ${saved ? 'half ' : ''}−${dmg}${fireWarded ? ' 🔥½' : ''}`);
     }
-    this._note(`🔥 ${e.glyph} ${e.name} unleashes a HELLFIRE BLAST (${cfg.dice || 5}d${cfg.die || 6} → ${full}) — ${parts.join(', ')}! [Ref DC ${dc}]`, cfg.sound, { side: 'enemy' });
+    // cfg.verb lets a dragon BREATHE and a bomb devil LOB instead of "hellfire".
+    this._note(`🔥 ${e.glyph} ${e.name} ${cfg.verb || 'unleashes a HELLFIRE BLAST'} (${cfg.dice || 5}d${cfg.die || 6} → ${full}) — ${parts.join(', ')}! [Ref DC ${dc}]`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
   }
   // Lich's Fireball (it casts as a wizard of its level): a roaring blast on a

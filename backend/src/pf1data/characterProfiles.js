@@ -31,7 +31,7 @@ function weaponAttackStat(weapon) {
   const cat = weapon.cat;
   const ranged = !!weapon.ranged || cat === 'ranged';
   const natural = weapon.group === 'natural';   // claws/bite/slams use STR, not finesse
-  const finesse = (cat === 'light' && !natural) || FINESSE_KEYS.has(weapon.key);
+  const finesse = (cat === 'light' && !natural) || FINESSE_KEYS.has(weapon.key) || !!weapon.finesse2h;   // finesse2h: the elven curved blade is a DEX two-hander
   return (ranged || finesse) ? 'dex' : 'str';
 }
 

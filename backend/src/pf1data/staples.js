@@ -72,6 +72,9 @@ const CUSTOM_WEAPONS = {
   // Taelys's DVL-10 bolt-action sniper rifle (2d8, ×4) — silenced single shot,
   // so no Rapid Shot (she relies on Bullseye Shot + Deadly Aim instead).
   dvl: { key: 'dvl', name: 'DVL-10 Sniper Rifle', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 8, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, boltAction: true, atkSound: '/audio/rifle_dvl_silenced.mp3' },
+  // Ser Toche's elven curved blade — the classic PF1 DEX two-hander (1d10, 18–20):
+  // finesse2h lets a DEX build drive it (to-hit AND damage, ×1.5 two-handed).
+  elvencurve: { key: 'elvencurve', name: 'Elven Curved Blade', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 18, mult: 2, type: 'S', group: 'heavyBlades', prof: 'exotic', custom: true, finesse2h: true },
   // Ulfred's named battleaxe "Voidshard" (1d8, ×3) — its own meaty axe report.
   voidshard: { key: 'voidshard', name: 'Voidshard', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'S', group: 'axes', prof: 'martial', custom: true, atkSound: '/audio/voidshard.mp3' },
   // Farrus Richton's TWIN battleaxes — two-weapon fighting (2 swings/turn, one

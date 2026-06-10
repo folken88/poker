@@ -57,6 +57,9 @@ const CHARACTER_VOICES = {
   'Farrah':            'Vnqlgu3fdiFwisAye1qH', // Mimi — young female, Swedish accent
   'Kai Ginn':          'Yj3XGMd9w2H4C0P0L28M', // Sean
   'Daramid':           'poTX7WPM13yOc28z0sVi', // Shoreh Thing
+  'Ser Toche':         'poTX7WPM13yOc28z0sVi', // Shoreh Thing (shared with Daramid) — tengu rogue, rarely speaks
+  'El Guapo':          'GEDXnQvfyd3quuXsFgKU', // Felix (shared with Estovion) — flamboyant swashbuckler gambler
+  'Gabriel':           'UoOL4r5ZefvNkwdKzfLN', // Hank (shared with Mr. Brow) — warm, steady paladin
   'Sirona':            'EXAVITQu4vr4xnSDxMaL', // Sarah — Mature, Reassuring, Confident (paladin barking orders)
   'Gaspar':            'zmw8ZGHS2l5ZG2v3AQ31', // Ultron
   'Farrus Richton':    'P2tOmMO16sLs34Jodjvk', // Verner Hishog — Werner-Herzog-style older German-accented male; user confirmed German accent works
