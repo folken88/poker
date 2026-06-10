@@ -3754,8 +3754,8 @@
     });
   });
   // Pressing Enter inside the raise-amount field submits the raise — powers the
-  // blind "5 = raise custom" prompt (type the number, press Return) and is handy
-  // for any keyboard player.
+  // blind "V = raise custom" prompt (V focuses the box, type the number, press
+  // Return) and is handy for any keyboard player.
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     const inp = e.target?.closest?.('[data-raise-input]'); if (!inp) return;
@@ -4250,17 +4250,19 @@
         }
         // ? — toggle help/learn mode: keys are spoken, not fired.
         if (e.key === '?') { e.preventDefault(); _blindHelp = !_blindHelp; window.BlindMode.speak(`Help mode ${_blindHelp ? 'on' : 'off'}.`, 'urgent'); return; }
-        // On YOUR turn, 1–5 are betting actions (dynamic + legal):
-        //   1 Fold · 2 Check/Call · 3 Raise to min · 4 Raise to pot · 5 Raise custom.
-        // Off-turn (or 6–9) they fall through to the seat reader below.
+        // Betting actions are on LETTER keys so the NUMBER keys (1–9) stay reserved
+        // for the seat reader / "sit in seat N" — those must work even on your turn,
+        // when a blind player most needs to re-read the table before acting. Bets
+        // only fire on your turn:
+        //   F Fold · K checK/Call · R Raise (min) · T raise to poT · A All-in ·
+        //   V raise to a custom Value (focuses the raise box).
         const _h = state.table?.hand;
         const _meId = state.me?.player_id;
         const _meP = _h?.players?.find(p => p.playerId === _meId);
         const _myTurn = !!(_h && _h.actor === _meId && _meP && !_meP.folded && !_meP.allIn);
-        const actKey = e.code.match(/^(?:Digit|Numpad)([1-5])$/);
-        if (actKey && _myTurn) {
+        const BET_KEYS = ['KeyF', 'KeyK', 'KeyR', 'KeyT', 'KeyA', 'KeyV'];
+        if (_myTurn && BET_KEYS.includes(e.code)) {
           e.preventDefault();
-          const n = parseInt(actKey[1], 10);
           const cur = _h.currentBet || 0, inv = _meP.invested || 0, stack = _meP.stack || 0, pot = _h.potTotal || 0;
           const toCall = Math.max(0, cur - inv);
           const minTo = Math.max(cur + (_h.minRaise || 1), cur + 1);
@@ -4268,12 +4270,13 @@
           const cap = inv + stack;   // a raise to the cap = all-in
           const say = (t) => window.BlindMode.speak(t, 'urgent');
           const send = (action, amount) => socket.emit('table:action', amount != null ? { action, amount } : { action }, (r) => { if (!r?.ok) say(r?.error || 'Action rejected.'); });
-          if (n === 1) { if (_blindHelp) return say('1: Fold.'); say('Fold.'); send('fold'); return; }
-          if (n === 2) { const lbl = toCall === 0 ? 'Check' : `Call ${Math.min(toCall, stack).toLocaleString()}`; if (_blindHelp) return say(`2: ${lbl}.`); say(`${lbl}.`); send(toCall === 0 ? 'check' : 'call'); return; }
-          if (n === 3) { const to = Math.min(minTo, cap); const lbl = to >= cap ? `All in, ${cap.toLocaleString()}` : `Raise to ${to.toLocaleString()}, minimum`; if (_blindHelp) return say(`3: ${lbl}.`); say(`${lbl}.`); if (to >= cap) send('allin'); else send('raise', to); return; }
-          if (n === 4) { const to = Math.min(potTo, cap); const lbl = to >= cap ? `All in, ${cap.toLocaleString()}` : `Raise to ${to.toLocaleString()}, pot`; if (_blindHelp) return say(`4: ${lbl}.`); say(`${lbl}.`); if (to >= cap) send('allin'); else send('raise', to); return; }
-          if (n === 5) {
-            if (_blindHelp) return say('5: Raise a custom amount.');
+          if (e.code === 'KeyF') { if (_blindHelp) return say('F: Fold.'); say('Fold.'); send('fold'); return; }
+          if (e.code === 'KeyK') { const lbl = toCall === 0 ? 'Check' : `Call ${Math.min(toCall, stack).toLocaleString()}`; if (_blindHelp) return say(`K: ${lbl}.`); say(`${lbl}.`); send(toCall === 0 ? 'check' : 'call'); return; }
+          if (e.code === 'KeyA') { if (_blindHelp) return say(`A: All in, ${cap.toLocaleString()}.`); say(`All in, ${cap.toLocaleString()}.`); send('allin'); return; }
+          if (e.code === 'KeyR') { const to = Math.min(minTo, cap); const lbl = to >= cap ? `All in, ${cap.toLocaleString()}` : `Raise to ${to.toLocaleString()}, minimum`; if (_blindHelp) return say(`R: ${lbl}.`); say(`${lbl}.`); if (to >= cap) send('allin'); else send('raise', to); return; }
+          if (e.code === 'KeyT') { const to = Math.min(potTo, cap); const lbl = to >= cap ? `All in, ${cap.toLocaleString()}` : `Raise to ${to.toLocaleString()}, pot`; if (_blindHelp) return say(`T: ${lbl}.`); say(`${lbl}.`); if (to >= cap) send('allin'); else send('raise', to); return; }
+          if (e.code === 'KeyV') {
+            if (_blindHelp) return say('V: Raise a custom amount.');
             const ri = document.querySelector('[data-raise-input]');
             if (ri) { ri.focus(); ri.select?.(); say(`Enter raise amount, minimum ${minTo.toLocaleString()}, then press Return.`); }
             else say('Raise input not available.');
