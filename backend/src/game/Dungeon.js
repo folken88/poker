@@ -42,7 +42,9 @@ const FF_NONE = { hit: 0, dmg: 0, ac: 0, hp: 0, save: 0, init: 0, impCrit: false
   // Ranged feat-tree bonuses (any feat-class wielding a bow/crossbow — see rangedFeats):
   pbs: 0, rapidShot: false, bullseye: false,
   // Rogue / cleric tree bonuses (see rogueFeats / clericFeats):
-  offDef: false, quickChannel: false };
+  offDef: false, quickChannel: false,
+  // High-level fighter ladder (see featLadder / rangedFeats):
+  prStrike: 0, critMastery: false, supremacy: false, manyshot: false };
 // PF1 weapon-damage-by-size table (Enlarge Person / Improved Natural Attack), one
 // step UP per entry. Used to grow a druid's natural-attack dice when they enlarge
 // into a bigger form and/or take Improved Natural Weapon.
@@ -60,15 +62,20 @@ function stepDamage(count, die, steps) {
 // earned so far) with the Toughness HP bonus scaling on actual Hit Dice `hd`.
 function featLadder(g, hd) {
   return {
-    hit:  1,                              // Weapon Focus — +1 to hit, every weapon
-    ac:   g >= 2 ? 1 : 0,                 // Dodge — +1 AC
+    // FULL 20-feat MELEE ladder — fighters take one feat per level (g = level), so
+    // theirs runs the whole length; half-rate classes only ever see the front half.
+    hit:  g >= 20 ? 4 : g >= 16 ? 3 : g >= 10 ? 2 : 1,   // Weapon Focus → Greater WF (10) → Weapon Mastery (16) → Weapon Supremacy (20)
+    ac:   g >= 14 ? 2 : g >= 2 ? 1 : 0,   // Dodge (2) → Mobility (14)
     hp:   g >= 3 ? Math.max(3, hd) : 0,   // Toughness — +1 HP per Hit Die (min 3)
-    dmg:  g >= 4 ? 2 : 0,                 // Weapon Specialization — +2 damage
+    dmg:  g >= 16 ? 5 : g >= 12 ? 4 : g >= 4 ? 2 : 0,    // Weapon Spec (4) → Greater (12) → Weapon Mastery (16)
     init: g >= 5 ? 4 : 0,                 // Improved Initiative
-    save: g >= 7 ? 2 : g >= 6 ? 1 : 0,    // Lightning Reflexes / Great Fortitude / Iron Will (unified +2)
+    save: g >= 17 ? 4 : g >= 13 ? 3 : g >= 7 ? 2 : g >= 6 ? 1 : 0,   // the save-feat ladder: +1 (6), +2 (7), Great Fortitude (13), Improved Iron Will (17)
     impCrit:   g >= 8,                    // Improved Critical — doubled threat range
     critFocus: g >= 9,                    // Critical Focus — +4 to confirm crits
+    critMastery: g >= 19,                 // Critical Mastery — +4 MORE to confirm (+8 total)
     impCleave: g >= 11,                   // Improved Cleave — auto-cleave like the barbarian
+    prStrike: g >= 18 ? 10 : g >= 15 ? 5 : 0,   // Penetrating Strike (15) / Greater (18) — ignore 5/10 of a foe's DR
+    supremacy: g >= 20,                   // Weapon Supremacy — never caught flat-footed
     // Two-weapon feats (only matter to dual-wielders — harmless on a single weapon):
     twf:   g >= 2,                        // Two-Weapon Fighting — dual penalty −6 → −2
     twDef: g >= 4,                        // Two-Weapon Defense — +1 AC while two-weapon fighting
@@ -261,13 +268,21 @@ function swashFeats(level) {
 function rangedFeats(g, hd) {
   return {
     ...FF_NONE,
-    hit:  g >= 1 ? 1 : 0,                 // Weapon Focus — +1 to hit (all weapons)
+    // FULL 20-feat RANGED ladder — a bow fighter explores the whole thing.
+    hit:  g >= 20 ? 4 : g >= 13 ? 3 : g >= 11 ? 2 : 1,   // Weapon Focus → Greater WF (11) → Improved Precise Shot (13) → Weapon Supremacy (20)
     pbs:  g >= 2 ? 1 : 0,                 // Point Blank Shot — +1 to hit & damage with ranged
-    rapidShot: g >= 3,                    // Rapid Shot — an extra ranged attack at −2
+    rapidShot: g >= 3,                    // Rapid Shot — an extra shot every full attack, −2 to ALL shots (wired in _attackOffsets)
     bullseye:  g >= 4,                    // Bullseye Shot — a focused, accurate shot
     hp:   g >= 5 ? Math.max(3, hd) : 0,   // Toughness — +1 HP per Hit Die (min 3)
     impCrit:   g >= 6,                    // Improved Critical — doubled threat range
     save: g >= 9 ? 3 : g >= 8 ? 2 : g >= 7 ? 1 : 0,   // Lightning Reflexes / Iron Will / Great Fortitude
+    dmg:  g >= 14 ? 4 : g >= 10 ? 2 : 0,  // Weapon Specialization (10) → Greater (14)
+    manyshot: g >= 12,                    // Manyshot — a 2nd arrow at FULL BAB each full attack (BOWS only)
+    critFocus: g >= 16,                   // Critical Focus — +4 to confirm
+    ac:   g >= 17 ? 1 : 0,                // Dodge
+    prStrike: g >= 18 ? 10 : g >= 15 ? 5 : 0,   // Penetrating Strike (15) / Greater (18) — ignore 5/10 DR
+    init: g >= 19 ? 4 : 0,                // Improved Initiative
+    supremacy: g >= 20,                   // Weapon Supremacy — never caught flat-footed
   };
 }
 // `ranged` true → the martial classes use the RANGED ladder instead of melee.
@@ -313,7 +328,10 @@ function gatingLevel(cls, L) { return cls === 'fighter' ? L : (cls === 'inquisit
 const FEAT_AT = {
   1: 'Weapon Focus (+1 to hit)', 2: 'Dodge (+1 AC)', 3: 'Toughness (+HP)', 4: 'Weapon Specialization (+2 dmg)',
   5: 'Improved Initiative', 6: 'a save feat (+1 saves)', 7: 'a save feat (+2 saves)',
-  8: 'Improved Critical', 9: 'Critical Focus', 11: 'Improved Cleave',
+  8: 'Improved Critical', 9: 'Critical Focus', 10: 'Greater Weapon Focus (+2 to hit total)', 11: 'Improved Cleave',
+  12: 'Greater Weapon Specialization (+4 dmg total)', 13: 'Great Fortitude (+3 saves)', 14: 'Mobility (+2 AC total)',
+  15: 'Penetrating Strike (ignore 5 DR)', 16: 'Weapon Mastery (+1 hit & +1 dmg)', 17: 'Improved Iron Will (+4 saves)',
+  18: 'Greater Penetrating Strike (ignore 10 DR)', 19: 'Critical Mastery (+8 to confirm)', 20: 'Weapon Supremacy (never flat-footed, +1 hit)',
 };
 // Paladin's reordered tree (by feat index n). Index 2 (Power Attack) is omitted
 // here — it's a kit toggle (minLevel 3) and gets announced via the ability path.
@@ -336,9 +354,13 @@ const CASTER_FEAT_AT = {
 };
 // Ranged tree (any feat-class with a bow/crossbow), by feat index.
 const RANGED_FEAT_AT = {
-  1: 'Weapon Focus (+1 to hit)', 2: 'Point Blank Shot (+1 hit & dmg)', 3: 'Rapid Shot (extra shot)',
+  1: 'Weapon Focus (+1 to hit)', 2: 'Point Blank Shot (+1 hit & dmg)', 3: 'Rapid Shot (extra shot each turn, −2 to all)',
   4: 'Bullseye Shot', 5: 'Toughness (+HP)', 6: 'Improved Critical', 7: 'Lightning Reflexes (+1 saves)',
-  8: 'Iron Will (+2 saves)', 9: 'Great Fortitude (+3 saves)',
+  8: 'Iron Will (+2 saves)', 9: 'Great Fortitude (+3 saves)', 10: 'Weapon Specialization (+2 dmg)',
+  11: 'Greater Weapon Focus (+2 to hit total)', 12: 'Manyshot (2nd arrow at full BAB — bows)',
+  13: 'Improved Precise Shot (+1 to hit)', 14: 'Greater Weapon Specialization (+4 dmg total)',
+  15: 'Penetrating Strike (ignore 5 DR)', 16: 'Critical Focus (+4 to confirm)', 17: 'Dodge (+1 AC)',
+  18: 'Greater Penetrating Strike (ignore 10 DR)', 19: 'Improved Initiative', 20: 'Weapon Supremacy (never flat-footed, +1 hit)',
 };
 // Level-up announce tables for the class trees (by feat index n = ceil(level/2)).
 const ROGUE_FEAT_AT = {
@@ -1013,7 +1035,7 @@ class Dungeon {
     this.depth += 1;
     this._spawnRoom();
     this.blackTentacles = null;   // the tentacle field doesn't carry between rooms
-    for (const m of this.present()) { this._resetAbilities(m); m.flatFooted = true; }  // refresh per-room spells/channels + flat-footed until they act
+    for (const m of this.present()) { this._resetAbilities(m); m.flatFooted = !fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy; }  // refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy: never caught flat-footed)
     if (Math.random() < 0.05) { try { this._reskinVorkstag(); } catch (_) {} }   // skinwalker drifts to a new face between rooms (rare)
     this._maintainBardSongs();   // Inspire Courage is a passive aura — always up, no action spent
     this.status = 'combat';
@@ -1781,7 +1803,7 @@ class Dungeon {
     // L5 with a finesse blade). Critical Focus (fighter L9) adds +4 to confirm.
     const impCrit = ff.impCrit || (swashFin && lvl >= 5) || arcKeen;   // fighter / swashbuckler / magus arcane-pool keen (don't stack)
     const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
-    const critFocus = ff.critFocus ? 4 : 0;
+    const critFocus = (ff.critFocus ? 4 : 0) + (ff.critMastery ? 4 : 0);   // Critical Focus +4, Critical Mastery +4 more (+8 confirm)
     if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
     // Precision (sneak / swashbuckler Precise Strike), smite, and bane dice ride on
     // top — NOT multiplied by a crit.
@@ -1797,7 +1819,7 @@ class Dungeon {
     // glancing off a skeleton). Elemental riders (flaming) ride on top, unsoaked.
     dmg = Math.max(1, dmg);
     let drTag = '';
-    [dmg, drTag] = this._physDR(target, dmg, weapon);
+    [dmg, drTag] = this._physDR(target, dmg, weapon, ff.prStrike || 0);   // Penetrating Strike pierces 5/10 of the DR
     // First time the party lands a blow on a creature with DR, announce what it has
     // (once per creature TYPE per run) so they can switch to the weapon that bites.
     const _drAmt = target.dr ? (typeof target.dr === 'object' ? target.dr.amount : target.dr) : 0;
@@ -2592,10 +2614,12 @@ class Dungeon {
   // +N or signature weapon), or '—'/null (nothing bypasses). `weapon` is the attacker's
   // weapon — its .dtype is the physical type, .dmgBonus>0 or .custom marks it magic.
   // Elemental damage is NOT physical and never routes through here (it uses resist).
-  _physDR(target, dmg, weapon) {
+  // `pierce` — the attacker's Penetrating Strike (high fighter ladder): ignore that
+  // many points of the foe's DR.
+  _physDR(target, dmg, weapon, pierce = 0) {
     const raw = target.dr;
     if (!raw) return [dmg, ''];
-    const amount = (typeof raw === 'object') ? (raw.amount || 0) : raw;
+    const amount = Math.max(0, ((typeof raw === 'object') ? (raw.amount || 0) : raw) - (pierce || 0));
     if (amount <= 0) return [dmg, ''];
     const bypass = (typeof raw === 'object') ? raw.bypass : null;   // bare number ⇒ DR/—
     let bypassed = false;
@@ -4340,9 +4364,15 @@ class Dungeon {
     // target as last turn (a proxy for not having to charge/move to a new one).
     const isRanged = !!(m.weapon && m.weapon.ranged);
     const fullAttack = isRanged || (m._lastAtkTarget === e.uid);
-    const twfPen = dual ? (ff.twf ? -2 : -6) : 0;
+    // RAPID SHOT (feat, ranged ladder g3): one extra shot on a full attack, at −2 to
+    // ALL shots this turn (PF1). Bolt-action rifles can't cycle that fast. Manyshot
+    // (g12, BOWS only) nocks a 2nd arrow on the first shot — an extra arrow at FULL BAB.
+    const rapidOn = isRanged && fullAttack && ff.rapidShot && !(m.weapon && m.weapon.boltAction);
+    const twfPen = (dual ? (ff.twf ? -2 : -6) : 0) + (rapidOn ? -2 : 0);
     const off = [twfPen];                       // primary / main-hand swing
     if (dual) off.push(twfPen);                 // base off-hand swing (the 2nd weapon)
+    if (rapidOn) off.push(twfPen);              // Rapid Shot's extra shot (full BAB, −2 like the rest)
+    if (isRanged && fullAttack && ff.manyshot && m.weapon && m.weapon.group === 'bows') off.push(twfPen);   // Manyshot's 2nd arrow
     if (fullAttack) {
       if (bab >= 6)  off.push(twfPen - 5);      // main-hand iterative
       if (bab >= 11) off.push(twfPen - 10);
