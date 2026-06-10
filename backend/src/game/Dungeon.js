@@ -705,7 +705,7 @@ const RESIST_BY_KEY = {
   fire_skeleton: { fire: 0, cold: 1.5 },          // burning bones: fireproof, but cold shatters them
   wood_golem:    { fire: 1.5 },                    // dry timber: catches fire easily
   winter_wolf:   { cold: 0, fire: 1.5 },           // creature of ice: immune cold, vuln fire
-  vampire:       { cold: 0.5, electricity: 0.5 },  // classic vampire energy resistance
+  vampire:       { cold: 0, electricity: 0.5 },  // user rule: vampires are IMMUNE to cold (electricity still half)
   fire_elemental: { fire: 0, cold: 1.5 },
 };
 for (const k of UNDEAD_KEYS) {                      // undead are immune to cold unless told otherwise
@@ -3180,6 +3180,15 @@ class Dungeon {
     const lvl = m.level || 1;
     const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // single-shot rifle → no Rapid Shot
     const maxSlots = slotsFor(m.cls, lvl);
+    // Stance BUTTONS only show for the style that can use them: a MELEE wielder
+    // sees Power Attack, a RANGED wielder sees Deadly Aim, and pure casters (whose
+    // at-will is a cantrip, not a weapon swing) see NEITHER. The full kit keeps
+    // both — the bot AI manages stances from it (_botStance) and a weapon swap
+    // re-serializes the right button on the next broadcast.
+    const _weaponFighter = (kit.atwill || {}).effect === 'attack';
+    const _rangedNow = this._isRanged(m);
+    const _showStance = (ab) => !(ab.powerattack || ab.deadlyaim)
+      || (_weaponFighter && (ab.powerattack ? !_rangedNow : _rangedNow));
     return {
       atwill: { key: kit.atwill.key, name: kit.atwill.name, icon: kit.atwill.icon, img: kit.atwill.img || null },
       caster: isCaster(m.cls),
@@ -3187,7 +3196,7 @@ class Dungeon {
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
       // Per-spell-level slots for spontaneous casters: { 1: {remaining,max}, … }.
       slots: maxSlots ? Object.fromEntries(Object.keys(maxSlots).map(L => [L, { remaining: (m.slots && m.slots[L]) || 0, max: maxSlots[L] }])) : null,
-      abilities: kit.abilities.filter(ab => this._charAllows(ab, m)).map(ab => ({
+      abilities: kit.abilities.filter(ab => this._charAllows(ab, m) && _showStance(ab)).map(ab => ({
         key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, maxTargets: ab.maxTargets || 1,
         slot: kit.abilities.indexOf(ab),   // stable index into kit.abilities (the action payload `slot`) — survives the char filter
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
@@ -3250,8 +3259,15 @@ class Dungeon {
   // 0.5 resistant, 1.5 vulnerable, 1 (default) unchanged. Physical/untyped (no
   // dtype) is never modified.
   _resistMult(e, dtype) {
-    if (!dtype || !e.resist || e.resist[dtype] == null) return 1;
-    return e.resist[dtype];
+    if (!dtype || !e) return 1;
+    if (e.resist && e.resist[dtype] != null) return e.resist[dtype];   // explicit entry wins (e.g. the fire-subtype Fire Skeleton is cold-VULNERABLE)
+    // Standard PF1 undead immunities (user rule — vampires and ALL undead): cold
+    // and poison simply bounce off, type-driven so every undead — including the
+    // whole vampire court — is covered without per-monster bookkeeping.
+    // Constructs share the poison immunity (no biology to poison).
+    if (e.type === 'undead' && (dtype === 'cold' || dtype === 'poison')) return 0;
+    if (e.type === 'construct' && dtype === 'poison') return 0;
+    return 1;
   }
   // The damage actually dealt after resistance (vulnerable rounds up, resisted
   // keeps at least 1 unless fully immune).
