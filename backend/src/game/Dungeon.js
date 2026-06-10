@@ -329,16 +329,16 @@ const MON = {
   goblin_rogue:      { name: 'Goblin Rogue',      glyph: '👺', cr: '1/2', hp: 7,   ac: 15, toHit: 3,  dmgDie: 4,  dmgBonus: 1, fort: 1,  reflex: 5,  gold: [8, 20],  attacks: 1, sneakDice: 2, evasion: true, atkSound: '/audio/fight_riki.mp3' }, // dogslicer + Sneak Attack; Evasion
   goblin_shaman:     { name: 'Goblin Shaman',     glyph: '👺', cr: '1',   hp: 8,   ac: 13, toHit: 1,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 2,  gold: [12, 26], caster: 'holdperson', spellDC: 13 },          // Hold Person (Will DC 13) — sets up the rogues
   goblin_barbarian:  { name: 'Goblin Barbarian',  glyph: '👺', cr: '1',   hp: 17,  ac: 14, toHit: 4,  dmgDie: 8,  dmgBonus: 4, fort: 4,  reflex: 2,  gold: [12, 28], taunt: { dc: 13, sound: '/audio/taunt_predator_goblin.mp3' } },   // raging goblin — roars a Taunt that pulls AI allies onto it
-  skeleton:          { name: 'Skeleton',          glyph: '💀', cr: '1/3', hp: 5,   ac: 16, toHit: 2,  dmgDie: 6,  dmgBonus: 2, fort: 0,  reflex: 1,  gold: [8, 20], dr: { amount: 3, bypass: 'B' } },   // dry bones — DR 3/bludgeoning (a mace crushes; a blade glances)
+  skeleton:          { name: 'Skeleton',          glyph: '💀', cr: '1/3', hp: 5,   ac: 16, toHit: 2,  dmgDie: 6,  dmgBonus: 2, fort: 0,  reflex: 1,  gold: [8, 20], dr: { amount: 5, bypass: 'B' } },   // PF1 skeleton — DR 5/bludgeoning (slashing & piercing glance off; a mace crushes)
   giant_spider:      { name: 'Giant Spider',      glyph: '🕷️', cr: '1',   hp: 16,  ac: 14, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 4,  reflex: 4,  gold: [10, 26] },
-  zombie:            { name: 'Zombie',            glyph: '🧟', cr: '1/2', hp: 12,  ac: 12, toHit: 4,  dmgDie: 6,  dmgBonus: 4, fort: 0,  reflex: 0,  gold: [10, 26], dr: { amount: 3, bypass: 'S' } },   // rotting flesh — DR 3/slashing (hack it apart)
+  zombie:            { name: 'Zombie',            glyph: '🧟', cr: '1/2', hp: 12,  ac: 12, toHit: 4,  dmgDie: 6,  dmgBonus: 4, fort: 0,  reflex: 0,  gold: [10, 26], dr: { amount: 5, bypass: 'S' } },   // PF1 zombie — DR 5/slashing (hack it apart; blunt & piercing barely dent it)
   ghoul:             { name: 'Ghoul',             glyph: '🧛', cr: '1',   hp: 13,  ac: 14, toHit: 3,  dmgDie: 6,  dmgBonus: 1, fort: 1,  reflex: 3,  gold: [14, 32], paralyze: true, paralyzeDC: 13 },
   cultist:           { name: 'Whispering Cultist',glyph: '🕯️', cr: '1',   hp: 14,  ac: 14, toHit: 3,  dmgDie: 8,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [16, 38] },
   ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', cr: '2', hp: 17,  ac: 17, toHit: 6,  dmgDie: 8,  dmgBonus: 3, fort: 2,  reflex: 5,  gold: [28, 60], paralyze: true, paralyzeDC: 15 },
   monk:              { name: 'Monk',              glyph: '🥋', cr: '2',   hp: 22,  ac: 16, toHit: 4,  dmgDie: 6,  dmgBonus: 2, fort: 4,  reflex: 5,  gold: [18, 42], attacks: 2, evasion: true, tokenPool: MONK_TOKENS, atkSounds: BRUCE_SFX },  // flurry of unarmed strikes; random face + kiai; Evasion
   skeletal_champion: { name: 'Skeletal Champion', glyph: '☠️', cr: '2',   hp: 19,  ac: 17, toHit: 5,  dmgDie: 8,  dmgBonus: 3, fort: 3,  reflex: 2,  gold: [26, 55], dr: { amount: 5, bypass: 'B' }, shout: { dc: 14, sound: '/audio/enemy_draugr_shout.mp3' } },   // DR 5/bludgeoning; bone-rattling shout: 1d8 + Fort or stunned 1
   shadow:            { name: 'Shadow',            glyph: '🌑', cr: '3',   hp: 19,  ac: 13, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 1,  reflex: 3,  gold: [30, 65] },
-  fire_skeleton:     { name: 'Fire Skeleton',     glyph: '🔥', cr: '3',   hp: 22,  ac: 16, toHit: 5,  dmgDie: 6,  dmgBonus: 2, fort: 1,  reflex: 2,  gold: [24, 52], detonate: { count: 2, die: 6, sound: '/audio/enemy_fireskeleton_boom.mp3' } },   // suicide bomber: on its TURN it rushes in and detonates — 1d6 fire/level to 1d2 heroes, destroying itself (kill it first to defuse)
+  fire_skeleton:     { name: 'Fire Skeleton',     glyph: '🔥', cr: '3',   hp: 22,  ac: 16, toHit: 5,  dmgDie: 6,  dmgBonus: 2, fort: 1,  reflex: 2,  gold: [24, 52], dr: { amount: 5, bypass: 'B' }, resist: { fire: 0 }, detonate: { count: 2, die: 6, sound: '/audio/enemy_fireskeleton_boom.mp3' } },   // skeleton: DR 5/bludgeoning + fire-immune; suicide bomber: on its TURN it rushes in and detonates — 1d6 fire/level to 1d2 heroes, destroying itself (kill it first to defuse)
   wight:             { name: 'Wight',             glyph: '👻', cr: '3',   hp: 26,  ac: 15, toHit: 4,  dmgDie: 4,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [34, 72] },
   ogre:              { name: 'Ogre',              glyph: '👹', cr: '3',   hp: 30,  ac: 17, toHit: 8,  dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 6, reflex: 0, gold: [40, 90] },                                  // greatclub 2d8+7
   gray_ooze:         { name: 'Gray Ooze',         glyph: '🟢', cr: '4',   hp: 50,  ac: 6,  toHit: 5,  dmgDie: 6,  dmgBonus: 4, fort: 6,  reflex: 0,  gold: [38, 80] },
@@ -349,7 +349,7 @@ const MON = {
   ettercap:          { name: 'Ettercap',          glyph: '🕸️', cr: '3',   hp: 30,  ac: 16, toHit: 5,  dmgDie: 8,  dmgBonus: 3,  fort: 5,  reflex: 5,  attacks: 2, gold: [24, 52] },
   dire_boar:         { name: 'Dire Boar',         glyph: '🐗', cr: '4',   hp: 51,  ac: 15, toHit: 12, dmgDie: 8,  dmgBonus: 12, fort: 9,  reflex: 5,  gold: [34, 72] },                                 // gore 1d8+12
   harpy:             { name: 'Harpy',             glyph: '🦅', cr: '4',   hp: 38,  ac: 15, toHit: 9,  dmgDie: 8,  dmgBonus: 1,  fort: 2,  reflex: 7,  attacks: 2, gold: [34, 72], flying: true },
-  gargoyle:          { name: 'Gargoyle',          glyph: '🪨', cr: '4',   hp: 42,  ac: 16, toHit: 9,  dmgDie: 6,  dmgBonus: 4,  fort: 5,  reflex: 6,  attacks: 2, gold: [36, 78], flying: true, dr: { amount: 8, bypass: 'magic' } },   // living stone — DR 8/magic (needs a +1 or signature weapon)
+  gargoyle:          { name: 'Gargoyle',          glyph: '🪨', cr: '4',   hp: 42,  ac: 16, toHit: 9,  dmgDie: 6,  dmgBonus: 4,  fort: 5,  reflex: 6,  attacks: 2, gold: [36, 78], flying: true, dr: { amount: 10, bypass: 'magic' } },   // PF1 gargoyle — DR 10/magic (needs a +1 or signature weapon)
   minotaur:          { name: 'Minotaur',          glyph: '🐂', cr: '4',   hp: 45,  ac: 14, toHit: 9,  dmgDie: 6,  dmgCount: 3, dmgBonus: 6, fort: 6, reflex: 5, gold: [38, 80], atkSound: '/audio/enemy_yak.mp3' },   // greataxe 3d6+6 — angry bovine bellow
   basilisk:          { name: 'Basilisk',          glyph: '🐍', cr: '5',   hp: 52,  ac: 16, toHit: 9,  dmgDie: 8,  dmgBonus: 4,  fort: 7,  reflex: 4,  paralyze: true, paralyzeDC: 13, gold: [42, 90] },  // petrifying gaze → "turned to stone, lose a turn"
   winter_wolf:       { name: 'Winter Wolf',       glyph: '🐺', cr: '5',   hp: 57,  ac: 18, toHit: 11, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  gold: [44, 95] },
@@ -362,14 +362,15 @@ const MON = {
   medusa:            { name: 'Medusa',            glyph: '🐍', cr: '7',   hp: 76,  ac: 15, toHit: 9,  dmgDie: 4,  dmgBonus: 2,  fort: 6,  reflex: 8,  attacks: 2, paralyze: true, paralyzeDC: 15, gold: [80, 165] },  // petrifying gaze
   stone_giant:       { name: 'Stone Giant',       glyph: '🗿', cr: '8',   hp: 102, ac: 24, toHit: 17, dmgDie: 8,  dmgCount: 2, dmgBonus: 12, fort: 12, reflex: 5, gold: [95, 190] },                  // greatclub 2d8+12
   abyssal_horror:    { name: 'Abyssal Horror',    glyph: '🐙', cr: '8',   hp: 95,  ac: 19, toHit: 14, dmgDie: 8,  dmgBonus: 6,  fort: 9,  reflex: 6,  attacks: 2, gold: [95, 190] },                  // eldritch chaos beast
-  brass_golem:       { name: 'Brass Golem',       glyph: '🗿', cr: '9',   hp: 92,  ac: 24, toHit: 14, dmgDie: 10, dmgCount: 2, dmgBonus: 9, fort: 3, reflex: 3, attacks: 2, gold: [180, 320], dr: { amount: 8, bypass: '—' } },                  // 8-HD construct, two 2d10+9 slams; DR 8/— (forged metal — nothing physical bypasses)
+  brass_golem:       { name: 'Brass Golem',       glyph: '🗿', cr: '9',   hp: 92,  ac: 24, toHit: 14, dmgDie: 10, dmgCount: 2, dmgBonus: 9, fort: 3, reflex: 3, attacks: 2, gold: [180, 320], dr: { amount: 10, bypass: '—' } },                  // 8-HD construct, two 2d10+9 slams; DR 10/— (forged metal — only adamantine would bite, which no one carries)
   barbed_devil:      { name: 'Barbed Devil',      glyph: '😈', cr: '11',  hp: 138, ac: 26, toHit: 18, dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 12, reflex: 9, attacks: 2, gold: [260, 460],
+                       dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 10, acid: 10 },   // PF1 barbed devil — DR 10/good (modelled as /magic, no alignment weapons here); immune fire, resist cold/acid
                        atkSounds: ['/audio/slorr_sever.mp3', '/audio/slorr_crush.mp3', '/audio/slorr_fury.mp3'],   // Slorr voicelines on its barbed claws
                        hook: { dmgDie: 8, dmgCount: 2, dmgBonus: 7, constrict: 14, sound: '/audio/slorr_grapple.mp3' },   // chain hook → grapple the weakest hero, then constrict each turn
                        hellfire: { count: 3, dice: 5, die: 6, dc: 19, sound: '/audio/spell_hellfire.mp3' } },           // Hellfire Blast — fire AoE, Reflex for half
 
-  vampire:           { name: 'Vampire',           glyph: '🧛', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 6,  dmgBonus: 8, fort: 8,  reflex: 11, attacks: 2, gold: [100, 200], dr: { amount: 8, bypass: 'magic' }, evil: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 4, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // magus of its level: dominating gaze + Vampiric Touch spellstrike (drains life)
-  lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], dr: { amount: 10, bypass: 'B' }, evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' }, arcane: true },                 // a full wizard of its level: Hold Monster, Fireball/Cone/Chain Lightning, Disintegrate, Finger of Death, Magic Missile (see _lichCast)
+  vampire:           { name: 'Vampire',           glyph: '🧛', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 6,  dmgBonus: 8, fort: 8,  reflex: 11, attacks: 2, gold: [100, 200], dr: { amount: 10, bypass: 'magic' }, evil: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 4, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // magus of its level: dominating gaze + Vampiric Touch spellstrike (drains life)
+  lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], dr: { amount: 15, bypass: 'B' }, evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' }, arcane: true },                 // a full wizard of its level: Hold Monster, Fireball/Cone/Chain Lightning, Disintegrate, Finger of Death, Magic Missile (see _lichCast)
 };
 // Real token art from the Foundry library (public/dungeon/monsters/). dire_rat
 // has no token in the library, so it falls back to its emoji glyph.
@@ -1621,6 +1622,10 @@ class Dungeon {
     dmg = Math.max(1, dmg);
     let drTag = '';
     [dmg, drTag] = this._physDR(target, dmg, weapon);
+    // First time the party lands a blow on a creature with DR, announce what it has
+    // (once per creature TYPE per run) so they can switch to the weapon that bites.
+    const _drAmt = target.dr ? (typeof target.dr === 'object' ? target.dr.amount : target.dr) : 0;
+    if (_drAmt > 0) { this._drSeen = this._drSeen || new Set(); if (!this._drSeen.has(target.name)) { this._drSeen.add(target.name); this._note(`🛡️ ${target.name}: ${this._drDesc(target.dr)}.`); } }
     // Magus arcane-pool FLAMING: +1d6 FIRE each hit (elemental — not soaked by physical
     // DR, not crit-multiplied); FLAMING BURST adds extra fire dice on a confirmed crit.
     if (arcFlame) dmg += dRollN(arcFlame, 6);
@@ -2402,6 +2407,20 @@ class Dungeon {
     if (bypassed) return [dmg, ''];
     const soaked = Math.min(dmg, amount);
     return [Math.max(0, dmg - amount), soaked > 0 ? ` 🛡️−${soaked} DR` : ''];
+  }
+  // A readable description of a creature's DR — for the once-per-fight reveal so the
+  // party knows to switch weapons (and so Josh hears it in the log).
+  _drDesc(dr) {
+    if (!dr) return '';
+    const amount = (typeof dr === 'object') ? dr.amount : dr;
+    const bypass = (typeof dr === 'object') ? dr.bypass : null;
+    const TYPE = { S: 'slashing', P: 'piercing', B: 'bludgeoning' };
+    if (bypass === 'magic') return `DR ${amount}/magic — only an enchanted weapon (a +1 or a signature weapon) bites through`;
+    if (TYPE[bypass]) {
+      const weak = Object.keys(TYPE).filter(k => k !== bypass).map(k => TYPE[k]).join(' & ');
+      return `DR ${amount}/${TYPE[bypass]} — ${weak} glance off; only ${TYPE[bypass]} cuts deep`;
+    }
+    return `DR ${amount}/— — almost nothing physical gets through; lean on spells and energy`;
   }
   _downMember(m) {
     if (m.dead) return;
