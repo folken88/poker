@@ -401,7 +401,7 @@ const BOT_CLASSES = {
   'Elfrip': 'oracle', 'Rodney Smith': 'ranger',   // Elfrip is a Flame-mystery oracle (fire blaster); Rodney "Danger" Smith is an archer
   'Vesorianna': 'cleric', 'Farrus Richton': 'barbarian', 'Dinvaya': 'cleric', 'Storgrim Thunderbeard': 'fighter',
   'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'barbarian', 'Kai Ginn': 'ranger', 'Lirienne': 'ranger',   // Crisp = deinonychus: melee multi-attacker + odd-level fighter feats
-  'Rissa': 'druid', 'Taelys': 'ranger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'ranger',
+  'Rissa': 'druid', 'Taelys': 'gunslinger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'gunslinger',   // Taelys + Duristan: PF1 gunslingers (rifles)
   'Holden': 'swashbuckler',
 };
 // Sensible default base weapon per class so AI aren't all daggers in the dungeon.

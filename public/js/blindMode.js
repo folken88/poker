@@ -1262,7 +1262,9 @@
       const fresh = st.log.filter(e => e.t > _dun.logT);
       if (fresh.length) {
         _dun.logT = Math.max(_dun.logT, ...st.log.map(e => e.t));
-        for (const e of fresh.slice(-2)) { const t = _stripGlyphs(e.text); if (t) speak(t, 'event'); }
+        // Skip VOICED banter — the 11labs character voice already says it out loud,
+        // so reading it again would be the narrator doing double duty (Josh's ask).
+        for (const e of fresh.slice(-2)) { if (e.voiced) continue; const t = _stripGlyphs(e.text); if (t) speak(t, 'event'); }
       }
     }
     // Turn changes.

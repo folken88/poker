@@ -174,6 +174,7 @@ const ABILITY_PRIORITY = {
   oracle:     ['cha', 'con', 'dex', 'str'],
   swashbuckler: ['dex', 'cha', 'con', 'wis'],  // finesse + panache (CHA)
   investigator: ['int', 'dex', 'con', 'wis'],  // studied combat (INT)
+  gunslinger:   ['dex', 'wis', 'con', 'cha'],  // DEX shooting + WIS grit
 };
 const ASI_PATTERN = {
   fighter: ['str'], barbarian: ['str'], rogue: ['dex'], wizard: ['int'], sorcerer: ['cha'], druid: ['wis'],
@@ -181,6 +182,7 @@ const ASI_PATTERN = {
   paladin: ['str', 'cha'], antipaladin: ['str', 'cha'], ranger: ['dex', 'str'], monk: ['dex', 'wis'],
   cleric: ['wis', 'str'], magus: ['str', 'int'], inquisitor: ['wis', 'str'], oracle: ['cha', 'con'],
   swashbuckler: ['dex', 'cha'], investigator: ['int', 'dex'],   // two-stat (MAD) — keep the 17/14/14/12 spread
+  gunslinger: ['dex'],    // SAD — pump DEX (18/14/12 spread); guns hit touch AC anyway
 };
 
 /** The class's casting ability ('int'|'wis'|'cha'|'con') or null for non-casters. */

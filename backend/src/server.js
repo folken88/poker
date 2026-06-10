@@ -67,6 +67,29 @@ app.get('/api/tables', (_req, res) => {
   }));
 });
 
+// Deploy announcement — the PRIME voice warns the table before a reboot ("I'M
+// REBOOTING TO APPLY UPDATES, FUCKERS!"). LOCALHOST-ONLY: the deploy watcher
+// calls it via `docker compose exec backend curl http://localhost:3000/...`
+// just before recreating the container. Synthesizes with 11labs (audio tags
+// like [excited] pass through to the v3 model; they're stripped from the
+// displayed text) and broadcasts to every table as voiced banter.
+const elevenlabs = require('./util/elevenlabs');
+const PRIME_VOICE = 'CPrddi89utXexSfHFD7y';   // "Prime" (Tokala's voice) — the announcer
+app.post('/api/admin/announce', async (req, res) => {
+  const ip = String(req.socket.remoteAddress || '');
+  if (!/^(::1|::ffff:127\.|127\.)/.test(ip)) return res.status(403).json({ ok: false, error: 'local only' });
+  const text = String((req.body && req.body.text) || '').slice(0, 300);
+  if (!text) return res.status(400).json({ ok: false, error: 'no text' });
+  const voiceId = String((req.body && req.body.voice) || PRIME_VOICE);
+  let audio = null;
+  if (elevenlabs.ENABLED) {
+    try { const r = await elevenlabs.synthesize(text, voiceId); if (r && r.ok && r.audio) audio = r.audio; } catch (_) {}
+  }
+  const shown = text.replace(/\[[^\]]+\]\s*/g, '');   // strip [excited]-style audio tags from the text line
+  for (const t of tables.values()) t.chat('banter', `📢 ${shown}`, audio ? { audio, audioMime: 'audio/mpeg' } : undefined);
+  res.json({ ok: true, voiced: !!audio });
+});
+
 // Hidden dev/reference pages: /monsters, /spells, /classes (not linked in the UI).
 try { require('./devpages').registerDevPages(app); } catch (e) { console.warn('[devpages] not loaded:', e.message); }
 

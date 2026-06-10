@@ -1366,7 +1366,11 @@ option.weapon-nonprof { color: #cc5500; }
   .help-panel { display: none; }
 }
 .felt {
-  width: min(1100px, 100%);
+  /* Fill the 16:9 screen: grow until EITHER the horizontal room or the vertical
+     room runs out. (The old hard 1100px cap left ~200px of dead band above and
+     below the felt on a 1080p display.) The height-derived term keeps the
+     1.85:1 oval from overflowing the area between the topbar and the chat log. */
+  width: min(1480px, 100%, calc((100vh - 170px) * 1.85));
   aspect-ratio: 1.85 / 1;
   max-height: 100%;
   border-radius: 50% / 35%;

@@ -558,6 +558,26 @@ KITS.oracle.abilities = [
   spontaneousSpell(SPELL.firesnake, 10),
 ];
 
+// GUNSLINGER (Taelys, Duristan) — a PF1 firearms specialist. Gun Training is the
+// house baseline already (DEX to hit AND damage with ranged); the kit carries the
+// shooting maneuvers, and the class gets its own ranged feat ladder (see
+// gunslingerFeats in Dungeon.js: Weapon Focus → Rapid Shot → Bullseye → Weapon
+// Specialization, per the user). Deadly Aim arrives via the universal loop below.
+KITS.gunslinger = { atwill: ATTACK('🔫'), note: 'Gun Training: DEX to hit and damage with firearms. Feats: Weapon Focus, Rapid Shot, Bullseye Shot, Weapon Specialization.', abilities: [
+  { key: 'rapidshot', name: 'Rapid Shot',   icon: '🔫', cost: 'free', effect: 'rapidshot', target: 'enemy', needsRepeating: true, sound: S.bowmulti, desc: 'Fire 2 shots this turn — each at −2 to hit. (Needs a repeating firearm — NOT a bolt-action rifle.)' },
+  { key: 'bullseye',  name: 'Bullseye Shot', icon: '🎯', cost: 'free', effect: 'bullseye',  target: 'enemy', sound: S.bow, desc: 'A carefully aimed shot at +4 to hit.' },
+] };
+
+// MONK — its own kit at last (it used to borrow the fighter's wholesale). FREE class
+// features: Improved Unarmed Strike (fists scale 1d6 → 1d8@4 → 1d10@8 → 2d6@12 →
+// 2d8@16 → 2d10@20 — see the monk block in Dungeon._swingVsAC), Stunning Fist, and
+// FLURRY OF BLOWS (every melee turn is two strikes at −2/−2 — see _isDualWielding +
+// monkFeats). Evasion comes with the class. Trip kept from the fighter kit — very monk.
+KITS.monk = { atwill: ATTACK('👊'), note: 'Free: Improved Unarmed Strike (scaling fists), Stunning Fist, Flurry of Blows (two strikes every turn).', abilities: [
+  { key: 'stunningfist', name: 'Stunning Fist', icon: '🌀', cost: 'room', uses: 1, effect: 'stunfist', target: 'enemy', sound: '/audio/weapon_blunt.mp3', desc: 'Once per room: a precise strike — your normal attack, and on a hit the foe must save (Fort, DC 10 + ½ level + WIS) or be STUNNED and lose its next turn.' },
+  { key: 'trip', name: 'Trip', icon: '🦵', cost: 'free', effect: 'trip', target: 'enemy', desc: 'Attack to trip (no damage). On a hit the foe is knocked prone, loses its turn, and you get a free attack. Prone = +4 for everyone to hit it.' },
+] };
+
 // ── Power Attack (melee) + Deadly Aim (ranged) on EVERY class, free, from L1 ──
 // House rule to empower martials & hybrids: both are FREE −hit/+damage toggles (see
 // Dungeon._abBuff). A character uses whichever matches their weapon; the dungeon AI

@@ -65,9 +65,10 @@ const CUSTOM_WEAPONS = {
   radiance: { key: 'radiance', name: 'Radiance', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true },
   // Lirienne's repeating crossbow (1d8, 19–20).
   repeatingcrossbow: { key: 'repeatingcrossbow', name: 'Repeating Crossbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'exotic', custom: true, atkSound: '/audio/crossbow.mp3' },
-  // Duristan's .338 Lapua Magnum — a heavy-hitting bolt-action (2d10, ×4). Single-
-  // shot: no Rapid Shot.
-  lapua: { key: 'lapua', name: 'Lapua .338', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 10, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, boltAction: true, atkSound: '/audio/rifle_lapua.mp3' },
+  // Duristan's rifle "Longue Carabine" — a heavy-hitting bolt-action .338 (2d10, ×4).
+  // Single-shot: no Rapid Shot. (Key stays 'lapua' so his persisted weapon row and
+  // gear history survive the rename.) Report: cyberpunk sniper crack from Foundry.
+  lapua: { key: 'lapua', name: 'Longue Carabine', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 10, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, boltAction: true, atkSound: '/audio/rifle_longue_carabine.mp3' },
   // Taelys's DVL-10 bolt-action sniper rifle (2d8, ×4) — silenced single shot,
   // so no Rapid Shot (she relies on Bullseye Shot + Deadly Aim instead).
   dvl: { key: 'dvl', name: 'DVL-10 Sniper Rifle', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 8, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, boltAction: true, atkSound: '/audio/rifle_dvl_silenced.mp3' },
