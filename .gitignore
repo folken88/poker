@@ -27,3 +27,9 @@ public/tokens/*.png
 public/tokens/*.jpg
 public/tokens/*.jpeg
 !public/tokens/manifest.json
+
+# Runtime data — bot TTS line-pools, dungeon journals, conversation logs.
+# These churn constantly during play and were bloating every commit (a one-line
+# code change once shipped with 266 KB of mp3 noise). The DB was already
+# ignored; now the whole data dir stays out of git.
+backend/data/
