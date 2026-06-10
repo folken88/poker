@@ -1073,8 +1073,14 @@ async function dungeonLine(nick, eventType, ctx = {}) {
 // roster at load; _refreshLineNames() below tops it up with whoever (humans
 // included) is actually seated when a line is chosen/recorded.
 // Seed the all-time roster with the full bot cast (for name DETECTION) — but do
-// NOT mark them present; only seated players count as present (see below).
-linePool.setRoster(Object.keys(CHARACTER_FLAVOR));
+// NOT mark them present; only seated players count as present (see below). This
+// list must be COMPREHENSIVE: a name we don't know slips into a cached line and
+// gets replayed at an absent player (the "Kate → Mandore" bug). So we fold in the
+// flavor keys, EVERY seeded bot/human nickname, and the NPCs named in bios.
+const _rosterNames = new Set(Object.keys(CHARACTER_FLAVOR));
+try { for (const p of db.listAll()) { if (p && p.nickname) _rosterNames.add(p.nickname); if (p && p.player_id) _rosterNames.add(p.player_id); } } catch (_) {}
+for (const n of ['Mandore', 'Hellion', 'Brigh', 'Nomkath', 'Casandalee', 'Tokala', 'Kovira', 'Rodney', 'Holden', 'Conchobar', 'Lirienne', 'Daramid', 'Estovion', 'Vorkstag', 'Vesorianna', 'Farrus', 'Richton', 'Storgrim', 'Thunderbeard', 'Duristan', 'Silvio', 'Meyanda', 'Sirona', 'Dismas', 'Gaspar']) _rosterNames.add(n);
+linePool.setRoster([..._rosterNames]);
 
 /** Set the line-pool's PRESENT name set to exactly who is seated right now (humans
  *  + bots). Departed players drop out of "present" (so a line naming them is no

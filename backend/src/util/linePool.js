@@ -142,6 +142,11 @@ async function _saveIndex(char, kind, c) {
 /** Record a freshly-voiced line for later reuse (fire-and-forget). base64 = mp3. */
 function record(char, kind, { text, version, subject, base64 } = {}) {
   if (!ENABLED || !char || !kind || !text || !base64) return;
+  // NEVER cache a line that NAMES a person. We can't guarantee that person is at
+  // the table when the clip later replays, and a bot addressing an absent player
+  // (e.g. "nice one, Mandore" when Mandore left) breaks immersion. Name-bearing
+  // lines are spoken LIVE only — generated fresh with the current roster.
+  if (_namesIn(text).length) return;
   _withLock(_ckey(char, kind), async () => {
     try {
       const c = await _load(char, kind);
@@ -207,4 +212,36 @@ async function choose(char, kind, subject) {
 
 function getStats() { const t = stats.reuseHits + stats.fresh; return { ...stats, decisions: t, reuseRate: t ? +(stats.reuseHits / t).toFixed(4) : 0, enabled: ENABLED }; }
 
-module.exports = { record, choose, setNames, setRoster, mentionsAbsent, getStats, ENABLED };
+/** Maintenance: delete every saved line that NAMES a person (text entry + its
+ *  mp3) across all (char,kind) pools, and rewrite each index.json. Seed the full
+ *  roster (setRoster) FIRST so detection is comprehensive. Returns counts. */
+async function purgeNamedLines() {
+  const result = { removed: 0, kept: 0, pools: 0, samples: [] };
+  let chars = [];
+  try { chars = await fsp.readdir(POOL_DIR); } catch (_) { return result; }
+  for (const char of chars) {
+    let kinds = [];
+    try { kinds = await fsp.readdir(path.join(POOL_DIR, char)); } catch (_) { continue; }
+    for (const kind of kinds) {
+      const dir = path.join(POOL_DIR, char, kind);
+      let entries;
+      try { entries = JSON.parse(await fsp.readFile(path.join(dir, 'index.json'), 'utf8')); } catch (_) { continue; }
+      if (!Array.isArray(entries)) continue;
+      result.pools++;
+      const keep = [];
+      for (const e of entries) {
+        const named = e && e.text && _namesIn(e.text).length;
+        if (named) {
+          if (result.samples.length < 12) result.samples.push(`${char}/${kind}: ${String(e.text).slice(0, 70)}`);
+          try { await fsp.unlink(path.join(dir, e.file)); } catch (_) {}
+          result.removed++;
+        } else if (e) { keep.push(e); result.kept++; }
+      }
+      try { await fsp.writeFile(path.join(dir, 'index.json'), JSON.stringify(keep)); } catch (_) {}
+      _cache.delete(_ckey(char, kind));
+    }
+  }
+  return result;
+}
+
+module.exports = { record, choose, setNames, setRoster, mentionsAbsent, purgeNamedLines, getStats, ENABLED };
