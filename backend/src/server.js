@@ -83,7 +83,8 @@ app.post('/api/admin/announce', async (req, res) => {
   const voiceId = String((req.body && req.body.voice) || PRIME_VOICE);
   let audio = null;
   if (elevenlabs.ENABLED) {
-    try { const r = await elevenlabs.synthesize(text, voiceId); if (r && r.ok && r.audio) audio = r.audio; } catch (_) {}
+    // synthesize() resolves to a base64 MP3 string or null (despite its header doc).
+    try { audio = (await elevenlabs.synthesize(text, voiceId)) || null; } catch (_) {}
   }
   const shown = text.replace(/\[[^\]]+\]\s*/g, '');   // strip [excited]-style audio tags from the text line
   for (const t of tables.values()) t.chat('banter', `📢 ${shown}`, audio ? { audio, audioMime: 'audio/mpeg' } : undefined);
