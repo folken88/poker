@@ -40,7 +40,9 @@ const FF_NONE = { hit: 0, dmg: 0, ac: 0, hp: 0, save: 0, init: 0, impCrit: false
   // Caster feat-tree bonuses (wizard/sorcerer/witch — see casterFeats):
   spellDC: 0, spellPen: 0, combatCasting: false, intensify: false, empower: false, maximize: false, quicken: false,
   // Ranged feat-tree bonuses (any feat-class wielding a bow/crossbow — see rangedFeats):
-  pbs: 0, rapidShot: false, bullseye: false };
+  pbs: 0, rapidShot: false, bullseye: false,
+  // Rogue / cleric tree bonuses (see rogueFeats / clericFeats):
+  offDef: false, quickChannel: false };
 // PF1 weapon-damage-by-size table (Enlarge Person / Improved Natural Attack), one
 // step UP per entry. Used to grow a druid's natural-attack dice when they enlarge
 // into a bigger form and/or take Improved Natural Weapon.
@@ -133,6 +135,124 @@ function casterFeats(level) {
   if (n >= 10) f.quicken = true;         // Quicken Spell — a 2nd (swift) cast each turn
   return f;
 }
+// ── Class feat trees (user-approved 2026-06-10) — one feat every ODD level
+// (n = ceil(level/2)) for each. Weapon Finesse / Slashing Grace / Power Attack /
+// Deadly Aim are house-rule FREEBIES for everyone, so no tree spends a slot on them.
+// ROGUE — TWF from LEVEL 1 (dagger/kukri dual-wield drops −6/−6 → −2/−2), then
+// initiative (act first → sneak the flat-footed), defense, crits.
+function rogueFeats(level) {
+  const L = Math.max(1, level || 1), n = Math.ceil(L / 2), f = { ...FF_NONE };
+  if (n >= 1) f.twf = true;             // Two-Weapon Fighting — dual penalty −6 → −2
+  if (n >= 2) f.hit = 1;                // Weapon Focus
+  if (n >= 3) f.init = 4;               // Improved Initiative
+  if (n >= 4) f.ac = 1;                 // Dodge
+  if (n >= 5) f.hp = Math.max(3, L);    // Toughness
+  if (n >= 6) f.save = 1;               // Lightning Reflexes
+  if (n >= 7) f.impCrit = true;         // Improved Critical
+  if (n >= 8) f.offDef = true;          // Offensive Defense — +2 AC after landing a sneak attack
+  if (n >= 9) f.save = 2;               // Iron Will
+  if (n >= 10) f.critFocus = true;      // Critical Focus
+  if (n >= 5) f.itwf = true;            // Improved TWF rides along at L9+ (2nd off-hand at −5)
+  return f;
+}
+// MONK — Improved Unarmed Strike + Stunning Fist are FREE class features (the kit
+// + unarmed dice scaling in _swingVsAC); Flurry of Blows = always two strikes at
+// −2/−2 (twf, via _isDualWielding). The tree fills in the fighter staples.
+function monkFeats(level) {
+  const L = Math.max(1, level || 1), n = Math.ceil(L / 2), f = { ...FF_NONE };
+  f.twf = true;                         // Flurry of Blows — free from level 1
+  if (L >= 8) f.itwf = true;            // Flurry's 2nd extra blow at L8+ (BAB 6)
+  if (n >= 1) f.hit = 1;                // Weapon Focus
+  if (n >= 2) f.ac = 1;                 // Dodge
+  if (n >= 3) f.hp = Math.max(3, L);    // Toughness
+  if (n >= 4) f.init = 4;               // Improved Initiative
+  if (n >= 5) f.dmg = 2;                // Weapon Specialization
+  if (n >= 6) f.save = 1;               // Lightning Reflexes
+  if (n >= 7) f.impCrit = true;         // Improved Critical
+  if (n >= 8) f.save = 2;               // Iron Will
+  if (n >= 9) f.save = 3;               // Great Fortitude
+  if (n >= 10) f.critFocus = true;      // Critical Focus
+  return f;
+}
+// MAGUS — gish: steel early, then the METAMAGIC core (Intensify L7 / Empower L9 /
+// Maximize L11 — all three by L12, per the user), then back to steel.
+function magusFeats(level) {
+  const L = Math.max(1, level || 1), n = Math.ceil(L / 2), f = { ...FF_NONE };
+  if (n >= 1) f.hit = 1;                // Weapon Focus
+  if (n >= 2) f.hp = Math.max(3, L);    // Toughness
+  if (n >= 3) f.spellDC = 2;            // Spell Focus
+  if (n >= 4) f.intensify = true;       // Intensified Spell — +5 to the damage-dice cap
+  if (n >= 5) f.empower = true;         // Empower Spell — ×1.5 spell damage
+  if (n >= 6) f.maximize = true;        // Maximize Spell — max damage dice
+  if (n >= 7) f.impCrit = true;         // Improved Critical
+  if (n >= 8) f.spellDC = 4;            // Greater Spell Focus
+  if (n >= 9) f.dmg = 2;                // Weapon Specialization
+  if (n >= 10) f.critFocus = true;      // Critical Focus
+  return f;
+}
+// CLERIC — battle-priest: hardy, fights, juices spell DCs, then QUICKEN CHANNEL
+// (first party-heal channel each room is a swift action — see _useAbility).
+function clericFeats(level) {
+  const L = Math.max(1, level || 1), n = Math.ceil(L / 2), f = { ...FF_NONE };
+  if (n >= 1) f.hp = Math.max(3, L);    // Toughness
+  if (n >= 2) f.hit = 1;                // Weapon Focus
+  if (n >= 3) f.combatCasting = true;   // Combat Casting
+  if (n >= 4) f.spellDC = 2;            // Spell Focus
+  if (n >= 5) f.init = 4;               // Improved Initiative
+  if (n >= 6) f.ac = 1;                 // Heavy Armor Mastery (+1 AC)
+  if (n >= 7) f.spellDC = 4;            // Greater Spell Focus
+  if (n >= 8) f.quickChannel = true;    // Quicken Channel — 1st channel/room is swift
+  if (n >= 9) f.save = 2;               // Iron Will
+  if (n >= 10) f.impCrit = true;        // Improved Critical
+  return f;
+}
+// ORACLE — CHA divine caster: mirrors the cleric but leans caster.
+function oracleFeats(level) {
+  const L = Math.max(1, level || 1), n = Math.ceil(L / 2), f = { ...FF_NONE };
+  if (n >= 1) f.hp = Math.max(3, L);    // Toughness
+  if (n >= 2) f.combatCasting = true;   // Combat Casting
+  if (n >= 3) f.spellDC = 2;            // Spell Focus
+  if (n >= 4) f.init = 4;               // Improved Initiative
+  if (n >= 5) f.spellPen = 2;           // Spell Penetration
+  if (n >= 6) f.spellDC = 4;            // Greater Spell Focus
+  if (n >= 7) f.save = 1;               // Lightning Reflexes
+  if (n >= 8) f.save = 2;               // Iron Will
+  if (n >= 9) f.quicken = true;         // Quicken Spell (flagged; wiring later, same as wizard)
+  if (n >= 10) f.save = 3;              // Great Fortitude
+  return f;
+}
+// BARD — support gish (Lingering Performance dropped per the user).
+function bardFeats(level) {
+  const L = Math.max(1, level || 1), n = Math.ceil(L / 2), f = { ...FF_NONE };
+  if (n >= 1) f.hit = 1;                // Weapon Focus
+  if (n >= 2) f.hp = Math.max(3, L);    // Toughness
+  if (n >= 3) f.spellDC = 2;            // Spell Focus (juices Fascinate/control DCs)
+  if (n >= 4) f.ac = 1;                 // Dodge
+  if (n >= 5) f.init = 4;               // Improved Initiative
+  if (n >= 6) f.impCrit = true;         // Improved Critical
+  if (n >= 7) f.spellDC = 4;            // Greater Spell Focus
+  if (n >= 8) f.save = 1;               // Lightning Reflexes
+  if (n >= 9) f.save = 2;               // Iron Will
+  if (n >= 10) f.dmg = 2;               // Weapon Specialization
+  return f;
+}
+// SWASHBUCKLER — Weapon Focus/Spec, Precise Strike and Improved Critical (L5) are
+// FREE class passives with a finesse blade (see the swashFin block in _swingVsAC);
+// this tree layers mostly-fighter feats that DON'T duplicate them. Greater Weapon
+// Focus/Spec stack legitimately on the passives (real PF1 feats).
+function swashFeats(level) {
+  const L = Math.max(1, level || 1), n = Math.ceil(L / 2), f = { ...FF_NONE };
+  if (n >= 1) f.ac = 1;                 // Dodge
+  if (n >= 2) f.hp = Math.max(3, L);    // Toughness
+  if (n >= 3) f.init = 4;               // Improved Initiative
+  if (n >= 4) f.save = 1;               // Lightning Reflexes
+  if (n >= 5) f.save = 2;               // Iron Will
+  if (n >= 6) f.critFocus = true;       // Critical Focus
+  if (n >= 7) f.save = 3;               // Great Fortitude
+  if (n >= 8) f.hit = 1;                // Greater Weapon Focus (stacks with the passive)
+  if (n >= 9) f.dmg = 2;                // Greater Weapon Specialization (stacks with the passive)
+  return f;
+}
 // RANGED feat tree — used by any feat-class (fighter / ranger / barbarian /
 // inquisitor) wielding a BOW or CROSSBOW, in the user's order: Weapon Focus,
 // Point Blank Shot, Rapid Shot, Bullseye Shot, Toughness, Improved Critical,
@@ -156,6 +276,13 @@ function fighterFeats(cls, level, ranged) {
   if (cls === 'wizard' || cls === 'sorcerer' || cls === 'witch') return casterFeats(L);
   if (cls === 'druid')      return druidFeats(L);
   if (cls === 'paladin' || cls === 'antipaladin') return paladinFeats(L);   // antipaladin uses the paladin feat tree
+  if (cls === 'rogue')        return rogueFeats(L);
+  if (cls === 'monk')         return monkFeats(L);
+  if (cls === 'magus')        return magusFeats(L);
+  if (cls === 'cleric')       return clericFeats(L);
+  if (cls === 'oracle')       return oracleFeats(L);
+  if (cls === 'bard')         return bardFeats(L);
+  if (cls === 'swashbuckler') return swashFeats(L);
   const ladder = ranged ? rangedFeats : featLadder;
   if (cls === 'fighter')    return ladder(L, L);
   if (cls === 'inquisitor' || cls === 'barbarian' || cls === 'ranger') return ladder(Math.floor((L + 1) / 2), L);
@@ -181,7 +308,8 @@ function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fi
 // Level now comes from XP (see pf1data/xp.js), NOT from gear. The gating level at
 // which fighter/inquisitor earn each bonus feat (fighter: every level; inquisitor:
 // every odd level) — used to NAME the feat gained on a level-up announcement.
-function gatingLevel(cls, L) { return cls === 'fighter' ? L : (cls === 'inquisitor' || cls === 'barbarian' || cls === 'ranger') ? Math.floor((L + 1) / 2) : (cls === 'paladin' || cls === 'antipaladin' || cls === 'druid' || cls === 'wizard' || cls === 'sorcerer' || cls === 'witch') ? Math.ceil(L / 2) : 0; }
+const ODD_FEAT_CLASSES = new Set(['paladin', 'antipaladin', 'druid', 'wizard', 'sorcerer', 'witch', 'rogue', 'monk', 'magus', 'cleric', 'oracle', 'bard', 'swashbuckler']);
+function gatingLevel(cls, L) { return cls === 'fighter' ? L : (cls === 'inquisitor' || cls === 'barbarian' || cls === 'ranger') ? Math.floor((L + 1) / 2) : ODD_FEAT_CLASSES.has(cls) ? Math.ceil(L / 2) : 0; }
 const FEAT_AT = {
   1: 'Weapon Focus (+1 to hit)', 2: 'Dodge (+1 AC)', 3: 'Toughness (+HP)', 4: 'Weapon Specialization (+2 dmg)',
   5: 'Improved Initiative', 6: 'a save feat (+1 saves)', 7: 'a save feat (+2 saves)',
@@ -212,6 +340,43 @@ const RANGED_FEAT_AT = {
   4: 'Bullseye Shot', 5: 'Toughness (+HP)', 6: 'Improved Critical', 7: 'Lightning Reflexes (+1 saves)',
   8: 'Iron Will (+2 saves)', 9: 'Great Fortitude (+3 saves)',
 };
+// Level-up announce tables for the class trees (by feat index n = ceil(level/2)).
+const ROGUE_FEAT_AT = {
+  1: 'Two-Weapon Fighting (dual −2/−2)', 2: 'Weapon Focus (+1 to hit)', 3: 'Improved Initiative',
+  4: 'Dodge (+1 AC)', 5: 'Toughness (+HP) & Improved TWF (2nd off-hand swing)', 6: 'Lightning Reflexes (+1 saves)',
+  7: 'Improved Critical', 8: 'Offensive Defense (+2 AC after a sneak attack)', 9: 'Iron Will (+2 saves)', 10: 'Critical Focus',
+};
+const MONK_FEAT_AT = {
+  1: 'Weapon Focus (+1 to hit)', 2: 'Dodge (+1 AC)', 3: 'Toughness (+HP)', 4: 'Improved Initiative',
+  5: 'Weapon Specialization (+2 dmg)', 6: 'Lightning Reflexes (+1 saves)', 7: 'Improved Critical',
+  8: 'Iron Will (+2 saves)', 9: 'Great Fortitude (+3 saves)', 10: 'Critical Focus',
+};
+const MAGUS_FEAT_AT = {
+  1: 'Weapon Focus (+1 to hit)', 2: 'Toughness (+HP)', 3: 'Spell Focus (+2 spell DC)',
+  4: 'Intensified Spell (raise damage cap)', 5: 'Empower Spell (×1.5 spell damage)', 6: 'Maximize Spell (max dice)',
+  7: 'Improved Critical', 8: 'Greater Spell Focus (+4 spell DC total)', 9: 'Weapon Specialization (+2 dmg)', 10: 'Critical Focus',
+};
+const CLERIC_FEAT_AT = {
+  1: 'Toughness (+HP)', 2: 'Weapon Focus (+1 to hit)', 3: 'Combat Casting', 4: 'Spell Focus (+2 spell DC)',
+  5: 'Improved Initiative', 6: 'Heavy Armor Mastery (+1 AC)', 7: 'Greater Spell Focus (+4 spell DC total)',
+  8: 'Quicken Channel (1st channel is swift)', 9: 'Iron Will (+2 saves)', 10: 'Improved Critical',
+};
+const ORACLE_FEAT_AT = {
+  1: 'Toughness (+HP)', 2: 'Combat Casting', 3: 'Spell Focus (+2 spell DC)', 4: 'Improved Initiative',
+  5: 'Spell Penetration', 6: 'Greater Spell Focus (+4 spell DC total)', 7: 'Lightning Reflexes (+1 saves)',
+  8: 'Iron Will (+2 saves)', 9: 'Quicken Spell (2nd cast)', 10: 'Great Fortitude (+3 saves)',
+};
+const BARD_FEAT_AT = {
+  1: 'Weapon Focus (+1 to hit)', 2: 'Toughness (+HP)', 3: 'Spell Focus (+2 spell DC)', 4: 'Dodge (+1 AC)',
+  5: 'Improved Initiative', 6: 'Improved Critical', 7: 'Greater Spell Focus (+4 spell DC total)',
+  8: 'Lightning Reflexes (+1 saves)', 9: 'Iron Will (+2 saves)', 10: 'Weapon Specialization (+2 dmg)',
+};
+const SWASH_FEAT_AT = {
+  1: 'Dodge (+1 AC)', 2: 'Toughness (+HP)', 3: 'Improved Initiative', 4: 'Lightning Reflexes (+1 saves)',
+  5: 'Iron Will (+2 saves)', 6: 'Critical Focus', 7: 'Great Fortitude (+3 saves)',
+  8: 'Greater Weapon Focus (+1 more to hit)', 9: 'Greater Weapon Specialization (+2 more dmg)',
+};
+const CLASS_FEAT_AT = { rogue: ROGUE_FEAT_AT, monk: MONK_FEAT_AT, magus: MAGUS_FEAT_AT, cleric: CLERIC_FEAT_AT, oracle: ORACLE_FEAT_AT, bard: BARD_FEAT_AT, swashbuckler: SWASH_FEAT_AT };
 const RANGED_FEAT_CLASSES = new Set(['fighter', 'ranger', 'barbarian', 'inquisitor']);
 const LIGHTNING_MAX_TARGETS = 2;
 const SICKENED_ROUNDS = 3;
@@ -1273,7 +1438,8 @@ class Dungeon {
     const feats = [];
     const featNames = (RANGED_FEAT_CLASSES.has(cls) && this._isRanged(m)) ? RANGED_FEAT_AT
                     : (cls === 'paladin' || cls === 'antipaladin') ? PALADIN_FEAT_AT : cls === 'druid' ? DRUID_FEAT_AT
-                    : (cls === 'wizard' || cls === 'sorcerer' || cls === 'witch') ? CASTER_FEAT_AT : FEAT_AT;
+                    : (cls === 'wizard' || cls === 'sorcerer' || cls === 'witch') ? CASTER_FEAT_AT
+                    : CLASS_FEAT_AT[cls] || FEAT_AT;
     for (let g = gatingLevel(cls, from) + 1; g <= gatingLevel(cls, to); g++) if (featNames[g]) feats.push(featNames[g]);
     if (feats.length) parts.push(`feat: ${feats.join(', ')}`);
     const kit = kitFor(cls), spells = [];
@@ -1488,10 +1654,13 @@ class Dungeon {
   // paired daggers)? Drives Two-Weapon Defense and the TWF attack sequence.
   _isDualWielding(m) {
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
+    // Monk FLURRY OF BLOWS: any melee attack is a two-strike flurry (their free
+    // TWF/ITWF flags in monkFeats keep the penalty at −2/−2 like real Flurry).
+    if (m.cls === 'monk' && w && !w.ranged) return true;
     return !!(w && (w.dual || (m.cls === 'rogue' && (m.weaponKey === 'dagger' || m.weaponKey === 'kukri'))));
   }
   _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1) + Haste (+1 dodge)
-    let b = ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).ac + this._hasteMod(m);
+    let b = ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).ac + this._hasteMod(m) + (m._offDef ? 2 : 0);   // rogue Offensive Defense: +2 AC after landing a sneak attack (until they next act)
     if (fighterFeats(m.cls, m.level, this._isRanged(m)).twDef && this._isDualWielding(m)) b += 1;   // Two-Weapon Defense
     return b;
   }
@@ -1595,9 +1764,16 @@ class Dungeon {
     // (the bigger combat forms enlarge them) and with Improved Natural Weapon — both
     // step the dice up the PF1 size table (1d6→1d8→2d6→…), stacking.
     let dmgCount = weapon.dmgCount, dmgDie = weapon.dmgDie;
+    // MONK Improved Unarmed Strike (free class feature): fists follow the PF1 monk
+    // ladder — 1d6, 1d8@L4, 1d10@L8, 2d6@L12, 2d8@L16, 2d10@L20 (replaces the 1d3).
+    if (attacker.cls === 'monk' && weapon.key === 'unarmed') {
+      const MONK_FIST = [[1, 6], [1, 8], [1, 10], [2, 6], [2, 8], [2, 10]];
+      const t = MONK_FIST[Math.min(5, Math.floor(lvl / 4))];
+      dmgCount = t[0]; dmgDie = t[1];
+    }
     if (weapon.group === 'natural') {
       const steps = ((attacker.form && attacker.form.sizeSteps) || 0) + (ff.inw ? 1 : 0);
-      if (steps > 0) { const st = stepDamage(weapon.dmgCount, weapon.dmgDie, steps); dmgCount = st.count; dmgDie = st.die; }
+      if (steps > 0) { const st = stepDamage(dmgCount, dmgDie, steps); dmgCount = st.count; dmgDie = st.die; }
     }
     const rollDmg = () => dRollN(dmgCount, dmgDie) + weapon.dmgBonus + flatDmg;
     let dmg = rollDmg() - sick, crit = false;
@@ -2698,6 +2874,7 @@ class Dungeon {
       darkness:    () => this._abDarkness(m, ab),
       rapidshot:   () => this._abRapidShot(m, ab, payload),
       bullseye:    () => this._abBullseye(m, ab, payload),
+      stunfist:    () => this._abStunningFist(m, ab, payload),
     }[ab.effect];
     if (!D) return { ok: false, error: 'unknown ability' };
     D();
@@ -2718,6 +2895,13 @@ class Dungeon {
     if (this._wieldsCurator(m) && this._isBuffSpell(ab) && !m._curatorBuffUsed) {
       m._curatorBuffUsed = true;
       this._note(`📖 ${m.nickname}'s Curator quickens the casting — a swift action! (cast again or strike this turn)`);
+      return { ok: true, freeAction: true };
+    }
+    // Cleric QUICKEN CHANNEL (feat tree n8): the FIRST party-heal channel each room
+    // is a SWIFT action — the cleric keeps their turn to strike or cast.
+    if (ab.effect === 'heal' && ab.heal === 'party' && !m._qcUsed && fighterFeats(m.cls, m.level, this._isRanged(m)).quickChannel) {
+      m._qcUsed = true;
+      this._note(`✨ ${m.nickname} QUICKENS the channel — a swift action! (act again this turn)`);
       return { ok: true, freeAction: true };
     }
     if (ab.effect === 'judgment' || ab.freeAction) return { ok: true, freeAction: true };   // judgement switch / barbarian Rage cost no action
@@ -2804,6 +2988,8 @@ class Dungeon {
     m.buffs = null;          // rage / divine favor / inspire clear
     m.bane = null;           // inquisitor Bane declaration clears between rooms
     m.buffApplied = {};      // which sticky buffs are already active (no stacking)
+    m._qcUsed = false;       // cleric Quicken Channel — one swift channel per room
+    m._offDef = false;       // rogue Offensive Defense AC wears off between rooms
     // Power Attack / Deadly Aim are STANCES, not per-room buffs — silently re-assert
     // whichever the hero left on (free, no re-announce). A bot may still ease it off
     // mid-fight against a high-AC foe via _botStance.
@@ -2883,7 +3069,25 @@ class Dungeon {
   // casting-stat mod (NOT the legacy Dex-ish ABILITY_MOD). Cantrips already do this
   // (see _abCantrip); the magus's weapon-delivered Spellstrike keeps its weapon stat.
   _spellToHit(m) { return babFor(m.cls || 'fighter', m.level || 1) + (m.castingMod != null ? m.castingMod : CAST_MOD); }
-  _spellDice(ab, m) { return diceCount(ab, m.level || 1); }
+  // Spell damage dice — INTENSIFIED SPELL (wizard/sorcerer/witch n6, magus n4)
+  // raises a level-scaled spell's dice cap by +5 (PF1), so Shocking Grasp keeps
+  // growing past 5d6 and Fireball past 10d6.
+  _spellDice(ab, m) {
+    const ff = fighterFeats(m.cls, m.level, this._isRanged(m));
+    const eab = (ff.intensify && ab.dcap && ab.dice) ? { ...ab, dcap: ab.dcap + 5 } : ab;
+    return diceCount(eab, m.level || 1);
+  }
+  // Roll a spell's damage dice with the caster's METAMAGIC applied: MAXIMIZE (max
+  // dice, no roll) beats EMPOWER (×1.5) — they don't stack here (simplification of
+  // PF1's max+half-rolled). Per-ability flags (a spellstrike's own empowered/
+  // maximized variants) fold in via `ab`.
+  _rollSpell(m, dice, die, ab) {
+    const ff = fighterFeats(m.cls, m.level, this._isRanged(m));
+    const maxed = !!((ab && ab.maximized) || ff.maximize);
+    let dmg = maxed ? dice * die : dRollN(dice, die);
+    if (!maxed && ((ab && ab.empowered) || ff.empower)) dmg = Math.floor(dmg * 1.5);
+    return dmg;
+  }
   _enemyTargets(payload, max) {
     let chosen = ((payload && payload.targetUids) || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0 && !(e.darkened > 0))).filter(Boolean);
     if (!chosen.length) chosen = this._targetableEnemies();   // Darkness-shrouded foes can't be hit
@@ -3054,7 +3258,7 @@ class Dungeon {
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs touch ${touchAC}]`, sound); this._echoToTable(sound); return; }
-    const raw = Math.max(1, dRollN(this._spellDice(ab, m), ab.die || 3) + (ab.flat || 0));
+    const raw = Math.max(1, this._rollSpell(m, this._spellDice(ab, m), ab.die || 3, ab) + (ab.flat || 0));
     const dmg = this._dmgE(e, raw, ab.dtype);
     this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}.${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
@@ -3084,7 +3288,8 @@ class Dungeon {
     // PF1e: the burst rolls its damage ONCE; every target saves against that same
     // number. Fail = full, save = half — or NONE if they have Evasion (a Reflex-
     // save area effect only). Resistance/vulnerability still applies per target.
-    const full = dRollN(dice, ab.die || 6);
+    // Metamagic (Empower ×1.5 / Maximize) applies to the one shared roll.
+    const full = this._rollSpell(m, dice, ab.die || 6, ab);
     for (const e of chosen) {
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
       const evaded = sv.saved && saveStat === 'reflex' && e.evasion;
@@ -3176,8 +3381,7 @@ class Dungeon {
     const dn = this._spellDice(ab, m);
     // MAXIMIZED → every die is its max (no roll). EMPOWERED → ×1.5. CAN-CRIT → the
     // spell damage rides the weapon's crit multiplier too (Maximized Shocking Grasp).
-    let bonus = ab.maximized ? dn * (ab.die || 6) : dRollN(dn, ab.die || 6);
-    if (ab.empowered) bonus = Math.floor(bonus * 1.5);
+    let bonus = this._rollSpell(m, dn, ab.die || 6, ab);   // per-ability maximized/empowered + the magus's metamagic feats (Intensify raises dn via _spellDice)
     if (r.crit) bonus *= (m.weapon.critMult || 2);       // the channelled spell rides the weapon's crit (×2 scimitar, ×3, …) — EVERY spellstrike, not just the Max one
     const sbonus = this._resisted(e, bonus, ab.dtype);    // spell rider vs the foe's ELEMENTAL resistance (shock, cold, fire…)
     const total = r.damage + sbonus;                      // r.damage already passed PHYSICAL DR (weapon type vs the foe's DR)
@@ -3204,6 +3408,27 @@ class Dungeon {
       }
     }
     this._note(`${ab.icon} ${m.nickname} ${ab.name}s ${e.name} for ${r.damage}${r.drTag || ''} weapon + ${sbonus}${this._resistTag(e, ab.dtype)} ${ab.dtype || ''} = ${total}.${extra}${this._afterEnemyHit(e)}`, sound);
+    if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+    this._echoToTable(sound);
+  }
+  // MONK Stunning Fist (free class feature, 1/room): a precise strike — a normal
+  // attack, and on a hit the foe makes a Fort save (DC 10 + ½ level + WIS mod) or
+  // is STUNNED, losing its next turn (e.loseTurn — same plumbing as Trip).
+  _abStunningFist(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const r = this._swingVsAC(m, this._enemyAC(e), e);
+    const sound = ab.sound || r.sound;
+    if (!r.hit) { this._note(`${ab.icon} ${m.nickname}'s Stunning Fist misses ${e.name}. ${this._atkStr(r)}`, sound); this._echoToTable(sound); return; }
+    this._dmgE(e, r.damage);
+    const dc = 10 + Math.floor((m.level || 1) / 2) + ((m.mods && m.mods.wis) || 0);
+    let extra = '';
+    if (e.hp > 0) {
+      const sv = this._saveVs(this._enemySave(e, 'fort'), dc);
+      if (!sv.saved) { e.loseTurn = true; extra = ` — STUNNED [${sv.total} vs DC ${dc}], it loses its turn!`; }
+      else extra = ` — it shakes off the stun [${sv.total} vs DC ${dc}].`;
+    }
+    this._note(`${ab.icon} ${m.nickname}'s Stunning Fist ${r.crit ? 'CRITS' : 'strikes'} ${e.name} for ${r.damage}${r.drTag || ''}.${extra}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   }
@@ -3562,7 +3787,7 @@ class Dungeon {
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
     const dice = this._spellDice(ab, m);
-    const raw = Math.max(1, dRollN(dice, ab.die || 6));
+    const raw = Math.max(1, this._rollSpell(m, dice, ab.die || 6, ab));
     const dmg = this._dmgE(e, raw, ab.dtype);
     let dotNote = '';
     if (ab.dot && e.hp > 0) {   // Acid Arrow: it keeps eating away each of the foe's turns.
@@ -4128,6 +4353,7 @@ class Dungeon {
   }
   _playerAttack(m, targetUid, quiet = false) {
     m.flatFooted = false;   // acting ends flat-footed
+    if (!quiet) m._offDef = false;   // Offensive Defense lasts until the rogue next acts
     if (!m.greaterInvis) m.invisible = false;    // attacking breaks Invisibility (Greater persists)
     const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
     if (!e) return;
@@ -4159,6 +4385,9 @@ class Dungeon {
       const lead = swings > 1 ? `${m.nickname} (hit ${i + 1})` : m.nickname;
       if (r.fumble) this._note(`${lead} fumbles the attack! ${this._atkStr(r)}`, r.sound);
       else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${lead} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name} for ${r.damage}${r.drTag || ''}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, tgt.hp)}/${tgt.maxHp})`}`, r.sound);
+        // Rogue Offensive Defense (feat tree n8): landing a sneak attack grants +2 AC
+        // until they next act — the strike leaves the foe off-balance.
+        if (r.sneakDice && fighterFeats(m.cls, m.level, this._isRanged(m)).offDef && !m._offDef) { m._offDef = true; this._note(`🤸 ${m.nickname}'s strike leaves them covered — +2 AC until their next move (Offensive Defense).`); }
         // Promethean tentacles GRAB on a hit — the foe is grappled & helpless until it breaks free.
         if (m.weapon.grapple && tgt.hp > 0 && !tgt.grappled) { tgt.grappled = true; tgt.grappledBy = m.playerId; tgt.grappleRounds = 2; this._note(`🐙 ${tgt.name} is SEIZED in ${m.nickname}'s tentacles — grappled and helpless!`); }
       }

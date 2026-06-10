@@ -558,6 +558,16 @@ KITS.oracle.abilities = [
   spontaneousSpell(SPELL.firesnake, 10),
 ];
 
+// MONK — its own kit at last (it used to borrow the fighter's wholesale). FREE class
+// features: Improved Unarmed Strike (fists scale 1d6 → 1d8@4 → 1d10@8 → 2d6@12 →
+// 2d8@16 → 2d10@20 — see the monk block in Dungeon._swingVsAC), Stunning Fist, and
+// FLURRY OF BLOWS (every melee turn is two strikes at −2/−2 — see _isDualWielding +
+// monkFeats). Evasion comes with the class. Trip kept from the fighter kit — very monk.
+KITS.monk = { atwill: ATTACK('👊'), note: 'Free: Improved Unarmed Strike (scaling fists), Stunning Fist, Flurry of Blows (two strikes every turn).', abilities: [
+  { key: 'stunningfist', name: 'Stunning Fist', icon: '🌀', cost: 'room', uses: 1, effect: 'stunfist', target: 'enemy', sound: '/audio/weapon_blunt.mp3', desc: 'Once per room: a precise strike — your normal attack, and on a hit the foe must save (Fort, DC 10 + ½ level + WIS) or be STUNNED and lose its next turn.' },
+  { key: 'trip', name: 'Trip', icon: '🦵', cost: 'free', effect: 'trip', target: 'enemy', desc: 'Attack to trip (no damage). On a hit the foe is knocked prone, loses its turn, and you get a free attack. Prone = +4 for everyone to hit it.' },
+] };
+
 // ── Power Attack (melee) + Deadly Aim (ranged) on EVERY class, free, from L1 ──
 // House rule to empower martials & hybrids: both are FREE −hit/+damage toggles (see
 // Dungeon._abBuff). A character uses whichever matches their weapon; the dungeon AI
