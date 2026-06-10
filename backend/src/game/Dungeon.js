@@ -2816,6 +2816,12 @@ class Dungeon {
   }
   // Spell save DC + caster level for this member (level = 1 + gear).
   _spellDC(m) { return 10 + (m.level || 1) + (m.castingMod != null ? m.castingMod : CAST_MOD) + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0); }   // 10 + level + casting-stat mod + Spell Focus
+  // Ranged-touch SPELL attack bonus. HOUSE RULE: casters aim their leveled touch
+  // spells (Disintegrate, Scorching Ray, Shocking Grasp, elemental bolts) with their
+  // SPELL stat, not Dex — so a wizard's ray lands as reliably as he casts. BAB +
+  // casting-stat mod (NOT the legacy Dex-ish ABILITY_MOD). Cantrips already do this
+  // (see _abCantrip); the magus's weapon-delivered Spellstrike keeps its weapon stat.
+  _spellToHit(m) { return babFor(m.cls || 'fighter', m.level || 1) + (m.castingMod != null ? m.castingMod : CAST_MOD); }
   _spellDice(ab, m) { return diceCount(ab, m.level || 1); }
   _enemyTargets(payload, max) {
     let chosen = ((payload && payload.targetUids) || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0 && !(e.darkened > 0))).filter(Boolean);
@@ -2983,7 +2989,7 @@ class Dungeon {
     if (!e) return;
     if (ab.cantrip) return this._abCantrip(m, ab, e);   // improved model + iteratives
     const touchAC = this._enemyAC(e, { touch: true });   // ranged touch — ignores armor & natural armor
-    const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
+    const toHit = this._spellToHit(m);   // BAB + casting-stat mod (house rule: spell stat, not Dex)
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs touch ${touchAC}]`, sound); this._echoToTable(sound); return; }
@@ -3036,7 +3042,7 @@ class Dungeon {
     const e = this._oneEnemy(payload); if (!e) return;
     const sound = ab.sound || pick(SND.lightning);
     const touchAC = this._enemyAC(e, { touch: true });
-    const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
+    const toHit = this._spellToHit(m);   // BAB + casting-stat mod (house rule: spell stat, not Dex)
     const roll = dRoll(20), total = roll + toHit;
     if (roll !== 20 && (roll === 1 || total < touchAC)) {
       this._note(`${ab.icon} ${m.nickname}'s ${ab.name} ray streaks wide of ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound);
@@ -3078,7 +3084,7 @@ class Dungeon {
     // the target drops, the next ray redirects to another foe (you don't pre-commit
     // all rays to one target). When it SPLITS (2+), use the dramatic fire-combo sound.
     const rays = Math.max(1, Math.min(3, 1 + Math.floor(((m.level || 1) - 3) / 4)));
-    const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD;
+    const toHit = this._spellToHit(m);   // BAB + casting-stat mod (house rule: spell stat, not Dex)
     const sound = (rays >= 2 && ab.splitSound) ? ab.splitSound : (ab.sound || pick(SND.lightning));
     const tally = new Map();   // uid -> { name, dmg, hits }
     let anyHit = false;
@@ -3489,7 +3495,7 @@ class Dungeon {
   _abTouch(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     const touchAC = this._enemyAC(e, { touch: true });
-    const toHit = babFor(m.cls || 'fighter', m.level || 1) + ABILITY_MOD + ((m.buffs && m.buffs.toHit) || 0);
+    const toHit = this._spellToHit(m) + ((m.buffs && m.buffs.toHit) || 0);   // casting-stat mod (house rule), + any combat buffs (e.g. magus melee touch)
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
