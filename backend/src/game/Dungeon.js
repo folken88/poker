@@ -2082,6 +2082,21 @@ class Dungeon {
   // sleeper. BARBARIANS pick the lowest-HP foe to fish for a kill → Cleave chain.
   // Everyone else AVOIDS asleep/fascinated foes (a hit wakes them and wastes the
   // crowd-control), only hitting one if all living foes are out.
+  // Does a creature's physical DR blunt THIS member's weapon? (true = its hits are
+  // reduced — the bot should rather strike a foe it can hurt.) Mirrors _physDR's bypass
+  // test: a matching S/P/B type, or a magic weapon vs DR/magic, gets through; DR/— and
+  // a plain numeric DR (Stoneskin) block every weapon. Used only as a SOFT preference
+  // — never to refuse combat (see _preferredFoe's fallback).
+  _drBlocksWeapon(m, e) {
+    const dr = e && e.dr;
+    const amount = dr ? (typeof dr === 'object' ? dr.amount : dr) : 0;
+    if (!(amount > 0)) return false;
+    const w = m.weapon || weaponOf(m.gear, m.weaponKey);
+    const bypass = (typeof dr === 'object') ? dr.bypass : null;
+    if (bypass === 'magic') return !(w && (w.dmgBonus > 0 || w.custom));
+    if (bypass && bypass !== '—') return !(w && w.dtype === bypass);
+    return true;   // DR/— or numeric (Stoneskin) — nothing physical bypasses
+  }
   _preferredFoe(m, foes) {
     if (!foes || !foes.length) return null;
     // Taunted → compelled to go straight for the taunter (cleared at turn's end).
@@ -2091,6 +2106,12 @@ class Dungeon {
     // only if that's all that's left, so the wasted-swing message still fires).
     const _w = m.weapon || weaponOf(m.gear, m.weaponKey);
     if (_w && !_w.ranged && !_w.reachFly) { const grounded = foes.filter(e => !e.flying); if (grounded.length) foes = grounded; }
+    // DR awareness: go for a foe this weapon can actually bite into. But if EVERY foe
+    // is warded by DR we can't pierce (an enemy Stoneskin, a room full of skeletons for
+    // a swordsman), DON'T give up — keep the whole list and swing anyway; a crit can
+    // still punch through. (Casters keep bypassing physical DR with energy spells.)
+    const hittable = foes.filter(e => !this._drBlocksWeapon(m, e));
+    if (hittable.length) foes = hittable;
     if (m.cls === 'rogue') {
       const helpless = foes.filter(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated);
       return (helpless.length ? helpless : foes).slice().sort((a, b) => a.hp - b.hp)[0];   // weakest sneakable foe
