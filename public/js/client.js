@@ -933,6 +933,10 @@
       if (q) { window.BlindMode.speak(`Your turn — attacking ${q.name}.`, 'urgent'); dungeonAction('attack', { targetUid: q.uid }); }
       else window.BlindMode.speak('Your locked target is gone.', 'urgent');
     }
+    // A pending "select a target" prompt never survives a TURN BOUNDARY — a stale
+    // one would silently swallow the first number key of the NEXT turn and fire
+    // last turn's action without offering a choice (Josh's "it just attacks").
+    if (isMyTurn !== _dunPrevMyTurn) _dunTarget = null;
     _dunPrevMyTurn = isMyTurn;
     const turnName = turnId ? ((d.party || []).find(m => m.playerId === turnId)?.nickname || 'someone') : null;
 
@@ -1558,8 +1562,27 @@
         const en = aliveE[_dunEnemyIdx >= 0 ? _dunEnemyIdx : 0];
         _dunEnemyMode = false;
         if (_blindHelp) { sayU(`Return: target ${en.name}.`); return; }
+        // An action is already ARMED and waiting for a target (e.g. you pressed
+        // Cleave, then browsed here to pick the victim): fire THAT action on this
+        // enemy — and clear it, so it can't go stale and swallow next turn's keys.
+        if (_dunTarget && myTurn) {
+          const pend = _dunTarget; _dunTarget = null;
+          sayU(`${pend.label} ${en.name}.`);
+          if (pend.kind === 'attack') dungeonAction('attack', { targetUid: en.uid });
+          else dungeonAction('ability', { slot: pend.slot, targetUid: en.uid, targetUids: [en.uid] });
+          return;
+        }
+        _dunTarget = null;   // never leave a stale pending action behind this path
         if (myTurn) { _dunQueuedAttack = null; sayU(`Attacking ${en.name}.`); dungeonAction('attack', { targetUid: en.uid }); }
         else { _dunQueuedAttack = en.uid; sayU(`${en.name} locked as your target — you'll attack it on your turn.`); }
+        return;
+      }
+      // M = Money: the gold this run has piled up so far (the run pool), plus depth.
+      if (k === 'm') {
+        e.preventDefault();
+        if (_blindHelp) { window.BlindMode.speak('M: gold earned this run.', 'urgent'); return; }
+        const pool = d.runGold | 0;
+        window.BlindMode.speak(`${pool} gold in the run pool, depth ${d.depth | 0}.`, 'urgent');
         return;
       }
       // L = Life: your current HP and any status (e.g. "5 of 35 HP, paralyzed").
@@ -2959,17 +2982,28 @@
   }
   // Re-render the open doll when chips/gear change — PRESERVING which control was
   // focused, so a keyboard/SR user isn't kicked out when the table state updates.
-  function renderSidebarBank() {
+  let _bankDirty = false;   // a rebuild was skipped while the user was inside the bank
+  function renderSidebarBank(force = false) {
     if (!_bankDollOpen) return;
     const el = $('#bankDoll'); if (!el) return;
     const a = document.activeElement;
+    const focusedInside = !!(a && el.contains(a));
+    const html = buildPaperDollHtml();
+    if (html === el.innerHTML) { _bankDirty = false; return; }   // nothing changed — leave the DOM (and the SR cursor) alone
+    // While the user is INSIDE the bank (tabbing / screen-reader browsing), a live
+    // table broadcast must NOT rebuild it — replacing innerHTML resets a screen
+    // reader's virtual cursor every couple of seconds ("the store bounces me
+    // around"). Defer; the rebuild happens when focus leaves, or immediately after
+    // the user's OWN buy/sell (force=true), with focus restored to the same button.
+    if (focusedInside && !force) { _bankDirty = true; return; }
     let key = null;
-    if (a && el.contains(a)) {
+    if (focusedInside) {
       key = a.dataset.buySlot ? 'buy:' + a.dataset.buySlot
           : a.dataset.sellSlot ? 'sell:' + a.dataset.sellSlot
           : a.hasAttribute('data-bank-close') ? 'close' : null;
     }
-    el.innerHTML = buildPaperDollHtml();
+    el.innerHTML = html;
+    _bankDirty = false;
     if (key) {
       const sel = key === 'close' ? '[data-bank-close]'
                 : key.startsWith('buy:') ? `[data-buy-slot="${key.slice(4)}"]`
@@ -2977,6 +3011,13 @@
       const next = el.querySelector(sel); if (next) { try { next.focus(); } catch (_) {} }
     }
   }
+  // When focus leaves the bank, apply any rebuild we deferred while browsing it.
+  $('#bankDoll')?.addEventListener('focusout', () => {
+    setTimeout(() => {
+      const el = $('#bankDoll');
+      if (_bankDirty && el && !el.contains(document.activeElement)) renderSidebarBank(true);
+    }, 0);
+  });
   function renderBank() { /* legacy no-op — gear bank also lives in the action panel */ }
 
   $('#sidebarBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankDollOpen ? closeBankDoll() : openBankDoll($('#sidebarBankToggle')); });
@@ -3687,7 +3728,9 @@
       const slot = buy.dataset.buySlot;
       const tier = Number(buy.dataset.buyTier);
       socket.emit('lobby:buyGear', { slot, tier }, (resp) => {
-        if (!resp?.ok) { toast(resp?.error || 'Could not buy', true); return; }
+        if (!resp?.ok) { toast(resp?.error || 'Could not buy', true); window.BlindMode?.speak?.(resp?.error || 'Could not buy.', 'urgent'); return; }
+        window.BlindMode?.speak?.(`Bought plus ${tier} ${GEAR_META[slot]?.label || slot}.`, 'urgent');
+        renderSidebarBank(true);   // user's own action — rebuild now, focus restored to this button
       });
       return;
     }
@@ -3697,8 +3740,10 @@
       e.preventDefault();
       const slot = sell.dataset.sellSlot;
       socket.emit('lobby:sellGear', { slot }, (resp) => {
-        if (!resp?.ok) { toast(resp?.error || 'Could not sell', true); return; }
+        if (!resp?.ok) { toast(resp?.error || 'Could not sell', true); window.BlindMode?.speak?.(resp?.error || 'Could not sell.', 'urgent'); return; }
         toast(`Hocked your ${GEAR_META[slot].label} for ${formatChips(resp.refund)} gp`);
+        window.BlindMode?.speak?.(`Hocked your ${GEAR_META[slot].label} for ${formatChips(resp.refund)} gold.`, 'urgent');
+        renderSidebarBank(true);   // user's own action — rebuild now, focus restored
       });
       return;
     }

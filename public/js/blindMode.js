@@ -156,6 +156,8 @@
     voice: null,              // chosen voice object once available
     queue: [],                // [{text, prio}, ...]
     speaking: false,
+    shadow: [],               // utterances handed to the engine that haven't STARTED yet (watchdog replay list)
+    lastAliveTs: 0,           // last time the engine proved it was talking (onstart/onboundary)
     listening: false,
     rec: null,                // active SpeechRecognition instance
     // True while a banter audio clip is playing on this client (either
@@ -279,6 +281,18 @@
     if (state.voice) u.voice = state.voice;
     blog('speak', `[${prio}]`, text.length > 90 ? text.slice(0, 90) + '…' : text);
     if (prio === 'event') state.lastEventText = text;
+    // WATCHDOG bookkeeping: shadow every utterance we hand the engine until it
+    // actually STARTS. If the engine wedges (see below), the shadow is what we
+    // replay after the reset. An URGENT speak() just cancel()ed the engine queue,
+    // so everything previously shadowed is gone — drop it.
+    if (p === PRIO.urgent) state.shadow.length = 0;
+    const rec = { text, prio };
+    state.shadow.push(rec);
+    if (state.shadow.length > 6) state.shadow.shift();
+    const alive = () => { state.lastAliveTs = Date.now(); const i = state.shadow.indexOf(rec); if (i > -1) state.shadow.splice(i, 1); };
+    u.onstart = alive;
+    u.onboundary = () => { state.lastAliveTs = Date.now(); };   // fires per word — proof the engine is really talking
+    u.onerror = alive;   // errored utterances must not count as "pending forever"
     // Hand it straight to the engine's queue — it plays this after anything already
     // queued, and advances itself. We do NOT rely on onend, so a dropped onend can
     // never wedge narration.
@@ -290,6 +304,27 @@
   // of our own state, so it can't desync.
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     setInterval(() => { try { window.speechSynthesis.resume(); } catch (_) {} }, 8000);
+  }
+  // ZOMBIE-ENGINE WATCHDOG. Chrome's speech engine can wedge for good when a
+  // cancel() lands mid-utterance (it keeps claiming `speaking` with a dead queue —
+  // this is what killed narration after leaving + re-entering the dungeon: every
+  // 'event' line queued behind the corpse forever, and only 'urgent' lines — which
+  // cancel() first — still spoke, i.e. "it only tells me my turn"). Every 3s: if the
+  // engine CLAIMS it's busy but nothing has started/spoken a word in 8s, declare it
+  // wedged — cancel() to clear the corpse and replay the last few unspoken lines.
+  // resume() alone provably did NOT fix this; cancel() is the only cure.
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    setInterval(() => {
+      if (!state.on) return;
+      const eng = window.speechSynthesis;
+      if (!(eng.speaking || eng.pending)) return;                  // idle — fine
+      if (Date.now() - (state.lastAliveTs || 0) < 8000) return;    // words are flowing — fine
+      blog('watchdog', 'speech engine wedged — resetting and replaying', state.shadow.length, 'line(s)');
+      try { eng.cancel(); } catch (_) {}
+      state.lastAliveTs = Date.now();                              // grace so we don't double-fire
+      const replay = state.shadow.splice(0).slice(-3);             // newest 3 unspoken lines
+      for (const it of replay) speak(it.text, it.prio === 'urgent' ? 'event' : it.prio);
+    }, 3000);
   }
   function pickVoice() {
     if (!supportsTTS) return;
@@ -1183,11 +1218,16 @@
     try { return String(s || '').replace(/\[[^\]]*\]/g, '').replace(/\p{Extended_Pictographic}/gu, '').replace(/\s+/g, ' ').trim(); }
     catch (_) { return String(s || '').replace(/\[[^\]]*\]/g, '').trim(); }
   }
+  // CR string → number ('1/2' → 0.5) so enemy lists sort deadliest-first.
+  function _crVal(cr) { const s = String(cr || 0); if (s.includes('/')) { const [a, b] = s.split('/'); return (+a || 0) / (+b || 1); } return +s || 0; }
   function _dunEnemyPhrase(d) {
-    const alive = (d.enemies || []).filter(e => e.alive);
+    // DEADLIEST FIRST — the SAME order (and therefore the SAME numbers) as the
+    // attack target picker and the E-inspector, so "2" always means the same foe
+    // no matter which list you heard it in.
+    const alive = (d.enemies || []).filter(e => e.alive).sort((a, b) => _crVal(b.cr) - _crVal(a.cr));
     if (!alive.length) return 'No enemies.';
     if (alive.length === 1) return `Enemy: ${alive[0].name}, ${alive[0].hp} hit points${alive[0].sickened ? ', sickened' : ''}.`;
-    return `${alive.length} enemies. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${e.hp}${e.sickened ? ', sickened' : ''}`).join('. ') + '.';
+    return `${alive.length} enemies, deadliest first. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${e.hp}${e.sickened ? ', sickened' : ''}`).join('. ') + '.';
   }
   // "Say attack, <ability 1>, <ability 2>, or bail." built from the player's kit.
   function _dunActionsHint(d) {
