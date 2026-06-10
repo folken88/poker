@@ -1803,7 +1803,7 @@ class Dungeon {
     };
   }
   _atkStr(r) { return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`; }
-  _swingVsAC(attacker, ac, target, extraToHit = 0) {
+  _swingVsAC(attacker, ac, target, extraToHit = 0, offHand = false) {
     const weapon = attacker.weapon;
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
     const lvl = attacker.level || 1;
@@ -1871,7 +1871,7 @@ class Dungeon {
     // the legacy +4 if a member has no derived mods yet. Replaces the ABILITY_MOD
     // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
     // now carry high-level scaling — see the iterative loop in _playerAttack).
-    const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };
+    const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon, { offHand }) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };   // off-hand swing → ½ ability mod to DAMAGE (PF1 two-weapon fighting)
     const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit + swashWF;
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
@@ -2666,8 +2666,17 @@ class Dungeon {
         if (sw) { const tough = targets.slice().sort((a, b) => b.maxHp - a.maxHp)[0] || weakestFoe; offense.push({ ab: sw, payload: { targetUid: tough.uid } }); }
       }
       const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // can't Rapid Shot a bolt-action rifle
-      for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint', 'disarm'].includes(a.effect)) {
+      for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint', 'disarm', 'stunfist'].includes(a.effect)) {
         if (a.needsRepeating && boltAction) continue;
+        // Stunning Fist (monk, 1/room): a strike + Fort-or-stun. Spend it on the
+        // BIGGEST threat that actually HAS a mind/body to stun (undead & constructs
+        // are immune) — robbing a boss of a turn is its highest-value use.
+        if (a.effect === 'stunfist') {
+          const prey = targets.filter(t => !mindImmune(t)).sort((x, y) => y.maxHp - x.maxHp)[0];
+          if (!prey) continue;                       // everything here is immune — save the strike
+          offense.push({ ab: a, payload: { targetUid: prey.uid } });
+          continue;
+        }
         // Trip smarts (PF1): never try to trip the untrippable (oozes, flyers, Huge
         // things); pick a TRIPPABLE foe — preferring two-legged ones (quadrupeds and
         // many-legged foes get +4 stability per extra leg, so they're poor targets).
@@ -3578,9 +3587,12 @@ class Dungeon {
     const dc = 10 + Math.floor((m.level || 1) / 2) + ((m.mods && m.mods.wis) || 0);
     let extra = '';
     if (e.hp > 0) {
-      const sv = this._saveVs(this._enemySave(e, 'fort'), dc);
-      if (!sv.saved) { e.loseTurn = true; extra = ` — STUNNED [${sv.total} vs DC ${dc}], it loses its turn!`; }
-      else extra = ` — it shakes off the stun [${sv.total} vs DC ${dc}].`;
+      if (mindImmune(e)) extra = ` — but ${e.name} is immune to stunning (no living body).`;   // PF1: undead & constructs ignore the stun (the strike still hurt)
+      else {
+        const sv = this._saveVs(this._enemySave(e, 'fort'), dc);
+        if (!sv.saved) { e.loseTurn = true; extra = ` — STUNNED [${sv.total} vs DC ${dc}], it loses its turn!`; }
+        else extra = ` — it shakes off the stun [${sv.total} vs DC ${dc}].`;
+      }
     }
     this._note(`${ab.icon} ${m.nickname}'s Stunning Fist ${r.crit ? 'CRITS' : 'strikes'} ${e.name} for ${r.damage}${r.drTag || ''}.${extra}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
@@ -3678,12 +3690,29 @@ class Dungeon {
   // Dispel Magic auto-targets: the WORST-afflicted ally (strip their debuffs); or
   // if no ally is debuffed, strip the strongest BUFF off a foe (haste / combat
   // bonuses), if any.
+  // PF1 dispel check: 1d20 + caster level vs DC 11 + the effect's caster level.
+  // (The +10 CL cap is folded into the CL itself; Greater Dispel adds +4 — its
+  // superior unweaving.) Returns { ok, roll, total, dc }. NOT auto-success on a 20
+  // (caster-level checks aren't, in PF1).
+  _dispelCheck(m, effectCL, greater) {
+    const cl = (m.level || 1) + (greater ? 4 : 0);
+    const roll = dRoll(20), total = roll + cl, dc = 11 + Math.max(1, effectCL | 0);
+    return { ok: total >= dc, roll, total, dc, cl };
+  }
   _abCleanse(m, ab) {
     const sound = ab.sound;
+    const FAIL_SOUND = '/audio/vine_boom.mp3';   // a FAILED dispel check (Foundry sting)
     const sev = (a) => (a.paralyzed > 0 ? 5 : 0) + (a.stunned > 0 ? 4 : 0) + (a.slowed > 0 ? 2 : 0) + (a.grappled ? 2 : 0) + (a.blinded > 0 ? 2 : 0) + (a.sickened > 0 ? 1 : 0);
-    // 1) Worst debuff on an ally.
+    // 1) Worst debuff on an ally. The hostile magic's caster level ≈ the toughest
+    //    foe present (the likely source), floored by the dungeon depth.
     const hurt = this.livingParty().filter(a => sev(a) > 0).sort((x, y) => sev(y) - sev(x))[0];
     if (hurt) {
+      const enemyCL = Math.max(this.depth || 1, ...this._targetableEnemies().map(e => crToNum(e.cr) || 1), 1);
+      const dc = this._dispelCheck(m, enemyCL, ab.greater);
+      if (!dc.ok) {   // the weave HOLDS
+        this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — but the hostile magic HOLDS! [dispel d20 ${dc.roll} +${dc.cl} = ${dc.total} vs DC ${dc.dc}]`, FAIL_SOUND);
+        this._echoToTable(FAIL_SOUND); return;
+      }
       const cleared = [];
       if (hurt.paralyzed > 0) { hurt.paralyzed = 0; hurt.heldDC = null; cleared.push('paralysis'); }
       if (hurt.stunned > 0)   { hurt.stunned = 0;   cleared.push('stun'); }
@@ -3691,19 +3720,25 @@ class Dungeon {
       if (hurt.grappled)      { hurt.grappled = false; hurt.grappledBy = null; cleared.push('grapple'); }
       if (hurt.blinded > 0)   { hurt.blinded = 0;   cleared.push('blindness'); }
       if (hurt.sickened > 0)  { hurt.sickened = 0;  cleared.push('sickness'); }
-      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — clears ${cleared.join(', ')}!`, sound);
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — clears ${cleared.join(', ')}! [dispel ${dc.total} vs DC ${dc.dc}]`, sound);
       this._echoToTable(sound); return;
     }
-    // 2) No ally debuff → strip the strongest buff off a foe (if any).
+    // 2) No ally debuff → strip the strongest buff off a foe (dispel check vs ITS CL).
     const foeScore = (e) => (e.hasted > 0 ? 3 : 0) + (e.buffs ? ((e.buffs.toHit || 0) + (e.buffs.dmg || 0) + (e.buffs.ac || 0) + (e.buffs.bonusDice || 0)) : 0);
     const foe = this._targetableEnemies().filter(e => foeScore(e) > 0).sort((x, y) => foeScore(y) - foeScore(x))[0];
     if (foe) {
+      const dc = this._dispelCheck(m, Math.max(this.depth || 1, crToNum(foe.cr) || 1), ab.greater);
+      if (!dc.ok) {   // its enchantment HOLDS
+        this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${foe.name} — but its enchantment HOLDS! [dispel d20 ${dc.roll} +${dc.cl} = ${dc.total} vs DC ${dc.dc}]`, FAIL_SOUND);
+        this._echoToTable(FAIL_SOUND); return;
+      }
       const stripped = [];
       if (foe.hasted > 0) { foe.hasted = 0; stripped.push('haste'); }
       if (foe.buffs) { foe.buffs = null; stripped.push('combat buffs'); }
-      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${foe.name} — strips its ${stripped.join(' & ')}!`, sound);
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${foe.name} — strips its ${stripped.join(' & ')}! [dispel ${dc.total} vs DC ${dc.dc}]`, sound);
       this._echoToTable(sound); return;
     }
+    // Nothing magical to dispel — NOT a failed check, so no fail sting.
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — but there's nothing to dispel.`, sound);
     this._echoToTable(sound);
   }
@@ -4504,7 +4539,7 @@ class Dungeon {
     // Natural multi-attackers (Crisp the deinonychus: bite + 2 talons) make their
     // FULL natural routine every turn — Pounce-style, even on a fresh target — all
     // at full BAB. No iteratives/TWF on top.
-    if (m.weapon && m.weapon.naturalAttacks > 1) return Array(m.weapon.naturalAttacks).fill(0);
+    if (m.weapon && m.weapon.naturalAttacks > 1) return Array(m.weapon.naturalAttacks).fill(0).map(off => ({ off, oh: false }));
     const dual = this._isDualWielding(m);
     // RANGED attackers (bows, crossbows, guns) can ALWAYS full-attack — they don't
     // move to reach a foe. MELEE only get their iteratives when they stay on the SAME
@@ -4516,15 +4551,18 @@ class Dungeon {
     // (g12, BOWS only) nocks a 2nd arrow on the first shot — an extra arrow at FULL BAB.
     const rapidOn = isRanged && fullAttack && ff.rapidShot && !(m.weapon && m.weapon.boltAction);
     const twfPen = (dual ? (ff.twf ? -2 : -6) : 0) + (rapidOn ? -2 : 0);
-    const off = [twfPen];                       // primary / main-hand swing
-    if (dual) off.push(twfPen);                 // base off-hand swing (the 2nd weapon)
-    if (rapidOn) off.push(twfPen);              // Rapid Shot's extra shot (full BAB, −2 like the rest)
-    if (isRanged && fullAttack && ff.manyshot && m.weapon && m.weapon.group === 'bows') off.push(twfPen);   // Manyshot's 2nd arrow
+    // Each swing carries `oh` (off-hand) → ½ ability mod to damage (PF1). Only the
+    // SECOND weapon's swings are off-hand; main-hand iteratives and ranged extras
+    // are full-mod.
+    const off = [{ off: twfPen, oh: false }];                  // primary / main-hand swing
+    if (dual) off.push({ off: twfPen, oh: true });             // base off-hand swing (the 2nd weapon)
+    if (rapidOn) off.push({ off: twfPen, oh: false });         // Rapid Shot's extra shot (full BAB, −2 like the rest)
+    if (isRanged && fullAttack && ff.manyshot && m.weapon && m.weapon.group === 'bows') off.push({ off: twfPen, oh: false });   // Manyshot's 2nd arrow
     if (fullAttack) {
-      if (bab >= 6)  off.push(twfPen - 5);      // main-hand iterative
-      if (bab >= 11) off.push(twfPen - 10);
-      if (bab >= 16) off.push(twfPen - 15);
-      if (dual && ff.itwf && bab >= 6) off.push(twfPen - 5);   // Improved Two-Weapon Fighting
+      if (bab >= 6)  off.push({ off: twfPen - 5,  oh: false });   // main-hand iterative
+      if (bab >= 11) off.push({ off: twfPen - 10, oh: false });
+      if (bab >= 16) off.push({ off: twfPen - 15, oh: false });
+      if (dual && ff.itwf && bab >= 6) off.push({ off: twfPen - 5, oh: true });   // Improved Two-Weapon Fighting (2nd off-hand swing)
     }
     return off;
   }
@@ -4541,7 +4579,7 @@ class Dungeon {
     // Build the swing sequence as a list of to-hit OFFSETS (see _attackOffsets):
     // dual-wielders attack twice; staying on the same target adds PF1 iteratives.
     // A Haste bonus swing (quiet) is always a single strike at full to-hit.
-    const offsets = quiet ? [0] : this._attackOffsets(m, e);
+    const offsets = quiet ? [{ off: 0, oh: false }] : this._attackOffsets(m, e);
     if (!quiet) m._lastAtkTarget = e.uid;   // remember the target → next turn's full-attack check
     const swings = offsets.length;
     // Sound: signature atkSound > a blunt "bap" for B-type weapons (quarterstaff,
@@ -4553,7 +4591,7 @@ class Dungeon {
       // redirects to another foe (PF1 — you don't pre-commit a full attack).
       const tgt = (e.hp > 0) ? e : this._targetableEnemies()[0];
       if (!tgt) break;
-      const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms' }), tgt, offsets[i]);   // firearms hit vs touch AC; offset = iterative/TWF penalty
+      const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms' }), tgt, offsets[i].off, offsets[i].oh);   // firearms hit vs touch AC; offset = iterative/TWF penalty; oh = off-hand (½ mod)
       if (i > 0 || quiet) r.sound = null;            // one report for the whole flurry; haste swing silent
       else if (baseSound) r.sound = baseSound;       // signature / blunt report on the first swing
       // Rogue Sneak Attack with a light blade (dagger/kukri/shortsword) → Riki.
