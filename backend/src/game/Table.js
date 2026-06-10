@@ -219,6 +219,30 @@ class Table {
     return false;
   }
 
+  /** Whether a real person still needs this table kept alive — used to decide
+   *  whether to keep dealing or send every bot home at hand's end. TRUE iff:
+   *    • a human is SEATED here (even "sitting out" this hand) AND still connected
+   *      (a closed-tab ghost or a mere spectator does NOT count), OR
+   *    • a human is off in this table's DUNGEON (they left their seat to adventure
+   *      and will come back — keep the seats warm).
+   *  Bots playing only against each other is pointless, so when this is false the
+   *  table clears its bots at the end of the hand. (_dungeonHasHumans is injected
+   *  by server.js, which holds the dungeons map.) */
+  _humanStillNeedsTable() {
+    if (typeof this._dungeonHasHumans === 'function' && this._dungeonHasHumans()) return true;
+    const seated = new Set();
+    for (const s of this.seats) if (!s.isEmpty() && !s.isBot && s.playerId) seated.add(s.playerId);
+    if (!seated.size) return false;
+    if (!this.io) return true;   // no socket layer to consult → trust the seat
+    const room = this.io.sockets.adapter.rooms.get(this.roomName());
+    if (!room) return false;
+    for (const sid of room) {
+      const pid = this.io.sockets.sockets.get(sid)?.data?.player?.player_id;
+      if (pid && seated.has(pid)) return true;   // a seated human is genuinely here
+    }
+    return false;
+  }
+
   // ============================================================
   // Seating
   // ============================================================
@@ -1216,7 +1240,7 @@ class Table {
       // nothing schedules a hand and the table simply idles until someone
       // shows up — no LLM banter, no 11labs synthesis, no bot-only hands
       // dealt to an empty room.
-      if (!this.anyHumanPresent()) {
+      if (!this._humanStillNeedsTable()) {
         let sentHome = 0;
         for (const seat of this.seats) {
           if (seat.isEmpty() || !seat.isBot) continue;
@@ -1224,7 +1248,7 @@ class Table {
           sentHome++;
         }
         if (sentHome > 0) {
-          console.log(`[poker] table=${this.id} idle — sent ${sentHome} bot(s) home (no humans present)`);
+          console.log(`[poker] table=${this.id} idle — sent ${sentHome} bot(s) home (no seated/dungeon humans)`);
           if (this.io) this.io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
         }
         this.nextHandAt = null;

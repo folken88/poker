@@ -95,6 +95,17 @@ tables.set(defaultTable.id, defaultTable);
 // Active dungeon runs, keyed by leader player_id (one run per leader).
 const dungeons = new Map();
 
+// Let each table tell whether a human from it is currently off in its dungeon, so
+// it keeps its bots while that player adventures — and clears them only when the
+// table is truly empty (no seated humans AND no dungeon humans). See
+// Table._humanStillNeedsTable.
+for (const t of tables.values()) {
+  t._dungeonHasHumans = () => {
+    const d = dungeons.get(t.id);
+    return !!(d && d.party && d.party.some(m => !m.isBot && !m.left && !m.dead));
+  };
+}
+
 io.on('connection', (socket) => {
   registerLobbyHandlers(io, socket, { tables });
   registerTableHandlers(io, socket, { tables, dungeons });
