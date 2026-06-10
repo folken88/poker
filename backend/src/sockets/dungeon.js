@@ -75,12 +75,19 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     socket.join(d.roomName());
     const fresh = db.getPlayer(me.player_id) || me;
     const already = d.hasMember(me.player_id);
+    // Back within the reconnect grace window → cancel the pending auto-bail and
+    // slot them straight back into their own run (same member, depth and share).
+    if (already && d._dcBail && d._dcBail.has(me.player_id)) {
+      try { clearTimeout(d._dcBail.get(me.player_id)); } catch (_) {}
+      d._dcBail.delete(me.player_id);
+      try { d._note(`📡 ${me.nickname} reconnected — back in the run!`); d._broadcast(); } catch (_) {}
+    }
     if (!already) {
       d.addMember(fresh);
       try { if (table) table.chat('info', `🗡️ ${me.nickname} has entered the dungeon.`); } catch (_) {}
     }
     socket.emit('dungeon:state', d.publicState());
-    ack?.({ ok: true, state: d.publicState() });
+    ack?.({ ok: true, state: d.publicState(), rejoined: already });
   });
 
   socket.on('dungeon:action', ({ kind, ...payload } = {}, ack) => {
@@ -239,11 +246,29 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     ack?.({ ok: true });
   });
 
+  // RECONNECT GRACE: a reload/disconnect no longer bails you out of the run on the
+  // spot. The member stays in the party (their turns auto-resolve via the AFK
+  // auto-attack) for a grace window; come back in time and dungeon:enter cancels
+  // the pending bail — you're simply back, same depth, same share. Only when the
+  // window expires do we bail them (banking their gold, exactly as before).
+  const DC_BAIL_GRACE_MS = 3 * 60_000;
   socket.on('disconnect', () => {
     const me = meOf();
     if (!me) return;
     const d = dungeons.get(tableIdOf());
-    if (d && d.hasMember(me.player_id)) { try { d.bail(me.player_id); } catch (_) {} }  // auto-bail keeps their gold
+    if (!d || !d.hasMember(me.player_id)) return;
+    const pid = me.player_id;
+    d._dcBail = d._dcBail || new Map();
+    if (d._dcBail.has(pid)) return;                 // a grace timer is already running
+    try { d._note(`📡 ${me.nickname} lost connection — holding their place for ${Math.round(DC_BAIL_GRACE_MS / 60000)} minutes.`); d._broadcast(); } catch (_) {}
+    const timer = setTimeout(() => {
+      try {
+        d._dcBail && d._dcBail.delete(pid);
+        if (d.status !== 'over' && d.hasMember(pid)) d.bail(pid);   // grace expired → bail (banks their gold)
+      } catch (_) {}
+    }, DC_BAIL_GRACE_MS);
+    if (timer.unref) timer.unref();
+    d._dcBail.set(pid, timer);
   });
 }
 

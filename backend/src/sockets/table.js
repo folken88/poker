@@ -103,7 +103,16 @@ function registerTableHandlers(io, socket, { tables, dungeons }) {
       if (p) socket.emit('table:hole', { playerId: me.player_id, hole: p.hole });
     }
 
-    ack?.({ ok: true, state: table.publicState() });
+    // Still listed (alive, not bailed) in this table's LIVE run — e.g. they just
+    // reloaded mid-dungeon and are inside the reconnect grace window. Tell the
+    // client so it routes them straight back into the run instead of stranding
+    // them at the table while their hero stands idle in the dungeon.
+    let inDungeon = false;
+    try {
+      const dRun = dungeons && dungeons.get(table.id);
+      inDungeon = !!(dRun && dRun.status !== 'over' && !me.is_bot && dRun.hasMember(me.player_id));
+    } catch (_) {}
+    ack?.({ ok: true, state: table.publicState(), inDungeon });
     io.to(table.roomName()).emit('table:state', table.publicState());
   });
 

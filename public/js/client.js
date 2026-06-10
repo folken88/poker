@@ -2065,6 +2065,14 @@
       if (!resp?.ok) { toast(resp?.error || 'Could not join table', true); return; }
       state.table = resp.state;
       renderTable();
+      // Reloaded mid-run? The server says our hero is STILL standing in this
+      // table's live dungeon (reconnect grace) — take the player straight back
+      // into the run instead of stranding them at the table.
+      if (resp.inDungeon) {
+        toast('You are still in the dungeon — rejoining your run…');
+        window.BlindMode?.speak?.('Reconnected. You are still in the dungeon — rejoining your run.', 'urgent');
+        enterDungeon();
+      }
     });
   }
 
