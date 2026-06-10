@@ -75,11 +75,21 @@ app.get('/api/tables', (_req, res) => {
 // displayed text) and broadcasts to every table as voiced banter.
 const elevenlabs = require('./util/elevenlabs');
 const PRIME_VOICE = 'CPrddi89utXexSfHFD7y';   // "Prime" (Tokala's voice) — the announcer
+// Dedupe timestamp persisted under data/ (a mounted volume) so it SURVIVES the
+// container recreate between a double-fired deploy's two announces — the user
+// heard the rebooting line twice when two watchers raced.
+const ANNOUNCE_TS_FILE = path.join(__dirname, '..', 'data', '.announce-ts');
 app.post('/api/admin/announce', async (req, res) => {
   const ip = String(req.socket.remoteAddress || '');
   if (!/^(::1|::ffff:127\.|127\.)/.test(ip)) return res.status(403).json({ ok: false, error: 'local only' });
   const text = String((req.body && req.body.text) || '').slice(0, 300);
   if (!text) return res.status(400).json({ ok: false, error: 'no text' });
+  try {
+    const fs = require('fs');
+    const last = parseInt(fs.readFileSync(ANNOUNCE_TS_FILE, 'utf8'), 10) || 0;
+    if (Date.now() - last < 3 * 60_000) return res.json({ ok: true, voiced: false, deduped: true });   // said it in the last 3 min — once was plenty
+  } catch (_) {}
+  try { require('fs').writeFileSync(ANNOUNCE_TS_FILE, String(Date.now())); } catch (_) {}
   const voiceId = String((req.body && req.body.voice) || PRIME_VOICE);
   let audio = null;
   if (elevenlabs.ENABLED) {

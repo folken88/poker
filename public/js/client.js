@@ -792,15 +792,26 @@
 
   socket.on('dungeon:state', (st) => {
     state.dungeon = st;
-    // Play the single newest log sound at full volume (this client is IN the
-    // dungeon, so it hears combat clearly — the table hears the muffled echo).
+    // Play the fresh log sounds (this client is IN the dungeon, so it hears
+    // combat clearly — the table hears the muffled echo). Up to the first THREE
+    // DISTINCT new sounds, staggered — the old "newest only" rule silently ATE a
+    // spell's blast whenever the kill ended the room, because the victory/level-up
+    // notes (with their own chime) landed after it in the same broadcast.
     if (st.log && st.log.length) {
-      let topT = _dungeonSoundSeen, topSound = null, maxT = _dungeonSoundSeen;
+      let maxT = _dungeonSoundSeen;
+      const fresh = [];
       for (const e of st.log) {
         if (e.t > maxT) maxT = e.t;
-        if (e.t > _dungeonSoundSeen && e.sound && e.t >= topT) { topT = e.t; topSound = e.sound; }
+        if (e.t > _dungeonSoundSeen && e.sound) fresh.push(e);   // log order: oldest first → the kill-shot plays before the fanfare
       }
-      if (topSound) playDungeonSound(topSound, _combatVolume);
+      const seen = new Set();
+      let i = 0;
+      for (const e of fresh) {
+        if (seen.has(e.sound)) continue;
+        seen.add(e.sound);
+        if (i < 3) { const snd = e.sound, delay = i * 350; setTimeout(() => playDungeonSound(snd, _combatVolume), delay); }
+        i++;
+      }
       _dungeonSoundSeen = maxT;
     }
     if (document.body.dataset.screen === 'dungeon') renderDungeon();
