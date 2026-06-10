@@ -558,6 +558,21 @@ KITS.oracle.abilities = [
   spontaneousSpell(SPELL.firesnake, 10),
 ];
 
+// ── Power Attack (melee) + Deadly Aim (ranged) on EVERY martial class, from L1 ──
+// Both are FREE −hit/+damage toggles (see Dungeon._abBuff). A character uses
+// whichever matches their weapon; the dungeon AI only ever throws on the matching
+// one (see the weapon-aware buff pick in _botAbility). Added here uniformly so all
+// martials get them early; classes without their own kit (monk, antipaladin) pick
+// them up via the fighter DEFAULT_KIT.
+const _POWER_ATTACK = { key: 'powerattack', name: 'Power Attack', icon: '💥', cost: 'free', freeAction: true, effect: 'buff', target: 'self', powerattack: true, sticky: true, minLevel: 1, sound: S.rage, desc: 'A FREE toggle — trade accuracy for power with a MELEE weapon: −1 to hit per +4 BAB, +2 damage each (×1.5 two-handed). Flip on or off without spending your turn.' };
+const _DEADLY_AIM  = { key: 'deadlyaim',  name: 'Deadly Aim',  icon: '🎯', cost: 'free', freeAction: true, effect: 'buff', target: 'self', deadlyaim: true,  sticky: true, minLevel: 1, sound: S.bow,  desc: 'A FREE toggle — the ranged Power Attack: with a bow, crossbow or firearm, trade −2 to hit for heavy bonus damage every shot (scales with level).' };
+for (const _cls of ['fighter', 'barbarian', 'paladin', 'magus', 'ranger', 'inquisitor', 'rogue', 'swashbuckler', 'cleric']) {
+  const _kit = KITS[_cls];
+  if (!_kit || !_kit.abilities) continue;
+  _kit.abilities = _kit.abilities.filter(a => a.key !== 'powerattack' && a.key !== 'deadlyaim');
+  _kit.abilities.unshift({ ..._DEADLY_AIM }, { ..._POWER_ATTACK });   // both, available from level 1
+}
+
 // Spell/ability art (PF1 stock icons copied into public/icons/spells/). Keyed
 // by ability key; anything not listed falls back to its emoji glyph.
 const ICON_KEYS = new Set([

@@ -155,7 +155,7 @@ function fighterFeats(cls, level, ranged) {
   const L = Math.max(1, level || 1);
   if (cls === 'wizard' || cls === 'sorcerer' || cls === 'witch') return casterFeats(L);
   if (cls === 'druid')      return druidFeats(L);
-  if (cls === 'paladin')    return paladinFeats(L);
+  if (cls === 'paladin' || cls === 'antipaladin') return paladinFeats(L);   // antipaladin uses the paladin feat tree
   const ladder = ranged ? rangedFeats : featLadder;
   if (cls === 'fighter')    return ladder(L, L);
   if (cls === 'inquisitor' || cls === 'barbarian' || cls === 'ranger') return ladder(Math.floor((L + 1) / 2), L);
@@ -181,7 +181,7 @@ function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fi
 // Level now comes from XP (see pf1data/xp.js), NOT from gear. The gating level at
 // which fighter/inquisitor earn each bonus feat (fighter: every level; inquisitor:
 // every odd level) — used to NAME the feat gained on a level-up announcement.
-function gatingLevel(cls, L) { return cls === 'fighter' ? L : (cls === 'inquisitor' || cls === 'barbarian' || cls === 'ranger') ? Math.floor((L + 1) / 2) : (cls === 'paladin' || cls === 'druid' || cls === 'wizard' || cls === 'sorcerer' || cls === 'witch') ? Math.ceil(L / 2) : 0; }
+function gatingLevel(cls, L) { return cls === 'fighter' ? L : (cls === 'inquisitor' || cls === 'barbarian' || cls === 'ranger') ? Math.floor((L + 1) / 2) : (cls === 'paladin' || cls === 'antipaladin' || cls === 'druid' || cls === 'wizard' || cls === 'sorcerer' || cls === 'witch') ? Math.ceil(L / 2) : 0; }
 const FEAT_AT = {
   1: 'Weapon Focus (+1 to hit)', 2: 'Dodge (+1 AC)', 3: 'Toughness (+HP)', 4: 'Weapon Specialization (+2 dmg)',
   5: 'Improved Initiative', 6: 'a save feat (+1 saves)', 7: 'a save feat (+2 saves)',
@@ -1270,7 +1270,7 @@ class Dungeon {
     if (sv > 0) parts.push(`saves +${sv}`);
     const feats = [];
     const featNames = (RANGED_FEAT_CLASSES.has(cls) && this._isRanged(m)) ? RANGED_FEAT_AT
-                    : cls === 'paladin' ? PALADIN_FEAT_AT : cls === 'druid' ? DRUID_FEAT_AT
+                    : (cls === 'paladin' || cls === 'antipaladin') ? PALADIN_FEAT_AT : cls === 'druid' ? DRUID_FEAT_AT
                     : (cls === 'wizard' || cls === 'sorcerer' || cls === 'witch') ? CASTER_FEAT_AT : FEAT_AT;
     for (let g = gatingLevel(cls, from) + 1; g <= gatingLevel(cls, to); g++) if (featNames[g]) feats.push(featNames[g]);
     if (feats.length) parts.push(`feat: ${feats.join(', ')}`);
@@ -2171,7 +2171,8 @@ class Dungeon {
     const fireFoes = foes.some(e => e.detonate || e.hellfire || /fire|flame|magma|salamander|phoenix/i.test(e.name));
     const protect = avail.find(a => a.protectFire);
     if (protect && fireFoes && this.livingParty().some(p => !p.protectFire)) return { slot: slot(protect), payload: {} };
-    const buff = avail.find(a => a.effect === 'buff' && a.sticky && !a.protectFire && !buffFullyUp(a));
+    const buff = avail.find(a => a.effect === 'buff' && a.sticky && !a.protectFire && !buffFullyUp(a)
+      && !(a.powerattack && this._isRanged(m)) && !(a.deadlyaim && !this._isRanged(m)));   // only the toggle that fits the weapon (PA melee / Deadly Aim ranged) — never both
     if (buff) return { slot: slot(buff), payload: {} };
     // Invisibility — shields the most-hurt ally (it lands on the lowest-HP ally in
     // _abInvisible). Cast when an ally is badly hurt and nobody's hidden yet.
