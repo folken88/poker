@@ -3887,9 +3887,12 @@
     const pen = meta.profPenalty || -4;
     const prof = [], non = [];
     for (const w of meta.weapons) (isProficient(cls, w) ? prof : non).push(w);
+    // Damage type now matters vs DR (skeletons shrug off blades, zombies shrug
+    // off everything but slashing…) — spell it out next to the dice.
+    const TYPE_NAME = { S: 'slashing', P: 'piercing', B: 'bludgeoning', 'P/S': 'pierce/slash' };
     const opt = (w, bad) =>
       `<option value="${w.key}"${bad ? ' class="weapon-nonprof" style="color:#cc5500"' : ''}>`
-      + `${w.name} (${w.dmg})${bad ? ` — ${pen} non-prof` : ''}</option>`;
+      + `${w.name} (${w.dmg}${TYPE_NAME[w.type] ? ' ' + TYPE_NAME[w.type] : ''})${bad ? ` — ${pen} non-prof` : ''}</option>`;
     let html = '';
     if (prof.length) html += `<optgroup label="✔ Proficient">${prof.map(w => opt(w, false)).join('')}</optgroup>`;
     if (non.length)  html += `<optgroup label="✘ Not proficient (${pen} to hit)">${non.map(w => opt(w, true)).join('')}</optgroup>`;

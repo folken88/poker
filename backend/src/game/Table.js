@@ -765,29 +765,25 @@ class Table {
       // any committed chips > big blind. The acting player is excluded
       // from the speaker pool (no commenting on themselves).
       try {
-        if (action === 'allin' || action === 'raise' || (action === 'call' && committed > this.bigBlind * 3)) {
+        // CHATTER OVERHAUL (user spec): focus on INTERESTING MOMENTS only, ~20%
+        // chance someone speaks. All-ins always qualify; raises only when they're
+        // MEANINGFUL (to at least 4× the big blind — a min-raise is not an event);
+        // big calls keep their 3×BB bar. The old per-check self-announcements
+        // ("chatter about nothing") are gone entirely.
+        const raiseTo = actorAfter?.invested ?? amount;
+        const bigRaise = action === 'raise' && raiseTo >= this.bigBlind * 4;
+        if (action === 'allin' || bigRaise || (action === 'call' && committed > this.bigBlind * 3)) {
           // Amounts spelled out as words for the LLM (numwords.gold) so the
           // small model can't misread digit strings ("152" → "fifteen two").
           // The exact value also rides along in `amounts` so a {amount}
           // token in the model's line gets the precise figure substituted in.
-          const amtVal = action === 'raise' ? (actorAfter?.invested ?? amount) : committed;
+          const amtVal = action === 'raise' ? raiseTo : committed;
           const desc = action === 'allin'
             ? `${nick} just shoved all-in (${gold(committed)}).`
             : action === 'raise'
-              ? `${nick} raised to ${gold(actorAfter?.invested ?? amount)}.`
+              ? `${nick} raised to ${gold(raiseTo)}.`
               : `${nick} called a big ${gold(committed)} bet.`;
           banter.maybeSpeak(this, { kind: action, description: desc, actorIds: [playerId], amounts: { amount: amtVal } });
-        } else if (action === 'check' && this.findSeat(playerId)?.isBot) {
-          // The actual checker (a bot) may announce their OWN check — never a
-          // bystander, and folded players never reach this action branch. The
-          // per-table banter cooldown keeps it occasional, not every check.
-          banter.maybeSpeak(this, {
-            kind: 'check',
-            description: `You (${nick}) just CHECKED — tapped the table, no bet, staying in the hand for free. You may simply say "check", or a brief in-character line as you do it. One short line.`,
-            speakerHint: playerId,
-            actorIds: [],
-            prob: 0.25,
-          });
         }
       } catch (_) { /* never let banter break a hand */ }
     } catch (_) { /* never let chat logging break a hand */ }
@@ -826,7 +822,7 @@ class Table {
           kind: 'advice',
           description: desc,
           actorIds: [newActor, playerId],
-          prob: 0.08,
+          prob: 0.03,   // chatter-overhaul: heckling someone's clock is rarely interesting — keep it a rare treat
           amounts: toCall > 0 ? { call: toCall, pot: potSize } : null,
         });
       }
@@ -1046,23 +1042,27 @@ class Table {
       // a smug, self-aggrandizing victory lap about their own win (not a
       // line that reads as chiding someone else). If a human won, fall
       // back to an opponent bot reacting to it.
-      if (ws.length > 0) {
+      // Chatter-overhaul: a win only earns banter when the POT was worth talking
+      // about (≥10× the big blind) — stealing the blinds is not an event. A
+      // revealed BLUFF is always juicy and speaks more often.
+      if (ws.length > 0 && ((ws[0].amount || 0) >= this.bigBlind * 10 || (ws[0].handDesc || '').includes('bluff'))) {
         const top = ws[0];
         const nick = nickById.get(top.playerId) || top.playerId;
         const isBluff = (top.handDesc || '').includes('bluff');
         const amt = gold(top.amount);
         const handTail = top.handDesc ? ` with ${top.handDesc}` : '';
+        const winProb = isBluff ? 0.45 : undefined;   // bluff reveals are the table's favorite drama
         const winnerIsBot = this.seats.some(s => !s.isEmpty() && s.isBot && s.playerId === top.playerId);
         if (winnerIsBot) {
           const desc = isBluff
             ? `You (${nick}) JUST WON ${amt} on a BLUFF (${top.handDesc})! This is YOUR victory — GLOAT: be smug and self-aggrandizing about your OWN win, in character (you may relish that it was a bluff). Brag about yourself; do NOT chide or scold someone else.`
             : `You (${nick}) JUST WON ${amt}${handTail}! This is YOUR victory — GLOAT: be smug and self-aggrandizing about your OWN win, in character. Brag about yourself; do NOT chide or scold someone else.`;
-          banter.maybeSpeak(this, { kind: isBluff ? 'bluff-win' : 'win', description: desc, speakerHint: top.playerId, actorIds: [], amounts: { amount: top.amount, pot: top.amount } });
+          banter.maybeSpeak(this, { kind: isBluff ? 'bluff-win' : 'win', description: desc, speakerHint: top.playerId, actorIds: [], prob: winProb, amounts: { amount: top.amount, pot: top.amount } });
         } else {
           const desc = isBluff
             ? `${nick} just won ${amt} on a bluff (${top.handDesc}). React as an opponent who just lost the pot to them.`
             : `${nick} just won ${amt}${handTail}. React as an opponent who just lost the pot to them.`;
-          banter.maybeSpeak(this, { kind: isBluff ? 'bluff-win' : 'win', description: desc, actorIds: [top.playerId], amounts: { amount: top.amount, pot: top.amount } });
+          banter.maybeSpeak(this, { kind: isBluff ? 'bluff-win' : 'win', description: desc, actorIds: [top.playerId], prob: winProb, amounts: { amount: top.amount, pot: top.amount } });
         }
       }
       // Loser-reaction trigger — pick one random bot who DIDN'T win
@@ -1077,16 +1077,17 @@ class Table {
         const seat = this.seats[p.seatIndex];
         return seat && !seat.isEmpty() && seat.isBot && seat.playerId === p.playerId;
       });
-      if (loserBots.length > 0) {
+      // Chatter-overhaul: losers only grumble over pots WORTH grumbling about.
+      if (loserBots.length > 0 && ws.length > 0 && (ws[0].amount || 0) >= this.bigBlind * 10) {
         const lp = loserBots[Math.floor(Math.random() * loserBots.length)];
         const lnick = nickById.get(lp.playerId) || lp.playerId;
-        const winnerNick = ws.length > 0 ? (nickById.get(ws[0].playerId) || ws[0].playerId) : 'someone';
+        const winnerNick = nickById.get(ws[0].playerId) || ws[0].playerId;
         const desc = `You (${lnick}) JUST LOST this hand to ${winnerNick}. React with frustration — cursing in character is encouraged.`;
         banter.maybeSpeak(this, {
           kind: 'lose',
           description: desc,
           speakerHint: lp.playerId,
-          prob: 0.22,
+          prob: 0.20,
         });
       }
     } catch (e) { /* never let logging break a hand */ }
@@ -1098,6 +1099,17 @@ class Table {
       seat.chipsAtTable = p.stack;
       db.setChips(p.playerId, p.stack);
     }
+    // Chatter-overhaul: going BUST is the single most interesting moment at a
+    // poker table — half the time somebody remarks on it (pity, mockery, eulogy).
+    try {
+      for (const p of this.hand.players) {
+        const seat = this.seats[p.seatIndex];
+        if (!seat || seat.playerId !== p.playerId || p.stack !== 0) continue;
+        const bnick = seat.player?.nickname || p.playerId;
+        banter.maybeSpeak(this, { kind: 'bust', description: `${bnick} just went BUST — lost their last chip and is felted. React in character: pity, mockery, or a short eulogy for their stack.`, actorIds: [p.playerId], prob: 0.5 });
+        break;   // one bust remark max per hand
+      }
+    } catch (_) { /* never let banter break a hand */ }
 
     // ---- Feed bot bluff memory ----
     // For every player whose hole cards were revealed (showdown

@@ -183,7 +183,7 @@ const ENDPOINT       = process.env.LLM_ENDPOINT || 'http://host.docker.internal:
 const MODEL          = process.env.LLM_MODEL || 'gemma4:e4b';
 const API_KEY        = process.env.LLM_API_KEY || '';   // Bearer auth for OpenRouter / OpenAI-compatible endpoints (blank for local Ollama)
 const COOLDOWN_MS    = parseInt(process.env.LLM_BANTER_COOLDOWN_MS || '18000', 10);
-const PROB           = parseFloat(process.env.LLM_BANTER_PROB || '0.30');
+const PROB           = parseFloat(process.env.LLM_BANTER_PROB || '0.20');   // chatter-overhaul: ~20% chance an interesting moment draws a line (user spec)
 const TIMEOUT_MS     = parseInt(process.env.LLM_BANTER_TIMEOUT_MS || '8000', 10);
 
 // Per-table cooldown so banter doesn't spam every action.

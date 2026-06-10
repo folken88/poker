@@ -109,7 +109,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
       .map(key => ({ key, name: CLASSES[key]?.name || key }))
       .sort((a, b) => a.name.localeCompare(b.name));
     const weapons = Object.values(STAPLE_BY_KEY)
-      .map(w => ({ key: w.key, name: w.name, dmg: `${w.dmgCount}d${w.dmgDie}`, prof: w.prof }));
+      .map(w => ({ key: w.key, name: w.name, dmg: `${w.dmgCount}d${w.dmgDie}`, prof: w.prof, type: w.type }));   // type S/P/B → shown in the picker (DR makes it matter)
     // Ship the proficiency map + penalty so the client can sort/colour the
     // weapon dropdown by the player's current class without a round-trip.
     ack?.({ ok: true, classes, weapons, proficiency: PROFICIENCY, profPenalty: NON_PROFICIENT_PENALTY, xpToLevel: XP_TO_LEVEL });

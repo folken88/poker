@@ -635,7 +635,8 @@ for (const kit of Object.values(KITS)) {
 const DEFAULT_KIT = KITS.fighter;
 // Classes a human may pick in the dropdown. Ranger has a kit (Danger uses it)
 // but isn't offered — its bow isn't in the staple weapon list.
-const SELECTABLE_CLASSES = ['fighter', 'barbarian', 'rogue', 'paladin', 'cleric', 'wizard', 'sorcerer', 'magus', 'inquisitor', 'bard', 'druid', 'oracle'];
+// Every class with a real kit + feat tree is pickable (Josh asked where ranger was).
+const SELECTABLE_CLASSES = ['fighter', 'barbarian', 'ranger', 'rogue', 'paladin', 'antipaladin', 'cleric', 'wizard', 'sorcerer', 'magus', 'inquisitor', 'bard', 'druid', 'oracle', 'monk', 'swashbuckler', 'gunslinger'];
 function kitFor(classKey) { return KITS[classKey] || DEFAULT_KIT; }
 const isPoolClass = (cls) => POOL_CLASSES.has(cls);
 const isCaster    = (cls) => CASTER_CLASSES.has(cls);
