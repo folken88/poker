@@ -2004,7 +2004,11 @@ class Dungeon {
       this._broadcast();
       return;
     }
-    // First see if a class ability is the smart play this turn (heal, buff,
+    // Set the Power Attack / Deadly Aim stance for this turn FIRST (free toggle):
+    // kept on for the damage, eased off against a target too well-armored to power
+    // through. Done here so the swing that follows uses the right stance.
+    this._botStance(m, foes);
+    // Then see if a class ability is the smart play this turn (heal, buff,
     // blast, spell). If so, use it; otherwise fall back to a basic attack.
     const choice = this._botAbility(m);
     if (choice) {
@@ -2028,6 +2032,37 @@ class Dungeon {
     const tgt = this._preferredFoe(m, foes);
     if (tgt) this._basicAttack(m, tgt.uid);
     this._hasteBonus(m);   // Haste: spend a pending extra attack after the action
+  }
+  // A bot's Power Attack / Deadly Aim STANCE for this turn. Default is ON (free
+  // damage, kept on across rooms). It EASES OFF against a target whose AC it can't
+  // reliably beat while powering — and powers back up once a hittable foe is up.
+  // Decision = the d20 it would need to land WHILE powering: needs 16+ (≤25%) → drop
+  // for accuracy; needs 14- (≥35%) → keep the damage; 15 is a hysteresis dead-band so
+  // it doesn't flip-flop turn to turn. Pure casters take no stance (at-will isn't a
+  // weapon), and the stance only flips when it actually changes (so no spam).
+  _botStance(m, foes) {
+    const kit = kitFor(m.cls);
+    if (((kit.atwill || {}).effect) !== 'attack') return;     // pure caster — no weapon stance
+    const ranged = this._isRanged(m);
+    const idx = kit.abilities.findIndex(a => ranged ? a.deadlyaim : a.powerattack);
+    if (idx < 0) return;
+    const on = ranged ? !!(m.buffApplied && m.buffApplied.deadlyaim)
+                      : !!(m.buffApplied && m.buffApplied.powerattack);
+    const tgt = this._preferredFoe(m, foes);
+    if (!tgt) return;
+    const weapon = m.weapon || weaponOf(m.gear, m.weaponKey);
+    const abilityMod = m.mods ? attackProfile({ mods: m.mods }, weapon).toHitMod : ABILITY_MOD;
+    const bab = babFor(m.cls || 'fighter', m.level || 1);
+    const ffHit = (fighterFeats(m.cls, m.level || 1, ranged).hit) || 0;   // Weapon Focus etc., as folded into the real swing
+    const curHit = bab + abilityMod + (weapon.toHit || 0) + ffHit + ((m.buffs && m.buffs.toHit) || 0);
+    const pen = ranged ? 2 : (m._paPen || (1 + Math.floor(bab / 4)));
+    const hitWhilePowering = on ? curHit : curHit - pen;      // m.buffs.toHit already holds −pen when the stance is on
+    const ac = (tgt.ac != null ? tgt.ac : 10);
+    const neededOn = ac - hitWhilePowering;                   // d20 needed to land while powered
+    let want = on;
+    if (neededOn >= 16) want = false;                         // too tough to power through → accuracy
+    else if (neededOn <= 14) want = true;                     // comfortably hits → take the damage
+    if (want !== on) this._useAbility(m, idx, {});            // free toggle (announces the change)
   }
   // Which foe a bot should strike. ROGUES hunt the HELPLESS (flat-footed / prone
   // / sickened / paralyzed / ASLEEP) for Sneak Attack — they'll happily stab a
@@ -2171,10 +2206,8 @@ class Dungeon {
     const fireFoes = foes.some(e => e.detonate || e.hellfire || /fire|flame|magma|salamander|phoenix/i.test(e.name));
     const protect = avail.find(a => a.protectFire);
     if (protect && fireFoes && this.livingParty().some(p => !p.protectFire)) return { slot: slot(protect), payload: {} };
-    const _weaponFighter = ((kitFor(m.cls).atwill || {}).effect === 'attack');   // melees/shoots (not a pure caster whose at-will is a cantrip)
     const buff = avail.find(a => a.effect === 'buff' && a.sticky && !a.protectFire && !buffFullyUp(a)
-      && !((a.powerattack || a.deadlyaim) && !_weaponFighter)              // pure casters keep their spell turn — never auto-toggle PA/Deadly Aim
-      && !(a.powerattack && this._isRanged(m)) && !(a.deadlyaim && !this._isRanged(m)));   // and only the toggle that fits the weapon (PA melee / Deadly Aim ranged) — never both
+      && !a.powerattack && !a.deadlyaim);   // Power Attack / Deadly Aim are managed by _botStance (default ON, eased off vs a high-AC target) — not auto-picked here
     if (buff) return { slot: slot(buff), payload: {} };
     // Invisibility — shields the most-hurt ally (it lands on the lowest-HP ally in
     // _abInvisible). Cast when an ally is badly hurt and nobody's hidden yet.
@@ -2710,6 +2743,11 @@ class Dungeon {
     m.buffs = null;          // rage / divine favor / inspire clear
     m.bane = null;           // inquisitor Bane declaration clears between rooms
     m.buffApplied = {};      // which sticky buffs are already active (no stacking)
+    // Power Attack / Deadly Aim are STANCES, not per-room buffs — silently re-assert
+    // whichever the hero left on (free, no re-announce). A bot may still ease it off
+    // mid-fight against a high-AC foe via _botStance.
+    if (m.paOn)  this._applyPowerAttack(m, true, { silent: true });
+    if (m.aimOn) this._applyDeadlyAim(m, true, { silent: true });
     m.smiteActive = false;
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
@@ -3661,45 +3699,52 @@ class Dungeon {
     if (ab.key === 'stoneskin')      return pool.filter(a => !a.dr).slice().sort((a, b) => a.hp - b.hp)[0] || pool.slice().sort((a, b) => a.hp - b.hp)[0] || m;   // least-HP ally without it
     return m;
   }
+  // ── STANCE TOGGLES (Power Attack / Deadly Aim) ──────────────────────────────
+  // Both are FREE, no-cost stances that stay on until flipped off — including ACROSS
+  // rooms (re-asserted silently by _resetAbilities). Shared helpers so the toggle,
+  // the silent room re-apply, and the bot's high-AC "ease off" decision all run the
+  // same math. on=true applies, on=false backs out exactly what was put on.
+  _applyDeadlyAim(m, on, { silent, sound } = {}) {
+    m.buffApplied = m.buffApplied || {};
+    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+    if (!on) {
+      if (!m.buffApplied.deadlyaim) return;
+      m.buffApplied.deadlyaim = false; m.aimOn = false;
+      m.buffs.toHit += 2; m.buffs.dmg -= (m._aimBonus || 0); m._aimBonus = 0;
+      if (!silent) { this._note(`🎯 ${m.nickname} eases off Deadly Aim — steadier, lighter shots for a surer hit.`, sound); this._echoToTable(sound); }
+      return;
+    }
+    if (m.buffApplied.deadlyaim) return;
+    const dmg = 2 + 2 * Math.floor(((m.level || 1) - 1) / 4);   // +2 at 1-4, +4 at 5-8, +6 at 9-12…
+    m.buffApplied.deadlyaim = true; m.aimOn = true; m._aimBonus = dmg;
+    m.buffs.toHit -= 2; m.buffs.dmg += dmg;
+    if (!silent) { this._note(`🎯 ${m.nickname} sets Deadly Aim — −2 to hit, +${dmg} damage on every shot.`, sound); this._echoToTable(sound); }
+  }
+  _applyPowerAttack(m, on, { silent, sound } = {}) {
+    m.buffApplied = m.buffApplied || {};
+    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+    if (!on) {   // back out exactly what we put on
+      if (!m.buffApplied.powerattack) return;
+      m.buffApplied.powerattack = false; m.paOn = false;
+      m.buffs.toHit += (m._paPen || 0); m.buffs.dmg -= (m._paBonus || 0);
+      m._paPen = 0; m._paBonus = 0;
+      if (!silent) { this._note(`💥 ${m.nickname} eases off Power Attack — a measured guard for a surer hit.`, sound); this._echoToTable(sound); }
+      return;
+    }
+    if (m.buffApplied.powerattack) return;
+    const w = weaponOf(m.gear, m.weaponKey);
+    const pen = 1 + Math.floor(babFor(m.cls || 'fighter', m.level || 1) / 4);   // −1 per +4 BAB
+    const bonus = Math.floor(pen * 2 * (w.cat === '2h' ? 1.5 : 1));             // +2 per −1, ×1.5 two-handed
+    m.buffApplied.powerattack = true; m.paOn = true; m._paPen = pen; m._paBonus = bonus;
+    m.buffs.toHit -= pen; m.buffs.dmg += bonus;
+    if (!silent) { this._note(`💥 ${m.nickname} hauls into Power Attack — −${pen} to hit, +${bonus} damage on every blow.`, sound); this._echoToTable(sound); }
+  }
   _abBuff(m, ab, payload) {
     const sound = ab.sound || pick(SND.flesh);
     const lvl = m.level || 1;
-    // DEADLY AIM (feat toggle) — −2 to hit for heavy bonus damage on every shot,
-    // scaling with level (+2 per +4 BAB, like PF1e).
-    if (ab.deadlyaim) {
-      m.buffApplied = m.buffApplied || {};
-      if (m.buffApplied.deadlyaim) return;
-      m.buffApplied.deadlyaim = true;
-      const dmg = 2 + 2 * Math.floor((lvl - 1) / 4);   // +2 at 1-4, +4 at 5-8, +6 at 9-12…
-      m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
-      m.buffs.toHit -= 2; m.buffs.dmg += dmg;
-      this._note(`🎯 ${m.nickname} sets Deadly Aim — −2 to hit, +${dmg} damage on every shot this room.`, sound);
-      this._echoToTable(sound);
-      return;
-    }
-    // POWER ATTACK — a FREE toggle (costs no action): trade accuracy for power
-    // (−1 to hit per +4 BAB, +2 damage per −1, ×1.5 two-handed). Flip on or off.
-    if (ab.powerattack) {
-      m.buffApplied = m.buffApplied || {};
-      m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
-      if (m.buffApplied.powerattack) {   // toggle OFF — back out exactly what we put on
-        m.buffApplied.powerattack = false;
-        m.buffs.toHit += (m._paPen || 0); m.buffs.dmg -= (m._paBonus || 0);
-        m._paPen = 0; m._paBonus = 0;
-        this._note(`💥 ${m.nickname} eases off Power Attack — back to a measured guard.`, sound);
-        this._echoToTable(sound);
-        return;
-      }
-      const w = weaponOf(m.gear, m.weaponKey);
-      const pen = 1 + Math.floor(babFor(m.cls || 'fighter', lvl) / 4);   // −1 per +4 BAB
-      const bonus = Math.floor(pen * 2 * (w.cat === '2h' ? 1.5 : 1));     // +2 per −1, ×1.5 two-handed
-      m.buffApplied.powerattack = true;
-      m._paPen = pen; m._paBonus = bonus;
-      m.buffs.toHit -= pen; m.buffs.dmg += bonus;
-      this._note(`💥 ${m.nickname} hauls into Power Attack — −${pen} to hit, +${bonus} damage on every blow.`, sound);
-      this._echoToTable(sound);
-      return;
-    }
+    // Power Attack / Deadly Aim — stance toggles; flip via the shared helpers.
+    if (ab.deadlyaim)   { this._applyDeadlyAim(m, !(m.buffApplied && m.buffApplied.deadlyaim), { sound }); return; }
+    if (ab.powerattack) { this._applyPowerAttack(m, !(m.buffApplied && m.buffApplied.powerattack), { sound }); return; }
     // RAGE — scales like PF1e (Greater at 11, Mighty at 20) and pumps Con → HP.
     if (ab.key === 'rage') {
       m.buffApplied = m.buffApplied || {};
