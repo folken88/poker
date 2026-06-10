@@ -1533,8 +1533,10 @@ class Dungeon {
     if (attacker.touchStrike > 0 && target) ac = this._enemyAC(target, { touch: true });
     // Fly / Overland Flight (magus) — a flyer can melee airborne foes (no high-ground gap).
     if (attacker.canHitFlyers && attacker.flying && target && target.flying) ac -= HIGH_GROUND_AC;
-    // Point Blank Shot: any ranged feat-class gets +1 to hit & damage with a bow/crossbow.
-    const pbs = (weapon && weapon.ranged) ? (fighterFeats(cls, lvl, true).pbs || 0) : 0;
+    // Point Blank Shot: +1 to hit & damage with a bow/crossbow, but ONLY against a
+    // foe that has closed to melee — i.e. one that has struck an ally this room
+    // (_engagedAlly). A distant/untouched foe is out of point-blank range.
+    const pbs = (weapon && weapon.ranged && target && target._engagedAlly) ? (fighterFeats(cls, lvl, true).pbs || 0) : 0;
     // Smite Evil: an ACTIVATED smite (paladin's ability) vs an evil foe adds a
     // to-hit bump + bonus (un-multiplied) damage equal to level.
     const smite = !!(attacker.smiteActive && target && (target.evil || target.markedEvil));   // Detect Evil marks neutral foes smite-able
@@ -1573,14 +1575,20 @@ class Dungeon {
     const swashWF = swashFin ? 1 : 0;
     const swashSpec = (swashFin && lvl >= 4) ? 2 : 0;
     const preciseDmg = (swashFin && lvl >= 3) ? lvl : 0;   // Precise Strike: +swashbuckler level
-    const toHit = bab + ABILITY_MOD + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit + swashWF;
+    // Real PF1 ability mods: to-hit from STR (or DEX for a finesse/ranged weapon),
+    // damage from STR ×1 / ×1.5 two-handed / ×0.5 off-hand (or DEX). Falls back to
+    // the legacy +4 if a member has no derived mods yet. Replaces the ABILITY_MOD
+    // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
+    // now carry high-level scaling — see the iterative loop in _playerAttack).
+    const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };
+    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit + swashWF;
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
     // Damage = weapon dice (NdX) + enhancement + ½ level + ability mod + buff dmg (+ Point Blank).
     const judgDmg = attacker.judgment === 'destruction' ? Math.max(1, Math.floor(lvl / 3)) : 0;   // inquisitor Judgement: Destruction
-    const flatDmg = Math.floor(lvl / 2) + ABILITY_MOD + (buff.dmg || 0) + (baneOn ? BANE_DMG : 0) + pbs + judgDmg + ff.dmg + swashSpec + arcEnhDelta;
+    const flatDmg = _ap.dmgBonus + (buff.dmg || 0) + (baneOn ? BANE_DMG : 0) + pbs + judgDmg + ff.dmg + swashSpec + arcEnhDelta;
     // Natural attacks (a druid's claws/bite) grow their DICE with the wielder's SIZE
     // (the bigger combat forms enlarge them) and with Improved Natural Weapon — both
     // step the dice up the PF1 size table (1d6→1d8→2d6→…), stacking.
@@ -1596,7 +1604,7 @@ class Dungeon {
     const impCrit = ff.impCrit || (swashFin && lvl >= 5) || arcKeen;   // fighter / swashbuckler / magus arcane-pool keen (don't stack)
     const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
     const critFocus = ff.critFocus ? 4 : 0;
-    if (roll >= effCritRange) { const conf = dRoll(20) + bab + ABILITY_MOD + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
+    if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
     // Precision (sneak / swashbuckler Precise Strike), smite, and bane dice ride on
     // top — NOT multiplied by a crit.
     let sneakDmg = 0;
@@ -1717,6 +1725,7 @@ class Dungeon {
       }
       // Mirror Image / Displacement — a decoy soaks, or the blurred form is missed.
       if (this._evadeIncoming(target, e)) { this._echoToTable(r.sound); return; }
+      e._engagedAlly = true;   // a melee foe that has struck an ally → within Point Blank Shot range this room
       let dmg = r.damage, sneakTag = '';
       // Enemy Sneak Attack (goblin/kobold rogues): +Xd6 vs a hero who's denied
       // their defenses — flat-footed (hasn't acted yet) or HELD by a shaman.
