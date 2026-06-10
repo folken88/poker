@@ -1198,6 +1198,13 @@
           `<div class="dungeon__actrow dungeon__actrow--abilities" role="group" aria-label="Combat actions">` +
             `<h2 class="sr-only">Combat actions</h2>` +
             B('attack', atName, myTurn, combat) +
+            // Caster cantrip ELEMENT selector (cold/acid/electricity, + the class's
+            // own if distinct) — free, clickable any time, current pick highlighted.
+            // Blind: the C key cycles the same choices.
+            (me.cantrip ? `<span class="dungeon__cantrips" role="group" aria-label="At-will cantrip element (C cycles)">` +
+              me.cantrip.choices.map(c =>
+                `<button class="btn ${c.key === me.cantrip.current ? 'btn--primary' : 'btn--ghost'}" data-dact="cantrip" data-cankey="${escapeAttr(c.key)}" aria-pressed="${c.key === me.cantrip.current}" title="${escapeAttr(c.name)} — your at-will ray deals ${escapeAttr(c.dtype)} (free to switch, any time)">${c.icon}</button>`
+              ).join('') + `</span>` : '') +
             abilHtml +
           `</div>` +
           `<div class="dungeon__actrow dungeon__actrow--nav" role="group" aria-label="Navigation and session controls">` +
@@ -1299,6 +1306,7 @@
       }
       dungeonAction('ability', payload); _spellbookOpen = false;
     }
+    else if (act === 'cantrip') dungeonAction('cantrip', { key: b.dataset.cankey });   // switch at-will element — free, any time
     else if (act === 'door')    dungeonAction('door');
     else if (act === 'bail')    dungeonAction('bail');
     else if (act === 'join')    enterDungeon();        // spectator → combatant
@@ -1575,6 +1583,19 @@
         _dunTarget = null;   // never leave a stale pending action behind this path
         if (myTurn) { _dunQueuedAttack = null; sayU(`Attacking ${en.name}.`); dungeonAction('attack', { targetUid: en.uid }); }
         else { _dunQueuedAttack = en.uid; sayU(`${en.name} locked as your target — you'll attack it on your turn.`); }
+        return;
+      }
+      // C = Cantrip: cycle your at-will ray's element (cold → acid → electricity →
+      // …) — a free action, any time. Casters only; announces the new element.
+      if (k === 'c') {
+        e.preventDefault();
+        if (_blindHelp) { window.BlindMode.speak('C: switch your cantrip element.', 'urgent'); return; }
+        const ct = meM.cantrip;
+        if (!ct || !(ct.choices || []).length) { window.BlindMode.speak('You have no cantrip to switch.', 'urgent'); return; }
+        const idx = ct.choices.findIndex(x => x.key === ct.current);
+        const next = ct.choices[(idx + 1) % ct.choices.length];
+        window.BlindMode.speak(`Cantrip: ${next.name}, ${next.dtype}.`, 'urgent');
+        dungeonAction('cantrip', { key: next.key });
         return;
       }
       // M = Money: the gold this run has piled up so far (the run pool), plus depth.

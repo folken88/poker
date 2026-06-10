@@ -176,6 +176,9 @@ button, input { font: inherit; color: inherit; }
 .dungeon__actions { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; }
 .dungeon__actrow { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
 .dungeon__actstatus { min-height: 1.2em; color: var(--ivory-dim); font-style: italic; font-size: 0.85rem; }
+/* Caster at-will element picker — a tight little ❄️🟢⚡ cluster beside Attack. */
+.dungeon__cantrips { display: inline-flex; gap: 2px; margin: 0 4px; vertical-align: middle; }
+.dungeon__cantrips .btn { padding: 0.25rem 0.45rem; line-height: 1; }
 .dungeon__actions .is-cooling { opacity: 0.5; }
 /* Per-room ability use counter inside an action button (e.g. "2/3"). */
 .dungeon__uses { font-size: 0.72em; opacity: 0.85; font-variant-numeric: tabular-nums; }
