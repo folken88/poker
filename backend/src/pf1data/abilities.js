@@ -558,19 +558,29 @@ KITS.oracle.abilities = [
   spontaneousSpell(SPELL.firesnake, 10),
 ];
 
-// ── Power Attack (melee) + Deadly Aim (ranged) on EVERY martial class, from L1 ──
-// Both are FREE −hit/+damage toggles (see Dungeon._abBuff). A character uses
-// whichever matches their weapon; the dungeon AI only ever throws on the matching
-// one (see the weapon-aware buff pick in _botAbility). Added here uniformly so all
-// martials get them early; classes without their own kit (monk, antipaladin) pick
-// them up via the fighter DEFAULT_KIT.
+// ── Power Attack (melee) + Deadly Aim (ranged) on EVERY class, free, from L1 ──
+// House rule to empower martials & hybrids: both are FREE −hit/+damage toggles (see
+// Dungeon._abBuff). A character uses whichever matches their weapon; the dungeon AI
+// only auto-throws the matching one AND only for weapon-fighters (pure casters never
+// auto-toggle — they'd waste the turn on a basic attack instead of a spell; see the
+// weapon-aware buff pick in _botAbility). Granted to every kit; classes without their
+// own kit (monk, antipaladin) pick them up via the fighter DEFAULT_KIT. Casters get
+// them too (a human caster may toggle if they choose to swing a weapon).
 const _POWER_ATTACK = { key: 'powerattack', name: 'Power Attack', icon: '💥', cost: 'free', freeAction: true, effect: 'buff', target: 'self', powerattack: true, sticky: true, minLevel: 1, sound: S.rage, desc: 'A FREE toggle — trade accuracy for power with a MELEE weapon: −1 to hit per +4 BAB, +2 damage each (×1.5 two-handed). Flip on or off without spending your turn.' };
 const _DEADLY_AIM  = { key: 'deadlyaim',  name: 'Deadly Aim',  icon: '🎯', cost: 'free', freeAction: true, effect: 'buff', target: 'self', deadlyaim: true,  sticky: true, minLevel: 1, sound: S.bow,  desc: 'A FREE toggle — the ranged Power Attack: with a bow, crossbow or firearm, trade −2 to hit for heavy bonus damage every shot (scales with level).' };
-for (const _cls of ['fighter', 'barbarian', 'paladin', 'magus', 'ranger', 'inquisitor', 'rogue', 'swashbuckler', 'cleric']) {
-  const _kit = KITS[_cls];
+for (const _kit of Object.values(KITS)) {
   if (!_kit || !_kit.abilities) continue;
   _kit.abilities = _kit.abilities.filter(a => a.key !== 'powerattack' && a.key !== 'deadlyaim');
   _kit.abilities.unshift({ ..._DEADLY_AIM }, { ..._POWER_ATTACK });   // both, available from level 1
+}
+// Wizards & sorcerers get Scribe Scroll + Eschew Materials free (the caster "tax"
+// feats), so their feat budget goes straight to Spell Focus / metamagic. Neither has
+// a dungeon-combat effect (no component tracking here — spells already cast freely),
+// so they're surfaced as flavor on the kit note rather than wired into combat math.
+for (const _ck of ['wizard', 'sorcerer']) {
+  const _k = KITS[_ck]; if (!_k) continue;
+  _k.freeFeats = ['Scribe Scroll', 'Eschew Materials'];
+  _k.note = (_k.note ? _k.note + ' ' : '') + 'Free feats: Scribe Scroll & Eschew Materials.';
 }
 
 // Spell/ability art (PF1 stock icons copied into public/icons/spells/). Keyed

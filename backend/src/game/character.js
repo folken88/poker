@@ -90,13 +90,22 @@ function attackProfile(derived, weapon, opts = {}) {
     return { attackStat: derived.castingAbility, toHitMod: derived.castingMod, dmgBonus: derived.castingMod, twoHanded: false, ranged: true, finesse: false, cantrip: true };
   }
   const wc = weaponClass(weapon);
-  const attackStat = (wc.ranged || wc.finesse) ? 'dex' : 'str';
-  const m = mods[attackStat] || 0;
+  // HOUSE RULE: every class has Weapon Finesse + Slashing/Fencing Grace for free, so
+  // any ONE-HANDED, light, or natural melee weapon may swing off the BETTER of STR or
+  // DEX — for BOTH to-hit and damage. We take the higher mod so this never nerfs a STR
+  // build, only lets a DEX (finesse) build hit & hurt with its weapon. Two-handed
+  // weapons stay pure STR (Grace is one-handed only, and a 2h STR build already enjoys
+  // ×1.5). Ranged stays DEX. (weaponClass.finesse is now moot for stat choice.)
+  const s = mods.str || 0, d = mods.dex || 0;
+  let attackStat, m, dexMelee = false;
+  if (wc.ranged)         { attackStat = 'dex'; m = d; }
+  else if (wc.twoHanded) { attackStat = 'str'; m = s; }
+  else                   { dexMelee = d >= s; attackStat = dexMelee ? 'dex' : 'str'; m = dexMelee ? d : s; }
   let mult = wc.twoHanded ? 1.5 : 1.0;
   if (opts.offHand) mult = 0.5;            // off-hand swing of a two-weapon fighter
   // Ranged weapons here get the house-rule DEX-to-damage at x1 (no 1.5/0.5).
   const dmgBonus = wc.ranged ? m : scaleMod(m, mult);
-  return { attackStat, toHitMod: m, dmgBonus, twoHanded: wc.twoHanded, ranged: wc.ranged, finesse: wc.finesse };
+  return { attackStat, toHitMod: m, dmgBonus, twoHanded: wc.twoHanded, ranged: wc.ranged, finesse: dexMelee };
 }
 
 module.exports = { deriveCharacter, attackProfile, weaponClass, iterativeOffsets };

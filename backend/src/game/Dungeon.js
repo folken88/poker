@@ -2171,8 +2171,10 @@ class Dungeon {
     const fireFoes = foes.some(e => e.detonate || e.hellfire || /fire|flame|magma|salamander|phoenix/i.test(e.name));
     const protect = avail.find(a => a.protectFire);
     if (protect && fireFoes && this.livingParty().some(p => !p.protectFire)) return { slot: slot(protect), payload: {} };
+    const _weaponFighter = ((kitFor(m.cls).atwill || {}).effect === 'attack');   // melees/shoots (not a pure caster whose at-will is a cantrip)
     const buff = avail.find(a => a.effect === 'buff' && a.sticky && !a.protectFire && !buffFullyUp(a)
-      && !(a.powerattack && this._isRanged(m)) && !(a.deadlyaim && !this._isRanged(m)));   // only the toggle that fits the weapon (PA melee / Deadly Aim ranged) — never both
+      && !((a.powerattack || a.deadlyaim) && !_weaponFighter)              // pure casters keep their spell turn — never auto-toggle PA/Deadly Aim
+      && !(a.powerattack && this._isRanged(m)) && !(a.deadlyaim && !this._isRanged(m)));   // and only the toggle that fits the weapon (PA melee / Deadly Aim ranged) — never both
     if (buff) return { slot: slot(buff), payload: {} };
     // Invisibility — shields the most-hurt ally (it lands on the lowest-HP ally in
     // _abInvisible). Cast when an ally is badly hurt and nobody's hidden yet.
