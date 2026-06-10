@@ -142,4 +142,55 @@ function saveFor(classKey, which, level) {
   return c[which] === 'good' ? Math.floor(lvl / 2) + 2 : Math.floor(lvl / 3);
 }
 
-module.exports = { CLASSES, DEFAULT_CLASS, babFor, saveFor, PROFICIENCY, NON_PROFICIENT_PENALTY, weaponProficient, EXOTIC_ONEHAND_FREE };
+// ── Ability-score metadata (PF1 ability-priority builds) ────────────────────
+// Each class supplies a DEFAULT ability PRIORITY (the order the 25-pt allocator
+// spends 17/14/14/12 down — see pf1data/abilityScores.js), the class's CASTING
+// ability (null for non-casters; a caster's stat must land at priority 1 or 2),
+// and the ASI pattern cycled at every-4-levels increases (single-key classes
+// bump one stat; MAD classes alternate two). Named characters override these in
+// pf1data/characterProfiles.js (e.g. a finesse-weapon fighter leads with DEX).
+const CASTING_ABILITY = {
+  wizard: 'int', magus: 'int', arcanist: 'int', witch: 'int', alchemist: 'int', investigator: 'int', occultist: 'int',
+  sorcerer: 'cha', bard: 'cha', paladin: 'cha', antipaladin: 'cha', oracle: 'cha', summoner: 'cha', skald: 'cha', bloodrager: 'cha', mesmerist: 'cha', psychic: 'cha', medium: 'cha',
+  cleric: 'wis', druid: 'wis', ranger: 'wis', inquisitor: 'wis', warpriest: 'wis', hunter: 'wis', shaman: 'wis', spiritualist: 'wis',
+  // martials & non-casters → null (kineticist uses CON for its blasts):
+  kineticist: 'con',
+};
+const ABILITY_PRIORITY = {
+  fighter:    ['str', 'con', 'dex', 'wis'],
+  barbarian:  ['str', 'con', 'dex', 'wis'],
+  paladin:    ['str', 'cha', 'con', 'dex'],
+  antipaladin:['str', 'cha', 'con', 'dex'],
+  ranger:     ['dex', 'str', 'con', 'wis'],   // archer default (melee rangers override)
+  rogue:      ['dex', 'cha', 'con', 'wis'],
+  monk:       ['dex', 'wis', 'con', 'str'],
+  cleric:     ['wis', 'str', 'con', 'dex'],    // melee default (ranged clerics override → dex)
+  druid:      ['wis', 'con', 'dex', 'str'],
+  wizard:     ['int', 'dex', 'con', 'wis'],
+  sorcerer:   ['cha', 'dex', 'con', 'wis'],
+  bard:       ['cha', 'dex', 'con', 'wis'],
+  magus:      ['str', 'int', 'con', 'dex'],    // gish: STR melee + INT casting (INT at P2)
+  inquisitor: ['wis', 'str', 'con', 'dex'],
+  oracle:     ['cha', 'con', 'dex', 'str'],
+  swashbuckler: ['dex', 'cha', 'con', 'wis'],  // finesse + panache (CHA)
+  investigator: ['int', 'dex', 'con', 'wis'],  // studied combat (INT)
+};
+const ASI_PATTERN = {
+  fighter: ['str'], barbarian: ['str'], rogue: ['dex'], wizard: ['int'], sorcerer: ['cha'], druid: ['wis'],
+  bard: ['cha', 'dex'],   // gish duelist — CHA casting + DEX finesse rapier (MAD spread)
+  paladin: ['str', 'cha'], antipaladin: ['str', 'cha'], ranger: ['dex', 'str'], monk: ['dex', 'wis'],
+  cleric: ['wis', 'str'], magus: ['str', 'int'], inquisitor: ['wis', 'str'], oracle: ['cha', 'con'],
+  swashbuckler: ['dex', 'cha'], investigator: ['int', 'dex'],   // two-stat (MAD) — keep the 17/14/14/12 spread
+};
+
+/** The class's casting ability ('int'|'wis'|'cha'|'con') or null for non-casters. */
+function castingAbilityFor(classKey) { return CASTING_ABILITY[classKey] || null; }
+/** The class's DEFAULT ability priority order (used when a character has no override). */
+function abilityPriorityFor(classKey) { return ABILITY_PRIORITY[classKey] || ['str', 'con', 'dex', 'wis']; }
+/** The class's ASI pattern (cycled at every-4-levels). Defaults to the primary stat. */
+function asiPatternFor(classKey) { return ASI_PATTERN[classKey] || [abilityPriorityFor(classKey)[0]]; }
+
+module.exports = {
+  CLASSES, DEFAULT_CLASS, babFor, saveFor, PROFICIENCY, NON_PROFICIENT_PENALTY, weaponProficient, EXOTIC_ONEHAND_FREE,
+  CASTING_ABILITY, ABILITY_PRIORITY, ASI_PATTERN, castingAbilityFor, abilityPriorityFor, asiPatternFor,
+};

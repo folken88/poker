@@ -207,9 +207,19 @@ const spontaneousSpell = (spell, minLevel) => ({ ...spell, cost: 'slot', minLeve
 // Wizard/Sorcerer at-will is NOT a weapon swing — it's an Elemental Ray: an
 // unlimited ranged touch attack for 1d6+4 (cold). Used in the dungeon AND for
 // poker-table harassment. (Ice-punch sound.)
-const RAY_OF_FROST = { key: 'rayoffrost', name: 'Ray of Frost', icon: '❄️', effect: 'bolt', target: 'enemy', die: 6, dice: 1, flat: 4, dtype: 'cold', sound: S.frost, desc: 'Elemental Ray — a ranged touch attack for 1d6+4 cold (unlimited).' };
-// Flame-oracle at-will — the fiery counterpart to Ray of Frost (Produce Flame).
-const PRODUCE_FLAME = { key: 'produceflame', name: 'Produce Flame', icon: '🔥', effect: 'bolt', target: 'enemy', die: 6, dice: 1, flat: 4, dtype: 'fire', sound: S.fire, desc: 'Produce Flame — a flickering flame hurled at a foe for 1d6+4 fire (ranged touch, unlimited).' };
+// At-will CANTRIPS — a caster's unlimited ranged-touch attack. The caster CHOOSES
+// among them (cold / acid / electricity); each uses the improved model: casting
+// stat to-hit AND to-damage (1d6 + casting mod), with BAB-based iterative attacks
+// (see Dungeon._abCantrip). cantrip:true flags the improved path.
+const RAY_OF_FROST = { key: 'rayoffrost', name: 'Ray of Frost', icon: '❄️', effect: 'bolt', target: 'enemy', die: 6, dice: 1, dtype: 'cold', sound: S.frost, cantrip: true, desc: 'At-will ranged touch — 1d6 + casting mod COLD (iterates with BAB).' };
+const ACID_SPLASH  = { key: 'acidsplash', name: 'Acid Splash', icon: '🟢', effect: 'bolt', target: 'enemy', die: 6, dice: 1, dtype: 'acid', sound: '/audio/spell_acidsplash.mp3', cantrip: true, desc: 'At-will ranged touch — 1d6 + casting mod ACID (iterates with BAB).' };
+const JOLT         = { key: 'jolt', name: 'Jolt', icon: '⚡', effect: 'bolt', target: 'enemy', die: 6, dice: 1, dtype: 'electricity', sound: '/audio/spell_jolt.mp3', cantrip: true, desc: 'At-will ranged touch — 1d6 + casting mod ELECTRICITY (iterates with BAB).' };
+// Flame-oracle at-will — the fiery counterpart (Produce Flame); a 4th cantrip kept
+// for flame casters (Elfrip) on top of the universal three.
+const PRODUCE_FLAME = { key: 'produceflame', name: 'Produce Flame', icon: '🔥', effect: 'bolt', target: 'enemy', die: 6, dice: 1, dtype: 'fire', sound: S.fire, cantrip: true, desc: 'At-will ranged touch — 1d6 + casting mod FIRE (iterates with BAB).' };
+// The universal cantrip choices every caster picks among (cold / acid / electricity).
+const CANTRIPS = [RAY_OF_FROST, ACID_SPLASH, JOLT];
+const CANTRIP_BY_KEY = { rayoffrost: RAY_OF_FROST, acidsplash: ACID_SPLASH, jolt: JOLT, produceflame: PRODUCE_FLAME };
 
 const KITS = {
   // ── Martials (conditional maneuvers) ──
@@ -587,6 +597,7 @@ const isCaster    = (cls) => CASTER_CLASSES.has(cls);
 
 module.exports = {
   KITS, SPELL, DEFAULT_KIT, SELECTABLE_CLASSES, CASTER_CLASSES, SPONTANEOUS_CLASSES, SLVL_BY_KEY,
+  CANTRIPS, CANTRIP_BY_KEY,
   kitFor, isPoolClass, isCaster, isSpontaneous, imgFor,
   spellSlots, spontaneousSlots, slotsFor, roomUses, diceCount, channelUses, smiteUses,
 };

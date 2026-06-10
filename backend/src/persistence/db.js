@@ -12,7 +12,8 @@ const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 const { CLASSES } = require('../pf1data/classes');
-const { STAPLE_BY_KEY } = require('../pf1data/staples');
+const { STAPLE_BY_KEY, WEAPON_LOOKUP, DEFAULT_WEAPON } = require('../pf1data/staples');
+const abilityProfiles = require('../pf1data/characterProfiles');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data');
 const DB_PATH  = process.env.DB_PATH  || path.join(DATA_DIR, 'poker.db');
@@ -82,6 +83,12 @@ ensureColumn('players', 'crowned', 'INTEGER NOT NULL DEFAULT 0');
 // played: switching class shows THAT class's level (start at 1 if new), switching
 // back restores the prior class's XP. JSON map { <class>: xp }. Gear is unaffected.
 ensureColumn('players', 'class_xp', "TEXT NOT NULL DEFAULT '{}'");
+// PF1 ABILITY SCORES — a per-class map { <class>: {str,dex,con,int,wis,cha} } of
+// the character's BASE 25-point array (pre-race, pre-ASI), MIRRORING class_xp:
+// each class a player tries gets its own build (a wizard is INT, a barbarian is
+// STR). Seeded lazily from the character's class + chosen weapon via
+// pf1data/characterProfiles (finesse/ranged ⇒ DEX). Editable per-class later.
+ensureColumn('players', 'ability_scores', "TEXT NOT NULL DEFAULT '{}'");
 // One-time backfill: fold any legacy single `experience` into the per-class map.
 try {
   const _bf = db.prepare("SELECT player_id, class, experience FROM players WHERE experience > 0 AND (class_xp IS NULL OR class_xp = '{}')").all();
@@ -562,6 +569,9 @@ const _setWeaponStmt = db.prepare('UPDATE players SET weapon = ? WHERE player_id
 function setWeapon(playerId, weapon) {
   if (!STAPLE_BY_KEY[weapon]) return;
   _setWeaponStmt.run(weapon, playerId);
+  // The build follows the weapon (greatsword = STR, rapier = finesse/DEX), so drop
+  // the derived ability-score cache — it re-derives with the new weapon on next read.
+  try { db.prepare("UPDATE players SET ability_scores = '{}' WHERE player_id = ?").run(playerId); } catch (_) {}
 }
 function getSwords(playerId) {
   const p = stmts.getPlayer.get(playerId);
@@ -591,6 +601,40 @@ function getGear(playerId) {
 function setGear(playerId, gear) {
   const json = JSON.stringify(gear || {});
   db.prepare('UPDATE players SET gear = ? WHERE player_id = ?').run(json, playerId);
+}
+
+// ---- PF1 ability scores (base 25-pt array, per class — see ability_scores col) ----
+const _STD_SCORES = { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 };
+const _resolveWeapon = (key) => WEAPON_LOOKUP[key] || STAPLE_BY_KEY[DEFAULT_WEAPON];
+/** Compute a player's default base ability array for a class from their build
+ *  (class + chosen weapon + name overrides). Pure; does not persist. */
+function defaultAbilityScores(p, cls) {
+  const klass = cls || p.class || 'fighter';
+  return abilityProfiles.seedScores(p.nickname || p.player_id, klass, _resolveWeapon(p.weapon));
+}
+/** A player's base ability array for their CURRENT class (or `cls`), seeding +
+ *  caching it in the per-class map on first access (mirrors class_xp). */
+function getAbilityScores(playerId, cls) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return { ..._STD_SCORES };
+  const klass = cls || p.class || 'fighter';
+  let map = {};
+  try { map = JSON.parse(p.ability_scores || '{}') || {}; } catch { map = {}; }
+  if (map[klass] && Number.isFinite(map[klass].str)) return map[klass];
+  const arr = defaultAbilityScores(p, klass);
+  map[klass] = arr;
+  try { db.prepare('UPDATE players SET ability_scores = ? WHERE player_id = ?').run(JSON.stringify(map), playerId); } catch (_) {}
+  return arr;
+}
+/** Set a player's base ability array for a class (the future editor's write path). */
+function setAbilityScores(playerId, cls, scores) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return;
+  const klass = cls || p.class || 'fighter';
+  let map = {};
+  try { map = JSON.parse(p.ability_scores || '{}') || {}; } catch { map = {}; }
+  map[klass] = scores || { ..._STD_SCORES };
+  db.prepare('UPDATE players SET ability_scores = ? WHERE player_id = ?').run(JSON.stringify(map), playerId);
 }
 
 // ---- Experience / leveling API (PF1 medium track — see pf1data/xp.js) ----
@@ -672,6 +716,9 @@ module.exports = {
   gearIsLootLord,
   getGear,
   setGear,
+  getAbilityScores,
+  setAbilityScores,
+  defaultAbilityScores,
   getXp,
   setXp,
   addXp,
