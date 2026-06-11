@@ -1343,14 +1343,15 @@ class Table {
    *  still pay blinds and call modest bets after the purchase. */
   _planBotGearPurchase(seat) {
     const RESERVE = db.DEFAULT_STACK;     // 5,000 — hard floor (solvency + bottom of the comfort band)
-    const COMFORT_CEIL = 15000;           // bots are comfy holding 5k-15k; the itch to buy grows toward 15k
+    const COMFORT_CEIL = 50000;           // bots are comfy holding 5k-50k; the itch to buy only grows strong toward 50k
     const available = seat.chipsAtTable - RESERVE;
     if (available <= 0) return null;
 
-    // Buy-eagerness rises CONVEXLY with the stack: ~0 in the low-mid band, near
-    // certain at 15k, and pinned at 1 above it (spend the excess down). So bots
-    // sit comfortably on 5k-15k and only think hard about gear as they approach /
-    // exceed 15k, instead of draining straight to the reserve every hand.
+    // Buy-eagerness rises CONVEXLY with the stack: ~0 in the low band, a modest
+    // occasional itch through the mid band (~5% at 15k, ~20% at 25k), near certain
+    // at 50k, and pinned at 1 above it (spend the excess down). So bots PREFER to
+    // accrue a real cushion (20k-50k is a fine place to sit), buying gear only
+    // occasionally on the climb instead of draining straight to the reserve.
     const eagerness = Math.min(1, (available / (COMFORT_CEIL - RESERVE)) ** 2);
     if (Math.random() > eagerness) return null;
 
