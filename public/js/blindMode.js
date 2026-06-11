@@ -1257,14 +1257,20 @@
       if (st.depth === 0) speak('You enter the dungeon. Say open to descend, or bail to leave.', 'event');
       else { const ne = (st.enemies || []).filter(e => e.alive).length; speak(`Room ${st.depth}. ${ne} ${ne === 1 ? 'enemy' : 'enemies'}. Press E to inspect them.`, 'event'); }
     }
-    // New combat-log lines (results) — speak the freshest, stripped of emoji.
+    // New combat-log lines (results) — speak EVERY fresh line, oldest first,
+    // stripped of emoji. (The old `.slice(-2)` kept only the newest two, so a
+    // multi-line turn — cleave hit + Haste blur + Haste hit — dropped the actual
+    // attack result and Josh heard only his bonus swing: "I can't attack".)
+    // Cap a reconnect/rejoin backlog so the narrator can't flood for a minute.
     if (Array.isArray(st.log) && st.log.length) {
       const fresh = st.log.filter(e => e.t > _dun.logT);
       if (fresh.length) {
         _dun.logT = Math.max(_dun.logT, ...st.log.map(e => e.t));
+        const toSay = fresh.length > 8 ? fresh.slice(-8) : fresh;
+        if (toSay.length < fresh.length) speak(`Skipping ${fresh.length - toSay.length} earlier lines.`, 'event');
         // Skip VOICED banter — the 11labs character voice already says it out loud,
         // so reading it again would be the narrator doing double duty (Josh's ask).
-        for (const e of fresh.slice(-2)) { if (e.voiced) continue; const t = _stripGlyphs(e.text); if (t) speak(t, 'event'); }
+        for (const e of toSay) { if (e.voiced) continue; const t = _stripGlyphs(e.text); if (t) speak(t, 'event'); }
       }
     }
     // Turn changes.
