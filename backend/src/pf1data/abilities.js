@@ -130,7 +130,7 @@ const S = {
   entangle: '/audio/spell_entangle.mp3',       // druid Entangle
   slow: '/audio/spell_slow.mp3',               // Slow (the Evil Morty theme)
   glitter: '/audio/40mm_glitter_grenade_sound_effect.mp3',   // Glitterdust (blinding sparkle)
-  chainlight: '/audio/thunderclap_slow.mp3',                 // Chain Lightning (slow thunderclap)
+  chainlight: '/audio/wizard_lightningbolt_hetfield_metallica_james.mp3',   // Chain Lightning (Foundry SFX — Hetfield lightning bolt)
 };
 // Sound POOLS — abilities with `sounds: [...]` pick one at random per cast, so a
 // repeated spell doesn't drone the same clip (Fireball / Lightning Bolt / Haste).
