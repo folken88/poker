@@ -160,6 +160,12 @@ function registerLobbyHandlers(io, socket, { tables }) {
       table.chat('rebuy', humanRebuyMessage(refreshed.nickname, db.DEFAULT_STACK));
       table._broadcast?.();
     }
+    // Meyanda: record human borrowing in the family poker log (humans only —
+    // bot personas don't carry an Abadar ledger worth broadcasting).
+    if (!refreshed.is_bot) {
+      try { require('../discord/meyanda').onDebtEvent({ nickname: refreshed.nickname, kind: 'borrow', amount: db.DEFAULT_STACK, debtNow: refreshed.rebuy_debt }); }
+      catch (e) { console.error('[meyanda]', e.message); }
+    }
     io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, chips: refreshed.chips, rebuyDebt: refreshed.rebuy_debt });
   });
@@ -187,6 +193,11 @@ function registerLobbyHandlers(io, socket, { tables }) {
         : ' Debt cleared — Abadar smiles on you.';
       table.chat('debt', `💸 ${refreshed.nickname} paid down ${amt.toLocaleString()} gp of debt.${owesLine}`);
       table._broadcast?.();
+    }
+    // Meyanda: record human repayment (and full settlements) in the poker log.
+    if (!refreshed.is_bot) {
+      try { require('../discord/meyanda').onDebtEvent({ nickname: refreshed.nickname, kind: 'repay', amount: amt, debtNow: refreshed.rebuy_debt }); }
+      catch (e) { console.error('[meyanda]', e.message); }
     }
     io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, chips: refreshed.chips, rebuyDebt: refreshed.rebuy_debt });

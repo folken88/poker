@@ -94,6 +94,20 @@ function onHandLogged({ hand, botByPlayer }) {
   } catch (e) { console.error('[meyanda]', e.message); }
 }
 
+/** Human debt events for the poker log — a borrow from, or a repayment to,
+ *  the First Bank of Abadar. Callers gate on !is_bot (human ledger only). */
+function onDebtEvent({ nickname, kind, amount, debtNow }) {
+  try {
+    if (!cfg.enabled) return;
+    const line = kind === 'borrow'
+      ? `🏦 ${nickname} borrowed ${gp(amount)} from the Bank of Abadar — debt now ${gp(debtNow)}.`
+      : (debtNow > 0
+        ? `💸 ${nickname} paid ${gp(amount)} toward their tab — ${gp(debtNow)} still owed.`
+        : `✅ ${nickname} settled their debt in full (${gp(amount)} paid). The ledger smiles.`);
+    post(line).catch(e => console.error('[meyanda]', e.message));
+  } catch (e) { console.error('[meyanda]', e.message); }
+}
+
 function readJsonl(file, sinceMs) {
   try {
     return fs.readFileSync(file, 'utf8').split('\n').filter(Boolean)
@@ -230,4 +244,4 @@ function start() {
   armDaily();
 }
 
-module.exports = { start, onHandLogged, dailyReport, post, loadCfg };
+module.exports = { start, onHandLogged, onDebtEvent, dailyReport, post, loadCfg };
