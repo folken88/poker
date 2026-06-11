@@ -102,41 +102,102 @@ function readJsonl(file, sinceMs) {
   } catch (_) { return []; }
 }
 
-/** The 11am stat breakdown. Defaults to HUMAN-INVOLVED hands (≥1 human-driven
- *  seat) per the house rule; bots-only volume gets one parenthetical. */
+const gp = (n) => `${Math.round(n).toLocaleString()} gp`;
+const signedGp = (n) => `${n >= 0 ? '+' : '−'}${gp(Math.abs(n))}`;
+const chiDate = (d) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', weekday: 'long', month: 'long', day: 'numeric' }).format(d);
+
+/** Net gp per human-driven player across a set of hand rows → ranked array. */
+function humanNets(rows) {
+  const net = new Map();
+  for (const r of rows) for (const p of (r.players || [])) {
+    if (p.bot !== false) continue;   // human-driven seats only
+    const won = (r.winners || []).filter(w => w.playerId === p.playerId).reduce((s, w) => s + (w.amount || 0), 0);
+    const e = net.get(p.playerId) || { nick: p.nickname, net: 0, hands: 0 };
+    e.net += won - (p.totalIn || 0); e.hands++; e.nick = p.nickname;
+    net.set(p.playerId, e);
+  }
+  return [...net.values()].sort((a, b) => b.net - a.net);
+}
+
+/** The 11am stat breakdown. Hand stats default to HUMAN-INVOLVED hands (≥1
+ *  human-driven seat). A quiet day (no human hands in 24h) swaps the daily
+ *  section for a HISTORICAL one from the full archive. Every report carries
+ *  current standings (leaders & losers) + all-time Hall of Records lines. */
 function dailyReport() {
   const since = Date.now() - 24 * 3600 * 1000;
-  const all = readJsonl(HAND_LOG, since);
-  const hands = all.filter(r => (r.players || []).some(p => p.bot === false));
-  const dateStr = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
-  const lines = [`📊 Daily poker report — ${dateStr}`];
-  if (!hands.length) {
-    lines.push('No human hands in the last day. The table sits patient, fully charged.');
-  } else {
-    lines.push(`Hands with humans: ${hands.length}${all.length > hands.length ? ` (the bots played ${all.length - hands.length} more on their own)` : ''}`);
+  const allRows = readJsonl(HAND_LOG);                                          // full archive, one read
+  const humanRows = allRows.filter(r => (r.players || []).some(p => p.bot === false));
+  const rows24 = allRows.filter(r => (Date.parse(r.ts) || 0) >= since);
+  const hands24 = rows24.filter(r => (r.players || []).some(p => p.bot === false));
+  const lines = [`📊 Daily poker report — ${chiDate(new Date())}`];
+
+  if (hands24.length) {
+    // ── The last day's action ──
+    lines.push(`Hands with humans: ${hands24.length}${rows24.length > hands24.length ? ` (the bots played ${rows24.length - hands24.length} more on their own)` : ''}`);
     let big = null;
-    for (const r of hands) { const pot = (r.winners || []).reduce((s, w) => s + (w.amount || 0), 0); if (!big || pot > big.pot) big = { pot, r }; }
+    for (const r of hands24) { const pot = (r.winners || []).reduce((s, w) => s + (w.amount || 0), 0); if (!big || pot > big.pot) big = { pot, r }; }
     if (big && big.pot > 0) {
       const w = big.r.winners[0] || {};
       const nick = ((big.r.players || []).find(p => p.playerId === w.playerId) || {}).nickname || w.playerId;
-      lines.push(`Biggest pot: ${big.pot.toLocaleString()} gp — ${nick}${w.handDesc ? ` (${w.handDesc})` : ''}`);
+      lines.push(`Biggest pot today: ${gp(big.pot)} — ${nick}${w.handDesc ? ` (${w.handDesc})` : ''}`);
     }
-    const net = new Map();
-    for (const r of hands) for (const p of (r.players || [])) {
-      if (p.bot !== false) continue;   // human-driven seats only
-      const won = (r.winners || []).filter(w => w.playerId === p.playerId).reduce((s, w) => s + (w.amount || 0), 0);
-      const e = net.get(p.playerId) || { nick: p.nickname, net: 0, hands: 0 };
-      e.net += won - (p.totalIn || 0); e.hands++; e.nick = p.nickname;
-      net.set(p.playerId, e);
+    const ranked = humanNets(hands24).slice(0, 6);
+    if (ranked.length) lines.push('Today: ' + ranked.map(e => `${e.nick} ${signedGp(e.net)} over ${e.hands} hands`).join(' · '));
+  } else {
+    // ── Quiet day → report from the archives instead ──
+    lines.push('A quiet day — no human hands since yesterday. From the archives instead:');
+    const last = humanRows[humanRows.length - 1];
+    if (last) {
+      const w = (last.winners || [])[0] || {};
+      const nick = ((last.players || []).find(p => p.playerId === w.playerId) || {}).nickname || w.playerId;
+      lines.push(`Last human action: ${chiDate(new Date(Date.parse(last.ts)))} — ${nick} took ${gp((last.winners || []).reduce((s, x) => s + (x.amount || 0), 0))}${w.handDesc ? ` (${w.handDesc})` : ''}.`);
     }
-    const ranked = [...net.values()].sort((a, b) => b.net - a.net);
-    if (ranked.length) lines.push('Humans: ' + ranked.map(e => `${e.nick} ${e.net >= 0 ? '+' : ''}${e.net.toLocaleString()} gp over ${e.hands} hands`).join(' · '));
+    if (humanRows.length) {
+      const firstTs = Date.parse(humanRows[0].ts);
+      lines.push(`All-time: ${humanRows.length.toLocaleString()} human hands logged since ${chiDate(new Date(firstTs))}.`);
+      const career = humanNets(humanRows);
+      const tops = career.slice(0, 3), bottoms = career.slice(-2).filter(e => !tops.includes(e) && e.net < 0);
+      if (career.length) lines.push('Career (full log): ' + [...tops, ...bottoms].map(e => `${e.nick} ${signedGp(e.net)}`).join(' · '));
+    }
   }
-  const dun = readJsonl(DUNGEON_LOG, since);
-  const clears = dun.filter(r => r.type === 'clear').length;
-  const deepest = dun.reduce((mx, r) => Math.max(mx, r.depth || 0), 0);
-  const ups = dun.filter(r => r.type === 'levelup').length;
-  if (clears || ups) lines.push(`Dungeon: ${clears} room${clears === 1 ? '' : 's'} cleared, deepest depth ${deepest}, ${ups} level-up${ups === 1 ? '' : 's'}.`);
+
+  // ── Current standings — leaders & losers (live chips + debts from the DB) ──
+  try {
+    const db = require('../persistence/db');
+    const everyone = db.listAll() || [];
+    const humans = everyone.filter(p => !p.is_bot).sort((a, b) => (b.chips || 0) - (a.chips || 0));
+    if (humans.length) {
+      const tops = humans.slice(0, 3).map(p => `${p.nickname} ${gp(p.chips || 0)}`).join(' · ');
+      const ai = everyone.filter(p => p.is_bot).sort((a, b) => (b.chips || 0) - (a.chips || 0))[0];
+      lines.push(`💰 Standings: ${tops}${ai ? ` — richest AI: ${ai.nickname} ${gp(ai.chips || 0)}` : ''}`);
+      const debtors = humans.filter(p => (p.rebuy_debt || 0) > 0).sort((a, b) => (b.rebuy_debt || 0) - (a.rebuy_debt || 0)).slice(0, 3);
+      if (debtors.length) lines.push('📉 In the red: ' + debtors.map(p => `${p.nickname} owes ${gp(p.rebuy_debt)} (${gp(p.chips || 0)} on hand)`).join(' · '));
+      else { const low = humans.filter(p => (p.chips || 0) < 5000).slice(-2); if (low.length) lines.push('📉 Short stacks: ' + low.map(p => `${p.nickname} ${gp(p.chips || 0)}`).join(' · ')); }
+    }
+  } catch (e) { console.error('[meyanda] standings:', e.message); }
+
+  // ── All-time Hall of Records (logger seeds these from the full log at boot) ──
+  try {
+    const { getRecords } = require('../persistence/logger');
+    const r = (getRecords() || {}).all || {};
+    const bits = [];
+    if (r.biggestPot)    bits.push(`biggest pot ${gp(r.biggestPot.amount)} (${r.biggestPot.nick})`);
+    if (r.biggestWin)    bits.push(`biggest single-hand heater ${gp(r.biggestWin.amount)} (${r.biggestWin.nick})`);
+    if (r.biggestBluff)  bits.push(`biggest bluff ${gp(r.biggestBluff.amount)} (${r.biggestBluff.nick})`);
+    if (r.ugliestWinner) bits.push(`ugliest winner: ${r.ugliestWinner.nick} with ${r.ugliestWinner.hand}`);
+    if (r.longestWar)    bits.push(`longest war ${r.longestWar.count} raises (${r.longestWar.nick})`);
+    if (bits.length) lines.push('🏆 All-time: ' + bits.join(' · '));
+  } catch (e) { console.error('[meyanda] records:', e.message); }
+
+  // ── Dungeon line: last day if there was action, else all-time ──
+  const dunAll = readJsonl(DUNGEON_LOG);
+  const dun24 = dunAll.filter(r => (Date.parse(r.ts) || 0) >= since);
+  const dunRows = dun24.length ? dun24 : dunAll;
+  const clears = dunRows.filter(r => r.type === 'clear').length;
+  const deepest = dunRows.reduce((mx, r) => Math.max(mx, r.depth || 0), 0);
+  const ups = dunRows.filter(r => r.type === 'levelup').length;
+  if (clears || ups) lines.push(`Dungeon${dun24.length ? '' : ' (all-time)'}: ${clears} room${clears === 1 ? '' : 's'} cleared, deepest depth ${deepest}, ${ups} level-up${ups === 1 ? '' : 's'}.`);
+
   lines.push('— Meyanda, keeper of records');
   return lines.join('\n');
 }
