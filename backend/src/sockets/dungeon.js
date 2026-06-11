@@ -11,8 +11,14 @@
  */
 const db = require('../persistence/db');
 const { Dungeon } = require('../game/Dungeon');
+const { levelFromXp } = require('../pf1data/xp');
 
-const RECRUIT_FEE = 50;        // gold paid to an AI ally to bring them along
+// An AI ally's recruit fee scales with how strong they are: 50g base + 10g per
+// character level (level comes from XP). A fresh L1 merc is 60g; a veteran L10 is
+// 150g. Paid recruiter → ally, so the gold stays in the economy.
+const RECRUIT_BASE = 50;
+const RECRUIT_PER_LEVEL = 10;
+const recruitFee = (botId) => RECRUIT_BASE + RECRUIT_PER_LEVEL * Math.max(1, levelFromXp(db.getXp(botId) || 0));
 const MAX_BOT_ALLIES = 3;
 
 function registerDungeonHandlers(io, socket, { tables, dungeons }) {
@@ -27,7 +33,7 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     const inParty = new Set(d.party.filter(m => !m.left).map(m => m.playerId));
     return db.listBots()
       .filter(b => !seated.has(b.player_id) && !inParty.has(b.player_id))
-      .map(b => ({ playerId: b.player_id, nickname: b.nickname, avatarId: b.avatar_id, wealth: b.chips, gear: db.getGear(b.player_id), fee: RECRUIT_FEE }))
+      .map(b => ({ playerId: b.player_id, nickname: b.nickname, avatarId: b.avatar_id, wealth: b.chips, gear: db.getGear(b.player_id), fee: recruitFee(b.player_id) }))
       .sort((a, b) => String(a.nickname).localeCompare(String(b.nickname)));
   }
   const isSeatedAnywhere = (botId) => [...tables.values()].some(t => !!t.findSeat(botId));
@@ -146,12 +152,13 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     if (isSeatedAnywhere(botId)) return ack?.({ ok: false, error: 'that AI is seated at the table' });
     if (d.hasMember(botId)) return ack?.({ ok: false, error: 'already in the party' });
     const meFresh = db.getPlayer(me.player_id);
-    if ((meFresh?.chips || 0) < RECRUIT_FEE) return ack?.({ ok: false, error: `not enough gold (need ${RECRUIT_FEE}g)` });
+    const fee = recruitFee(botId);   // 50g + 10g per the ally's level
+    if ((meFresh?.chips || 0) < fee) return ack?.({ ok: false, error: `not enough gold (need ${fee}g)` });
     // Pay the fee: recruiter → ally.
-    db.setChips(me.player_id, meFresh.chips - RECRUIT_FEE);
-    db.setChips(botId, (bot.chips || 0) + RECRUIT_FEE);
+    db.setChips(me.player_id, meFresh.chips - fee);
+    db.setChips(botId, (bot.chips || 0) + fee);
     d.addMember(bot, true);
-    d._note(`🤝 ${me.nickname} recruited ${bot.nickname} for ${RECRUIT_FEE}g.`);
+    d._note(`🤝 ${me.nickname} recruited ${bot.nickname} for ${fee}g.`);
     d._broadcast();
     io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true });
@@ -159,9 +166,9 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
 
   // Hire a RANDOM batch of AI allies in one click (the dungeon's answer to the
   // poker table's "Fill" button). Fills the open party slots with random unseated
-  // bots at RECRUIT_FEE each — but only as many as the player can afford: 150g
-  // hires 3, 100g hires 2, 50g hires 1. Affordability + availability + the
-  // 3-ally cap are all respected.
+  // bots, paying EACH ally's own level-scaled fee (50g + 10g/level). Hires down a
+  // shuffled list, skipping any the recruiter can't currently afford, until the
+  // slots are full or no affordable ally remains. The 3-ally cap is respected.
   socket.on('dungeon:recruitRandom', (_p, ack) => {
     const me = meOf();
     if (!me) return ack?.({ ok: false, error: 'no player' });
@@ -169,27 +176,25 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     if (!d || !d.hasMember(me.player_id)) return ack?.({ ok: false, error: 'not in a dungeon' });
     const slots = MAX_BOT_ALLIES - d.botCount();
     if (slots <= 0) return ack?.({ ok: false, error: `party is full (${MAX_BOT_ALLIES} AI allies max)` });
-    const affordable = Math.floor((db.getPlayer(me.player_id)?.chips || 0) / RECRUIT_FEE);
-    const want = Math.min(slots, affordable);
-    if (want <= 0) return ack?.({ ok: false, error: `not enough gold (need ${RECRUIT_FEE}g each)` });
     // Shuffle the unseated, not-already-in-party bots and hire down the list.
     const pool = computeRecruitable(d);
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
     let hired = 0;
     for (const c of pool) {
-      if (hired >= want) break;
+      if (hired >= slots) break;
       const bot = db.getPlayer(c.playerId);
       if (!bot || !bot.is_bot) continue;
       if (isSeatedAnywhere(c.playerId) || d.hasMember(c.playerId)) continue;
       const cur = db.getPlayer(me.player_id);
-      if ((cur?.chips || 0) < RECRUIT_FEE) break;
-      db.setChips(me.player_id, cur.chips - RECRUIT_FEE);
-      db.setChips(c.playerId, (bot.chips || 0) + RECRUIT_FEE);
+      const fee = recruitFee(c.playerId);
+      if ((cur?.chips || 0) < fee) continue;   // can't afford this one — try a cheaper ally
+      db.setChips(me.player_id, cur.chips - fee);
+      db.setChips(c.playerId, (bot.chips || 0) + fee);
       d.addMember(bot, true);
-      d._note(`🤝 ${me.nickname} recruited ${bot.nickname} for ${RECRUIT_FEE}g.`);
+      d._note(`🤝 ${me.nickname} recruited ${bot.nickname} for ${fee}g.`);
       hired++;
     }
-    if (hired === 0) return ack?.({ ok: false, error: 'no available allies to hire' });
+    if (hired === 0) return ack?.({ ok: false, error: 'not enough gold for any available ally' });
     d._broadcast();
     io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true, hired });

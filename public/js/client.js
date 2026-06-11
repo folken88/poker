@@ -1246,9 +1246,9 @@
       if (d.status === 'over' || !list.length || _spectating) { recruit.innerHTML = ''; _recruitOpen = false; }
       else recruit.innerHTML =
         `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-toggle" data-recruit-toggle aria-expanded="${_recruitOpen}">🤝 Recruit AI ▾ <span class="dungeon__recruit-count">${list.length}</span></button>` +
-        `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-random" data-recruit-random ${full ? 'disabled' : ''} title="Hire up to 3 random allies — 50g each (150g = 3, 100g = 2, 50g = 1)">🎲 Random helpers</button>` +
+        `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-random" data-recruit-random ${full ? 'disabled' : ''} title="Hire up to 3 random allies — fee scales with each ally's level (50g + 10g/level)">🎲 Random helpers</button>` +
         `<div class="dungeon__recruit-pop ${_recruitOpen ? 'is-open' : ''}">` +
-          `<div class="dungeon__recruit-head">Unseated allies — 50g each${full ? ' · party full' : ''}</div>` +
+          `<div class="dungeon__recruit-head">Unseated allies — 50g + 10g per level${full ? ' · party full' : ''}</div>` +
           `<div class="bot-picker__grid bot-picker__grid--dungeon">` +
           list.map(b => `<button type="button" class="bot-picker__card" data-recruit="${escapeAttr(b.playerId)}" ${full ? 'disabled' : ''} title="${escapeAttr(b.nickname)} — ${escapeAttr(dungeonGearTip(b.gear))} · 💰 ${formatChips(b.wealth)} gp · recruit for ${b.fee}g">
               <div class="bot-picker__avatar">${renderAvatar(b.avatarId)}</div>
