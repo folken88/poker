@@ -1420,9 +1420,10 @@
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const d = state.dungeon; if (!d) return;
     const k = (e.key || '').toLowerCase();
-    // ----- Blind keyboard play (only when blind mode is on; sighted scheme below
-    //       is untouched). 1 = Attack, 2..N = your abilities in kit order, ? = help
-    //       mode (speak keys without firing), Return = open the next door. -----
+    // ----- Blind keyboard play (only when blind mode is on; the sighted scheme
+    //       below never runs in blind mode — the branch ends with a hard return).
+    //       1 = Attack, 2..N = abilities, 0 = open door (row or numpad), B = bail,
+    //       . = cancel run (confirm), ? = help mode (speak keys without firing). -----
     if (window.BlindMode?.isOn?.()) {
       if (e.key !== '.') _dunCancelArm = 0;   // any non-"." key aborts a pending cancel-run confirm
       if (e.key === '?') { e.preventDefault(); _blindHelp = !_blindHelp; window.BlindMode.speak(`Help mode ${_blindHelp ? 'on' : 'off'}.`, 'urgent'); return; }
@@ -1715,10 +1716,13 @@
         else dungeonAction('ability', { slot: act.slot, targetUid, targetUids: alive.slice(0, 6).map(x => x.uid) });
         return;
       }
-      // 0 (or Return) = open the next door between rooms.
-      if (k === '0' || ((e.key === 'Enter' || e.code === 'NumpadEnter') && d.status !== 'combat')) {
+      // 0 = open the next door. Number-row zero AND numpad zero both land here
+      // (Numpad0's e.key is '0'). Return and O are deliberately NOT door keys in
+      // blind mode (Josh's report): Return's only job is confirming inside the
+      // spellbook / session menu / enemy inspect sub-modes.
+      if (k === '0') {
         e.preventDefault();
-        if (_blindHelp) { window.BlindMode.speak('0: open the next door.', 'urgent'); return; }
+        if (_blindHelp) { window.BlindMode.speak('0: open the next door. Number row or numpad.', 'urgent'); return; }
         if (d.status === 'combat') { window.BlindMode.speak('Cannot open a door during combat.', 'urgent'); return; }
         window.BlindMode.speak('Opening the door.', 'urgent'); dungeonAction('door'); return;
       }
@@ -1729,7 +1733,9 @@
         if (_blindHelp) { window.BlindMode.speak('Period: cancel the run for everyone, with confirmation.', 'urgent'); return; }
         if (_dunCancelArm && (Date.now() - _dunCancelArm) < 6000) {
           _dunCancelArm = 0;
-          window.BlindMode.speak('Cancelling the run.', 'urgent'); dungeonAction('cancel'); return;
+          // dungeon:cancel is its own socket event, NOT an action kind — routing
+          // this through dungeonAction('cancel') was why Josh's period never worked.
+          window.BlindMode.speak('Cancelling the run.', 'urgent'); cancelDungeon(); return;
         }
         _dunCancelArm = Date.now();
         window.BlindMode.speak('Cancel the run for everyone? Press period again to confirm, or any other key to abort.', 'urgent');
@@ -1750,6 +1756,35 @@
         window.BlindMode.speak('Session menu. Tab through spectate, leave dungeon, and cancel run; Return to choose; Escape to exit. Spectate.', 'urgent');
         return;
       }
+      // B = bail out with your banked share. Handled HERE (not via the sighted
+      // fallthrough) so help mode can describe it without firing it.
+      if (k === 'b') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('B: bail out of the dungeon with your share of the gold.'); return; }
+        sayU('Bailing out with your gold.');
+        dungeonAction('bail');
+        return;
+      }
+      // Blind mode NEVER falls through to the sighted letter scheme below — that
+      // leak is how O and Return opened doors, B bailed from inside help mode, and
+      // Q/W fired abilities (all Josh's 6/11 report). Unassigned letters answer in
+      // help mode ("S: not assigned") and otherwise point at the real keys.
+      if (/^[a-z]$/.test(k)) {
+        e.preventDefault();
+        if (_blindHelp) sayU(`${k.toUpperCase()}: not assigned. Actions are on the number keys. 0 opens the door, B bails, period cancels the run.`);
+        else if (['q', 'w', 'a', 'o'].includes(k)) sayU('Not assigned in blind mode. Actions are on the number keys — press question mark for help.');
+        return;
+      }
+      // Return outside the sub-modes has no job (it confirms in the spellbook,
+      // session menu, and enemy inspect). Swallow it when nothing has focus so it
+      // can't leak into the sighted door binding; leave it alone on a focused
+      // control so buttons still click.
+      if ((e.key === 'Enter' || e.code === 'NumpadEnter') && (!document.activeElement || document.activeElement === document.body)) {
+        e.preventDefault();
+        if (_blindHelp) sayU('Return: confirms inside the spellbook, session menu, and enemy inspect. 0 opens doors.');
+        return;
+      }
+      return;   // anything else: ignored in blind mode (Tab keeps its browser default)
     }
     // Loot roll: R = roll d20, P = pass (only when it's mine to decide).
     if (d.lootRoll) {
