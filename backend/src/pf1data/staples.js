@@ -69,6 +69,10 @@ const CUSTOM_WEAPONS = {
   radiance: { key: 'radiance', name: 'Radiance', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true },
   // Lirienne's repeating crossbow (1d8, 19–20).
   repeatingcrossbow: { key: 'repeatingcrossbow', name: 'Repeating Crossbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'exotic', custom: true, atkSound: '/audio/crossbow.mp3' },
+  // Universal BACKUP weapon — every melee character carries a light crossbow to shoot
+  // airborne foes they can't reach in melee (last resort; see _playerAttack). Masterwork
+  // (no enchant), so always weaker than their real weapon. 1d8, 19-20/x2. custom => always proficient.
+  lightcrossbow: { key: 'lightcrossbow', name: 'Light Crossbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'simple', custom: true, atkSound: '/audio/crossbow.mp3' },
   // Duristan's rifle "Longue Carabine" — a heavy-hitting bolt-action .338 (2d10, ×4).
   // Single-shot: no Rapid Shot. (Key stays 'lapua' so his persisted weapon row and
   // gear history survive the rename.) Report: cyberpunk sniper crack from Foundry.

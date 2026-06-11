@@ -2556,9 +2556,22 @@ class Dungeon {
     const fireFoes = foes.some(e => e.detonate || e.hellfire || /fire|flame|magma|salamander|phoenix/i.test(e.name));
     const protect = avail.find(a => a.protectFire);
     if (protect && fireFoes && this.livingParty().some(p => !p.protectFire)) return { slot: slot(protect), payload: {} };
-    const buff = avail.find(a => a.effect === 'buff' && a.sticky && !a.protectFire && !buffFullyUp(a)
-      && !a.powerattack && !a.deadlyaim);   // Power Attack / Deadly Aim are managed by _botStance (default ON, eased off vs a high-AC target) — not auto-picked here
-    if (buff) return { slot: slot(buff), payload: {} };
+    // Buff priority (PF1 support play): a multi-target PARTY buff is almost always the
+    // best use of a turn, so take those FIRST — Stoneskin (Communal), Prayer, Protection
+    // from Evil, Bless reach every ally at once. Then cheap SELF buffs (Divine Favor,
+    // Shield, Displacement). SINGLE-ALLY buffs (Shield of Faith, Bull's Strength, single
+    // Stoneskin) land on ONE ally per cast; spreading them down the line is fine early but
+    // a poor use of a turn at mid-late levels — past L6 the bot stops babysitting each ally
+    // and would rather drop a party buff or just attack. (Power Attack / Deadly Aim are
+    // toggles handled by _botStance, never auto-picked here.)
+    const stickyBuffs = avail.filter(a => a.effect === 'buff' && a.sticky && !a.protectFire
+      && !a.powerattack && !a.deadlyaim && !buffFullyUp(a));
+    const partyBuff = stickyBuffs.find(a => a.party);
+    if (partyBuff) return { slot: slot(partyBuff), payload: {} };
+    const selfBuff = stickyBuffs.find(a => a.target === 'self');
+    if (selfBuff) return { slot: slot(selfBuff), payload: {} };
+    const allyBuff = stickyBuffs.find(a => a.target === 'ally');
+    if (allyBuff && (m.level || 1) < 7) return { slot: slot(allyBuff), payload: {} };
     // Invisibility — shields the most-hurt ally (it lands on the lowest-HP ally in
     // _abInvisible). Cast when an ally is badly hurt and nobody's hidden yet.
     const invis = avail.find(a => a.effect === 'invisible');
@@ -4686,8 +4699,17 @@ class Dungeon {
     if (!e) return;
     m.weapon = weaponOf(m.gear, m.weaponKey);
     if (e.darkened > 0) { this._note(`🌑 ${m.nickname} can't find ${e.name} in the magical darkness!`); this._broadcast(); return; }
-    // Melee can't reach a flyer — only ranged weapons or spells hit airborne foes.
-    if (e.flying && !m.weapon.ranged && !m.weapon.reachFly) { this._note(`🪽 ${m.nickname} can't reach the airborne ${e.name} — need a ranged weapon or a spell!`); this._broadcast(); return; }
+    // Melee can't reach a flyer. Rather than waste the turn, a melee character draws a
+    // BACKUP light crossbow and shoots — masterwork (no enchant), so worse than their
+    // real weapon, but it reaches, and it still rides their full iteratives and buffs
+    // (Divine Favor, Bless, Haste…). A flyer-reaching hero (Overland Flight magus) just
+    // melees as normal. The bot only targets a flyer when EVERY foe is airborne, so for
+    // bots this fires strictly as a last resort.
+    const _realWeapon = m.weapon;
+    if (e.flying && !m.weapon.ranged && !m.weapon.reachFly && !(m.canHitFlyers && m.flying)) {
+      m.weapon = weaponOf({}, 'lightcrossbow');
+      if (!quiet) this._note(`🏹 ${m.nickname} can't reach the airborne ${e.name} in melee — draws a light crossbow!`);
+    }
     // Build the swing sequence as a list of to-hit OFFSETS (see _attackOffsets):
     // dual-wielders attack twice; staying on the same target adds PF1 iteratives.
     // A Haste bonus swing (quiet) is always a single strike at full to-hit.
@@ -4722,6 +4744,7 @@ class Dungeon {
       if (r.hit && tgt.hp <= 0) this._tryBanter(m, 'down', { enemy: tgt.name });
       this._echoToTable(r.sound);
     }
+    m.weapon = _realWeapon;   // drop any backup crossbow — restore the real weapon for later reads (e.g. next turn's target pick)
   }
   // ── Loot (per owner) ──────────────────────────────────────────────────────
   equipLoot(playerId, idx) {
