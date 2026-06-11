@@ -3778,13 +3778,16 @@ class Dungeon {
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
     const targets = pool.slice(0, n);
     if (!targets.length) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} settles on no one.`, sound); this._echoToTable(sound); return; }
-    const parts = [];
+    const parts = []; let failN = 0, saveN = 0;
     for (const e of targets) {
       const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
-      if (!sv.saved) { e.blinded = BLIND_ROUNDS; parts.push(`${e.name} BLINDED [${sv.total} vs ${dc}]`); }
-      else parts.push(`${e.name} resists [${sv.total} vs ${dc}]`);
+      if (!sv.saved) { e.blinded = BLIND_ROUNDS; failN++; parts.push(`${e.name} BLINDED [${sv.total} vs ${dc}]`); }
+      else { saveN++; parts.push(`${e.name} resists [${sv.total} vs ${dc}]`); }
     }
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${parts.join('; ')}.`, sound);
+    // 3+ targets → a succinct count (kind to chat AND the blind narrator); the
+    // per-foe outcome lives on each enemy's condition chips. 1-2 keep detail.
+    const detail = targets.length <= 2 ? parts.join('; ') : `${failN} BLINDED, ${saveN} resist [Will DC ${dc}]`;
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${targets.length} foe${targets.length === 1 ? '' : 's'} — ${detail}.`, sound);
     this._echoToTable(sound);
   }
   // Mirror Image — shimmering decoys soak incoming attacks (1d4 + 1 per 3 levels, max 8).
@@ -4188,13 +4191,17 @@ class Dungeon {
     const saveType = ab.save || 'reflex';
     const lbl = saveType === 'fort' ? 'Fort' : saveType === 'will' ? 'Will' : 'Ref';
     const sound = ab.sound || pick(SND.flesh), parts = [];
+    let failN = 0, saveN = 0, airN = 0;
     for (const e of chosen) {
-      if (e.flying) { parts.push(`${e.name}: airborne — can't be tripped (immune to prone)`); continue; }
+      if (e.flying) { airN++; parts.push(`${e.name}: airborne — can't be tripped (immune to prone)`); continue; }
       const sv = this._saveVs(this._enemySave(e, saveType), dc);
-      if (!sv.saved) { e.prone = true; e.loseTurn = true; }
+      if (!sv.saved) { e.prone = true; e.loseTurn = true; failN++; } else saveN++;
       parts.push(`${e.name}: ${lbl} ${sv.total} vs ${dc} ${sv.saved ? 'stays up' : 'KNOCKED prone'}`);
     }
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${parts.join('; ')}.`, sound);
+    // 3+ targets → counts only; the prone markers tell the rest.
+    const detail = chosen.length <= 2 ? parts.join('; ')
+      : `${failN} KNOCKED prone, ${saveN} stay up${airN ? `, ${airN} airborne (immune)` : ''} [${lbl} DC ${dc}]`;
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${chosen.length} foe${chosen.length === 1 ? '' : 's'} — ${detail}.`, sound);
     this._echoToTable(sound);
   }
   // Sleep: the weakest foes (lowest HP) must make a Will save or fall asleep —
@@ -4204,12 +4211,15 @@ class Dungeon {
     const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !ccd(e) && !mindImmune(e)).slice().sort((a, b) => a.hp - b.hp);   // skip already-CC'd foes + mind-immune (undead/construct)
     if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name}, but those foes are immune or already entranced.`); this._echoToTable(); return; }
     const sound = ab.sound || pick(SND.flesh), parts = [];
+    let failN = 0, saveN = 0;
     for (const e of chosen) {
       const sv = this._saveVs(this._enemySave(e, 'will'), dc);
-      if (!sv.saved) { e.fascinated = true; e.asleep = true; e.flatFooted = true; }   // asleep: skip turns (woken by a hit) + helpless
+      if (!sv.saved) { e.fascinated = true; e.asleep = true; e.flatFooted = true; failN++; } else saveN++;   // asleep: skip turns (woken by a hit) + helpless
       parts.push(`${e.name}: Will ${sv.total} vs ${dc} ${sv.saved ? 'shrugs it off' : '💤 ASLEEP'}`);
     }
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${parts.join('; ')}.`, sound);
+    // 3+ targets → counts only; the 💤 chips show who's down.
+    const detail = chosen.length <= 2 ? parts.join('; ') : `${failN} fall 💤 ASLEEP, ${saveN} shrug it off [Will DC ${dc}]`;
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${chosen.length} foe${chosen.length === 1 ? '' : 's'} — ${detail}.`, sound);
     this._echoToTable(sound);
   }
   // Slow: a RANDOM 2d4 foes must make a Will save or be SLOWED for ~1 round per
@@ -4223,12 +4233,16 @@ class Dungeon {
     const chosen = living.slice(0, n);
     const dur = Math.max(3, Math.min(10, m.level || 1));
     const sound = ab.sound || pick(SND.flesh), parts = [];
+    let failN = 0, saveN = 0;
     for (const e of chosen) {
       const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
-      if (!sv.saved) { e.slowed = Math.max(e.slowed || 0, dur); e._slowTick = 0; }
+      if (!sv.saved) { e.slowed = Math.max(e.slowed || 0, dur); e._slowTick = 0; failN++; } else saveN++;
       parts.push(`${e.name}: Will ${sv.total} vs ${dc} ${sv.saved ? 'resists' : '🐌 SLOWED'}`);
     }
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${chosen.length} foe${chosen.length === 1 ? '' : 's'} — ${parts.join('; ')}.`, sound);
+    // 3+ targets → "Bob casts Slow on 7 foes — 4 SLOWED, 3 resist." The 🐌
+    // condition chips carry the per-foe answer for anyone who wants it.
+    const detail = chosen.length <= 2 ? parts.join('; ') : `${failN} 🐌 SLOWED, ${saveN} resist [Will DC ${dc}]`;
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${chosen.length} foe${chosen.length === 1 ? '' : 's'} — ${detail}.`, sound);
     this._echoToTable(sound);
   }
   // Fascinate: up to maxTargets foes stand enthralled, losing turns until struck.
