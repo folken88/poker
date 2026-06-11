@@ -434,6 +434,7 @@ const BOT_WEAPONS = {
   'Lou Candlebean': 'gnomehammer',   // fighter dual-wielder — gnome hooked hammer (2 swings + TWF feats)
   'Nomkath': 'kukri', 'Kelda': 'dagger',   // rogues — dual-wield light blades (dagger / kukri)
   'Ser Toche': 'elvencurve',               // tengu rogue — elven curved blade (DEX two-hander)
+  'Gabriel': 'redeemer',                   // Hell's Rebels paladin — green-glass greatsword Redeemer (Divine Bond makes it holy)
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 

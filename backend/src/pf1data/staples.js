@@ -52,6 +52,10 @@ const CUSTOM_WEAPONS = {
   rovadra: { key: 'rovadra', name: 'Rovadra', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 12, crit: 20, mult: 4, type: 'B', group: 'firearms', prof: 'exotic', custom: true, atkSound: '/audio/rovadra_dragonrifle.mp3' },   // Dismas's holy-gun report — the dragonrifle "delay" recording (single shot)
   // Gaspar's bastard sword "Curator".
   curator: { key: 'curator', name: 'Curator', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 19, mult: 2, type: 'S', group: 'heavyBlades', prof: 'exotic', custom: true },
+  // Gabriel's greatsword "Redeemer" — a green-glass blade of legend, once a tool of
+  // evil, now a holy sword again in a paladin's hands. Mechanically just masterwork
+  // steel (2d6, 19-20/×2); its plus and HOLY come from Gabriel's Divine Bond.
+  redeemer: { key: 'redeemer', name: 'Redeemer', cat: '2h', ranged: false, dmgCount: 2, dmgDie: 6, crit: 19, mult: 2, type: 'S', group: 'heavyBlades', prof: 'martial', custom: true },
   // Danger's composite longbow (1d8, ×3) — single-shot bow report.
   longbow: { key: 'longbow', name: 'Composite Longbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'P', group: 'bows', prof: 'martial', custom: true, atkSound: '/audio/bow_silent_hits.mp3' },   // Danger's longbow — near-silent loose, sound lands on the hit
   // Vesorianna's spectral Ghost Touch — a chilling 2d6 melee strike.

@@ -1812,13 +1812,22 @@ class Dungeon {
     // is always treated as wielding at least this grade): +1@1, +2@5, keen@6,
     // flaming@8, +3@9, flaming burst@11, +4@13, +5@17. The real weapon's enchant
     // wins if it's higher; keen/flaming layer on top.
-    let arcEnhDelta = 0, arcKeen = false, arcFlame = 0, arcFlameBurst = false;
+    let arcEnhDelta = 0, arcKeen = false, arcFlame = 0, arcFlameBurst = false, arcHoly = 0, arcUnholy = 0;
     if (cls === 'magus') {
       const arcEnh = lvl >= 17 ? 5 : lvl >= 13 ? 4 : lvl >= 9 ? 3 : lvl >= 5 ? 2 : 1;
       arcEnhDelta = Math.max(0, arcEnh - (weapon.dmgBonus || 0));   // only the part above the real enchant
       arcKeen = lvl >= 6;
       arcFlame = lvl >= 8 ? 1 : 0;        // +1d6 fire on each hit
       arcFlameBurst = lvl >= 11;          // flaming burst: extra fire dice on a crit
+    } else if ((cls === 'paladin' || cls === 'antipaladin') && lvl >= 5) {
+      // DIVINE BOND (paladin) / FIENDISH BOON (antipaladin) — a celestial/fiendish
+      // spirit pours into the weapon: an automatic enhancement of +1@5, +2@8, +3@11,
+      // +4@14, +5@17, +6@20 (PF1). The real weapon's enchant wins if it's higher.
+      // From 8th the blade turns HOLY/UNHOLY: +2d6 vs EVIL (paladin) / vs GOOD
+      // (antipaladin), granted free on top — the way the magus gets flaming.
+      const bond = lvl >= 20 ? 6 : lvl >= 17 ? 5 : lvl >= 14 ? 4 : lvl >= 11 ? 3 : lvl >= 8 ? 2 : 1;
+      arcEnhDelta = Math.max(0, bond - (weapon.dmgBonus || 0));
+      if (lvl >= 8) { if (cls === 'paladin') arcHoly = 2; else arcUnholy = 2; }
     }
     // Dimensional Blade — for 1 round the magus's strikes resolve as TOUCH attacks.
     if (attacker.touchStrike > 0 && target) ac = this._enemyAC(target, { touch: true });
@@ -1928,6 +1937,11 @@ class Dungeon {
     // a flaming blade does nothing extra to a devil and ×1.5 to a wood golem.
     if (arcFlame) dmg += this._resisted(target, dRollN(arcFlame, 6), 'fire');
     if (crit && arcFlameBurst) dmg += this._resisted(target, dRollN(Math.max(1, (weapon.critMult || 2) - 1), 10), 'fire');
+    // Divine Bond HOLY (paladin) / Fiendish Boon UNHOLY (antipaladin): +2d6 of aligned
+    // energy that only bites the opposed alignment — vs EVIL foes (holy) / GOOD foes
+    // (unholy). Rides on top: not soaked by physical DR, not crit-multiplied.
+    if (arcHoly && (target.evil || target.markedEvil)) dmg += dRollN(arcHoly, 6);
+    if (arcUnholy && target.good) dmg += dRollN(arcUnholy, 6);
     return { hit: true, crit, smite, sneakDice, sneakDmg, damage: Math.max(0, dmg), drTag, roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
   _monsterSwing(e, targetAC) {
