@@ -1438,6 +1438,7 @@
         let s = `${i + 1}: ${en.name}, ${Math.max(0, en.hp | 0)} of ${en.maxHp | 0} HP`;
         if (en.flying) s += ', flying';
         if (en.boss) s += ', boss';
+        if (en.drDesc) s += `, ${en.drDesc}`;   // e.g. "DR 15/bludgeoning — slashing glances off" (why hits run low)
         if (c.length) s += ', ' + c.join(', ');
         return s;
       };
