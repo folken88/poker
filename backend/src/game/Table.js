@@ -7,6 +7,7 @@ const db = require('../persistence/db');
 const { Hand, STATES } = require('./Hand');
 const { Bot } = require('../bot/Bot');
 const { logHand, logBotDecision, logChat, getRecords, resetRecords, recordSound } = require('../persistence/logger');
+const meyanda = require('../discord/meyanda');
 const { gold } = require('../util/numwords');
 const { strengthOf } = require('../bot/strength');
 const { botRebuyMessage, botBorrowMessage, botHockMessage, humanRebuyMessage, bustMessage } = require('../util/flavor');
@@ -1207,14 +1208,19 @@ class Table {
 
     // Append-only JSONL log for offline analysis (bind-mounted to host).
     try {
+      // Mark which seats were AI vs human-driven (seat.isBot is false when a human
+      // has taken over a bot character) so analysis can exclude human-played hands.
+      const botByPlayer = Object.fromEntries((this.seats || []).filter(s => s && s.playerId).map(s => [s.playerId, !!s.isBot]));
       logHand({
         tableId: this.id,
         hand: this.hand,
         durationMs: (this.hand.completedAt || Date.now()) - this.hand.startedAt,
-        // Mark which seats were AI vs human-driven (seat.isBot is false when a human
-        // has taken over a bot character) so analysis can exclude human-played hands.
-        botByPlayer: Object.fromEntries((this.seats || []).filter(s => s && s.playerId).map(s => [s.playerId, !!s.isBot])),
+        botByPlayer,
       });
+      // Meyanda (family Discord herald): one plain line per completed hand with
+      // 2+ human-driven seats — a human as themselves OR piloting a persona both
+      // count. Fire-and-forget; a Discord hiccup can never break a hand.
+      try { meyanda.onHandLogged({ hand: this.hand, botByPlayer }); } catch (e) { console.error('[meyanda]', e.message); }
     } catch (e) { console.error('[hand-log]', e); }
 
     // Vacate any seats flagged for mid-hand stand.

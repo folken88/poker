@@ -1867,7 +1867,10 @@ class Dungeon {
     const smiteHit = smite ? SMITE_TOHIT : 0;
     // NPCs are hand-assigned their signature weapons, so they're always
     // proficient; the −4 penalty only guides human weapon choices.
-    const notProf = (attacker.isBot || weaponProficient(cls, weapon)) ? 0 : NON_PROFICIENT_PENALTY;
+    // PF1 proficiency applies to EVERY combatant — bots, humans, and piloted
+    // personas alike (no AI exemption). Signature `custom` weapons are always
+    // proficient (weaponProficient handles that), so iconic gear is unaffected.
+    const notProf = weaponProficient(cls, weapon) ? 0 : NON_PROFICIENT_PENALTY;
     const ff = fighterFeats(cls, lvl, !!(weapon && weapon.ranged));   // bonus feats — RANGED ladder with a bow/crossbow, else melee
     // Swashbuckler — only with a finessable weapon: Weapon Focus, Weapon
     // Specialization, Precise Strike (+level, NOT crit-multiplied), Improved Critical.
@@ -3443,7 +3446,7 @@ class Dungeon {
   _attackRoll(m, e, extraDef = 0) {
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
     const lvl = m.level || 1, cls = m.cls || 'fighter';
-    const notProf = (m.isBot || weaponProficient(cls, w)) ? 0 : NON_PROFICIENT_PENALTY;
+    const notProf = weaponProficient(cls, w) ? 0 : NON_PROFICIENT_PENALTY;   // PF1 proficiency — uniform, no AI exemption
     const toHit = babFor(cls, lvl) + ABILITY_MOD + (w.toHit || 0) + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m) + notProf - (m.sickened > 0 ? SICKENED_PENALTY : 0);
     const roll = dRoll(20), total = roll + toHit;
     return { hit: roll === 20 || (roll !== 1 && total >= this._enemyAC(e) + (extraDef || 0)), roll, total, toHit, weapon: w };
@@ -4103,13 +4106,20 @@ class Dungeon {
     const dice = this._spellDice(ab, m);
     const raw = Math.max(1, this._rollSpell(m, dice, ab.die || 6, ab));
     const dmg = this._dmgE(e, raw, ab.dtype);
+    // Lifesteal rider (antipaladin Vampiric Touch) — heal the caster by the
+    // energy actually dealt, same as the magus spellstrike version.
+    let stealNote = '';
+    if (ab.lifesteal && dmg > 0 && m.hp > 0) {
+      const before = m.hp; m.hp = Math.min(m.maxHp, m.hp + dmg);
+      if (m.hp > before) stealNote = ` ${m.nickname} DRINKS ${m.hp - before} HP back.`;
+    }
     let dotNote = '';
     if (ab.dot && e.hp > 0) {   // Acid Arrow: it keeps eating away each of the foe's turns.
       const rounds = Math.min(5, Math.max(1, Math.floor((m.level || 1) / 3)));   // 1 round per 3 caster levels
       e.acid = { rounds, dice: Math.max(1, Math.floor(dice / 2)), die: ab.die || 6 };   // a fading burn (half the initial dice)
       dotNote = ` It clings and KEEPS BURNING (${rounds} more round${rounds > 1 ? 's' : ''}).`;
     }
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}.${dotNote}${this._afterEnemyHit(e)}`, sound);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}.${stealNote}${dotNote}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   }

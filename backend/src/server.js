@@ -153,6 +153,9 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[poker] v3 listening on :${PORT}  defaultStack=${db.DEFAULT_STACK}  roster=${db.ROSTER.length}`);
+  // Meyanda, the family Discord herald — a silent no-op unless data/.meyanda.env
+  // enables her (so the testbed stays dark and her failures stay her own).
+  try { require('./discord/meyanda').start(); } catch (e) { console.error('[meyanda]', e.message); }
   // If this deploy carried a feature note (DEPLOY_NOTE env, set on the
   // `docker compose up`), drop a short "what changed" line into the table
   // chat. It lands in the chat log, so whoever is connected or joins after

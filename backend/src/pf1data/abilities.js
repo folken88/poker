@@ -135,7 +135,7 @@ const S = {
 // Sound POOLS — abilities with `sounds: [...]` pick one at random per cast, so a
 // repeated spell doesn't drone the same clip (Fireball / Lightning Bolt / Haste).
 const FIREBALL_SFX = ['/audio/fireball_1.mp3', '/audio/fireball_2.mp3', '/audio/fireball_3.mp3', '/audio/fireball_4.mp3'];
-const THUNDER_SFX  = ['/audio/thunder_1.mp3', '/audio/thunder_2.mp3', '/audio/thunder_3.mp3', '/audio/thunder_4.mp3', '/audio/thunder_5.mp3'];
+const THUNDER_SFX  = ['/audio/thunder_1.mp3', '/audio/thunder_2.mp3', '/audio/thunder_3.mp3', '/audio/thunder_4.mp3', '/audio/thunder_5.mp3', '/audio/thunderclap_slow.mp3'];   // slow clap retired from Chain Lightning into the Lightning Bolt pool
 const HASTE_SFX    = ['/audio/spell_haste.mp3', '/audio/spell_haste2.mp3', '/audio/ghosts_n_stuff_intro.mp3'];
 // Blessing of Fervor incants ABBA's "Gimme! Gimme! Gimme!" — one of three clips.
 const FERVOR_SFX   = ['/audio/abba_gimme_intro.mp3', '/audio/abba_gimme_chorus.mp3', '/audio/abba_gimme_chorus2.mp3'];
@@ -586,6 +586,17 @@ KITS.gunslinger = { atwill: ATTACK('🔫'), note: 'Gun Training: DEX to hit and 
 KITS.monk = { atwill: ATTACK('👊'), note: 'Free: Improved Unarmed Strike (scaling fists), Stunning Fist, Flurry of Blows (two strikes every turn).', abilities: [
   { key: 'stunningfist', name: 'Stunning Fist', icon: '🌀', cost: 'room', uses: 1, effect: 'stunfist', target: 'enemy', sound: '/audio/weapon_blunt.mp3', desc: 'Once per room: a precise strike — your normal attack, and on a hit the foe must save (Fort, DC 10 + ½ level + WIS) or be STUNNED and lose its next turn.' },
   { key: 'trip', name: 'Trip', icon: '🦵', cost: 'free', effect: 'trip', target: 'enemy', desc: 'Attack to trip (no damage). On a hit the foe is knocked prone, loses its turn, and you get a free attack. Prone = +4 for everyone to hit it.' },
+] };
+
+// ── ANTIPALADIN — the paladin's dark mirror (Adimarus). Was the last kit-less
+// class (it fell back to the fighter kit). FIENDISH BOON already auto-enchants
+// the weapon in Dungeon._swingVsAC (+1@5 … +6@20; UNHOLY +2d6 vs good from 8).
+// Touch of Corruption is PF1 RAW (1d6 per 2 levels, melee touch); Bull's
+// Strength (2nd) and Vampiric Touch (3rd) are on the antipaladin spell list.
+KITS.antipaladin = { atwill: ATTACK('🗡️'), note: 'Unholy champion — your Fiendish Boon auto-enchants your weapon (+1 at 5 up to +6 at 20; UNHOLY vs good foes from 8). Antipaladin spells unlock at 4th.', abilities: [
+  { key: 'touchofcorruption', name: 'Touch of Corruption', icon: '🖤', cost: 'room', uses: smiteUses, minLevel: 2, effect: 'touch', target: 'enemy', die: 6, dice: 'halflevel', dcap: 10, dtype: 'negative', sound: S.umbral, desc: 'A melee touch crackling with profane energy — ½ level d6 negative damage (cap 10d6). Once per 5 levels per room.' },
+  { key: 'bullsstrength', name: "Bull's Strength", icon: '💪', cost: 'room', uses: 1, minLevel: 7, slvl: 2, effect: 'buff', target: 'ally', buff: { toHit: 2, dmg: 2 }, sticky: true, sound: S.invoke, desc: 'One martial ally gets +2 to hit and +2 melee damage for the rest of the room. (2nd-level antipaladin spell, level 7.)' },
+  { key: 'vampirictouch', name: 'Vampiric Touch', icon: '🩸', cost: 'room', uses: 1, minLevel: 10, slvl: 3, effect: 'touch', target: 'enemy', die: 6, dice: 'halflevel', dcap: 10, dtype: 'negative', lifesteal: true, sound: S.umbral, desc: 'A draining melee touch — ½ level d6 negative (cap 10d6); you HEAL the energy dealt. (3rd-level antipaladin spell, level 10.)' },
 ] };
 
 // ── Power Attack (melee) + Deadly Aim (ranged) on EVERY class, free, from L1 ──
