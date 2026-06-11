@@ -1147,7 +1147,9 @@
                       : (cnt ? `<span class="dungeon__sb-badge">${cnt}</span>` : '');
           const tgt = ab.maxTargets > 1 ? ` · up to ${ab.maxTargets} foes` : '';
           const lk  = locked ? ` — unlocks at level ${ab.minLevel}` : '';
-          const title = `${ab.name}${tgt}${lk}${ab.desc ? ' — ' + ab.desc : ''}`;
+          // Metamagic active → this slot spell draws a HIGHER slot; show which.
+          const mmSlot = (ab.cost === 'slot' && ab.slvlEff && ab.slvlEff !== ab.slvl) ? ` — METAMAGIC: draws a ${ab.slvlEff}th-level slot` : '';
+          const title = `${ab.name}${tgt}${lk}${mmSlot}${ab.desc ? ' — ' + ab.desc : ''}`;
           return `<button class="dungeon__sb-spell${locked ? ' is-locked' : ''}" data-dact="ability" data-slot="${slot}"${dis ? ' disabled' : ''} title="${escapeAttr(title)}" aria-label="${escapeAttr(ab.name)}">${ic(ab)}${badge}</button>`;
         };
         const atName = `${kit.atwill.img ? ic(kit.atwill) : (kit.atwill.icon || '⚔️') + ' '}${escapeText(kit.atwill.name || 'Attack')}`;
@@ -1215,6 +1217,13 @@
             (me.cantrip ? `<span class="dungeon__cantrips" role="group" aria-label="At-will cantrip element (C cycles)">` +
               me.cantrip.choices.map(c =>
                 `<button class="btn ${c.key === me.cantrip.current ? 'btn--primary' : 'btn--ghost'}" data-dact="cantrip" data-cankey="${escapeAttr(c.key)}" aria-pressed="${c.key === me.cantrip.current}" title="${escapeAttr(c.name)} — your at-will ray deals ${escapeAttr(c.dtype)} (free to switch, any time)">${c.icon}</button>`
+              ).join('') + `</span>` : '') +
+            // Spontaneous-caster METAMAGIC toggles (one per feat owned). Toggling on
+            // raises your next damaging spell's slot cost and boosts it; stacking is
+            // allowed. Lit = active.
+            ((kit.metamagic && kit.metamagic.length) ? `<span class="dungeon__metamagic" role="group" aria-label="Metamagic — toggle before casting">` +
+              kit.metamagic.map(mm =>
+                `<button class="btn ${mm.on ? 'btn--primary' : 'btn--ghost'} btn--sm" data-dact="metamagic" data-mmkey="${escapeAttr(mm.key)}" aria-pressed="${!!mm.on}" title="${escapeAttr(mm.name)} (${mm.adj} slot level) — toggle before you cast; stacks with others">✨${escapeText(mm.name)} ${mm.adj}</button>`
               ).join('') + `</span>` : '') +
             abilHtml +
           `</div>` +
@@ -1318,6 +1327,7 @@
       dungeonAction('ability', payload); _spellbookOpen = false;
     }
     else if (act === 'cantrip') dungeonAction('cantrip', { key: b.dataset.cankey });   // switch at-will element — free, any time
+    else if (act === 'metamagic') dungeonAction('metamagic', { key: b.dataset.mmkey });   // toggle a metamagic on/off (spontaneous casters)
     else if (act === 'door')    dungeonAction('door');
     else if (act === 'bail')    dungeonAction('bail');
     else if (act === 'join')    enterDungeon();        // spectator → combatant

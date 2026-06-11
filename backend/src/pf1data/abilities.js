@@ -191,7 +191,7 @@ const SPELL = {
   fireshield:    { key: 'fireshield',    name: 'Fire Shield',    icon: '🔥', effect: 'buff', target: 'self', fireShield: true, sticky: true, slvl: 4, sound: S.invoke, desc: 'Wreathe yourself in flame — any foe that hits you in melee is scorched for 1d6 + level fire. Lasts the room.' },
   elementalbody: { key: 'elementalbody', name: 'Elemental Body',  icon: '🌪️', effect: 'buff', target: 'self', elemBody: true, sticky: true, slvl: 4, sound: S.invoke, desc: 'Become a being of raw element — IMMUNE to critical hits and to paralysis, stun, sickening & blinding, for the rest of the room.' },
   dimensionalblade: { key: 'dimensionalblade', name: 'Dimensional Blade', icon: '🗡️', effect: 'dimensionalblade', target: 'self', freeAction: true, slvl: 5, sound: S.anchor, desc: 'Fold your weapon a half-step out of phase — a FREE action: your strikes resolve as TOUCH attacks (ignoring armor & natural armor) for 1 round.' },
-  chainlightning:{ key: 'chainlightning',name: 'Chain Lightning', icon: '⚡', effect: 'aoe', target: 'aoe', maxTargets: 6, randFoes: 6, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'electricity', slvl: 6, sound: S.chainlight, desc: 'A bolt arcs from foe to foe — a RANDOM 1d6 enemies, Reflex for half (level d6, cap 15d6).' },
+  chainlightning:{ key: 'chainlightning',name: 'Chain Lightning', icon: '⚡', effect: 'aoe', target: 'aoe', maxTargets: 10, randBase: 4, randDie: 6, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'electricity', slvl: 6, sound: S.chainlight, desc: 'A bolt forks from foe to foe — 4 + 1d6 enemies (5–10), Reflex for half (level d6, cap 15d6).' },
   dispelmagicgreater: { key: 'dispelmagicgreater', name: 'Dispel Magic, Greater', icon: '🌀', effect: 'cleanse', greater: true, target: 'ally', slvl: 6, sound: S.dispel, desc: 'A sweeping unweaving — strip ALL debuffs off an afflicted ally (paralysis, hold, slow, sicken, blind, grapple), or tear the buffs off a foe.' },
   trueseeing:    { key: 'trueseeing',    name: 'True Seeing',     icon: '👁️', effect: 'buff', target: 'self', trueSeeing: true, sticky: true, slvl: 6, sound: S.invoke, desc: 'Your eyes pierce all deception — see through darkness, ignore illusions, and strike the invisible. Lasts the room.' },
 };
@@ -334,6 +334,16 @@ const KITS = {
     preparedSpell(SPELL.coneofcold,    9),
     preparedSpell(SPELL.disintegrate,  11),
     preparedSpell(SPELL.chainlightning, 11),
+    // ── METAMAGIC prepared spells (PF1: the wizard prepares the metamagic version
+    //    in a HIGHER slot — modelled here as separate once-per-room entries gated to
+    //    the level that slot opens up; each carries its boost flag). Gated on having
+    //    both the spell and the metamagic feat (Intensify n6/L11, Empower n7/L13,
+    //    Maximize n9/L17 in casterFeats). ──
+    { ...SPELL.fireball,      key: 'fireball_int',  name: 'Intensified Fireball',  icon: '💥', cost: 'room', uses: 1, minLevel: 11, intensified: true, desc: 'Fireball in a 4th-level slot — the damage cap climbs +5 dice (level d6 to 15, Reflex half).' },
+    { ...SPELL.fireball,      key: 'fireball_emp',  name: 'Empowered Fireball',    icon: '🔥', cost: 'room', uses: 1, minLevel: 13, empowered: true,   desc: 'Fireball in a 5th-level slot — ×1.5 damage (Reflex half).' },
+    { ...SPELL.scorchingray,  key: 'scorch_emp',    name: 'Empowered Scorching Ray', icon: '🔥', cost: 'room', uses: 1, minLevel: 13, empowered: true, desc: 'Scorching Ray in a 4th-level slot — ×1.5 fire on every ray.' },
+    { ...SPELL.coneofcold,    key: 'cone_max',      name: 'Maximized Cone of Cold', icon: '🥶', cost: 'room', uses: 1, minLevel: 17, maximized: true,  desc: 'Cone of Cold in an 8th-level slot — every die maxed (Reflex half).' },
+    { ...SPELL.disintegrate,  key: 'disint_max',    name: 'Maximized Disintegrate', icon: '☢️', cost: 'room', uses: 1, minLevel: 17, maximized: true,  desc: 'Disintegrate in a 9th-level slot — every die maxed on a hit.' },
   ] },
   // SORCERER — spontaneous caster: knows FEWER spells, drawn from a shared
   // per-room cast pool (his limited casts/day = casts/room). A focused blaster's

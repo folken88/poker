@@ -2326,7 +2326,9 @@ class Dungeon {
     const choice = this._botAbility(m);
     if (choice) {
       const ab = kitFor(m.cls).abilities[choice.slot];
+      m._botMM = this._botPickMetamagic(m, ab);   // spontaneous bot may empower/maximize a damage spell when flush on high slots
       const r = this._useAbility(m, choice.slot, choice.payload);
+      m._botMM = null;                            // one-shot — never leaks past the cast
       if (r && r.ok && ab) m._lastAbilityKey = ab.key;
       if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }   // free action (judgement) → keep acting
       // Curator: after a quickened (swift) buff, immediately try ONE more support
@@ -2895,6 +2897,7 @@ class Dungeon {
     if (kind === 'equip') { const r = this.equipLoot(playerId, payload.idx); this._broadcast(); return r; }
     if (kind === 'hock')  { const r = this.hockLoot(playerId, payload.idx); this._broadcast(); return r; }
     if (kind === 'cantrip') return this.setCantrip(playerId, payload.key);   // pick at-will element (free, any time)
+    if (kind === 'metamagic') return this.setMetamagic(playerId, payload.key);   // spontaneous caster toggles a metamagic on/off
 
     if (this.status === 'exploring') {
       if (kind === 'door') return this.openDoor();
@@ -3024,7 +3027,7 @@ class Dungeon {
     if (!D) return { ok: false, error: 'unknown ability' };
     D();
     if (ab.cost === 'pool') m.spellPool = Math.max(0, (m.spellPool || 0) - 1);
-    else if (ab.cost === 'slot') { m.slots = m.slots || {}; m.slots[ab.slvl] = Math.max(0, (m.slots[ab.slvl] || 0) - 1); }
+    else if (ab.cost === 'slot') { m.slots = m.slots || {}; const _L = this._slotLevelFor(m, ab); m.slots[_L] = Math.max(0, (m.slots[_L] || 0) - 1); }   // metamagic draws from the HIGHER slot
     else if (ab.cost === 'room' && !formOff) m.abilityUses[ab.key] = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 0) - 1);
     else if (ab.cost === 'run') m.runAbilityUses[ab.key] = Math.max(0, ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) - 1);
     if ((ab.target === 'enemy' || ab.target === 'aoe') && !m.greaterInvis) m.invisible = false;   // attacking breaks Invisibility (Greater persists)
@@ -3047,6 +3050,16 @@ class Dungeon {
     if (ab.effect === 'heal' && ab.heal === 'party' && !m._qcUsed && fighterFeats(m.cls, m.level, this._isRanged(m)).quickChannel) {
       m._qcUsed = true;
       this._note(`✨ ${m.nickname} QUICKENS the channel — a swift action! (act again this turn)`);
+      return { ok: true, freeAction: true };
+    }
+    // METAMAGIC QUICKEN: a quickened spell is a SWIFT action — the caster acts again
+    // (cast a second spell, or strike). PF1: one swift action per turn, so it consumes
+    // itself — the quicken toggle / bot one-shot clears after firing.
+    if (ab.cost === 'slot' && this._mmForCast(m, ab).quicken) {
+      if (m.metamagic) m.metamagic.quicken = false;
+      if (m._botMM) m._botMM.quicken = false;
+      this._note(`⚡ ${m.nickname} QUICKENS the casting — a swift action! (cast again or strike this turn)`);
+      this._broadcast();
       return { ok: true, freeAction: true };
     }
     if (ab.effect === 'judgment' || ab.freeAction) return { ok: true, freeAction: true };   // judgement switch / barbarian Rage cost no action
@@ -3198,21 +3211,37 @@ class Dungeon {
     const _rangedNow = this._isRanged(m);
     const _showStance = (ab) => !(ab.powerattack || ab.deadlyaim)
       || (_weaponFighter && (ab.powerattack ? !_rangedNow : _rangedNow));
+    // Metamagic — for SPONTANEOUS casters: the toggle buttons (one per feat owned)
+    // and which are active. Slot spells re-level by the active toggles below.
+    const ff = fighterFeats(m.cls, m.level, this._isRanged(m));
+    const mmActive = this._spontMM(m) || {};
+    const mmFeats = isSpontaneous(m.cls)
+      ? [['intensify', 'Intensify', '+1'], ['empower', 'Empower', '+2'], ['maximize', 'Maximize', '+3'], ['quicken', 'Quicken', '+4']]
+          .filter(([k]) => ff[k]).map(([key, name, adj]) => ({ key, name, adj, on: !!mmActive[key] }))
+      : [];
     return {
       atwill: { key: kit.atwill.key, name: kit.atwill.name, icon: kit.atwill.icon, img: kit.atwill.img || null },
       caster: isCaster(m.cls),
       spellNote: kit.note || null,
+      metamagic: mmFeats.length ? mmFeats : null,    // null → no buttons (prepared casters bake metamagic into spell entries)
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
       // Per-spell-level slots for spontaneous casters: { 1: {remaining,max}, … }.
       slots: maxSlots ? Object.fromEntries(Object.keys(maxSlots).map(L => [L, { remaining: (m.slots && m.slots[L]) || 0, max: maxSlots[L] }])) : null,
-      abilities: kit.abilities.filter(ab => this._charAllows(ab, m) && _showStance(ab)).map(ab => ({
+      abilities: kit.abilities.filter(ab => this._charAllows(ab, m) && _showStance(ab)).map(ab => {
+        // Slot spells re-level by the active metamagic; the UI shows the effective
+        // level, draws the right slot count, and greys out if there's no slot there
+        // (or it pushes past 9th).
+        const slvlEff = ab.cost === 'slot' ? this._slotLevelFor(m, ab) : ab.slvl;
+        return {
         key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, maxTargets: ab.maxTargets || 1,
         slot: kit.abilities.indexOf(ab),   // stable index into kit.abilities (the action payload `slot`) — survives the char filter
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
-        minLevel: ab.minLevel || 1, slvl: ab.slvl || null, available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction) && !(ab.cost === 'slot' && !(maxSlots && maxSlots[ab.slvl])), desc: ab.desc || '',
-        remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'slot' ? ((m.slots && m.slots[ab.slvl]) || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
-        max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'slot' ? ((maxSlots && maxSlots[ab.slvl]) || 0) : ab.cost === 'room' ? roomUses(ab, lvl) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl) : (ab.uses || 1)) : null,
-      })),
+        minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null,
+        available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction) && !(ab.cost === 'slot' && (slvlEff > 9 || !(maxSlots && maxSlots[slvlEff]))), desc: ab.desc || '',
+        remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'slot' ? ((m.slots && m.slots[slvlEff]) || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
+        max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'slot' ? ((maxSlots && maxSlots[slvlEff]) || 0) : ab.cost === 'room' ? roomUses(ab, lvl) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl) : (ab.uses || 1)) : null,
+        };
+      }),
     };
   }
   // Spell save DC + caster level for this member (level = 1 + gear).
@@ -3223,23 +3252,78 @@ class Dungeon {
   // casting-stat mod (NOT the legacy Dex-ish ABILITY_MOD). Cantrips already do this
   // (see _abCantrip); the magus's weapon-delivered Spellstrike keeps its weapon stat.
   _spellToHit(m) { return babFor(m.cls || 'fighter', m.level || 1) + (m.castingMod != null ? m.castingMod : CAST_MOD); }
-  // Spell damage dice — INTENSIFIED SPELL (wizard/sorcerer/witch n6, magus n4)
-  // raises a level-scaled spell's dice cap by +5 (PF1), so Shocking Grasp keeps
-  // growing past 5d6 and Fireball past 10d6.
-  _spellDice(ab, m) {
+  // ── METAMAGIC (PF1) ─────────────────────────────────────────────────────────
+  // Two paths, mirroring the two spell systems:
+  //   • SPONTANEOUS casters (sorcerer/bard/oracle/inquisitor) carry live TOGGLES in
+  //     m.metamagic (set via the 'metamagic' action / UI). Toggling is gated on the
+  //     caster owning the feat. A metamagic'd spontaneous spell is drawn from a slot
+  //     +1/+2/+3/+4 HIGHER (Intensify/Empower/Maximize/Quicken) — see _slotLevelFor.
+  //   • PREPARED casters (wizard/druid/magus) bake the flag onto a fixed spell entry
+  //     (ab.empowered etc., like the magus); the higher slot cost is baked into the
+  //     entry's minLevel, so prepared casts pay no runtime slot bump.
+  //   • A bot may set a ONE-SHOT m._botMM for the cast it's about to make.
+  // Stacking is allowed (PF1 RAW) — adjustments sum.
+  _spontMM(m) {
+    const t = (isSpontaneous(m.cls) && m.metamagic) ? m.metamagic : null;
+    const b = m._botMM || null;
+    if (!t && !b) return null;
+    return { intensify: !!((t && t.intensify) || (b && b.intensify)), empower: !!((t && t.empower) || (b && b.empower)),
+             maximize: !!((t && t.maximize) || (b && b.maximize)), quicken: !!((t && t.quicken) || (b && b.quicken)) };
+  }
+  // The metamagic that actually APPLIES to this cast = the spell's baked flags
+  // (prepared) ∪ the spontaneous toggles / bot one-shot — but Empower/Maximize/
+  // Intensify only do anything to a DICE (damage) spell, while Quicken applies to
+  // any spell. So toggling Empower and then casting Haste wastes nothing (no boost,
+  // no slot bump); Quicken + Haste still costs +4 and frees the action.
+  _mmForCast(m, ab) {
+    const s = this._spontMM(m) || {};
+    const wantI = !!((ab && ab.intensified) || s.intensify), wantE = !!((ab && ab.empowered) || s.empower);
+    const wantM = !!((ab && ab.maximized) || s.maximize), wantQ = !!((ab && ab.quickened) || s.quicken);
+    const dice = !!(ab && ab.dice);
+    return { intensify: wantI && dice && !!(ab && ab.dcap), empower: wantE && dice, maximize: wantM && dice, quicken: wantQ };
+  }
+  _mmAdjust(mm) { return mm ? ((mm.intensify ? 1 : 0) + (mm.empower ? 2 : 0) + (mm.maximize ? 3 : 0) + (mm.quicken ? 4 : 0)) : 0; }
+  // Effective slot level for a SPONTANEOUS 'slot' cast = base spell level + the
+  // adjustment for the toggles that actually APPLY to this spell (so a non-damage
+  // spell isn't bumped by Empower). Prepared (room) casts never slot-bump.
+  _slotLevelFor(m, ab) {
+    if (ab.cost !== 'slot') return ab.slvl || 0;
+    const s = this._spontMM(m); if (!s) return ab.slvl || 0;
+    const dice = !!(ab && ab.dice);
+    const adj = (s.intensify && dice && ab.dcap ? 1 : 0) + (s.empower && dice ? 2 : 0) + (s.maximize && dice ? 3 : 0) + (s.quicken ? 4 : 0);
+    return (ab.slvl || 0) + adj;
+  }
+  // A spontaneous BOT may upgrade a damage spell with Empower/Maximize when it has the
+  // feat AND a SURPLUS higher slot to spend (never cannibalises its single top slot).
+  // Bots skip Quicken (action economy) and Intensify (marginal). Returns a one-shot
+  // metamagic set for the cast, or null. Announces its choice.
+  _botPickMetamagic(m, ab) {
+    if (!ab || ab.cost !== 'slot' || !isSpontaneous(m.cls)) return null;
+    if (!['bolt', 'aoe', 'touch', 'rays', 'disintegrate'].includes(ab.effect) || !ab.dice) return null;
     const ff = fighterFeats(m.cls, m.level, this._isRanged(m));
-    const eab = (ff.intensify && ab.dcap && ab.dice) ? { ...ab, dcap: ab.dcap + 5 } : ab;
+    const slots = m.slots || {}, base = ab.slvl || 1;
+    const surplus = (adj) => { const L = base + adj; return L <= 9 && (slots[L] || 0) > 0 && ((slots[L] || 0) >= 2 || Object.keys(slots).some(k => +k > L && slots[k] > 0)); };
+    let mm = null, word = '';
+    if (ff.maximize && surplus(3))     { mm = { maximize: true }; word = 'MAXIMIZED'; }
+    else if (ff.empower && surplus(2)) { mm = { empower: true };  word = 'EMPOWERED'; }
+    if (mm) this._note(`✨ ${m.nickname} channels a ${word} ${ab.name}!`);
+    return mm;
+  }
+  // Spell damage dice — INTENSIFIED SPELL raises a level-scaled spell's dice cap by +5
+  // (PF1), so Shocking Grasp keeps growing past 5d6 and Fireball past 10d6.
+  _spellDice(ab, m) {
+    const mm = this._mmForCast(m, ab);
+    const eab = (mm.intensify && ab.dcap && ab.dice) ? { ...ab, dcap: ab.dcap + 5 } : ab;
     return diceCount(eab, m.level || 1);
   }
-  // Roll a spell's damage dice with the caster's METAMAGIC applied: MAXIMIZE (max
-  // dice, no roll) beats EMPOWER (×1.5) — they don't stack here (simplification of
-  // PF1's max+half-rolled). Per-ability flags (a spellstrike's own empowered/
-  // maximized variants) fold in via `ab`.
+  // Roll a spell's damage dice with METAMAGIC applied. PF1 RAW stacking: MAXIMIZE sets
+  // every die to max; EMPOWER adds +50% — and the two STACK (max the dice, then add
+  // half of a fresh roll). Metamagic only reaches here if it's a baked spell flag or
+  // an active spontaneous toggle (both gated on the caster's feat).
   _rollSpell(m, dice, die, ab) {
-    const ff = fighterFeats(m.cls, m.level, this._isRanged(m));
-    const maxed = !!((ab && ab.maximized) || ff.maximize);
-    let dmg = maxed ? dice * die : dRollN(dice, die);
-    if (!maxed && ((ab && ab.empowered) || ff.empower)) dmg = Math.floor(dmg * 1.5);
+    const mm = this._mmForCast(m, ab);
+    let dmg = mm.maximize ? dice * die : dRollN(dice, die);
+    if (mm.empower) dmg += Math.floor((mm.maximize ? dRollN(dice, die) : dmg) * 0.5);
     return dmg;
   }
   _enemyTargets(payload, max) {
@@ -3384,6 +3468,20 @@ class Dungeon {
     m.cantrip = key;
     this._broadcast();
     return { ok: true, cantrip: key };
+  }
+  // Toggle a metamagic on/off for a SPONTANEOUS caster (stacking allowed). Only a
+  // metamagic the caster has the FEAT for can be toggled. Active metamagic re-levels
+  // the next damaging spell to a higher slot (see _slotLevelFor) and boosts it.
+  setMetamagic(playerId, key) {
+    const m = this.member(playerId);
+    if (!m || m.left) return { ok: false, error: 'not in this run' };
+    if (!isSpontaneous(m.cls)) return { ok: false, error: 'prepared casters bake metamagic into prepared spells, not on the fly' };
+    const ff = fighterFeats(m.cls, m.level, this._isRanged(m));
+    if (!ff[key] || !['intensify', 'empower', 'maximize', 'quicken'].includes(key)) return { ok: false, error: 'you don\'t have that metamagic feat' };
+    m.metamagic = m.metamagic || { intensify: false, empower: false, maximize: false, quicken: false };
+    m.metamagic[key] = !m.metamagic[key];
+    this._broadcast();
+    return { ok: true, metamagic: m.metamagic };
   }
   // Improved at-will: casting stat to-hit AND to-damage (1d6 + casting mod), with
   // BAB-based iteratives (2nd ray at BAB 6, 3rd at 11, 4th at 16). Each ray is a
