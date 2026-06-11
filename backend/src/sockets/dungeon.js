@@ -66,7 +66,12 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
   socket.on('dungeon:enter', (_p, ack) => {
     const me = meOf();
     if (!me) return ack?.({ ok: false, error: 'choose a player first' });
-    if (me.is_bot) return ack?.({ ok: false, error: 'bots cannot enter the dungeon directly' });
+    // A human driving a BOT persona (chose it via lobby:choosePlayer, just like
+    // sitting in for a bot at the poker table) may bring that persona into the
+    // dungeon. Only a connected socket can reach this handler, so `me.is_bot`
+    // here is always a HUMAN wearing a bot's face — never the AI itself. The
+    // member is added as human-controlled (addMember isBot=false), so the human
+    // drives its turns; the AI never auto-plays a persona someone's piloting.
     const tableId = tableIdOf();
     const table = tables.get(tableId);
 
