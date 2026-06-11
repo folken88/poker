@@ -535,16 +535,16 @@ const MON = {
   goblin:            { name: 'Goblin',            glyph: '👺', cr: '1/3', hp: 6,   ac: 16, toHit: 2,  dmgDie: 4,  dmgBonus: 0, fort: 3,  reflex: 2,  gold: [6, 16] },
   kobold:            { name: 'Kobold',            glyph: '🦎', cr: '1/4', hp: 5,   ac: 15, toHit: 1,  dmgDie: 6,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [6, 14] },
   kobold_spearman:   { name: 'Kobold Spearman',   glyph: '🦎', cr: '1/3', hp: 6,   ac: 15, toHit: 2,  dmgDie: 6,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [6, 16] },                                            // 1d6 spear
-  kobold_shaman:     { name: 'Kobold Shaman',     glyph: '🦎', cr: '1',   hp: 7,   ac: 13, toHit: 0,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [12, 26], caster: 'holdperson', spellDC: 13 },          // Hold Person (Will DC 13)
+  kobold_shaman:     { name: 'Kobold Shaman',     glyph: '🦎', cr: '1',   hp: 7,   ac: 13, toHit: 0,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [12, 26], caster: 'holdperson', spellDC: 13, healer: { dice: 1, uses: 1 } },          // Hold Person (Will DC 13) + one Cure Light for the warren
   kobold_rogue:      { name: 'Kobold Rogue',      glyph: '🦎', cr: '1',   hp: 6,   ac: 16, toHit: 2,  dmgDie: 3,  dmgBonus: 0, fort: 1,  reflex: 4,  gold: [10, 24], attacks: 2, sneakDice: 2, evasion: true, atkSound: '/audio/fight_riki.mp3' }, // two 1d3 daggers + sneak attack; Evasion
   goblin_rogue:      { name: 'Goblin Rogue',      glyph: '👺', cr: '1/2', hp: 7,   ac: 15, toHit: 3,  dmgDie: 4,  dmgBonus: 1, fort: 1,  reflex: 5,  gold: [8, 20],  attacks: 1, sneakDice: 2, evasion: true, atkSound: '/audio/fight_riki.mp3' }, // dogslicer + Sneak Attack; Evasion
-  goblin_shaman:     { name: 'Goblin Shaman',     glyph: '👺', cr: '1',   hp: 8,   ac: 13, toHit: 1,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 2,  gold: [12, 26], caster: 'holdperson', spellDC: 13 },          // Hold Person (Will DC 13) — sets up the rogues
+  goblin_shaman:     { name: 'Goblin Shaman',     glyph: '👺', cr: '1',   hp: 8,   ac: 13, toHit: 1,  dmgDie: 4,  dmgBonus: 0, fort: 2,  reflex: 2,  gold: [12, 26], caster: 'holdperson', spellDC: 13, healer: { dice: 1, uses: 1 } },          // Hold Person (Will DC 13) — sets up the rogues; one Cure Light for the tribe
   goblin_barbarian:  { name: 'Goblin Barbarian',  glyph: '👺', cr: '1',   hp: 17,  ac: 14, toHit: 4,  dmgDie: 8,  dmgBonus: 4, fort: 4,  reflex: 2,  gold: [12, 28], taunt: { dc: 13, sound: '/audio/taunt_predator_goblin.mp3' } },   // raging goblin — roars a Taunt that pulls AI allies onto it
   skeleton:          { name: 'Skeleton',          glyph: '💀', cr: '1/3', hp: 5,   ac: 16, toHit: 2,  dmgDie: 6,  dmgBonus: 2, fort: 0,  reflex: 1,  gold: [8, 20], dr: { amount: 5, bypass: 'B' } },   // PF1 skeleton — DR 5/bludgeoning (slashing & piercing glance off; a mace crushes)
   giant_spider:      { name: 'Giant Spider',      glyph: '🕷️', cr: '1',   hp: 16,  ac: 14, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 4,  reflex: 4,  gold: [10, 26] },
   zombie:            { name: 'Zombie',            glyph: '🧟', cr: '1/2', hp: 12,  ac: 12, toHit: 4,  dmgDie: 6,  dmgBonus: 4, fort: 0,  reflex: 0,  gold: [10, 26], dr: { amount: 5, bypass: 'S' } },   // PF1 zombie — DR 5/slashing (hack it apart; blunt & piercing barely dent it)
   ghoul:             { name: 'Ghoul',             glyph: '🧛', cr: '1',   hp: 13,  ac: 14, toHit: 3,  dmgDie: 6,  dmgBonus: 1, fort: 1,  reflex: 3,  gold: [14, 32], paralyze: true, paralyzeDC: 13 },
-  cultist:           { name: 'Whispering Cultist',glyph: '🕯️', cr: '1',   hp: 14,  ac: 14, toHit: 3,  dmgDie: 8,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [16, 38] },
+  cultist:           { name: 'Whispering Cultist',glyph: '🕯️', cr: '1',   hp: 14,  ac: 14, toHit: 3,  dmgDie: 8,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [16, 38], healer: { dice: 1, uses: 1 } },   // a lay priest of the Whispering Way — one dark mending
   ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', cr: '2', hp: 17,  ac: 17, toHit: 6,  dmgDie: 8,  dmgBonus: 3, fort: 2,  reflex: 5,  gold: [28, 60], paralyze: true, paralyzeDC: 15 },
   monk:              { name: 'Monk',              glyph: '🥋', cr: '2',   hp: 22,  ac: 16, toHit: 4,  dmgDie: 6,  dmgBonus: 2, fort: 4,  reflex: 5,  gold: [18, 42], attacks: 2, evasion: true, tokenPool: MONK_TOKENS, atkSounds: BRUCE_SFX },  // flurry of unarmed strikes; random face + kiai; Evasion
   skeletal_champion: { name: 'Skeletal Champion', glyph: '☠️', cr: '2',   hp: 19,  ac: 17, toHit: 5,  dmgDie: 8,  dmgBonus: 3, fort: 3,  reflex: 2,  gold: [26, 55], dr: { amount: 5, bypass: 'B' }, shout: { dc: 14, sound: '/audio/enemy_draugr_shout.mp3' } },   // DR 5/bludgeoning; bone-rattling shout: 1d8 + Fort or stunned 1
@@ -587,12 +587,12 @@ const MON = {
   //    undead = mind-immune). CR ≈ class level + 1 for the template. ──
   vampire_spawn:     { name: 'Vampire Spawn',     glyph: '🧛', cr: '4',   hp: 26,  ac: 15, toHit: 7,  dmgDie: 6,  dmgBonus: 4,  fort: 3,  reflex: 5,  gold: [36, 78],   type: 'undead', evil: true, dr: { amount: 5,  bypass: 'magic' } },
   vamp_knight:       { name: 'Vampire Knight',    glyph: '🧛', cr: '9',   hp: 100, ac: 23, toHit: 15, dmgDie: 8,  dmgBonus: 8,  fort: 9,  reflex: 7,  attacks: 2, gold: [110, 220], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F8 + vampire
-  vamp_inquisitor:   { name: 'Vampire Inquisitor',glyph: '🧛', cr: '10',  hp: 105, ac: 22, toHit: 15, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  attacks: 2, gold: [120, 240], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 17, sound: '/audio/enemy_lich_gaze.mp3' } },   // I9 + vampire — dread judgment
+  vamp_inquisitor:   { name: 'Vampire Inquisitor',glyph: '🧛', cr: '10',  hp: 105, ac: 22, toHit: 15, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  attacks: 2, gold: [120, 240], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 17, sound: '/audio/enemy_lich_gaze.mp3' }, healer: { dice: 2, uses: 2 } },   // I9 + vampire — dread judgment; channels black mending for the court
   vamp_rogue:        { name: 'Vampire Rogue',     glyph: '🧛', cr: '10',  hp: 95,  ac: 23, toHit: 15, dmgDie: 6,  dmgBonus: 6,  fort: 6,  reflex: 11, attacks: 2, sneakDice: 5, evasion: true, gold: [120, 240], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // R9 + vampire
   vamp_scout:        { name: 'Vampire Scout',     glyph: '🧛', cr: '11',  hp: 105, ac: 24, toHit: 16, dmgDie: 6,  dmgBonus: 6,  fort: 6,  reflex: 12, attacks: 2, sneakDice: 5, evasion: true, gold: [130, 260], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // R10 + vampire
   vamp_warrior:      { name: 'Vampire Warrior',   glyph: '🧛', cr: '11',  hp: 120, ac: 24, toHit: 17, dmgDie: 8,  dmgBonus: 9,  fort: 10, reflex: 8,  attacks: 2, gold: [130, 260], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F10 + vampire
   vamp_bodyguard:    { name: 'Vampire Bodyguard', glyph: '🧛', cr: '13',  hp: 140, ac: 26, toHit: 19, dmgDie: 8,  dmgBonus: 10, fort: 11, reflex: 9,  attacks: 2, gold: [170, 320], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F12 + vampire
-  vamp_priest:       { name: 'Vampire Priest',    glyph: '🧛', cr: '13',  hp: 130, ac: 25, toHit: 17, dmgDie: 8,  dmgBonus: 8,  fort: 11, reflex: 8,  attacks: 2, gold: [170, 320], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' } },   // C12 + vampire — profane litany
+  vamp_priest:       { name: 'Vampire Priest',    glyph: '🧛', cr: '13',  hp: 130, ac: 25, toHit: 17, dmgDie: 8,  dmgBonus: 8,  fort: 11, reflex: 8,  attacks: 2, gold: [170, 320], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' }, healer: { dice: 3, uses: 3 } },   // C12 + vampire — profane litany; a true battle-cleric who mends the court
   vamp_assassin:     { name: 'Vampire Assassin',  glyph: '🧛', cr: '14',  hp: 140, ac: 27, toHit: 19, dmgDie: 6,  dmgBonus: 8,  fort: 8,  reflex: 13, attacks: 2, sneakDice: 7, evasion: true, gold: [190, 360], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // R13 + vampire
   vamp_nightguard:   { name: 'Vampire Nightguard',glyph: '🧛', cr: '14',  hp: 160, ac: 27, toHit: 21, dmgDie: 6,  dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 9, attacks: 2, gold: [190, 360], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F14 + vampire — polearm sweeps (2d6+10)
   vamp_noble:        { name: 'Vampire Noble',     glyph: '🧛', cr: '15',  hp: 160, ac: 27, toHit: 20, dmgDie: 8,  dmgBonus: 9,  fort: 11, reflex: 11, attacks: 2, gold: [220, 420], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 21, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 5, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // Mag14 + vampire — Vampiric Touch spellstrikes
@@ -915,6 +915,13 @@ class Dungeon {
   // True if this member wields a ranged weapon (bow/crossbow/firearm) — selects the
   // RANGED feat tree (Weapon Focus, Point Blank, Rapid Shot, …) over the melee one.
   _isRanged(m) { try { return !!weaponOf(m.gear, m.weaponKey).ranged; } catch (_) { return false; } }
+  // Can this member's CURRENT weapon reach foe `e`? Grounded melee can't touch a
+  // flyer; ranged/reach weapons and airborne attackers (Overland Flight) can.
+  _canReach(m, e) {
+    if (!e || !e.flying) return true;
+    const w = m.weapon || weaponOf(m.gear, m.weaponKey);
+    return !!(w.ranged || w.reachFly || (m.canHitFlyers && m.flying));
+  }
   // Compute + cache a member's PF1 derived stats (ability mods, CON-adjusted max
   // HP, casting mod, iterative-attack offsets) from their base 25-pt ability array.
   // Called at join and on every level change so the numbers track level/ASI.
@@ -1216,6 +1223,8 @@ class Dungeon {
       arcane: base.arcane || null,         // lich (wizard of its level): Fireball-style AoE blasts
       arcaneLeft: base.arcane ? 3 : 0,
       spellstrike: base.spellstrike || null, // vampire (magus of its level): Vampiric Touch on its strike
+      healer: base.healer || null,           // priestly foes mend their allies (see _enemyHeal)
+      healsLeft: base.healer ? (base.healer.uses || 1) : 0,
       prayed: 0,                           // cleric Prayer: −1 to this enemy's attacks/damage/saves
       acid: null,                          // Acid Arrow lingering burn: { rounds, dice, die }
       resist: base.resist || null,         // energy resistances / vulnerabilities (see RESIST_BY_KEY)
@@ -1977,6 +1986,14 @@ class Dungeon {
       // Fire Skeleton: its whole purpose is to rush in and blow up. If it survives
       // to its turn, it detonates (and dies) instead of making a normal attack.
       if (e.detonate && !e._exploded) return this._detonate(e);
+      // Enemy CLERICS tend their own: a priestly foe with healing left mends the
+      // most-wounded living ally (itself included) once anyone drops below half —
+      // but never wastes the prayer when the line is still healthy.
+      if (e.healer && e.healsLeft > 0) {
+        const wounded = this.livingEnemies().filter(x => x.hp > 0 && x.hp <= x.maxHp * 0.5)
+          .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
+        if (wounded) return this._enemyHeal(e, wounded);
+      }
       // Kobold shaman: cast Hold Person on an unheld target before resorting to melee.
       if (e.caster === 'holdperson' && e.castsLeft > 0) {
         const free = this._targetableParty().filter(m => !(m.paralyzed > 0));
@@ -1994,8 +2011,10 @@ class Dungeon {
         if (awake.length) return this._enemyShout(e, pick(awake));
       }
       // Vampire (magus of its level): a Vampiric Touch spellstrike — a draining
-      // melee blow that heals it. (Needs a grounded hero to touch.)
-      if (e.spellstrike && dRoll(2) === 1) {
+      // melee blow that heals it. (Needs a grounded hero to touch.) A WOUNDED
+      // vampire reaches for it every turn — the drain is its self-heal; a healthy
+      // one mixes it in on a coin flip.
+      if (e.spellstrike && (e.hp < e.maxHp * 0.7 || dRoll(2) === 1)) {
         const reach = this._targetableParty().filter(m => !m.flying);
         if (reach.length) return this._enemySpellstrike(e, pick(reach.filter(m => m.paralyzed > 0).length ? reach.filter(m => m.paralyzed > 0) : reach));
       }
@@ -2172,6 +2191,20 @@ class Dungeon {
   }
   // Barbed Devil's Hellfire Blast — fire AoE on a random handful of heroes,
   // Reflex for half. Rolls its damage once for the whole burst.
+  // An enemy priest channels restorative (or, for the undead court, profane)
+  // energy into the most-wounded ally — cure dice scale with the priest's grade.
+  _enemyHeal(e, ally) {
+    e.healsLeft = Math.max(0, (e.healsLeft || 0) - 1);
+    const d = (e.healer && e.healer.dice) || 1;
+    const heal = dRollN(d, 8) + d * 3;
+    const before = ally.hp;
+    ally.hp = Math.min(ally.maxHp, ally.hp + heal);
+    const dark = e.evil || e.type === 'undead';
+    const self = ally.uid === e.uid;
+    const target = self ? 'its own wounds' : `${ally.name}'s wounds`;
+    this._note(`${dark ? '🖤' : '💚'} ${e.glyph} ${e.name} ${dark ? 'hisses a PROFANE PRAYER — black energy knits' : 'chants a HEALING PRAYER — light mends'} ${target}: +${ally.hp - before} HP (${ally.hp}/${ally.maxHp}).`, '/audio/spell_cure.mp3', { side: 'enemy' });
+    this._echoToTable('/audio/spell_cure.mp3'); this._broadcast();
+  }
   _enemyHellfire(e) {
     e.hellfireLeft -= 1;
     const cfg = e.hellfire || {};
@@ -2220,20 +2253,25 @@ class Dungeon {
     if (cl >= 9 && bruiser && !heroes.some(m => m.paralyzed > 0)) return this._enemyHoldHero(e, bruiser, dc(5), 'Hold Monster');
     // 2) Finish a badly-wounded hero with auto-hitting Magic Missile (1st).
     if (weakest.hp <= weakest.maxHp * 0.28) return this._enemyMissiles(e, weakest, Math.min(5, Math.floor((cl + 1) / 2)));
-    // 3) A cluster of foes → a rotating elemental blast (mostly), else a nuke.
-    if (heroes.length >= 2 && dRoll(5) <= 3) {
+    // 3) A cluster of foes → a rotating elemental blast. With 3+ heroes up the
+    //    blast is ALWAYS the right spend (max coverage); at 2 it's a strong lean.
+    if (heroes.length >= 2 && (heroes.length >= 3 || dRoll(5) <= 3)) {
       const blasts = [{ verb: 'hurls a FIREBALL', icon: '🔥', dtype: 'fire', dice: Math.min(10, cl), slvl: 3, count: () => dRoll(3) + 1, sound: '/audio/spell_fireball.mp3' }];
       if (cl >= 9)  blasts.push({ verb: 'breathes a CONE OF COLD', icon: '❄️', dtype: 'cold', dice: Math.min(15, cl), slvl: 5, count: () => dRoll(3) + 1, sound: '/audio/spell_coneofcold.mp3' });
       if (cl >= 11) blasts.push({ verb: 'looses CHAIN LIGHTNING', icon: '⚡', dtype: 'electricity', dice: Math.min(20, cl), slvl: 6, count: () => dRoll(4), sound: '/audio/spell_lightning.mp3' });
       const b = pick(blasts);
       return this._enemyBlast(e, { ...b, die: 6, dc: dc(b.slvl) });
     }
-    // 4) Delete the toughest hero with a big single-target nuke — Finger of Death
-    //    (7th, negative) at high level, else a Disintegrate ray (6th, force).
+    // 4) Delete the most VALUABLE hero with a big single-target nuke — a lich
+    //    knows to kill the CASTER first (the party's healing and blasting engine);
+    //    only when no caster stands does it settle for the toughest body.
+    //    Finger of Death (7th, negative) at high level, else Disintegrate (6th).
+    const CASTERISH = new Set(['cleric', 'oracle', 'wizard', 'sorcerer', 'druid', 'bard', 'witch']);
+    const priority = heroes.find(m => CASTERISH.has(m.cls) && m.hp > m.maxHp * 0.3) || strongest;
     if (cl >= 13 && dRoll(2) === 1) {
-      return this._enemyNuke(e, strongest, { verb: 'speaks a FINGER OF DEATH at', icon: '💀', dtype: 'negative', dice: Math.min(25, cl), die: 8, dc: dc(7), saveLbl: 'Fort', partialDice: Math.floor(cl / 2), sound: '/audio/spell_umbral_bolt.mp3' });
+      return this._enemyNuke(e, priority, { verb: 'speaks a FINGER OF DEATH at', icon: '💀', dtype: 'negative', dice: Math.min(25, cl), die: 8, dc: dc(7), saveLbl: 'Fort', partialDice: Math.floor(cl / 2), sound: '/audio/spell_umbral_bolt.mp3' });
     }
-    return this._enemyNuke(e, strongest, { verb: 'fires a DISINTEGRATE ray at', icon: '☢️', dtype: 'force', dice: Math.min(40, cl * 2), die: 6, dc: dc(6), saveLbl: 'Fort', partialDice: 5, dust: true, sound: '/audio/spell_disintegrate.mp3' });
+    return this._enemyNuke(e, priority, { verb: 'fires a DISINTEGRATE ray at', icon: '☢️', dtype: 'force', dice: Math.min(40, cl * 2), die: 6, dc: dc(6), saveLbl: 'Fort', partialDice: 5, dust: true, sound: '/audio/spell_disintegrate.mp3' });
   }
   // A lich AoE blast on a random handful of heroes — save for half (Evasion = none
   // on a made save; Fire Ward halves fire). Damage rolled once for the whole burst.
@@ -2976,6 +3014,9 @@ class Dungeon {
     // every foe their swing FELLS grants another swing (chains on kills only).
     if (m.cls === 'barbarian' || fighterFeats(m.cls, m.level, this._isRanged(m)).impCleave) {
       const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
+      // Cleave is a MELEE sweep — vs an airborne target fall through to the
+      // normal attack path (which draws the backup crossbow); no carving at the sky.
+      if (e && !this._canReach(m, e)) return this._playerAttack(m, targetUid);
       if (e) return this._cleaveSweep(m, e, { followThrough: false });
       return;
     }
@@ -4580,6 +4621,14 @@ class Dungeon {
     m.flatFooted = false; m.invisible = false;
     if (opts.acPen) { m.acPenRound = this.round; m.acPenAmt = opts.acPen; }
     m.weapon = weaponOf(m.gear, m.weaponKey);
+    // A cleave can only sweep through foes the blade can REACH — if the chosen
+    // target is airborne, redirect to a grounded foe; if EVERYTHING flies, hand
+    // the turn to the normal attack (its backup crossbow can at least shoot).
+    if (!this._canReach(m, firstTarget)) {
+      const grounded = this.livingEnemies().filter(x => this._canReach(m, x));
+      if (!grounded.length) return this._playerAttack(m, firstTarget.uid);
+      firstTarget = pick(grounded);
+    }
     const baseSound = m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null);
     const struck = new Set();
     const sounds = [];
@@ -4604,7 +4653,10 @@ class Dungeon {
       const keepGoing = downed || (opts.followThrough && r.hit && !bonus);
       bonus = true;
       if (!keepGoing) break;
-      target = this._randomLivingFoe(struck);   // 2nd + chain targets are RANDOM
+      // 2nd + chain targets are RANDOM — but only foes the blade can REACH
+      // (a Great Cleave never chains up into a flyer).
+      const pool = this.livingEnemies().filter(x => !struck.has(x.uid) && this._canReach(m, x));
+      target = pool.length ? pick(pool) : null;
     }
     if (kills >= 3) this._note(`🪓 ${m.nickname} carves clean through the line — ${kills} foes felled in one furious sweep!`);
     this._emitChainSfx(sounds);
@@ -4732,8 +4784,10 @@ class Dungeon {
     if (m.smiteActive && m.weaponKey === 'warhammer') baseSound = '/audio/weapon_warhammer_smite.mp3';   // holy hammer-ring on a smite
     for (let i = 0; i < swings; i++) {
       // Resolve swings ONE AT A TIME: if the target has dropped, the next swing
-      // redirects to another foe (PF1 — you don't pre-commit a full attack).
-      const tgt = (e.hp > 0) ? e : this._targetableEnemies()[0];
+      // redirects to another foe (PF1 — you don't pre-commit a full attack) —
+      // but only one this weapon can REACH (no melee iteratives up at flyers;
+      // a backup crossbow, being ranged, redirects freely).
+      const tgt = (e.hp > 0) ? e : this._targetableEnemies().find(x => this._canReach(m, x));
       if (!tgt) break;
       const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms' }), tgt, offsets[i].off, offsets[i].oh);   // firearms hit vs touch AC; offset = iterative/TWF penalty; oh = off-hand (½ mod)
       if (i > 0 || quiet) r.sound = null;            // one report for the whole flurry; haste swing silent
