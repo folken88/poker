@@ -2743,6 +2743,20 @@ class Dungeon {
     // Mage Armor — a free, run-long +4 AC; put it up once if not already on.
     const mageArmor = avail.find(a => a.effect === 'magearmor');
     if (mageArmor && !m.mageArmor) return { slot: slot(mageArmor), payload: {} };
+    // ── ROUND-DECAY BUFF APPETITE ── nobody opens round 8 with Shield. The urge
+    //    to spend a turn raising buffs is strongest at the top of a fight and
+    //    fades fast — R1 ~90%, R2 ~60%, R3 ~30%, R4+ never — after which the
+    //    caster falls through to control/offense below. Reactive picks are NOT
+    //    gated (heals, prot-fire vs fiery foes, invisibility triage, smite/
+    //    judgement/bane attack enablers): those answer the battlefield, not the
+    //    opening checklist.
+    const buffAppetite = Math.random() < Math.max(0, 0.9 - 0.3 * ((this.round || 1) - 1));
+    // High-level casters don't burn turns on petty buffs: a leveled buff only
+    // makes the cut if its slot level is within 3 of the caster's best — a L12
+    // wizard opens Stoneskin (Communal) / Haste, never Shield. Class features
+    // without a spell level (Rage, Inspire Courage) always qualify.
+    const bestSlvl = Math.ceil(Math.min(lvl, 18) / 2);
+    const potentEnough = (a) => !a.slvl || a.slvl >= Math.max(1, Math.min(3, bestSlvl - 3));
     // Don't waste a turn re-casting a NON-STACKING buff that's already up. A buff
     // is "fully up" when every recipient already has it: the whole party for a
     // party buff (Inspire/Prayer/Bless), or the caster for a self buff (Rage/
@@ -2770,8 +2784,10 @@ class Dungeon {
     // a poor use of a turn at mid-late levels — past L6 the bot stops babysitting each ally
     // and would rather drop a party buff or just attack. (Power Attack / Deadly Aim are
     // toggles handled by _botStance, never auto-picked here.)
-    const stickyBuffs = avail.filter(a => a.effect === 'buff' && a.sticky && !a.protectFire
-      && !a.powerattack && !a.deadlyaim && !buffFullyUp(a));
+    const stickyBuffs = avail.filter(a => buffAppetite && potentEnough(a)
+      && a.effect === 'buff' && a.sticky && !a.protectFire
+      && !a.powerattack && !a.deadlyaim && !buffFullyUp(a))
+      .sort((x, y) => (y.slvl || 0) - (x.slvl || 0));   // most potent first
     const partyBuff = stickyBuffs.find(a => a.party);
     if (partyBuff) return { slot: slot(partyBuff), payload: {} };
     const selfBuff = stickyBuffs.find(a => a.target === 'self');
@@ -2800,7 +2816,7 @@ class Dungeon {
     //     run dry (no living member still holds a haste charge) — never double
     //     up on a fervor that's already running, and vice versa.
     const haste = avail.find(a => a.effect === 'haste');
-    if (haste && !this.livingParty().some(p => p.hasted > 0)) return { slot: slot(haste), payload: {} };
+    if (haste && buffAppetite && !this.livingParty().some(p => p.hasted > 0)) return { slot: slot(haste), payload: {} };
     // 2b2) Bards LOCK DOWN a boss so it misses its turns. Hideous Laughter (Held)
     //      is ideal — unlike Fascinate it survives being hit, so the party can
     //      keep focus-firing while the boss wastes turns trying to re-save. Once
