@@ -2706,6 +2706,32 @@ class Dungeon {
         if (chosen) return { slot: slot(chosen), payload: {} };
       }
     }
+    // ── CR CALCULUS (full casters) ── when the toughest foe's CR is BELOW the
+    //    caster's own level, the fight is chaff: no wards, no save-or-suck
+    //    babysitting, no defensive setup. The caster either throws the ONE
+    //    offensive buff worth a turn (Haste, if the party's speed is dry) or
+    //    just BLASTS — widest coverage first, biggest dice as the tiebreak —
+    //    until the damage spells run out, then falls back to cantrips/weapon.
+    //    (Healing and cleansing above still always apply; inquisitors and magi
+    //    keep their steel-first rules — this is for the robe-wearers.)
+    if (['wizard', 'sorcerer', 'cleric', 'druid', 'bard', 'oracle'].includes(m.cls)) {
+      const topCR = Math.max(0, ...targets.map(e => crToNum(e.cr) || 0));
+      if (topCR < lvl) {
+        const haste = avail.find(a => a.effect === 'haste');
+        if (haste && !this.livingParty().some(p => p.hasted > 0)) return { slot: slot(haste), payload: {} };
+        const DMG = ['aoe', 'bolt', 'missile', 'touch', 'rays', 'disintegrate'];
+        const cov = (a) => Math.min(targets.length, a.maxTargets || 1);
+        const pow = (a) => (typeof a.dice === 'number' ? a.dice : lvl) * (a.die || 6);
+        const blast = avail.filter(a => DMG.includes(a.effect) && (a.dice || a.die))
+                           .sort((x, y) => (cov(y) - cov(x)) || (pow(y) - pow(x)))[0];
+        if (blast) {
+          const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
+          const cap = blast.maxTargets || 1;
+          return { slot: slot(blast), payload: cap < 2 ? { targetUid: weakFirst[0].uid } : { targetUids: weakFirst.slice(0, cap).map(e => e.uid) } };
+        }
+        return null;   // damage spells spent → cantrip / weapon swing
+      }
+    }
     // 2) Put up buffs once — Smite, then sticky self/party buffs (rage, shield,
     //    bane, divine favor, inspire). Sticky guard stops re-casting.
     const smite = avail.find(a => a.effect === 'smite' && !m.smiteActive);
