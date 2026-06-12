@@ -597,6 +597,19 @@ const MON = {
   vamp_nightguard:   { name: 'Vampire Nightguard',glyph: '🧛', cr: '14',  hp: 160, ac: 27, toHit: 21, dmgDie: 6,  dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 9, attacks: 2, gold: [190, 360], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F14 + vampire — polearm sweeps (2d6+10)
   vamp_noble:        { name: 'Vampire Noble',     glyph: '🧛', cr: '15',  hp: 160, ac: 27, toHit: 20, dmgDie: 8,  dmgBonus: 9,  fort: 11, reflex: 11, attacks: 2, gold: [220, 420], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 21, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 5, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // Mag14 + vampire — Vampiric Touch spellstrikes
   vamp_techwitch:    { name: 'Vampire Tech Witch',glyph: '🧛', cr: '12',  hp: 110, ac: 22, toHit: 12, dmgDie: 6,  dmgBonus: 4,  fort: 8,  reflex: 8,  gold: [150, 300], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, arcane: true },   // W11 + vampire — Technic League arcanist, full wizard casting
+  // ── THE WHISPERING WAY — classed living cultists (wizards, clerics, rogues,
+  //    magi of various levels; NPC CR = class level − 1). They herd the undead
+  //    (gang 'undead') but are LIVING humans: mind spells land, channel doesn't
+  //    sear them, and their magi favor Vampiric Touch spellstrikes — fitting. ──
+  ww_initiate:       { name: 'WW Initiate',        glyph: '🕯️', cr: '1',   hp: 14,  ac: 15, toHit: 2,  dmgDie: 8,  dmgBonus: 1,  fort: 4,  reflex: 0,  gold: [14, 32],  evil: true, healer: { dice: 1, uses: 1 } },   // C2 — a whispered mending for the dead-herders
+  ww_knife:          { name: 'WW Knife',           glyph: '🗡️', cr: '3',   hp: 26,  ac: 17, toHit: 6,  dmgDie: 4,  dmgBonus: 2,  fort: 2,  reflex: 7,  attacks: 2, sneakDice: 2, evasion: true, gold: [26, 56], evil: true, atkSound: '/audio/fight_riki.mp3' },   // R4 — paired daggers from the dark
+  ww_gravecaller:    { name: 'WW Gravecaller',     glyph: '🕯️', cr: '4',   hp: 36,  ac: 18, toHit: 6,  dmgDie: 8,  dmgBonus: 2,  fort: 6,  reflex: 2,  gold: [34, 72],  evil: true, healer: { dice: 2, uses: 2 }, caster: 'holdperson', spellDC: 15 },   // C5 — divine Hold Person (2nd-level ✓) + mendings
+  ww_bladebound:     { name: 'WW Bladebound',      glyph: '⚔️', cr: '5',   hp: 45,  ac: 18, toHit: 8,  dmgDie: 8,  dmgBonus: 4,  fort: 6,  reflex: 4,  gold: [42, 90],  evil: true, spellstrike: { dice: 3, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // Mag6 — Vampiric Touch spellstrikes
+  ww_necromancer:    { name: 'WW Necromancer',     glyph: '🧙', cr: '6',   hp: 40,  ac: 16, toHit: 5,  dmgDie: 4,  dmgBonus: 0,  fort: 4,  reflex: 4,  gold: [55, 115], evil: true, arcane: true, precast: ['magearmor', 'shield'] },   // W7 — full wizard casting (pre-warded as a boss)
+  ww_slayer:         { name: 'WW Slayer',          glyph: '🗡️', cr: '7',   hp: 60,  ac: 20, toHit: 11, dmgDie: 6,  dmgBonus: 4,  fort: 4,  reflex: 10, attacks: 2, sneakDice: 4, evasion: true, gold: [70, 150], evil: true, atkSound: '/audio/fight_riki.mp3' },   // R8 — twin swords + deep sneak
+  ww_deathpriest:    { name: 'WW Death Priest',    glyph: '🕯️', cr: '8',   hp: 70,  ac: 21, toHit: 11, dmgDie: 8,  dmgBonus: 4,  fort: 9,  reflex: 4,  gold: [95, 190], evil: true, healer: { dice: 3, uses: 3 }, caster: 'holdperson', spellDC: 17, shout: { fear: true, dc: 17, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['shieldoffaith', 'protfire'] },   // C9 — dread litany, Hold Person, battle-mendings
+  ww_deathblade:     { name: 'WW Deathblade',      glyph: '⚔️', cr: '10',  hp: 95,  ac: 23, toHit: 15, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  attacks: 2, gold: [120, 240], evil: true, spellstrike: { dice: 4, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' }, precast: ['magearmor', 'shield'] },   // Mag11 — iterative Vampiric Touch blades
+  ww_archnecromancer:{ name: 'WW Archnecromancer', glyph: '🧙', cr: '11',  hp: 75,  ac: 19, toHit: 8,  dmgDie: 4,  dmgBonus: 0,  fort: 7,  reflex: 7,  gold: [130, 260], evil: true, arcane: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['magearmor', 'shield', 'stoneskin', 'fly'] },   // W12 — the cell's master, a lich-in-waiting
   // ── TECHNIC LEAGUE & THRUNE — named villains ──
   zernibeth:         { name: 'Zernibeth',         glyph: '🤖', cr: '13',  hp: 120, ac: 24, toHit: 12, dmgDie: 6,  dmgBonus: 4,  fort: 9,  reflex: 9,  gold: [280, 480], evil: true, arcane: true, precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // android W14 of the Technic League (LE) — full wizard casting; walks in pre-buffed (boss only)
   barzillai:         { name: 'Barzillai Thrune',  glyph: '😈', cr: '15',  hp: 220, ac: 28, toHit: 22, dmgDie: 6,  dmgCount: 2, dmgBonus: 12, fort: 14, reflex: 9, attacks: 2, gold: [340, 580], evil: true, shout: { fear: true, dc: 22, sound: '/audio/enemy_lich_gaze.mp3' } },   // I16 inquisitor of Asmodeus — greathammer (2d6+12), a deep-room villain
@@ -658,6 +671,9 @@ const MON_GANGS = {
   // Way cultist herds them
   skeleton: ['undead'], zombie: ['undead'], ghoul: ['undead'], ghast: ['undead'], shadow: ['undead'],
   wight: ['undead'], fire_skeleton: ['undead'], skeletal_champion: ['undead'], cultist: ['undead'],
+  ww_initiate: ['undead'], ww_knife: ['undead'], ww_gravecaller: ['undead'], ww_bladebound: ['undead'],
+  ww_necromancer: ['undead'], ww_slayer: ['undead'], ww_deathpriest: ['undead'], ww_deathblade: ['undead'],
+  ww_archnecromancer: ['undead'],
   lich: ['undead'], vampire: ['undead'], vampire_spawn: ['undead'],
   vamp_knight: ['undead'], vamp_inquisitor: ['undead'], vamp_rogue: ['undead'], vamp_scout: ['undead'],
   vamp_warrior: ['undead'], vamp_bodyguard: ['undead'], vamp_priest: ['undead'], vamp_assassin: ['undead'],
@@ -666,7 +682,7 @@ const MON_GANGS = {
   badger: ['beast'], dire_ape: ['beast'], dire_boar: ['beast'], winter_wolf: ['beast'],
   blood_caimon: ['beast'], dire_bear: ['beast'],
   // aberrations & horrors — the weird monstrous things
-  gray_ooze: ['horror'], gibbering_mouther: ['horror'], abyssal_horror: ['horror'],
+  gray_ooze: ['horror'], gibbering_mouther: ['horror'], abyssal_horror: ['horror'], bog_brute: ['horror'],
   minotaur: ['horror'], chimera: ['horror'], basilisk: ['horror'], medusa: ['horror'],
   ettercap: ['horror'], harpy: ['horror'], harpy_sorcerer: ['horror'],
   gargoyle: ['horror', 'construct'],
@@ -705,6 +721,10 @@ const MON_ART = {
   vamp_bodyguard: 'vamp_bodyguard', vamp_priest: 'vamp_priest', vamp_assassin: 'vamp_assassin',
   vamp_nightguard: 'vamp_nightguard', vamp_noble: 'vamp_noble', vamp_techwitch: 'vamp_techwitch',
   zernibeth: 'zernibeth', barzillai: 'barzillai',
+  // The Whispering Way cell — plague-masked tokens from carrion_crown/whisperingway.
+  ww_initiate: 'ww_initiate', ww_knife: 'ww_knife', ww_gravecaller: 'ww_gravecaller',
+  ww_bladebound: 'ww_bladebound', ww_necromancer: 'ww_necromancer', ww_slayer: 'ww_slayer',
+  ww_deathpriest: 'ww_deathpriest', ww_deathblade: 'ww_deathblade', ww_archnecromancer: 'ww_archnecromancer',
   devil_swordsman: 'devil_swordsman', devil_samurai: 'devil_samurai', devil_rogue: 'devil_rogue',
   bomb_devil: 'bomb_devil', black_dragon: 'black_dragon', void_dragon: 'void_dragon',
   harpy_sorcerer: 'harpy_sorcerer',
