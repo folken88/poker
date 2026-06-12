@@ -607,7 +607,7 @@ const MON = {
   devil_samurai:     { name: 'Devil Samurai',     glyph: '😈', cr: '13',  hp: 145, ac: 26, toHit: 19, dmgDie: 6,  dmgCount: 2, dmgBonus: 9, fort: 12, reflex: 10, attacks: 2, gold: [170, 320], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 } },   // F12 + devil — naginata (2d6+9)
   devil_rogue:       { name: '???',               glyph: '😈', cr: '16',  hp: 175, ac: 29, toHit: 22, dmgDie: 6,  dmgBonus: 9,  fort: 10, reflex: 15, attacks: 3, sneakDice: 8, evasion: true, gold: [380, 640], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 } },   // R15 + devil (Mangvhune) — a dual-wielding horror; its name is not spoken
   bomb_devil:        { name: 'Bomb Devil',        glyph: '💣', cr: '11',  hp: 115, ac: 24, toHit: 16, dmgDie: 6,  dmgBonus: 6,  fort: 10, reflex: 11, gold: [130, 260], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 },
-                       hellfire: { count: 3, dice: 6, die: 6, dc: 20, verb: 'lobs a sputtering FIRE BOMB into the party', sound: '/audio/spell_fireball.mp3' } },   // alchemist-devil — bombs, burning hands, fireball flavor
+                       hellfire: { count: 3, dice: 6, die: 6, bonus: 4, dc: 20, uses: 6, eager: true, verb: 'lobs a sputtering GRENADE into the party', sound: '/audio/grenade_explosion01.mp3' } },   // ALCHEMIST of its HD (11): bombs = 6d6+4 (1d6 per 2 levels + Int), a deep satchel (6), and it BOMBS ON SIGHT (eager) — real grenade report from foundry media
   // ── DRAGONS — winged terrors with breath weapons (reuse the hellfire AoE with a
   //    breath verb + element). ──
   black_dragon:      { name: 'Black Dragon',      glyph: '🐉', cr: '11',  hp: 150, ac: 26, toHit: 20, dmgDie: 6,  dmgCount: 2, dmgBonus: 9, fort: 12, reflex: 9, attacks: 2, flying: true, gold: [200, 400], evil: true, dr: { amount: 5, bypass: 'magic' }, resist: { acid: 0 }, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' },
@@ -1264,7 +1264,7 @@ class Dungeon {
       hook: base.hook || null,             // barbed devil: chain hook → grapple + constrict
       // barbed devil hellfire / dragon breath — boss levels add dice, DC and uses
       hellfire: base.hellfire ? { ...base.hellfire, dc: (base.hellfire.dc || 18) + half, dice: (base.hellfire.dice || 5) + extra } : null,
-      hellfireLeft: base.hellfire ? 2 + half : 0,
+      hellfireLeft: base.hellfire ? ((base.hellfire.uses || 2) + half) : 0,   // per-monster satchel size (the Bomb Devil packs 6)
       arcane: base.arcane || null,         // lich (wizard of its level): _lichCast adds bossLevels to its caster level
       arcaneLeft: base.arcane ? 3 + half : 0,
       // vampire (magus of its level): Vampiric Touch on its strike — boss = more dice
@@ -2072,7 +2072,11 @@ class Dungeon {
       if (e.taunt && e.tauntsLeft > 0 && this.livingParty().some(m => m.isBot)) return this._enemyTaunt(e);
       // Barbed Devil: occasionally a Hellfire Blast; otherwise chain-hook the
       // weakest hero and CRUSH whoever it's already grappling.
-      if (e.hellfire && e.hellfireLeft > 0 && this._targetableParty().length >= 2 && dRoll(3) === 1) return this._enemyHellfire(e);
+      // EAGER bombers (the alchemist Bomb Devil) throw on sight, every turn the
+      // satchel holds out; others save the blast for a clustered party (1-in-3).
+      if (e.hellfire && e.hellfireLeft > 0 && (e.hellfire.eager
+        ? this._targetableParty().length >= 1
+        : (this._targetableParty().length >= 2 && dRoll(3) === 1))) return this._enemyHellfire(e);
       if (e.hook) {
         const victim = this._targetableParty().find(p => p.grappled && p.grappledBy === e.uid);
         if (victim) return this._enemyConstrict(e, victim);
@@ -2080,18 +2084,33 @@ class Dungeon {
         if (weakest) return this._enemyHook(e, weakest);
       }
     }
-    // Melee — the kobold rogue stabs twice (1d3 each); everyone else swings once.
-    // A taunted foe hammers the barbarian; otherwise re-pick a living, TARGETABLE
-    // (non-invisible), preferably-helpless target. FLYING heroes are out of reach
-    // of a GROUNDED foe (Fly = immune to non-ranged attacks); a flyer can hit them.
+    // ── PF1 ACTION ECONOMY (melee) ── no grid here, so the spatial shortcut:
+    // engaging a NEW target costs the MOVE action (closing the distance) plus the
+    // STANDARD action (ONE attack). Staying on the SAME target next turn = a FULL
+    // ATTACK — the whole multi-attack/natural routine. Mirrors the heroes' rule
+    // in _attackOffsets. Specials above (casts/shouts/bombs/heals) are STANDARD
+    // actions and already replace the attack; taunts/judgements stay free/swift.
+    // FLYING heroes are out of reach of a GROUNDED foe; a flyer can hit them.
     let noReach = false;
-    for (let i = 0; i < Math.max(1, e.attacks || 1); i++) {
-      const seen = this._targetableParty();
-      const living = e.flying ? seen : seen.filter(m => !m.flying);
-      if (!living.length) { noReach = seen.length > 0; break; }
-      if (forced && forced.hp > 0 && !forced.left && (e.flying || !forced.flying)) { this._enemyMelee(e, forced); continue; }
-      const helpless = living.filter(m => m.paralyzed > 0);
-      this._enemyMelee(e, pick(helpless.length ? helpless : living));
+    const seen = this._targetableParty();
+    const living = e.flying ? seen : seen.filter(m => !m.flying);
+    if (!living.length) { noReach = seen.length > 0; }
+    else {
+      // ONE target for the whole turn: taunter > helpless > last turn's target > random.
+      let target = null;
+      if (forced && forced.hp > 0 && !forced.left && (e.flying || !forced.flying)) target = forced;
+      if (!target) {
+        const helpless = living.filter(m => m.paralyzed > 0);
+        const prev = living.find(m => m.playerId === e._lastAtkTarget);
+        target = helpless.length ? (helpless.find(m => m.playerId === e._lastAtkTarget) || pick(helpless)) : (prev || pick(living));
+      }
+      const fullAttack = e._lastAtkTarget === target.playerId;   // stayed put → full routine
+      const swings = fullAttack ? Math.max(1, e.attacks || 1) : 1;
+      for (let i = 0; i < swings; i++) {
+        if (target.hp <= 0 || target.left) break;   // target dropped mid-routine — the rest of the swings are spent closing on someone new
+        this._enemyMelee(e, target);
+      }
+      e._lastAtkTarget = target.playerId;
     }
     if (noReach) this._note(`${e.glyph} ${e.name} claws at the air — its prey is on the wing, out of reach!`, null, { side: 'enemy' });
   }
@@ -2270,7 +2289,7 @@ class Dungeon {
     const live = this._targetableParty().slice();
     for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
     const hit = live.slice(0, dRoll(cfg.count || 3));
-    const dc = cfg.dc || 18, full = dRollN(cfg.dice || 5, cfg.die || 6), parts = [];
+    const dc = cfg.dc || 18, full = dRollN(cfg.dice || 5, cfg.die || 6) + (cfg.bonus || 0), parts = [];   // bonus = the alchemist's Int rider
     for (const t of hit) {
       const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;

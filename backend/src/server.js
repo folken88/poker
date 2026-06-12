@@ -151,6 +151,29 @@ io.on('connection', (socket) => {
   });
 });
 
+// ── GRACEFUL SHUTDOWN ────────────────────────────────────────────────────────
+// docker stop / compose recreate sends SIGTERM (node is PID 1 — exec-form CMD).
+// Before the process dies, every ACTIVE dungeon run pays out its pool to the
+// whole party via _groupExtract (even shares, downed included — better-sqlite3
+// is synchronous, so the chips land before exit). A deploy can therefore NEVER
+// eat unbanked gold again, no matter what the gate raced against.
+// (Lesson 2026-06-12: a recreate vaporized a depth-10 run's 14,548 gp pool.)
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, () => {
+    try {
+      for (const d of dungeons.values()) {
+        try {
+          if (d && d.status && d.status !== 'over') {
+            console.log(`[shutdown] banking live dungeon run — pool ${d.runGold || 0}g, depth ${d.depth || 0}`);
+            d._groupExtract();
+          }
+        } catch (e) { console.error('[shutdown] dungeon payout:', e.message); }
+      }
+    } catch (e) { console.error('[shutdown]', e.message); }
+    process.exit(0);
+  });
+}
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[poker] v3 listening on :${PORT}  defaultStack=${db.DEFAULT_STACK}  roster=${db.ROSTER.length}`);
   // Meyanda, the family Discord herald — a silent no-op unless data/.meyanda.env
