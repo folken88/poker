@@ -329,6 +329,11 @@ function titleCase(s) { return String(s || '').replace(/\b\w/g, c => c.toUpperCa
 // Undead & constructs are immune to mind-affecting magic — sleep, fascinate, hold
 // person, hideous laughter (PF1: no mind to affect / no Con).
 const MIND_IMMUNE_TYPES = new Set(['undead', 'construct']);
+// isSneakClass — every rogue-style AI behavior keys off the SNEAK_CLASSES set
+// declared with the class conditionals below (rogue/ninja/slayer): invisible
+// alpha strikes, feint logic, helpless-target preference, dagger dual-wield
+// styling. New rogue variants just join that set and inherit all of it.
+const isSneakClass = (cls) => SNEAK_CLASSES.has(cls);
 function mindImmune(e) { return !!e && MIND_IMMUNE_TYPES.has(e.type); }
 // "Already taken out of the fight" by crowd control — don't waste fresh CC on them
 // (asleep / fascinated / held / prone / stunned). Used to target CC intelligently.
@@ -1989,7 +1994,7 @@ class Dungeon {
     // Monk FLURRY OF BLOWS: any melee attack is a two-strike flurry (their free
     // TWF/ITWF flags in monkFeats keep the penalty at −2/−2 like real Flurry).
     if (m.cls === 'monk' && w && !w.ranged) return true;
-    return !!(w && (w.dual || (m.cls === 'rogue' && (m.weaponKey === 'dagger' || m.weaponKey === 'kukri'))));
+    return !!(w && (w.dual || (isSneakClass(m.cls) && (m.weaponKey === 'dagger' || m.weaponKey === 'kukri'))));
   }
   _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1) + Haste (+1 dodge)
     let b = ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).ac + this._hasteMod(m) + (m._offDef ? 2 : 0);   // rogue Offensive Defense: +2 AC after landing a sneak attack (until they next act)
@@ -2634,10 +2639,26 @@ class Dungeon {
       this._hasteBonus(m);
       return;
     }
-    // An INVISIBLE ally stays hidden: it takes a NON-offensive support action
-    // (heal/buff) if it has one, else it holds — it will NOT attack (attacking
-    // would break invisibility).
+    // An INVISIBLE ally:
+    //  • a SNEAK-class killer (rogue, soon slayer) doesn't lurk — an unseen
+    //    attacker denies Dex, so the next strike is a guaranteed Sneak Attack.
+    //    Pick the juiciest prey (enemy caster first, then the boss, lowest HP
+    //    breaking ties) and gut it. The strike breaks normal invisibility —
+    //    that's what it was FOR; Greater Invisibility keeps them unseen.
+    //  • everyone else stays hidden: a NON-offensive support action (heal/buff)
+    //    if they have one, else they hold — attacking would break the spell.
+    //    (Always narrated, so blind players know exactly why nobody swung.)
     if (m.invisible) {
+      if (isSneakClass(m.cls)) {
+        const prey = this._sneakPrey(foes);
+        this._note(m.greaterInvis
+          ? `🗡️ ${m.nickname} strikes from everywhere and nowhere — ${prey.name} can't see the blade coming!`
+          : `🗡️ ${m.nickname} melts out of the shadows behind ${prey.name} — an unseen strike!`);
+        this._botStance(m, foes);
+        this._basicAttack(m, prey.uid);
+        this._hasteBonus(m);
+        return;
+      }
       const c = this._botAbility(m);
       if (c) {
         const ab = kitFor(m.cls).abilities[c.slot];
@@ -2647,7 +2668,7 @@ class Dungeon {
           if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }
         }
       }
-      this._note(`👻 ${m.nickname} stays hidden, holding for the right moment.`);
+      this._note(`👻 ${m.nickname} stays hidden — attacking would break the invisibility — and holds for the right moment.`);
       this._broadcast();
       return;
     }
@@ -2748,13 +2769,22 @@ class Dungeon {
     // still punch through. (Casters keep bypassing physical DR with energy spells.)
     const hittable = foes.filter(e => !this._drBlocksWeapon(m, e));
     if (hittable.length) foes = hittable;
-    if (m.cls === 'rogue') {
+    if (isSneakClass(m.cls)) {
       const helpless = foes.filter(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated);
       return (helpless.length ? helpless : foes).slice().sort((a, b) => a.hp - b.hp)[0];   // weakest sneakable foe
     }
     const awake = foes.filter(e => !e.fascinated);
     if (m.cls === 'barbarian') return (awake.length ? awake : foes).slice().sort((a, b) => a.hp - b.hp)[0];   // weakest first → drop it → Cleave carries on
     return (awake.length ? awake : foes)[0];
+  }
+  // The juiciest prey for an UNSEEN killer striking from invisibility: enemy
+  // CASTERS die first (arcane wizards, hold-shamans, priests), then the BOSS,
+  // then whoever is closest to death — lowest HP breaks every tie.
+  _sneakPrey(foes) {
+    const byHp = foes.slice().sort((a, b) => a.hp - b.hp);
+    return byHp.find(e => e.arcane || e.caster || e.healer)
+        || byHp.find(e => e.boss)
+        || byHp[0];
   }
   // Bot ability AI: pick a class ability for this turn, or null to basic-attack.
   // Priority: heal the hurt → raise buffs (smite/rage/shield/inspire/bane) →
@@ -2769,7 +2799,7 @@ class Dungeon {
     // Rogue: if a foe is already HELPLESS (flat-footed at the open, prone, asleep,
     // held…) it's a free Sneak target — skip Feint and just stab it (basic attack).
     // Feint only when there's no opening to set one up.
-    if (m.cls === 'rogue' && foes.some(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated)) return null;
+    if (isSneakClass(m.cls) && foes.some(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated)) return null;
     const awake = foes.filter(e => !e.fascinated);
     const targets = awake.length ? awake : foes;          // don't wake sleepers
     const usable = (ab) => {
@@ -4363,10 +4393,10 @@ class Dungeon {
       const party = this.livingParty();
       let target = null;
       if (payload && payload.targetUid) target = party.find(a => a.playerId === payload.targetUid || a.uid === payload.targetUid);
-      if (!target) target = party.find(a => a.cls === 'rogue' && a.playerId !== m.playerId) || m;
+      if (!target) target = party.find(a => isSneakClass(a.cls) && a.playerId !== m.playerId) || m;
       target.invisible = true; target.greaterInvis = true;
       const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
-      const bonus = (target.cls === 'rogue') ? ' — and every strike a Sneak Attack!' : '';
+      const bonus = isSneakClass(target.cls) ? ' — and every strike a Sneak Attack!' : '';
       this._note(`${ab.icon} ${m.nickname} wraps ${who} in GREATER INVISIBILITY — unseen for the whole fight${bonus}`, ab.sound);
       this._echoToTable(ab.sound);
       return;
@@ -4849,7 +4879,7 @@ class Dungeon {
     const acScore = (a) => this._acOf(a).ac + this._acBonus(a) - this._acPenalty(a);
     if (ab.key === 'shieldoffaith') return pool.slice().sort((a, b) => acScore(a) - acScore(b))[0] || m;   // lowest-AC ally WITHOUT it
     if (ab.key === 'bearsendurance') return pool.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
-    if (ab.key === 'catsgrace')      return pool.find(a => a.cls === 'ranger' || a.cls === 'rogue') || pool.find(a => MARTIAL.includes(a.cls)) || m;
+    if (ab.key === 'catsgrace')      return pool.find(a => a.cls === 'ranger' || isSneakClass(a.cls)) || pool.find(a => MARTIAL.includes(a.cls)) || m;
     if (ab.key === 'bullsstrength')  return pool.find(a => MARTIAL.includes(a.cls) && a.playerId !== m.playerId) || pool.find(a => MARTIAL.includes(a.cls)) || m;
     if (ab.key === 'stoneskin')      return pool.filter(a => !a.dr).slice().sort((a, b) => a.hp - b.hp)[0] || pool.slice().sort((a, b) => a.hp - b.hp)[0] || m;   // least-HP ally without it
     return m;
@@ -5319,7 +5349,7 @@ class Dungeon {
       if (i > 0 || quiet) r.sound = null;            // one report for the whole flurry; haste swing silent
       else if (baseSound) r.sound = baseSound;       // signature / blunt report on the first swing
       // Rogue Sneak Attack with a light blade (dagger/kukri/shortsword) → Riki.
-      if (r.sneakDice && m.cls === 'rogue' && ['dagger', 'kukri', 'shortsword'].includes(m.weaponKey) && i === 0) r.sound = '/audio/sneak_riki.mp3';
+      if (r.sneakDice && isSneakClass(m.cls) && ['dagger', 'kukri', 'shortsword'].includes(m.weaponKey) && i === 0) r.sound = '/audio/sneak_riki.mp3';
       if (i === 0) flurrySound = r.sound;
       const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '');
       if (!multi) {
