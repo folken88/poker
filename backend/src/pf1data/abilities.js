@@ -302,6 +302,7 @@ const KITS = {
   // shot per room without repeating the override on each line.
   wizard: { atwill: { ...RAY_OF_FROST }, note: 'One casting of each spell, per room.', abilities: [
     preparedSpell(SPELL.shockinggrasp, 1),
+    preparedSpell(SPELL.magicmissile,  1),
     preparedSpell(SPELL.grease,        1),
     preparedSpell(SPELL.sleep,         1),
     preparedSpell(SPELL.shield,        1),
@@ -312,7 +313,7 @@ const KITS = {
     preparedSpell(SPELL.glitterdust,   3),
     preparedSpell(SPELL.aciddart,      3),
     preparedSpell(SPELL.scorchingray,  3),
-    preparedSpell(SPELL.holdperson,    3),
+    preparedSpell(SPELL.holdperson,    5),   // arcane Hold Person is a 3RD-level spell (divine casters get it at 2nd) — 3rd-level slots arrive at wizard 5
     preparedSpell(SPELL.fly,           5),
     preparedSpell(SPELL.dispelmagic,   5),
     { key: 'haste', name: 'Haste', icon: '💨', cost: 'room', uses: 1, minLevel: 5, slvl: 3, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — every ally gets an EXTRA attack each turn for 1 turn per 5 caster levels (on top of their action).' },
@@ -339,6 +340,7 @@ const KITS = {
     //    the level that slot opens up; each carries its boost flag). Gated on having
     //    both the spell and the metamagic feat (Intensify n6/L11, Empower n7/L13,
     //    Maximize n9/L17 in casterFeats). ──
+    { ...SPELL.magicmissile,  key: 'magicmissile_quick', name: 'Quickened Magic Missile', icon: '⚡', cost: 'room', uses: 1, minLevel: 9, slvl: 5, freeAction: true, desc: 'Magic Missile crammed into a 5th-level slot — a SWIFT action: the darts fly unerringly and you STILL cast or act this turn. Once per room. (Needs 5th-level slots — wizard 9.)' },
     { ...SPELL.fireball,      key: 'fireball_int',  name: 'Intensified Fireball',  icon: '💥', cost: 'room', uses: 1, minLevel: 11, intensified: true, desc: 'Fireball in a 4th-level slot — the damage cap climbs +5 dice (level d6 to 15, Reflex half).' },
     { ...SPELL.fireball,      key: 'fireball_emp',  name: 'Empowered Fireball',    icon: '🔥', cost: 'room', uses: 1, minLevel: 13, empowered: true,   desc: 'Fireball in a 5th-level slot — ×1.5 damage (Reflex half).' },
     { ...SPELL.scorchingray,  key: 'scorch_emp',    name: 'Empowered Scorching Ray', icon: '🔥', cost: 'room', uses: 1, minLevel: 13, empowered: true, desc: 'Scorching Ray in a 4th-level slot — ×1.5 fire on every ray.' },
@@ -365,6 +367,7 @@ const KITS = {
     spontaneousSpell(SPELL.fly,          6),
     spontaneousSpell(SPELL.slow,         6),
     spontaneousSpell(SPELL.fireball,     6),
+    spontaneousSpell(SPELL.holdperson,   6),   // 3rd-level for arcane casters (counterintuitive — divine get it at 2nd)
     { key: 'haste', name: 'Haste', icon: '💨', cost: 'slot', slvl: 3, minLevel: 6, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 turn per 5 caster levels.' },
     spontaneousSpell(SPELL.stoneskin,    8),
     // 4th-level additions

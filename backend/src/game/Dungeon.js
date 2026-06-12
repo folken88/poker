@@ -2731,6 +2731,18 @@ class Dungeon {
     //     hardest single-target nuke (Disintegrate / Cone of Cold) or pin it with
     //     a save-or-suck debuff (Hold Person). NOTE: some 'aoe'-tagged spells only
     //     hit one target (maxTargets 1), so coverage = min(foes, maxTargets).
+    // 2c0) INQUISITORS fight with STEEL — Judgement and Bane are already up (the
+    //      buff phase above), so the turn is best spent swinging, not casting
+    //      offense spells. The one exception: pin a PARTICULARLY DANGEROUS foe
+    //      (a boss, or one towering over the field) with Hold Person — then carve it.
+    if (m.cls === 'inquisitor') {
+      const byHp = targets.slice().sort((a, b) => b.maxHp - a.maxHp);
+      const dangerous = targets.find(e => e.boss)
+        || ((byHp.length >= 2 && byHp[0].maxHp >= 1.6 * byHp[1].maxHp) ? byHp[0] : null);
+      const hold = avail.find(a => a.effect === 'save_debuff');
+      if (hold && dangerous && !(dangerous.paralyzed > 0)) return { slot: slot(hold), payload: { targetUid: dangerous.uid } };
+      return null;   // → Bane/Judgement-boosted weapon attack
+    }
     if (m.cls === 'wizard' || m.cls === 'sorcerer' || m.cls === 'oracle') {
       const SPELLISH = ['aoe', 'disintegrate', 'grease', 'sleep', 'slow', 'fascinate', 'bolt', 'missile', 'touch', 'rays', 'save_debuff'];
       const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
@@ -3349,7 +3361,13 @@ class Dungeon {
           .filter(([k]) => ff[k]).map(([key, name, adj]) => ({ key, name, adj, on: !!mmActive[key] }))
       : [];
     return {
-      atwill: { key: kit.atwill.key, name: kit.atwill.name, icon: kit.atwill.icon, img: kit.atwill.img || null },
+      // The at-will button wears the CHOSEN cantrip's face — a caster who has
+      // cycled to Acid Splash or Jolt sees that name, not a stale "Ray of Frost".
+      atwill: (() => {
+        const at = kit.atwill;
+        const a = (at && at.effect === 'bolt' && CANTRIP_BY_KEY[m.cantrip]) ? CANTRIP_BY_KEY[m.cantrip] : at;
+        return { key: a.key, name: a.name, icon: a.icon, img: a.img || at.img || null };
+      })(),
       caster: isCaster(m.cls),
       spellNote: kit.note || null,
       metamagic: mmFeats.length ? mmFeats : null,    // null → no buttons (prepared casters bake metamagic into spell entries)
