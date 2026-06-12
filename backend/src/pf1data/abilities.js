@@ -550,6 +550,11 @@ const KITS = {
     { key: 'curemoderate',name: 'Cure Moderate Wounds', icon: '💚', cost: 'room', uses: 1, minLevel: 4, effect: 'heal', heal: 'single', healDice: 2, healCap: 10, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 2d8 + caster level (max +10).' },
     { key: 'removeparalysis', name: 'Remove Paralysis', icon: '🩹', cost: 'room', uses: 1, minLevel: 3, effect: 'cleanse', target: 'ally', sound: S.cure, desc: 'Free an ally from paralysis / hold / stun (and other debuffs).' },
     { key: 'dispelmagic', name: 'Dispel Magic',     icon: '🌀', cost: 'room', uses: 1, minLevel: 5, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'Strip a debuff off an afflicted ally — or a buff off a foe, if any.' },
+    // Reincarnate — the druid's raise-dead (PF1: druid 4th-level spell, level 7).
+    // The soul returns, but in a NEW body: instead of PF1's random-race table,
+    // the fallen hero is REPLACED by a random hero from the bench (one who is
+    // not seated at the poker table and not already in the dungeon).
+    { key: 'reincarnate', name: 'Reincarnate', icon: '🌱', cost: 'room', uses: 1, minLevel: 7, slvl: 4, effect: 'revive', raiseDead: true, reincarnate: true, target: 'ally', sound: S.revive, desc: 'Grow a SLAIN ally a new body — their soul returns as a DIFFERENT hero (random, from those not at the table or in the dungeon), at full health.' },
   ] },
 };
 

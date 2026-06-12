@@ -952,6 +952,9 @@ class Dungeon {
   // through Infernal Healing or Adimarus's Channel Negative. Vesorianna is also
   // a GHOST: constantly flying and incorporeal (half of physical blows pass through).
   static UNDEAD_HEROES = new Set(['tar baphon', 'auren vrood', 'vesorianna', 'farrus richton']);
+  // Casters who FRONT-LOAD damage: on a won initiative (round 1) vs foes of
+  // their level or weaker they usually skip straight to their biggest blast.
+  static BLASTER_OPENERS = new Set(['elfrip']);
   addMember(player, isBot = false) {
     const playerId = player.player_id;
     const idx = this.party.findIndex(m => m.playerId === playerId);
@@ -1478,7 +1481,7 @@ class Dungeon {
     this.turnIdx += 1;
     // Initiative is rolled ONCE per combat (per room, in openDoor) — Pathfinder
     // keeps the same order each round; we just wrap back to the top.
-    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; if (this.blackTentacles) this._blackTentaclesTick(); }   // tentacles re-grab at the top of each round
+    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; this._endOfRoundRaise(); if (this.blackTentacles) this._blackTentaclesTick(); }   // the fallen are raised between rounds; tentacles re-grab at the top of each round
     this._advanceToActor();
   }
   _armAfkTimer(m) {
@@ -1561,6 +1564,21 @@ class Dungeon {
   // Resurrection (full HP, level restored) is preferred over Raise Dead (1 HP, the lost
   // level stays lost). Each cast spends a slot; we loop until no corpse remains or nobody
   // can cast. (Auto-cast — the party always saves a fallen comrade if able.)
+  // The DEAD are a non-factor while a round is running — no healer wastes a
+  // combat turn on them. But as the round TURNS, a healer who still holds Raise
+  // Dead / Resurrection (or a druid's Reincarnate) performs the ritual between
+  // turns, so the fallen stand again for the new round (the raise sound marks
+  // the moment). One raise per round-turn — the rest wait for the next.
+  _endOfRoundRaise() {
+    if (this.status !== 'combat') return;
+    if (!this.party.some(c => c.dead && !c.left)) return;
+    const caster = this.party.find(c => !c.left && !c.dead && c.hp > 0
+      && !(c.paralyzed > 0) && !(c.stunned > 0) && this._raiseSlotFor(c) != null);
+    if (!caster) return;
+    this._roundRaise = true;   // lets the ritual through _useAbility's in-combat block
+    try { this._useAbility(caster, this._raiseSlotFor(caster), {}); }
+    finally { this._roundRaise = false; }
+  }
   _endOfRoomRaise() {
     let guard = 16;
     while (guard-- > 0 && this.party.some(c => c.dead && !c.left)) {
@@ -2637,13 +2655,28 @@ class Dungeon {
     const someoneHurt = allies.some(a => !a.undead && a.hp < a.maxHp * 0.55);   // the undead don't count — positive energy can't help them anyway
     const weakestFoe = targets.slice().sort((a, b) => a.hp - b.hp)[0];
     const anyDowned = this.party.some(a => !a.dead && !a.left && a.downed);
-    const anyDead = this.party.some(a => a.dead);
+    const topCR = Math.max(0, ...targets.map(e => crToNum(e.cr) || 0));
+    // Biggest damage spell on hand — widest coverage first, dice as the tiebreak,
+    // aimed weakest-first. Shared by the blaster opener and the chaff calculus.
+    const bestBlast = () => {
+      const DMG = ['aoe', 'bolt', 'missile', 'touch', 'rays', 'disintegrate'];
+      const cov = (a) => Math.min(targets.length, a.maxTargets || 1);
+      const pow = (a) => {   // honest dice count: halflevel scales at lvl/2, dcap respected
+        const n = typeof a.dice === 'number' ? a.dice : (a.dice === 'halflevel' ? Math.ceil(lvl / 2) : lvl);
+        return Math.min(n, a.dcap || n) * (a.die || 6);
+      };
+      const blast = avail.filter(a => DMG.includes(a.effect) && (a.dice || a.die))
+                         .sort((x, y) => (cov(y) - cov(x)) || (pow(y) - pow(x)))[0];
+      if (!blast) return null;
+      const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
+      const cap = blast.maxTargets || 1;
+      return { slot: slot(blast), payload: cap < 2 ? { targetUid: weakFirst[0].uid } : { targetUids: weakFirst.slice(0, cap).map(e => e.uid) } };
+    };
 
-    // 0) Revive a fallen ally if we have the prayer for it (Raise Dead/Resurrection
-    //    for the slain; Breath of Life for the dying).
-    // In combat, only Breath of Life (NOT Raise Dead / Resurrection — those are cast
-    // between rooms) revives, and it can now snatch back the DYING or the freshly DEAD.
-    const revive = avail.find(a => a.effect === 'revive' && !a.raiseDead && (anyDowned || anyDead));
+    // 0) Revive the DYING (Breath of Life — castable in combat). The already-DEAD
+    //    are a non-factor mid-round: they return via the between-rounds ritual
+    //    (_endOfRoundRaise) or between rooms — no combat turn is spent on them.
+    const revive = avail.find(a => a.effect === 'revive' && !a.raiseDead && anyDowned);
     if (revive) return { slot: slot(revive), payload: {} };
     // 0b) Inquisitor: declare a Judgement if none is up (free action, then attack).
     const judg = avail.find(a => a.effect === 'judgment');
@@ -2656,6 +2689,15 @@ class Dungeon {
       if (present.size && (!m.bane || !present.has(m.bane.type))) {
         return { slot: slot(baneAb), payload: { baneType: this._autoBaneType() } };
       }
+    }
+    // 0d) FRONT-LOADED BLASTERS — Elfrip trusts the alpha strike: winning
+    //     initiative (round 1) against foes of his level or weaker, he usually
+    //     just opens with his biggest blast, hoping to end the fight before
+    //     anyone needs buffing or healing. (A dying ally still trumps glory.)
+    if (this.round === 1 && Dungeon.BLASTER_OPENERS.has((m.playerId || '').toLowerCase())
+        && !anyDowned && topCR <= lvl && Math.random() < 0.65) {
+      const b = bestBlast();
+      if (b) return b;
     }
     // 1) Healing. CHANNEL (party heal) is the better call when MULTIPLE allies are
     //    hurt or anyone's DOWNED (it revives the dying); a single big CURE is better
@@ -2677,12 +2719,21 @@ class Dungeon {
     const bigCure = avail.filter(a => a.effect === 'heal' && a.heal === 'single')
                          .sort((x, y) => (y.healDice || 0) - (x.healDice || 0))[0];   // largest castable cure (e.g. Cure Serious)
     const hurtCount = allies.filter(a => !a.undead && a.hp < a.maxHp * 0.6).length + (anyDowned ? 1 : 0);
-    if (channelHeal && (anyDowned || hurtCount >= 2)) return { slot: slot(channelHeal), payload: {} };   // many hurt / dying → channel
-    if (bigCure && hurtCount === 1) {
-      const worst = allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
-      if (worst && worst.hp < worst.maxHp * 0.5) return { slot: slot(bigCure), payload: {} };   // one badly hurt → big single cure
-    }
-    if ((channelHeal || bigCure) && someoneHurt) return { slot: slot(channelHeal || bigCure), payload: {} };
+    const pickHeal = () => {
+      if (channelHeal && (anyDowned || hurtCount >= 2)) return { slot: slot(channelHeal), payload: {} };   // many hurt / dying → channel
+      if (bigCure && hurtCount === 1) {
+        const worst = allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
+        if (worst && worst.hp < worst.maxHp * 0.5) return { slot: slot(bigCure), payload: {} };   // one badly hurt → big single cure
+      }
+      if ((channelHeal || bigCure) && someoneHurt) return { slot: slot(channelHeal || bigCure), payload: {} };
+      return null;
+    };
+    // Healing is PRIORITY-BY-SEVERITY: someone dying, or an ally below 30%, and
+    // the heal happens RIGHT NOW, ahead of everything. Mild scrapes wait their
+    // turn — control and buffs come first; the patch-up lands just before the
+    // offense phase (the mild-wounds stop below). Nobody hurt → no healing.
+    const sevHurt = anyDowned || allies.some(a => !a.undead && a.hp < a.maxHp * 0.3);
+    if (sevHurt) { const h = pickHeal(); if (h) return h; }
     // Nobody hurt, but undead on the field → channel to HARM them (PF1 cleric).
     if (channelHeal && !someoneHurt && targets.some(e => e.type === 'undead')) return { slot: slot(channelHeal), payload: {} };
     // 1b) Dispel Magic — cleanse a debuffed ally (paralysis / stun / sickness).
@@ -2715,21 +2766,35 @@ class Dungeon {
     //    (Healing and cleansing above still always apply; inquisitors and magi
     //    keep their steel-first rules — this is for the robe-wearers.)
     if (['wizard', 'sorcerer', 'cleric', 'druid', 'bard', 'oracle'].includes(m.cls)) {
-      const topCR = Math.max(0, ...targets.map(e => crToNum(e.cr) || 0));
       if (topCR < lvl) {
         const haste = avail.find(a => a.effect === 'haste');
         if (haste && !this.livingParty().some(p => p.hasted > 0)) return { slot: slot(haste), payload: {} };
-        const DMG = ['aoe', 'bolt', 'missile', 'touch', 'rays', 'disintegrate'];
-        const cov = (a) => Math.min(targets.length, a.maxTargets || 1);
-        const pow = (a) => (typeof a.dice === 'number' ? a.dice : lvl) * (a.die || 6);
-        const blast = avail.filter(a => DMG.includes(a.effect) && (a.dice || a.die))
-                           .sort((x, y) => (cov(y) - cov(x)) || (pow(y) - pow(x)))[0];
-        if (blast) {
-          const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
-          const cap = blast.maxTargets || 1;
-          return { slot: slot(blast), payload: cap < 2 ? { targetUid: weakFirst[0].uid } : { targetUids: weakFirst.slice(0, cap).map(e => e.uid) } };
-        }
+        const b = bestBlast();
+        if (b) return b;
         return null;   // damage spells spent → cantrip / weapon swing
+      }
+    }
+    // ── CONTROL FIRST (caster doctrine) ── a SERIOUS fight gets shut down BEFORE
+    //    the buff checklist: Black Tentacles grips a pack, Slow staggers a crowd,
+    //    the bard pins the boss with Hideous Laughter. THEN buffs (Stoneskin
+    //    Communal / Haste / Fervor), THEN offense.
+    const tentacles = avail.find(a => a.effect === 'blacktentacles');
+    if (tentacles && !this.blackTentacles && foes.length >= 2) return { slot: slot(tentacles), payload: {} };
+    const slowAb = avail.find(a => a.effect === 'slow');
+    if (slowAb) {
+      const fresh = targets.filter(t => !(t.slowed > 0) && !t.fascinated);
+      if (fresh.length >= 2) return { slot: slot(slowAb), payload: { targetUids: fresh.slice(0, slowAb.maxTargets || 3).map(e => e.uid) } };
+    }
+    // The bard pins a BOSS so it misses turns — Hideous Laughter (Held) survives
+    // being hit (unlike Fascinate), so the party can keep focus-firing while it
+    // wastes turns re-saving. Re-cast only if the boss shrugs free; a crowd with
+    // no boss falls through to the phases below.
+    if (m.cls === 'bard') {
+      const heaviest = targets.slice().sort((a, b) => b.maxHp - a.maxHp);
+      const boss = targets.find(e => e.boss) || (heaviest.length >= 2 && heaviest[0].maxHp >= 1.6 * heaviest[1].maxHp ? heaviest[0] : null);
+      if (boss && !(boss.paralyzed > 0)) {
+        const laugh = avail.find(a => a.effect === 'save_debuff');   // Hideous Laughter → Held
+        if (laugh) return { slot: slot(laugh), payload: { targetUid: boss.uid } };
       }
     }
     // 2) Put up buffs once — Smite, then sticky self/party buffs (rage, shield,
@@ -2817,22 +2882,6 @@ class Dungeon {
     //     up on a fervor that's already running, and vice versa.
     const haste = avail.find(a => a.effect === 'haste');
     if (haste && buffAppetite && !this.livingParty().some(p => p.hasted > 0)) return { slot: slot(haste), payload: {} };
-    // 2b2) Bards LOCK DOWN a boss so it misses its turns. Hideous Laughter (Held)
-    //      is ideal — unlike Fascinate it survives being hit, so the party can
-    //      keep focus-firing while the boss wastes turns trying to re-save. Once
-    //      the party buffs are up the bard pins the boss; it only re-casts if the
-    //      boss shrugs free. A crowd with no boss falls through to group offense.
-    if (m.cls === 'bard') {
-      const heaviest = targets.slice().sort((a, b) => b.maxHp - a.maxHp);
-      const boss = targets.find(e => e.boss) || (heaviest.length >= 2 && heaviest[0].maxHp >= 1.6 * heaviest[1].maxHp ? heaviest[0] : null);
-      if (boss && !(boss.paralyzed > 0)) {
-        const laugh = avail.find(a => a.effect === 'save_debuff');   // Hideous Laughter → Held
-        if (laugh) return { slot: slot(laugh), payload: { targetUid: boss.uid } };
-      }
-    }
-    // 2b3) Black Tentacles — drop a control field when 2+ foes and none is up yet.
-    const tentacles = avail.find(a => a.effect === 'blacktentacles');
-    if (tentacles && !this.blackTentacles && foes.length >= 2) return { slot: slot(tentacles), payload: {} };
     // 2b4) Suffocation — try to outright kill a dangerous non-undead foe (boss/elite,
     //      or a lone target). A made save still deals heavy damage, so it's never wasted.
     const suffocate = avail.find(a => a.effect === 'savedie');
@@ -2849,6 +2898,10 @@ class Dungeon {
     // 2b6) Overland Flight — rise above grounded foes (defensive), once, if not flying.
     const overland = avail.find(a => a.effect === 'overlandflight');
     if (overland && !m.flying) return { slot: slot(overland), payload: {} };
+    // 3) MILD wounds — control is down and the buffs are up; patch the party up
+    //    BEFORE opening fire. (SEVERE wounds already jumped the queue at the top;
+    //    nobody hurt → pickHeal returns null and the offense below proceeds.)
+    { const h = pickHeal(); if (h) return h; }
     // 2c) Arcane controllers (wizard, sorcerer) play the battlefield: by default
     //     they pick the spell that AFFECTS THE MOST foes — a wide blast (Fireball,
     //     Lightning Bolt, Burning Hands) or a mass lockdown (Sleep, Grease). But
@@ -2878,9 +2931,10 @@ class Dungeon {
         const affects = Math.max(1, Math.min(targets.length, cap));
         const single = cap < 2;
         const isDebuff = a.effect === 'save_debuff' || ['grease', 'sleep', 'fascinate'].includes(a.effect);
-        // Rough damage rank for boss focus: 'level'/'halflevel' dice scale with
-        // caster level; a numeric dice count is taken as-is. Debuffs rank 0.
-        const power = isDebuff ? 0 : (typeof a.dice === 'number' ? a.dice : lvl) * (a.die || 6);
+        // Rough damage rank for boss focus: honest dice count ('halflevel' scales
+        // at lvl/2, dcap respected); a numeric count is taken as-is. Debuffs rank 0.
+        const nDice = typeof a.dice === 'number' ? a.dice : (a.dice === 'halflevel' ? Math.ceil(lvl / 2) : lvl);
+        const power = isDebuff ? 0 : Math.min(nDice, a.dcap || nDice) * (a.die || 6);
         const payload = single ? { targetUid: weakFirst[0].uid } : { targetUids: weakFirst.slice(0, cap).map(e => e.uid) };
         cand.push({ ab: a, payload, affects, single, isDebuff, power });
       }
@@ -3232,8 +3286,9 @@ class Dungeon {
     if (!this._charAllows(ab, m)) return { ok: false, error: 'not your ability' };   // char-gated form (e.g. Rissa's Beast Mode)
     const lvl = m.level || 1;
     if (ab.minLevel && lvl < ab.minLevel) return { ok: false, error: `${ab.name} needs level ${ab.minLevel}` };
-    // Raise Dead / Resurrection are powerful rituals — only between rooms (out of combat).
-    if (ab.raiseDead && this.status === 'combat') return { ok: false, error: `${ab.name} can only be cast between rooms, not during combat.` };
+    // Raise Dead / Resurrection are powerful rituals — only between rooms (out of
+    // combat), EXCEPT the between-rounds ritual window (_endOfRoundRaise).
+    if (ab.raiseDead && this.status === 'combat' && !this._roundRaise) return { ok: false, error: `${ab.name} can only be cast between rooms or as a round turns, not mid-round.` };
     // Dropping a Wild Shape form you're already in is FREE (no use spent, always allowed).
     const formOff = ab.effect === 'form' && ab.form && m.form && m.form.key === ab.form.key;
     if (ab.cost === 'pool' && (m.spellPool || 0) <= 0) return { ok: false, error: 'out of spell casts this room' };
@@ -4315,6 +4370,24 @@ class Dungeon {
       // back: Raise Dead at 1 HP (the lost level STAYS lost); Resurrection at FULL HP
       // (the lost level is RESTORED — we simply clear the still-pending penalty).
       const dead = this.party.find(a => a.dead && !a.left);
+      // Reincarnate (druid) — the soul comes back in a NEW body: the fallen hero
+      // is replaced by a random hero from the BENCH (not at the poker table, not
+      // in the dungeon), arriving at full health as themselves. Only BOT heroes
+      // swap identities (a human's run stays theirs — for them it falls through
+      // to a plain raise). No bench available → plain raise too.
+      if (ab.reincarnate && dead && dead.isBot) {
+        const pool = (typeof this._recruitableFn === 'function' && this._recruitableFn()) || [];
+        if (pool.length) {
+          const choice = pool[Math.floor(Math.random() * pool.length)];
+          const rec = db.getPlayer(choice.playerId)
+                   || { player_id: choice.playerId, nickname: choice.nickname, class: choice.cls, avatar_id: choice.avatarId };
+          dead.left = true;   // the old body is gone for good — the soul moved house
+          this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${dead.nickname}'s soul takes root in a new body…`, sound);
+          const nm = this.addMember(rec, true);
+          this._note(`🌱 …and rises as ${nm.nickname} the ${nm.cls} (Lv ${nm.level}), whole and hale!`);
+          this._echoToTable(sound); this._broadcast(); return;
+        }
+      }
       if (dead) {
         dead.dead = false; dead.downed = false; dead.left = false;
         dead.flatFooted = true; dead.paralyzed = 0; dead.stunned = 0;
