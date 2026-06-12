@@ -607,7 +607,7 @@ const MON = {
   devil_samurai:     { name: 'Devil Samurai',     glyph: '😈', cr: '13',  hp: 145, ac: 26, toHit: 19, dmgDie: 6,  dmgCount: 2, dmgBonus: 9, fort: 12, reflex: 10, attacks: 2, gold: [170, 320], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 } },   // F12 + devil — naginata (2d6+9)
   devil_rogue:       { name: '???',               glyph: '😈', cr: '16',  hp: 175, ac: 29, toHit: 22, dmgDie: 6,  dmgBonus: 9,  fort: 10, reflex: 15, attacks: 3, sneakDice: 8, evasion: true, gold: [380, 640], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 } },   // R15 + devil (Mangvhune) — a dual-wielding horror; its name is not spoken
   bomb_devil:        { name: 'Bomb Devil',        glyph: '💣', cr: '11',  hp: 115, ac: 24, toHit: 16, dmgDie: 6,  dmgBonus: 6,  fort: 10, reflex: 11, gold: [130, 260], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 },
-                       hellfire: { count: 3, dice: 6, die: 6, bonus: 4, dc: 20, uses: 6, eager: true, verb: 'lobs a sputtering GRENADE into the party', sound: '/audio/grenade_explosion01.mp3' } },   // ALCHEMIST of its HD (11): bombs = 6d6+4 (1d6 per 2 levels + Int), a deep satchel (6), and it BOMBS ON SIGHT (eager) — real grenade report from foundry media
+                       hellfire: { count: 3, dice: 6, die: 6, bonus: 4, dc: 20, uses: 6, eager: true, verb: 'lobs a sputtering GRENADE into the party', sound: '/audio/tarkov_grenade_frag_full_.mp3' } },   // ALCHEMIST of its HD (11): bombs = 6d6+4 (1d6 per 2 levels + Int), a deep satchel (6), and it BOMBS ON SIGHT (eager) — Tarkov frag report from foundry media
   // ── DRAGONS — winged terrors with breath weapons (reuse the hellfire AoE with a
   //    breath verb + element). ──
   black_dragon:      { name: 'Black Dragon',      glyph: '🐉', cr: '11',  hp: 150, ac: 26, toHit: 20, dmgDie: 6,  dmgCount: 2, dmgBonus: 9, fort: 12, reflex: 9, attacks: 2, flying: true, gold: [200, 400], evil: true, dr: { amount: 5, bypass: 'magic' }, resist: { acid: 0 }, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' },
@@ -1004,7 +1004,7 @@ class Dungeon {
     if (o.paralyzed > 0) c.push(o.heldDC
       ? { key: 'held',      label: 'Held',      desc: 'helpless — re-saves each turn (the attempt costs the turn)', icon: `${I}paralyzed.webp` }
       : { key: 'paralyzed', label: 'Paralyzed', desc: 'frozen — loses turns; easy to hit', icon: `${I}paralyzed.webp` });
-    if (o.slowed > 0)    c.push({ key: 'slowed',    label: 'Slowed',    desc: 'sluggish — acts only every other turn; −1 AC', icon: `${I}slowed.webp` });
+    if (o.slowed > 0)    c.push({ key: 'slowed',    label: 'Slowed',    desc: 'STAGGERED — one single action a turn: move OR attack, never both, never a full attack; −1 AC', icon: `${I}slowed.webp` });
     if (o.grappled)      c.push({ key: 'grappled',  label: 'Grappled',  desc: 'chained — −2 to hit, easier to strike; crushed each turn (Dispel or Grease frees you)', icon: `${I}grappled.webp` });
     if (o.prayed > 0)    c.push({ key: 'prayed',     label: 'Prayer',    desc: `−${o.prayed} to hit, damage & saves (cleric Prayer covers the battlefield)`, icon: `${I}shaken.webp` });
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
@@ -1396,10 +1396,10 @@ class Dungeon {
       }
       if (e.loseTurn) { e.loseTurn = false; this._note(`${e.glyph} ${e.name} is off-balance — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       if (e.sickened > 0) { e.sickened -= 1; this._note(`${e.glyph} ${e.name} retches in the cloud — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
-      if (e.slowed > 0) {   // Slow: sluggish — acts only every other turn.
-        e.slowed -= 1; e._slowTick = (e._slowTick || 0) + 1;
-        if (e._slowTick % 2 === 1) { this._note(`🐌 ${e.name} is slowed — too sluggish to act this turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
-      }
+      // Slow (PF1 STAGGERED): the creature still acts every turn — the single-
+      // action limit (move OR attack, never both, never a full attack) is
+      // enforced down in _enemyAct's action economy. Just tick the duration.
+      if (e.slowed > 0) e.slowed -= 1;
       this._stepTimer = setTimeout(() => { this._withSide('enemy', () => this._enemyAct(e)); this._nextTurn(); }, aiStepMs(e));
       this._broadcast();
       return;
@@ -2105,12 +2105,20 @@ class Dungeon {
         target = helpless.length ? (helpless.find(m => m.playerId === e._lastAtkTarget) || pick(helpless)) : (prev || pick(living));
       }
       const fullAttack = e._lastAtkTarget === target.playerId;   // stayed put → full routine
-      const swings = fullAttack ? Math.max(1, e.attacks || 1) : 1;
-      for (let i = 0; i < swings; i++) {
-        if (target.hp <= 0 || target.left) break;   // target dropped mid-routine — the rest of the swings are spent closing on someone new
-        this._enemyMelee(e, target);
+      // PF1 SLOW = STAGGERED: a single move OR standard action each turn, never
+      // both, never a full attack. Closing on a NEW target eats the whole turn
+      // as movement (no swing); on the same target it strikes exactly once.
+      if (e.slowed > 0 && !fullAttack) {
+        this._note(`🐌 ${e.name}, slowed, lumbers toward ${target.nickname} — its single action spent just closing the distance.`, null, { side: 'enemy' });
+        e._lastAtkTarget = target.playerId;
+      } else {
+        const swings = (e.slowed > 0) ? 1 : (fullAttack ? Math.max(1, e.attacks || 1) : 1);
+        for (let i = 0; i < swings; i++) {
+          if (target.hp <= 0 || target.left) break;   // target dropped mid-routine — the rest of the swings are spent closing on someone new
+          this._enemyMelee(e, target);
+        }
+        e._lastAtkTarget = target.playerId;
       }
-      e._lastAtkTarget = target.playerId;
     }
     if (noReach) this._note(`${e.glyph} ${e.name} claws at the air — its prey is on the wing, out of reach!`, null, { side: 'enemy' });
   }
