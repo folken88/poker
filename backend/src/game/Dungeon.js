@@ -901,7 +901,13 @@ class Dungeon {
   livingEnemies() { return this.enemies.filter(e => e.hp > 0); }
   // Foes a hero can actually hit — excludes those shrouded in DARKNESS (can't be
   // attacked for 2 rounds). They're still "alive" (room stays active until it lifts).
-  _targetableEnemies() { return this.enemies.filter(e => e.hp > 0 && !(e.darkened > 0)); }
+  _targetableEnemies() {
+    // Darkvision (Communal — Rhyarca's Trickery mystery): when ANY living party
+    // member carries it, the party can TARGET foes shrouded in magical darkness
+    // (the darkened foes still lose their own turns — see _advanceToActor).
+    const dv = this.party.some(p => !p.left && p.hp > 0 && p.darkvision);
+    return this.enemies.filter(e => e.hp > 0 && (dv || !(e.darkened > 0)));
+  }
 
   hasMember(playerId) { const m = this.member(playerId); return !!(m && !m.left && m.hp > 0); }
   botCount() { return this.party.filter(m => m.isBot && !m.left && m.hp > 0).length; }
@@ -3280,7 +3286,7 @@ class Dungeon {
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null;   // taunt / grapple / fire ward / flight / stoneskin / spiritual weapon clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false;   // taunt / grapple / fire ward / flight / stoneskin / spiritual weapon / darkvision clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
     m.infernalHeal = 0;   // Infernal Healing fast-healing ends between rooms
@@ -4542,6 +4548,7 @@ class Dungeon {
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
       if (ab.dr) who.dr = Math.max(who.dr || 0, ab.dr);   // Stoneskin — DR vs physical blows
       if (ab.protectFire) who.protectFire = Math.min(120, 12 * (m.level || 1));   // PF1 Protection from Energy: an absorption pool — 12 per caster level, max 120
+      if (ab.darkvision) who.darkvision = true;   // Darkvision (Communal): the party can target foes shrouded in magical darkness
       if (ab.fly) who.flying = true;                // Fly — grounded foes can't melee them
       if (ab.canHitFlyers) who.canHitFlyers = true; // Magus Fly/Overland Flight — can melee airborne foes
       if (ab.displace) who.displaced = true;        // Displacement — 50% incoming-miss (this room)
@@ -4647,11 +4654,20 @@ class Dungeon {
   // that foe on EACH of the cleric's turns — see _spiritWeaponStrike, fired from
   // _advanceToActor — so the cleric can do other things while it fights on. Lasts
   // 1 round per ½ caster level, and it swings the moment it's summoned.
+  // A divine caster's SPIRITUAL WEAPON takes the shape of their GOD's favored
+  // weapon: Besmara's rapier (Rhyarca), Sarenrae's scimitar (Elfrip), Brigh's
+  // multitool (Dinvaya — closest staple: battleaxe), Vesorianna's lash (whip).
+  // Everyone else conjures a force-copy of their own weapon, as before.
+  _spiritWeaponKey(m) {
+    const BY_CHAR = { rhyarca: 'rapier', elfrip: 'scimitar', dinvaya: 'battleaxe', vesorianna: 'whip' };
+    return BY_CHAR[(m.playerId || '').toLowerCase()] || m.weaponKey;
+  }
   _abSpiritWeapon(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     const rounds = Math.max(1, Math.floor((m.level || 1) / 2));   // 1 round per 2 caster levels
     m.spiritWeapon = { targetUid: e.uid, rounds };
-    this._note(`🗡️✨ ${m.nickname} conjures a SPIRITUAL WEAPON over ${e.name} — it will strike on every turn for ${rounds} rounds!`, ab.sound || '/audio/spell_holy_smite.mp3');
+    const shape = weaponOf({}, this._spiritWeaponKey(m)).name.replace(/^Masterwork /, '');
+    this._note(`🗡️✨ ${m.nickname} conjures a SPIRITUAL ${shape.toUpperCase()} over ${e.name} — it will strike on every turn for ${rounds} rounds!`, ab.sound || '/audio/spell_holy_smite.mp3');
     this._echoToTable(ab.sound || '/audio/spell_holy_smite.mp3');
     this._spiritWeaponStrike(m);   // it lashes out the instant it appears
   }
@@ -4665,7 +4681,7 @@ class Dungeon {
     let e = this.enemies.find(x => x.uid === sw.targetUid && x.hp > 0);
     if (!e) { e = this.livingEnemies().slice().sort((a, b) => a.hp - b.hp)[0]; if (e) sw.targetUid = e.uid; }
     if (e) {
-      m.weapon = weaponOf(m.gear, m.weaponKey);
+      m.weapon = weaponOf(m.gear, this._spiritWeaponKey(m));   // the god's weapon, riding the caster's enhancement
       const swings = 1 + (m.hasted > 0 ? 1 : 0);   // benefits from Haste — an extra strike
       const snd = '/audio/spell_holy_smite.mp3';    // its own ringing note
       const parts = [];

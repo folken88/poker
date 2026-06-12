@@ -94,6 +94,12 @@ function winningsFor(winners, playerId) {
 //   ai      — best among the AI
 const _emptyRecs = () => ({ biggestWin: null, biggestLoss: null, biggestPot: null, longestWar: null, biggestBluff: null, ugliestWinner: null });
 const _recAll = _emptyRecs(), _recHuman = _emptyRecs(), _recAi = _emptyRecs();
+// ── Career poker NET (won − lost) per player ────────────────────────────────
+// Accumulated alongside the records (same boot seed, same reset-era markers)
+// and handed to db ONCE by reference — db decorates roster rows with
+// pokerNet/pokerHands so the leaderboards rank by RESULTS, not current cash.
+const _nets = new Map();
+try { db.setPokerNets(_nets); } catch (_) { /* db without the hook (old build) */ }
 const _isBotPid = (pid) => { try { return !!(db.getPlayer(String(pid || '')) || {}).is_bot; } catch (_) { return false; } };
 // Set a category's record on the "all" store AND the holder's population store,
 // using a `better(existing, candidate) → bool` comparator.
@@ -126,6 +132,18 @@ function _applyHandRecords(h) {
   const board = h.board || [];
 
   const nickById = new Map(players.map(p => [p.playerId, p.nickname || p.playerId]));
+
+  // 0) Career NET: every dealt-in current player banks (winnings − contribution)
+  //    for this hand — the leaderboard metric. Counts zero-net hands too (the
+  //    hands counter is how the boards hide never-played players).
+  for (const p of players) {
+    if (!_isCurrent(p.playerId)) continue;
+    const delta = (p.stackEnd || 0) - (p.stackStart || 0);
+    const acc = _nets.get(p.playerId) || { net: 0, hands: 0 };
+    acc.net += Number.isFinite(delta) ? delta : 0;
+    acc.hands += 1;
+    _nets.set(p.playerId, acc);
+  }
 
   // 1) Biggest single-hand GAIN / LOSS — most chips a current player NET
   //    gained / lost in one hand (stack delta, i.e. after subtracting their
@@ -191,7 +209,7 @@ function getRecords() {
   return { all: clone(_recAll), human: clone(_recHuman), ai: clone(_recAi) };
 }
 
-function _clearRecords() { for (const store of [_recAll, _recHuman, _recAi]) for (const k of Object.keys(store)) store[k] = null; }
+function _clearRecords() { for (const store of [_recAll, _recHuman, _recAi]) for (const k of Object.keys(store)) store[k] = null; _nets.clear(); }
 
 /** Start a fresh records era. Called on a Full Reset / Loot Lord win: wipes the
  *  current records AND writes a boundary marker to the hand log, so the board

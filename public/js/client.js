@@ -727,7 +727,24 @@
 
   function playDungeonSound(url, vol) {
     if (!url || !combatSoundEnabled(url)) return;   // honors the combat-sound toggles
-    try { const a = new Audio(url); a.volume = Math.max(0, Math.min(1, vol)); a.play().catch(() => {}); } catch (_) {}
+    try {
+      const a = new Audio(url);
+      const v = Math.max(0, Math.min(1, vol));
+      a.volume = v;
+      a.play().catch(() => {});
+      // Long clips (the music-flavored spell sounds — ABBA's Haste, the Hetfield
+      // bolt, ghosts n stuff…) start FADING at 4s and are silent by 5s. Short
+      // weapon/spell hits end on their own long before the fade ever fires.
+      setTimeout(() => {
+        if (a.paused || a.ended) return;
+        const t0 = Date.now();
+        const iv = setInterval(() => {
+          const k = 1 - (Date.now() - t0) / 1000;   // 1 → 0 across one second
+          if (k <= 0 || a.ended) { clearInterval(iv); try { a.pause(); } catch (_) {} }
+          else a.volume = v * k;
+        }, 50);
+      }, 4000);
+    } catch (_) {}
   }
   function enterDungeon() {
     socket.emit('dungeon:enter', null, (resp) => {
@@ -2838,23 +2855,15 @@
   function buildLeaderboardHtml() {
     const all = (state.roster || []).slice();
     const meId = state.me?.player_id;
-    function wealthOf(p) {
-      // CASH ONLY — chips minus outstanding First Bank of Abadar debt.
-      // Magic-item (gear) value is deliberately NOT counted on the
-      // leaderboard; only spendable gold ranks you. Debt drags the score
-      // down so the board reflects what you'd actually have if you settled
-      // up tomorrow. Bots have rebuy_debt always = 0.
-      return Number(p.chips || 0) - Number(p.rebuy_debt || 0);
-    }
-    // Hide players sitting at exactly 5,000 net worth — that's the
-    // default starting stack, so a flat 5,000 almost always means
-    // "never played this game". Keeping them off the board makes the
-    // leaderboard reflect actual results. Anyone above OR below 5,000
-    // shows up.
+    // NET POKER RESULT — money won minus money lost across every logged hand
+    // (server-computed from hands.jsonl; survives restarts, resets with the
+    // records era). Ranks RESULTS, not bankroll: a loan from Abadar or a
+    // dungeon haul doesn't move this board — only poker does.
+    function scoreOf(p) { return Number(p.pokerNet || 0); }
     const ranked = all
-      .map(p => ({ p, wealth: wealthOf(p) }))
-      .filter(({ wealth }) => wealth !== 5000)
-      .sort((a, b) => b.wealth - a.wealth)
+      .map(p => ({ p, net: scoreOf(p) }))
+      .filter(({ p }) => Number(p.pokerHands || 0) > 0)   // never dealt a hand → off the board
+      .sort((a, b) => b.net - a.net)
       .slice(0, 10);
 
     const rows = ranked.map((row, i) => {
@@ -2875,7 +2884,7 @@
           <span class="lb__rank">${rankMedal}</span>
           <span class="lb__avatar">${renderAvatar(p.avatar_id)}</span>
           <span class="lb__name">${escapeText(p.nickname)}${lord?'<span class="lb__bot">'+lord+'</span>':''}${debtDot}</span>
-          <span class="lb__wealth">${formatChips(row.wealth)} gp</span>
+          <span class="lb__wealth" style="${row.net < 0 ? 'color:#cc5544' : ''}" title="poker won − lost over ${Number(p.pokerHands || 0).toLocaleString()} hands · cash on hand ${formatChips(p.chips || 0)} gp">${row.net < 0 ? '−' : '+'}${formatChips(Math.abs(row.net))} gp</span>
         </li>`;
     }).join('');
     return `<ol class="lb">${rows}</ol>`;
@@ -2953,22 +2962,15 @@
     const all = (state.roster || []).slice();
     if (all.length === 0) { el.innerHTML = '<li class="lb__empty">No players yet…</li>'; return; }
     const meId = state.me?.player_id;
-    function wealthOf(p) {
-      // CASH ONLY — chips minus outstanding First Bank of Abadar debt.
-      // Magic-item (gear) value is deliberately NOT counted on the
-      // leaderboard; only spendable gold ranks you. Debt drags the score
-      // down so the board reflects what you'd actually have if you settled
-      // up tomorrow. Bots have rebuy_debt always = 0.
-      return Number(p.chips || 0) - Number(p.rebuy_debt || 0);
-    }
-    // Same 5,000-flat filter as the popup leaderboard — hide players
-    // sitting at the default starting stack with zero gear/debt; that
-    // signature means "never played."
+    // NET POKER RESULT — won minus lost across every logged hand (server-fed
+    // pokerNet; same metric as the popup board). Loans, gear and dungeon gold
+    // don't move this board — only poker results do.
+    function scoreOf(p) { return Number(p.pokerNet || 0); }
     const ranked = all
-      .map(p => ({ p, wealth: wealthOf(p) }))
-      .filter(({ wealth }) => wealth !== 5000)
+      .map(p => ({ p, net: scoreOf(p) }))
+      .filter(({ p }) => Number(p.pokerHands || 0) > 0)      // never dealt a hand → off the board
       .filter(({ p }) => _lbFilter === 'all' || !p.is_bot)   // Hu = humans only (default)
-      .sort((a, b) => b.wealth - a.wealth);
+      .sort((a, b) => b.net - a.net);
     if (!ranked.length) { el.innerHTML = `<li class="lb__empty">${_lbFilter === 'all' ? 'No players yet…' : 'No human players yet…'}</li>`; return; }
     el.innerHTML = ranked.map((row, i) => {
       const p = row.p;
@@ -2985,7 +2987,7 @@
           <span class="lb__rank">${rankMedal}</span>
           <span class="lb__avatar">${renderAvatar(p.avatar_id)}</span>
           <span class="lb__name">${escapeText(p.nickname)}${lord}${debtDot}</span>
-          <span class="lb__wealth">${formatChips(row.wealth)}</span>
+          <span class="lb__wealth" style="${row.net < 0 ? 'color:#cc5544' : ''}" title="poker won − lost over ${Number(p.pokerHands || 0).toLocaleString()} hands · cash ${formatChips(p.chips || 0)} gp">${row.net < 0 ? '−' : '+'}${formatChips(Math.abs(row.net))}</span>
         </li>`;
     }).join('');
   }

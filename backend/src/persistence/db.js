@@ -506,8 +506,19 @@ function getPlayer(playerId) {
 function listPlayers() {
   return stmts.listPlayers.all();
 }
-function listHumans() { return stmts.listHumans.all(); }
-function listBots()   { return stmts.listBots.all();   }
+// ── Poker net winnings (won − lost), fed by persistence/logger.js ───────────
+// The logger owns the math (it replays hands.jsonl at boot, honors reset
+// markers, and updates per hand); it hands us its live Map once via
+// setPokerNets. We decorate every roster row with pokerNet/pokerHands so the
+// client leaderboards can rank by RESULTS instead of current cash.
+let _pokerNets = new Map();
+function setPokerNets(map) { if (map) _pokerNets = map; }
+function _withNet(r) {
+  const n = _pokerNets.get(r.player_id);
+  return { ...r, pokerNet: n ? n.net : 0, pokerHands: n ? n.hands : 0 };
+}
+function listHumans() { return stmts.listHumans.all().map(_withNet); }
+function listBots()   { return stmts.listBots.all().map(_withNet);   }
 /** Full roster snapshot for the lobby:roster event. Returns humans
  *  first (for the picker UI), then bots. The wealth-ranked
  *  leaderboard + bot picker on the client need this whole list, not
@@ -711,6 +722,7 @@ module.exports = {
   ROSTER,
   BOT_ROSTER,
   DEFAULT_STACK,
+  setPokerNets,
   // Gear / Loot Lord
   GEAR_SLOTS,
   GEAR_SLOT_KEYS,

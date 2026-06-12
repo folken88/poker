@@ -573,6 +573,14 @@ KITS.oracle.abilities = [
   { ...spontaneousSpell(SPELL.slow, 5),         char: 'Casandalee' },
   { ...spontaneousSpell(SPELL.mirrorimage, 4),  char: 'Casandalee' },
   { ...spontaneousSpell(SPELL.displacement, 6), char: 'Casandalee' },
+  // ── TRICKERY (Deception) mystery — Rhyarca: the pirate-queen's bag of dirty
+  //    tricks. Darkness shrouds foes; her Communal Darkvision lets the WHOLE
+  //    party keep targeting them while they stumble blind (see
+  //    Dungeon._targetableEnemies). Greater Invisibility loves a rogue ally.
+  { ...spontaneousSpell(SPELL.invisibility, 4),  char: 'Rhyarca' },
+  { ...spontaneousSpell(SPELL.darkness, 4),      char: 'Rhyarca' },
+  { key: 'darkvisioncomm', name: 'Darkvision (Communal)', icon: '👁️', cost: 'slot', slvl: 3, minLevel: 6, effect: 'buff', target: 'self', party: true, sticky: true, darkvision: true, sound: S.invoke, char: 'Rhyarca', desc: 'The whole party sees through magical darkness — shrouded foes can be TARGETED again (they still stumble, losing their turns). Lasts the room.' },
+  { ...spontaneousSpell(SPELL.invisgreater, 8),  char: 'Rhyarca' },
 ];
 
 // GUNSLINGER (Taelys, Duristan) — a PF1 firearms specialist. Gun Training is the
