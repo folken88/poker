@@ -78,6 +78,10 @@ button, input { font: inherit; color: inherit; }
 .dungeon__enemies.is-packed .dmon__name { font-size: 0.62rem; }
 .dmon:hover:not(:disabled) { transform: translateY(-2px); border-color: rgba(255,120,120,0.85); }
 .dmon.is-sel { border-color: var(--brass-bright); box-shadow: 0 0 0 2px rgba(241,207,131,0.4); }
+/* The monster whose TURN it is glows hot red — mirrors the heroes' gold glow. */
+.dmon.is-turn { border-color: rgba(255,140,90,0.95); box-shadow: 0 0 12px 3px rgba(255,110,70,0.65); }
+/* 🎯 who's aiming here — one colored name per targeting human (ring colors match). */
+.dmon__aim { font-size: 0.58rem; line-height: 1.1; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dmon.is-boss { border-color: rgba(220,170,60,0.9); background: rgba(40,28,10,0.5); }
 .dmon.is-dead { opacity: 0.32; filter: grayscale(1); cursor: default; }
 /* Dead monsters COLLAPSE to tiny corpse chips — the kill stays visible but no
@@ -167,7 +171,7 @@ button, input { font: inherit; color: inherit; }
 .dpc { position: relative; width: 190px; background: rgba(0,0,0,0.4); border: 1px solid rgba(217,176,106,0.3); border-radius: 10px; padding: 0.5rem; display: flex; flex-direction: column; gap: 0.3rem; }
 .dpc.is-low { border-color: rgba(220,80,80,0.7); }
 .dpc.is-me { border-color: rgba(241,207,131,0.7); }
-.dpc.is-turn { box-shadow: 0 0 0 2px rgba(241,207,131,0.55); }
+.dpc.is-turn { box-shadow: 0 0 0 2px rgba(241,207,131,0.55), 0 0 14px 4px rgba(241,207,131,0.5); border-color: var(--brass-bright); }
 .dpc.is-out { opacity: 0.4; filter: grayscale(0.8); }
 /* OUT heroes (dead ☠️ / bailed 🪜) shrink to slim chips — still listed (the
    dead can be raised when the round turns) but no longer crowd the living.

@@ -827,6 +827,18 @@ class Dungeon {
     this._turnTimer = null;
     this._stepTimer = null;
     this._bantRound = -1;        // last combat round an AI ally reacted (1 per round)
+    this.targeting = {};         // playerId → enemy uid: live 🎯 aim telegraphy (humans only)
+  }
+
+  // Live aim telegraphy — a human's currently-selected foe, rebroadcast so the
+  // whole party (including blind players' locked targets) can see the focus
+  // converging. Validated against living enemies; deduped to spare broadcasts.
+  setTargeting(playerId, uid) {
+    const next = (typeof uid === 'string' && this.enemies.some(e => e.uid === uid && e.hp > 0)) ? uid : null;
+    const cur = this.targeting[playerId] || null;
+    if (cur === next) return;
+    if (next) this.targeting[playerId] = next; else delete this.targeting[playerId];
+    this._broadcast();
   }
 
   // ── AI ally trash-talk ────────────────────────────────────────────────────
@@ -1131,6 +1143,9 @@ class Dungeon {
         buffs: e.hp > 0 ? this._enemyBuffList(e) : [],
       })),
       turn: this._currentTurn(),
+      // 🎯 aim telegraphy — only present, living humans' picks are shown.
+      targeting: Object.fromEntries(Object.entries(this.targeting).filter(([pid]) =>
+        this.party.some(p => p.playerId === pid && !p.left && !p.dead && !p.isBot))),
       botCount: this.botCount(),
       recruitable: this._recruitableFn ? this._recruitableFn() : [],   // unseated bots, set by the socket layer
       lootRoll: this.lootRoll ? {
@@ -1183,6 +1198,7 @@ class Dungeon {
     this._maintainBardSongs();   // Inspire Courage is a passive aura — always up, no action spent
     this.status = 'combat';
     this.round = 1;
+    this.targeting = {};   // last room's 🎯 aim picks are stale — fresh foes, fresh aims
     this._rollInitiative();
     this._note(`🚪 Door creaks open — room ${this.depth}. ${this._enemySummary()}`);
     this._log('room', { boss: this.enemies.some(e => e.boss), party: this.present().length, enemies: this.enemies.map(e => ({ name: e.name, cr: e.cr, hp: e.maxHp, ac: e.ac, toHit: e.toHit })) });

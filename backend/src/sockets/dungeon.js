@@ -126,6 +126,17 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     ack?.({ ok: true, state: d.publicState() });
   });
 
+  // Live 🎯 aim telegraphy: the client's currently-selected foe (or null to
+  // clear) — sighted clicks AND blind target locks. Fire-and-forget UI hint;
+  // validated against living enemies + deduped inside setTargeting.
+  socket.on('dungeon:target', ({ uid } = {}) => {
+    const me = meOf();
+    if (!me) return;
+    const d = dungeons.get(tableIdOf());
+    if (!d || !d.hasMember(me.player_id)) return;
+    d.setTargeting(me.player_id, typeof uid === 'string' ? uid : null);
+  });
+
   // Human chat in the dungeon — same idea as table:say, scoped to the run.
   // Open to combatants AND spectators (heckling is half the fun).
   socket.on('dungeon:say', ({ text } = {}, ack) => {

@@ -776,7 +776,18 @@
       renderDungeon();
     });
   }
+  // Telegraph my current target to the rest of the party — the server rebroadcasts
+  // it as d.targeting and everyone sees a colored 🎯 aim ring on that monster.
+  // Covers the sighted click-select AND the blind E-mode lock (deduped here).
+  let _lastAim = null;
+  function emitAim(uid) {
+    const u = (typeof uid === 'string' && uid) ? uid : null;
+    if (u === _lastAim) return;
+    _lastAim = u;
+    socket.emit('dungeon:target', { uid: u });
+  }
   function dungeonAction(kind, payload) {
+    if (payload && typeof payload.targetUid === 'string') emitAim(payload.targetUid);   // acting on a foe IS targeting it
     socket.emit('dungeon:action', { kind, ...(payload || {}) }, (resp) => {
       if (resp && resp.ok === false && resp.error) toast(resp.error, true);
     });
@@ -992,19 +1003,39 @@
     const meta = $('#dungeonMeta');
     if (meta) meta.textContent = `Depth ${d.depth} · Round ${d.round || 0} · 💰 ${formatChips(d.runGold)} gp pool`;
 
+    // Stable per-player aim color (same hash on every client → everyone sees the
+    // same color for the same person's 🎯 ring).
+    const aimHue = (pid) => { let h = 7; for (const ch of String(pid)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
     const ene = $('#dungeonEnemies');
     if (ene) ene.innerHTML = (d.enemies || []).length
       ? d.enemies.map(e => {
           const dead = !e.alive;
           const shrouded = !!e.darkened;   // Darkness — can't be targeted
           const sel = !dead && !shrouded && _dungeonSel.includes(e.uid);
+          const isTurn = !dead && d.turn && d.turn.kind === 'enemy' && d.turn.id === e.uid;
+          // Who's aiming at this monster (other humans — my own pick is the brass
+          // is-sel ring). One colored ring + name per targeting human.
+          const aimedBy = (!dead && d.targeting)
+            ? Object.entries(d.targeting).filter(([pid, u]) => u === e.uid && pid !== meId)
+                .map(([pid]) => (d.party || []).find(p => p.playerId === pid && !p.left)).filter(Boolean)
+            : [];
+          const shadows = aimedBy.map((p, i) => `0 0 0 ${2 + i * 3}px hsla(${aimHue(p.playerId)},85%,60%,.85)`);
+          // Inline box-shadow would override the .is-turn CSS glow — fold it in.
+          if (isTurn && shadows.length) shadows.unshift('0 0 12px 3px rgba(255,110,70,.65)');
+          const styles = [];
+          if (shrouded) styles.push('opacity:.45');
+          if (shadows.length) styles.push(`box-shadow:${shadows.join(', ')}`);
+          const aimChip = aimedBy.length
+            ? `<div class="dmon__aim">${aimedBy.map(p => `<span style="color:hsl(${aimHue(p.playerId)},85%,70%)">🎯${escapeText(p.nickname)}</span>`).join(' ')}</div>`
+            : '';
           const pct = e.maxHp ? Math.max(0, Math.round(100 * e.hp / e.maxHp)) : 0;
           const portrait = e.art
             ? `<div class="dmon__art" style="background-image:url('${escapeAttr(e.art)}')">${e.boss ? '<span class="dmon__crown">👑</span>' : ''}</div>`
             : `<div class="dmon__glyph">${e.glyph || '❓'}${e.boss ? ' 👑' : ''}</div>`;
-          return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''}"${shrouded ? ' style="opacity:.45"' : ''} data-enemy="${escapeAttr(e.uid)}" ${(dead || shrouded) ? 'disabled' : ''} title="${shrouded ? 'Shrouded in darkness — cannot be targeted' : ''}">
+          return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''} ${isTurn ? 'is-turn' : ''}"${styles.length ? ` style="${styles.join(';')}"` : ''} data-enemy="${escapeAttr(e.uid)}" ${(dead || shrouded) ? 'disabled' : ''} title="${shrouded ? 'Shrouded in darkness — cannot be targeted' : ''}">
             ${portrait}
             <div class="dmon__name">${escapeText(e.name)}${e.flying ? ` <span class="dmon__fly" title="Flying — immune to prone (can't be tripped); holds the high ground: +1 to hit and +2 AC vs grounded heroes">🪽</span>` : ''}</div>
+            ${aimChip}
             ${condIcons(e.conditions)}${buffIcons(e.buffs)}
             <div class="dmon__hpbar" title="${dead ? 'Slain' : `${e.hp}/${e.maxHp} HP`}"><span style="width:${pct}%"></span></div>
             ${dead ? '<div class="dmon__hp">☠️</div>' : ''}
@@ -1358,6 +1389,7 @@
     const i = _dungeonSel.indexOf(uid);
     if (i >= 0) _dungeonSel.splice(i, 1);
     else { _dungeonSel.push(uid); if (_dungeonSel.length > 2) _dungeonSel.shift(); }
+    emitAim(_dungeonSel[0] || null);   // telegraph the pick to the party
     renderDungeon();
   });
   $('#dungeonActions')?.addEventListener('click', (ev) => {
@@ -1666,7 +1698,7 @@
         }
         _dunTarget = null;   // never leave a stale pending action behind this path
         if (myTurn) { _dunQueuedAttack = null; sayU(`Attacking ${en.name}.`); dungeonAction('attack', { targetUid: en.uid }); }
-        else { _dunQueuedAttack = en.uid; sayU(`${en.name} locked as your target — you'll attack it on your turn.`); }
+        else { _dunQueuedAttack = en.uid; emitAim(en.uid); sayU(`${en.name} locked as your target — you'll attack it on your turn.`); }
         return;
       }
       // C = Cantrip: cycle your at-will ray's element (cold → acid → electricity →
