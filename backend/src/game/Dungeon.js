@@ -2688,10 +2688,12 @@ class Dungeon {
     if (taunt && foes.length >= 2 && foes.filter(e => e.taunted).length * 2 < foes.length) {
       return { slot: slot(taunt), payload: {} };
     }
-    // 2b) Haste — a powerful party buff (bards & wizards love it). Cast it once
-    //     while there are foes to fight and the party isn't already hasted.
+    // 2b) Haste / Blessing of Fervor — the SAME benefit in this implementation,
+    //     and they don't stack. Cast one only when the party's speed has fully
+    //     run dry (no living member still holds a haste charge) — never double
+    //     up on a fervor that's already running, and vice versa.
     const haste = avail.find(a => a.effect === 'haste');
-    if (haste && !(m.hasted > 0)) return { slot: slot(haste), payload: {} };
+    if (haste && !this.livingParty().some(p => p.hasted > 0)) return { slot: slot(haste), payload: {} };
     // 2b2) Bards LOCK DOWN a boss so it misses its turns. Hideous Laughter (Held)
     //      is ideal — unlike Fascinate it survives being hit, so the party can
     //      keep focus-firing while the boss wastes turns trying to re-save. Once
