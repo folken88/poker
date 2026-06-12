@@ -641,6 +641,45 @@ const MON_BODY = {
   black_dragon: { size: 'L', legs: 4 }, void_dragon: { size: 'L', legs: 4 },
 };
 for (const [k, b] of Object.entries(MON_BODY)) if (MON[k]) Object.assign(MON[k], b);
+// ── ENCOUNTER GANGS ── rooms spawn THEMED warbands: the first creature picked
+// sets the room's gang and the rest of the budget fills from that pool, so
+// vampires run with the restless dead, goblins with goblinoid warbands, and
+// the weird monstrous horrors (minotaur, chimera, oozes…) prowl together.
+// A monster may run with several gangs (ogres muscle for goblin tribes AND
+// giant clans; kobolds serve dragons); anything UNLISTED is a wildcard that
+// can wander into any room. The gang filter always falls back to "anyone"
+// before letting a room come up empty or under-budget.
+const MON_GANGS = {
+  // the warrens — goblin & kobold tribes (with their kennel vermin)
+  goblin: ['goblinoid'], goblin_rogue: ['goblinoid'], goblin_shaman: ['goblinoid'], goblin_barbarian: ['goblinoid'],
+  kobold: ['kobold'], kobold_spearman: ['kobold'], kobold_shaman: ['kobold'], kobold_rogue: ['kobold'],
+  dire_rat: ['goblinoid', 'kobold', 'beast'], giant_centipede: ['kobold', 'beast'], giant_spider: ['kobold', 'beast', 'horror'],
+  // the restless dead — vampires mix with every other undead; the Whispering
+  // Way cultist herds them
+  skeleton: ['undead'], zombie: ['undead'], ghoul: ['undead'], ghast: ['undead'], shadow: ['undead'],
+  wight: ['undead'], fire_skeleton: ['undead'], skeletal_champion: ['undead'], cultist: ['undead'],
+  lich: ['undead'], vampire: ['undead'], vampire_spawn: ['undead'],
+  vamp_knight: ['undead'], vamp_inquisitor: ['undead'], vamp_rogue: ['undead'], vamp_scout: ['undead'],
+  vamp_warrior: ['undead'], vamp_bodyguard: ['undead'], vamp_priest: ['undead'], vamp_assassin: ['undead'],
+  vamp_nightguard: ['undead'], vamp_noble: ['undead'], vamp_techwitch: ['undead'],
+  // beasts of the wild
+  badger: ['beast'], dire_ape: ['beast'], dire_boar: ['beast'], winter_wolf: ['beast'],
+  blood_caimon: ['beast'], dire_bear: ['beast'],
+  // aberrations & horrors — the weird monstrous things
+  gray_ooze: ['horror'], gibbering_mouther: ['horror'], abyssal_horror: ['horror'],
+  minotaur: ['horror'], chimera: ['horror'], basilisk: ['horror'], medusa: ['horror'],
+  ettercap: ['horror'], harpy: ['horror'], harpy_sorcerer: ['horror'],
+  gargoyle: ['horror', 'construct'],
+  // the big folk — ogres also muscle for goblin warbands
+  ogre: ['giant', 'goblinoid'], ettin: ['giant'], hill_giant: ['giant'], stone_giant: ['giant'],
+  // constructs stand guard together (Zernibeth marches with the Technic League's machines)
+  wood_golem: ['construct'], brass_golem: ['construct'], zernibeth: ['construct'],
+  // the infernal court — devils and the Thrune villains who serve Hell
+  barbed_devil: ['devil'], devil_swordsman: ['devil'], devil_samurai: ['devil'], devil_rogue: ['devil'],
+  bomb_devil: ['devil'], barzillai: ['devil'], abrogail: ['devil'],
+  // dragons — kobold warrens famously serve them
+  black_dragon: ['dragon', 'kobold'], void_dragon: ['dragon', 'kobold'],
+};
 // Real token art from the Foundry library (public/dungeon/monsters/). dire_rat
 // has no token in the library, so it falls back to its emoji glyph.
 const MON_ART = {
@@ -690,7 +729,13 @@ const MON_TYPE = {
   ettercap: 'aberration', gibbering_mouther: 'aberration', bog_brute: 'aberration', abyssal_horror: 'aberration',
   wood_golem: 'construct', brass_golem: 'construct',
   gray_ooze: 'ooze',
-  barbed_devil: 'outsider',
+  // The infernal court are DEVILS (outsiders) and the dragons are DRAGONS —
+  // they were missing here and defaulted to 'humanoid', so a Bane: Humanoids
+  // inquisitor was shredding dragons while Bane: Outsiders did nothing.
+  barbed_devil: 'outsider', devil_swordsman: 'outsider', devil_samurai: 'outsider',
+  devil_rogue: 'outsider', bomb_devil: 'outsider',
+  black_dragon: 'dragon', void_dragon: 'dragon',
+  harpy_sorcerer: 'monstrous humanoid',
 };
 for (const [k, t] of Object.entries(MON_TYPE)) if (MON[k]) MON[k].type = t;
 for (const k of Object.keys(MON)) if (!MON[k].type) MON[k].type = 'humanoid';   // default → Bane always has a target
@@ -1239,8 +1284,13 @@ class Dungeon {
   // CHEAP foes (weight ∝ 1/xp) so a room fills up with lots of shitty mooks —
   // goblins, kobolds, their sneaky rogues and Hold-Person shamans — instead of a
   // few tough ones. Falls back to anything affordable.
-  _pickForBudget(budget, floorCR, capCR) {
-    let cand = SPAWNABLE.filter(k => MON[k].crNum >= floorCR && MON[k].crNum <= capCR && rawXpForCR(MON[k].crNum) <= budget);
+  _pickForBudget(budget, floorCR, capCR, gang) {
+    // Gang filter: stick to the room's theme (wildcards — unlisted monsters —
+    // run with anyone). If the gang pool can't fill the CR window, fall back
+    // to the full roster rather than leave the room under-strength.
+    const inGang = (k) => { if (!gang) return true; const g = MON_GANGS[k]; return !g || g.includes(gang); };
+    let cand = SPAWNABLE.filter(k => inGang(k) && MON[k].crNum >= floorCR && MON[k].crNum <= capCR && rawXpForCR(MON[k].crNum) <= budget);
+    if (!cand.length) cand = SPAWNABLE.filter(k => inGang(k) && MON[k].crNum <= capCR && rawXpForCR(MON[k].crNum) <= budget);
     if (!cand.length) cand = SPAWNABLE.filter(k => MON[k].crNum <= capCR && rawXpForCR(MON[k].crNum) <= budget);
     if (!cand.length) return null;
     const weights = cand.map(k => 1 / Math.max(1, rawXpForCR(MON[k].crNum)));
@@ -1337,18 +1387,32 @@ class Dungeon {
     const partyN = Math.max(1, this.alivePresent().length);
     const sizeMult = Math.max(1, partyN - 1);   // 1→×1, 2→×1, 3→×2, 4→×3, 6→×5
     const keys = [];
+    // ── GANGS ── the FIRST creature picked (the boss, or the first budget
+    // fill) sets the room's theme; everything after fills from the same gang
+    // pool — vampires bring the restless dead, a goblin brings the warband,
+    // a minotaur brings its fellow horrors. Multi-gang monsters anchor ONE of
+    // their gangs at random (an ogre room is goblinoid OR giant, not both).
+    let roomGang;   // undefined = not set yet; null = wildcard anchor → mixed pack
+    const adoptGang = (k) => {
+      if (roomGang !== undefined || !k) return;
+      const g = MON_GANGS[k];
+      roomGang = (g && g.length) ? g[dRoll(g.length) - 1] : null;
+    };
     // Fill an XP budget with creatures CR ≤ cap (and not trivially weak).
     const fill = (budget, floorCR, capCR, maxCount) => {
       let g = 0;
       while (keys.length < maxCount && budget > 100 && g++ < 80) {
-        const key = this._pickForBudget(budget, floorCR, capCR);
+        const key = this._pickForBudget(budget, floorCR, capCR, roomGang);
         if (!key) break;
         keys.push(key);
+        adoptGang(key);
         budget -= rawXpForCR(MON[key].crNum);
       }
     };
     if (boss) {
-      keys.push(this._pickBoss(encCR));   // one strong foe
+      const bk = this._pickBoss(encCR);   // one strong foe — its gang themes the minions
+      keys.push(bk);
+      adoptGang(bk);
       // Boss rooms also mob a big party — minions at a notch below the room CR.
       const baseCR = this._minLevel() + Math.floor(this.depth / 4);
       fill(Math.round(rawXpForCR(baseCR) * Math.max(0, partyN - 1) * 0.6),
@@ -1359,7 +1423,7 @@ class Dungeon {
     }
     if (!keys.length) keys.push(pickByCR(this.depth));
     keys.forEach((k, i) => this.enemies.push(this._makeEnemy(MON[k], boss && i === 0)));
-    this._log('encounter', { depth: this.depth, minLevel: this._minLevel(), encCR, partyN, count: keys.length });
+    this._log('encounter', { depth: this.depth, minLevel: this._minLevel(), encCR, partyN, count: keys.length, gang: roomGang || 'mixed' });
   }
   _enemySummary() {
     const counts = {};
