@@ -471,6 +471,7 @@
            Fill) are reachable the instant the picker opens, without scrolling
            or scanning past the character list. Random is first for speed. -->
       <div class="modal__actions modal__actions--top">
+        <button class="btn btn--ghost" id="botPickerLast" title="Seat the same AI lineup you played with last time (free)">↻ Last party</button>
         <button class="btn btn--primary" id="botPickerRandom">🎲 Random</button>
         <button class="btn btn--ghost"   id="botPickerFill" title="Seat a random AI in every empty seat">🪑 Fill empty seats</button>
         <button class="btn btn--ghost"   data-close-bot-picker>Cancel</button>
@@ -504,7 +505,7 @@
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
   <script src="/js/cards.js?v=20260602-abadar"></script>
   <script src="/js/blindMode.js?v=20260611-allfresh"></script>
-  <script src="/js/client.js?v=20260612-netboard"></script>
+  <script src="/js/client.js?v=20260612-lastparty"></script>
   <script>/* Point the Test-server link at whichever host serves this page (LAN IP, domain, Tailscale…), test backend lives on :32096. */(function(){var a=document.getElementById('testServerLink');if(a)a.href=location.protocol+'//'+location.hostname+':32096';})();</script>
 </body>
 </html>

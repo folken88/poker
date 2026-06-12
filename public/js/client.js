@@ -669,6 +669,17 @@
 
   socket.on('table:state', (st) => {
     state.table = st;
+    // Remember the AI personalities seated alongside me — this browser's human —
+    // for the poker bot-picker's "↻ Last party" button (seating bots is free).
+    try {
+      const meId = state.me?.player_id;
+      const seats = st.seats || [];
+      const myId = (s) => s.playerId || s.player_id;
+      if (meId && seats.some(s => s && s.occupied && !s.isBot && myId(s) === meId)) {
+        const bots = seats.filter(s => s && s.occupied && s.isBot && myId(s)).map(myId);
+        if (bots.length) localStorage.setItem('fp_lastPokerParty', JSON.stringify(bots));
+      }
+    } catch (_) {}
     if (!st.hand) {
       state.myHole = null;
     } else if (state.me && st.hand.state !== 'COMPLETE') {
@@ -809,6 +820,16 @@
 
   socket.on('dungeon:state', (st) => {
     state.dungeon = st;
+    // Remember THIS BROWSER's last dungeon crew (i.e. the human behind whatever
+    // persona is logged in — localStorage is per-human memory): the AI allies in
+    // my current run feed the recruit panel's "↻ Last party" button.
+    try {
+      const meId = state.me?.player_id;
+      if (meId && (st.party || []).some(p => p.playerId === meId && !p.left)) {
+        const allies = (st.party || []).filter(p => p.isBot && !p.left).map(p => p.playerId).slice(0, 3);
+        if (allies.length) localStorage.setItem('fp_lastDunParty', JSON.stringify(allies));
+      }
+    } catch (_) {}
     // Play the fresh log sounds (this client is IN the dungeon, so it hears
     // combat clearly — the table hears the muffled echo). Up to the first THREE
     // DISTINCT new sounds, staggered — the old "newest only" rule silently ATE a
@@ -1260,9 +1281,18 @@
     if (recruit) {
       const list = d.recruitable || [];
       const full = (d.botCount || 0) >= 3;
+      // "↻ Last party": this browser's remembered crew from the previous run —
+      // only offered when every remembered ally is currently recruitable.
+      const _lastDun = (() => { try { return JSON.parse(localStorage.getItem('fp_lastDunParty') || '[]'); } catch (_) { return []; } })();
+      const lastCards = _lastDun.map(id => list.find(b => b.playerId === id)).filter(Boolean);
+      const lastFee = lastCards.reduce((s, b) => s + (b.fee || 0), 0);
+      const lastBtn = lastCards.length
+        ? `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-last" data-recruit-last ${full ? 'disabled' : ''} title="Recruit the same crew as last run — ${escapeAttr(lastCards.map(b => `${b.nickname} (${b.cls})`).join(', '))} — ${lastFee}g total">↻ Last party (${lastCards.length}) · ${lastFee}g</button>`
+        : '';
       if (d.status === 'over' || !list.length || _spectating) { recruit.innerHTML = ''; _recruitOpen = false; }
       else recruit.innerHTML =
         `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-toggle" data-recruit-toggle aria-expanded="${_recruitOpen}">🤝 Recruit AI ▾ <span class="dungeon__recruit-count">${list.length}</span></button>` +
+        lastBtn +
         `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-random" data-recruit-random ${full ? 'disabled' : ''} title="Hire up to 3 random allies — fee scales with each ally's level (50g + 10g/level)">🎲 Random helpers</button>` +
         `<div class="dungeon__recruit-pop ${_recruitOpen ? 'is-open' : ''}">` +
           `<div class="dungeon__recruit-head">Unseated allies — 50g + 10g per level${full ? ' · party full' : ''}</div>` +
@@ -1400,6 +1430,17 @@
         if (!resp?.ok) { toast(resp?.error || 'Could not hire helpers', true); return; }
         toast(`🎲 Hired ${resp.hired} random ${resp.hired === 1 ? 'helper' : 'helpers'} (50g each).`);
       });
+      return;
+    }
+    if (ev.target.closest('[data-recruit-last]')) {
+      let ids = []; try { ids = JSON.parse(localStorage.getItem('fp_lastDunParty') || '[]'); } catch (_) {}
+      if (!ids.length) { toast('No remembered party yet — finish a run with allies first.', true); return; }
+      // Hire one at a time (chained acks) so each fee debits before the next check.
+      const hire = (i, ok) => {
+        if (i >= ids.length) { toast(ok ? `↻ Recruited ${ok} of ${ids.length} from your last party.` : 'Could not recruit your last party.', !ok); return; }
+        socket.emit('dungeon:recruit', { botId: ids[i] }, (resp) => hire(i + 1, ok + (resp && resp.ok ? 1 : 0)));
+      };
+      hire(0, 0);
       return;
     }
     const b = ev.target.closest('[data-recruit]'); if (!b) return;
@@ -4237,6 +4278,17 @@
   }
   // "+ Bot" = random AI (fast path), "Pick AI ▾" opens the modal picker.
   $('#addBotBtn').addEventListener('click', () => emitAddBot(null));
+  // ↻ Last party — re-seat the AI lineup this browser's human last played with
+  // (stored in localStorage by the table:state handler; seating bots is free).
+  $('#botPickerLast')?.addEventListener('click', () => {
+    let ids = []; try { ids = JSON.parse(localStorage.getItem('fp_lastPokerParty') || '[]'); } catch (_) {}
+    if (!ids.length) { toast('No remembered table party yet — play a hand with AI seated first.', true); return; }
+    const add = (i, ok) => {
+      if (i >= ids.length) { toast(ok ? `↻ Seated ${ok} of ${ids.length} from your last table.` : 'Could not seat your last party (table full or already seated).', !ok); return; }
+      socket.emit('table:addBot', { playerId: ids[i] }, (resp) => add(i + 1, ok + (resp && resp.ok !== false ? 1 : 0)));
+    };
+    add(0, 0);
+  });
   $('#pickBotBtn').addEventListener('click', openBotPicker);
   $('#botPickerModal').addEventListener('click', (e) => {
     if (e.target.closest('[data-close-bot-picker]')) { closeBotPicker(); return; }
