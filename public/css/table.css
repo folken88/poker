@@ -80,6 +80,19 @@ button, input { font: inherit; color: inherit; }
 .dmon.is-sel { border-color: var(--brass-bright); box-shadow: 0 0 0 2px rgba(241,207,131,0.4); }
 .dmon.is-boss { border-color: rgba(220,170,60,0.9); background: rgba(40,28,10,0.5); }
 .dmon.is-dead { opacity: 0.32; filter: grayscale(1); cursor: default; }
+/* Dead monsters COLLAPSE to tiny corpse chips — the kill stays visible but no
+   longer eats battleboard space (a big room half-slain must never force a
+   scrollbar). The width selector carries .dungeon__enemies so it out-cascades
+   the is-compact / is-packed width rules above at equal specificity (later in
+   the file); the inner rules are more specific outright. */
+.dungeon__enemies .dmon.is-dead { width: 46px; padding: 0.15rem 0.1rem; gap: 0.05rem; }
+.dungeon__enemies .dmon.is-dead .dmon__art { width: 26px; height: 26px; }
+.dungeon__enemies .dmon.is-dead .dmon__glyph { font-size: 1rem; }
+.dungeon__enemies .dmon.is-dead .dmon__name { font-size: 0.55rem; max-width: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dungeon__enemies .dmon.is-dead .dmon__hpbar,
+.dungeon__enemies .dmon.is-dead .dcond,
+.dungeon__enemies .dmon.is-dead .dbuff { display: none; }
+.dungeon__enemies .dmon.is-dead .dmon__hp { font-size: 0.7rem; line-height: 1; }
 .dmon__glyph { font-size: 2rem; line-height: 1; }
 .dmon__art { position: relative; width: 64px; height: 64px; border-radius: 50%; background-size: cover; background-position: center; border: 1px solid rgba(0,0,0,0.4); }
 .dmon.is-boss .dmon__art { border-color: rgba(220,170,60,0.9); box-shadow: 0 0 0 2px rgba(220,170,60,0.5); }
@@ -156,6 +169,17 @@ button, input { font: inherit; color: inherit; }
 .dpc.is-me { border-color: rgba(241,207,131,0.7); }
 .dpc.is-turn { box-shadow: 0 0 0 2px rgba(241,207,131,0.55); }
 .dpc.is-out { opacity: 0.4; filter: grayscale(0.8); }
+/* OUT heroes (dead ☠️ / bailed 🪜) shrink to slim chips — still listed (the
+   dead can be raised when the round turns) but no longer crowd the living.
+   DYING (is-down) heroes stay FULL SIZE — they're the ones to watch. */
+.dungeon__party .dpc.is-out { width: 96px; padding: 0.25rem; gap: 0.1rem; }
+.dungeon__party .dpc.is-out .dpc__avatar { width: 22px; height: 22px; }
+.dungeon__party .dpc.is-out .dpc__name { font-size: 0.68rem; }
+.dungeon__party .dpc.is-out .dpc__xpbar,
+.dungeon__party .dpc.is-out .dcond,
+.dungeon__party .dpc.is-out .dbuff,
+.dungeon__party .dpc.is-out .dpc__ac { display: none; }
+.dungeon__party .dpc.is-out .dpc__hp { font-size: 0.62rem; }
 /* Downed/dying: not greyed out (they're savable) — pulsing red border + bloody HP. */
 .dpc.is-down { border-color: rgba(200,40,40,0.95); animation: dpc-dying 1s ease-in-out infinite; }
 .dpc.is-down .dpc__hp { color: #e06a6a; font-weight: 700; }

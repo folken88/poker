@@ -1012,9 +1012,11 @@
         }).join('')
       : '<div class="dmon__none">— the room is quiet —</div>';
     // Static battlefield box: shrink the cards as the field fills so a crowded
-    // room never spills past the box / pushes the spellbook off-screen.
+    // room never spills past the box / pushes the spellbook off-screen. Only
+    // the LIVING count — the dead collapse to tiny corpse chips (CSS .is-dead),
+    // so a half-cleared room relaxes back to full-size cards.
     if (ene) {
-      const n = (d.enemies || []).length;
+      const n = (d.enemies || []).filter(e => e.alive).length;
       ene.classList.toggle('is-compact', n > 6 && n <= 12);
       ene.classList.toggle('is-packed', n > 12);
     }
@@ -1057,9 +1059,10 @@
       </div>`;
     }).join('');
     // Shrink the hero cards as the party grows so they ALWAYS fit without scrolling
-    // (mirrors the enemy field's is-compact / is-packed).
+    // (mirrors the enemy field's is-compact / is-packed). Dead/bailed heroes
+    // collapse to slim chips (CSS .is-out), so only the ACTIVE count drives it.
     if (party) {
-      const np = (d.party || []).length;
+      const np = (d.party || []).filter(x => !x.dead && !x.left).length;
       party.classList.toggle('is-compact', np > 4 && np <= 6);
       party.classList.toggle('is-packed', np > 6);
     }
