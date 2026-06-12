@@ -1019,7 +1019,9 @@ class Dungeon {
         protfire:      ['Fire Ward', `absorbs the next ${o.fireWard || 0} fire damage (dispellable)`],
         fly:           ['Fly (spell)', 'airborne by magic — DISPEL it and the boss crashes prone'],
       };
-      for (const k of o.precast) { const p = PRE[k]; if (p) c.push({ key: `pre_${k}`, label: p[0], desc: p[1], icon: `${I}haste.webp` }); }
+      // Ward chips reuse the PLAYER buff art — /dungeon/buffs/ already carries
+      // every one of these by name (protfire's file is spelled protectfire).
+      for (const k of o.precast) { const p = PRE[k]; if (p) c.push({ key: `pre_${k}`, label: p[0], desc: p[1], icon: `/dungeon/buffs/${k === 'protfire' ? 'protectfire' : k}.webp` }); }
     }
     else if (o.fascinated) c.push({ key: 'fascinated', label: 'Fascinated', desc: 'enthralled — loses turns; the first hit snaps it out', icon: `${I}fascinated.webp` });
     if (o.darkened > 0)  c.push({ key: 'darkened',  label: 'Darkness',  desc: 'shrouded in darkness — cannot act or be attacked (2 rounds)', icon: `${I}darkened.webp` });
