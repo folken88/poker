@@ -1855,10 +1855,32 @@ class Dungeon {
   _heroACs(m) {
     const a = this._acOf(m);
     const ac = a.ac + this._acBonus(m);
+    // Itemized breakdown for the party-card tooltip — mirrors acOf + _acBonus
+    // exactly (only GRANTED sources are listed; a suppressed shield shows why).
+    const parts = ['10 base'];
+    const w = m.weapon || weaponOf(m.gear, m.weaponKey);
+    const armor = Number(m.gear?.armor) || 0, shield = Number(m.gear?.shield) || 0, ring = Number(m.gear?.ring) || 0;
+    const arcaneNoArmor = (m.cls === 'wizard' || m.cls === 'sorcerer');
+    if (arcaneNoArmor) { if (armor > 0) parts.push(`+${armor} armor enchant (no armor worn)`); }
+    else { const base = (m.cls === 'barbarian' || m.cls === 'oracle') ? 6 : 9; parts.push(`+${base + armor} ${base === 6 ? 'breastplate' : 'full plate'}${armor ? ` +${armor}` : ''}`); }
+    const noShield = !!(w && (w.noShield || w.ranged));
+    if (shield >= 1 && m.cls !== 'swashbuckler' && !arcaneNoArmor && !noShield) parts.push(`+${2 + shield} shield +${shield}`);
+    else if (shield >= 1) parts.push('(shield owned but unusable — hands full)');
+    if (ring >= 1) parts.push(`+${ring} ring of protection`);
+    if (m.mageArmor) parts.push('+4 Mage Armor');
+    const buffAC = (m.buffs && m.buffs.ac) || 0;
+    if (buffAC) parts.push(`+${buffAC} spell buffs`);
+    if (m.judgment === 'protection') parts.push(`+${Math.max(1, Math.floor((m.level || 1) / 3))} Judgement: Protection`);
+    const featAC = fighterFeats(m.cls, m.level, this._isRanged(m)).ac;
+    if (featAC) parts.push(`+${featAC} feats (Dodge)`);
+    if (this._hasteMod(m)) parts.push('+1 Haste (dodge)');
+    if (m._offDef) parts.push('+2 Offensive Defense');
+    if (fighterFeats(m.cls, m.level, this._isRanged(m)).twDef && this._isDualWielding(m)) parts.push('+1 Two-Weapon Defense');
     return {
       ac,
       touchAC: Math.max(10, ac - a.physical - (m.mageArmor ? 4 : 0)),
       ffAC:    Math.max(10, ac - fighterFeats(m.cls, m.level, this._isRanged(m)).ac),
+      acBreak: `AC ${ac} = ${parts.join(' · ')}`,
     };
   }
   _atkStr(r) { return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`; }
