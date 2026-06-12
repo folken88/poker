@@ -3481,6 +3481,30 @@ class Dungeon {
       const picked = this._enemyTargets(payload, ab.maxTargets || 3);
       if (picked.length && picked.every(e => e.fascinated)) return { ok: false, error: 'those foes are already asleep or fascinated' };
     }
+    // EXPLICITLY-TARGETED buff / dispel: refuse — keeping the slot — when the
+    // chosen target is invalid (an ally already wearing the buff, or a target
+    // with no magic to dispel). The reason goes back to the caster as a toast
+    // and is SPOKEN in blind mode. With no explicit target the cast falls
+    // through to the same smart auto-pick the AI uses.
+    if (payload && (payload.allyUid || payload.targetUid)) {
+      const pickedId = payload.allyUid || payload.targetUid;
+      if (ab.effect === 'buff' && ab.target === 'ally' && ab.sticky) {
+        const t = this.livingParty().find(a => a.playerId === pickedId);
+        if (t) {
+          const flag = ab.persist ? 'runBuffApplied' : 'buffApplied';
+          if (t[flag] && t[flag][ab.key]) return { ok: false, error: `${t.nickname} already has ${ab.name}` };
+        }
+      }
+      if (ab.effect === 'cleanse') {
+        const ta = this.livingParty().find(a => a.playerId === pickedId);
+        const te = !ta && this.enemies.find(e => e.uid === payload.targetUid && e.hp > 0);
+        const allyAfflicted = (a) => (a.paralyzed > 0) || (a.stunned > 0) || (a.slowed > 0) || a.grappled || (a.blinded > 0) || (a.sickened > 0);
+        const foeEnchanted = (e) => (e.hasted > 0) || !!(e.precast && e.precast.length)
+          || !!(e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0 || (e.buffs.bonusDice || 0) > 0));
+        if (ta && !allyAfflicted(ta)) return { ok: false, error: `${ta.nickname} has no hostile magic on them to dispel` };
+        if (te && !foeEnchanted(te)) return { ok: false, error: `${te.name} has no enchantment to strip` };
+      }
+    }
     m.flatFooted = false;   // acting ends flat-footed
     const D = {
       trip:        () => this._abTrip(m, payload),
@@ -3506,7 +3530,7 @@ class Dungeon {
       savedie:     () => this._abSaveDie(m, ab, payload),
       judgment:    () => this._abJudgment(m, ab),
       bane:        () => this._abBane(m, ab, payload),
-      cleanse:     () => this._abCleanse(m, ab),
+      cleanse:     () => this._abCleanse(m, ab, payload),
       aoe:         () => this._abAoe(m, ab, payload),
       disintegrate: () => this._abDisintegrate(m, ab, payload),
       bolt:        () => this._abBolt(m, ab, payload.targetUid),
@@ -4322,13 +4346,22 @@ class Dungeon {
     const roll = dRoll(20), total = roll + cl, dc = 11 + Math.max(1, effectCL | 0);
     return { ok: total >= dc, roll, total, dc, cl };
   }
-  _abCleanse(m, ab) {
+  _abCleanse(m, ab, payload) {
     const sound = ab.sound;
     const FAIL_SOUND = '/audio/vine_boom.mp3';   // a FAILED dispel check (Foundry sting)
     const sev = (a) => (a.paralyzed > 0 ? 5 : 0) + (a.stunned > 0 ? 4 : 0) + (a.slowed > 0 ? 2 : 0) + (a.grappled ? 2 : 0) + (a.blinded > 0 ? 2 : 0) + (a.sickened > 0 ? 1 : 0);
+    // EXPLICIT pick (human party-card / enemy selection) — honor it. Invalid
+    // explicit targets were already refused in _useAbility with a told-to-the-
+    // caster reason, so a resolved pick here is a valid one. No pick → the
+    // smart auto logic below (same as the AI).
+    const pickId = payload && (payload.allyUid || payload.targetUid);
+    const tAlly = pickId ? this.livingParty().find(a => a.playerId === (payload.allyUid || payload.targetUid)) : null;
+    const tFoe = (pickId && !tAlly) ? this._targetableEnemies().find(e => e.uid === payload.targetUid) : null;
+    const explicit = !!(tAlly || tFoe);
     // 1) Worst debuff on an ally. The hostile magic's caster level ≈ the toughest
     //    foe present (the likely source), floored by the dungeon depth.
-    const hurt = this.livingParty().filter(a => sev(a) > 0).sort((x, y) => sev(y) - sev(x))[0];
+    const hurt = (tAlly && sev(tAlly) > 0) ? tAlly
+               : (!explicit ? this.livingParty().filter(a => sev(a) > 0).sort((x, y) => sev(y) - sev(x))[0] : null);
     if (hurt) {
       const enemyCL = Math.max(this.depth || 1, ...this._targetableEnemies().map(e => crToNum(e.cr) || 1), 1);
       const dc = this._dispelCheck(m, enemyCL, ab.greater);
@@ -4350,7 +4383,8 @@ class Dungeon {
     //    Boss PRE-CAST wards (mage armor / shield / stoneskin / fire ward / fly /
     //    shield of faith) count — plain Dispel peels ONE, Greater sweeps them all.
     const foeScore = (e) => (e.hasted > 0 ? 3 : 0) + ((e.precast && e.precast.length) ? e.precast.length * 2 : 0) + (e.buffs ? ((e.buffs.toHit || 0) + (e.buffs.dmg || 0) + (e.buffs.ac || 0) + (e.buffs.bonusDice || 0)) : 0);
-    const foe = this._targetableEnemies().filter(e => foeScore(e) > 0).sort((x, y) => foeScore(y) - foeScore(x))[0];
+    const foe = (tFoe && foeScore(tFoe) > 0) ? tFoe
+              : (!explicit ? this._targetableEnemies().filter(e => foeScore(e) > 0).sort((x, y) => foeScore(y) - foeScore(x))[0] : null);
     if (foe) {
       const dc = this._dispelCheck(m, Math.max(this.depth || 1, crToNum(foe.cr) || 1), ab.greater);
       if (!dc.ok) {   // its enchantment HOLDS
@@ -4867,7 +4901,13 @@ class Dungeon {
   // else a bot picks by intent (most-hurt for Bear's, a martial for Bull's…).
   _buffTarget(m, ab, payload) {
     const allies = this.livingParty();
-    if (payload && payload.targetUid) { const t = allies.find(a => a.playerId === payload.targetUid); if (t) return t; }
+    // Explicit pick first: allyUid is the party-card selection; targetUid is kept
+    // as a fallback (older payloads / blind flows). Invalid explicit picks were
+    // already refused in _useAbility, so a hit here is a valid recipient.
+    if (payload && (payload.allyUid || payload.targetUid)) {
+      const t = allies.find(a => a.playerId === (payload.allyUid || payload.targetUid));
+      if (t) return t;
+    }
     const MARTIAL = ['fighter', 'barbarian', 'paladin', 'antipaladin', 'ranger', 'rogue', 'magus', 'cavalier', 'monk', 'inquisitor'];
     // A sticky buff WON'T stack — re-casting it on an ally who already has it is a
     // wasted slot/turn. So pick only from allies who DON'T have THIS buff yet; if

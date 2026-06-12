@@ -717,6 +717,7 @@
 
   // ===== 🗡️ Dungeon side-game =====
   let _dungeonSel = [];        // selected enemy uids (combat targeting)
+  let _dungeonAllySel = null;  // selected ALLY playerId (buff / dispel targeting — click a party card)
   let _dungeonSoundSeen = 0;   // highest dungeon-log id whose sound we've played
   let _iFellInDungeon = false;  // my hero is dead-but-present (spectating, awaiting revive)
   let _recruitOpen = false;    // dungeon "Recruit AI ▾" dropdown open/closed
@@ -789,7 +790,12 @@
   function dungeonAction(kind, payload) {
     if (payload && typeof payload.targetUid === 'string') emitAim(payload.targetUid);   // acting on a foe IS targeting it
     socket.emit('dungeon:action', { kind, ...(payload || {}) }, (resp) => {
-      if (resp && resp.ok === false && resp.error) toast(resp.error, true);
+      if (resp && resp.ok === false && resp.error) {
+        toast(resp.error, true);
+        // Blind mode: the refusal reason is SPOKEN ("Gabriel already has Bull's
+        // Strength", "no level-3 slots left") — silence told Josh nothing.
+        try { if (window.BlindMode?.isOn?.()) window.BlindMode.speak(resp.error, 'urgent'); } catch (_) {}
+      }
       else if (resp && resp.queued) {
         // Off-turn act → the server PRE-LOADED it; it fires when the turn comes.
         toast(`⏳ ${resp.label} queued — fires the moment your turn begins (queue again to replace it)`);
@@ -1063,6 +1069,7 @@
       const isMe = m.playerId === meId;
       const isTurn = m.playerId === turnId;
       const cls = ['dpc']; if (pct <= 30) cls.push('is-low'); if (m.dead || m.left) cls.push('is-out'); if (m.downed) cls.push('is-down'); if (isMe) cls.push('is-me'); if (isTurn) cls.push('is-turn');
+      if (_dungeonAllySel === m.playerId) cls.push('is-target');   // my buff/dispel aim
       const tag = m.dead ? ' ☠️' : m.downed ? ' 🩸' : m.left ? ' 🪜' : '';
       // HP + level only — XP-to-next moved to the blue XP bar below (saves the text
       // space). The exact "XP→next" figure rides on the XP bar's hover tooltip.
@@ -1087,7 +1094,7 @@
       const kickHtml = canKick
         ? `<button type="button" class="dpc__remove" data-dungeon-kick="${escapeAttr(m.playerId)}" title="Dismiss ${escapeAttr(m.nickname)} from the party" aria-label="Dismiss ${escapeAttr(m.nickname)} from the party">×</button>`
         : '';
-      return `<div class="${cls.join(' ')}" style="position:relative">${kickHtml}
+      return `<div class="${cls.join(' ')}" style="position:relative"${(!m.dead && !m.left) ? ` data-ally="${escapeAttr(m.playerId)}" title="Click to target ${escapeAttr(m.nickname)} with your next buff or dispel (click again to clear)"` : ''}>${kickHtml}
         <div class="dpc__ac" title="${escapeAttr(m.acBreak || 'Armor Class — current total')}" style="position:absolute;bottom:3px;right:5px;font-size:0.7rem;font-weight:700;color:var(--brass-bright);background:rgba(0,0,0,0.55);border-radius:6px;padding:0 5px;line-height:1.45;cursor:help;z-index:6">🛡 ${Number.isFinite(m.ac) ? m.ac : '?'}</div>
         <div class="dpc__avatar"${m.crowned ? ' style="position:relative"' : ''}>${renderAvatar((m.form && m.form.art) ? m.form.art : m.avatarId)}${m.form ? `<span class="dpc__form" title="Wild Shape: ${escapeAttr(m.form.label)}" style="position:absolute;bottom:-4px;right:-2px;font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.8))">${m.form.glyph || '🐾'}</span>` : ''}${m.crowned ? `<span class="dpc__crown" title="Loot Lord" style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>${afk}${queuedChip}
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${m.form ? ` <span class="dpc__formtag" style="color:var(--brass-bright);font-size:.82em">${escapeText(m.form.label)}</span>` : ''}${tag}</div>
@@ -1386,11 +1393,21 @@
   // × kick on an AI party member — dismiss them from the dungeon run.
   $('#dungeonParty')?.addEventListener('click', (ev) => {
     const k = ev.target.closest?.('[data-dungeon-kick]');
-    if (!k) return;
-    ev.preventDefault();
-    socket.emit('dungeon:kick', { botId: k.dataset.dungeonKick }, (resp) => {
-      if (!resp?.ok) toast(resp?.error || 'Could not dismiss ally', true);
-    });
+    if (k) {
+      ev.preventDefault();
+      socket.emit('dungeon:kick', { botId: k.dataset.dungeonKick }, (resp) => {
+        if (!resp?.ok) toast(resp?.error || 'Could not dismiss ally', true);
+      });
+      return;
+    }
+    // Click a party card to TARGET an ally — buffs / dispels aim at them
+    // (invalid picks are refused with a reason; no pick = smart auto-cast).
+    // Click again to deselect.
+    const card = ev.target.closest?.('[data-ally]');
+    if (!card) return;
+    const pid = card.dataset.ally;
+    _dungeonAllySel = (_dungeonAllySel === pid) ? null : pid;
+    renderDungeon();
   });
   $('#dungeonEnemies')?.addEventListener('click', (ev) => {
     const b = ev.target.closest('[data-enemy]'); if (!b) return;
@@ -1408,7 +1425,7 @@
     const act = b.dataset.dact;
     if (act === 'attack')       dungeonAction('attack', { targetUid: _dungeonSel[0] });
     else if (act === 'ability') {
-      const payload = { slot: Number(b.dataset.slot) || 0, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6) };
+      const payload = { slot: Number(b.dataset.slot) || 0, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6), allyUid: _dungeonAllySel || undefined };
       // Inquisitor Bane declares a creature TYPE: take it from the selected foe
       // (if any). With nothing selected the server auto-picks the commonest type.
       if (b.dataset.abkey === 'bane') {

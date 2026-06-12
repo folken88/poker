@@ -173,6 +173,10 @@ button, input { font: inherit; color: inherit; }
 .dpc.is-me { border-color: rgba(241,207,131,0.7); }
 .dpc.is-turn { box-shadow: 0 0 0 2px rgba(241,207,131,0.55), 0 0 14px 4px rgba(241,207,131,0.5); border-color: var(--brass-bright); }
 .dpc.is-out { opacity: 0.4; filter: grayscale(0.8); }
+/* Ally targeting: party cards are clickable; the selected ally (your buff /
+   dispel aim) wears a green ring — distinct from the gold "whose turn" glow. */
+.dungeon__party .dpc[data-ally] { cursor: pointer; }
+.dpc.is-target { border-color: #7bd06a; box-shadow: 0 0 0 2px rgba(123,208,106,0.55); }
 /* OUT heroes (dead ☠️ / bailed 🪜) shrink to slim chips — still listed (the
    dead can be raised when the round turns) but no longer crowd the living.
    DYING (is-down) heroes stay FULL SIZE — they're the ones to watch. */
