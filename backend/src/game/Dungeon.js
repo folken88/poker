@@ -947,6 +947,11 @@ class Dungeon {
     m.maxHpDerived = d.hp;
     return d;
   }
+  // UNDEAD party members — standard PF1 undead rules apply to THEM too: positive
+  // energy (cure spells, Channel Positive, cure potions) does NOTHING; they mend
+  // through Infernal Healing or Adimarus's Channel Negative. Vesorianna is also
+  // a GHOST: constantly flying and incorporeal (half of physical blows pass through).
+  static UNDEAD_HEROES = new Set(['tar baphon', 'auren vrood', 'vesorianna', 'farrus richton']);
   addMember(player, isBot = false) {
     const playerId = player.player_id;
     const idx = this.party.findIndex(m => m.playerId === playerId);
@@ -965,6 +970,9 @@ class Dungeon {
       nickname: player.nickname || playerId,
       avatarId: player.avatar_id || null,
       isBot: !!isBot,
+      undead: Dungeon.UNDEAD_HEROES.has((playerId || '').toLowerCase()),   // positive energy does nothing for them
+      ghost: (playerId || '').toLowerCase() === 'vesorianna',               // always flying + incorporeal
+      flying: (playerId || '').toLowerCase() === 'vesorianna',
       abilityScores,
       gear, level, xp,
       crowned: !!(db.getPlayer(playerId)?.crowned),   // permanent Loot Lord crown
@@ -1016,6 +1024,9 @@ class Dungeon {
     if (o.prayed > 0)    c.push({ key: 'prayed',     label: 'Prayer',    desc: `−${o.prayed} to hit, damage & saves (cleric Prayer covers the battlefield)`, icon: `${I}shaken.webp` });
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
     if (o.asleep)        c.push({ key: 'asleep',     label: 'Asleep',     desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
+    // Undead/ghost PARTY members — so everyone can see why the cures skip them.
+    if (o.undead)        c.push({ key: 'undeadhero', label: 'Undead',     desc: 'positive energy does NOTHING (cures, channel, potions) — mend with Infernal Healing or Channel Negative', icon: `${I}markedevil.webp` });
+    if (o.ghost)         c.push({ key: 'ghosthero',  label: 'Incorporeal', desc: 'a ghost — always flying, and half of all physical blows pass straight through her', icon: `${I}darkened.webp` });
     // Boss PRE-CAST wards — shown so the party knows what Dispel Magic can strip.
     if (o.precast && o.precast.length) {
       const PRE = {
@@ -1703,7 +1714,7 @@ class Dungeon {
     // Most-hurt member drinks it — DOWNED (dying) allies count too and sort first
     // (negative HP fraction), so a Cure potion can haul them back up.
     const hurt = this.party
-      .filter(m => !m.left && !m.dead && m.hp < m.maxHp)
+      .filter(m => !m.left && !m.dead && !m.undead && m.hp < m.maxHp)   // cure potions are positive energy — the undead pass
       .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
     if (hurt.length) {
       const m = hurt[0], before = m.hp;
@@ -2623,7 +2634,7 @@ class Dungeon {
     const avail = kit.abilities.filter(usable);
     if (!avail.length) return null;
     const allies = this.livingParty();
-    const someoneHurt = allies.some(a => a.hp < a.maxHp * 0.55);
+    const someoneHurt = allies.some(a => !a.undead && a.hp < a.maxHp * 0.55);   // the undead don't count — positive energy can't help them anyway
     const weakestFoe = targets.slice().sort((a, b) => a.hp - b.hp)[0];
     const anyDowned = this.party.some(a => !a.dead && !a.left && a.downed);
     const anyDead = this.party.some(a => a.dead);
@@ -2650,10 +2661,22 @@ class Dungeon {
     //    hurt or anyone's DOWNED (it revives the dying); a single big CURE is better
     //    when exactly ONE ally is badly hurt (more HP on one target). If nobody's
     //    hurt but UNDEAD are present, CHANNEL anyway — _abHeal sears them (PF1).
+    // UNDEAD comrades (Tar Baphon, Vrood, Vesorianna, Farrus) take NOTHING from
+    // positive energy — healers who know better reach for INFERNAL HEALING on
+    // them (eagerly — any hurt undead jumps the queue), and Adimarus mends them
+    // with his Channel Negative. They're excluded from every cure/channel count.
+    const undeadHurt = allies.filter(a => a.undead && !a.infernalHeal && a.hp < a.maxHp * 0.7)
+                             .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
+    if (undeadHurt) {
+      const infernal = avail.find(a => a.effect === 'infernalheal');
+      if (infernal) return { slot: slot(infernal), payload: { targetUid: undeadHurt.playerId } };
+      const chNeg = avail.find(a => a.effect === 'channelneg');
+      if (chNeg) return { slot: slot(chNeg), payload: {} };
+    }
     const channelHeal = avail.find(a => a.effect === 'heal' && a.heal === 'party');
     const bigCure = avail.filter(a => a.effect === 'heal' && a.heal === 'single')
                          .sort((x, y) => (y.healDice || 0) - (x.healDice || 0))[0];   // largest castable cure (e.g. Cure Serious)
-    const hurtCount = allies.filter(a => a.hp < a.maxHp * 0.6).length + (anyDowned ? 1 : 0);
+    const hurtCount = allies.filter(a => !a.undead && a.hp < a.maxHp * 0.6).length + (anyDowned ? 1 : 0);
     if (channelHeal && (anyDowned || hurtCount >= 2)) return { slot: slot(channelHeal), payload: {} };   // many hurt / dying → channel
     if (bigCure && hurtCount === 1) {
       const worst = allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
@@ -2916,6 +2939,12 @@ class Dungeon {
     }
     if (target.displaced && dRoll(2) === 1) {
       this._note(`🌫️ ${target.nickname} is displaced — the attack passes through empty air!`, null);
+      return true;
+    }
+    // INCORPOREAL — Vesorianna is a ghost: half of all physical blows pass clean
+    // through her. (She also never lands, so grounded foes can't reach her at all.)
+    if (target.ghost && dRoll(2) === 1) {
+      this._note(`👻 the blow passes THROUGH ${target.nickname} — she is incorporeal!`, null);
       return true;
     }
     return false;
@@ -3192,6 +3221,7 @@ class Dungeon {
       smite:       () => this._abSmite(m, ab),
       detectevil:  () => this._abDetectEvil(m, ab),
       heal:        () => this._abHeal(m, ab),
+      channelneg:  () => this._abChannelNeg(m, ab),
       revive:      () => this._abRevive(m, ab),
       haste:       () => this._abHaste(m, ab),
       invisible:   () => this._abInvisible(m, ab, payload),
@@ -3367,6 +3397,7 @@ class Dungeon {
     m.images = 0; m.displaced = false; m.fireShield = null; m.elemBody = false; m.trueSeeing = false;
     m.touchStrike = 0; m.untargetable = false; m.blinded = 0; m.canHitFlyers = false;
     if (m.overlandFlight) { m.flying = true; m.canHitFlyers = true; }   // Overland Flight is RUN-long — re-assert flight + airborne reach
+    if (m.ghost) { m.flying = true; m.canHitFlyers = true; }            // Vesorianna never lands — a ghost drifts over every room
     m.acPenRound = -1; m.acPenAmt = 0;
   }
   // Inspire Courage is a passive bard AURA — it costs the bard NO action and is
@@ -4451,6 +4482,26 @@ class Dungeon {
     this._echoToTable('/audio/spell_revive.mp3');
     return true;
   }
+  // Adimarus's CHANNEL NEGATIVE — the dark mirror of Channel Positive: the same
+  // ½ level d6 burst, but it mends the party's UNDEAD members (who take nothing
+  // from positive energy). The living feel only a cold draft.
+  _abChannelNeg(m, ab) {
+    const lvl = m.level || 1;
+    const sound = ab.sound || pick(SND.flesh);
+    const undead = this.present().filter(a => !a.dead && a.undead);
+    if (!undead.length) { this._note(`${ab.icon} ${m.nickname} holds the negative channel — no undead comrades to mend.`); this._echoToTable(); return; }
+    const h = Math.max(1, dRollN(Math.max(1, Math.ceil(lvl / 2)), 6));
+    const parts = [];
+    for (const a of undead) {
+      const wasDown = a.hp <= 0;
+      a.hp = Math.min(a.maxHp, a.hp + h);
+      const up = wasDown && a.hp > 0;
+      if (up) a.downed = false;
+      parts.push(`${a.nickname} ${a.hp}/${a.maxHp}${up ? ' ⤴up!' : ''}`);
+    }
+    this._note(`${ab.icon} ${m.nickname} channels NEGATIVE energy — black vitality knits the undead: +${h} (${parts.join(', ')}).`, sound);
+    this._echoToTable(sound);
+  }
   _abHeal(m, ab) {
     const lvl = m.level || 1;
     const sound = ab.sound || pick(SND.flesh);
@@ -4464,7 +4515,10 @@ class Dungeon {
       // the field, channeling positive energy SEARS them instead — ½ level d6, a
       // Will save (DC 10 + ½ level + casting mod) for half. Auto-decided so both
       // bots and humans channel sensibly: heal the living, else harm the undead.
-      const woundedAllies = this.present().filter(a => !a.dead && a.hp < a.maxHp);
+      // UNDEAD party members (Tar Baphon, Vrood, Vesorianna, Farrus) take NOTHING
+      // from positive energy — they don't count as wounded here and the burst
+      // passes over them below (Infernal Healing / Channel Negative is their cure).
+      const woundedAllies = this.present().filter(a => !a.dead && !a.undead && a.hp < a.maxHp);
       const undead = this._targetableEnemies().filter(e => e.type === 'undead');
       if (!woundedAllies.length && undead.length) {
         const dmg = channelAmt(), dc = 10 + Math.floor(lvl / 2) + CAST_MOD, parts = [];
@@ -4480,7 +4534,7 @@ class Dungeon {
       // PF1e: a channel rolls its healing ONCE and heals EVERY hero in the burst.
       // That includes the DOWNED/dying (negative HP but not dead at −10) — a
       // channel is positive energy and can pull a dying ally back onto their feet.
-      const allies = this.present().filter(a => !a.dead);
+      const allies = this.present().filter(a => !a.dead && !a.undead);
       const h = channelAmt();
       const parts = [];
       for (const a of allies) {
@@ -4490,13 +4544,15 @@ class Dungeon {
         if (up) a.downed = false;   // revived — back on their feet
         parts.push(`${a.nickname} ${a.hp}/${a.maxHp}${up ? ' ⤴up!' : ''}`);
       }
-      this._note(`${ab.icon} ${m.nickname} channels positive energy — +${h} to the party (${parts.join(', ')}).`, sound);
+      const skippedUndead = this.present().filter(a => !a.dead && a.undead);
+      const skipNote = skippedUndead.length ? ` The positive energy washes over ${skippedUndead.map(a => a.nickname).join(' & ')} without effect.` : '';
+      this._note(`${ab.icon} ${m.nickname} channels positive energy — +${h} to the party (${parts.join(', ')}).${skipNote}`, sound);
     } else {
       // Target the MOST-HURT ally who is NOT dead — INCLUDING a downed/dying ally
       // (hp <= 0 but not slain at -10). (Was livingParty() = hp>0, so a cure could
       // skip a bleeding-out ally and land on someone barely scratched.) A cure
       // that lifts a downed ally above 0 puts them back on their feet.
-      const cands = this.present().filter(a => !a.dead);
+      const cands = this.present().filter(a => !a.dead && !a.undead);   // a cure spell can't touch the undead comrades
       const target = cands.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
       const wasDown = target.hp <= 0;
       const h = cureAmt(); target.hp = Math.min(target.maxHp, target.hp + h);

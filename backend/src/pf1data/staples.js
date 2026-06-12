@@ -72,7 +72,7 @@ const CUSTOM_WEAPONS = {
   // Universal BACKUP weapon — every melee character carries a light crossbow to shoot
   // airborne foes they can't reach in melee (last resort; see _playerAttack). Masterwork
   // (no enchant), so always weaker than their real weapon. 1d8, 19-20/x2. custom => always proficient.
-  lightcrossbow: { key: 'lightcrossbow', name: 'Light Crossbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'simple', custom: true, atkSound: '/audio/crossbow.mp3' },
+  lightcrossbow: { key: 'lightcrossbow', name: 'Light Crossbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'simple', custom: true, atkSound: '/audio/crossbow_fire_and_reload.mp3' },
   // El Guapo's pistol — his swashbuckler archetype packs a sidearm as the SECONDARY
   // attack: firearms hit TOUCH AC, full iteratives apply (ranged always full-attacks).
   // Drawn via the backup-ranged path when his rapier can't reach (see _backupRangedKey).
