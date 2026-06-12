@@ -790,6 +790,13 @@
     if (payload && typeof payload.targetUid === 'string') emitAim(payload.targetUid);   // acting on a foe IS targeting it
     socket.emit('dungeon:action', { kind, ...(payload || {}) }, (resp) => {
       if (resp && resp.ok === false && resp.error) toast(resp.error, true);
+      else if (resp && resp.queued) {
+        // Off-turn act → the server PRE-LOADED it; it fires when the turn comes.
+        toast(`⏳ ${resp.label} queued — fires the moment your turn begins (queue again to replace it)`);
+        // Blind: E-mode attack locks announce themselves with the enemy's name,
+        // so only speak the generic line for queued ABILITIES.
+        try { if (kind !== 'attack' && window.BlindMode?.isOn?.()) window.BlindMode.speak(`${resp.label} queued — it fires when your turn comes.`, 'polite'); } catch (_) {}
+      }
     });
   }
   // Bail out of the fight but keep watching — banks gold, drops to spectator,
@@ -985,14 +992,11 @@
     const meId = state.me?.player_id;
     const turnId = (d.turn && d.turn.kind === 'party') ? d.turn.id : null;
     const isMyTurn = turnId === meId;
-    // Blind: when it becomes your turn, auto-attack the target you locked from the
-    // E (enemy-inspect) menu. Fires once on the not-your-turn → your-turn edge.
-    if (window.BlindMode?.isOn?.() && isMyTurn && !_dunPrevMyTurn && _dunQueuedAttack) {
-      const q = (d.enemies || []).find(en => en.uid === _dunQueuedAttack && en.alive);
-      _dunQueuedAttack = null;
-      if (q) { window.BlindMode.speak(`Your turn — attacking ${q.name}.`, 'urgent'); dungeonAction('attack', { targetUid: q.uid }); }
-      else window.BlindMode.speak('Your locked target is gone.', 'urgent');
-    }
+    // Blind: target locks now ride the SERVER-side action queue (the E-menu lock
+    // sends the attack early; the server fires it when the turn comes), so the
+    // old client-side edge-fire is gone — it would double-attack. Just tidy the
+    // local mirror once the turn arrives.
+    if (isMyTurn && !_dunPrevMyTurn) _dunQueuedAttack = null;
     // A pending "select a target" prompt never survives a TURN BOUNDARY — a stale
     // one would silently swallow the first number key of the NEXT turn and fire
     // last turn's action without offering a choice (Josh's "it just attacks").
@@ -1073,6 +1077,10 @@
       const afk = m.afkAt
         ? `<span class="dpc__afk" data-afk-at="${m.afkAt}" title="You'll auto-skip if idle">⏱ ${Math.max(0, Math.ceil((m.afkAt - Date.now()) / 1000))}s</span>`
         : '';
+      // ⏳ pre-loaded action chip — everyone can see this player has queued their turn.
+      const queuedChip = m.queued
+        ? `<span class="dpc__queued" title="Pre-loaded — fires automatically the moment their turn begins">⏳ ${escapeText(m.queued)}</span>`
+        : '';
       // × kick: any human delver in the run can dismiss an AI ally (same idea as
       // the poker "× kick"). Hidden for yourself, humans, and already-departed.
       const canKick = m.isBot && meInRun && !_spectating && !m.left;
@@ -1081,7 +1089,7 @@
         : '';
       return `<div class="${cls.join(' ')}" style="position:relative">${kickHtml}
         <div class="dpc__ac" title="${escapeAttr(m.acBreak || 'Armor Class — current total')}" style="position:absolute;bottom:3px;right:5px;font-size:0.7rem;font-weight:700;color:var(--brass-bright);background:rgba(0,0,0,0.55);border-radius:6px;padding:0 5px;line-height:1.45;cursor:help;z-index:6">🛡 ${Number.isFinite(m.ac) ? m.ac : '?'}</div>
-        <div class="dpc__avatar"${m.crowned ? ' style="position:relative"' : ''}>${renderAvatar((m.form && m.form.art) ? m.form.art : m.avatarId)}${m.form ? `<span class="dpc__form" title="Wild Shape: ${escapeAttr(m.form.label)}" style="position:absolute;bottom:-4px;right:-2px;font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.8))">${m.form.glyph || '🐾'}</span>` : ''}${m.crowned ? `<span class="dpc__crown" title="Loot Lord" style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>${afk}
+        <div class="dpc__avatar"${m.crowned ? ' style="position:relative"' : ''}>${renderAvatar((m.form && m.form.art) ? m.form.art : m.avatarId)}${m.form ? `<span class="dpc__form" title="Wild Shape: ${escapeAttr(m.form.label)}" style="position:absolute;bottom:-4px;right:-2px;font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.8))">${m.form.glyph || '🐾'}</span>` : ''}${m.crowned ? `<span class="dpc__crown" title="Loot Lord" style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>${afk}${queuedChip}
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${m.form ? ` <span class="dpc__formtag" style="color:var(--brass-bright);font-size:.82em">${escapeText(m.form.label)}</span>` : ''}${tag}</div>
         ${condIcons(m.conditions)}${buffIcons(m.buffs)}
         <div class="dpc__hpbar"><span style="width:${pct}%"></span></div>
@@ -1205,15 +1213,16 @@
           const tgt = ab.maxTargets > 1 ? ` <span class="dungeon__uses">×${ab.maxTargets}</span>` : '';
           const cls = ab.active ? 'btn btn--primary' : 'btn btn--ghost';
           const mark = ab.active ? '✓ ' : '';
-          const ttl = ab.active ? `${ab.desc || ''}\n(active — click to revert to normal)` : (ab.desc || '');
-          return `<button class="${cls}" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(ab.key || '')}"${(myTurn && ok) ? '' : ' disabled'} title="${escapeAttr(ttl)}">${mark}${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
+          let ttl = ab.active ? `${ab.desc || ''}\n(active — click to revert to normal)` : (ab.desc || '');
+          if (combat && !myTurn) ttl += '\n(⏳ not your turn — clicking QUEUES it to fire the moment your turn begins)';
+          return `<button class="${cls}" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(ab.key || '')}"${(combat && ok) ? '' : ' disabled'} title="${escapeAttr(ttl)}">${mark}${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
         };
         // Spellbook tile: icon ONLY (name + short description show on hover).
         // A corner badge carries the uses-left count, or 🔒 when level-locked.
         const spellIcon = (ab, slot) => {
           const locked = !ab.available;
           const ok = !locked && (ab.cost === 'free' ? true : (ab.remaining > 0));
-          const dis = !myTurn || !ok;
+          const dis = !combat || !ok;   // off-turn casts QUEUE (fire at turn start); view-only while exploring
           const cnt = (ab.cost === 'room' || ab.cost === 'run') && ab.max ? `${ab.remaining}/${ab.max}` : '';
           const badge = locked ? `<span class="dungeon__sb-badge dungeon__sb-lock">🔒</span>`
                       : (cnt ? `<span class="dungeon__sb-badge">${cnt}</span>` : '');
@@ -1227,7 +1236,7 @@
         const atName = `${kit.atwill.img ? ic(kit.atwill) : (kit.atwill.icon || '⚔️') + ' '}${escapeText(kit.atwill.name || 'Attack')}`;
         const pool = kit.spellPool ? ` · ✨ ${kit.spellPool.remaining}/${kit.spellPool.max} casts` : '';
         const status = combat
-          ? (myTurn ? `⚔️ Your turn${pool}` : (turnName ? escapeText(turnName) + ' is acting…' : 'Enemies acting…'))
+          ? (myTurn ? `⚔️ Your turn${pool}` : `${turnName ? escapeText(turnName) + ' is acting…' : 'Enemies acting…'} <span class="dungeon__queuehint" title="Pick an action now and it pre-loads — it fires automatically the moment your turn begins. Picking another replaces it.">⏳ clicks queue for your turn</span>`)
           : '🚪 Pick a door — or bail.';
         // Casters collapse their spells into an expandable Spellbook ▾; everyone
         // else shows their maneuvers inline. The badge/header differ by caster:
@@ -1282,7 +1291,7 @@
           // actions, then the navigation/session controls.
           `<div class="dungeon__actrow dungeon__actrow--abilities" role="group" aria-label="Combat actions">` +
             `<h2 class="sr-only">Combat actions</h2>` +
-            B('attack', atName, myTurn, combat) +
+            B('attack', atName, combat, combat) +   // off-turn click queues the attack
             // Caster cantrip ELEMENT selector (cold/acid/electricity, + the class's
             // own if distinct) — free, clickable any time, current pick highlighted.
             // Blind: the C key cycles the same choices.
@@ -1698,7 +1707,14 @@
         }
         _dunTarget = null;   // never leave a stale pending action behind this path
         if (myTurn) { _dunQueuedAttack = null; sayU(`Attacking ${en.name}.`); dungeonAction('attack', { targetUid: en.uid }); }
-        else { _dunQueuedAttack = en.uid; emitAim(en.uid); sayU(`${en.name} locked as your target — you'll attack it on your turn.`); }
+        else {
+          // Off-turn lock → the SERVER queues the attack and fires it the moment
+          // the turn comes (re-locking replaces it). Local mirror only feeds the
+          // E-menu "locked" readout.
+          _dunQueuedAttack = en.uid; emitAim(en.uid);
+          dungeonAction('attack', { targetUid: en.uid });
+          sayU(`${en.name} locked in — your attack fires the moment your turn comes.`);
+        }
         return;
       }
       // C = Cantrip: cycle your at-will ray's element (cold → acid → electricity →

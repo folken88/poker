@@ -1126,6 +1126,7 @@ class Dungeon {
         sickened: m.sickened > 0, paralyzed: m.paralyzed > 0,
         // Auto-skip countdown — only for the human whose turn it currently is.
         afkAt: (this.status === 'combat' && !m.isBot && this._currentActorId() === m.playerId && m.afkDeadline) ? m.afkDeadline : null,
+        queued: (!m.isBot && m.queuedAction) ? m.queuedAction.label : null,   // ⏳ pre-loaded action chip
         conditions: (!m.dead && !m.left && m.hp > 0) ? this._condList(m) : [],
         buffs: (!m.dead && !m.left && m.hp > 0) ? this._buffList(m) : [],
         smiteActive: !!m.smiteActive, buffed: !!(m.buffs && (m.buffs.toHit || m.buffs.dmg || m.buffs.bonusDice || m.buffs.ac)),
@@ -1490,6 +1491,22 @@ class Dungeon {
       this._note(`💗 ${m.nickname}'s Judgement of Healing mends ${h} HP.`);
     }
     if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, aiStepMs(m)); this._broadcast(); }
+    else if (m.queuedAction) {
+      // ── ACTION QUEUE ── the player pre-loaded this turn: fire it after a
+      // short beat (the board visibly becomes their turn first). If it fizzles
+      // (target gone, slot spent), the turn is handed back to the player live.
+      const q = m.queuedAction; m.queuedAction = null;
+      this._note(`⏳ ${m.nickname}'s pre-loaded ${q.label} triggers!`);
+      this._stepTimer = setTimeout(() => {
+        if (this.status !== 'combat' || this._currentActorId() !== m.playerId) return;   // room/run resolved in the beat
+        const r = this.action(m.playerId, q.kind, q.payload);
+        if (!r || r.ok === false) {
+          this._note(`⏳ ${m.nickname}'s queued ${q.label} fizzled${r && r.error ? ` (${r.error})` : ''} — act now!`);
+          this._armAfkTimer(m); this._broadcast();
+        }
+      }, 900);
+      this._broadcast();
+    }
     else { this._armAfkTimer(m); this._broadcast(); }   // human — wait for input
   }
   _nextTurn() {
@@ -2095,7 +2112,20 @@ class Dungeon {
   }
   _enemyAct(e) {
     e.flatFooted = false;   // acting ends flat-footed
-    if (e.prone) { e.prone = false; this._note(`${e.glyph} ${e.name} clambers back to its feet.`); }
+    // PF1: standing up from prone is a MOVE ACTION. A slowed (staggered) creature's
+    // single action is spent entirely on standing; everyone else stands and has
+    // only their STANDARD left (one attack on the same target, or spend it closing
+    // on a new one — see stoodUp in the melee economy below).
+    let stoodUp = false;
+    if (e.prone) {
+      e.prone = false;
+      if (e.slowed > 0) {
+        this._note(`🐌 ${e.glyph} ${e.name}, slowed, struggles back to its feet — its single action spent standing.`, null, { side: 'enemy' });
+        return;
+      }
+      stoodUp = true;
+      this._note(`${e.glyph} ${e.name} clambers back to its feet (a move action).`);
+    }
     if (!this.livingParty().length) return;
     // Taunted: compelled to go straight at the barbarian who taunted it — this
     // overrides its specials and target choice. The pull lasts only this (its
@@ -2178,12 +2208,16 @@ class Dungeon {
         const prev = living.find(m => m.playerId === e._lastAtkTarget);
         target = helpless.length ? (helpless.find(m => m.playerId === e._lastAtkTarget) || pick(helpless)) : (prev || pick(living));
       }
-      const fullAttack = e._lastAtkTarget === target.playerId;   // stayed put → full routine
+      const fullAttack = e._lastAtkTarget === target.playerId && !stoodUp;   // stayed put → full routine (standing up ate the move)
       // PF1 SLOW = STAGGERED: a single move OR standard action each turn, never
       // both, never a full attack. Closing on a NEW target eats the whole turn
       // as movement (no swing); on the same target it strikes exactly once.
       if (e.slowed > 0 && !fullAttack) {
         this._note(`🐌 ${e.name}, slowed, lumbers toward ${target.nickname} — its single action spent just closing the distance.`, null, { side: 'enemy' });
+        e._lastAtkTarget = target.playerId;
+      } else if (stoodUp && e._lastAtkTarget !== target.playerId) {
+        // Stood up (move) + closing on a NEW target (move) — no actions left to swing.
+        this._note(`${e.glyph} ${e.name} rises and closes on ${target.nickname} — no time left to strike.`, null, { side: 'enemy' });
         e._lastAtkTarget = target.playerId;
       } else {
         const swings = (e.slowed > 0) ? 1 : (fullAttack ? Math.max(1, e.attacks || 1) : 1);
@@ -3108,7 +3142,7 @@ class Dungeon {
   _downMember(m) {
     if (m.dead) return;
     if (!m.downed) {
-      m.downed = true;
+      m.downed = true; m.queuedAction = null;   // dying wipes the pre-load
       this._note(`🩸 ${m.nickname} collapses at ${m.hp} HP — DOWN and dying! (slain at −10; a Cure potion can still save them)`);
       this._log('downed', { who: m.playerId, hp: m.hp, depth: this.depth });
     } else {
@@ -3118,7 +3152,7 @@ class Dungeon {
   }
   _memberDown(m) {   // −10 or worse, or a total-party wipe: SLAIN — but NOT yet kicked.
     if (m.dead) return;
-    m.dead = true; m.downed = false;
+    m.dead = true; m.downed = false; m.queuedAction = null;   // death wipes the pre-load
     m._deathPending = true;   // the level-loss penalty is DEFERRED — a Breath of Life
                               // (in combat) or Resurrection (end of room) can undo it.
     this._note(`☠️ ${m.nickname} drops past −10 — SLAIN. They lie fallen, awaiting a Breath of Life or a rescue at the end of the room.`, '/audio/hero_death.mp3');
@@ -3243,7 +3277,20 @@ class Dungeon {
       return { ok: false, error: 'invalid while exploring' };
     }
     if (this.status !== 'combat') return { ok: false, error: 'run is over' };
-    if (this._currentActorId() !== playerId) return { ok: false, error: 'not your turn' };
+    if (this._currentActorId() !== playerId) {
+      // ── ACTION QUEUE ── acting before your turn PRE-LOADS the turn: the
+      // action fires the moment your turn begins. Queueing again REPLACES the
+      // earlier pick (last one wins) — line up your move and go get a drink.
+      if ((kind === 'attack' || kind === 'ability') && !m.dead && !m.downed && m.hp > 0) {
+        const label = kind === 'attack' ? 'attack'
+          : ((kitFor(m.cls).abilities[payload.slot | 0] || {}).name || 'ability');
+        m.queuedAction = { kind, payload, label };
+        this._broadcast();   // the ⏳ chip appears on their hero card
+        return { ok: true, queued: true, label };
+      }
+      return { ok: false, error: 'not your turn' };
+    }
+    m.queuedAction = null;   // acting live always clears a stale pre-load
     clearTimeout(this._turnTimer);
     this._log('action', { who: playerId, kind, hp: m.hp, enemiesAlive: this.livingEnemies().length });
     if (kind === 'attack') this._useAtwill(m, payload);
@@ -3504,6 +3551,7 @@ class Dungeon {
     m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false;   // taunt / grapple / fire ward / flight / stoneskin / spiritual weapon / darkvision clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
+    m.queuedAction = null;   // pre-loaded actions never carry into a new room (stale targets)
     m.infernalHeal = 0;   // Infernal Healing fast-healing ends between rooms
     // Magus per-room effects clear: mirror images, displacement, fire shield,
     // elemental body, true seeing, touch strikes, blur, blindness, melee-flight.

@@ -191,7 +191,19 @@ button, input { font: inherit; color: inherit; }
 .dpc__name { font-size: 0.82rem; font-weight: 600; }
 .dpc__hpbar span { display: block; height: 100%; background: linear-gradient(90deg,#3fa34d,#7bd06a); }
 .dpc.is-low .dpc__hpbar span { background: linear-gradient(90deg,#c84a4a,#e8a15b); }
-.dpc__hp { font-size: 0.72rem; color: var(--ivory-dim); font-variant-numeric: tabular-nums; }
+/* HP/Lv line sits BOTTOM-LEFT (the card centers everything else) so the
+   absolutely-positioned 🛡 AC chip at bottom-right never covers it. */
+.dpc__hp { font-size: 0.72rem; color: var(--ivory-dim); font-variant-numeric: tabular-nums; align-self: flex-start; text-align: left; max-width: calc(100% - 46px); }
+/* ⏳ pre-loaded action chip — mirrors the AFK badge, on the other shoulder. */
+.dpc__queued {
+  position: absolute; top: 8px; right: 4px;
+  font-size: 0.6rem; font-weight: 700; line-height: 1;
+  color: var(--brass-bright); background: rgba(0,0,0,0.6);
+  padding: 2px 5px; border-radius: 8px; white-space: nowrap; max-width: 46%;
+  overflow: hidden; text-overflow: ellipsis;
+  border: 1px solid rgba(217,176,106,0.5); pointer-events: none; z-index: 3;
+}
+.dungeon__queuehint { color: var(--brass-bright); font-size: 0.85em; cursor: help; }
 .dungeon__loot { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
 .dloot { display: flex; align-items: center; gap: 0.5rem; background: rgba(40,30,10,0.5); border: 1px solid rgba(217,176,106,0.4); border-radius: 8px; padding: 0.3rem 0.6rem; }
 .dloot__name { color: #ffe9a8; font-size: 0.85rem; }
