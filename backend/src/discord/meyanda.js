@@ -175,18 +175,20 @@ function dailyReport() {
     }
   }
 
-  // ── Current standings — leaders & losers (live chips + debts from the DB) ──
+  // ── Standings — PURE POKER (won − lost), same metric as the leaderboards.
+  //    Cash and magic items are deliberately NOT a factor: the table is Fred's
+  //    game and the dungeon is Josh's — dungeon hauls don't move this board.
   try {
     const db = require('../persistence/db');
     const everyone = db.listAll() || [];
-    const humans = everyone.filter(p => !p.is_bot).sort((a, b) => (b.chips || 0) - (a.chips || 0));
+    const played = (p) => (p.pokerHands || 0) > 0;
+    const humans = everyone.filter(p => !p.is_bot && played(p)).sort((a, b) => (b.pokerNet || 0) - (a.pokerNet || 0));
     if (humans.length) {
-      const tops = humans.slice(0, 3).map(p => `${p.nickname} ${gp(p.chips || 0)}`).join(' · ');
-      const ai = everyone.filter(p => p.is_bot).sort((a, b) => (b.chips || 0) - (a.chips || 0))[0];
-      lines.push(`💰 Standings: ${tops}${ai ? ` — richest AI: ${ai.nickname} ${gp(ai.chips || 0)}` : ''}`);
-      const debtors = humans.filter(p => (p.rebuy_debt || 0) > 0).sort((a, b) => (b.rebuy_debt || 0) - (a.rebuy_debt || 0)).slice(0, 3);
+      const tops = humans.slice(0, 3).map(p => `${p.nickname} ${signedGp(p.pokerNet || 0)}`).join(' · ');
+      const ai = everyone.filter(p => p.is_bot && played(p)).sort((a, b) => (b.pokerNet || 0) - (a.pokerNet || 0))[0];
+      lines.push(`💰 Poker standings (won − lost): ${tops}${ai ? ` — top AI: ${ai.nickname} ${signedGp(ai.pokerNet || 0)}` : ''}`);
+      const debtors = everyone.filter(p => !p.is_bot && (p.rebuy_debt || 0) > 0).sort((a, b) => (b.rebuy_debt || 0) - (a.rebuy_debt || 0)).slice(0, 3);
       if (debtors.length) lines.push('📉 In the red: ' + debtors.map(p => `${p.nickname} owes ${gp(p.rebuy_debt)} (${gp(p.chips || 0)} on hand)`).join(' · '));
-      else { const low = humans.filter(p => (p.chips || 0) < 5000).slice(-2); if (low.length) lines.push('📉 Short stacks: ' + low.map(p => `${p.nickname} ${gp(p.chips || 0)}`).join(' · ')); }
     }
   } catch (e) { console.error('[meyanda] standings:', e.message); }
 
