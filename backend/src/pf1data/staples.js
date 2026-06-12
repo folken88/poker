@@ -73,6 +73,14 @@ const CUSTOM_WEAPONS = {
   // airborne foes they can't reach in melee (last resort; see _playerAttack). Masterwork
   // (no enchant), so always weaker than their real weapon. 1d8, 19-20/x2. custom => always proficient.
   lightcrossbow: { key: 'lightcrossbow', name: 'Light Crossbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'simple', custom: true, atkSound: '/audio/crossbow.mp3' },
+  // El Guapo's pistol — his swashbuckler archetype packs a sidearm as the SECONDARY
+  // attack: firearms hit TOUCH AC, full iteratives apply (ranged always full-attacks).
+  // Drawn via the backup-ranged path when his rapier can't reach (see _backupRangedKey).
+  guapopistol: { key: 'guapopistol', name: 'Pistol', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 4, type: 'B', group: 'firearms', prof: 'martial', custom: true, atkSound: '/audio/tarkov_pistol_rsh12_empty_reload2.mp3' },
+  // Gaspar's PAIRED PISTOLS — his backup ranged option: dual-wielded firearms (two
+  // shots + TWF, touch AC, full iteratives) that ride Bane/Judgement and every other
+  // buff like any weapon. He LIKES them — see the 60/40 mixed-field pick in _playerAttack.
+  gasparpistols: { key: 'gasparpistols', name: 'Paired Pistols', cat: 'ranged', ranged: true, dual: true, noShield: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 4, type: 'B', group: 'firearms', prof: 'exotic', custom: true, atkSound: '/audio/pistol_evil-rsh12_sonny_landham_billy_laugh.mp3' },
   // Duristan's rifle "Longue Carabine" — a heavy-hitting bolt-action .338 (2d10, ×4).
   // Single-shot: no Rapid Shot. (Key stays 'lapua' so his persisted weapon row and
   // gear history survive the rename.) Report: cyberpunk sniper crack from Foundry.

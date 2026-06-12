@@ -921,6 +921,13 @@ class Dungeon {
   // True if this member wields a ranged weapon (bow/crossbow/firearm) — selects the
   // RANGED feat tree (Weapon Focus, Point Blank, Rapid Shot, …) over the melee one.
   _isRanged(m) { try { return !!weaponOf(m.gear, m.weaponKey).ranged; } catch (_) { return false; } }
+  // Which BACKUP ranged weapon a melee character draws when they can't reach
+  // (or, for Gaspar, when he just feels like shooting): signature sidearms for
+  // the gunfighters, the plain masterwork light crossbow for everyone else.
+  _backupRangedKey(m) {
+    const BY_CHAR = { 'el guapo': 'guapopistol', gaspar: 'gasparpistols' };
+    return BY_CHAR[(m.playerId || '').toLowerCase()] || 'lightcrossbow';
+  }
   // Can this member's CURRENT weapon reach foe `e`? Grounded melee can't touch a
   // flyer; ranged/reach weapons and airborne attackers (Overland Flight) can.
   _canReach(m, e) {
@@ -3330,7 +3337,7 @@ class Dungeon {
     m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
     m.slots = slotsFor(m.cls, m.level || 1);   // per-spell-level slots (sorcerer/bard/oracle/cleric)
     m.abilityUses = {};
-    for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1);
+    for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
     // from the turn loop when downed). HOME-RULE: paladins (and antipaladins) get
     // their spellcasting from LEVEL 1, not 4 — still the slowest progression in the
@@ -3439,7 +3446,7 @@ class Dungeon {
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null,
         available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction) && !(ab.cost === 'slot' && (slvlEff > 9 || !(maxSlots && maxSlots[slvlEff]))), desc: ab.desc || '',
         remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'slot' ? ((m.slots && m.slots[slvlEff]) || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
-        max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'slot' ? ((maxSlots && maxSlots[slvlEff]) || 0) : ab.cost === 'room' ? roomUses(ab, lvl) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl) : (ab.uses || 1)) : null,
+        max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'slot' ? ((maxSlots && maxSlots[slvlEff]) || 0) : ab.cost === 'room' ? roomUses(ab, lvl, m) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl, m) : (ab.uses || 1)) : null,
         };
       }),
     };
@@ -4946,16 +4953,25 @@ class Dungeon {
     if (!e) return;
     m.weapon = weaponOf(m.gear, m.weaponKey);
     if (e.darkened > 0) { this._note(`🌑 ${m.nickname} can't find ${e.name} in the magical darkness!`); this._broadcast(); return; }
-    // Melee can't reach a flyer. Rather than waste the turn, a melee character draws a
-    // BACKUP light crossbow and shoots — masterwork (no enchant), so worse than their
-    // real weapon, but it reaches, and it still rides their full iteratives and buffs
-    // (Divine Favor, Bless, Haste…). A flyer-reaching hero (Overland Flight magus) just
-    // melees as normal. The bot only targets a flyer when EVERY foe is airborne, so for
-    // bots this fires strictly as a last resort.
+    // Melee can't reach a flyer. Rather than waste the turn, a melee character draws
+    // their BACKUP ranged weapon and shoots — the generic masterwork light crossbow
+    // for most (plain, so always worse than the real weapon), or a SIGNATURE sidearm
+    // for the gunfighters: El Guapo's pistol and Gaspar's paired pistols (firearms —
+    // TOUCH AC, and they ride the wielder's weapon enchant + every buff/Bane).
+    // A flyer-reaching hero (Overland Flight magus) just melees as normal.
     const _realWeapon = m.weapon;
-    if (e.flying && !m.weapon.ranged && !m.weapon.reachFly && !(m.canHitFlyers && m.flying)) {
-      m.weapon = weaponOf({}, 'lightcrossbow');
-      if (!quiet) this._note(`🏹 ${m.nickname} can't reach the airborne ${e.name} in melee — draws a light crossbow!`);
+    // GASPAR's 60/40: facing a MIXED field (flyers AND grounded), bot Gaspar draws
+    // the paired pistols 40% of the time — bane-boosted touch-AC full attacks at
+    // whatever he's targeting — and works the Curator the other 60%.
+    let forceRanged = false;
+    if (!quiet && m.isBot && (m.playerId || '').toLowerCase() === 'gaspar' && !m.weapon.ranged) {
+      const foes = this._targetableEnemies();
+      if (foes.some(f => f.flying) && foes.some(f => !f.flying) && dRoll(10) <= 4) forceRanged = true;
+    }
+    if (forceRanged || (e.flying && !m.weapon.ranged && !m.weapon.reachFly && !(m.canHitFlyers && m.flying))) {
+      const bk = this._backupRangedKey(m);
+      m.weapon = weaponOf(bk === 'lightcrossbow' ? {} : m.gear, bk);   // signature sidearms keep the wielder's enchant; the generic crossbow stays plain
+      if (!quiet) this._note(`🔫 ${m.nickname} ${forceRanged ? 'draws' : `can't reach the airborne ${e.name} in melee — draws`} ${bk === 'lightcrossbow' ? 'a light crossbow' : (bk === 'gasparpistols' ? 'his paired pistols' : 'his pistol')}!`);
     }
     // Build the swing sequence as a list of to-hit OFFSETS (see _attackOffsets):
     // dual-wielders attack twice; staying on the same target adds PF1 iteratives.

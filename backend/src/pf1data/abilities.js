@@ -90,9 +90,9 @@ function diceCount(ab, level) {
   return ab.dice || 1;
 }
 // How many own-pool uses a 'room' ability gets at a level.
-function roomUses(ability, level) {
+function roomUses(ability, level, m) {
   if (!ability || ability.cost !== 'room') return 0;
-  if (typeof ability.uses === 'function') return ability.uses(level);
+  if (typeof ability.uses === 'function') return ability.uses(level, m);   // uses fns may read the member's ability mods (e.g. Channel = 3 + WIS)
   if (typeof ability.uses === 'number') return ability.uses;
   return channelUses(level);
 }
@@ -268,7 +268,7 @@ const KITS = {
   // Each spell spends a slot of its level; with extra slots the AI prepares more
   // cures. CHANNEL is a class feature (own count); BLESS is run-long (cast once).
   cleric: { atwill: ATTACK('🔨'), abilities: [
-    { key: 'channel',      name: 'Channel Positive',     icon: '💖', cost: 'room', uses: smiteUses, effect: 'heal', heal: 'party', target: 'ally', sound: S.charge, desc: 'Channel positive energy — heal the whole party for ½level d6 (PF1e). Once per 5 levels per room.' },
+    { key: 'channel',      name: 'Channel Positive',     icon: '💖', cost: 'room', uses: (level, m) => 3 + Math.max(0, (m && m.mods && m.mods.wis) || 0), effect: 'heal', heal: 'party', target: 'ally', sound: S.charge, desc: 'Channel positive energy — heal the whole party for ½level d6 (PF1e). 3 + WIS mod uses per room (PF1\'s 3 + CHA, keyed to Wisdom so clerics stay SAD).' },
     // ── 1st-level prayers ──
     { key: 'curelight',    name: 'Cure Light Wounds',    icon: '💚', cost: 'slot', slvl: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5,  target: 'ally', sound: S.cure,    desc: 'Heal the most-hurt ally — 1d8 + caster level (max +5).' },
     { key: 'shieldoffaith',name: 'Shield of Faith',      icon: '🛡️', cost: 'slot', slvl: 1, effect: 'buff', target: 'ally', buff: { ac: 2 }, sticky: true, sound: S.invoke, desc: '+2 deflection AC to an ally (the one with the LOWEST AC) for the rest of the room.' },
