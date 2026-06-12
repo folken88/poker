@@ -1250,10 +1250,10 @@
         `<div class="dungeon__recruit-pop ${_recruitOpen ? 'is-open' : ''}">` +
           `<div class="dungeon__recruit-head">Unseated allies — 50g + 10g per level${full ? ' · party full' : ''}</div>` +
           `<div class="bot-picker__grid bot-picker__grid--dungeon">` +
-          list.map(b => `<button type="button" class="bot-picker__card" data-recruit="${escapeAttr(b.playerId)}" ${full ? 'disabled' : ''} title="${escapeAttr(b.nickname)} — ${escapeAttr(dungeonGearTip(b.gear))} · 💰 ${formatChips(b.wealth)} gp · recruit for ${b.fee}g">
+          list.map(b => `<button type="button" class="bot-picker__card" data-recruit="${escapeAttr(b.playerId)}" ${full ? 'disabled' : ''} title="${escapeAttr(b.nickname)}, ${escapeAttr(b.cls || '')} — ${escapeAttr(dungeonGearTip(b.gear))} · 💰 ${formatChips(b.wealth)} gp · recruit for ${b.fee}g">
               <div class="bot-picker__avatar">${renderAvatar(b.avatarId)}</div>
               <div class="bot-picker__nick">${escapeText(b.nickname)}</div>
-              <div class="bot-picker__worth">🤝 ${b.fee}g</div>
+              <div class="bot-picker__worth">${escapeText(b.cls || '')} · 🤝 ${b.fee}g</div>
             </button>`).join('') +
           `</div>` +
         `</div>`;

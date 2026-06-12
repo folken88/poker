@@ -79,7 +79,7 @@ function slotsFor(cls, level) {
 }
 
 const POOL_CLASSES   = new Set([]);   // (sorcerer is spontaneous-per-level now)
-const CASTER_CLASSES = new Set(['wizard', 'sorcerer', 'cleric', 'druid', 'bard', 'inquisitor', 'magus']);
+const CASTER_CLASSES = new Set(['wizard', 'sorcerer', 'cleric', 'druid', 'bard', 'inquisitor', 'magus', 'oracle']);   // oracle was missing → its spells rendered as flat buttons instead of the spellbook
 const isSpontaneous = (cls) => SPONTANEOUS_CLASSES.has(cls);
 
 // Spell-damage dice count from a level scale.
@@ -288,7 +288,7 @@ const KITS = {
     { key: 'dispelmagic',  name: 'Dispel Magic',         icon: '🌀', cost: 'slot', slvl: 3, minLevel: 5, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'Strip a debuff off an afflicted ally (paralysis / hold / grapple / stun / sickness).' },
     // ── 4th-level prayers ──
     { key: 'curecritical', name: 'Cure Critical Wounds', icon: '💚', cost: 'slot', slvl: 4, minLevel: 7, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20).' },
-    { key: 'protectfire',  name: 'Protection from Fire',  icon: '🔥', cost: 'slot', slvl: 4, minLevel: 7, effect: 'buff', target: 'self', party: true, protectFire: true, sticky: true, sound: S.invoke, desc: 'Ward the whole party against FIRE — fire damage they take is HALVED for the rest of the room. (Cast it when fiery foes loom.)' },
+    { key: 'protectfire',  name: 'Protection from Fire',  icon: '🔥', cost: 'slot', slvl: 4, minLevel: 7, effect: 'buff', target: 'self', party: true, protectFire: true, sticky: true, sound: S.invoke, desc: 'Ward the whole party against FIRE — each ally gains a ward that ABSORBS the next 12 fire damage per caster level (max 120), soaked before it burns, until spent. (PF1 Protection from Energy — cast it when fiery foes loom.)' },
     { key: 'blessingoffervor', name: 'Blessing of Fervor', icon: '💨', cost: 'slot', slvl: 4, minLevel: 7, effect: 'haste', target: 'self', party: true, sounds: FERVOR_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (like Haste).' },
     { key: 'holysmite',    name: 'Holy Smite',           icon: '🌟', cost: 'slot', slvl: 4, minLevel: 7, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
     // ── High-level prayers (revives), gated by level + slot availability ──
@@ -560,12 +560,19 @@ const KITS = {
 // the full Haste spell below — two distinct options.
 KITS.oracle.abilities = [
   ...KITS.cleric.abilities.map(a => ({ ...a })),
-  spontaneousSpell(SPELL.burninghands, 1),
-  spontaneousSpell(SPELL.scorchingray, 3),
-  { key: 'haste', name: 'Haste', icon: '💨', cost: 'slot', slvl: 3, minLevel: 5, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 round per caster level.' },
-  spontaneousSpell(SPELL.slow,      5),
-  spontaneousSpell(SPELL.fireball,  5),
-  spontaneousSpell(SPELL.firesnake, 10),
+  // ── FLAME mystery — Elfrip ONLY (most oracles never see fire spells; the
+  //    char tag is enforced by Dungeon._charAllows in the UI, bot AI and casts).
+  { ...spontaneousSpell(SPELL.burninghands, 1), char: 'Elfrip' },
+  { ...spontaneousSpell(SPELL.scorchingray, 3), char: 'Elfrip' },
+  { ...spontaneousSpell(SPELL.fireball,  5),    char: 'Elfrip' },
+  { ...spontaneousSpell(SPELL.firesnake, 10),   char: 'Elfrip' },
+  // ── TIME mystery — Casandalee: she bends the battle's tempo (Haste/Slow) and
+  //    her own timeline (Mirror Image's might-have-beens, Displacement's
+  //    half-second sidestep). Other oracles keep the plain cleric list.
+  { key: 'haste', name: 'Haste', icon: '💨', cost: 'slot', slvl: 3, minLevel: 5, effect: 'haste', target: 'self', party: true, sounds: HASTE_SFX, char: 'Casandalee', desc: 'The whole party blurs with speed — an EXTRA attack each turn for 1 round per caster level.' },
+  { ...spontaneousSpell(SPELL.slow, 5),         char: 'Casandalee' },
+  { ...spontaneousSpell(SPELL.mirrorimage, 4),  char: 'Casandalee' },
+  { ...spontaneousSpell(SPELL.displacement, 6), char: 'Casandalee' },
 ];
 
 // GUNSLINGER (Taelys, Duristan) — a PF1 firearms specialist. Gun Training is the

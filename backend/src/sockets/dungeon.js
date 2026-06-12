@@ -33,7 +33,7 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     const inParty = new Set(d.party.filter(m => !m.left).map(m => m.playerId));
     return db.listBots()
       .filter(b => !seated.has(b.player_id) && !inParty.has(b.player_id))
-      .map(b => ({ playerId: b.player_id, nickname: b.nickname, avatarId: b.avatar_id, wealth: b.chips, gear: db.getGear(b.player_id), fee: recruitFee(b.player_id) }))
+      .map(b => ({ playerId: b.player_id, nickname: b.nickname, cls: b.class || 'fighter', avatarId: b.avatar_id, wealth: b.chips, gear: db.getGear(b.player_id), fee: recruitFee(b.player_id) }))
       .sort((a, b) => String(a.nickname).localeCompare(String(b.nickname)));
   }
   const isSeatedAnywhere = (botId) => [...tables.values()].some(t => !!t.findSeat(botId));
@@ -163,7 +163,7 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     db.setChips(me.player_id, meFresh.chips - fee);
     db.setChips(botId, (bot.chips || 0) + fee);
     d.addMember(bot, true);
-    d._note(`🤝 ${me.nickname} recruited ${bot.nickname} for ${fee}g.`);
+    d._note(`🤝 ${me.nickname} recruited ${bot.nickname} the ${bot.class || 'fighter'} for ${fee}g.`);
     d._broadcast();
     io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
     ack?.({ ok: true });
@@ -196,7 +196,7 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
       db.setChips(me.player_id, cur.chips - fee);
       db.setChips(c.playerId, (bot.chips || 0) + fee);
       d.addMember(bot, true);
-      d._note(`🤝 ${me.nickname} recruited ${bot.nickname} for ${fee}g.`);
+      d._note(`🤝 ${me.nickname} recruited ${bot.nickname} the ${bot.class || 'fighter'} for ${fee}g.`);
       hired++;
     }
     if (hired === 0) return ack?.({ ok: false, error: 'not enough gold for any available ally' });

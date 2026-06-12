@@ -493,7 +493,7 @@ const BUFF_META = {
   deadlyaim:     { label: 'Deadly Aim',      desc: 'trading aim for power — −hit, +damage' },
   powerattack:   { label: 'Power Attack',    desc: 'trading accuracy for power — −hit, +damage' },
   fly:           { label: 'Flying',          desc: 'airborne — grounded foes cannot reach you' },
-  protectfire:   { label: 'Fire Ward',       desc: 'fire damage halved (Protection from Fire)' },
+  protectfire:   { label: 'Fire Ward',       desc: 'absorbs incoming fire damage until spent (Protection from Fire)' },
   bless:         { label: 'Bless',           desc: '+1 to hit — whole dungeon' },
   inspire:       { label: 'Inspire Courage', desc: 'allies +1 hit & damage — whole dungeon' },
   // ── Magus buffs (icons fall back to fitting existing art) ──
@@ -581,26 +581,26 @@ const MON = {
                        hellfire: { count: 3, dice: 5, die: 6, dc: 19, sound: '/audio/spell_hellfire.mp3' } },           // Hellfire Blast — fire AoE, Reflex for half
 
   vampire:           { name: 'Vampire',           glyph: '🧛', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 6,  dmgBonus: 8, fort: 8,  reflex: 11, attacks: 2, gold: [100, 200], dr: { amount: 10, bypass: 'magic' }, evil: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 4, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // magus of its level: dominating gaze + Vampiric Touch spellstrike (drains life)
-  lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], dr: { amount: 15, bypass: 'B' }, evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' }, arcane: true },                 // a full wizard of its level: Hold Monster, Fireball/Cone/Chain Lightning, Disintegrate, Finger of Death, Magic Missile (see _lichCast)
+  lich:              { name: 'Lich',              glyph: '💀', cr: '12',  hp: 138, ac: 25, toHit: 16, dmgDie: 8,  dmgBonus: 5, fort: 10, reflex: 9,  gold: [300, 520], dr: { amount: 15, bypass: 'B' }, evil: true, shout: { fear: true, dc: 20, sound: '/audio/enemy_lich_gaze.mp3' }, arcane: true, precast: ['magearmor', 'shield', 'protfire', 'fly'] },                 // a full wizard of its level: Hold Monster, Fireball/Cone/Chain Lightning, Disintegrate, Finger of Death, Magic Missile (see _lichCast); pre-buffed as a boss (keeps its own DR over Stoneskin)
 
   // ── THE VAMPIRE COURT — classed vampires (PF1 vampire template: DR 10/magic,
   //    undead = mind-immune). CR ≈ class level + 1 for the template. ──
   vampire_spawn:     { name: 'Vampire Spawn',     glyph: '🧛', cr: '4',   hp: 26,  ac: 15, toHit: 7,  dmgDie: 6,  dmgBonus: 4,  fort: 3,  reflex: 5,  gold: [36, 78],   type: 'undead', evil: true, dr: { amount: 5,  bypass: 'magic' } },
   vamp_knight:       { name: 'Vampire Knight',    glyph: '🧛', cr: '9',   hp: 100, ac: 23, toHit: 15, dmgDie: 8,  dmgBonus: 8,  fort: 9,  reflex: 7,  attacks: 2, gold: [110, 220], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F8 + vampire
-  vamp_inquisitor:   { name: 'Vampire Inquisitor',glyph: '🧛', cr: '10',  hp: 105, ac: 22, toHit: 15, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  attacks: 2, gold: [120, 240], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 17, sound: '/audio/enemy_lich_gaze.mp3' }, healer: { dice: 2, uses: 2 } },   // I9 + vampire — dread judgment; channels black mending for the court
+  vamp_inquisitor:   { name: 'Vampire Inquisitor',glyph: '🧛', cr: '10',  hp: 105, ac: 22, toHit: 15, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  attacks: 2, gold: [120, 240], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 17, sound: '/audio/enemy_lich_gaze.mp3' }, healer: { dice: 2, uses: 2 }, precast: ['shieldoffaith', 'protfire'] },   // I9 + vampire — dread judgment; channels black mending for the court; pre-warded as a boss
   vamp_rogue:        { name: 'Vampire Rogue',     glyph: '🧛', cr: '10',  hp: 95,  ac: 23, toHit: 15, dmgDie: 6,  dmgBonus: 6,  fort: 6,  reflex: 11, attacks: 2, sneakDice: 5, evasion: true, gold: [120, 240], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // R9 + vampire
   vamp_scout:        { name: 'Vampire Scout',     glyph: '🧛', cr: '11',  hp: 105, ac: 24, toHit: 16, dmgDie: 6,  dmgBonus: 6,  fort: 6,  reflex: 12, attacks: 2, sneakDice: 5, evasion: true, gold: [130, 260], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // R10 + vampire
   vamp_warrior:      { name: 'Vampire Warrior',   glyph: '🧛', cr: '11',  hp: 120, ac: 24, toHit: 17, dmgDie: 8,  dmgBonus: 9,  fort: 10, reflex: 8,  attacks: 2, gold: [130, 260], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F10 + vampire
   vamp_bodyguard:    { name: 'Vampire Bodyguard', glyph: '🧛', cr: '13',  hp: 140, ac: 26, toHit: 19, dmgDie: 8,  dmgBonus: 10, fort: 11, reflex: 9,  attacks: 2, gold: [170, 320], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F12 + vampire
-  vamp_priest:       { name: 'Vampire Priest',    glyph: '🧛', cr: '13',  hp: 130, ac: 25, toHit: 17, dmgDie: 8,  dmgBonus: 8,  fort: 11, reflex: 8,  attacks: 2, gold: [170, 320], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' }, healer: { dice: 3, uses: 3 } },   // C12 + vampire — profane litany; a true battle-cleric who mends the court
+  vamp_priest:       { name: 'Vampire Priest',    glyph: '🧛', cr: '13',  hp: 130, ac: 25, toHit: 17, dmgDie: 8,  dmgBonus: 8,  fort: 11, reflex: 8,  attacks: 2, gold: [170, 320], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' }, healer: { dice: 3, uses: 3 }, precast: ['shieldoffaith', 'protfire'] },   // C12 + vampire — profane litany; a true battle-cleric who mends the court; pre-warded as a boss (divine list)
   vamp_assassin:     { name: 'Vampire Assassin',  glyph: '🧛', cr: '14',  hp: 140, ac: 27, toHit: 19, dmgDie: 6,  dmgBonus: 8,  fort: 8,  reflex: 13, attacks: 2, sneakDice: 7, evasion: true, gold: [190, 360], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // R13 + vampire
   vamp_nightguard:   { name: 'Vampire Nightguard',glyph: '🧛', cr: '14',  hp: 160, ac: 27, toHit: 21, dmgDie: 6,  dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 9, attacks: 2, gold: [190, 360], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F14 + vampire — polearm sweeps (2d6+10)
   vamp_noble:        { name: 'Vampire Noble',     glyph: '🧛', cr: '15',  hp: 160, ac: 27, toHit: 20, dmgDie: 8,  dmgBonus: 9,  fort: 11, reflex: 11, attacks: 2, gold: [220, 420], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 21, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 5, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // Mag14 + vampire — Vampiric Touch spellstrikes
   vamp_techwitch:    { name: 'Vampire Tech Witch',glyph: '🧛', cr: '12',  hp: 110, ac: 22, toHit: 12, dmgDie: 6,  dmgBonus: 4,  fort: 8,  reflex: 8,  gold: [150, 300], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, arcane: true },   // W11 + vampire — Technic League arcanist, full wizard casting
   // ── TECHNIC LEAGUE & THRUNE — named villains ──
-  zernibeth:         { name: 'Zernibeth',         glyph: '🤖', cr: '13',  hp: 120, ac: 24, toHit: 12, dmgDie: 6,  dmgBonus: 4,  fort: 9,  reflex: 9,  gold: [280, 480], evil: true, arcane: true },   // android W14 of the Technic League (LE) — full wizard casting
+  zernibeth:         { name: 'Zernibeth',         glyph: '🤖', cr: '13',  hp: 120, ac: 24, toHit: 12, dmgDie: 6,  dmgBonus: 4,  fort: 9,  reflex: 9,  gold: [280, 480], evil: true, arcane: true, precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // android W14 of the Technic League (LE) — full wizard casting; walks in pre-buffed (boss only)
   barzillai:         { name: 'Barzillai Thrune',  glyph: '😈', cr: '15',  hp: 220, ac: 28, toHit: 22, dmgDie: 6,  dmgCount: 2, dmgBonus: 12, fort: 14, reflex: 9, attacks: 2, gold: [340, 580], evil: true, shout: { fear: true, dc: 22, sound: '/audio/enemy_lich_gaze.mp3' } },   // I16 inquisitor of Asmodeus — greathammer (2d6+12), a deep-room villain
-  abrogail:          { name: 'Abrogail Thrune II',glyph: '👑', cr: '16',  hp: 200, ac: 27, toHit: 14, dmgDie: 4,  dmgBonus: 4,  fort: 11, reflex: 12, gold: [400, 700], evil: true, arcane: true, shout: { fear: true, dc: 23, sound: '/audio/enemy_lich_gaze.mp3' }, art: '/dungeon/monsters/abrogail.png' },   // S17 — Queen of Cheliax, full arcane barrage
+  abrogail:          { name: 'Abrogail Thrune II',glyph: '👑', cr: '16',  hp: 200, ac: 27, toHit: 14, dmgDie: 4,  dmgBonus: 4,  fort: 11, reflex: 12, gold: [400, 700], evil: true, arcane: true, shout: { fear: true, dc: 23, sound: '/audio/enemy_lich_gaze.mp3' }, art: '/dungeon/monsters/abrogail.png', precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // S17 — Queen of Cheliax, full arcane barrage; pre-buffed (boss only)
   // ── THE INFERNAL COURT — classed devils (devil template: DR 10/magic, fire-immune,
   //    resist cold & acid). ──
   devil_swordsman:   { name: 'Devil Swordsman',   glyph: '😈', cr: '11',  hp: 125, ac: 25, toHit: 17, dmgDie: 8,  dmgBonus: 9,  fort: 11, reflex: 9,  attacks: 2, gold: [130, 260], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 } },   // F10 + devil — katana
@@ -615,7 +615,7 @@ const MON = {
   void_dragon:       { name: 'Void Dragon',       glyph: '🐉', cr: '13',  hp: 175, ac: 27, toHit: 21, dmgDie: 8,  dmgCount: 2, dmgBonus: 9, fort: 13, reflex: 10, attacks: 2, flying: true, gold: [260, 480], evil: true, dr: { amount: 5, bypass: 'magic' }, resist: { cold: 0 }, shout: { fear: true, dc: 21, sound: '/audio/enemy_lich_gaze.mp3' },
                        hellfire: { count: 3, dice: 10, die: 6, dc: 21, dtype: 'cold', verb: 'exhales a freezing GULF OF THE VOID over the party', sound: '/audio/spell_coneofcold.mp3' } },   // void dragon — entropic cold breath
   // ── HARPY SORCERER — harpy stats + 9 sorcerer levels (full arcane barrage on the wing). ──
-  harpy_sorcerer:    { name: 'Harpy Sorcerer',    glyph: '🦅', cr: '10',  hp: 95,  ac: 21, toHit: 13, dmgDie: 6,  dmgBonus: 4,  fort: 6,  reflex: 10, attacks: 2, flying: true, gold: [120, 240], evil: true, arcane: true },
+  harpy_sorcerer:    { name: 'Harpy Sorcerer',    glyph: '🦅', cr: '10',  hp: 95,  ac: 21, toHit: 13, dmgDie: 6,  dmgBonus: 4,  fort: 6,  reflex: 10, attacks: 2, flying: true, gold: [120, 240], evil: true, arcane: true, precast: ['magearmor', 'shield', 'stoneskin'] },   // pre-buffed as a boss (already on the wing)
 };
 // PF1 BODY PLANS — size category + leg count per monster (used by the trip rules:
 // +4 to trip defense per leg beyond two; you can't trip a foe more than ONE size
@@ -1003,6 +1003,18 @@ class Dungeon {
     if (o.prayed > 0)    c.push({ key: 'prayed',     label: 'Prayer',    desc: `−${o.prayed} to hit, damage & saves (cleric Prayer covers the battlefield)`, icon: `${I}shaken.webp` });
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
     if (o.asleep)        c.push({ key: 'asleep',     label: 'Asleep',     desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
+    // Boss PRE-CAST wards — shown so the party knows what Dispel Magic can strip.
+    if (o.precast && o.precast.length) {
+      const PRE = {
+        magearmor:     ['Mage Armor', '+4 armor AC (dispellable)'],
+        shield:        ['Shield', '+4 AC and IMMUNE to Magic Missile (dispellable)'],
+        shieldoffaith: ['Shield of Faith', '+3 deflection AC, even vs touch (dispellable)'],
+        stoneskin:     ['Stoneskin', 'DR 10 vs physical blows (dispellable)'],
+        protfire:      ['Fire Ward', `absorbs the next ${o.fireWard || 0} fire damage (dispellable)`],
+        fly:           ['Fly (spell)', 'airborne by magic — DISPEL it and the boss crashes prone'],
+      };
+      for (const k of o.precast) { const p = PRE[k]; if (p) c.push({ key: `pre_${k}`, label: p[0], desc: p[1], icon: `${I}haste.webp` }); }
+    }
     else if (o.fascinated) c.push({ key: 'fascinated', label: 'Fascinated', desc: 'enthralled — loses turns; the first hit snaps it out', icon: `${I}fascinated.webp` });
     if (o.darkened > 0)  c.push({ key: 'darkened',  label: 'Darkness',  desc: 'shrouded in darkness — cannot act or be attacked (2 rounds)', icon: `${I}darkened.webp` });
     if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
@@ -1031,7 +1043,7 @@ class Dungeon {
     if (m.images > 0)   push('mirrorimage', 'Mirror Image', `${m.images} decoy${m.images > 1 ? 's' : ''} soaking incoming attacks`);
     if (m.untargetable) push('blur', 'Blurred', 'untargetable until your next turn (Bladed Dash)', '/dungeon/buffs/fly.webp');
     if (m.touchStrike > 0) push('dimblade', 'Dimensional Blade', 'your strikes hit on TOUCH this round', '/dungeon/buffs/magearmor.webp');
-    if (m.protectFire)  push('protectfire', 'Fire Ward', 'fire damage halved (Protection from Fire)');
+    if (m.protectFire > 0) push('protectfire', 'Fire Ward', `absorbs the next ${m.protectFire} fire damage (Protection from Fire)`);
     if (m.judgment === 'destruction') push('judg_destruction', 'Judgement: Destruction', '+damage on your strikes');
     if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection', '+AC');
     if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing', 'regenerate HP each turn');
@@ -1081,6 +1093,7 @@ class Dungeon {
       enemies: this.enemies.map(e => ({
         uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
         flying: !!e.flying,
+        drDesc: e.dr ? this._drDesc(e.dr) : null,   // spoken in the blind E-inspector + shown on hover (why your hits run low)
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
         align: e.align || 'NE', evil: !!e.evil, type: e.type || null,
         ac: e.ac, touchAC: (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)), ffAC: Math.max(10, e.ac - 2),
@@ -1191,52 +1204,81 @@ class Dungeon {
     return cand[cand.length - 1];
   }
   _makeEnemy(base, boss) {
+    // BOSS ADVANCEMENT — a designated boss gains 1d4 EXTRA LEVELS (PF1 advancing
+    // by class levels/HD): +12% HP and +1 to-hit per level; +1 AC, saves, damage,
+    // ability DCs and special-use counts per 2 levels; bigger sneak/spellstrike/
+    // heal dice; +1 effective CR per 2 levels (so XP and loot scale with the
+    // tougher fight); and a fatter gold pouch. `bossLevels` feeds the lich's
+    // caster level too, so its spells grow with the advancement.
+    const extra = boss ? dRoll(4) : 0;
+    const half = Math.floor(extra / 2);
+    // BOSS PRE-CAST WARDS — a caster boss "cheats": every long-duration buff
+    // (anything NOT measured in rounds/level — Mage Armor, Shield, Stoneskin,
+    // Protection from Fire, Fly, Shield of Faith) is assumed already up when the
+    // party walks in. Stored on e.precast so the enemy's chips show the wards and
+    // Dispel Magic can strip them one by one (Greater sweeps them all).
+    const pre = (boss && Array.isArray(base.precast)) ? base.precast.slice() : [];
+    const preAC = (pre.includes('magearmor') ? 4 : 0) + (pre.includes('shield') ? 4 : 0) + (pre.includes('shieldoffaith') ? 3 : 0);
+    const preTouch = pre.includes('shieldoffaith') ? 3 : 0;   // deflection counts vs touch; armor/shield bonuses don't
     return {
       uid: `e${++_uidSeq}`,
-      name: boss ? `Boss: ${base.name}` : base.name,
-      glyph: base.glyph, art: base.tokenPool ? pick(base.tokenPool) : (base.art || null), boss, cr: base.cr || null,
-      hp: base.hp, maxHp: base.hp,
-      ac: base.ac,
+      name: boss ? `Boss: ${base.name}${extra ? ` +${extra}` : ''}` : base.name,
+      glyph: base.glyph, art: base.tokenPool ? pick(base.tokenPool) : (base.art || null), boss,
+      cr: (boss && half) ? String((base.crNum || 0) + half) : (base.cr || null),   // advanced CR → bigger XP + loot rolls
+      bossLevels: extra,
+      hp: Math.round(base.hp * (1 + 0.12 * extra)), maxHp: Math.round(base.hp * (1 + 0.12 * extra)),
+      ac: base.ac + half + preAC,
       // PF1 AC types. touchAC: spells/firearms ignore armor & natural armor (an
       // optional per-monster `touch` overrides the heuristic). Flat-footed AC is
       // derived (−2, denied Dex) in _enemyAC. Refine per-monster touch values later.
-      touchAC: (base.touch != null ? base.touch : Math.max(10, base.ac - 5)),
-      toHit: base.toHit,
-      dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus,
-      fort: base.fort, reflex: base.reflex,
+      touchAC: (base.touch != null ? base.touch : Math.max(10, base.ac - 5)) + half + preTouch,
+      precast: pre,                                         // pre-cast wards (chips + dispellable)
+      shieldUp: pre.includes('shield'),                     // PF1 Shield: also IMMUNE to Magic Missile
+      fireWard: pre.includes('protfire') ? Math.min(120, 12 * Math.max(10, (base.crNum || 10) + extra)) : 0,   // absorption pool, 12/CL
+      toHit: base.toHit + extra,
+      dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus + half,
+      fort: base.fort + Math.ceil(extra / 2), reflex: base.reflex + Math.ceil(extra / 2),
       align: base.align || 'NE', evil: !!base.evil, markedEvil: false, type: base.type || 'humanoid',
       flatFooted: true, prone: false, fascinated: false, asleep: false, loseTurn: false,
-      paralyze: !!base.paralyze, paralyzeDC: base.paralyzeDC || PARALYZE_DC, sickened: 0,
+      paralyze: !!base.paralyze, paralyzeDC: (base.paralyzeDC || PARALYZE_DC) + half, sickened: 0,
       attacks: base.attacks || 1,
       atkSound: base.atkSound || null,
       atkSounds: base.atkSounds || null,
       caster: base.caster || null,
-      spellDC: base.spellDC || 13,
-      castsLeft: base.caster ? 2 : 0,
-      shout: base.shout || null,           // special shout attack (e.g. Skeletal Champion)
-      shoutsLeft: base.shout ? 2 : 0,
-      taunt: base.taunt || null,           // goblin barbarian: roars a taunt that pulls AI allies onto it
+      spellDC: (base.spellDC || 13) + half,
+      castsLeft: base.caster ? 2 + half : 0,
+      // special shout attack (e.g. Skeletal Champion) — boss levels raise the DC + uses
+      shout: base.shout ? { ...base.shout, dc: (base.shout.dc || 14) + half } : null,
+      shoutsLeft: base.shout ? 2 + half : 0,
+      // goblin barbarian: roars a taunt that pulls AI allies onto it
+      taunt: base.taunt ? { ...base.taunt, dc: (base.taunt.dc || 13) + half } : null,
       tauntsLeft: base.taunt ? 1 : 0,
       hook: base.hook || null,             // barbed devil: chain hook → grapple + constrict
-      hellfire: base.hellfire || null,     // barbed devil: hellfire blast (fire AoE)
-      hellfireLeft: base.hellfire ? 2 : 0,
-      arcane: base.arcane || null,         // lich (wizard of its level): Fireball-style AoE blasts
-      arcaneLeft: base.arcane ? 3 : 0,
-      spellstrike: base.spellstrike || null, // vampire (magus of its level): Vampiric Touch on its strike
-      healer: base.healer || null,           // priestly foes mend their allies (see _enemyHeal)
-      healsLeft: base.healer ? (base.healer.uses || 1) : 0,
+      // barbed devil hellfire / dragon breath — boss levels add dice, DC and uses
+      hellfire: base.hellfire ? { ...base.hellfire, dc: (base.hellfire.dc || 18) + half, dice: (base.hellfire.dice || 5) + extra } : null,
+      hellfireLeft: base.hellfire ? 2 + half : 0,
+      arcane: base.arcane || null,         // lich (wizard of its level): _lichCast adds bossLevels to its caster level
+      arcaneLeft: base.arcane ? 3 + half : 0,
+      // vampire (magus of its level): Vampiric Touch on its strike — boss = more dice
+      spellstrike: base.spellstrike ? { ...base.spellstrike, dice: (base.spellstrike.dice || 4) + half } : null,
+      // priestly foes mend their allies (see _enemyHeal) — boss priests heal harder, more often
+      healer: base.healer ? { ...base.healer, dice: (base.healer.dice || 1) + half } : null,
+      healsLeft: base.healer ? (base.healer.uses || 1) + half : 0,
+      // rogue-types: sneak attack dice vs denied defenses (was never copied — latent
+      // bug: enemy sneak attacks silently never fired). Boss rogues sneak harder.
+      sneakDice: base.sneakDice ? base.sneakDice + half : 0,
       prayed: 0,                           // cleric Prayer: −1 to this enemy's attacks/damage/saves
       acid: null,                          // Acid Arrow lingering burn: { rounds, dice, die }
       resist: base.resist || null,         // energy resistances / vulnerabilities (see RESIST_BY_KEY)
-      dr: base.dr || 0,                     // physical DAMAGE REDUCTION — number (DR/—) or { amount, bypass:'S'|'P'|'B'|'magic'|'—' } (see _physDR)
+      dr: (pre.includes('stoneskin') && !base.dr) ? 10 : (base.dr || 0),   // physical DAMAGE REDUCTION — number (DR/— / Stoneskin) or { amount, bypass } (see _physDR); a boss keeps its own DR over a pre-cast Stoneskin
       size: base.size || 'M',               // PF1 size category (S/M/L/H…) — trip & flavor (see MON_BODY)
       legs: (base.legs != null ? base.legs : 2),   // leg count — 0 = untrippable; >2 = +4 trip defense per extra leg
-      flying: !!base.flying,               // airborne: immune to prone + "high ground" vs grounded foes
+      flying: !!base.flying || pre.includes('fly'),   // airborne: immune to prone + "high ground" vs grounded foes (a pre-cast Fly can be DISPELLED — the boss crashes)
       evasion: !!base.evasion,             // rogues/monks: a made Reflex save vs an area effect = NO damage
       detonate: base.detonate || null,     // fire skeleton: rushes in and blows itself up on its turn
       taunted: null,                       // barbarian Taunt: playerId it's compelled to attack next turn
       slowed: 0, _slowTick: 0,             // Slow spell: sluggish for N rounds, acts every other turn
-      gold: rint(base.gold[0], base.gold[1]),
+      gold: Math.round(rint(base.gold[0], base.gold[1]) * (1 + 0.25 * extra)),   // an advanced boss carries a fatter pouch
     };
   }
   // Build a room of foes. The per-enemy CR is geared to the weakest hero; the
@@ -2063,7 +2105,7 @@ class Dungeon {
           this._note(`🤺 ${target.nickname} PARRIES ${e.glyph} ${e.name}'s strike [${pRoll} vs ${r.total}] — no damage, and RIPOSTES!`, '/audio/sneak_riki.mp3');
           target.weapon = weaponOf(target.gear, target.weaponKey);
           const rr = this._swingVsAC(target, this._enemyAC(e), e);
-          if (rr.hit) { this._dmgE(e, rr.damage); this._note(`🗡️ ${target.nickname}'s riposte hits ${e.name} for ${rr.damage}.${this._afterEnemyHit(e)}`, rr.sound); if (e.hp <= 0) this._tryBanter(target, 'down', { enemy: e.name }); }
+          if (rr.hit) { this._dmgE(e, rr.damage); this._note(`🗡️ ${target.nickname}'s riposte hits ${e.name} for ${rr.damage}${rr.drTag || ''}.${this._afterEnemyHit(e)}`, rr.sound); if (e.hp <= 0) this._tryBanter(target, 'down', { enemy: e.name }); }
           else this._note(`🗡️ ${target.nickname}'s riposte misses ${e.name}. ${this._atkStr(rr)}`, rr.sound);
           this._echoToTable(rr.sound);
           return;   // the incoming attack is fully negated
@@ -2205,6 +2247,15 @@ class Dungeon {
     this._note(`${dark ? '🖤' : '💚'} ${e.glyph} ${e.name} ${dark ? 'hisses a PROFANE PRAYER — black energy knits' : 'chants a HEALING PRAYER — light mends'} ${target}: +${ally.hp - before} HP (${ally.hp}/${ally.maxHp}).`, '/audio/spell_cure.mp3', { side: 'enemy' });
     this._echoToTable('/audio/spell_cure.mp3'); this._broadcast();
   }
+  // PF1 Protection from Energy (fire): the ward is an ABSORPTION POOL (12 per
+  // caster level, max 120) — incoming fire damage (after saves/resistance) eats
+  // the pool until it's spent; the remainder burns through. Mutates t.protectFire.
+  _fireSoak(t, dmg) {
+    if (!(t.protectFire > 0) || dmg <= 0) return { dmg, tag: '' };
+    const soak = Math.min(t.protectFire, dmg);
+    t.protectFire -= soak;
+    return { dmg: dmg - soak, tag: ` 🔥🛡absorbs ${soak}${t.protectFire <= 0 ? ' — ward SPENT' : ''}` };
+  }
   _enemyHellfire(e) {
     e.hellfireLeft -= 1;
     const cfg = e.hellfire || {};
@@ -2216,10 +2267,10 @@ class Dungeon {
       const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
       let dmg = saved ? Math.floor(full / 2) : full;
-      const fireWarded = t.protectFire && (cfg.dtype || 'fire') === 'fire';   // the fire ward only blunts FIRE (not a dragon's acid/cold breath)
-      if (fireWarded) dmg = Math.max(1, Math.floor(dmg / 2));
+      let fireTag = '';   // the fire ward only absorbs FIRE (not a dragon's acid/cold breath)
+      if ((cfg.dtype || 'fire') === 'fire') ({ dmg, tag: fireTag } = this._fireSoak(t, dmg));
       this._dmgToMember(t, dmg);
-      parts.push(`${t.nickname} ${saved ? 'half ' : ''}−${dmg}${fireWarded ? ' 🔥½' : ''}`);
+      parts.push(`${t.nickname} ${saved ? 'half ' : ''}−${dmg}${fireTag}`);
     }
     // cfg.verb lets a dragon BREATHE and a bomb devil LOB instead of "hellfire".
     this._note(`🔥 ${e.glyph} ${e.name} ${cfg.verb || 'unleashes a HELLFIRE BLAST'} (${cfg.dice || 5}d${cfg.die || 6} → ${full}) — ${parts.join(', ')}! [Ref DC ${dc}]`, cfg.sound, { side: 'enemy' });
@@ -2235,7 +2286,7 @@ class Dungeon {
   _lichCast(e) {
     const heroes = this._targetableParty();
     if (!heroes.length) return;
-    const cl = Math.min(30, Math.max(12, this.depth || 12));   // caster level by depth
+    const cl = Math.min(30, Math.max(12, this.depth || 12) + (e.bossLevels || 0));   // caster level by depth (+ boss advancement: bigger dice AND DCs)
     const im = 4 + Math.floor(cl / 4);                          // Intelligence modifier
     const dc = (slvl) => 10 + slvl + im;                        // PF1 spell save DC
     const MART = new Set(['fighter', 'barbarian', 'paladin', 'antipaladin', 'ranger', 'rogue', 'monk', 'magus', 'cavalier', 'inquisitor', 'slayer', 'bloodrager']);
@@ -2284,9 +2335,10 @@ class Dungeon {
       const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= cfg.dc;
       let dmg = (saved && t.evasion) ? 0 : saved ? Math.floor(full / 2) : full;   // Evasion: no damage on a made save
-      if (cfg.dtype === 'fire' && t.protectFire) dmg = Math.max(saved && t.evasion ? 0 : 1, Math.floor(dmg / 2));
+      let fireTag = '';
+      if (cfg.dtype === 'fire') ({ dmg, tag: fireTag } = this._fireSoak(t, dmg));   // PF1 ward: absorption pool, not a halving
       this._dmgToMember(t, dmg);
-      parts.push(`${t.nickname} ${saved ? (t.evasion ? 'evades ' : 'half ') : ''}−${dmg}${cfg.dtype === 'fire' && t.protectFire ? ' 🔥½' : ''}`);
+      parts.push(`${t.nickname} ${saved ? (t.evasion ? 'evades ' : 'half ') : ''}−${dmg}${fireTag}`);
     }
     this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} (${cfg.dice}d${cfg.die || 6} ${cfg.dtype} → ${full}) — ${parts.join(', ')}! [Ref DC ${cfg.dc}]`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
@@ -2550,7 +2602,7 @@ class Dungeon {
     const cleanse = avail.find(a => a.effect === 'cleanse');
     if (cleanse) {
       const allyDebuffed = allies.some(a => a.paralyzed > 0 || a.stunned > 0 || a.slowed > 0 || a.sickened > 0 || a.grappled);
-      const foeBuffed = this._targetableEnemies().some(e => e.hasted > 0 || (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)));
+      const foeBuffed = this._targetableEnemies().some(e => e.hasted > 0 || (e.precast && e.precast.length) || (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)));
       if (allyDebuffed || foeBuffed) return { slot: slot(cleanse), payload: {} };
     }
     // 1c) Druid WILD SHAPE — most druids fight shapeshifted. If not already in a
@@ -3452,7 +3504,14 @@ class Dungeon {
   // Apply (resisted) damage of `dtype` to an enemy; any hit snaps a Fascinate.
   // Returns the damage actually dealt.
   _dmgE(e, dmg, dtype) {
-    const dealt = this._resisted(e, dmg, dtype);
+    let dealt = this._resisted(e, dmg, dtype);
+    // Boss pre-cast Protection from Fire: an absorption pool (12/CL) soaks fire
+    // after resistance, until it burns out — mirror of the party's _fireSoak.
+    if (dtype === 'fire' && e.fireWard > 0 && dealt > 0) {
+      const soak = Math.min(e.fireWard, dealt);
+      e.fireWard -= soak; dealt -= soak;
+      this._note(`🔥🛡 ${e.name}'s fire ward absorbs ${soak}${e.fireWard <= 0 ? ' — the ward BURNS OUT!' : ''}.`);
+    }
     e.hp -= dealt; if (e.fascinated) { e.fascinated = false; e.asleep = false; }   // a hit snaps Sleep/Fascinate
     // NOTE: a Fire Skeleton does NOT explode when slain — kill it first and it's
     // DEFUSED. It only blows up if it survives to its own turn (see _detonate).
@@ -3469,7 +3528,7 @@ class Dungeon {
     for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
     const hit = live.slice(0, dRoll(ex.count || 2));   // 1d2 heroes caught in the blast
     const parts = [];
-    for (const t of hit) { const dd = t.protectFire ? Math.max(1, Math.floor(d / 2)) : d; this._dmgToMember(t, dd); parts.push(`${t.nickname} −${dd}${t.protectFire ? ' 🔥½' : ''}`); }
+    for (const t of hit) { const s = this._fireSoak(t, d); this._dmgToMember(t, s.dmg); parts.push(`${t.nickname} −${s.dmg}${s.tag}`); }
     e._exploded = true; e.hp = 0;   // it consumes itself
     this._note(`💥 ${e.name} hurls itself among the heroes and DETONATES (${lvl}d6 fire = ${d})${parts.length ? ' — ' + parts.join(', ') : ' — but catches no one'}! It is destroyed.`, ex.sound, { side: 'enemy' });
     this._echoToTable(ex.sound);
@@ -3666,6 +3725,8 @@ class Dungeon {
     for (let i = 0; i < darts; i++) {
       const e = targets[i % targets.length];
       if (!e || e.hp <= 0) continue;
+      // PF1: the Shield spell stops Magic Missiles cold (boss pre-cast ward).
+      if (e.shieldUp) { parts.push(`${e.name} 🛡SHIELDED`); continue; }
       const d = dRoll(4) + 1;
       this._dmgE(e, d);
       parts.push(`${e.name} ${d}${e.hp <= 0 ? ' ☠️' : ''}`);
@@ -3812,7 +3873,7 @@ class Dungeon {
       if (blocked) extra = ` — ${blocked}, cannot be tripped.`;
       else { const a = this._attackRoll(m, e, this._tripDefBonus(e)); if (a.hit) { e.prone = true; e.loseTurn = true; extra = ' — TRIPPED prone, it loses its turn!'; } else extra = ' — but it keeps its feet.'; }
     }
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} whips ${e.name} for ${r.damage}.${extra}${this._afterEnemyHit(e)}`, sound);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} whips ${e.name} for ${r.damage}${r.drTag || ''}.${extra}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   }
@@ -3826,7 +3887,7 @@ class Dungeon {
     if (r.hit) { this._dmgE(e, r.damage); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     m.untargetable = true;   // cleared at the start of the magus's next turn (see _advanceToActor)
     this._note(r.hit
-      ? `${ab.icon} ${m.nickname} DASHES through ${e.name} for ${r.damage} and blurs out of reach — untargetable until next turn!${this._afterEnemyHit(e)}`
+      ? `${ab.icon} ${m.nickname} DASHES through ${e.name} for ${r.damage}${r.drTag || ''} and blurs out of reach — untargetable until next turn!${this._afterEnemyHit(e)}`
       : `${ab.icon} ${m.nickname} dashes past ${e.name} (a miss) and blurs out of reach — untargetable until next turn. ${this._atkStr(r)}`, sound);
     this._echoToTable(sound);
   }
@@ -3896,7 +3957,9 @@ class Dungeon {
       this._echoToTable(sound); return;
     }
     // 2) No ally debuff → strip the strongest buff off a foe (dispel check vs ITS CL).
-    const foeScore = (e) => (e.hasted > 0 ? 3 : 0) + (e.buffs ? ((e.buffs.toHit || 0) + (e.buffs.dmg || 0) + (e.buffs.ac || 0) + (e.buffs.bonusDice || 0)) : 0);
+    //    Boss PRE-CAST wards (mage armor / shield / stoneskin / fire ward / fly /
+    //    shield of faith) count — plain Dispel peels ONE, Greater sweeps them all.
+    const foeScore = (e) => (e.hasted > 0 ? 3 : 0) + ((e.precast && e.precast.length) ? e.precast.length * 2 : 0) + (e.buffs ? ((e.buffs.toHit || 0) + (e.buffs.dmg || 0) + (e.buffs.ac || 0) + (e.buffs.bonusDice || 0)) : 0);
     const foe = this._targetableEnemies().filter(e => foeScore(e) > 0).sort((x, y) => foeScore(y) - foeScore(x))[0];
     if (foe) {
       const dc = this._dispelCheck(m, Math.max(this.depth || 1, crToNum(foe.cr) || 1), ab.greater);
@@ -3905,8 +3968,25 @@ class Dungeon {
         this._echoToTable(FAIL_SOUND); return;
       }
       const stripped = [];
-      if (foe.hasted > 0) { foe.hasted = 0; stripped.push('haste'); }
-      if (foe.buffs) { foe.buffs = null; stripped.push('combat buffs'); }
+      // Revert one pre-cast ward (Greater: all of them), undoing its mechanics.
+      const PRE_NAME = { magearmor: 'Mage Armor', shield: 'Shield', shieldoffaith: 'Shield of Faith', stoneskin: 'Stoneskin', protfire: 'fire ward', fly: 'Fly' };
+      const revert = (key) => {
+        if (key === 'magearmor') foe.ac -= 4;
+        else if (key === 'shield') { foe.ac -= 4; foe.shieldUp = false; }
+        else if (key === 'shieldoffaith') { foe.ac -= 3; foe.touchAC -= 3; }
+        else if (key === 'stoneskin') { if (typeof foe.dr === 'number') foe.dr = 0; }
+        else if (key === 'protfire') foe.fireWard = 0;
+        else if (key === 'fly') { foe.flying = false; foe.prone = true; foe.loseTurn = true; }   // dispelled mid-air → CRASHES prone
+        stripped.push(PRE_NAME[key] || key);
+        if (key === 'fly') stripped[stripped.length - 1] += ' (it CRASHES to the ground!)';
+      };
+      if (foe.precast && foe.precast.length) {
+        if (ab.greater) { for (const k of foe.precast.splice(0)) revert(k); }
+        else revert(foe.precast.pop());
+      } else {
+        if (foe.hasted > 0) { foe.hasted = 0; stripped.push('haste'); }
+        if (foe.buffs) { foe.buffs = null; stripped.push('combat buffs'); }
+      }
       this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${foe.name} — strips its ${stripped.join(' & ')}! [dispel ${dc.total} vs DC ${dc.dc}]`, sound);
       this._echoToTable(sound); return;
     }
@@ -4461,7 +4541,7 @@ class Dungeon {
       who.buffs.save += (ab.buff && ab.buff.save) || 0;
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
       if (ab.dr) who.dr = Math.max(who.dr || 0, ab.dr);   // Stoneskin — DR vs physical blows
-      if (ab.protectFire) who.protectFire = true;   // Protection from Fire — halves fire damage taken
+      if (ab.protectFire) who.protectFire = Math.min(120, 12 * (m.level || 1));   // PF1 Protection from Energy: an absorption pool — 12 per caster level, max 120
       if (ab.fly) who.flying = true;                // Fly — grounded foes can't melee them
       if (ab.canHitFlyers) who.canHitFlyers = true; // Magus Fly/Overland Flight — can melee airborne foes
       if (ab.displace) who.displaced = true;        // Displacement — 50% incoming-miss (this room)
@@ -4543,7 +4623,7 @@ class Dungeon {
     e.prone = true; e.loseTurn = true;
     this._note(`🦵 ${m.nickname} TRIPS ${e.name} prone${defTag} — it loses its turn! Free attack!`);
     const r = this._swingVsAC(m, this._enemyAC(e), e);   // prone (−4 AC) folded into _enemyAC
-    if (r.hit) { this._dmgE(e, r.damage); this._note(`⚔️ free hit on ${e.name} for ${r.damage}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    if (r.hit) { this._dmgE(e, r.damage); this._note(`⚔️ free hit on ${e.name} for ${r.damage}${r.drTag || ''}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     else this._note(`⚔️ the free hit misses. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
   }
@@ -4559,7 +4639,7 @@ class Dungeon {
     e.loseTurn = true;
     this._note(`🌀 ${m.nickname} DISARMS ${e.name}! [${cmb} vs CMD ${cmd}] — it scrambles for its weapon (loses its next turn) — free strike!`);
     const r = this._swingVsAC(m, this._enemyAC(e), e);
-    if (r.hit) { this._dmgE(e, r.damage); this._note(`🗡️ ${m.nickname} skewers the off-balance ${e.name} for ${r.damage}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    if (r.hit) { this._dmgE(e, r.damage); this._note(`🗡️ ${m.nickname} skewers the off-balance ${e.name} for ${r.damage}${r.drTag || ''}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     else this._note(`🗡️ the follow-up misses ${e.name}. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
   }
@@ -4648,19 +4728,23 @@ class Dungeon {
     const sounds = [];
     let target = firstTarget, bonus = false, kills = 0;
     const MAX = 24;   // safety cap so a freak run can't loop forever
+    // The whole sweep reports as ONE line — "Josh cleaves — Skeleton 35 ☠️, Zombie
+    // 28 ☠️, Shadow miss. 2 foes felled!" — instead of a line per swing (a 9-kill
+    // Great Cleave used to flood 10+ lines and trip the blind narrator's cap).
+    const bits = [];
     for (let swings = 0; target && swings < MAX; swings++) {
       struck.add(target.uid);
       const r = this._swingVsAC(m, this._enemyAC(target) + (bonus ? 2 : 0), target);
       sounds.push(baseSound || r.sound || null);
       let downed = false;
       if (r.fumble) {
-        this._note(`🪓 ${m.nickname}${bonus ? '’s follow-through' : ''} fumbles at ${target.name}! ${this._atkStr(r)}`, null);
+        bits.push(`${target.name} FUMBLE`);
       } else if (r.hit) {
         this._dmgE(target, r.damage); downed = target.hp <= 0;
-        this._note(`🪓 ${m.nickname} ${bonus ? '…cleaves on into' : 'cleaves'} ${target.name} for ${r.damage}.${this._afterEnemyHit(target)}`, null);
+        bits.push(`${target.name} ${r.damage}${r.drTag || ''}${downed ? ' ☠️' : ` (${Math.max(0, target.hp)}/${target.maxHp})`}${this._afterEnemyHit(target)}`);
         if (downed) { kills++; this._tryBanter(m, 'down', { enemy: target.name }); }
       } else {
-        this._note(`🪓 ${m.nickname}'s ${bonus ? 'follow-through' : 'swing'} misses ${target.name}. ${this._atkStr(r)}`, null);
+        bits.push(`${target.name} miss`);
       }
       // Continue if this swing FELLED a foe (Great Cleave chain), or — once — to
       // grant the Cleave ability's standard follow-through after a connecting hit.
@@ -4672,7 +4756,7 @@ class Dungeon {
       const pool = this.livingEnemies().filter(x => !struck.has(x.uid) && this._canReach(m, x));
       target = pool.length ? pick(pool) : null;
     }
-    if (kills >= 3) this._note(`🪓 ${m.nickname} carves clean through the line — ${kills} foes felled in one furious sweep!`);
+    if (bits.length) this._note(`🪓 ${m.nickname} cleaves — ${bits.join(', ')}.${kills >= 3 ? ` ${kills} foes felled in one furious sweep!` : ''}`, null);
     this._emitChainSfx(sounds);
   }
   // Feint: an opposed roll. On success the foe is flat-footed → a free
@@ -4687,7 +4771,7 @@ class Dungeon {
     m.weapon = weaponOf(m.gear, m.weaponKey);
     const r = this._swingVsAC(m, this._enemyAC(e), e);
     const tag = r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '';
-    if (r.hit) { this._dmgE(e, r.damage); this._note(`🗡️ ${m.nickname} strikes ${e.name} for ${r.damage}.${tag}${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    if (r.hit) { this._dmgE(e, r.damage); this._note(`🗡️ ${m.nickname} strikes ${e.name} for ${r.damage}${r.drTag || ''}.${tag}${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     else this._note(`🗡️ the strike misses ${e.name}. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
   }
@@ -4710,7 +4794,7 @@ class Dungeon {
     m.weapon = weaponOf(m.gear, m.weaponKey);
     const r = this._swingVsAC(m, this._enemyAC(e, { touch: m.weapon.group === 'firearms' }), e, hitMod);   // firearms hit vs touch AC
     if (m.weapon.atkSound) r.sound = m.weapon.atkSound; else if (ab.sound) r.sound = ab.sound;
-    if (r.hit) { this._dmgE(e, r.damage); this._note(`${ab.icon} ${m.nickname}${label} ${r.crit ? 'CRITS' : 'hits'} ${e.name} for ${r.damage}. ${this._atkStr(r)}${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    if (r.hit) { this._dmgE(e, r.damage); this._note(`${ab.icon} ${m.nickname}${label} ${r.crit ? 'CRITS' : 'hits'} ${e.name} for ${r.damage}${r.drTag || ''}. ${this._atkStr(r)}${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     else this._note(`${ab.icon} ${m.nickname}${label} misses ${e.name}. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
   }
@@ -4796,6 +4880,12 @@ class Dungeon {
     // warhammer…) > the swing's own hit/whiff. Plays ONCE for the whole flurry.
     let baseSound = m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null);
     if (m.smiteActive && m.weaponKey === 'warhammer') baseSound = '/audio/weapon_warhammer_smite.mp3';   // holy hammer-ring on a smite
+    // MULTI-SWING flurries collapse into ONE line — "Josh attacks Lich: 35, CRIT 62,
+    // miss — Slain!" — instead of a name-prefixed line per swing (Josh's TTS report).
+    // Single swings (and the Haste bonus strike) keep the classic one-liner with roll detail.
+    const multi = swings > 1;
+    const groups = [];   // consecutive same-target swings → one segment each
+    let flurrySound = null;
     for (let i = 0; i < swings; i++) {
       // Resolve swings ONE AT A TIME: if the target has dropped, the next swing
       // redirects to another foe (PF1 — you don't pre-commit a full attack) —
@@ -4808,19 +4898,32 @@ class Dungeon {
       else if (baseSound) r.sound = baseSound;       // signature / blunt report on the first swing
       // Rogue Sneak Attack with a light blade (dagger/kukri/shortsword) → Riki.
       if (r.sneakDice && m.cls === 'rogue' && ['dagger', 'kukri', 'shortsword'].includes(m.weaponKey) && i === 0) r.sound = '/audio/sneak_riki.mp3';
+      if (i === 0) flurrySound = r.sound;
       const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '');
-      const lead = swings > 1 ? `${m.nickname} (hit ${i + 1})` : m.nickname;
-      if (r.fumble) this._note(`${lead} fumbles the attack! ${this._atkStr(r)}`, r.sound);
-      else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${lead} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name} for ${r.damage}${r.drTag || ''}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, tgt.hp)}/${tgt.maxHp})`}`, r.sound);
+      if (!multi) {
+        if (r.fumble) this._note(`${m.nickname} fumbles the attack! ${this._atkStr(r)}`, r.sound);
+        else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name} for ${r.damage}${r.drTag || ''}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, tgt.hp)}/${tgt.maxHp})`}`, r.sound); }
+        else this._note(`${m.nickname} misses ${tgt.name}. ${this._atkStr(r)}`, r.sound);
+      } else {
+        let g = groups[groups.length - 1];
+        if (!g || g.tgt !== tgt) { g = { tgt, bits: [] }; groups.push(g); }
+        if (r.fumble) g.bits.push('FUMBLE');
+        else if (r.hit) { this._dmgE(tgt, r.damage); g.bits.push(`${r.crit ? 'CRIT ' : ''}${r.damage}${r.drTag || ''}${tag}`); }
+        else g.bits.push('miss');
+      }
+      if (r.hit) {
         // Rogue Offensive Defense (feat tree n8): landing a sneak attack grants +2 AC
         // until they next act — the strike leaves the foe off-balance.
         if (r.sneakDice && fighterFeats(m.cls, m.level, this._isRanged(m)).offDef && !m._offDef) { m._offDef = true; this._note(`🤸 ${m.nickname}'s strike leaves them covered — +2 AC until their next move (Offensive Defense).`); }
         // Promethean tentacles GRAB on a hit — the foe is grappled & helpless until it breaks free.
         if (m.weapon.grapple && tgt.hp > 0 && !tgt.grappled) { tgt.grappled = true; tgt.grappledBy = m.playerId; tgt.grappleRounds = 2; this._note(`🐙 ${tgt.name} is SEIZED in ${m.nickname}'s tentacles — grappled and helpless!`); }
+        if (tgt.hp <= 0) this._tryBanter(m, 'down', { enemy: tgt.name });
       }
-      else this._note(`${lead} misses ${tgt.name}. ${this._atkStr(r)}`, r.sound);
-      if (r.hit && tgt.hp <= 0) this._tryBanter(m, 'down', { enemy: tgt.name });
       this._echoToTable(r.sound);
+    }
+    if (multi && groups.length) {
+      const txt = groups.map(g => `${g.tgt.name}: ${g.bits.join(', ')}${g.tgt.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, g.tgt.hp)}/${g.tgt.maxHp})`}`).join('; ');
+      this._note(`⚔️ ${m.nickname} attacks — ${txt}`, flurrySound);
     }
     m.weapon = _realWeapon;   // drop any backup crossbow — restore the real weapon for later reads (e.g. next turn's target pick)
   }
