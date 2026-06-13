@@ -733,6 +733,28 @@
   let _dunPrevMyTurn = false;  // edge-detect the start of the blind player's dungeon turn
   let _dunSbMode = false;      // blind dungeon: spellbook open (numbers pick a spell LEVEL, Tab cycles spells)
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
+  // Full-art PORTRAITS (paired from each token's Foundry source) used as the
+  // background of hero/villain cards. The manifest lists which basenames have a
+  // portrait; tokens without one keep the plain card background.
+  let _portraitSet = null;
+  (function loadPortraits() {
+    fetch('/portraits/manifest.json', { cache: 'force-cache' })
+      .then(r => (r.ok ? r.json() : []))
+      .then(arr => { _portraitSet = new Set(Array.isArray(arr) ? arr : []); if (state.dungeon) renderDungeon(); })
+      .catch(() => { _portraitSet = new Set(); });
+  })();
+  // Token path / avatar id → its portrait URL, or null when none was paired.
+  function portraitFor(pathOrId) {
+    if (!_portraitSet || !pathOrId || typeof pathOrId !== 'string') return null;
+    const mm = pathOrId.match(/([^/]+?)(?:\.\w+)?$/);
+    const base = mm && mm[1];
+    return (base && _portraitSet.has(base)) ? `/portraits/${base}.webp` : null;
+  }
+  // Inline style for a card whose backdrop is a full-art portrait — a dark
+  // gradient over the cover keeps the name/HP/AC text legible on any art.
+  function portraitBg(url) {
+    return url ? `;background-image:linear-gradient(rgba(8,10,8,.60),rgba(8,10,8,.84)),url('${escapeAttr(url)}');background-size:cover;background-position:center top` : '';
+  }
   let _dunSbLevel = null;      // blind spellbook: currently-chosen spell level
   let _dunSbIdx = -1;          // blind spellbook: current spell index within the chosen level (Tab cycles)
   let _dunSessionMode = false; // blind dungeon: Esc "session menu" open (Tab cycles spectate/leave/cancel)
@@ -1035,9 +1057,11 @@
           const shadows = aimedBy.map((p, i) => `0 0 0 ${2 + i * 3}px hsla(${aimHue(p.playerId)},85%,60%,.85)`);
           // Inline box-shadow would override the .is-turn CSS glow — fold it in.
           if (isTurn && shadows.length) shadows.unshift('0 0 12px 3px rgba(255,110,70,.65)');
+          const artBg = portraitFor(e.art);   // full-art backdrop when one was paired
           const styles = [];
           if (shrouded) styles.push('opacity:.45');
           if (shadows.length) styles.push(`box-shadow:${shadows.join(', ')}`);
+          if (artBg) styles.push(portraitBg(artBg).replace(/^;/, ''));
           const aimChip = aimedBy.length
             ? `<div class="dmon__aim">${aimedBy.map(p => `<span style="color:hsl(${aimHue(p.playerId)},85%,70%)">🎯${escapeText(p.nickname)}</span>`).join(' ')}</div>`
             : '';
@@ -1045,7 +1069,7 @@
           const portrait = e.art
             ? `<div class="dmon__art" style="background-image:url('${escapeAttr(e.art)}')">${e.boss ? '<span class="dmon__crown">👑</span>' : ''}</div>`
             : `<div class="dmon__glyph">${e.glyph || '❓'}${e.boss ? ' 👑' : ''}</div>`;
-          return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''} ${isTurn ? 'is-turn' : ''}"${styles.length ? ` style="${styles.join(';')}"` : ''} data-enemy="${escapeAttr(e.uid)}" ${(dead || shrouded) ? 'disabled' : ''} title="${shrouded ? 'Shrouded in darkness — cannot be targeted' : ''}">
+          return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''} ${isTurn ? 'is-turn' : ''} ${artBg ? 'has-portrait' : ''}"${styles.length ? ` style="${styles.join(';')}"` : ''} data-enemy="${escapeAttr(e.uid)}" ${(dead || shrouded) ? 'disabled' : ''} title="${shrouded ? 'Shrouded in darkness — cannot be targeted' : ''}">
             ${portrait}
             <div class="dmon__name">${escapeText(e.name)}${e.flying ? ` <span class="dmon__fly" title="Flying — immune to prone (can't be tripped); holds the high ground: +1 to hit and +2 AC vs grounded heroes">🪽</span>` : ''}</div>
             ${aimChip}
@@ -1073,6 +1097,9 @@
       const isTurn = m.playerId === turnId;
       const cls = ['dpc']; if (pct <= 30) cls.push('is-low'); if (m.dead || m.left) cls.push('is-out'); if (m.downed) cls.push('is-down'); if (isMe) cls.push('is-me'); if (isTurn) cls.push('is-turn');
       if (_dungeonAllySel === m.playerId) cls.push('is-target');   // my buff/dispel aim
+      // Full-art portrait backdrop (the hero's avatar, or their Wild Shape form).
+      const heroPortrait = portraitFor((m.form && m.form.art) ? m.form.art : m.avatarId);
+      if (heroPortrait) cls.push('has-portrait');
       const tag = m.dead ? ' ☠️' : m.downed ? ' 🩸' : m.left ? ' 🪜' : '';
       // HP + level only — XP-to-next moved to the blue XP bar below (saves the text
       // space). The exact "XP→next" figure rides on the XP bar's hover tooltip.
@@ -1097,7 +1124,7 @@
       const kickHtml = canKick
         ? `<button type="button" class="dpc__remove" data-dungeon-kick="${escapeAttr(m.playerId)}" title="Dismiss ${escapeAttr(m.nickname)} from the party" aria-label="Dismiss ${escapeAttr(m.nickname)} from the party">×</button>`
         : '';
-      return `<div class="${cls.join(' ')}" style="position:relative"${(!m.dead && !m.left) ? ` data-ally="${escapeAttr(m.playerId)}" title="Click to target ${escapeAttr(m.nickname)} with your next buff or dispel (click again to clear)"` : ''}>${kickHtml}
+      return `<div class="${cls.join(' ')}" style="position:relative${portraitBg(heroPortrait)}"${(!m.dead && !m.left) ? ` data-ally="${escapeAttr(m.playerId)}" title="Click to target ${escapeAttr(m.nickname)} with your next buff or dispel (click again to clear)"` : ''}>${kickHtml}
         <div class="dpc__ac" title="${escapeAttr(m.acBreak || 'Armor Class — current total')}" style="position:absolute;bottom:3px;right:5px;font-size:0.7rem;font-weight:700;color:var(--brass-bright);background:rgba(0,0,0,0.55);border-radius:6px;padding:0 5px;line-height:1.45;cursor:help;z-index:6">🛡 ${Number.isFinite(m.ac) ? m.ac : '?'}</div>
         <div class="dpc__avatar"${m.crowned ? ' style="position:relative"' : ''}>${renderAvatar((m.form && m.form.art) ? m.form.art : m.avatarId)}${m.form ? `<span class="dpc__form" title="Wild Shape: ${escapeAttr(m.form.label)}" style="position:absolute;bottom:-4px;right:-2px;font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.8))">${m.form.glyph || '🐾'}</span>` : ''}${m.crowned ? `<span class="dpc__crown" title="Loot Lord" style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>${afk}${queuedChip}
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${m.form ? ` <span class="dpc__formtag" style="color:var(--brass-bright);font-size:.82em">${escapeText(m.form.label)}</span>` : ''}${tag}</div>
