@@ -2022,8 +2022,10 @@ class Dungeon {
     if (arcaneNoArmor) { if (armor > 0) parts.push(`+${armor} armor enchant (no armor worn)`); }
     else { const base = (m.cls === 'barbarian' || m.cls === 'oracle') ? 6 : 9; parts.push(`+${base + armor} ${base === 6 ? 'breastplate' : 'full plate'}${armor ? ` +${armor}` : ''}`); }
     const noShield = !!(w && (w.noShield || w.ranged));
-    if (shield >= 1 && m.cls !== 'swashbuckler' && !arcaneNoArmor && !noShield) parts.push(`+${2 + shield} shield +${shield}`);
-    else if (shield >= 1) parts.push('(shield owned but unusable — hands full)');
+    if (shield >= 1 && m.cls !== 'swashbuckler' && m.cls !== 'magus' && !arcaneNoArmor && !noShield) parts.push(`+${2 + shield} shield +${shield}`);
+    else if (shield >= 1) parts.push(m.cls === 'magus'
+      ? '(shield owned but unused — the off hand is for spell combat; the Shield SPELL works)'
+      : '(shield owned but unusable — hands full)');
     if (ring >= 1) parts.push(`+${ring} ring of protection`);
     if (m.mageArmor) parts.push('+4 Mage Armor');
     const buffAC = (m.buffs && m.buffs.ac) || 0;

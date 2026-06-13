@@ -305,6 +305,24 @@
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     setInterval(() => { try { window.speechSynthesis.resume(); } catch (_) {} }, 8000);
   }
+  // AUTO-MUTE the AI character voices while the screen reader is TALKING (Josh's
+  // ask) — the 11labs clips and the TTS were talking over each other. Polled
+  // (the engine has no reliable end event we trust — see the watchdog below):
+  // while TTS is speaking, the current banter clip's volume drops to 0; the
+  // moment the reader goes quiet, the clip's own volume comes right back.
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    setInterval(() => {
+      const a = state.banterAudio;
+      if (!a) return;
+      try {
+        if (state.on && window.speechSynthesis.speaking) {
+          if (a._preDuck == null) { a._preDuck = a.volume; a.volume = 0; }
+        } else if (a._preDuck != null) {
+          a.volume = a._preDuck; a._preDuck = null;
+        }
+      } catch (_) {}
+    }, 250);
+  }
   // ZOMBIE-ENGINE WATCHDOG. Chrome's speech engine can wedge for good when a
   // cancel() lands mid-utterance (it keeps claiming `speaking` with a dead queue —
   // this is what killed narration after leaving + re-entering the dungeon: every

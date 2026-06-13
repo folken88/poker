@@ -131,12 +131,14 @@ function acOf(gear, cls, opts = {}) {
   const armorBase = (cls === 'barbarian' || cls === 'oracle') ? 6 : 9;   // breastplate vs full plate
   const armorAC = arcaneNoArmor ? armor : (armorBase + armor);
   ac += armorAC; physical += armorAC;
-  // No shield AC for swashbucklers (a hand free for finesse + parry), arcane
-  // casters (need free hands to cast), or anyone whose WEAPON precludes a shield —
-  // a dual-wielder or a two-handed RANGED weapon (bow / crossbow / gun). They can
-  // still OWN a shield (it has treasure value and they can roll for drops); it just
-  // grants no AC. `opts.noShield` carries that from the wielder's weapon.
-  if (shield >= 1 && cls !== 'swashbuckler' && !arcaneNoArmor && !opts.noShield) { const v = 2 + shield; ac += v; physical += v; }
+  // No shield AC for swashbucklers (a hand free for finesse + parry), MAGI (the
+  // off hand is for SPELL COMBAT — a physical shield grants nothing; the Shield
+  // SPELL still works), arcane casters (need free hands to cast), or anyone whose
+  // WEAPON precludes a shield — a dual-wielder or a two-handed RANGED weapon
+  // (bow / crossbow / gun). They can still OWN a shield (it has treasure value
+  // and they can roll for drops); it just grants no AC. `opts.noShield` carries
+  // that from the wielder's weapon.
+  if (shield >= 1 && cls !== 'swashbuckler' && cls !== 'magus' && !arcaneNoArmor && !opts.noShield) { const v = 2 + shield; ac += v; physical += v; }
   if (ring >= 1)   { ac += ring; }
   return { ac, physical };
 }
