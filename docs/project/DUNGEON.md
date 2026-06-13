@@ -16,7 +16,21 @@ heroes who DIED in a failed run; bail/flee/disconnect always keeps gear.
 Reload drops you back INTO your run (3-minute reconnect grace, then auto-bail
 with your share). Run cancel: period key (blind) / session menu, confirm.
 **SIGTERM banks every active run's pool to the party before the process exits**
-(deploys can't eat gold).
+(deploys can't eat gold). **A hard CRASH also banks it**: `server.js` has
+`uncaughtException`/`unhandledRejection` handlers that run `_groupExtract` on
+every live run before exiting (a loot-roll timer once threw on a null
+`lootRoll`, crashed the process, and docker-restart vaporized a depth-15 run +
+12,893 gp — the SIGTERM path doesn't fire on a crash, so this backstop does).
+
+**Action queue**: a human may pick an action BEFORE their turn — it pre-loads
+(⏳ chip on the card) and fires when the turn comes; re-picking replaces it.
+Wiped by death/dying/acting-live/room change; a fizzle hands the turn back live.
+The blind E-lock rides the same queue.
+
+**AI flees with the party**: when a CONSCIOUS human voluntarily flees mid-fight
+and no conscious human remains to lead, the hired AI break and run too (each
+bails on its next turn). A human re-joining or a new room calls it off
+(`_fleeing`).
 
 ## PF1 systems implemented
 
@@ -41,14 +55,29 @@ with your share). Run cancel: period key (blind) / session menu, confirm.
   sickened, blinded (glitterdust), prone/trip (PF1 legs/size rules), fascinated/
   asleep (broken by hits), grappled (constrict, Grease/Dispel frees), slowed,
   darkness (can't act/be targeted — unless the party has Darkvision Communal),
-  fear shouts, ferocity (orcs fight to −10).
+  fear shouts, ferocity (orcs fight to −10). **Standing from prone is a MOVE
+  action**: a prone enemy that stands keeps its standard (one attack if it stays
+  on its target, none if it must close on a new one); a slowed/staggered foe
+  spends its single action just standing. **Flying creatures can't be knocked
+  prone** anywhere (trip gate, mass-prone saves, dispel-Fly grounds them first).
+- **Magus**: gains NO AC from a physical shield (off hand = spell combat); the
+  Shield SPELL still works. (Swashbucklers + arcane casters also get no shield AC.)
 - **Metamagic**: spontaneous casters get pre-cast toggles (Intensify/Empower/
   Maximize/Quicken) that re-level the slot, PF1 RAW stacking; prepared casters
   get designer entries (Quickened Magic Missile, Intensified/Empowered
   Fireball…). Bots use Empower/Maximize with surplus slots.
 - **Dispel Magic**: real dispel check (d20+CL vs 11+CL), strips ally debuffs or
   foe buffs — including boss pre-cast wards (one per cast; Greater sweeps all;
-  dispelling Fly drops the boss prone). Failure plays the vine boom.
+  dispelling Fly drops the boss prone). Failure plays the vine boom. **Targetable
+  by humans**: pick a specific afflicted ally OR enchanted foe (sighted: party-
+  card / enemy click; blind: a combined ally+foe picker, Return = smart auto).
+  No pick → smart auto-cast; REFUSES (slot kept, reason spoken) when the picked
+  target — or the whole battle — has nothing to dispel.
+- **Targeted ally spells** (`_pickedAlly`): Invisibility (+Greater), single Cure
+  X Wounds, Infernal Healing, and Breath of Life honor a chosen ally (sighted
+  party-card click → `allyUid`; blind ally-picker), else smart auto-pick. Kit
+  state flags these `allyPick`; sticky single-ally buffs refuse a re-cast on an
+  ally who already has them.
 - **Protection from Fire**: PF1 absorption pool (12/CL, max 120), soaks after
   saves, both for heroes (`_fireSoak`) and warded bosses (`fireWard`).
 
@@ -93,6 +122,32 @@ flavor for undead); wounded vampires spam their draining spellstrike; shamans
 Hold Person the unheld; eager bombers bomb; taunts pull AI heroes; enemies use
 the same flying-reach rules as heroes.
 
+**Gang encounters** (`MON_GANGS`): the FIRST creature picked sets the room's
+theme; the rest fill from the same gang — undead court, goblinoid + kobold
+warrens (with kennel vermin), beasts, horrors (minotaur/chimera/medusa/oozes/
+mouthers), giants, constructs, devils (+ Thrune villains), dragons (served by
+kobolds). Multi-gang monsters anchor ONE at random (ogre = goblinoid OR giant);
+unlisted = wildcard; the filter falls back to the full roster before a room
+under-fills. Creature TYPES are correct for Bane (devils = outsider, dragons =
+dragon, the basic undead carry `type:'undead'` so they're mind/cold/poison-immune).
+
+**The Whispering Way** (`ww_*`): 9 classed LIVING cultists (clerics, rogues,
+magi with lifesteal spellstrikes, wizards up to a W12 Archnecromancer) riding
+the undead gang — mind spells land on them, channel positive doesn't sear them.
+
+**Monks** (`monk_*`): 10 named martial artists (CR ≈ level−1), flurry + Evasion
++ kiai SFX — Shaolin (L5), Shackles Brawler (L6 Chelish, LE), Greenbriar Adept
+(L8 orc), Chelish Redactor ×2 (L9/L10, LE), Vakra (L11), Beastmode (L15 orc,
+2d6+10), Puff (goblin gang), Kobold Monk + Kobold Adept (kobold gang). Replaced
+the old random-faced generic Monk.
+
+**Card art**: every token has a paired full-art PORTRAIT in `public/portraits/`
+(paired by content-hash from the Foundry `token_*` siblings, see
+`tools/pair_portraits.sh` + `portraits/manifest.json`). Hero/villain cards use
+it as a dimmed cover BACKGROUND (client `portraitFor`/`has-portrait`); the small
+token is hidden when a portrait exists, kept when it doesn't. Transparent PNGs
+sit on a dark-grey card fill.
+
 ## Ally caster AI (`_botAbility` doctrine)
 
 Decision order for bot casters, per turn:
@@ -136,6 +191,12 @@ hero from the bench (not seated at poker, not in the dungeon — the recruiter's
 availability filter), arriving at full health as themselves. Dead humans and
 an empty bench fall back to a plain raise.
 
+**Invisible sneak-class allies STRIKE** (`SNEAK_CLASSES`: rogue/ninja/slayer):
+an unseen attacker denies Dex, so an invisible rogue doesn't lurk — it alpha-
+strikes the juiciest prey (enemy caster > boss > lowest HP). Normal Invisibility
+breaks on the hit; Greater stays. Non-sneak invisible allies hold and SAY why
+(blind-narrated). Every dungeon action error is spoken in blind mode.
+
 ## Recruiting
 
 Unseated bots are mercenaries: fee = 50g + 10g × level, paid to the ally.
@@ -150,3 +211,8 @@ flying, DR, conditions, wards); M = run pool + depth; L = my HP; H = party HP;
 C = cantrip; Esc = session menu; `?` = help mode (describes keys, never fires).
 Narrator speaks every fresh log line (cap 8 + "skipping N"); flurries and
 cleaves are aggregated into single lines server-side.
+
+**Targeting sub-modes**: an ally-targeted spell prompts "on whom?" with a
+numbered party list (Return = smart auto); Dispel prompts a combined
+afflicted-ally + enchanted-foe list. Action queue: picking off-turn pre-loads;
+the E-lock fires the attack when the turn comes.

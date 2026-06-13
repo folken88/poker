@@ -101,3 +101,18 @@ under distinct temp names.
   accumulators from it at boot, honoring `{type:'reset'}` era markers.
 - Dungeon `slot` action payloads index into the FULL kit ability array —
   filters (level/char gating) must never renumber slots.
+- **An uncaught throw anywhere crashes the whole process** (one Node thread):
+  docker auto-restarts and any in-memory dungeon run is lost. The SIGTERM payout
+  only covers graceful shutdown, so `server.js` also banks live runs on
+  `uncaughtException`/`unhandledRejection`. Guard async timer callbacks against
+  state that may have been nulled since they were scheduled (the loot-roll timer
+  re-read `this.lootRoll` mid-loop and crashed). When a player reports being
+  "kicked + robbed", check the backend logs for a crash FIRST — a piloted
+  persona already counts as human (`addMember` isBot=false; `/api/tables`
+  `dungeonHumans` uses `!m.isBot`), so "persona not detected" is usually a
+  red herring.
+- **Card portraits** (`public/portraits/` + `manifest.json`): paired from each
+  token's Foundry `token_*` sibling by content-hash (`tools/pair_portraits.sh`).
+  Unpaired tokens (renamed/edited, or token-only art) keep their plain card bg;
+  the tokens manifest's `sourceFile` records the original Foundry path. Regenerate
+  the manifest after adding portraits or the client won't use them.

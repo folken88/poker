@@ -55,5 +55,21 @@ piloting personas). `lobby.js` debt paths → `meyanda.onDebtEvent`.
 ## Keyboard / accessibility (table)
 
 Blind mode (`blindMode.js`): backtick toggles; spoken state, earcons,
-push-to-talk (hold Space) voice commands; B reads the board; bet shortcuts.
-Hard refresh on Josh's Mac is **Cmd+Option+R** (tell him that, not Ctrl+Shift+R).
+push-to-talk (hold Space) voice commands. Hard refresh on Josh's Mac is
+**Cmd+Option+R** (tell him that, not Ctrl+Shift+R).
+
+Keys (on your turn unless noted): **F** fold · **K** check/call · **A** all-in ·
+**R** opens the RAISE MENU (then 1 min, 2 half-pot, 3 pot, 4 all-in; Esc cancels) ·
+**T** raise-to-pot · **V** custom raise box · **C** your cards · **B** board ·
+**P** pot · **M** cash · **N** bet this hand · **1-9** read a seat · **S** stop ·
+**?** help mode. **0** toggles CARD READER: then 1/2 = pocket, 4/5/6 = flop,
+7 = turn, 8 = river — speaks ONLY the card (slot meanings are taught in help
+mode). **Help mode describes every key INCLUDING the bet keys even off-turn**
+(they were turn-gated before — Josh bug).
+
+Audio menu is a true click-disclosure (`display:none` when closed → out of the
+a11y tree, no hover-open that strands the VO cursor). Hand-rankings panel
+auto-collapses when blind mode turns on. The sidebar leaderboard / Hall of
+Records render-if-changed (identical re-renders were stranding the VO cursor and
+blinding the Item Chooser). While the screen reader is talking, the current AI
+character-voice clip is auto-muted (no talk-over), restored when it goes quiet.
