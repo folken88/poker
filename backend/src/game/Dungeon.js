@@ -520,12 +520,8 @@ const BRUCE_SFX = [
   '/audio/bruce_punch_single_quick.mp3', '/audio/bruce_scream_hoo_hoo_hooo.mp3',
   '/audio/bruce_scream_roar_kick_aftermath.mp3', '/audio/bruce_smack_scream_crash.mp3',
 ];
-// Monk tokens span many races + ages — a random face per spawn so a room of Monks
-// is a motley dojo (human/dwarf/orc/half-orc/tiefling/goblin/hobgoblin + cameos).
-const MONK_TOKENS = [
-  'monk_human_m', 'monk_acolyte', 'monk_tian', 'monk_shaolin_f', 'monk_shaolin_m', 'monk_bald',
-  'monk_dwarf', 'monk_tiefling', 'monk_orc', 'monk_halforc_f', 'monk_goblin', 'monk_hobgoblin', 'monk_jackie',
-].map(n => `/dungeon/monsters/${n}.webp`).concat(['/dungeon/monsters/monk_bruce.webp']);
+// Monks are now a roster of NAMED individuals (see the MONKS block below), each
+// its own MON entry with fixed art — no more random-face token pool.
 
 // ── Monster bestiary (placeholder art = emoji glyphs) ───────────────────────
 // PF1e stat blocks (CR in comment). NO depth scaling — difficulty comes from
@@ -551,7 +547,21 @@ const MON = {
   ghoul:             { name: 'Ghoul',             glyph: '🧛', cr: '1',   hp: 13,  ac: 14, toHit: 3,  dmgDie: 6,  dmgBonus: 1, fort: 1,  reflex: 3,  gold: [14, 32], paralyze: true, paralyzeDC: 13 },
   cultist:           { name: 'Whispering Cultist',glyph: '🕯️', cr: '1',   hp: 14,  ac: 14, toHit: 3,  dmgDie: 8,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [16, 38], healer: { dice: 1, uses: 1 } },   // a lay priest of the Whispering Way — one dark mending
   ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', cr: '2', hp: 17,  ac: 17, toHit: 6,  dmgDie: 8,  dmgBonus: 3, fort: 2,  reflex: 5,  gold: [28, 60], paralyze: true, paralyzeDC: 15 },
-  monk:              { name: 'Monk',              glyph: '🥋', cr: '2',   hp: 22,  ac: 16, toHit: 4,  dmgDie: 6,  dmgBonus: 2, fort: 4,  reflex: 5,  gold: [18, 42], attacks: 2, evasion: true, tokenPool: MONK_TOKENS, atkSounds: BRUCE_SFX },  // flurry of unarmed strikes; random face + kiai; Evasion
+  // ── THE MONKS — named martial artists, each a class NPC (CR ≈ level − 1).
+  //    Flurry of unarmed strikes (attacks scale with level), Evasion, Bruce-Lee
+  //    kiai SFX. Puff runs with goblin warbands; the two kobold monks with kobold
+  //    warrens; the Chelish ones (redactors, the Shackles sailor) are LE agents of
+  //    Cheliax; the rest are wildcards that wander into any room. ──
+  monk_shaolin:      { name: 'Shaolin Monk',      glyph: '🥋', cr: '4',   hp: 42,  ac: 18, toHit: 8,  dmgDie: 8,  dmgBonus: 4,  fort: 5,  reflex: 8,  will: 8,  gold: [30, 65],  attacks: 3, evasion: true, atkSounds: BRUCE_SFX },                 // L5 human
+  monk_sailor:       { name: 'Shackles Brawler',  glyph: '🥋', cr: '5',   hp: 50,  ac: 19, toHit: 9,  dmgDie: 8,  dmgBonus: 4,  fort: 6,  reflex: 9,  will: 8,  gold: [40, 85],  attacks: 3, evasion: true, evil: true, atkSounds: BRUCE_SFX },   // L6 chelish sailor monk
+  monk_greenbriar:   { name: 'Greenbriar Adept',  glyph: '🥋', cr: '7',   hp: 68,  ac: 20, toHit: 12, dmgDie: 10, dmgBonus: 6,  fort: 8,  reflex: 10, will: 9,  gold: [60, 130], attacks: 3, evasion: true, atkSounds: BRUCE_SFX },                 // L8 orc monk
+  monk_redactor2:    { name: 'Chelish Redactor',  glyph: '🥋', cr: '8',   hp: 78,  ac: 21, toHit: 13, dmgDie: 10, dmgBonus: 6,  fort: 8,  reflex: 11, will: 10, gold: [85, 170], attacks: 3, evasion: true, evil: true, atkSounds: BRUCE_SFX },   // L9 chelish operative
+  monk_redactor:     { name: 'Chelish Redactor',  glyph: '🥋', cr: '9',   hp: 85,  ac: 22, toHit: 14, dmgDie: 10, dmgBonus: 7,  fort: 9,  reflex: 12, will: 11, gold: [95, 190], attacks: 4, evasion: true, evil: true, atkSounds: BRUCE_SFX },   // L10 chelish operative — destroys/guards forbidden lore
+  monk_vakra:        { name: 'Vakra',             glyph: '🥋', cr: '10',  hp: 95,  ac: 23, toHit: 15, dmgDie: 10, dmgBonus: 7,  fort: 9,  reflex: 12, will: 11, gold: [110, 220], attacks: 4, evasion: true, atkSounds: BRUCE_SFX },                // L11 half-orc monk
+  monk_beastmode:    { name: 'Beastmode',         glyph: '🥋', cr: '14',  hp: 140, ac: 26, toHit: 19, dmgDie: 6,  dmgCount: 2, dmgBonus: 10, fort: 13, reflex: 14, will: 12, gold: [180, 360], attacks: 4, evasion: true, atkSounds: BRUCE_SFX },  // L15 orc monk — a flurry of 2d6+10 fists; very dangerous
+  monk_puff:         { name: 'Puff',              glyph: '🥋', cr: '2',   hp: 20,  ac: 16, toHit: 4,  dmgDie: 6,  dmgBonus: 2,  fort: 4,  reflex: 6,  will: 5,  gold: [12, 28],  attacks: 2, evasion: true, atkSounds: BRUCE_SFX },                 // goblin monk (goblin packs)
+  monk_kobold:       { name: 'Kobold Monk',       glyph: '🥋', cr: '1',   hp: 12,  ac: 16, toHit: 3,  dmgDie: 4,  dmgBonus: 1,  fort: 3,  reflex: 5,  will: 4,  gold: [8, 20],   attacks: 2, evasion: true, atkSounds: BRUCE_SFX },                 // kobold monk (kobold packs)
+  monk_kobold_big:   { name: 'Kobold Adept',      glyph: '🥋', cr: '3',   hp: 26,  ac: 17, toHit: 6,  dmgDie: 6,  dmgBonus: 2,  fort: 4,  reflex: 6,  will: 5,  gold: [16, 38],  attacks: 2, evasion: true, atkSounds: BRUCE_SFX },                 // bigger kobold monk
   skeletal_champion: { name: 'Skeletal Champion', glyph: '☠️', cr: '2',   hp: 19,  ac: 17, toHit: 5,  dmgDie: 8,  dmgBonus: 3, fort: 3,  reflex: 2,  gold: [26, 55], dr: { amount: 5, bypass: 'B' }, shout: { dc: 14, sound: '/audio/enemy_draugr_shout.mp3' } },   // DR 5/bludgeoning; bone-rattling shout: 1d8 + Fort or stunned 1
   shadow:            { name: 'Shadow',            glyph: '🌑', cr: '3',   hp: 19,  ac: 13, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 1,  reflex: 3,  gold: [30, 65] },
   fire_skeleton:     { name: 'Fire Skeleton',     glyph: '🔥', cr: '3',   hp: 22,  ac: 16, toHit: 5,  dmgDie: 6,  dmgBonus: 2, fort: 1,  reflex: 2,  gold: [24, 52], dr: { amount: 5, bypass: 'B' }, resist: { fire: 0, cold: 1.5 }, detonate: { count: 2, die: 6, sound: '/audio/enemy_fireskeleton_boom.mp3' } },   // skeleton: DR 5/bludgeoning, fire-immune, VULNERABLE to cold (×1.5); suicide bomber: on its TURN it rushes in and detonates — 1d6 fire/level to 1d2 heroes, destroying itself (kill it first to defuse)
@@ -644,6 +654,7 @@ const SIZE_NAME = { F: 'Fine', D: 'Diminutive', T: 'Tiny', S: 'Small', M: 'Mediu
 const MON_BODY = {
   dire_rat: { size: 'S', legs: 4 }, badger: { size: 'S', legs: 4 }, giant_centipede: { size: 'M', legs: 8 },
   goblin: { size: 'S' }, kobold: { size: 'S' }, kobold_spearman: { size: 'S' }, kobold_shaman: { size: 'S' },
+  monk_puff: { size: 'S' }, monk_kobold: { size: 'S' }, monk_kobold_big: { size: 'S' },
   kobold_rogue: { size: 'S' }, goblin_rogue: { size: 'S' }, goblin_shaman: { size: 'S' }, goblin_barbarian: { size: 'S' },
   giant_spider: { size: 'M', legs: 8 }, shadow: { legs: 0 },                       // incorporeal — nothing to sweep
   gray_ooze: { legs: 0 }, gibbering_mouther: { legs: 0 },                          // amorphous
@@ -672,6 +683,10 @@ const MON_GANGS = {
   goblin: ['goblinoid'], goblin_rogue: ['goblinoid'], goblin_shaman: ['goblinoid'], goblin_barbarian: ['goblinoid'],
   kobold: ['kobold'], kobold_spearman: ['kobold'], kobold_shaman: ['kobold'], kobold_rogue: ['kobold'],
   dire_rat: ['goblinoid', 'kobold', 'beast'], giant_centipede: ['kobold', 'beast'], giant_spider: ['kobold', 'beast', 'horror'],
+  // monks: Puff runs with goblins, the kobold monks with kobold warrens; the
+  // Chelish agents serve Hell (devil/Thrune); the rest are wildcards (unlisted).
+  monk_puff: ['goblinoid'], monk_kobold: ['kobold'], monk_kobold_big: ['kobold'],
+  monk_redactor: ['devil'], monk_redactor2: ['devil'], monk_sailor: ['devil'],
   // the restless dead — vampires mix with every other undead; the Whispering
   // Way cultist herds them
   skeleton: ['undead'], zombie: ['undead'], ghoul: ['undead'], ghast: ['undead'], shadow: ['undead'],
@@ -726,6 +741,10 @@ const MON_ART = {
   vamp_bodyguard: 'vamp_bodyguard', vamp_priest: 'vamp_priest', vamp_assassin: 'vamp_assassin',
   vamp_nightguard: 'vamp_nightguard', vamp_noble: 'vamp_noble', vamp_techwitch: 'vamp_techwitch',
   zernibeth: 'zernibeth', barzillai: 'barzillai',
+  // The named monks (portrait + token paired from Foundry).
+  monk_shaolin: 'monk_shaolin', monk_sailor: 'monk_sailor', monk_greenbriar: 'monk_greenbriar',
+  monk_redactor: 'monk_redactor', monk_redactor2: 'monk_redactor2', monk_vakra: 'monk_vakra',
+  monk_beastmode: 'monk_beastmode', monk_puff: 'monk_puff', monk_kobold: 'monk_kobold', monk_kobold_big: 'monk_kobold_big',
   // The Whispering Way cell — plague-masked tokens from carrion_crown/whisperingway.
   ww_initiate: 'ww_initiate', ww_knife: 'ww_knife', ww_gravecaller: 'ww_gravecaller',
   ww_bladebound: 'ww_bladebound', ww_necromancer: 'ww_necromancer', ww_slayer: 'ww_slayer',
@@ -745,7 +764,10 @@ const MON_TYPE = {
   giant_centipede: 'vermin', giant_spider: 'vermin',
   goblin: 'humanoid', goblin_rogue: 'humanoid', goblin_shaman: 'humanoid', goblin_barbarian: 'humanoid',
   kobold: 'humanoid', kobold_spearman: 'humanoid', kobold_shaman: 'humanoid', kobold_rogue: 'humanoid',
-  cultist: 'humanoid', monk: 'humanoid',
+  cultist: 'humanoid',
+  monk_shaolin: 'humanoid', monk_sailor: 'humanoid', monk_greenbriar: 'humanoid', monk_redactor: 'humanoid',
+  monk_redactor2: 'humanoid', monk_vakra: 'humanoid', monk_beastmode: 'humanoid', monk_puff: 'humanoid',
+  monk_kobold: 'humanoid', monk_kobold_big: 'humanoid',
   skeleton: 'undead', zombie: 'undead', ghoul: 'undead', ghast: 'undead', skeletal_champion: 'undead',
   shadow: 'undead', fire_skeleton: 'undead', wight: 'undead', vampire: 'undead', lich: 'undead',
   ogre: 'giant', ettin: 'giant', hill_giant: 'giant', stone_giant: 'giant',
@@ -803,8 +825,11 @@ const ALIGN_BY_KEY = {
   // chaotic evil
   ghoul: 'CE', ghast: 'CE', shadow: 'CE', ogre: 'CE', ettin: 'CE', minotaur: 'CE',
   hill_giant: 'CE', harpy: 'CE', gargoyle: 'CE', chimera: 'CE', abyssal_horror: 'CE',
-  // lawful neutral (a disciplined martial foe — not smite-able)
-  monk: 'LN',
+  // monks — the Chelish agents are lawful EVIL (smite-able); the rest are the
+  // disciplined LN martial artists.
+  monk_redactor: 'LE', monk_redactor2: 'LE', monk_sailor: 'LE',
+  monk_shaolin: 'LN', monk_greenbriar: 'LN', monk_vakra: 'LN', monk_beastmode: 'LN',
+  monk_puff: 'LN', monk_kobold: 'LN', monk_kobold_big: 'LN',
 };
 for (const [k, base] of Object.entries(MON)) {
   base.align = ALIGN_BY_KEY[k] || 'NE';
@@ -3518,14 +3543,24 @@ class Dungeon {
           if (t[flag] && t[flag][ab.key]) return { ok: false, error: `${t.nickname} already has ${ab.name}` };
         }
       }
-      if (ab.effect === 'cleanse') {
+    }
+    // DISPEL MAGIC targeting: an EXPLICIT pick (ally to un-debuff OR foe to
+    // un-buff) is honored; an invalid pick is refused. With NO pick the cast
+    // auto-targets the smartest option, but is REFUSED — slot kept — when there
+    // is nothing to dispel ANYWHERE (no hostile magic on the party, no
+    // enchantments on the foes). The reason is toasted + spoken in blind mode.
+    if (ab.effect === 'cleanse') {
+      const allyAfflicted = (a) => (a.paralyzed > 0) || (a.stunned > 0) || (a.slowed > 0) || a.grappled || (a.blinded > 0) || (a.sickened > 0);
+      const foeEnchanted = (e) => (e.hasted > 0) || !!(e.precast && e.precast.length)
+        || !!(e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0 || (e.buffs.bonusDice || 0) > 0));
+      const pickedId = payload && (payload.allyUid || payload.targetUid);
+      if (pickedId) {
         const ta = this.livingParty().find(a => a.playerId === pickedId);
         const te = !ta && this.enemies.find(e => e.uid === payload.targetUid && e.hp > 0);
-        const allyAfflicted = (a) => (a.paralyzed > 0) || (a.stunned > 0) || (a.slowed > 0) || a.grappled || (a.blinded > 0) || (a.sickened > 0);
-        const foeEnchanted = (e) => (e.hasted > 0) || !!(e.precast && e.precast.length)
-          || !!(e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0 || (e.buffs.bonusDice || 0) > 0));
         if (ta && !allyAfflicted(ta)) return { ok: false, error: `${ta.nickname} has no hostile magic on them to dispel` };
         if (te && !foeEnchanted(te)) return { ok: false, error: `${te.name} has no enchantment to strip` };
+      } else if (!this.livingParty().some(allyAfflicted) && !this._targetableEnemies().some(foeEnchanted)) {
+        return { ok: false, error: 'nothing to dispel — no hostile magic on the party and no enchantments on the foes' };
       }
     }
     m.flatFooted = false;   // acting ends flat-footed
@@ -3802,8 +3837,12 @@ class Dungeon {
           (ab.effect === 'invisible') ||
           (ab.effect === 'infernalheal') ||
           (ab.effect === 'revive' && !ab.raiseDead);
+        // dispelPick: Dispel Magic can be aimed at EITHER an afflicted ally or an
+        // enchanted foe — the blind picker offers both sides; sighted uses the
+        // party-card / enemy selection. No pick → smart auto / refuse if nothing.
+        const dispelPick = ab.effect === 'cleanse';
         return {
-        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, allyPick, maxTargets: ab.maxTargets || 1,
+        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, allyPick, dispelPick, maxTargets: ab.maxTargets || 1,
         slot: kit.abilities.indexOf(ab),   // stable index into kit.abilities (the action payload `slot`) — survives the char filter
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null,

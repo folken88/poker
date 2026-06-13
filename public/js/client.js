@@ -733,6 +733,7 @@
   let _dunPrevMyTurn = false;  // edge-detect the start of the blind player's dungeon turn
   let _dunSbMode = false;      // blind dungeon: spellbook open (numbers pick a spell LEVEL, Tab cycles spells)
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
+  let _dunDispelPick = null;   // blind dungeon: Dispel Magic awaiting a target — {slot,label,targets:[{kind:'ally'|'foe',id,name}]} (numbers pick, Return = smart auto)
   // Full-art PORTRAITS (paired from each token's Foundry source) used as the
   // background of hero/villain cards. The manifest lists which basenames have a
   // portrait; tokens without one keep the plain card background.
@@ -1629,6 +1630,20 @@
           _dunAllyPick = { slot, label: ab.name, allies };
           const list = party.map((p, i) => `${i + 1} ${p.nickname}${p.playerId === meId ? ', you' : ''}`).join(', ');
           sayU(`${ab.name} on whom? ${list}. Press a number, or Return for the best target.`);
+        } else if (ab.dispelPick) {
+          // Dispel Magic — pick an afflicted ALLY (strip a debuff) or an enchanted
+          // FOE (strip a buff). Numbers pick; Return = smart auto. If the client
+          // sees no candidate, let the server decide (it sees boss wards too) — it
+          // auto-casts or refuses + speaks "nothing to dispel".
+          const CC = ['held', 'paralyzed', 'slowed', 'grappled', 'blinded', 'sickened', 'stunned'];
+          const allies = (d.party || []).filter(p => !p.left && !p.dead && (p.conditions || []).some(c => CC.includes(c.key)));
+          const foes = aliveE.filter(e => (e.buffs || []).length);
+          const targets = allies.map(p => ({ kind: 'ally', id: p.playerId, name: p.nickname }))
+                       .concat(foes.map(e => ({ kind: 'foe', id: e.uid, name: e.name })));
+          if (!targets.length) { dungeonAction('ability', { slot }); return; }   // server auto/refuses
+          _dunDispelPick = { slot, label: ab.name, targets };
+          const list = targets.map((t, i) => `${i + 1} ${t.name}${t.kind === 'ally' ? ' (cleanse)' : ' (strip)'}`).join(', ');
+          sayU(`${ab.name} on whom? ${list}. Press a number, or Return for the best target.`);
         } else {
           dungeonAction('ability', { slot });   // self / ally — server chooses
         }
@@ -1713,6 +1728,32 @@
         }
         // any other key cancels the pending pick and falls through
         _dunAllyPick = null;
+      }
+      // ----- Dispel-pick sub-mode (Dispel Magic awaiting an ally OR foe) -------
+      //   A number picks that target; Return = smart auto-pick; Escape cancels.
+      if (_dunDispelPick) {
+        if (e.key === 'Escape') { e.preventDefault(); _dunDispelPick = null; sayU('Cancelled.'); return; }
+        if (e.key === 'Enter' || e.code === 'NumpadEnter') {
+          e.preventDefault();
+          const p = _dunDispelPick; _dunDispelPick = null;
+          if (!myTurn) { sayU('Not your turn.'); return; }
+          sayU(`Casting ${p.label} on the best target.`);
+          dungeonAction('ability', { slot: p.slot });   // no target → server smart-picks / refuses
+          return;
+        }
+        const dm = (e.key || '').match(/^[1-9]$/);
+        if (dm) {
+          e.preventDefault();
+          const p = _dunDispelPick;
+          const t = p.targets[parseInt(e.key, 10) - 1];
+          if (!t) { sayU(`No target ${e.key}.`); return; }
+          _dunDispelPick = null;
+          if (!myTurn) { sayU('Not your turn.'); return; }
+          sayU(`Casting ${p.label} on ${t.name}.`);
+          dungeonAction('ability', t.kind === 'ally' ? { slot: p.slot, allyUid: t.id } : { slot: p.slot, targetUid: t.id });
+          return;
+        }
+        _dunDispelPick = null;   // any other key cancels + falls through
       }
       // ----- Session menu (opened by Esc) ------------------------------------
       // A self-contained sub-mode for the spectate / leave / cancel controls. Done
@@ -1900,6 +1941,19 @@
           const party = (d.party || []).filter(p => !p.left && !p.dead);
           _dunAllyPick = { slot: act.slot, label, allies: party.map(p => p.playerId) };
           const list = party.map((p, i) => `${i + 1} ${p.nickname}${p.playerId === meId ? ', you' : ''}`).join(', ');
+          sayU(`${label} on whom? ${list}. Press a number, or Return for the best target.`);
+          return;
+        }
+        // Dispel Magic feature (e.g. druid) — pick an afflicted ally or enchanted foe.
+        if (ab && ab.dispelPick) {
+          const CC = ['held', 'paralyzed', 'slowed', 'grappled', 'blinded', 'sickened', 'stunned'];
+          const allies = (d.party || []).filter(p => !p.left && !p.dead && (p.conditions || []).some(c => CC.includes(c.key)));
+          const foes = alive.filter(e => (e.buffs || []).length);
+          const targets = allies.map(p => ({ kind: 'ally', id: p.playerId, name: p.nickname }))
+                       .concat(foes.map(e => ({ kind: 'foe', id: e.uid, name: e.name })));
+          if (!targets.length) { sayU(`Casting ${label}.`); dungeonAction('ability', { slot: act.slot }); return; }
+          _dunDispelPick = { slot: act.slot, label, targets };
+          const list = targets.map((t, i) => `${i + 1} ${t.name}${t.kind === 'ally' ? ' (cleanse)' : ' (strip)'}`).join(', ');
           sayU(`${label} on whom? ${list}. Press a number, or Return for the best target.`);
           return;
         }

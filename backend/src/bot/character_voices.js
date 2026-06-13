@@ -68,7 +68,7 @@ const CHARACTER_VOICES = {
   // ===== Defaults picked from your 11labs library — adjust as desired =====
   // Carrion Crown / Caliphas crowd
   'Storgrim':          'xytDFh9V3d1GsWzN9QtU', // Arnold2 (user pick; also Conchobar's voice) — replaced Paul (Yorkshire)
-  'Ulfred':            'Yj3XGMd9w2H4C0P0L28M', // Sean (user pick; also Kai Ginn's voice) — replaced Adam
+  'Ulfred':            'xytDFh9V3d1GsWzN9QtU', // Arnold2 (user pick) — replaced Sean
   'Tamsin':            'dAlhI9qAHVIjXuVppzhW', // Tamsin — Engaging British storyteller (name-match!)
   'Toni':              'pFZP5JQG7iQjIQuC4Bku', // Lily — Velvety Actress (British, mid-aged) — vampire velvet
   'Agu':               'XB0fDUnXU5powFXDhCwa', // Charlotte (11labs default, Swedish-accented mature female — placeholder for "Slavic middle-aged woman"; swap to a specific library voice when one is picked)
