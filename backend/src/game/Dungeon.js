@@ -898,6 +898,7 @@ class Dungeon {
     this._stepTimer = null;
     this._bantRound = -1;        // last combat round an AI ally reacted (1 per round)
     this.targeting = {};         // playerId → enemy uid: live 🎯 aim telegraphy (humans only)
+    this._fleeing = false;       // a human fled mid-fight with no human left to lead → AI hirelings retreat too
   }
 
   // Live aim telegraphy — a human's currently-selected foe, rebroadcast so the
@@ -1085,6 +1086,7 @@ class Dungeon {
       if (victims.length) { const v = pick(victims); m.trueNick = m.nickname; m.nickname = v.nickname; m.avatarId = v.avatarId; }
     }
     this.party.push(m);
+    if (!isBot && this._fleeing) { this._fleeing = false; this._note('🛡️ A delver returns to the fray — the hired blades hold their ground after all.'); }   // a human re-joining calls off the retreat
     this._note(`🚪 ${m.nickname} joins the delve. (Lv ${level} · ${maxHp} HP)`);
     this._log('join', { who: playerId, level, maxHp, party: this.present().length });
     // Mid-combat join → add to the current turn order so they act this round.
@@ -1270,6 +1272,7 @@ class Dungeon {
     this.status = 'combat';
     this.round = 1;
     this.targeting = {};   // last room's 🎯 aim picks are stale — fresh foes, fresh aims
+    this._fleeing = false;   // a fresh room — any prior retreat is moot
     this._rollInitiative();
     this._note(`🚪 Door creaks open — room ${this.depth}. ${this._enemySummary()}`);
     this._log('room', { boss: this.enemies.some(e => e.boss), party: this.present().length, enemies: this.enemies.map(e => ({ name: e.name, cr: e.cr, hp: e.maxHp, ac: e.ac, toHit: e.toHit })) });
@@ -1579,7 +1582,16 @@ class Dungeon {
       const h = Math.max(1, Math.floor((m.level || 1) / 3)); m.hp = Math.min(m.maxHp, m.hp + h);
       this._note(`💗 ${m.nickname}'s Judgement of Healing mends ${h} HP.`);
     }
-    if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, aiStepMs(m)); this._broadcast(); }
+    if (m.isBot && this._fleeing) {
+      // The party is in RETREAT (a human fled with no human left to lead) — the
+      // hireling grabs its share and flees too, on its own turn (Josh: "if the
+      // humans flee, the AI should flee, if they live that long"). bail() banks
+      // the share, advances the turn, and group-extracts the rest once the field
+      // empties.
+      this._stepTimer = setTimeout(() => { try { this.bail(m.playerId); } catch (_) { this._nextTurn(); } }, aiStepMs(m));
+      this._broadcast();
+    }
+    else if (m.isBot) { this._stepTimer = setTimeout(() => { this._allyAct(m); this._nextTurn(); }, aiStepMs(m)); this._broadcast(); }
     else if (m.queuedAction) {
       // ── ACTION QUEUE ── the player pre-loaded this turn: fire it after a
       // short beat (the board visibly becomes their turn first). If it fizzles
@@ -3520,9 +3532,9 @@ class Dungeon {
       taunt:       () => this._abTaunt(m, ab),
       smite:       () => this._abSmite(m, ab),
       detectevil:  () => this._abDetectEvil(m, ab),
-      heal:        () => this._abHeal(m, ab),
+      heal:        () => this._abHeal(m, ab, payload),
       channelneg:  () => this._abChannelNeg(m, ab),
-      revive:      () => this._abRevive(m, ab),
+      revive:      () => this._abRevive(m, ab, payload),
       haste:       () => this._abHaste(m, ab),
       invisible:   () => this._abInvisible(m, ab, payload),
       magearmor:   () => this._abMageArmor(m, ab),
@@ -3771,8 +3783,18 @@ class Dungeon {
         // level, draws the right slot count, and greys out if there's no slot there
         // (or it pushes past 9th).
         const slvlEff = ab.cost === 'slot' ? this._slotLevelFor(m, ab) : ab.slvl;
+        // allyPick: this spell can be aimed at ONE chosen ally (the sighted
+        // party-card click and the blind ally-picker both set payload.allyUid;
+        // the server honors it, else smart-auto-picks). True for single cures,
+        // single-ally buffs, invisibility, infernal healing, and Breath of Life.
+        const allyPick =
+          (ab.effect === 'heal' && ab.heal === 'single') ||
+          (ab.effect === 'buff' && ab.target === 'ally' && !ab.party && !ab.powerattack && !ab.deadlyaim) ||
+          (ab.effect === 'invisible') ||
+          (ab.effect === 'infernalheal') ||
+          (ab.effect === 'revive' && !ab.raiseDead);
         return {
-        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, maxTargets: ab.maxTargets || 1,
+        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, allyPick, maxTargets: ab.maxTargets || 1,
         slot: kit.abilities.indexOf(ab),   // stable index into kit.abilities (the action payload `slot`) — survives the char filter
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null,
@@ -4424,11 +4446,11 @@ class Dungeon {
   // and the m.invisible=false clears in _playerAttack / offensive _useAbility).
   _abInvisible(m, ab, payload) {
     if (ab.greater) {
-      // GREATER INVISIBILITY — stays up the whole fight, even when attacking. Best
-      // on a ROGUE ally (constant Sneak Attack); else the caster, or a chosen ally.
+      // GREATER INVISIBILITY — stays up the whole fight, even when attacking. The
+      // caster's CHOSEN ally wins; else best on a ROGUE ally (constant Sneak
+      // Attack); else the caster.
       const party = this.livingParty();
-      let target = null;
-      if (payload && payload.targetUid) target = party.find(a => a.playerId === payload.targetUid || a.uid === payload.targetUid);
+      let target = this._pickedAlly(payload, { alive: true });
       if (!target) target = party.find(a => isSneakClass(a.cls) && a.playerId !== m.playerId) || m;
       target.invisible = true; target.greaterInvis = true;
       const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
@@ -4437,8 +4459,9 @@ class Dungeon {
       this._echoToTable(ab.sound);
       return;
     }
-    // Cloak the MOST-HURT ally (least current HP) — not necessarily the caster.
-    const target = this.livingParty().slice().sort((a, b) => a.hp - b.hp)[0] || m;
+    // The caster's CHOSEN ally (Josh: hide Vaughn, not always Nomkath), else the
+    // MOST-HURT ally (least current HP) — not necessarily the caster.
+    const target = this._pickedAlly(payload, { alive: true }) || this.livingParty().slice().sort((a, b) => a.hp - b.hp)[0] || m;
     target.invisible = true;
     const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
     this._note(`${ab.icon} ${m.nickname} cloaks ${who} in INVISIBILITY — unseen until they strike.`, ab.sound);
@@ -4461,12 +4484,12 @@ class Dungeon {
   }
   // Infernal Healing, Greater — fast healing 4 on the most-wounded ally (or a chosen
   // ally). Ticks at the start of that ally's turn (see _advanceToActor); lasts the room.
-  _abInfernalHeal(m, ab) {
-    // Always lands on the ally with the LEAST current HP right now — INCLUDING
-    // downed/dying allies below 0 HP (the fast healing can knit them back up).
-    // If everyone is at full HP, the caster takes it themselves.
+  _abInfernalHeal(m, ab, payload) {
+    // The caster's CHOSEN ally wins; else the ally with the LEAST current HP right
+    // now — INCLUDING downed/dying allies below 0 HP (the fast healing can knit
+    // them back up). If everyone is at full HP, the caster takes it themselves.
     const wounded = this.party.filter(a => !a.left && !a.dead && a.hp < a.maxHp);
-    const target = wounded.length ? wounded.slice().sort((a, b) => a.hp - b.hp)[0] : m;
+    const target = this._pickedAlly(payload) || (wounded.length ? wounded.slice().sort((a, b) => a.hp - b.hp)[0] : m);
     target.infernalHeal = ab.heal || 4;
     const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
     this._note(`${ab.icon} ${m.nickname} anoints ${who} with infernal ichor — fast healing ${target.infernalHeal} HP/turn for the rest of the room.`, ab.sound);
@@ -4575,7 +4598,7 @@ class Dungeon {
   }
   // Breath of Life (revive a DYING ally + big heal) / Raise Dead + Resurrection
   // (bring a SLAIN ally back into the run). High-level cleric prayers.
-  _abRevive(m, ab) {
+  _abRevive(m, ab, payload) {
     const lvl = m.level || 1;
     const sound = ab.sound;
     const healBig = () => Math.max(1, dRollN(ab.reviveDice || 5, 8) + Math.min(ab.reviveCap || lvl, lvl));
@@ -4622,9 +4645,12 @@ class Dungeon {
       // No corpse to raise → fall through to a big heal.
     } else {
       // Breath of Life — snatch a DYING (downed) OR freshly-SLAIN ally back (castable IN
-      // combat). Catching them in time PREVENTS the lost level. Prefer the dying (cheaper
+      // combat). Catching them in time PREVENTS the lost level. The caster's CHOSEN
+      // ally (if they picked a downed/slain one) wins; else prefer the dying (cheaper
       // to save) before the dead.
-      const target = this.party.find(a => !a.left && !a.dead && a.downed)
+      const picked = this._pickedAlly(payload);
+      const target = (picked && (picked.downed || picked.dead) ? picked : null)
+                  || this.party.find(a => !a.left && !a.dead && a.downed)
                   || this.party.find(a => !a.left && a.dead);
       if (target) {
         const wasDead = target.dead;
@@ -4831,7 +4857,7 @@ class Dungeon {
     this._note(`${ab.icon} ${m.nickname} channels NEGATIVE energy — black vitality knits the undead: +${h} (${parts.join(', ')}).`, sound);
     this._echoToTable(sound);
   }
-  _abHeal(m, ab) {
+  _abHeal(m, ab, payload) {
     const lvl = m.level || 1;
     const sound = ab.sound || pick(SND.flesh);
     // Channel Positive — PF1e positive-energy burst: ½ caster level d6 (1d6 at
@@ -4882,7 +4908,11 @@ class Dungeon {
       // skip a bleeding-out ally and land on someone barely scratched.) A cure
       // that lifts a downed ally above 0 puts them back on their feet.
       const cands = this.present().filter(a => !a.dead && !a.undead);   // a cure spell can't touch the undead comrades
-      const target = cands.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
+      // The caster's CHOSEN ally (unless they picked an undead comrade a cure
+      // can't touch), else the most-hurt — INCLUDING a downed/dying ally.
+      const picked = this._pickedAlly(payload);
+      const target = (picked && !picked.undead) ? picked
+                   : (cands.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m);
       const wasDown = target.hp <= 0;
       const h = cureAmt(); target.hp = Math.min(target.maxHp, target.hp + h);
       const up = wasDown && target.hp > 0;
@@ -4901,6 +4931,20 @@ class Dungeon {
   }
   // Pick the single ally a target:'ally' buff lands on — the player's chosen one,
   // else a bot picks by intent (most-hurt for Bear's, a martial for Bull's…).
+  // The ally a HUMAN explicitly chose for a targeted spell (party-card click →
+  // allyUid; the blind ally-picker and older flows → targetUid as a fallback).
+  // Returns the present (not-left) member, or null when nothing valid was picked
+  // → the caller falls back to its smart auto-pick, exactly like the AI does.
+  // `opts.alive` excludes the dead/dying (e.g. you can't turn a corpse invisible);
+  // heals/revives leave it off so they can reach a downed ally.
+  _pickedAlly(payload, opts = {}) {
+    const id = payload && (payload.allyUid || payload.targetUid);
+    if (!id) return null;
+    const a = this.present().find(x => x.playerId === id || x.uid === id);
+    if (!a) return null;
+    if (opts.alive && (a.dead || a.hp <= 0)) return null;
+    return a;
+  }
   _buffTarget(m, ab, payload) {
     const allies = this.livingParty();
     // Explicit pick first: allyUid is the party-card selection; targetUid is kept
@@ -5484,6 +5528,17 @@ class Dungeon {
     this._log('bail', { who: playerId, share, poolLeft: this.runGold, fled, downed: !!m.downed });
     if (m.dead) this._applyDeathPenalty(m);   // a slain hero leaving the run locks in the level loss
     this._emitMemberExit(m, { reason: 'bailed', goldBanked: share, fled });
+    // RETREAT SIGNAL — a CONSCIOUS human voluntarily fleeing mid-fight, with no
+    // conscious human left to lead, tells the hired AI to break and run too. Each
+    // bot bails on its own next turn (see the turn scheduler). The dying are
+    // dragged out with the group-extract once the field clears.
+    if (fled && !m.isBot && !m.dead && !m.downed && !this._fleeing) {
+      const humanUp = this.party.some(h => !h.isBot && !h.left && !h.dead && h.hp > 0);
+      if (!humanUp) {
+        this._fleeing = true;
+        this._note('🏃 The last of the delvers turns to flee — the hired blades break and run for the stairs too!');
+      }
+    }
     // Last conscious member out → drag any remaining dying allies out with their
     // share (voluntary retreat). Otherwise, if only AI remain, cash them out.
     if (!this._anyUp()) { this._groupExtract(); return { ok: true, goldBanked: share }; }

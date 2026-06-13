@@ -732,6 +732,7 @@
   let _dunQueuedAttack = null; // blind dungeon: enemy uid chosen (Return in E-mode) to attack when your turn comes
   let _dunPrevMyTurn = false;  // edge-detect the start of the blind player's dungeon turn
   let _dunSbMode = false;      // blind dungeon: spellbook open (numbers pick a spell LEVEL, Tab cycles spells)
+  let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
   let _dunSbLevel = null;      // blind spellbook: currently-chosen spell level
   let _dunSbIdx = -1;          // blind spellbook: current spell index within the chosen level (Tab cycles)
   let _dunSessionMode = false; // blind dungeon: Esc "session menu" open (Tab cycles spectate/leave/cancel)
@@ -1593,6 +1594,14 @@
           dungeonAction('ability', { slot, targetUid: tgt?.uid, targetUids: tgt ? [tgt.uid] : [] });
         } else if (ab.target === 'aoe') {
           dungeonAction('ability', { slot, targetUid: aliveE[0]?.uid, targetUids: aliveE.slice(0, 6).map(x => x.uid) });
+        } else if (ab.allyPick) {
+          // Aimed at a CHOSEN ally (Josh: hide Vaughn, not always Nomkath). Prompt
+          // for one — numbers pick a party member, Return takes the smart auto-pick.
+          const party = (d.party || []).filter(p => !p.left && !p.dead);
+          const allies = party.map(p => p.playerId);
+          _dunAllyPick = { slot, label: ab.name, allies };
+          const list = party.map((p, i) => `${i + 1} ${p.nickname}${p.playerId === meId ? ', you' : ''}`).join(', ');
+          sayU(`${ab.name} on whom? ${list}. Press a number, or Return for the best target.`);
         } else {
           dungeonAction('ability', { slot });   // self / ally — server chooses
         }
@@ -1643,11 +1652,40 @@
           if (!myTurn) { sayU('Not your turn.'); return; }
           if (sp.available === false) { sayU(`${sp.name} is out of slots.`); return; }
           closeSb();
-          sayU(`Casting ${sp.name}.`);
+          if (!sp.allyPick) sayU(`Casting ${sp.name}.`);   // allyPick spells prompt for a target instead
           castSpell(sp);
           return;
         }
         // Any other key falls through to the normal handlers below.
+      }
+      // ----- Ally-pick sub-mode (a targeted ally spell awaiting its target) ----
+      //   A number picks that party member; Return casts on the smart auto-pick;
+      //   Escape cancels (the slot is NOT spent — nothing was sent yet).
+      if (_dunAllyPick) {
+        if (e.key === 'Escape') { e.preventDefault(); _dunAllyPick = null; sayU('Cancelled.'); return; }
+        if (e.key === 'Enter' || e.code === 'NumpadEnter') {
+          e.preventDefault();
+          const p = _dunAllyPick; _dunAllyPick = null;
+          if (!myTurn) { sayU('Not your turn.'); return; }
+          sayU(`Casting ${p.label} on the best target.`);
+          dungeonAction('ability', { slot: p.slot });   // no allyUid → server smart-picks
+          return;
+        }
+        const am = (e.key || '').match(/^[1-9]$/);
+        if (am) {
+          e.preventDefault();
+          const p = _dunAllyPick;
+          const pid = p.allies[parseInt(e.key, 10) - 1];
+          if (!pid) { sayU(`No ally ${e.key}.`); return; }
+          _dunAllyPick = null;
+          if (!myTurn) { sayU('Not your turn.'); return; }
+          const who = (d.party || []).find(x => x.playerId === pid);
+          sayU(`Casting ${p.label} on ${who ? who.nickname : 'them'}.`);
+          dungeonAction('ability', { slot: p.slot, allyUid: pid });
+          return;
+        }
+        // any other key cancels the pending pick and falls through
+        _dunAllyPick = null;
       }
       // ----- Session menu (opened by Esc) ------------------------------------
       // A self-contained sub-mode for the spectate / leave / cancel controls. Done
@@ -1829,6 +1867,15 @@
         if (!myTurn) { window.BlindMode.speak('Not your turn.', 'urgent'); return; }
         const ab = act.ab || null;
         const label = act.label;
+        // Ally-targeted FEATURE (a druid's Cure, Barkskin, Bull's Strength…) →
+        // prompt for the ally (numbers pick, Return = smart auto-pick).
+        if (ab && ab.allyPick) {
+          const party = (d.party || []).filter(p => !p.left && !p.dead);
+          _dunAllyPick = { slot: act.slot, label, allies: party.map(p => p.playerId) };
+          const list = party.map((p, i) => `${i + 1} ${p.nickname}${p.playerId === meId ? ', you' : ''}`).join(', ');
+          sayU(`${label} on whom? ${list}. Press a number, or Return for the best target.`);
+          return;
+        }
         // Single-enemy-target actions (basic attack, or an ability that targets one
         // enemy) with MORE THAN ONE foe alive → ask which enemy; the next number
         // selects it. One foe (or an AoE/self/ally action) just fires.
