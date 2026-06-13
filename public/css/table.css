@@ -85,12 +85,18 @@ button, input { font: inherit; color: inherit; }
 .dmon.is-boss { border-color: rgba(220,170,60,0.9); background: rgba(40,28,10,0.5); }
 .dmon.is-dead { opacity: 0.32; filter: grayscale(1); cursor: default; }
 /* Full-art portrait backdrop (hero/villain cards) — the inline gradient keeps
-   text legible; reinforce name/HP with a drop shadow and ring the avatar so the
-   face reads against the art. */
+   text legible; reinforce name/HP with a drop shadow. */
 .dpc.has-portrait .dpc__name, .dpc.has-portrait .dpc__hp,
 .dmon.has-portrait .dmon__name, .dmon.has-portrait .dmon__hp { text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.8); }
-.dpc.has-portrait .dpc__avatar { box-shadow: 0 0 0 2px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.6); }
-.dmon.has-portrait .dmon__art { box-shadow: 0 0 0 2px rgba(0,0,0,0.5); }
+/* The portrait IS the face now — hide the redundant token circle, but KEEP the
+   status badges (Loot Lord / boss crown, Wild Shape glyph). The avatar box stays
+   in place but goes transparent, so the portrait shows through where the circle
+   was and the badges still anchor. Cards WITHOUT a paired portrait are untouched
+   — their token is the only art they have. */
+.dpc.has-portrait .dpc__avatar { background: transparent; border: none; box-shadow: none; }
+.dpc.has-portrait .dpc__avatar .avatar-img,
+.dpc.has-portrait .dpc__avatar > svg { display: none; }
+.dmon.has-portrait .dmon__art { background-image: none !important; border: none; box-shadow: none; }
 /* Dead monsters COLLAPSE to tiny corpse chips — the kill stays visible but no
    longer eats battleboard space (a big room half-slain must never force a
    scrollbar). The width selector carries .dungeon__enemies so it out-cascades
