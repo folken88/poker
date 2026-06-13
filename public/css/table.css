@@ -1014,6 +1014,7 @@ option.weapon-nonprof { color: #cc5500; }
   border-radius: 10px;
   padding: 10px 12px 12px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+  display: none;   /* fully out of the accessibility tree when closed (VoiceOver sees nothing) */
   opacity: 0;
   pointer-events: none;
   /* visibility:hidden (not just opacity) so the closed menu's controls leave the
@@ -1028,13 +1029,15 @@ option.weapon-nonprof { color: #cc5500; }
   line-height: 1.4;
   text-align: left;
 }
-/* NOTE: deliberately NO :focus-within here — it made the menu pop open the
-   instant the 🔊 button received keyboard/VoiceOver focus (so a blind player
-   tabbing past it got trapped in the open menu). It now opens ONLY on mouse
-   hover or an explicit click/Enter (.is-open, set in JS), and Esc/outside-click
-   closes it. */
-.audio-menu:hover .audio-menu__pop,
+/* NOTE: NO :focus-within (it trapped keyboard/VoiceOver focus) and — since the
+   Josh VoiceOver pass — NO :hover either: hover-open meant the panel could
+   appear/vanish under the VO cursor (mouse drift), stranding it on content
+   that just went invisible and blinding the macOS Item Chooser. The menu now
+   opens ONLY on an explicit click/Enter (.is-open, a true disclosure with
+   aria-expanded) and is display:none when closed — completely out of the
+   accessibility tree, zero clutter. Esc/outside-click closes it. */
 .audio-menu.is-open .audio-menu__pop {
+  display: block;
   opacity: 1;
   pointer-events: auto;
   visibility: visible;

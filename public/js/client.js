@@ -723,6 +723,8 @@
   let _recruitOpen = false;    // dungeon "Recruit AI ▾" dropdown open/closed
   let _spellbookOpen = false;  // caster "📖 Spellbook ▾" dropdown open/closed
   let _blindHelp = false;      // blind "learn mode" (?): keys are SPOKEN, not fired
+  let _raiseMenu = null;       // blind poker: R opened the raise menu — {minTo, halfTo, potTo, cap}; numbers 1-4 pick a bet
+  let _cardReader = false;     // blind poker: 0 toggled card-reader mode — numbers read single cards instead of seats
   let _dunCancelArm = 0;       // blind dungeon: timestamp of an armed "." cancel-run confirm
   let _dunTarget = null;       // blind dungeon: pending action awaiting an enemy pick ({kind, slot, label})
   let _dunEnemyMode = false;   // blind dungeon: "inspect enemies" browse mode (E toggles; Tab cycles)
@@ -3025,15 +3027,17 @@
     for (const [id, label, rec, valFn, cls] of ROWS) {
       const el = $(id);
       if (!el) continue;
+      // Skip identical re-writes — DOM churn here stranded the VoiceOver cursor.
+      const put = (html) => { if (el._lastHtml !== html) { el._lastHtml = html; el.innerHTML = html; } };
       if (!rec) {
-        el.innerHTML = `<span class="lb-records__label">${label}</span><span class="lb-records__empty">—</span>`;
+        put(`<span class="lb-records__label">${label}</span><span class="lb-records__empty">—</span>`);
         continue;
       }
       const when = rec.ts ? new Date(rec.ts).toLocaleDateString() : '';
       const tip = `${rec.nick}${rec.hand ? ' · ' + rec.hand : ''}${when ? ' · ' + when : ''}`;
-      el.innerHTML = `<span class="lb-records__label">${label}</span>`
+      put(`<span class="lb-records__label">${label}</span>`
         + `<span class="lb-records__who" title="${escapeAttr(tip)}">${escapeText(rec.nick)}</span>`
-        + `<span class="lb-records__amt ${cls}">${valFn(rec)}</span>`;
+        + `<span class="lb-records__amt ${cls}">${valFn(rec)}</span>`);
     }
   }
   // Hu / All filter for the Hall of Records (remembers the choice).
@@ -3068,8 +3072,12 @@
   function renderSidebarLeaderboard() {
     const el = $('#sidebarLeaderboard');
     if (!el) return;
+    // Only touch the DOM when the board actually CHANGED. Rebuilding identical
+    // HTML every broadcast yanked the rug out from under VoiceOver — the
+    // cursor got stranded on dead nodes and the macOS Item Chooser went blind.
+    const put = (html) => { if (el._lastHtml !== html) { el._lastHtml = html; el.innerHTML = html; } };
     const all = (state.roster || []).slice();
-    if (all.length === 0) { el.innerHTML = '<li class="lb__empty">No players yet…</li>'; return; }
+    if (all.length === 0) { put('<li class="lb__empty">No players yet…</li>'); return; }
     const meId = state.me?.player_id;
     // NET POKER RESULT — won minus lost across every logged hand (server-fed
     // pokerNet; same metric as the popup board). Loans, gear and dungeon gold
@@ -3080,8 +3088,8 @@
       .filter(({ p }) => Number(p.pokerHands || 0) > 0)      // never dealt a hand → off the board
       .filter(({ p }) => _lbFilter === 'all' || !p.is_bot)   // Hu = humans only (default)
       .sort((a, b) => b.net - a.net);
-    if (!ranked.length) { el.innerHTML = `<li class="lb__empty">${_lbFilter === 'all' ? 'No players yet…' : 'No human players yet…'}</li>`; return; }
-    el.innerHTML = ranked.map((row, i) => {
+    if (!ranked.length) { put(`<li class="lb__empty">${_lbFilter === 'all' ? 'No players yet…' : 'No human players yet…'}</li>`); return; }
+    put(ranked.map((row, i) => {
       const p = row.p;
       const mine = p.player_id === meId ? 'is-me' : '';
       const rankMedal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1) + '.';
@@ -3098,7 +3106,7 @@
           <span class="lb__name">${escapeText(p.nickname)}${lord}${debtDot}</span>
           <span class="lb__wealth" style="${row.net < 0 ? 'color:#cc5544' : ''}" title="poker won − lost over ${Number(p.pokerHands || 0).toLocaleString()} hands · cash ${formatChips(p.chips || 0)} gp">${row.net < 0 ? '−' : '+'}${formatChips(Math.abs(row.net))}</span>
         </li>`;
-    }).join('');
+    }).join(''));
   }
 
   // ===== Loot Bank "paper doll" popover =====
@@ -4516,6 +4524,44 @@
         const _meId = state.me?.player_id;
         const _meP = _h?.players?.find(p => p.playerId === _meId);
         const _myTurn = !!(_h && _h.actor === _meId && _meP && !_meP.folded && !_meP.allIn);
+        const _bSay = (t) => window.BlindMode.speak(t, 'urgent');
+        const _bSend = (action, amount) => socket.emit('table:action', amount != null ? { action, amount } : { action }, (r) => { if (!r?.ok) _bSay(r?.error || 'Action rejected.'); });
+        // ── R RAISE MENU (Josh) ── while open, 1-4 pick a standardized bet:
+        // 1 minimum, 2 half pot, 3 pot, 4 all-in. Escape closes; any other key
+        // closes it and does its normal job. Dies if the turn moved on.
+        if (_raiseMenu) {
+          if (!_myTurn) { _raiseMenu = null; }
+          else if (e.key === 'Escape') { e.preventDefault(); _raiseMenu = null; _bSay('Raise menu closed.'); return; }
+          else {
+            const rm = e.code.match(/^(?:Digit|Numpad)([1-4])$/);
+            if (rm) {
+              e.preventDefault();
+              const q = _raiseMenu; _raiseMenu = null;
+              const to = [q.minTo, q.halfTo, q.potTo, q.cap][+rm[1] - 1];
+              if (to >= q.cap) { _bSay(`All in, ${q.cap.toLocaleString()}.`); _bSend('allin'); }
+              else { _bSay(`Raise to ${to.toLocaleString()}.`); _bSend('raise', to); }
+              return;
+            }
+            _raiseMenu = null;
+          }
+        }
+        // ── 0 CARD READER (Josh) ── numbers read SINGLE cards while it's on:
+        // 1, 2 your pocket cards; 4, 5, 6 the flop; 7 the turn; 8 the river.
+        // 0 or Escape exits; seats read normally again afterwards.
+        if (e.code === 'Digit0' || e.code === 'Numpad0') {
+          e.preventDefault();
+          if (_blindHelp) return _bSay('Zero: toggle card reader — numbers read single cards, one at a time.');
+          _cardReader = !_cardReader;
+          _bSay(_cardReader
+            ? 'Card reader on. 1 and 2 your pocket cards. 4, 5, 6 the flop. 7 the turn. 8 the river. Press 0 to exit.'
+            : 'Card reader off. Numbers read seats again.');
+          return;
+        }
+        if (_cardReader) {
+          if (e.key === 'Escape') { e.preventDefault(); _cardReader = false; _bSay('Card reader off.'); return; }
+          const ck = e.code.match(/^(?:Digit|Numpad)([1-9])$/);
+          if (ck) { e.preventDefault(); window.BlindMode.readCardSlot?.(+ck[1]); return; }
+        }
         const BET_KEYS = ['KeyF', 'KeyK', 'KeyR', 'KeyT', 'KeyA', 'KeyV'];
         if (_myTurn && BET_KEYS.includes(e.code)) {
           e.preventDefault();
@@ -4529,7 +4575,15 @@
           if (e.code === 'KeyF') { if (_blindHelp) return say('F: Fold.'); say('Fold.'); send('fold'); return; }
           if (e.code === 'KeyK') { const lbl = toCall === 0 ? 'Check' : `Call ${Math.min(toCall, stack).toLocaleString()}`; if (_blindHelp) return say(`K: ${lbl}.`); say(`${lbl}.`); send(toCall === 0 ? 'check' : 'call'); return; }
           if (e.code === 'KeyA') { if (_blindHelp) return say(`A: All in, ${cap.toLocaleString()}.`); say(`All in, ${cap.toLocaleString()}.`); send('allin'); return; }
-          if (e.code === 'KeyR') { const to = Math.min(minTo, cap); const lbl = to >= cap ? `All in, ${cap.toLocaleString()}` : `Raise to ${to.toLocaleString()}, minimum`; if (_blindHelp) return say(`R: ${lbl}.`); say(`${lbl}.`); if (to >= cap) send('allin'); else send('raise', to); return; }
+          if (e.code === 'KeyR') {
+            // R opens the RAISE MENU (Josh's design): standardized bets on 1-4.
+            if (_blindHelp) return say('R: open the raise menu — then 1 minimum, 2 half pot, 3 pot, 4 all in.');
+            const halfTo = Math.min(Math.max(minTo, cur === 0 ? Math.max(1, Math.floor(pot / 2)) : cur + Math.floor((pot + toCall) / 2)), cap);
+            const q = { minTo: Math.min(minTo, cap), halfTo, potTo: Math.min(potTo, cap), cap };
+            _raiseMenu = q;
+            say(`Raise menu: 1, minimum, ${q.minTo.toLocaleString()}. 2, half pot, ${q.halfTo.toLocaleString()}. 3, pot, ${q.potTo.toLocaleString()}. 4, all in, ${q.cap.toLocaleString()}. Escape to cancel.`);
+            return;
+          }
           if (e.code === 'KeyT') { const to = Math.min(potTo, cap); const lbl = to >= cap ? `All in, ${cap.toLocaleString()}` : `Raise to ${to.toLocaleString()}, pot`; if (_blindHelp) return say(`T: ${lbl}.`); say(`${lbl}.`); if (to >= cap) send('allin'); else send('raise', to); return; }
           if (e.code === 'KeyV') {
             if (_blindHelp) return say('V: Raise a custom amount.');

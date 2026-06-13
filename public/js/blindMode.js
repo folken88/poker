@@ -363,6 +363,10 @@
     try { sessionStorage.setItem('blindMode', state.on ? '1' : '0'); } catch (_) {}
     updateChip();
     if (state.on) {
+      // Declutter for VoiceOver: collapse the hand-rankings panel (its ten
+      // static list items are pure noise to a screen reader — Josh asked).
+      // It stays a normal <details>, so it can be re-opened any time.
+      try { document.querySelector('.help-panel__ranks')?.removeAttribute('open'); } catch (_) {}
       earcon('ack');
       speak('Blind support on.', 'urgent');
       // If a hand is in progress, narrate where things stand RIGHT
@@ -975,6 +979,29 @@
     if (hole && hole.length) speak(`Your cards: ${cardListWords(hole)}.`, 'urgent');
     else speak('You have no cards right now.', 'urgent');
   }
+  /** CARD READER (the 0 mode, client.js holds the toggle): speak ONE card by
+   *  slot so a player can re-check a single card without the whole readout —
+   *  1, 2 = your pocket cards; 4, 5, 6 = the flop; 7 = the turn; 8 = the river. */
+  function readCardSlot(n) {
+    if (!state.on) return;
+    state.pendingSit = null;
+    const hole  = state.deps?.state?.myHole || [];
+    const board = state.deps?.state?.table?.hand?.board || [];
+    const SLOT = {
+      1: [hole[0],  'Your first pocket card'],
+      2: [hole[1],  'Your second pocket card'],
+      4: [board[0], 'First flop card'],
+      5: [board[1], 'Second flop card'],
+      6: [board[2], 'Third flop card'],
+      7: [board[3], 'The turn'],
+      8: [board[4], 'The river'],
+    };
+    const s = SLOT[n];
+    if (!s) { speak('No card on that key. 1 and 2 pocket, 4 5 6 flop, 7 turn, 8 river.', 'urgent'); return; }
+    const [card, label] = s;
+    if (!card) { speak(`${label}: not dealt yet.`, 'urgent'); return; }
+    speak(`${label}: ${cardWords(card)}.`, 'urgent');
+  }
   /** Stop talking NOW (the S key). Cancels the in-flight utterance, empties the
    *  queue, and cuts any character-voice/banter clip — so a blind player can
    *  silence a long readout the instant they've heard enough. A short blip
@@ -1167,6 +1194,7 @@
         // avoid surprising sighted users sharing the tab).
         state.on = true;
         updateChip();
+        try { document.querySelector('.help-panel__ranks')?.removeAttribute('open'); } catch (_) {}   // same VoiceOver declutter as toggle-on
       }
     } catch (_) {}
     // Voices populate async on some browsers.
@@ -1366,6 +1394,8 @@
     readHand, sit,
     // Explore hotkeys (C/B/P + seat numbers 1–9) and the Return-to-sit confirm.
     readMyCards, announceBoard, announcePot, announceSeat, confirmPendingSit,
+    // Card reader mode (0 toggles in client.js; numbers read single cards).
+    readCardSlot,
     // Money shortcuts: M = total cash, N = bet invested this hand.
     announceStack, announceMyBet,
     // Stop/silence the current announcement (the S key).
