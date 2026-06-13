@@ -194,6 +194,14 @@ const SPELL = {
   chainlightning:{ key: 'chainlightning',name: 'Chain Lightning', icon: '⚡', effect: 'aoe', target: 'aoe', maxTargets: 10, randBase: 4, randDie: 6, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'electricity', slvl: 6, sound: S.chainlight, desc: 'A bolt forks from foe to foe — 4 + 1d6 enemies (5–10), Reflex for half (level d6, cap 15d6).' },
   dispelmagicgreater: { key: 'dispelmagicgreater', name: 'Dispel Magic, Greater', icon: '🌀', effect: 'cleanse', greater: true, target: 'ally', slvl: 6, sound: S.dispel, desc: 'A sweeping unweaving — strip ALL debuffs off an afflicted ally (paralysis, hold, slow, sicken, blind, grapple), or tear the buffs off a foe.' },
   trueseeing:    { key: 'trueseeing',    name: 'True Seeing',     icon: '👁️', effect: 'buff', target: 'self', trueSeeing: true, sticky: true, slvl: 6, sound: S.invoke, desc: 'Your eyes pierce all deception — see through darkness, ignore illusions, and strike the invisible. Lasts the room.' },
+  // ── HIGH ARCANE (7th–9th) — without these, a sorcerer past L13 had the SLOTS
+  //    but no spells to put in them (Josh: "L15, never got my 7th-level spells").
+  delayedfireball: { key: 'delayedfireball', name: 'Delayed Blast Fireball', icon: '🔥', effect: 'aoe', target: 'aoe', maxTargets: 8, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'fire', slvl: 7, sounds: FIREBALL_SFX, desc: 'A roiling fireball engulfs up to 8 foes — 1d6 fire per caster level (max 20d6), Reflex for half.' },
+  fingerofdeath: { key: 'fingerofdeath', name: 'Finger of Death', icon: '💀', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 7, sound: S.umbral, desc: 'A word of death stops one heart (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy negative damage.' },
+  horridwilting: { key: 'horridwilting', name: 'Horrid Wilting', icon: '🥀', effect: 'aoe', target: 'aoe', maxTargets: 10, save: 'fort', die: 6, dice: 'level', dcap: 20, dtype: 'negative', slvl: 8, sound: S.umbral, desc: 'Moisture is ripped from up to 10 foes — 1d6 per caster level (max 20d6), Fortitude for half.' },
+  polarray: { key: 'polarray', name: 'Polar Ray', icon: '❄️', effect: 'touch', target: 'enemy', die: 6, dice: 'level', dcap: 25, dtype: 'cold', slvl: 8, sound: S.coldcone, desc: 'A lance of utter cold — ranged touch, 1d6 per caster level (max 25d6).' },
+  meteorswarm: { key: 'meteorswarm', name: 'Meteor Swarm', icon: '☄️', effect: 'aoe', target: 'aoe', maxTargets: 12, save: 'reflex', die: 6, dice: 'level', dcap: 24, dtype: 'fire', slvl: 9, sounds: FIREBALL_SFX, desc: 'Four blazing meteors scatter the room — up to 12 foes, 1d6 fire per caster level (max 24d6), Reflex for half.' },
+  wailbanshee: { key: 'wailbanshee', name: 'Wail of the Banshee', icon: '😱', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 9, sound: S.umbral, desc: 'A keening cry of death (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy damage.' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
@@ -335,6 +343,13 @@ const KITS = {
     preparedSpell(SPELL.coneofcold,    9),
     preparedSpell(SPELL.disintegrate,  11),
     preparedSpell(SPELL.chainlightning, 11),
+    // 7th (wizard gains 7th-level spells at L13), 8th at L15, 9th at L17
+    preparedSpell(SPELL.delayedfireball, 13),
+    preparedSpell(SPELL.fingerofdeath,   13),
+    preparedSpell(SPELL.horridwilting,   15),
+    preparedSpell(SPELL.polarray,        15),
+    preparedSpell(SPELL.meteorswarm,     17),
+    preparedSpell(SPELL.wailbanshee,     17),
     // ── METAMAGIC prepared spells (PF1: the wizard prepares the metamagic version
     //    in a HIGHER slot — modelled here as separate once-per-room entries gated to
     //    the level that slot opens up; each carries its boost flag). Gated on having
@@ -384,6 +399,13 @@ const KITS = {
     spontaneousSpell(SPELL.coneofcold,   10),
     spontaneousSpell(SPELL.disintegrate, 12),
     spontaneousSpell(SPELL.chainlightning, 12),
+    // 7th (sorcerer gains 7th-level spells at L14), 8th at L16, 9th at L18
+    spontaneousSpell(SPELL.delayedfireball, 14),
+    spontaneousSpell(SPELL.fingerofdeath,   14),
+    spontaneousSpell(SPELL.horridwilting,   16),
+    spontaneousSpell(SPELL.polarray,        16),
+    spontaneousSpell(SPELL.meteorswarm,     18),
+    spontaneousSpell(SPELL.wailbanshee,     18),
   ] },
   // ORACLE — spontaneous DIVINE caster on the CLERIC spell list, at oracle (full
   // spontaneous caster) progression: per-spell-level slots from the SORC table via

@@ -1983,19 +1983,11 @@
         if (d.status === 'combat') { window.BlindMode.speak('Cannot open a door during combat.', 'urgent'); return; }
         window.BlindMode.speak('Opening the door.', 'urgent'); dungeonAction('door'); return;
       }
-      // . (period) = cancel the whole run — confirm by pressing it again (any other
-      // key aborts; the arm is cleared at the top of this handler for non-"." keys).
+      // . (period) is UNMAPPED (Josh: kept cancelling his run by fat-fingering it
+      // while moving fast). Cancel-run now lives ONLY in the Escape session menu.
       if (e.key === '.') {
         e.preventDefault();
-        if (_blindHelp) { window.BlindMode.speak('Period: cancel the run for everyone, with confirmation.', 'urgent'); return; }
-        if (_dunCancelArm && (Date.now() - _dunCancelArm) < 6000) {
-          _dunCancelArm = 0;
-          // dungeon:cancel is its own socket event, NOT an action kind — routing
-          // this through dungeonAction('cancel') was why Josh's period never worked.
-          window.BlindMode.speak('Cancelling the run.', 'urgent'); cancelDungeon(); return;
-        }
-        _dunCancelArm = Date.now();
-        window.BlindMode.speak('Cancel the run for everyone? Press period again to confirm, or any other key to abort.', 'urgent');
+        if (_blindHelp) window.BlindMode.speak('Period: unmapped. Cancel the run from the Escape menu.', 'urgent');
         return;
       }
       // Esc → session controls. If a dropdown/overlay is open, let the global Esc

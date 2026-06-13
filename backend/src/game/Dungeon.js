@@ -1169,9 +1169,15 @@ class Dungeon {
     const push = (k, label, desc, icon) => { if (pushed.has(k)) return; pushed.add(k); c.push({ key: k, label, desc, icon: icon || `${I}${k}.webp` }); };
     // Every applied spell/feat buff carries its own icon via BUFF_META — walk the
     // recorded keys so any buff (new ones included) lights up automatically.
-    for (const key of [...Object.keys(m.buffApplied || {}), ...Object.keys(m.runBuffApplied || {})]) {
-      const meta = BUFF_META[key];
-      if (meta) push(key, meta.label, meta.desc, meta.icon);
+    // Only TRUTHY entries are active: a toggled-OFF Power Attack / Deadly Aim
+    // leaves its key set to FALSE (not deleted), so checking key-existence alone
+    // kept reporting it as "on" forever (Josh: L always said Power Attack on).
+    for (const src of [m.buffApplied || {}, m.runBuffApplied || {}]) {
+      for (const key of Object.keys(src)) {
+        if (!src[key]) continue;
+        const meta = BUFF_META[key];
+        if (meta) push(key, meta.label, meta.desc, meta.icon);
+      }
     }
     // Transient states tracked by their own flags, not in buffApplied:
     if (m.smiteActive)  push('smite', 'Smite', '+hit & +2×level damage vs evil');
