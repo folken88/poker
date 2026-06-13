@@ -997,28 +997,19 @@
     if (hole && hole.length) speak(`Your cards: ${cardListWords(hole)}.`, 'urgent');
     else speak('You have no cards right now.', 'urgent');
   }
-  /** CARD READER (the 0 mode, client.js holds the toggle): speak ONE card by
-   *  slot so a player can re-check a single card without the whole readout —
-   *  1, 2 = your pocket cards; 4, 5, 6 = the flop; 7 = the turn; 8 = the river. */
+  /** CARD READER (the 0 mode, client.js holds the toggle): speak ONLY the card
+   *  at that slot — the player already knows which key they pressed, so no slot
+   *  label (Josh). The slot meanings are taught in HELP mode instead (client.js).
+   *  1, 2 = pocket; 4, 5, 6 = flop; 7 = turn; 8 = river. */
   function readCardSlot(n) {
     if (!state.on) return;
     state.pendingSit = null;
     const hole  = state.deps?.state?.myHole || [];
     const board = state.deps?.state?.table?.hand?.board || [];
-    const SLOT = {
-      1: [hole[0],  'Your first pocket card'],
-      2: [hole[1],  'Your second pocket card'],
-      4: [board[0], 'First flop card'],
-      5: [board[1], 'Second flop card'],
-      6: [board[2], 'Third flop card'],
-      7: [board[3], 'The turn'],
-      8: [board[4], 'The river'],
-    };
-    const s = SLOT[n];
-    if (!s) { speak('No card on that key. 1 and 2 pocket, 4 5 6 flop, 7 turn, 8 river.', 'urgent'); return; }
-    const [card, label] = s;
-    if (!card) { speak(`${label}: not dealt yet.`, 'urgent'); return; }
-    speak(`${label}: ${cardWords(card)}.`, 'urgent');
+    const SLOT = { 1: hole[0], 2: hole[1], 4: board[0], 5: board[1], 6: board[2], 7: board[3], 8: board[4] };
+    if (!(n in SLOT)) { speak('No card on that key. 1 and 2 pocket, 4 5 6 flop, 7 turn, 8 river.', 'urgent'); return; }
+    const card = SLOT[n];
+    speak(card ? `${cardWords(card)}.` : 'Not dealt yet.', 'urgent');
   }
   /** Stop talking NOW (the S key). Cancels the in-flight utterance, empties the
    *  queue, and cuts any character-voice/banter clip — so a blind player can

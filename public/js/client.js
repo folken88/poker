@@ -4688,9 +4688,33 @@
         if (_cardReader) {
           if (e.key === 'Escape') { e.preventDefault(); _cardReader = false; _bSay('Card reader off.'); return; }
           const ck = e.code.match(/^(?:Digit|Numpad)([1-9])$/);
-          if (ck) { e.preventDefault(); window.BlindMode.readCardSlot?.(+ck[1]); return; }
+          if (ck) {
+            e.preventDefault();
+            // HELP mode teaches what each number reads; ACTIVE mode just speaks the
+            // card itself (Josh: you know which key you pressed, so no slot label).
+            if (_blindHelp) {
+              const SLOT_HELP = { 1: 'your first pocket card', 2: 'your second pocket card', 4: 'first flop card', 5: 'second flop card', 6: 'third flop card', 7: 'the turn', 8: 'the river' };
+              _bSay(SLOT_HELP[+ck[1]] ? `${ck[1]}: ${SLOT_HELP[+ck[1]]}.` : `${ck[1]}: no card on that key.`);
+              return;
+            }
+            window.BlindMode.readCardSlot?.(+ck[1]);
+            return;
+          }
         }
         const BET_KEYS = ['KeyF', 'KeyK', 'KeyR', 'KeyT', 'KeyA', 'KeyV'];
+        // HELP MODE describes the bet keys even when it's NOT your turn (Josh:
+        // F/K/R reported nothing in help because the act-block below is turn-gated).
+        // Static descriptions — no live hand math, so they're safe off-turn.
+        if (_blindHelp && BET_KEYS.includes(e.code)) {
+          e.preventDefault();
+          const H = {
+            KeyF: 'F: Fold.', KeyK: 'K: Check, or call the current bet.', KeyA: 'A: All in.',
+            KeyR: 'R: open the raise menu — then 1 minimum, 2 half pot, 3 pot, 4 all in.',
+            KeyT: 'T: Raise to the pot.', KeyV: 'V: Raise a custom amount.',
+          };
+          window.BlindMode.speak(H[e.code], 'urgent');
+          return;
+        }
         if (_myTurn && BET_KEYS.includes(e.code)) {
           e.preventDefault();
           const cur = _h.currentBet || 0, inv = _meP.invested || 0, stack = _meP.stack || 0, pot = _h.potTotal || 0;
