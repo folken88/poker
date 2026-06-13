@@ -1904,8 +1904,17 @@ class Dungeon {
     // Idle humans auto-pass after the window.
     clearTimeout(this._lootTimer);
     this._lootTimer = setTimeout(() => {
-      if (!this.lootRoll) return;
-      for (const id of this.lootRoll.eligible) if (!(id in this.lootRoll.decided)) this._lootDecide(id, false, true);
+      // Capture the roll: a _lootDecide that RESOLVES the roll mid-loop nulls
+      // this.lootRoll, so re-reading this.lootRoll.decided on the next iteration
+      // would deref null and CRASH THE WHOLE PROCESS (lost a depth-15 run +
+      // 12,893 gp this way, 2026-06-13). Iterate the captured object and stop
+      // the instant the live roll is gone.
+      const lr = this.lootRoll;
+      if (!lr) return;
+      for (const id of lr.eligible) {
+        if (!this.lootRoll) break;   // the roll resolved — nothing left to auto-pass
+        if (!(id in lr.decided)) this._lootDecide(id, false, true);
+      }
     }, LOOT_ROLL_MS);
     this._broadcast();
   }

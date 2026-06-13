@@ -158,21 +158,37 @@ io.on('connection', (socket) => {
 // is synchronous, so the chips land before exit). A deploy can therefore NEVER
 // eat unbanked gold again, no matter what the gate raced against.
 // (Lesson 2026-06-12: a recreate vaporized a depth-10 run's 14,548 gp pool.)
-for (const sig of ['SIGTERM', 'SIGINT']) {
-  process.on(sig, () => {
-    try {
-      for (const d of dungeons.values()) {
-        try {
-          if (d && d.status && d.status !== 'over') {
-            console.log(`[shutdown] banking live dungeon run — pool ${d.runGold || 0}g, depth ${d.depth || 0}`);
-            d._groupExtract();
-          }
-        } catch (e) { console.error('[shutdown] dungeon payout:', e.message); }
-      }
-    } catch (e) { console.error('[shutdown]', e.message); }
-    process.exit(0);
-  });
+function bankLiveDungeonRuns(why) {
+  try {
+    for (const d of dungeons.values()) {
+      try {
+        if (d && d.status && d.status !== 'over') {
+          console.log(`[${why}] banking live dungeon run — pool ${d.runGold || 0}g, depth ${d.depth || 0}`);
+          d._groupExtract();
+        }
+      } catch (e) { console.error(`[${why}] dungeon payout:`, e.message); }
+    }
+  } catch (e) { console.error(`[${why}]`, e.message); }
 }
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, () => { bankLiveDungeonRuns('shutdown'); process.exit(0); });
+}
+// CRASH BACKSTOP — a hard crash (uncaught exception / rejected promise) is NOT a
+// signal, so the SIGTERM payout above never runs: the process just dies and
+// docker auto-restarts, vaporizing every in-memory run. (Lost a depth-15 run +
+// 12,893 gp on 2026-06-13 when a loot-roll timer threw on a null lootRoll.)
+// Bank every live run's pool to the party FIRST — better-sqlite3 is synchronous,
+// so the chips land before we exit — then crash for real so docker restarts us.
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err && err.stack ? err.stack : err);
+  bankLiveDungeonRuns('crash');
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason && reason.stack ? reason.stack : reason);
+  bankLiveDungeonRuns('crash');
+  process.exit(1);
+});
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[poker] v3 listening on :${PORT}  defaultStack=${db.DEFAULT_STACK}  roster=${db.ROSTER.length}`);
