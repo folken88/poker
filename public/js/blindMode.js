@@ -250,6 +250,11 @@
     // spelled it out), eating the space before it so "50 gp." → "50."
     // The trailing period (sentence beat) is preserved.
     text = text.replace(/\s*\bg(?:p|old)\b/gi, '');
+    // Read a number/number ratio as "X of Y" instead of "X slash Y". Josh: the
+    // voice spends real time on every "/" in HP totals (and they compound when
+    // reading the whole party). "65/80" → "65 of 80". (A fractional CR like
+    // "1/3" also becomes "1 of 3" — rare and still clear.)
+    text = text.replace(/(\d+)\s*\/\s*(\d+)/g, '$1 of $2');
     // Pronunciation fixes — written names the TTS engine routinely
     // mangles get spelled phonetically here so the screen-reader
     // voice says them correctly. Add new pairs as they surface.

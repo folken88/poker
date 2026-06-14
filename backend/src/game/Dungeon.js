@@ -2713,18 +2713,24 @@ class Dungeon {
         this._hasteBonus(m);
         return;
       }
-      const c = this._botAbility(m);
-      if (c) {
-        const ab = kitFor(m.cls).abilities[c.slot];
-        if (ab && ab.target !== 'enemy' && ab.target !== 'aoe' && ab.effect !== 'attack') {
-          const r = this._useAbility(m, c.slot, c.payload);
-          if (r && r.ok && ab) m._lastAbilityKey = ab.key;
-          if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }
+      // GREATER Invisibility does NOT break on attack, so a greater-invisible
+      // ally fights normally (Josh: a greater-invis'd fighter just stood there
+      // doing nothing). Fall through to the normal turn below; every swing lands
+      // against a foe denied its Dex (see the greaterInvis branch in _denied).
+      if (!m.greaterInvis) {
+        const c = this._botAbility(m);
+        if (c) {
+          const ab = kitFor(m.cls).abilities[c.slot];
+          if (ab && ab.target !== 'enemy' && ab.target !== 'aoe' && ab.effect !== 'attack') {
+            const r = this._useAbility(m, c.slot, c.payload);
+            if (r && r.ok && ab) m._lastAbilityKey = ab.key;
+            if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }
+          }
         }
+        this._note(`👻 ${m.nickname} stays hidden — attacking would break the invisibility — and holds for the right moment.`);
+        this._broadcast();
+        return;
       }
-      this._note(`👻 ${m.nickname} stays hidden — attacking would break the invisibility — and holds for the right moment.`);
-      this._broadcast();
-      return;
     }
     // Set the Power Attack / Deadly Aim stance for this turn FIRST (free toggle):
     // kept on for the damage, eased off against a target too well-armored to power
@@ -3039,7 +3045,12 @@ class Dungeon {
     // wizard opens Stoneskin (Communal) / Haste, never Shield. Class features
     // without a spell level (Rage, Inspire Courage) always qualify.
     const bestSlvl = Math.ceil(Math.min(lvl, 18) / 2);
-    const potentEnough = (a) => !a.slvl || a.slvl >= Math.max(1, Math.min(3, bestSlvl - 3));
+    // PARTY/communal buffs (a.party) are exempt — a party-wide ward like
+    // Protection from Evil (Communal) or Bless is worth a slot at ANY level
+    // (Josh: high-level sorcerers never cast Prot Evil Communal because its
+    // slvl-2 fell under the floor). The floor only suppresses petty SELF buffs
+    // (no Shield in round 8). Class features without a spell level always qualify.
+    const potentEnough = (a) => !a.slvl || a.party || a.slvl >= Math.max(1, Math.min(3, bestSlvl - 3));
     // Don't waste a turn re-casting a NON-STACKING buff that's already up. A buff
     // is "fully up" when every recipient already has it: the whole party for a
     // party buff (Inspire/Prayer/Bless), or the caster for a self buff (Rage/
@@ -3848,7 +3859,7 @@ class Dungeon {
         // party-card / enemy selection. No pick → smart auto / refuse if nothing.
         const dispelPick = ab.effect === 'cleanse';
         return {
-        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, allyPick, dispelPick, maxTargets: ab.maxTargets || 1,
+        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, maxTargets: ab.maxTargets || 1,
         slot: kit.abilities.indexOf(ab),   // stable index into kit.abilities (the action payload `slot`) — survives the char filter
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null,

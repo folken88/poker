@@ -1617,6 +1617,17 @@
         if (!myTurn) { sayU('Not your turn.'); return; }   // hard gate — never cast off-turn
         const slot = (ab.slot != null ? ab.slot : 0);
         if (ab.target === 'enemy') {
+          // Single-target enemy spells (Suffocation, Hold Person, Disintegrate,
+          // Searing Ray…) let you AIM at a specific foe — Josh wasted a Suffocate
+          // on a lich because it auto-locked the deadliest. Prompt to pick when
+          // 2+ foes are up. Magic Missile & other auto-hit spells (effect
+          // 'missile') keep snapping to the deadliest, as Josh prefers.
+          if (ab.effect !== 'missile' && aliveE.length > 1) {
+            _dunTarget = { kind: 'ability', slot, label: ab.name };
+            const list = aliveE.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}${x.cr ? `, CR ${x.cr}` : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
+            sayU(`${ab.name} — select a target, deadliest first: ${list}.`);
+            return;
+          }
           const locked = _dunQueuedAttack && aliveE.find(x => x.uid === _dunQueuedAttack);
           const tgt = locked || aliveE[0];
           dungeonAction('ability', { slot, targetUid: tgt?.uid, targetUids: tgt ? [tgt.uid] : [] });
@@ -1694,7 +1705,12 @@
           if (!myTurn) { sayU('Not your turn.'); return; }
           if (sp.available === false) { sayU(`${sp.name} is out of slots.`); return; }
           closeSb();
-          if (!sp.allyPick) sayU(`Casting ${sp.name}.`);   // allyPick spells prompt for a target instead
+          // Skip the pre-announce when castSpell will PROMPT for a target (ally
+          // pick, dispel pick, or a single-target enemy spell with 2+ foes) — the
+          // picker speaks its own "on whom?" / "select a target" line.
+          const willPrompt = sp.allyPick || sp.dispelPick
+            || (sp.target === 'enemy' && sp.effect !== 'missile' && aliveE.length > 1);
+          if (!willPrompt) sayU(`Casting ${sp.name}.`);
           castSpell(sp);
           return;
         }
@@ -1762,6 +1778,7 @@
       // because Return would otherwise be hijacked by the open-door hotkey below.
       const SESSION_ITEMS = [
         { label: 'Spectate', fn: () => bailToSpectate() },
+        { label: 'Bail out with your share', fn: () => { sayU('Bailing out with your gold.'); dungeonAction('bail'); } },
         { label: 'Leave dungeon', fn: () => returnFromDungeon() },
         { label: 'Cancel run', fn: () => cancelDungeon() },
       ];
@@ -1771,7 +1788,7 @@
           _dunSessionIdx = (e.shiftKey ? _dunSessionIdx - 1 + SESSION_ITEMS.length : _dunSessionIdx + 1) % SESSION_ITEMS.length;
           sayU(SESSION_ITEMS[_dunSessionIdx].label + '.'); return;
         }
-        if (/^[1-3]$/.test(k)) { e.preventDefault(); const it = SESSION_ITEMS[parseInt(k, 10) - 1]; _dunSessionMode = false; sayU(it.label + '.'); it.fn(); return; }
+        if (/^[1-4]$/.test(k)) { e.preventDefault(); const it = SESSION_ITEMS[parseInt(k, 10) - 1]; _dunSessionMode = false; sayU(it.label + '.'); it.fn(); return; }
         if (e.key === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); const it = SESSION_ITEMS[_dunSessionIdx]; _dunSessionMode = false; sayU(it.label + '.'); it.fn(); return; }
         if (e.key === 'Escape') { e.preventDefault(); _dunSessionMode = false; sayU('Session menu closed.'); return; }
         // Swallow anything else so you can't accidentally attack while deciding.
@@ -2000,18 +2017,25 @@
           || !!$('#audioMenu')?.classList.contains('is-open');
         if (overlayOpen) return;
         e.preventDefault();
-        if (_blindHelp) { window.BlindMode.speak('Escape: open the session menu — spectate, leave, or cancel.', 'urgent'); return; }
+        if (_blindHelp) { window.BlindMode.speak('Escape: open the session menu — spectate, bail out with your share, leave, or cancel.', 'urgent'); return; }
         _dunSessionMode = true; _dunSessionIdx = 0;
-        window.BlindMode.speak('Session menu. Tab through spectate, leave dungeon, and cancel run; Return to choose; Escape to exit. Spectate.', 'urgent');
+        window.BlindMode.speak('Session menu. Tab through spectate, bail out with your share, leave dungeon, and cancel run; Return to choose; Escape to exit. Spectate.', 'urgent');
         return;
       }
-      // B = bail out with your banked share. Handled HERE (not via the sighted
-      // fallthrough) so help mode can describe it without firing it.
+      // B = read out the whole party's active buffs and conditions (Josh: L
+      // already reads HIS own HP + buffs; B covers the rest of the team). Bail
+      // moved to the Escape session menu so a stray B can't end your run.
       if (k === 'b') {
         e.preventDefault();
-        if (_blindHelp) { sayU('B: bail out of the dungeon with your share of the gold.'); return; }
-        sayU('Bailing out with your gold.');
-        dungeonAction('bail');
+        if (_blindHelp) { sayU('B: read every party member’s active buffs and conditions. Bail now lives in the Escape menu.'); return; }
+        const liveP = (d.party || []).filter(p => !p.left && !p.dead);
+        if (!liveP.length) { sayU('No party members.'); return; }
+        const lines = liveP.map(p => {
+          const items = (p.buffs || []).map(b => b.label)
+            .concat((p.conditions || []).map(c => c.label));
+          return `${p.nickname}${p.playerId === meId ? ', you,' : ''}: ${items.length ? items.join(', ') : 'no buffs'}`;
+        });
+        sayU('Party buffs. ' + lines.join('. ') + '.');
         return;
       }
       // Blind mode NEVER falls through to the sighted letter scheme below — that
@@ -2020,7 +2044,7 @@
       // help mode ("S: not assigned") and otherwise point at the real keys.
       if (/^[a-z]$/.test(k)) {
         e.preventDefault();
-        if (_blindHelp) sayU(`${k.toUpperCase()}: not assigned. Actions are on the number keys. 0 opens the door, B bails, period cancels the run.`);
+        if (_blindHelp) sayU(`${k.toUpperCase()}: not assigned. Actions are on the number keys. 0 opens the door, L reads your buffs, B reads the party’s buffs, Escape opens the session menu (bail, leave, cancel).`);
         else if (['q', 'w', 'a', 'o'].includes(k)) sayU('Not assigned in blind mode. Actions are on the number keys — press question mark for help.');
         return;
       }
