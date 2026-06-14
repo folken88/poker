@@ -5053,7 +5053,9 @@ class Dungeon {
       m.buffApplied.powerattack = false; m.paOn = false;
       m.buffs.toHit += (m._paPen || 0); m.buffs.dmg -= (m._paBonus || 0);
       m._paPen = 0; m._paBonus = 0;
-      if (!silent) { this._note(`💥 ${m.nickname} eases off Power Attack — a measured guard for a surer hit.`, sound); this._echoToTable(sound); }
+      // Toggling OFF plays a distinct "shh" so a (blind) player can hear the
+      // difference between turning it ON (rage grunt) and OFF.
+      if (!silent) { this._note(`💥 ${m.nickname} eases off Power Attack — a measured guard for a surer hit.`, '/audio/shh.mp3'); this._echoToTable('/audio/shh.mp3'); }
       return;
     }
     if (m.buffApplied.powerattack) return;
