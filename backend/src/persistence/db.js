@@ -14,6 +14,9 @@ const path = require('path');
 const { CLASSES } = require('../pf1data/classes');
 const { STAPLE_BY_KEY, WEAPON_LOOKUP, DEFAULT_WEAPON } = require('../pf1data/staples');
 const abilityProfiles = require('../pf1data/characterProfiles');
+const { validateBuild } = require('../pf1data/abilityScores');
+const RACES = require('../pf1data/races');
+const { BUILDS } = require('../pf1data/characterBuilds');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data');
 const DB_PATH  = process.env.DB_PATH  || path.join(DATA_DIR, 'poker.db');
@@ -89,6 +92,10 @@ ensureColumn('players', 'class_xp', "TEXT NOT NULL DEFAULT '{}'");
 // STR). Seeded lazily from the character's class + chosen weapon via
 // pf1data/characterProfiles (finesse/ranged ⇒ DEX). Editable per-class later.
 ensureColumn('players', 'ability_scores', "TEXT NOT NULL DEFAULT '{}'");
+// PF1 RACE — one per character (NOT per class). Drives racial ability mods,
+// vision, and save bonuses (see pf1data/races.js). Default 'human'; pinned per
+// character from pf1data/characterBuilds.js (BUILDS) and re-synced at boot.
+ensureColumn('players', 'race', "TEXT NOT NULL DEFAULT 'none'");
 // One-time backfill: fold any legacy single `experience` into the per-class map.
 try {
   const _bf = db.prepare("SELECT player_id, class, experience FROM players WHERE experience > 0 AND (class_xp IS NULL OR class_xp = '{}')").all();
@@ -440,7 +447,7 @@ const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 
 function seedRoster() {
   const now = Date.now();
-  let humans = 0, bots = 0, prunedBots = 0;
+  let humans = 0, bots = 0, prunedBots = 0, builtRace = 0, builtScores = 0;
   const updateBotClass  = db.prepare('UPDATE players SET class = ? WHERE player_id = ? AND is_bot = 1');
   const updateBotWeapon = db.prepare('UPDATE players SET weapon = ? WHERE player_id = ? AND is_bot = 1');
   const updateBotAvatar = db.prepare('UPDATE players SET avatar_id = ? WHERE player_id = ? AND is_bot = 1');
@@ -493,8 +500,33 @@ function seedRoster() {
         prunedBots++;
       }
     }
+    // Pin per-character RACE + optional custom ability build from
+    // pf1data/characterBuilds.js — the source of truth, re-synced every boot
+    // (like BOT_CLASSES). race is per character; a custom `scores` array
+    // overrides the class TEMPLATE for the player's current class (templates
+    // stay the fallback for anyone with no custom scores). Builds are validated
+    // against the 25-pt buy and warned (never blocked) so a typo can't break boot.
+    const _setRaceTx   = db.prepare('UPDATE players SET race = ? WHERE player_id = ?');
+    const _setScoresTx = db.prepare('UPDATE players SET ability_scores = ? WHERE player_id = ?');
+    const _getRowTx    = db.prepare('SELECT player_id, class, ability_scores FROM players WHERE player_id = ?');
+    for (const [name, b] of Object.entries(BUILDS)) {
+      const id = name.toLowerCase();
+      const row = _getRowTx.get(id);
+      if (!row) continue;   // character not seeded → skip
+      if (b.race) { _setRaceTx.run(RACES.raceKey(b.race), id); builtRace++; }
+      if (b.scores) {
+        const cls = row.class || 'fighter';
+        const v = validateBuild(b.scores, {});
+        if (!v.ok) console.warn(`[builds] ${name} custom build invalid: ${v.errors.join('; ')}`);
+        let map = {}; try { map = JSON.parse(row.ability_scores || '{}') || {}; } catch (_) { map = {}; }
+        map[cls] = b.scores;
+        _setScoresTx.run(JSON.stringify(map), id);
+        builtScores++;
+      }
+    }
   });
   tx();
+  if (builtRace || builtScores) console.log(`[builds] pinned race x${builtRace}, custom scores x${builtScores} from characterBuilds`);
   console.log(`[poker] seeded: humans=${humans}/${ROSTER.length} bots=${bots}/${BOT_ROSTER.length} pruned=${prunedBots} stale bots`);
 }
 seedRoster();
@@ -654,6 +686,20 @@ function setAbilityScores(playerId, cls, scores) {
   db.prepare('UPDATE players SET ability_scores = ? WHERE player_id = ?').run(JSON.stringify(map), playerId);
 }
 
+// ---- PF1 race (one per character; see pf1data/races.js + characterBuilds.js) ----
+const _setRaceStmt = db.prepare('UPDATE players SET race = ? WHERE player_id = ?');
+/** A player's race key (default 'human' for legacy rows / unknown). */
+function getRace(playerId) {
+  const p = stmts.getPlayer.get(playerId);
+  return RACES.raceKey(p && p.race);
+}
+/** Pin a player's race (used by the boot roster sync + a future editor). */
+function setRace(playerId, race) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return;
+  _setRaceStmt.run(RACES.raceKey(race), playerId);
+}
+
 // ---- Experience / leveling API (PF1 medium track — see pf1data/xp.js) ----
 // XP is PER CLASS — keyed by the player's CURRENT class. `experience` is kept as a
 // mirror of the current class's XP for legacy/display. _setClassXpStmt writes both.
@@ -736,6 +782,8 @@ module.exports = {
   setGear,
   getAbilityScores,
   setAbilityScores,
+  getRace,
+  setRace,
   defaultAbilityScores,
   getXp,
   setXp,

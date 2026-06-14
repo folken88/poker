@@ -24,6 +24,7 @@ const { logDungeon, recordSound } = require('../persistence/logger');
 const banter = require('../bot/banter');
 const { deriveCharacter, attackProfile } = require('./character');
 const { MON, MON_GANGS, BOSS_KEYS, SPAWNABLE, crToNum, SIZE_RANK, SIZE_NAME } = require('../pf1data/monsters');
+const RACES = require('../pf1data/races');   // racial ability mods, vision, save bonuses (Phase 1)
 
 // ── Tuning knobs ────────────────────────────────────────────────────────────
 // LEVEL = 1 + sum of all gear bonuses (min 1). Level drives HP, to-hit, and
@@ -713,7 +714,8 @@ class Dungeon {
   // Called at join and on every level change so the numbers track level/ASI.
   _setDerived(m) {
     const featHp = (fighterFeats(m.cls, m.level, this._isRanged(m)).hp) || 0;
-    const d = deriveCharacter({ cls: m.cls, level: m.level, baseScores: m.abilityScores, featHp });
+    const raceMods = RACES.raceModsFor(m.race, m.abilityScores);   // race ability adjustments (flat, or human's floating +2 on the best stat)
+    const d = deriveCharacter({ cls: m.cls, level: m.level, baseScores: m.abilityScores, raceMods, featHp });
     m.mods = d.mods;
     m.castingMod = d.castingMod;
     m.iteratives = d.iteratives;
@@ -738,9 +740,11 @@ class Dungeon {
     const level = levelFromXp(xp);             // level now comes from XP (not gear)
     const cls = player.class || 'fighter';
     const abilityScores = db.getAbilityScores(playerId, cls);   // PF1 base 25-pt array
+    const race = db.getRace(playerId);                          // PF1 race (default 'human')
+    const raceMods = RACES.raceModsFor(race, abilityScores);    // racial ability adjustments
     const _ranged = !!weaponOf(gear, player.weapon || 'dagger').ranged;
     const featHp = (fighterFeats(cls, level, _ranged).hp) || 0;
-    const maxHp = deriveCharacter({ cls, level, baseScores: abilityScores, featHp }).hp;   // Hit Die×level + CON mod/level + feat HP
+    const maxHp = deriveCharacter({ cls, level, baseScores: abilityScores, raceMods, featHp }).hp;   // Hit Die×level + CON mod/level (race-adjusted) + feat HP
     const m = {
       playerId,
       nickname: player.nickname || playerId,
@@ -749,6 +753,8 @@ class Dungeon {
       undead: Dungeon.UNDEAD_HEROES.has((playerId || '').toLowerCase()),   // positive energy does nothing for them
       ghost: (playerId || '').toLowerCase() === 'vesorianna',               // always flying + incorporeal
       flying: (playerId || '').toLowerCase() === 'vesorianna',
+      race,                                    // PF1 race key (drives ability mods, vision, save bonuses)
+      vision: RACES.raceVision(race),          // 'normal' | 'low-light' | 'darkvision60' (read by blind mode; Phase-2 will negate darkness penalties)
       abilityScores,
       gear, level, xp,
       crowned: !!(db.getPlayer(playerId)?.crowned),   // permanent Loot Lord crown
@@ -884,6 +890,7 @@ class Dungeon {
       party: this.party.map(m => ({
         playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot, crowned: !!m.crowned,
         cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
+        race: m.race || 'human', raceName: RACES.raceName(m.race), vision: m.vision || 'normal',   // PF1 race + vision (blind mode reads vision; non-human shows on the hero card)
         form: m.form ? { key: m.form.key, label: m.form.label, glyph: m.form.glyph, art: m.form.art } : null,   // active Wild Shape (drives the token swap on the hero card)
         level: m.level, ...this._xpInfo(m), ...this._heroACs(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
         abilityScores: m.abilityScores || null, abilityMods: m.mods || null, cantrip: this._cantripState(m),
@@ -1265,7 +1272,7 @@ class Dungeon {
     if (m.paralyzed > 0) {
       if (m.heldDC) {   // Hold Person on a hero: re-save each turn, costs the turn either way (PF1e).
         m.paralyzed -= 1; const hdc = m.heldDC;
-        const sm = this._partySaveMod(m), sroll = dRoll(20), stot = sroll + sm;
+        const sm = this._partySaveMod(m, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold is a compulsion spell
         const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= hdc;
         if (saved || m.paralyzed <= 0) { m.paralyzed = 0; m.heldDC = null; this._note(`🖐️ ${m.nickname} ${saved ? 'breaks free of the hold' : 'the hold finally fades'}! [Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs ${hdc}]${saved ? ' — but the struggle cost the turn.' : ''}`); }
         else this._note(`🖐️ ${m.nickname} stays HELD — can't break free and loses the turn. [Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs ${hdc}]`);
@@ -1686,7 +1693,7 @@ class Dungeon {
     const old = m.level || 1;
     if (nl === old) return 0;
     const _featHp = (fighterFeats(m.cls, nl, this._isRanged(m)).hp) || 0;
-    const nmax = deriveCharacter({ cls: m.cls, level: nl, baseScores: m.abilityScores, featHp: _featHp }).hp;
+    const nmax = deriveCharacter({ cls: m.cls, level: nl, baseScores: m.abilityScores, raceMods: RACES.raceModsFor(m.race, m.abilityScores), featHp: _featHp }).hp;
     const gain = nmax - m.maxHp;
     m.level = nl; m.maxHp = nmax;
     this._setDerived(m);                    // refresh ability mods / iteratives at the new level
@@ -1700,7 +1707,7 @@ class Dungeon {
   // stack with itself and ends exactly when Haste does. (Engine saves are generic,
   // so the Reflex bonus reads as +1 to all saves — a small, benign approximation.)
   _hasteMod(m) { return (m && m.hasted > 0 && m.hasteFull) ? 1 : 0; }
-  _partySaveMod(m) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex)
+  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
   _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
@@ -2096,7 +2103,7 @@ class Dungeon {
   _enemyCastHold(e, target) {
     e.castsLeft -= 1;
     const dc = e.spellDC || 13;
-    const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
+    const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
     const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
     if (!saved) {
@@ -2117,7 +2124,7 @@ class Dungeon {
     const dmg = fear ? 0 : dRollN(1, 8);
     if (dmg) this._dmgToMember(target, dmg);
     const dc = cfg.dc || e.spellDC || 14;
-    const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
+    const sm = this._partySaveMod(target, fear ? ['fear'] : []), sroll = dRoll(20), stot = sroll + sm;   // fear gaze → halfling/etc. fear bonus
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
     const roll = `[${fear ? 'Will' : 'Fort'} d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
     const snd = cfg.sound || null;
@@ -2311,7 +2318,7 @@ class Dungeon {
   // Lich Hold Monster — a hero fails a Will save or is HELD (re-saves each turn,
   // the attempt costing the turn). Same mechanic as the shaman's Hold Person.
   _enemyHoldHero(e, target, dc, label) {
-    const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
+    const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
     const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
     if (!saved) { target.paralyzed = Math.max(target.paralyzed || 0, 3); target.heldDC = dc; this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — HELD! ${roll} (re-save each turn to break free)`, '/audio/spell_dimensional_anchor.mp3', { side: 'enemy' }); }
