@@ -5142,7 +5142,11 @@ class Dungeon {
   // fire off the rest of the party. Once per room.
   _abTaunt(m, ab) {
     const dc = 10 + Math.floor((m.level || 1) / 2) + ABILITY_MOD;   // martial intimidation DC
-    const sound = ab.sounds ? pick(ab.sounds) : ab.sound;   // alternate between the taunt yells
+    // Per-character taunt voice: Farrus (the Butcher, Farrah's grandpa ghost)
+    // roars by summoning grandpa. Tokala + other barbarians keep the predator
+    // yell (ab.sound); goblin barbarians use their own yell via _enemyTaunt.
+    const TAUNT_VOICE = { 'farrus richton': '/audio/farrah_summon_grandpa.mp3' };
+    const sound = TAUNT_VOICE[(m.playerId || '').toLowerCase()] || (ab.sounds ? pick(ab.sounds) : ab.sound);
     const parts = [];
     for (const e of this.livingEnemies()) {
       const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
