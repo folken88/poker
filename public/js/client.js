@@ -1788,7 +1788,9 @@
           _dunSessionIdx = (e.shiftKey ? _dunSessionIdx - 1 + SESSION_ITEMS.length : _dunSessionIdx + 1) % SESSION_ITEMS.length;
           sayU(SESSION_ITEMS[_dunSessionIdx].label + '.'); return;
         }
-        if (/^[1-4]$/.test(k)) { e.preventDefault(); const it = SESSION_ITEMS[parseInt(k, 10) - 1]; _dunSessionMode = false; sayU(it.label + '.'); it.fn(); return; }
+        // Numbers are deliberately NOT mapped here (Josh: a stray number after Esc
+        // bailed/cancelled his run). The session menu is Tab-to-cycle, Return-to-
+        // activate ONLY; everything else is swallowed below.
         if (e.key === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); const it = SESSION_ITEMS[_dunSessionIdx]; _dunSessionMode = false; sayU(it.label + '.'); it.fn(); return; }
         if (e.key === 'Escape') { e.preventDefault(); _dunSessionMode = false; sayU('Session menu closed.'); return; }
         // Swallow anything else so you can't accidentally attack while deciding.
@@ -2030,8 +2032,13 @@
         if (_blindHelp) { sayU('B: read every party member’s active buffs and conditions. Bail now lives in the Escape menu.'); return; }
         const liveP = (d.party || []).filter(p => !p.left && !p.dead);
         if (!liveP.length) { sayU('No party members.'); return; }
+        // Streamlined (Josh): report buffs that matter to the PARTY — haste, communal/
+        // party buffs, and notable conditions — but skip each character's personal
+        // attack toggles (Power Attack / Deadly Aim / Rapid Shot), which are their
+        // own business, not party info.
+        const PERSONAL = new Set(['powerattack', 'deadlyaim', 'rapidshot']);
         const lines = liveP.map(p => {
-          const items = (p.buffs || []).map(b => b.label)
+          const items = (p.buffs || []).filter(b => !PERSONAL.has(b.key)).map(b => b.label)
             .concat((p.conditions || []).map(c => c.label));
           return `${p.nickname}${p.playerId === meId ? ', you,' : ''}: ${items.length ? items.join(', ') : 'no buffs'}`;
         });
