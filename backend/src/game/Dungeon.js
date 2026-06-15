@@ -641,6 +641,7 @@ class Dungeon {
 
   roomName() { return `dungeon:${this.id}`; }
   _note(text, sound, meta = {}) {
+    if (this._silentSfx) sound = null;   // pre-door buff pass: log the line, mute the SFX (no wall of sounds at once)
     // Each entry carries `side` (which column it belongs in) and `kind` (its
     // colour tint) so the client can split the log hero-left / enemy-right and
     // gently colour heals (gold), deaths (red), buffs (blue), debuffs (purple).
@@ -967,7 +968,40 @@ class Dungeon {
     return { active: this.status !== 'over', depth: this.depth, status: this.status, party: this.present().map(m => m.nickname) };
   }
   _echoToTable(sound) {
+    if (this._silentSfx) return;   // muted during the pre-door buff pass
     if (sound && this.io && this.tableId) this.io.to(`table:${this.tableId}`).emit('dungeon:echo', { sound });
+  }
+  // ── Pre-door buffs ──────────────────────────────────────────────────────────
+  // Before the door opens, AI casters (heroes; villains pre-buff via spawn precast)
+  // put up their RUN-LONG buffs — Mage Armor, Bless, Overland Flight — so they don't
+  // waste combat turns on them (Josh: "casters never cast mage armor / fly"). Cast
+  // SILENTLY (one summary line + sound), so it's not a wall of noise. Humans are NOT
+  // auto-cast — they choose to cast these during exploring themselves.
+  _isRunLongBuff(ab) {
+    return !!ab && (ab.effect === 'magearmor' || ab.effect === 'overlandflight'
+      || (ab.effect === 'buff' && ab.persist && ab.key !== 'inspire'));   // inspire is auto-maintained
+  }
+  _preDoorBuffs() {
+    if (this.status !== 'exploring') return;
+    const cast = [];
+    this._silentSfx = true;
+    try {
+      for (const m of this.present()) {
+        if (!m.isBot || m.dead || m.left || m.hp <= 0) continue;
+        const kit = kitFor(m.cls);
+        (kit.abilities || []).forEach((ab, slot) => {
+          if (!this._isRunLongBuff(ab) || (m.level || 1) < (ab.minLevel || 1)) return;
+          if (ab.effect === 'magearmor' && m.mageArmor) return;
+          if (ab.effect === 'overlandflight' && m.flying) return;
+          const flag = ab.persist ? 'runBuffApplied' : 'buffApplied';
+          if (m[flag] && m[flag][ab.key]) return;                                  // already up
+          if (ab.cost === 'run' && !((m.runAbilityUses || {})[ab.key] > 0)) return; // none left
+          const r = this._useAbility(m, slot, {});
+          if (r && r.ok) cast.push(`${m.nickname} — ${ab.name}`);
+        });
+      }
+    } finally { this._silentSfx = false; }
+    if (cast.length) this._note(`✨ The party readies before the door: ${cast.join(', ')}.`, '/audio/spell_invoke.mp3');
   }
 
   // ── Turn helpers ──────────────────────────────────────────────────────────
@@ -982,6 +1016,7 @@ class Dungeon {
   openDoor() {
     if (this.status !== 'exploring') return { ok: false, error: 'not exploring' };
     if (this.lootRoll) return { ok: false, error: 'finish the loot roll first' };
+    this._preDoorBuffs();   // AI casters put up run-long buffs (Mage Armor/Bless/Fly) before the fight
     this.depth += 1;
     this._spawnRoom();
     this.blackTentacles = null;   // the tentacle field doesn't carry between rooms
@@ -1257,6 +1292,9 @@ class Dungeon {
     // party member
     const m = this.member(t.id);
     if (!m || m.left) return this._nextTurn();
+    // Black Tentacles renew their grip on the CASTER'S turn only (not at round-top) —
+    // the field re-grabs when its conjurer acts (free; doesn't cost the turn).
+    if (this.blackTentacles && this.blackTentacles.caster === m.playerId && m.hp > 0) this._blackTentaclesTick();
     m._curatorBuffUsed = false;   // Curator: the once-per-turn swift buff resets each turn
     if (m.untargetable) m.untargetable = false;   // Bladed Dash blur ends at the start of the magus's next turn
     if (m.touchStrike > 0) m.touchStrike -= 1;     // Dimensional Blade touch-strikes lapse after the round
@@ -1335,7 +1373,7 @@ class Dungeon {
     this.turnIdx += 1;
     // Initiative is rolled ONCE per combat (per room, in openDoor) — Pathfinder
     // keeps the same order each round; we just wrap back to the top.
-    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; this._endOfRoundRaise(); if (this.blackTentacles) this._blackTentaclesTick(); }   // the fallen are raised between rounds; tentacles re-grab at the top of each round
+    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; this._endOfRoundRaise(); }   // the fallen are raised between rounds (Black Tentacles re-grab on the CASTER'S turn, not at round-top)
     this._advanceToActor();
   }
   _armAfkTimer(m) {
@@ -1594,7 +1632,7 @@ class Dungeon {
       const gained = m.hp - before;
       const revived = before <= 0 && m.hp > 0;
       if (m.hp > 0) m.downed = false;
-      this._note(`🧪 A Potion of ${p.name} drops — ${m.nickname} ${revived ? 'is revived' : 'quaffs it'} (rolled ${p.count}d${p.die}+${p.bonus}): +${gained} HP (now ${m.hp}/${m.maxHp})${revived ? ' — back on their feet!' : ''}.`, '/audio/spell_cure.mp3');
+      this._note(`🧪 A Potion of ${p.name} drops — ${m.nickname} ${revived ? 'is revived' : 'quaffs it'} (rolled ${p.count}d${p.die}+${p.bonus}): +${gained} HP (now ${m.hp}/${m.maxHp})${revived ? ' — back on their feet!' : ''}.`, '/audio/mix_drink.mp3');
       this._log('potion', { name: p.name, who: m.playerId, rolled: heal, gained, revived });
     } else {
       const sell = Math.floor(p.gp / 2); this.runGold += sell;
@@ -3156,6 +3194,13 @@ class Dungeon {
 
     if (this.status === 'exploring') {
       if (kind === 'door') return this.openDoor();
+      // Humans may pre-cast their RUN-LONG buffs (Mage Armor / Bless / Overland
+      // Flight) before opening the door — their choice, never auto-cast for them.
+      if (kind === 'ability' && m) {
+        const ab = kitFor(m.cls).abilities[payload.slot | 0];
+        if (this._isRunLongBuff(ab)) return this._useAbility(m, payload.slot | 0, payload || {});
+        return { ok: false, error: 'only long-lasting buffs (Mage Armor, Bless, Overland Flight) can be cast before the door' };
+      }
       return { ok: false, error: 'invalid while exploring' };
     }
     if (this.status !== 'combat') return { ok: false, error: 'run is over' };

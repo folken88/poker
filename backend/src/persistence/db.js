@@ -412,7 +412,7 @@ const BOT_CLASSES = {
   'Kovira': 'wizard', 'Tokala': 'barbarian', 'Mr. Brow': 'investigator', 'Tamsin': 'bard',
   'Concetta': 'swashbuckler', 'Farrah': 'sorcerer', 'Fera': 'rogue',
   'Elfrip': 'oracle', 'Rodney Smith': 'ranger',   // Elfrip is a Flame-mystery oracle (fire blaster); Rodney "Danger" Smith is an archer
-  'Vesorianna': 'cleric', 'Farrus Richton': 'barbarian', 'Dinvaya': 'cleric', 'Storgrim Thunderbeard': 'fighter',
+  'Vesorianna': 'oracle', 'Farrus Richton': 'barbarian', 'Dinvaya': 'cleric', 'Storgrim Thunderbeard': 'fighter',
   'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'rogue', 'Kai Ginn': 'ranger', 'Lirienne': 'ranger',   // Crisp = deinonychus: no real class, but rogue is closest (pounce + sneak); keeps his 'bite' natural multi-attack (3 attacks, no iteratives) via BOT_WEAPONS + _attackOffsets
   'Rissa': 'druid', 'Taelys': 'gunslinger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'gunslinger',   // Taelys + Duristan: PF1 gunslingers (rifles)
   'Holden': 'swashbuckler',
