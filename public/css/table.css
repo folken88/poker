@@ -87,7 +87,7 @@ button, input { font: inherit; color: inherit; }
 /* Full-art portrait backdrop (hero/villain cards) — the inline gradient keeps
    text legible; reinforce name/HP with a drop shadow. */
 .dpc.has-portrait .dpc__name, .dpc.has-portrait .dpc__hp,
-.dmon.has-portrait .dmon__name, .dmon.has-portrait .dmon__hp { text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.8); }
+.dmon.has-portrait .dmon__name, .dmon.has-portrait .dmon__hp { text-shadow: 0 1px 3px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.8); opacity: 0.85; }
 /* The portrait IS the face now — hide the redundant token circle, but KEEP the
    status badges (Loot Lord / boss crown, Wild Shape glyph). The avatar box stays
    in place but goes transparent, so the portrait shows through where the circle
@@ -95,7 +95,7 @@ button, input { font: inherit; color: inherit; }
    — their token is the only art they have. */
 /* A solid dark-grey fill UNDER the portrait so transparent art (e.g. the ooze
    PNG) sits on grey rather than showing the felt through it. */
-.dpc.has-portrait, .dmon.has-portrait { background-color: #1a1c1e; }
+.dpc.has-portrait, .dmon.has-portrait { background-color: #2b2e35; }
 .dpc.has-portrait .dpc__avatar { background: transparent; border: none; box-shadow: none; }
 .dpc.has-portrait .dpc__avatar .avatar-img,
 .dpc.has-portrait .dpc__avatar > svg { display: none; }

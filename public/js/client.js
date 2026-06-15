@@ -754,7 +754,10 @@
   // Inline style for a card whose backdrop is a full-art portrait — a dark
   // gradient over the cover keeps the name/HP/AC text legible on any art.
   function portraitBg(url) {
-    return url ? `;background-image:linear-gradient(rgba(8,10,8,.60),rgba(8,10,8,.84)),url('${escapeAttr(url)}');background-size:cover;background-position:center top` : '';
+    // Lighter scrim so the portrait shows through (was .60→.84, which crushed dark
+    // art like the vampires). Stays darker toward the BOTTOM, where the name/HP
+    // text sits, so legibility holds (text also carries its own shadow).
+    return url ? `;background-image:linear-gradient(rgba(8,10,8,.20),rgba(8,10,8,.40) 55%,rgba(8,10,8,.78)),url('${escapeAttr(url)}');background-size:cover;background-position:center top` : '';
   }
   let _dunSbLevel = null;      // blind spellbook: currently-chosen spell level
   let _dunSbIdx = -1;          // blind spellbook: current spell index within the chosen level (Tab cycles)
