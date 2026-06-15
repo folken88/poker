@@ -337,9 +337,14 @@ const MIND_IMMUNE_TYPES = new Set(['undead', 'construct']);
 // styling. New rogue variants just join that set and inherit all of it.
 const isSneakClass = (cls) => SNEAK_CLASSES.has(cls);
 function mindImmune(e) { return !!e && MIND_IMMUNE_TYPES.has(e.type); }
+// Fights with NATURAL weapons / unarmed (claws, fangs, slams, fists, tentacles) —
+// no manufactured weapon to knock away, so it can't be DISARMED. True for the
+// explicit `natural` flag (monks + flagged monsters) or these creature types.
+const NATURAL_TYPES = new Set(['animal', 'vermin', 'ooze', 'magical beast', 'aberration', 'plant']);
+function fightsNatural(e) { return !!e && (e.natural || NATURAL_TYPES.has(e.type)); }
 // "Already taken out of the fight" by crowd control — don't waste fresh CC on them
 // (asleep / fascinated / held / prone / stunned). Used to target CC intelligently.
-function ccd(o) { return !!o && (o.asleep || o.fascinated || (o.paralyzed > 0) || o.prone || (o.stunned > 0)); }
+function ccd(o) { return !!o && (o.asleep || o.fascinated || o.charmed || (o.paralyzed > 0) || o.prone || (o.stunned > 0)); }
 // A "finessable" melee weapon (light, or a one-handed fencing blade) — what a
 // swashbuckler's Precise Strike, Weapon Focus/Specialization and Improved
 // Critical key off of.
@@ -679,7 +684,10 @@ class Dungeon {
     // Darkvision (Communal — Rhyarca's Trickery mystery): when ANY living party
     // member carries it, the party can TARGET foes shrouded in magical darkness
     // (the darkened foes still lose their own turns — see _advanceToActor).
-    const dv = this.party.some(p => !p.left && p.hp > 0 && p.darkvision);
+    // Darkvision Communal OR a blindsense hero (iku-turso) present → the party can
+    // TARGET foes shrouded in magical darkness (and, when foes can turn invisible,
+    // those too — blindsense pinpoints the unseen).
+    const dv = this.party.some(p => !p.left && p.hp > 0 && (p.darkvision || p.blindsense > 0));
     return this.enemies.filter(e => e.hp > 0 && (dv || !(e.darkened > 0)));
   }
 
@@ -714,7 +722,7 @@ class Dungeon {
   // Called at join and on every level change so the numbers track level/ASI.
   _setDerived(m) {
     const featHp = (fighterFeats(m.cls, m.level, this._isRanged(m)).hp) || 0;
-    const raceMods = RACES.raceModsFor(m.race, m.abilityScores);   // race ability adjustments (flat, or human's floating +2 on the best stat)
+    const raceMods = RACES.raceModsFor(m.race, m.abilityScores, m.flexStat);   // race ability adjustments (flat, or a flex race's chosen/best +2)
     const d = deriveCharacter({ cls: m.cls, level: m.level, baseScores: m.abilityScores, raceMods, featHp });
     m.mods = d.mods;
     m.castingMod = d.castingMod;
@@ -726,7 +734,7 @@ class Dungeon {
   // energy (cure spells, Channel Positive, cure potions) does NOTHING; they mend
   // through Infernal Healing or Adimarus's Channel Negative. Vesorianna is also
   // a GHOST: constantly flying and incorporeal (half of physical blows pass through).
-  static UNDEAD_HEROES = new Set(['tar baphon', 'auren vrood', 'vesorianna', 'farrus richton']);
+  static UNDEAD_HEROES = new Set(['tar baphon', 'auren vrood', 'vesorianna', 'farrus richton', 'toni']);   // lich/ghost/graveknight/vampire templates → undead (positive energy does nothing)
   // Casters who FRONT-LOAD damage: on a won initiative (round 1) vs foes of
   // their level or weaker they usually skip straight to their biggest blast.
   static BLASTER_OPENERS = new Set(['elfrip']);
@@ -740,8 +748,9 @@ class Dungeon {
     const level = levelFromXp(xp);             // level now comes from XP (not gear)
     const cls = player.class || 'fighter';
     const abilityScores = db.getAbilityScores(playerId, cls);   // PF1 base 25-pt array
-    const race = db.getRace(playerId);                          // PF1 race (default 'human')
-    const raceMods = RACES.raceModsFor(race, abilityScores);    // racial ability adjustments
+    const race = db.getRace(playerId);                          // PF1 race (default 'none')
+    const flexStat = db.getRaceFlex(playerId);                  // chosen ability for a flex race's +2 ('' = auto)
+    const raceMods = RACES.raceModsFor(race, abilityScores, flexStat);   // racial ability adjustments
     const _ranged = !!weaponOf(gear, player.weapon || 'dagger').ranged;
     const featHp = (fighterFeats(cls, level, _ranged).hp) || 0;
     const maxHp = deriveCharacter({ cls, level, baseScores: abilityScores, raceMods, featHp }).hp;   // Hit Die×level + CON mod/level (race-adjusted) + feat HP
@@ -754,7 +763,9 @@ class Dungeon {
       ghost: (playerId || '').toLowerCase() === 'vesorianna',               // always flying + incorporeal
       flying: (playerId || '').toLowerCase() === 'vesorianna',
       race,                                    // PF1 race key (drives ability mods, vision, save bonuses)
+      flexStat,                                // chosen ability for a flex race's floating +2 ('' = auto)
       vision: RACES.raceVision(race),          // 'normal' | 'low-light' | 'darkvision60' (read by blind mode; Phase-2 will negate darkness penalties)
+      blindsense: RACES.raceBlindsense(race),  // ft of blindsense (iku-turso 30): pinpoints unseen foes — invisibility/darkness can't hide a target from this hero (see _targetableEnemies)
       abilityScores,
       gear, level, xp,
       crowned: !!(db.getPlayer(playerId)?.crowned),   // permanent Loot Lord crown
@@ -825,6 +836,7 @@ class Dungeon {
       for (const k of o.precast) { const p = PRE[k]; if (p) c.push({ key: `pre_${k}`, label: p[0], desc: p[1], icon: `/dungeon/buffs/${k === 'protfire' ? 'protectfire' : k}.webp` }); }
     }
     else if (o.fascinated) c.push({ key: 'fascinated', label: 'Fascinated', desc: 'enthralled — loses turns; the first hit snaps it out', icon: `${I}fascinated.webp` });
+    if (o.charmed)       c.push({ key: 'charmed',    label: 'Charmed',    desc: "won't attack your party — only tends its own side; a hit snaps it out", icon: `${I}fascinated.webp` });
     if (o.darkened > 0)  c.push({ key: 'darkened',  label: 'Darkness',  desc: 'shrouded in darkness — cannot act or be attacked (2 rounds)', icon: `${I}darkened.webp` });
     if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
     if (o.markedEvil)    c.push({ key: 'markedevil', label: 'Marked',   desc: 'revealed by Detect Evil — smite-able', icon: `${I}markedevil.webp` });
@@ -876,6 +888,10 @@ class Dungeon {
     const I = '/dungeon/buffs/', c = [];
     if (e.hasted > 0) c.push({ key: 'haste', label: 'Hasted', desc: 'an extra attack each turn', icon: `${I}haste.webp` });
     if (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)) c.push({ key: 'buffed', label: 'Strengthened', desc: 'combat buffs active (+hit / +damage / +AC)', icon: `${I}bullsstrength.webp` });
+    // Pre-cast wards (boss casters walk in pre-buffed) — these are DISPELLABLE, so
+    // they MUST appear here or the blind Dispel picker won't offer the foe (Josh:
+    // "cannot target a foe"). Mirrors the server's foeEnchanted check.
+    if (e.precast && e.precast.length) c.push({ key: 'warded', label: 'Warded', desc: `pre-cast wards (${e.precast.join(', ')}) — dispellable`, icon: `${I}magearmor.webp` });
     return c;
   }
 
@@ -890,7 +906,7 @@ class Dungeon {
       party: this.party.map(m => ({
         playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot, crowned: !!m.crowned,
         cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
-        race: m.race || 'human', raceName: RACES.raceName(m.race), vision: m.vision || 'normal',   // PF1 race + vision (blind mode reads vision; non-human shows on the hero card)
+        race: m.race || 'human', raceName: RACES.raceName(m.race), vision: m.vision || 'normal', blindsense: m.blindsense || 0,   // PF1 race + vision (+ blindsense ft); blind mode reads vision; non-human shows on the hero card
         form: m.form ? { key: m.form.key, label: m.form.label, glyph: m.form.glyph, art: m.form.art } : null,   // active Wild Shape (drives the token swap on the hero card)
         level: m.level, ...this._xpInfo(m), ...this._heroACs(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
         abilityScores: m.abilityScores || null, abilityMods: m.mods || null, cantrip: this._cantripState(m),
@@ -914,7 +930,7 @@ class Dungeon {
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
         align: e.align || 'NE', evil: !!e.evil, type: e.type || null,
         ac: e.ac, touchAC: (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)), ffAC: Math.max(10, e.ac - 2),
-        flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep, darkened: (e.darkened > 0),
+        flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep, charmed: !!e.charmed, darkened: (e.darkened > 0),
         conditions: e.hp > 0 ? this._condList(e) : [],
         buffs: e.hp > 0 ? this._enemyBuffList(e) : [],
       })),
@@ -1102,6 +1118,7 @@ class Dungeon {
       legs: (base.legs != null ? base.legs : 2),   // leg count — 0 = untrippable; >2 = +4 trip defense per extra leg
       flying: !!base.flying || pre.includes('fly'),   // airborne: immune to prone + "high ground" vs grounded foes (a pre-cast Fly can be DISPELLED — the boss crashes)
       evasion: !!base.evasion,             // rogues/monks: a made Reflex save vs an area effect = NO damage
+      natural: !!base.natural,             // fights with natural weapons / unarmed (claws, bite, slams) → cannot be DISARMED
       detonate: base.detonate || null,     // fire skeleton: rushes in and blows itself up on its turn
       taunted: null,                       // barbarian Taunt: playerId it's compelled to attack next turn
       slowed: 0, _slowTick: 0,             // Slow spell: sluggish for N rounds, acts every other turn
@@ -1693,7 +1710,7 @@ class Dungeon {
     const old = m.level || 1;
     if (nl === old) return 0;
     const _featHp = (fighterFeats(m.cls, nl, this._isRanged(m)).hp) || 0;
-    const nmax = deriveCharacter({ cls: m.cls, level: nl, baseScores: m.abilityScores, raceMods: RACES.raceModsFor(m.race, m.abilityScores), featHp: _featHp }).hp;
+    const nmax = deriveCharacter({ cls: m.cls, level: nl, baseScores: m.abilityScores, raceMods: RACES.raceModsFor(m.race, m.abilityScores, m.flexStat), featHp: _featHp }).hp;
     const gain = nmax - m.maxHp;
     m.level = nl; m.maxHp = nmax;
     this._setDerived(m);                    // refresh ability mods / iteratives at the new level
@@ -1942,6 +1959,20 @@ class Dungeon {
       this._note(`${e.glyph} ${e.name} clambers back to its feet (a move action).`);
     }
     if (!this.livingParty().length) return;
+    // CHARMED (Charm Person): regards the party as friends and WON'T attack them.
+    // It still tends its OWN side — a charmed healer mends a wounded ally — but
+    // otherwise just waits it out. A hit from the party snaps the charm (see the
+    // damage path). Overrides a taunt (a charmed foe won't be goaded into swinging).
+    if (e.charmed) {
+      e.taunted = null;
+      if (e.healer && e.healsLeft > 0) {
+        const wounded = this.livingEnemies().filter(x => x !== e && x.hp > 0 && x.hp <= x.maxHp * 0.5)
+          .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
+        if (wounded) return this._enemyHeal(e, wounded);
+      }
+      this._note(`💞 ${e.glyph} ${e.name}, charmed, won't raise a hand against you — it waits among its own.`, null, { side: 'enemy' });
+      return;
+    }
     // Taunted: compelled to go straight at the barbarian who taunted it — this
     // overrides its specials and target choice. The pull lasts only this (its
     // next) turn, so consume it now.
@@ -3252,6 +3283,13 @@ class Dungeon {
         return { ok: false, error: 'nothing to dispel — no hostile magic on the party and no enchantments on the foes' };
       }
     }
+    // DISARM only works on a manufactured weapon — refuse (keeping the action) vs a
+    // foe that fights with natural weapons / unarmed (claws, fangs, fists). The
+    // reason is toasted + spoken in blind mode.
+    if (ab.effect === 'disarm') {
+      const tgt = this._oneEnemy(payload);
+      if (tgt && fightsNatural(tgt)) return { ok: false, error: `${tgt.name} fights with natural weapons — there's nothing to disarm.` };
+    }
     m.flatFooted = false;   // acting ends flat-footed
     const D = {
       trip:        () => this._abTrip(m, payload),
@@ -3291,6 +3329,7 @@ class Dungeon {
       bladeddash:  () => this._abBladedDash(m, ab, payload),
       dimensionalblade: () => this._abDimBlade(m, ab),
       save_debuff: () => this._abSaveDebuff(m, ab, payload),
+      charm:       () => this._abCharm(m, ab, payload),
       grease:      () => this._abGrease(m, ab, payload),
       fascinate:   () => this._abFascinate(m, ab, payload),
       sleep:       () => this._abSleep(m, ab, payload),
@@ -3688,6 +3727,7 @@ class Dungeon {
       this._note(`🔥🛡 ${e.name}'s fire ward absorbs ${soak}${e.fireWard <= 0 ? ' — the ward BURNS OUT!' : ''}.`);
     }
     e.hp -= dealt; if (e.fascinated) { e.fascinated = false; e.asleep = false; }   // a hit snaps Sleep/Fascinate
+    if (e.charmed && dealt > 0 && e.hp > 0) { e.charmed = false; this._note(`💔 ${e.name}'s charm shatters — struck, it turns hostile again!`, null, { side: 'enemy' }); }   // attacking a charmed foe breaks the charm
     // NOTE: a Fire Skeleton does NOT explode when slain — kill it first and it's
     // DEFUSED. It only blows up if it survives to its own turn (see _detonate).
     return dealt;
@@ -3936,7 +3976,11 @@ class Dungeon {
     }
     if (!anyHit) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} (${rays} ray${rays > 1 ? 's' : ''}) all miss.`, sound); this._echoToTable(sound); return; }
     const parts = [...tally.values()].filter(r => r.hits).map(r => `${r.hits} ray${r.hits > 1 ? 's' : ''} → ${r.name} for ${r.dmg}`);
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} — ${parts.join('; ')} ${ab.dtype || 'fire'}.`, sound);
+    const hitN = [...tally.values()].reduce((s, r) => s + r.hits, 0);
+    const missed = rays - hitN;
+    // State the number of rays FIRED (1 / 2 at CL7 / 3 at CL11), so a missed ray
+    // doesn't make it look like fewer rays launched (Tobias: "only seeing 1 ray").
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} fires ${rays} ray${rays > 1 ? 's' : ''} — ${parts.join('; ')}${missed > 0 ? ` (${missed} miss${missed > 1 ? 'es' : ''})` : ''} ${ab.dtype || 'fire'}.`, sound);
     this._echoToTable(sound);
   }
   // Spellstrike: a weapon hit carrying bonus elemental dice (+ optional debuff).
@@ -4410,6 +4454,20 @@ class Dungeon {
     const h = healBig(); target.hp = Math.min(target.maxHp, target.hp + h);
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${target.nickname} heals ${h} (${target.hp}/${target.maxHp}).`, sound);
     this._echoToTable(sound);
+  }
+  // Charm Person — a living foe, Will save or CHARMED: it stops attacking the
+  // party (only tends its own side) until a hero's blow snaps it out. Mindless
+  // foes (undead/constructs) are immune; an already-charmed foe is left be.
+  _abCharm(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — undead and constructs have no mind to charm.`); this._echoToTable(); return; }
+    if (e.charmed) { this._note(`${ab.icon} ${e.name} is already charmed.`); return; }
+    const dc = this._spellDC(m);
+    const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
+    const sound = ab.sound || pick(SND.stink);
+    if (!sv.saved) { e.charmed = true; e.taunted = null; }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — Will ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : "CHARMED! it won't attack your party (until struck)"}`, sound);
+    this._echoToTable(sound); this._broadcast();
   }
   // Save-or-be-disabled (Hold Person): Will save or paralyzed.
   _abSaveDebuff(m, ab, payload) {
@@ -4895,6 +4953,7 @@ class Dungeon {
   // and the swashbuckler lands a free strike.
   _abDisarm(m, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
+    if (fightsNatural(e)) { this._note(`🌀 ${m.nickname} can't disarm ${e.name} — it fights with natural weapons (claws, fangs, fists); nothing to knock away.`); return this._echoToTable(); }
     m.weapon = weaponOf(m.gear, m.weaponKey);
     const cmb = dRoll(20) + babFor(m.cls || 'swashbuckler', m.level || 1) + ABILITY_MOD + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m);
     const cmd = 10 + (e.toHit || 0);   // rough CMD from the foe's offense (scales with CR via toHit)

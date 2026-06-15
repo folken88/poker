@@ -35,6 +35,19 @@ const RACES = {
   orc:      { name: 'Orc',      mods: { str: 4, int: -2, wis: -2, cha: -2 }, size: 'medium', speed: 30, vision: 'darkvision60', saves: {},          traits: ['+4 STR, −2 INT/WIS/CHA', 'Orc ferocity', 'Darkvision 60'] },
   tiefling: { name: 'Tiefling', mods: { dex: 2, int: 2, cha: -2 }, size: 'medium', speed: 30, vision: 'darkvision60', saves: {},                     traits: ['+2 DEX, +2 INT, −2 CHA', 'Fire/cold/electricity resist 5', 'Darkvision 60'] },
   aasimar:  { name: 'Aasimar',  mods: { wis: 2, cha: 2 },          size: 'medium', speed: 30, vision: 'darkvision60', saves: {},                     traits: ['+2 WIS, +2 CHA', 'Acid/cold/electricity resist 5', 'Darkvision 60'] },
+  // ── Extended roster races (Folken cast) ──────────────────────────────────
+  drow:     { name: 'Drow',     mods: { dex: 2, cha: 2, con: -2 }, size: 'medium', speed: 30, vision: 'darkvision120', saves: { enchantment: 2 },  traits: ['+2 DEX, +2 CHA, −2 CON', 'Spell resistance', '+2 vs enchantment', 'Darkvision 120', 'Light blindness'] },
+  catfolk:  { name: 'Catfolk',  mods: { dex: 2, cha: 2, wis: -2 }, size: 'medium', speed: 30, vision: 'low-light',     saves: {},                     traits: ['+2 DEX, +2 CHA, −2 WIS', 'Cat’s luck', 'Low-light vision'] },
+  goblin:   { name: 'Goblin',   mods: { dex: 4, str: -2, cha: -2 }, size: 'small', speed: 30, vision: 'darkvision60',  saves: {},                     traits: ['+4 DEX, −2 STR, −2 CHA', 'Small', 'Darkvision 60'] },
+  tengu:    { name: 'Tengu',    mods: { dex: 2, wis: 2, con: -2 }, size: 'medium', speed: 30, vision: 'low-light',     saves: {},                     traits: ['+2 DEX, +2 WIS, −2 CON', 'Swordtrained', 'Gifted linguist', 'Low-light vision'] },
+  gillman:  { name: 'Gillman',  mods: { con: 2, cha: 2, wis: -2 }, size: 'medium', speed: 30, vision: 'low-light',     saves: {},                     traits: ['+2 CON, +2 CHA, −2 WIS', 'Amphibious', 'Enchantment resistance (aboleths)', 'Low-light vision'] },
+  // Iku-Turso — an aberration (Bujon). No PC ability adjustments; its key trait
+  // is Blindsense 30 ft, so invisibility/darkness can't hide a foe from it.
+  iku_turso: { name: 'Iku-Turso',                                   size: 'large',  speed: 20, vision: 'darkvision60', blindsense: 30, saves: {},     traits: ['Aberration (no racial ability adjustments)', 'Blindsense 30 ft — pinpoints unseen foes; invisibility & darkness fail against it', 'Amphibious', 'Darkvision 60'] },
+  android:  { name: 'Android',  mods: { dex: 2, int: 2, cha: -2 }, size: 'medium', speed: 30, vision: 'darkvision60',  saves: {},                     traits: ['+2 DEX, +2 INT, −2 CHA', 'Constructed (immune to mind-affecting fear/morale, disease, exhaustion)', 'Darkvision 60'] },
+  skinwalker: { name: 'Skinwalker', mods: { wis: 2, cha: -2 },     size: 'medium', speed: 30, vision: 'low-light',     saves: {},                     traits: ['+2 WIS, −2 CHA', 'Change shape (beast-form)', 'Low-light vision'] },
+  leshy:    { name: 'Leshy',    mods: { con: 2, wis: 2, cha: -2 }, size: 'small',  speed: 20, vision: 'low-light',     saves: {},                     traits: ['+2 CON, +2 WIS, −2 CHA', 'Plant (immune to mind-affecting — Phase 2)', 'Small', 'Low-light vision'] },
+  animal:   { name: 'Animal',                                       size: 'medium', speed: 40, vision: 'low-light',     saves: {},                     traits: ['No racial ability adjustments (not a humanoid race)', 'Natural attacks (via weapon)', 'Low-light vision', 'Scent'] },
 };
 
 const DEFAULT_RACE = 'none';   // unassigned → no racial mods (zero change until a race is chosen)
@@ -48,10 +61,13 @@ function raceFor(k) { return RACES[raceKey(k)]; }
  *  against the character's base array — the +N lands on the highest base score
  *  (ties broken by ABILITY_ORDER), mirroring "put your racial +2 in your prime
  *  stat". Returns a fresh object; safe to pass straight to deriveCharacter. */
-function raceModsFor(k, baseScores) {
+function raceModsFor(k, baseScores, flexStat) {
   const r = raceFor(k);
   if (r.mods) return { ...r.mods };
   if (r.flex) {
+    // A floating +N (human/half-elf/half-orc): land it on the EXPLICIT choice
+    // (characterBuilds `flex`), else on the highest base ability.
+    if (flexStat && ABILITY_ORDER.includes(flexStat)) return { [flexStat]: r.flex };
     const base = baseScores || {};
     let best = ABILITY_ORDER[0], bestVal = -Infinity;
     for (const a of ABILITY_ORDER) {
@@ -73,6 +89,7 @@ function raceSaveBonus(k, tags) {
   return b;
 }
 
+function raceBlindsense(k) { return raceFor(k).blindsense || 0; }
 function raceVision(k) { return raceFor(k).vision || 'normal'; }
 function raceSize(k)   { return raceFor(k).size || 'medium'; }
 function raceName(k)   { return raceFor(k).name || 'Human'; }
@@ -81,5 +98,5 @@ function raceList()    { return Object.keys(RACES).map(k => ({ key: k, name: RAC
 
 module.exports = {
   RACES, DEFAULT_RACE, raceKey, raceFor, raceModsFor, raceSaveBonus,
-  raceVision, raceSize, raceName, raceTraits, raceList,
+  raceVision, raceSize, raceName, raceTraits, raceList, raceBlindsense,
 };

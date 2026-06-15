@@ -350,5 +350,11 @@ const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil']);   // boss-only, neve
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 
+// NATURAL / UNARMED fighters — claws, bite, slams, fists, tentacles: there's no
+// manufactured weapon to knock away, so they CANNOT be DISARMED (Dungeon._abDisarm
+// also treats animals/vermin/oozes/magical beasts/aberrations as natural by TYPE).
+// Flag the monks (unarmed) and the named natural-attackers that aren't those types.
+const NATURAL_KEYS = ['zombie', 'ghoul', 'ghast', 'shadow', 'wight', 'skeletal_champion', 'gargoyle', 'harpy', 'medusa', 'gibbering_mouther', 'abyssal_horror', 'bog_brute', 'ettercap'];
+for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k)) MON[k].natural = true;
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX };

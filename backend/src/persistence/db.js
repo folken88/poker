@@ -96,6 +96,9 @@ ensureColumn('players', 'ability_scores', "TEXT NOT NULL DEFAULT '{}'");
 // vision, and save bonuses (see pf1data/races.js). Default 'human'; pinned per
 // character from pf1data/characterBuilds.js (BUILDS) and re-synced at boot.
 ensureColumn('players', 'race', "TEXT NOT NULL DEFAULT 'none'");
+// The chosen ability for a FLEX race's floating +2 (human/half-elf/half-orc),
+// e.g. 'str'. Empty = auto (highest base stat). Pinned from characterBuilds.
+ensureColumn('players', 'race_flex', "TEXT NOT NULL DEFAULT ''");
 // One-time backfill: fold any legacy single `experience` into the per-class map.
 try {
   const _bf = db.prepare("SELECT player_id, class, experience FROM players WHERE experience > 0 AND (class_xp IS NULL OR class_xp = '{}')").all();
@@ -506,14 +509,14 @@ function seedRoster() {
     // overrides the class TEMPLATE for the player's current class (templates
     // stay the fallback for anyone with no custom scores). Builds are validated
     // against the 25-pt buy and warned (never blocked) so a typo can't break boot.
-    const _setRaceTx   = db.prepare('UPDATE players SET race = ? WHERE player_id = ?');
+    const _setRaceTx   = db.prepare('UPDATE players SET race = ?, race_flex = ? WHERE player_id = ?');
     const _setScoresTx = db.prepare('UPDATE players SET ability_scores = ? WHERE player_id = ?');
     const _getRowTx    = db.prepare('SELECT player_id, class, ability_scores FROM players WHERE player_id = ?');
     for (const [name, b] of Object.entries(BUILDS)) {
       const id = name.toLowerCase();
       const row = _getRowTx.get(id);
       if (!row) continue;   // character not seeded → skip
-      if (b.race) { _setRaceTx.run(RACES.raceKey(b.race), id); builtRace++; }
+      if (b.race) { _setRaceTx.run(RACES.raceKey(b.race), b.flex || '', id); builtRace++; }
       if (b.scores) {
         const cls = row.class || 'fighter';
         const v = validateBuild(b.scores, {});
@@ -688,16 +691,23 @@ function setAbilityScores(playerId, cls, scores) {
 
 // ---- PF1 race (one per character; see pf1data/races.js + characterBuilds.js) ----
 const _setRaceStmt = db.prepare('UPDATE players SET race = ? WHERE player_id = ?');
-/** A player's race key (default 'human' for legacy rows / unknown). */
+const _setFlexStmt = db.prepare('UPDATE players SET race_flex = ? WHERE player_id = ?');
+/** A player's race key (default 'none' for legacy rows / unknown). */
 function getRace(playerId) {
   const p = stmts.getPlayer.get(playerId);
   return RACES.raceKey(p && p.race);
 }
-/** Pin a player's race (used by the boot roster sync + a future editor). */
-function setRace(playerId, race) {
+/** The chosen ability for a flex race's floating +2 ('' = auto / not a flex race). */
+function getRaceFlex(playerId) {
+  const p = stmts.getPlayer.get(playerId);
+  return (p && p.race_flex) || '';
+}
+/** Pin a player's race (+ optional flex ability) — boot roster sync + future editor. */
+function setRace(playerId, race, flex) {
   const p = stmts.getPlayer.get(playerId);
   if (!p) return;
   _setRaceStmt.run(RACES.raceKey(race), playerId);
+  if (flex !== undefined) _setFlexStmt.run(flex || '', playerId);
 }
 
 // ---- Experience / leveling API (PF1 medium track — see pf1data/xp.js) ----
@@ -783,6 +793,7 @@ module.exports = {
   getAbilityScores,
   setAbilityScores,
   getRace,
+  getRaceFlex,
   setRace,
   defaultAbilityScores,
   getXp,
