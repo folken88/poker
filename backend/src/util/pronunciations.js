@@ -27,7 +27,8 @@ const PRONUNCIATIONS = [
   ['Kai Ginn',   'Kai Jinn'],
   ['Kai Gin',    'Kai Jinn'],      // bio sometimes spells it "Kai Gin"
   ['Gaspar',     'Gas par'],
-  ['Fera',       'Fear ah'],
+  ['Fera',       'feer-ah'],     // FEER-ah (hyphen → one smooth word, no mid-name pause)
+  ['Sirona',     'sih-roh-nah'], // SIH-roh-nah
   ['Richton',    'Rick ton'],     // Farrah & her great-grandfather Farrus Richton
   ['Daramid',    'darramidd'],    // Judge Daramid — DAR-ah-mid
   ['bilge',      'bilj'],          // rhymes-ish with "build"; NOT "bill-jah" (common in pirate "bilge rat")
