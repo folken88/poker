@@ -311,14 +311,18 @@ class Bot {
         if (this.mode === 'risky' && this.intelligence === 'high' && v < 0.86 && rng() < 0.30) {
           return buildRaise(0.55, 'probe');
         }
-        // Monster + risky → shove (only risky shoves on standard monsters).
-        if (v >= tuning.monsterThresh && tuning.willShove) {
+        // Monster + risky → shove (only risky shoves on standard monsters) — but
+        // NEVER preflop: open-jamming a premium (e.g. pocket aces) just wins the
+        // blinds and blows everyone off. Preflop it falls through to a value RAISE
+        // to build the pot; the shove is a postflop move (street > 0).
+        if (v >= tuning.monsterThresh && tuning.willShove && street > 0) {
           return { action: 'allin', reason: `monster-shove v=${v.toFixed(2)} ${tag}` };
         }
         // Cautious patient-pays: near-nuts (v ≥ 0.92) finally trigger an
         // all-in. The patient bot has waited for a great hand — when it
-        // comes, they jam to extract maximum value.
-        if (this.mode === 'cautious' && v >= 0.92) {
+        // comes, they jam to extract maximum value. POSTFLOP only — preflop
+        // even the nuts just raises (a preflop jam scares the pot away).
+        if (this.mode === 'cautious' && v >= 0.92 && street > 0) {
           return { action: 'allin', reason: `patience-pays v=${v.toFixed(2)} ${tag}` };
         }
         return buildRaise(1.0, 'value-open');
@@ -375,10 +379,10 @@ class Bot {
     // Strong → raise. Risky promotes monsters to all-in; cautious does so
     // only on near-nuts (the patient bot's payoff move). Mood shades the bar.
     if (v > tuning.raiseThresh - mood * 0.05) {
-      if (this.mode === 'risky' && v >= tuning.monsterThresh) {
+      if (this.mode === 'risky' && v >= tuning.monsterThresh && street > 0) {
         return { action: 'allin', reason: `monster v=${v.toFixed(2)} ${tag}` };
       }
-      if (this.mode === 'cautious' && v >= 0.92) {
+      if (this.mode === 'cautious' && v >= 0.92 && street > 0) {
         return { action: 'allin', reason: `patience-pays v=${v.toFixed(2)} ${tag}` };
       }
       // Cautious only "bets big" when truly certain — otherwise small value bet.
