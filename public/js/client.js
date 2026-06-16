@@ -4632,6 +4632,23 @@
         window.BlindMode.toggle();
         return;
       }
+      // F (fold) / K (checK / call) work as plain poker HOTKEYS even with blind
+      // mode OFF — only on YOUR turn, on the table, and never while typing. When
+      // blind mode is ON the speaking block below handles F/K instead (no double-fire).
+      if (!window.BlindMode.isOn() && !isTypingTarget(e.target)
+          && document.body.dataset.screen !== 'dungeon'
+          && (e.code === 'KeyF' || e.code === 'KeyK')) {
+        const h = state.table?.hand;
+        const meId = state.me?.player_id;
+        const meP = h?.players?.find(p => p.playerId === meId);
+        if (h && h.actor === meId && meP && !meP.folded && !meP.allIn) {
+          e.preventDefault();
+          const toCall = Math.max(0, (h.currentBet || 0) - (meP.invested || 0));
+          const action = e.code === 'KeyF' ? 'fold' : (toCall === 0 ? 'check' : 'call');
+          socket.emit('table:action', { action }, (r) => { if (!r?.ok) { try { toast(r?.error || 'Action rejected.', true); } catch (_) {} } });
+          return;
+        }
+      }
       if (!window.BlindMode.isOn() || isTypingTarget(e.target)) return;
       // Push-to-talk (configurable key; default Space). Checked before H
       // so a player who rebinds PTT to H still gets the mic, not a re-read.
