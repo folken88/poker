@@ -1004,6 +1004,49 @@ class Dungeon {
     if (cast.length) this._note(`✨ The party readies before the door: ${cast.join(', ')}.`, '/audio/spell_invoke.mp3');
   }
 
+  // ── Between-rooms economy (AI personas) ──────────────────────────────────────
+  // Between rooms, an AI delver manages money like a person would: pay DOWN debt
+  // when flush, then BUY a weapon upgrade if they can sensibly afford one — taking
+  // a modest LOAN from Abadar to cover a small shortfall. Spends their persistent
+  // chips (the SAME wallet humans buy gear from via the bank). Conservative + bounded
+  // so it can't blow up the economy; all knobs are right here. Humans are untouched.
+  _aiEconomy() {
+    if (this.status !== 'exploring') return;
+    const RESERVE   = 1500;   // never spend a bot's chips below this poker buffer
+    const MAX_LOAN  = 4000;   // biggest single shortfall a bot will borrow to cover
+    const DEBT_CAP  = 12000;  // a bot won't let its total Abadar tab exceed this
+    for (const m of this.present()) {
+      if (!m.isBot || m.dead || m.left || m.hp <= 0) continue;
+      const p = db.getPlayer(m.playerId); if (!p) continue;
+      let chips = p.chips || 0;
+      // 1) PAY DOWN DEBT first when comfortably flush.
+      const debt = p.rebuy_debt || 0;
+      if (debt > 0 && chips > RESERVE + 250) {
+        const pay = Math.min(debt, chips - RESERVE);
+        if (pay > 0) { db.payRebuyDebt(m.playerId, pay); chips -= pay; this._note(`🏦 ${m.nickname} pays down ${pay} gp of their Abadar tab.`); }
+      }
+      // 2) BUY a WEAPON upgrade — one tier per stop, capped to a WBL-sane target for
+      //    their level (≈ +1 by L3, +2 by L7, +3 by L11, +4 by L15, +5 by L19).
+      const gear = db.getGear(m.playerId) || {};
+      const cur = Number(gear.weapon) || 0;
+      const target = Math.min(5, Math.floor(((m.level || 1) + 1) / 4));
+      if (cur >= target || cur >= 5) continue;
+      const next = cur + 1;
+      const price = db.gearPrice('weapon', next);
+      let borrowed = 0;
+      if (chips < price + RESERVE) {                          // a little short → consider a modest loan
+        const gap = (price + RESERVE) - chips;
+        const curDebt = (db.getPlayer(m.playerId).rebuy_debt || 0);
+        if (gap <= MAX_LOAN && curDebt + gap <= DEBT_CAP) { db.addRebuyDebt(m.playerId, gap); db.setChips(m.playerId, chips + gap); chips += gap; borrowed = gap; }
+      }
+      if (chips >= price + RESERVE) {
+        db.setChips(m.playerId, chips - price);
+        gear.weapon = next; db.setGear(m.playerId, gear); m.gear = gear;   // apply THIS run too (weaponOf reads m.gear)
+        this._note(`🛒 ${m.nickname} buys a +${next} weapon for ${price} gp${borrowed ? ` (borrowing ${borrowed} from Abadar)` : ''}.`);
+      }
+    }
+  }
+
   // ── Turn helpers ──────────────────────────────────────────────────────────
   _currentTurn() {
     if (this.status !== 'combat') return null;
@@ -1016,6 +1059,7 @@ class Dungeon {
   openDoor() {
     if (this.status !== 'exploring') return { ok: false, error: 'not exploring' };
     if (this.lootRoll) return { ok: false, error: 'finish the loot roll first' };
+    this._aiEconomy();      // AI delvers shop between rooms — buy a weapon upgrade, borrow/repay Abadar
     this._preDoorBuffs();   // AI casters put up run-long buffs (Mage Armor/Bless/Fly) before the fight
     this.depth += 1;
     this._spawnRoom();

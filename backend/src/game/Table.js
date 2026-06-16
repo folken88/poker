@@ -15,6 +15,7 @@ const { botRebuyMessage, botBorrowMessage, botHockMessage, humanRebuyMessage, bu
 // debt climbs past this does it pawn an item as a last resort to stay seated.
 const BOT_DEBT_CEILING = 30000;   // ~6 rebuys deep
 const banter = require('../bot/banter');
+const races = require('../pf1data/races');   // for social banter that can address a player by their race
 
 // Which human "owns" each AI character — shown on the token (top-right) in place
 // of the "AI" tag while that human is driving the bot's seat. Keyed by playerId
@@ -766,25 +767,34 @@ class Table {
       // any committed chips > big blind. The acting player is excluded
       // from the speaker pool (no commenting on themselves).
       try {
-        // CHATTER OVERHAUL (user spec): focus on INTERESTING MOMENTS only, ~20%
-        // chance someone speaks. All-ins always qualify; raises only when they're
-        // MEANINGFUL (to at least 4× the big blind — a min-raise is not an event);
-        // big calls keep their 3×BB bar. The old per-check self-announcements
-        // ("chatter about nothing") are gone entirely.
+        // CHATTER OVERHAUL (user spec): a real poker player doesn't narrate routine
+        // bets ("25g into a pot like that?" marks you as a fake/fish). Only react to
+        // a GENUINELY meaningful moment, judged by size vs the POT and a BB floor —
+        // never the raw number. A normal open / min-raise / small call is a NON-EVENT.
+        // And we pass NO amount, so the speaker reacts to the MOMENT, never the figure.
+        const pot = this.hand?.pot?.totalSize?.() || 0;
         const raiseTo = actorAfter?.invested ?? amount;
-        const bigRaise = action === 'raise' && raiseTo >= this.bigBlind * 4;
-        if (action === 'allin' || bigRaise || (action === 'call' && committed > this.bigBlind * 3)) {
-          // Amounts spelled out as words for the LLM (numwords.gold) so the
-          // small model can't misread digit strings ("152" → "fifteen two").
-          // The exact value also rides along in `amounts` so a {amount}
-          // token in the model's line gets the precise figure substituted in.
-          const amtVal = action === 'raise' ? raiseTo : committed;
-          const desc = action === 'allin'
-            ? `${nick} just shoved all-in (${gold(committed)}).`
+        const bigRaise = action === 'raise' && raiseTo >= this.bigBlind * 8 && committed >= pot * 0.6;
+        const bigCall  = action === 'call'  && committed >= this.bigBlind * 8 && committed >= pot * 0.5;
+        const bigAllin = action === 'allin' && committed >= this.bigBlind * 6;
+        if (bigAllin || bigRaise || bigCall) {
+          const desc = bigAllin
+            ? `${nick} just shoved ALL-IN — a defining moment in the hand.`
             : action === 'raise'
-              ? `${nick} raised to ${gold(raiseTo)}.`
-              : `${nick} called a big ${gold(committed)} bet.`;
-          banter.maybeSpeak(this, { kind: action, description: desc, actorIds: [playerId], amounts: { amount: amtVal } });
+              ? `${nick} just put in a big raise — real pressure on the table.`
+              : `${nick} just made a big call to stay in a serious pot.`;
+          banter.maybeSpeak(this, { kind: action, description: desc, actorIds: [playerId], prob: 0.2 });
+        } else if (action === 'check' || (action === 'call' && committed <= this.bigBlind * 2)) {
+          // SOCIAL table talk — a quiet opening check or small/routine call is a fine
+          // moment for light banter ABOUT THE PERSON (a greeting, a friendly "good to
+          // see you again", a playful needle at their luck or their kind), NOT the bet.
+          // (User: "nice to see you again, X" / "hope your luck's better, <race>".)
+          // Low chance; each persona colours the tone — warm, sly, or menacing.
+          let raceName = null;
+          try { const rk = db.getRace(playerId); if (rk && rk !== 'none' && rk !== 'human') raceName = races.raceName(rk); } catch (_) {}
+          const who = raceName ? `${nick} (a ${raceName})` : nick;
+          const desc = `${who} settles in for the hand. Make a bit of light SOCIAL table talk aimed at ${nick} — a greeting, a "good to see you again", or a playful needle about who they are, their kind, or their luck. Use their NAME. Do NOT mention the check, the call, the bet, the pot, or any amount — this is about the person, never the play.`;
+          banter.maybeSpeak(this, { kind: 'social', description: desc, actorIds: [playerId], prob: 0.06 });
         }
       } catch (_) { /* never let banter break a hand */ }
     } catch (_) { /* never let chat logging break a hand */ }
@@ -803,12 +813,13 @@ class Table {
     }
     this._broadcast();
 
-    // ---- Banter: spectator advice for the new actor ----
-    // Folded / waiting bots can chime in for the player now on the
-    // clock — "your move", "fold it", "smell a bluff", etc. Excludes
-    // the new actor (no commenting on themselves) AND the player who
-    // just acted (they likely already got a reaction line above).
-    // Fires at 8% per turn so it's flavor-only, not constant chatter.
+    // ---- Banter: WORK THE TABLE on the player who's on the clock ----
+    // The social half of poker (Fred's move): when an opponent faces a real
+    // decision into a growing pot, a shrewd player chats them up to get a READ —
+    // a probing personal question, a distracting witty remark about who they are,
+    // friendly needling — speech play meant to rattle them or coax out a TELL,
+    // NOT commentary on the cards or the bet. The chance scales with the stakes:
+    // the bigger the decision, the more it's worth trying to get inside their head.
     try {
       const newActor = this.hand?.getCurrentActor?.();
       if (newActor && newActor !== playerId && this.hand?.state !== STATES.COMPLETE) {
@@ -816,16 +827,16 @@ class Table {
         const newActorNick = newActorP?.nickname || newActor;
         const toCall = Math.max(0, this.hand.currentBet - (newActorP?.invested || 0));
         const potSize = this.hand.pot.totalSize();
+        const bb = this.bigBlind || 1;
+        const realDecision = toCall > 0 && potSize >= bb * 8;          // a spot worth probing
+        const prob = realDecision ? (toCall >= potSize * 0.5 ? 0.18 : 0.10) : 0.03;
+        let raceName = null;
+        try { const rk = db.getRace(newActor); if (rk && rk !== 'none' && rk !== 'human') raceName = races.raceName(rk); } catch (_) {}
+        const who = raceName ? `${newActorNick} (a ${raceName})` : newActorNick;
         const desc = toCall > 0
-          ? `${newActorNick} is on the clock, facing a call of ${gold(toCall)} into a ${gold(potSize)} pot. You are a SPECTATOR watching THEM decide — heckle, predict, or needle them; do NOT announce an action yourself.`
-          : `${newActorNick} is on the clock and can check or open. You are a SPECTATOR watching THEM decide — heckle, predict, or needle them; do NOT say "check"/"call" yourself.`;
-        banter.maybeSpeak(this, {
-          kind: 'advice',
-          description: desc,
-          actorIds: [newActor, playerId],
-          prob: 0.03,   // chatter-overhaul: heckling someone's clock is rarely interesting — keep it a rare treat
-          amounts: toCall > 0 ? { call: toCall, pot: potSize } : null,
-        });
+          ? `${who} is on the clock, facing a real decision into a growing pot. You are a SPECTATOR running a bit of GAMESMANSHIP — a pointed question or witty jab TIMED to their turn, thrown deliberately to break their concentration and bait them into the WRONG decision (or to coax out a TELL). Get in their head: a probing personal question, a needling remark about who they are or their kind, a distracting tangent — whatever rattles THIS player. Do NOT announce your own action, and do NOT narrate the cards, the bet, the call, the pot, or any amount.`
+          : `${who} is on the clock and can check or open. You are a SPECTATOR — make a bit of light social chatter or a witty aside aimed at ${newActorNick} (about THEM, never the bet); do NOT say "check"/"call" yourself.`;
+        banter.maybeSpeak(this, { kind: 'advice', description: desc, actorIds: [newActor, playerId], prob });
       }
     } catch (_) { /* never let banter break a hand */ }
     return { ok: true };
