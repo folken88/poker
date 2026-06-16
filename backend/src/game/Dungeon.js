@@ -4975,7 +4975,7 @@ class Dungeon {
     // Per-character taunt voice: Farrus (the Butcher, Farrah's grandpa ghost)
     // roars by summoning grandpa. Tokala + other barbarians keep the predator
     // yell (ab.sound); goblin barbarians use their own yell via _enemyTaunt.
-    const TAUNT_VOICE = { 'farrus richton': '/audio/farrah_summon_grandpa.mp3' };
+    const TAUNT_VOICE = { 'farrus richton': '/audio/farrah_summon_grandpa_short.mp3' };   // shorter recording (new URL dodges the 1h browser cache on the old file)
     const sound = TAUNT_VOICE[(m.playerId || '').toLowerCase()] || (ab.sounds ? pick(ab.sounds) : ab.sound);
     const parts = [];
     for (const e of this.livingEnemies()) {
