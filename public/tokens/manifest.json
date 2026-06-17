@@ -167,7 +167,7 @@
     "villain": true,
     "npc": false,
     "race": "Human",
-    "class": "Necromancer · Whispering Way headman",
+    "class": "Necromancer \u00b7 Whispering Way headman",
     "campaign": "CC"
   },
   {
@@ -235,7 +235,7 @@
     "villain": true,
     "npc": false,
     "race": "Half-Elf",
-    "class": "Witch · Priestess of the Pirate God",
+    "class": "Witch \u00b7 Priestess of the Pirate God",
     "campaign": "CC"
   },
   {
@@ -448,7 +448,7 @@
     "villain": true,
     "npc": false,
     "race": "Velociraptor",
-    "class": "Animal Companion · Loyal Reptile",
+    "class": "Animal Companion \u00b7 Loyal Reptile",
     "campaign": "JG"
   },
   {
@@ -597,7 +597,7 @@
     "villain": false,
     "npc": true,
     "race": "Gnome",
-    "class": "Bard · Estoc Swashbuckler",
+    "class": "Bard \u00b7 Estoc Swashbuckler",
     "campaign": "HR"
   },
   {
@@ -610,7 +610,7 @@
     "villain": true,
     "npc": false,
     "race": "Human",
-    "class": "Spiritualist · Master of Ascanor Lodge",
+    "class": "Spiritualist \u00b7 Master of Ascanor Lodge",
     "campaign": "CC"
   },
   {
@@ -1086,7 +1086,7 @@
     "villain": false,
     "npc": true,
     "race": "Gnome",
-    "class": "Cavalier · Caliphas Mercenary",
+    "class": "Cavalier \u00b7 Caliphas Mercenary",
     "campaign": "JG"
   },
   {
@@ -1373,7 +1373,7 @@
     "villain": true,
     "npc": false,
     "race": "Deva",
-    "class": "Paladin · Deva of the First Circle",
+    "class": "Paladin \u00b7 Deva of the First Circle",
     "campaign": "CC"
   },
   {
@@ -1469,7 +1469,7 @@
     "villain": true,
     "npc": false,
     "race": "Human",
-    "class": "Captain · Oblivious Swashbuckler",
+    "class": "Captain \u00b7 Oblivious Swashbuckler",
     "campaign": null
   },
   {
@@ -1590,5 +1590,35 @@
     "sourceFile": "human/token_human_woman_crawling_squinting_adventurer_professo.webp",
     "mtime": "2026-03-26T23:41:26.454Z",
     "size": 30360
+  },
+  {
+    "id": "draymus-necromancer",
+    "name": "Draymus, Necromancer",
+    "art": "/tokens/draymus-necromancer.webp",
+    "sourceFile": "undead/token_dhampir_draymus_mortiar_necromancer.webp",
+    "mtime": "2026-06-17T01:13:21.000Z",
+    "size": 10364,
+    "race": "Dhampir",
+    "class": "Necromancer"
+  },
+  {
+    "id": "draymus-lich-phase",
+    "name": "Draymus, Lich Phase",
+    "art": "/tokens/draymus-lich-phase.webp",
+    "sourceFile": "token_draymus_mortiar_lich_phase.webp",
+    "mtime": "2026-06-17T01:13:21.000Z",
+    "size": 7716,
+    "race": "Dhampir",
+    "class": "Lich"
+  },
+  {
+    "id": "draymus-simple",
+    "name": "Draymus",
+    "art": "/tokens/draymus-simple.webp",
+    "sourceFile": "token_draymus_new_simple_highres.webp",
+    "mtime": "2026-06-17T01:13:21.000Z",
+    "size": 8000,
+    "race": "Dhampir",
+    "class": null
   }
 ]
