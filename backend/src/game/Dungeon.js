@@ -4730,15 +4730,14 @@ class Dungeon {
     const undead = this.present().filter(a => !a.dead && a.undead);
     if (!undead.length) { this._note(`${ab.icon} ${m.nickname} holds the negative channel — no undead comrades to mend.`); this._echoToTable(); return; }
     const h = Math.max(1, dRollN(Math.max(1, Math.ceil(lvl / 2)), 6));
-    const parts = [];
+    const revived = [];   // concise report (Josh): amount + revives, not per-member HP
     for (const a of undead) {
       const wasDown = a.hp <= 0;
       a.hp = Math.min(a.maxHp, a.hp + h);
-      const up = wasDown && a.hp > 0;
-      if (up) a.downed = false;
-      parts.push(`${a.nickname} ${a.hp}/${a.maxHp}${up ? ' ⤴up!' : ''}`);
+      if (wasDown && a.hp > 0) { a.downed = false; revived.push(a.nickname); }
     }
-    this._note(`${ab.icon} ${m.nickname} channels NEGATIVE energy — black vitality knits the undead: +${h} (${parts.join(', ')}).`, sound);
+    const upNote = revived.length ? ` ${revived.join(' & ')} back up!` : '';
+    this._note(`${ab.icon} ${m.nickname} channels NEGATIVE energy — black vitality knits the undead for +${h} HP.${upNote}`, sound);
     this._echoToTable(sound);
   }
   _abHeal(m, ab, payload) {
@@ -4775,17 +4774,20 @@ class Dungeon {
       // channel is positive energy and can pull a dying ally back onto their feet.
       const allies = this.present().filter(a => !a.dead && !a.undead);
       const h = channelAmt();
-      const parts = [];
+      // Concise report (Josh): a channel announces the HEAL AMOUNT + anyone it
+      // pulled back to their feet — NOT every member's HP. (The old per-member
+      // "Name X/Y" list got read aloud as a full party-health dump that buried
+      // the actual combat narration.) Blind players check party HP with the H key.
+      const revived = [];
       for (const a of allies) {
         const wasDown = a.hp <= 0;
         a.hp = Math.min(a.maxHp, a.hp + h);
-        const up = wasDown && a.hp > 0;
-        if (up) a.downed = false;   // revived — back on their feet
-        parts.push(`${a.nickname} ${a.hp}/${a.maxHp}${up ? ' ⤴up!' : ''}`);
+        if (wasDown && a.hp > 0) { a.downed = false; revived.push(a.nickname); }   // back on their feet
       }
+      const upNote = revived.length ? ` ${revived.join(' & ')} back up!` : '';
       const skippedUndead = this.present().filter(a => !a.dead && a.undead);
       const skipNote = skippedUndead.length ? ` The positive energy washes over ${skippedUndead.map(a => a.nickname).join(' & ')} without effect.` : '';
-      this._note(`${ab.icon} ${m.nickname} channels positive energy — +${h} to the party (${parts.join(', ')}).${skipNote}`, sound);
+      this._note(`${ab.icon} ${m.nickname} channels positive energy — heals the party for +${h} HP.${upNote}${skipNote}`, sound);
     } else {
       // Target the MOST-HURT ally who is NOT dead — INCLUDING a downed/dying ally
       // (hp <= 0 but not slain at -10). (Was livingParty() = hp>0, so a cure could

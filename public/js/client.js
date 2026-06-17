@@ -1552,9 +1552,24 @@
     const text = input.value.trim();
     if (!text) return;
     socket.emit('dungeon:say', { text }, (resp) => {
-      if (resp?.ok) input.value = '';
-      else toast(resp?.error || 'Could not send', true);
+      if (resp?.ok) {
+        input.value = '';
+        // Blind players land back in combat after talking — Backslash brought them
+        // here, a sent message bounces them out so the dungeon hotkeys work again.
+        if (window.BlindMode?.isOn?.()) { try { input.blur(); } catch (_) {} window.BlindMode.speak('Message sent.', 'urgent'); }
+      } else toast(resp?.error || 'Could not send', true);
     });
+  });
+  // Escape inside the message field = bail back to the dungeon without sending
+  // (blind players use Backslash to enter, Escape to leave). The dungeon keydown
+  // handler bails while an INPUT is focused, so this is the only listener that sees it.
+  $('#dungeonChatInput')?.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+      ev.preventDefault();
+      ev.target.value = '';
+      try { ev.target.blur(); } catch (_) {}
+      if (window.BlindMode?.isOn?.()) window.BlindMode.speak('Cancelled. Back to the dungeon.', 'urgent');
+    }
   });
   $('#dungeonLoot')?.addEventListener('click', (ev) => {
     const dr = ev.target.closest('[data-dact]');
@@ -1581,6 +1596,20 @@
       if (e.key !== '.') _dunCancelArm = 0;   // any non-"." key aborts a pending cancel-run confirm
       if (e.key === '?') { e.preventDefault(); _blindHelp = !_blindHelp; window.BlindMode.speak(`Help mode ${_blindHelp ? 'on' : 'off'}.`, 'urgent'); return; }
       const sayU = (t) => window.BlindMode.speak(t, 'urgent');
+      // Backslash = jump INTO the dungeon message field. A blind player can't mouse
+      // over to the chat box mid-combat (Josh, playing with Harry over dungeon
+      // messaging), so this drops focus straight into it: type, Enter sends and
+      // bounces you back to combat, Escape cancels. (\\ is otherwise unused in the
+      // dungeon, and the INPUT-focus guard above means it never fires combat keys.)
+      if (e.key === '\\') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('Backslash: open the message field to type to the party. Enter sends, Escape cancels.'); return; }
+        const input = document.getElementById('dungeonChatInput');
+        if (!input) { sayU('No message field here.'); return; }
+        input.focus(); try { input.select(); } catch (_) {}
+        sayU('Message field. Type your message, Enter to send, Escape to cancel.');
+        return;
+      }
       // Order foes by CR (highest threat first) for blind enumeration + targeting,
       // so "enemy 1" is always the most dangerous. Handles fractional CRs ("1/3").
       const crNum = (cr) => { const s = String(cr ?? ''); if (s.includes('/')) { const p = s.split('/'); const a = parseFloat(p[0]), b = parseFloat(p[1]); return b ? a / b : 0; } const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
@@ -1910,7 +1939,7 @@
         if (!party.length) { window.BlindMode.speak('No party.', 'urgent'); return; }
         const parts = party.map(p => {
           const hp = Math.max(0, p.hp | 0), max = p.maxHp | 0;
-          let s = `${p.nickname}${p.playerId === meId ? ', you,' : ''} ${hp} of ${max}`;
+          let s = `${p.nickname} ${hp} of ${max}`;   // no "you," self-label — Josh knows which character he plays
           if (p.dead) s += ', dead';
           else if (p.downed || hp <= 0) s += ', down';
           return s;
@@ -2043,7 +2072,7 @@
         const lines = liveP.map(p => {
           const items = (p.buffs || []).filter(b => !PERSONAL.has(b.key)).map(b => b.label)
             .concat((p.conditions || []).map(c => c.label));
-          return `${p.nickname}${p.playerId === meId ? ', you,' : ''}: ${items.length ? items.join(', ') : 'no buffs'}`;
+          return `${p.nickname}: ${items.length ? items.join(', ') : 'no buffs'}`;   // no "you," self-label (Josh knows which character he plays)
         });
         sayU('Party buffs. ' + lines.join('. ') + '.');
         return;

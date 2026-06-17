@@ -492,6 +492,24 @@
   /** Diff old vs new table state and emit one or two terse lines. */
   function onState(st) {
     if (!state.on || !st) return;
+    // POKER STAYS AT THE TABLE. While you're down in the dungeon the felt keeps
+    // running (bots + other humans), but its TTS narration must NOT bleed into
+    // the dungeon (Josh: "poker is still announcing in the dungeon"). Keep every
+    // diff tracker synced to the live table so returning to your seat doesn't
+    // dump a backlog of "new hand / flop / X wins" — just stay silent here.
+    // Dungeon combat narration rides a separate path (onDungeonState), so this
+    // guard never silences the dungeon itself. (Banter/SFX audio is already
+    // muffled "through the floor" in client.js; this covers the spoken lines.)
+    if (typeof document !== 'undefined' && document.body && document.body.dataset.screen === 'dungeon') {
+      state.prevState = st;
+      const h = st.hand;
+      state.prevBoardLen = (h && h.board ? h.board.length : 0);
+      state.prevActor = currentActorId(st);
+      if (h && h.state === 'COMPLETE' && h.winners && h.winners.length) {
+        state.prevWinners = h.winners.map(w => `${w.playerId}:${w.amount}`).join('|');
+      }
+      return;
+    }
     const old = state.prevState;
     state.prevState = st;
     const hand = st.hand;
@@ -606,6 +624,11 @@
    *  pronounce icons. */
   function onChat(entry) {
     if (!state.on || !entry || !entry.text) return;
+    // In the dungeon, the poker play-by-play stays silent (Josh: "poker is still
+    // announcing in the dungeon"). table:chat is poker-only — dungeon combat is
+    // narrated via onDungeonState — so suppressing it here never mutes the
+    // dungeon. Banter/SFX audio is muffled "through the floor" in client.js.
+    if (typeof document !== 'undefined' && document.body && document.body.dataset.screen === 'dungeon') return;
     const kind = entry.kind || 'info';
     // Strip leading emoji / symbols / spaces so spoken output doesn't
     // start with "playing-cards black-joker" or similar nonsense.
