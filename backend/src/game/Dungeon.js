@@ -504,6 +504,7 @@ const BUFF_META = {
   goodhope:      { label: 'Good Hope',       desc: 'allies +2 hit, damage & saves (this room)' },
   deadlyaim:     { label: 'Deadly Aim',      desc: 'trading aim for power — −hit, +damage' },
   powerattack:   { label: 'Power Attack',    desc: 'trading accuracy for power — −hit, +damage' },
+  fightdefensively: { label: 'Fighting Defensively', desc: '−4 to hit for a dodge AC bonus', icon: '/dungeon/buffs/shieldoffaith.webp' },
   fly:           { label: 'Flying',          desc: 'airborne — grounded foes cannot reach you' },
   protectfire:   { label: 'Fire Ward',       desc: 'absorbs incoming fire damage until spent (Protection from Fire)' },
   bless:         { label: 'Bless',           desc: '+1 to hit — whole dungeon' },
@@ -1125,6 +1126,36 @@ class Dungeon {
     for (let i = 0; i < cand.length; i++) { r -= weights[i]; if (r <= 0) return cand[i]; }
     return cand[cand.length - 1];
   }
+  // Defensive WARDS a caster foe walks in already wearing — they know the party
+  // is coming, so the long-duration buffs they'd sensibly keep up are assumed
+  // pre-cast (Tobias: "all enemy casters should have pre-cast wards — they know
+  // they're about to be under attack"). An explicit base.precast wins; otherwise
+  // we DERIVE a loadout from the foe's caster type + CR. ARCANE casters
+  // (wizard/sorcerer/magus → arcane/spellstrike) wear Mage Armor + Shield, and
+  // Stoneskin / Fly / Fire ward as they get tougher; DIVINE casters (clerics/
+  // oracles who heal → healer) wear Shield of Faith, plus Fire ward / Stone skin.
+  // Only the ward keys the Dispel-strip + chip UI understand are used: magearmor,
+  // shield, shieldoffaith, stoneskin, protfire, fly. Stoneskin is skipped when the
+  // foe already has innate DR (don't fake-stack a ward the dispel can't truly peel).
+  _autoWards(base) {
+    const arcane = !!base.arcane || !!base.spellstrike;
+    const divine = !!base.healer;
+    if (!arcane && !divine && !base.caster) return [];   // not a caster — no wards
+    const cr = (base.crNum != null) ? base.crNum : (crToNum(base.cr) || 1);
+    const w = [];
+    if (arcane) {
+      w.push('magearmor', 'shield');
+      if (cr >= 7 && !base.dr) w.push('stoneskin');
+      if (cr >= 9)  w.push('fly');
+      if (cr >= 11) w.push('protfire');
+    }
+    if (divine || (!arcane && base.caster)) {
+      w.push('shieldoffaith');
+      if (cr >= 6) w.push('protfire');
+      if (cr >= 9 && !base.dr) w.push('stoneskin');
+    }
+    return [...new Set(w)];
+  }
   _makeEnemy(base, boss) {
     // BOSS ADVANCEMENT — a designated boss gains 1d4 EXTRA LEVELS (PF1 advancing
     // by class levels/HD): +12% HP and +1 to-hit per level; +1 AC, saves, damage,
@@ -1139,7 +1170,7 @@ class Dungeon {
     // Protection from Fire, Fly, Shield of Faith) is assumed already up when the
     // party walks in. Stored on e.precast so the enemy's chips show the wards and
     // Dispel Magic can strip them one by one (Greater sweeps them all).
-    const pre = (boss && Array.isArray(base.precast)) ? base.precast.slice() : [];
+    const pre = Array.isArray(base.precast) ? base.precast.slice() : this._autoWards(base);   // explicit wards (boss or not) else derive from caster type/CR
     const preAC = (pre.includes('magearmor') ? 4 : 0) + (pre.includes('shield') ? 4 : 0) + (pre.includes('shieldoffaith') ? 3 : 0);
     const preTouch = pre.includes('shieldoffaith') ? 3 : 0;   // deflection counts vs touch; armor/shield bonuses don't
     return {
@@ -1309,9 +1340,12 @@ class Dungeon {
           const bt = this.blackTentacles; srcGlyph = '🦑';
           stillHeld = !!bt; cmd = bt ? 10 + bt.cmb : 0;
         } else {
+          // A HERO holds the grip — either Promethean tentacles or a Grapple MANEUVER
+          // (both set grappledBy = the hero's playerId). Held as long as that hero is
+          // up; the foe rolls its CMB vs the grappler's CMD to slip free.
           const grappler = this.member(e.grappledBy);
-          stillHeld = !!(grappler && !grappler.left && grappler.hp > 0 && grappler.form && grappler.form.key === 'promethean');
-          cmd = stillHeld ? 12 + (grappler.level || 1) : 0;
+          stillHeld = !!(grappler && !grappler.left && grappler.hp > 0);
+          cmd = stillHeld ? this._heroCMD(grappler) : 0;
         }
         if (!stillHeld) { e.grappled = false; e.grappledBy = null; e.grappleRounds = 0; this._note(`${srcGlyph} ${e.name} wrenches loose — the grip releases it.`, null, { side: 'enemy' }); }
         else {
@@ -1820,7 +1854,7 @@ class Dungeon {
     return !!(w && (w.dual || (isSneakClass(m.cls) && (m.weaponKey === 'dagger' || m.weaponKey === 'kukri'))));
   }
   _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1) + Haste (+1 dodge)
-    let b = ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).ac + this._hasteMod(m) + (m._offDef ? 2 : 0);   // rogue Offensive Defense: +2 AC after landing a sneak attack (until they next act)
+    let b = ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).ac + this._hasteMod(m) + (m._offDef ? 2 : 0) + (m._fdAc || 0);   // rogue Offensive Defense: +2 AC after a sneak hit; _fdAc: Fight Defensively dodge bonus
     if (fighterFeats(m.cls, m.level, this._isRanged(m)).twDef && this._isDualWielding(m)) b += 1;   // Two-Weapon Defense
     return b;
   }
@@ -1857,12 +1891,14 @@ class Dungeon {
     const featAC = fighterFeats(m.cls, m.level, this._isRanged(m)).ac;
     if (featAC) parts.push(`+${featAC} feats (Dodge)`);
     if (this._hasteMod(m)) parts.push('+1 Haste (dodge)');
+    if (m._fdAc) parts.push(`+${m._fdAc} Fighting Defensively (dodge)`);
     if (m._offDef) parts.push('+2 Offensive Defense');
     if (fighterFeats(m.cls, m.level, this._isRanged(m)).twDef && this._isDualWielding(m)) parts.push('+1 Two-Weapon Defense');
     return {
       ac,
       touchAC: Math.max(10, ac - a.physical - (m.mageArmor ? 4 : 0)),
-      ffAC:    Math.max(10, ac - fighterFeats(m.cls, m.level, this._isRanged(m)).ac),
+      ffAC:    Math.max(10, ac - fighterFeats(m.cls, m.level, this._isRanged(m)).ac - (m._fdAc || 0)),   // a dodge bonus (Fight Defensively) is lost when flat-footed
+
       acBreak: `AC ${ac} = ${parts.join(' · ')}`,
     };
   }
@@ -3383,6 +3419,8 @@ class Dungeon {
     const D = {
       trip:        () => this._abTrip(m, payload),
       disarm:      () => this._abDisarm(m, payload),
+      bullrush:    () => this._abBullRush(m, payload),
+      grapple:     () => this._abGrapple(m, payload),
       spiritweapon: () => this._abSpiritWeapon(m, ab, payload),
       cleave:      () => this._abCleave(m, ab, payload),
       feint:       () => this._abFeint(m, payload),
@@ -3557,6 +3595,7 @@ class Dungeon {
     // mid-fight against a high-AC foe via _botStance.
     if (m.paOn)  this._applyPowerAttack(m, true, { silent: true });
     if (m.aimOn) this._applyDeadlyAim(m, true, { silent: true });
+    m._fdAc = 0; if (m.fdOn) this._applyFightDefensively(m, true, { silent: true });
     m.smiteActive = false;
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
@@ -3658,8 +3697,11 @@ class Dungeon {
         // enchanted foe — the blind picker offers both sides; sighted uses the
         // party-card / enemy selection. No pick → smart auto / refuse if nothing.
         const dispelPick = ab.effect === 'cleanse';
+        // modePick: a CHANNEL (heal:'party') can be aimed OFFENSIVELY (sear undead)
+        // or DEFENSIVELY (heal the party) — the client prompts and sends payload.mode.
+        const modePick = ab.effect === 'heal' && ab.heal === 'party';
         return {
-        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, maxTargets: ab.maxTargets || 1,
+        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
         slot: kit.abilities.indexOf(ab),   // stable index into kit.abilities (the action payload `slot`) — survives the char filter
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null,
@@ -4758,7 +4800,15 @@ class Dungeon {
       // passes over them below (Infernal Healing / Channel Negative is their cure).
       const woundedAllies = this.present().filter(a => !a.dead && !a.undead && a.hp < a.maxHp);
       const undead = this._targetableEnemies().filter(e => e.type === 'undead');
-      if (!woundedAllies.length && undead.length) {
+      // The caster may FORCE the mode (Tobias: channel offensive vs defensive):
+      //   'offensive' → sear the undead   ·   'defensive' → heal the party
+      // No mode = the old auto-pick (heal if anyone's hurt, else sear undead).
+      const mode = payload && payload.mode;
+      const wantSear = (mode === 'offensive') || (!mode && !woundedAllies.length);
+      if (mode === 'offensive' && !undead.length) {
+        this._note(`${ab.icon} ${m.nickname} readies an OFFENSIVE channel — but there are no undead here to sear; the energy mends the party instead.`);
+      }
+      if (wantSear && undead.length) {
         const dmg = channelAmt(), dc = 10 + Math.floor(lvl / 2) + CAST_MOD, parts = [];
         for (const e of undead) {
           const sv = this._saveVs(this._enemySave(e, 'will'), dc);
@@ -4898,12 +4948,34 @@ class Dungeon {
     m.buffs.toHit -= pen; m.buffs.dmg += bonus;
     if (!silent) { this._note(`💥 ${m.nickname} hauls into Power Attack — −${pen} to hit, +${bonus} damage on every blow.`, sound); this._echoToTable(sound); }
   }
+  // FIGHT DEFENSIVELY — a stance toggle like Power Attack: −4 to all attacks (and
+  // combat maneuvers, via buffs.toHit) for a +2 DODGE AC (+3 for the acrobatic
+  // classes — monks etc. who'd have the Acrobatics ranks). The dodge bonus is real
+  // (summed in _acBonus, dropped when flat-footed in _heroACs). m.fdOn re-asserts
+  // the stance across rooms, exactly like paOn/aimOn.
+  _applyFightDefensively(m, on, { silent, sound } = {}) {
+    m.buffApplied = m.buffApplied || {};
+    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+    if (!on) {
+      if (!m.buffApplied.fightdefensively) return;
+      m.buffApplied.fightdefensively = false; m.fdOn = false;
+      m.buffs.toHit += 4; m._fdAc = 0;
+      if (!silent) { this._note(`🛡️ ${m.nickname} drops the defensive guard — back to full commitment.`, '/audio/shh.mp3'); this._echoToTable('/audio/shh.mp3'); }
+      return;
+    }
+    if (m.buffApplied.fightdefensively) return;
+    const dodge = ['monk', 'rogue', 'swashbuckler', 'ranger'].includes(m.cls) ? 3 : 2;   // PF1: +2, or +3 with 3 ranks of Acrobatics
+    m.buffApplied.fightdefensively = true; m.fdOn = true; m._fdAc = dodge;
+    m.buffs.toHit -= 4;
+    if (!silent) { this._note(`🛡️ ${m.nickname} fights defensively — −4 to hit, +${dodge} dodge AC.`, sound); this._echoToTable(sound); }
+  }
   _abBuff(m, ab, payload) {
     const sound = ab.sound || pick(SND.flesh);
     const lvl = m.level || 1;
-    // Power Attack / Deadly Aim — stance toggles; flip via the shared helpers.
-    if (ab.deadlyaim)   { this._applyDeadlyAim(m, !(m.buffApplied && m.buffApplied.deadlyaim), { sound }); return; }
-    if (ab.powerattack) { this._applyPowerAttack(m, !(m.buffApplied && m.buffApplied.powerattack), { sound }); return; }
+    // Power Attack / Deadly Aim / Fight Defensively — stance toggles; shared helpers.
+    if (ab.deadlyaim)        { this._applyDeadlyAim(m, !(m.buffApplied && m.buffApplied.deadlyaim), { sound }); return; }
+    if (ab.powerattack)      { this._applyPowerAttack(m, !(m.buffApplied && m.buffApplied.powerattack), { sound }); return; }
+    if (ab.fightdefensively) { this._applyFightDefensively(m, !(m.buffApplied && m.buffApplied.fightdefensively), { sound }); return; }
     // RAGE — scales like PF1e (Greater at 11, Mighty at 20) and pumps Con → HP.
     if (ab.key === 'rage') {
       m.buffApplied = m.buffApplied || {};
@@ -5054,6 +5126,56 @@ class Dungeon {
     const r = this._swingVsAC(m, this._enemyAC(e), e);
     if (r.hit) { this._dmgE(e, r.damage); this._note(`🗡️ ${m.nickname} skewers the off-balance ${e.name} for ${r.damage}${r.drTag || ''}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     else this._note(`🗡️ the follow-up misses ${e.name}. ${this._atkStr(r)}`, r.sound);
+    this._echoToTable(r.sound);
+  }
+  // ── PF1 COMBAT MANEUVERS (shared math) ──────────────────────────────────────
+  // CMB = d20 + BAB + STR mod + the same situational hit mods a swing gets (buffs
+  // incl. Power Attack / Fight Defensively penalties, Haste). Real STR from the
+  // individualized build, falling back to the legacy +4 when a member has no mods.
+  _heroCMB(m) {
+    return dRoll(20) + babFor(m.cls || 'fighter', m.level || 1)
+         + ((m.mods && m.mods.str != null) ? m.mods.str : ABILITY_MOD)
+         + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m);
+  }
+  // A hero's CMD (10 + BAB + STR + DEX) — what a grappled foe rolls against to slip free.
+  _heroCMD(m) {
+    return 10 + babFor(m.cls || 'fighter', m.level || 1)
+         + ((m.mods && m.mods.str != null) ? m.mods.str : ABILITY_MOD)
+         + ((m.mods && m.mods.dex != null) ? m.mods.dex : 0);
+  }
+  // A foe's CMD vs a maneuver: its offense (toHit ≈ BAB+STR) over 10, plus, for
+  // moves that try to upend/move/seize it, stability from extra legs + big size.
+  _enemyCMD(e, stability) { return 10 + (e.toHit || 0) + (stability ? this._tripDefBonus(e) : 0); }
+  // Bull Rush (STR maneuver): shove the foe back. On a success it's driven out of
+  // reach and loses its next turn recovering ground; a hard shove (≥5 over its CMD)
+  // slams it prone. No free attack — you've pushed it AWAY, not set it up.
+  _abBullRush(m, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const cmb = this._heroCMB(m), cmd = this._enemyCMD(e, true);
+    if (cmb < cmd) { this._note(`💪 ${m.nickname} throws a shoulder into ${e.name}, but it holds its ground. [CMB ${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword)); return this._echoToTable(); }
+    e.loseTurn = true;
+    const hard = cmb - cmd >= 5;
+    if (hard) e.prone = true;
+    this._note(`💪 ${m.nickname} BULL RUSHES ${e.name}${hard ? ' — a brutal shove that SLAMS it prone' : ''} — driven back, it loses its turn closing the distance! [CMB ${cmb} vs CMD ${cmd}]`, '/audio/spell_revive.mp3');
+    this._echoToTable('/audio/spell_revive.mp3');
+  }
+  // Grapple (STR maneuver): seize the foe. On a success it's grappled & helpless —
+  // it burns its turns struggling (the enemy-turn escape loop rolls its CMB vs the
+  // grappler's CMD; the grip lasts ~2 rounds) — and the grab crushes for a free
+  // strike. Can't grapple foes far bigger than the grappler or incorporeal ones.
+  _abGrapple(m, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    if (e.grappled) { this._note(`🤼 ${e.name} is already grappled.`); return this._echoToTable(); }
+    if (e.incorporeal) { this._note(`🤼 ${m.nickname} can't grapple ${e.name} — it's incorporeal, hands pass right through.`); return this._echoToTable(); }
+    m.weapon = weaponOf(m.gear, m.weaponKey);
+    const cmb = this._heroCMB(m), cmd = this._enemyCMD(e, true);
+    if (cmb < cmd) { this._note(`🤼 ${m.nickname} grabs at ${e.name}, but it twists out of the hold. [CMB ${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword)); return this._echoToTable(); }
+    e.grappled = true; e.grappledBy = m.playerId; e.grappleRounds = 2;   // helpless until it breaks free (enemy-turn escape) or ~2 rounds pass
+    this._note(`🤼 ${m.nickname} GRAPPLES ${e.name} — seized and helpless, it'll burn its turns struggling free! [CMB ${cmb} vs CMD ${cmd}] Free strike!`, '/audio/spell_revive.mp3');
+    const r = this._swingVsAC(m, this._enemyAC(e), e);
+    if (r.hit) { this._dmgE(e, r.damage); this._note(`💥 ${m.nickname} crushes the held ${e.name} for ${r.damage}${r.drTag || ''}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
+    else this._note(`💥 the crushing grip can't land clean. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
   }
   // Spiritual Weapon (cleric): conjure a force-blade over a chosen foe. It strikes

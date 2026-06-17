@@ -665,6 +665,26 @@ for (const _kit of Object.values(KITS)) {
   _kit.abilities = _kit.abilities.filter(a => a.key !== 'powerattack' && a.key !== 'deadlyaim');
   _kit.abilities.unshift({ ..._DEADLY_AIM }, { ..._POWER_ATTACK });   // both, available from level 1
 }
+
+// ── PF1 COMBAT MANEUVERS + FIGHT DEFENSIVELY on the STR front-liners ──────────
+// The heavy melee get the full opposed-maneuver suite (CMB vs CMD; see the _ab*
+// handlers + _heroCMB/_enemyCMD in Dungeon.js) plus a Fight Defensively stance.
+// Each maneuver is its OWN button (Tobias's call). cavalier shares the fighter
+// DEFAULT_KIT, so injecting into 'fighter' covers it too. We skip any a class
+// already owns (fighter & monk keep their existing Trip).
+const _TRIP_MV    = { key: 'trip',    name: 'Trip',     icon: '🦵', cost: 'free', effect: 'trip',    target: 'enemy', desc: 'Attack to trip (no damage). On a hit the foe is knocked prone, loses its turn, and you get a free attack. Prone = +4 for everyone to hit it.' };
+const _DISARM_MV  = { key: 'disarm',  name: 'Disarm',   icon: '🌀', cost: 'free', effect: 'disarm',  target: 'enemy', desc: 'An opposed maneuver (your CMB vs its CMD) to knock a foe\'s weapon away. On a success it scrambles for its weapon (loses its next turn) and you land a free strike. (No effect on claws/fangs/fists — nothing to drop.)' };
+const _BULLRUSH_MV= { key: 'bullrush',name: 'Bull Rush',icon: '💪', cost: 'free', effect: 'bullrush',target: 'enemy', desc: 'Shove a foe back — an opposed maneuver (your CMB vs its CMD). On a success it\'s driven out of reach and loses its turn closing again; a hard shove (5+ over its CMD) slams it prone. No free attack — you\'ve pushed it away.' };
+const _GRAPPLE_MV = { key: 'grapple', name: 'Grapple',  icon: '🤼', cost: 'free', effect: 'grapple', target: 'enemy', desc: 'Seize a foe — an opposed maneuver (your CMB vs its CMD). On a success it\'s grappled and helpless, burning its turns struggling free (~2 rounds), and your grip crushes for a free strike. Can\'t grapple incorporeal foes.' };
+const _FIGHT_DEF  = { key: 'fightdefensively', name: 'Fight Defensively', icon: '🛡️', cost: 'free', freeAction: true, effect: 'buff', target: 'self', fightdefensively: true, sticky: true, minLevel: 1, sound: S.invoke, desc: 'A FREE toggle — −4 to all your attacks (and combat maneuvers) for a +2 dodge AC (+3 if you\'re acrobatic, e.g. a monk). Flip on or off without spending your turn.' };
+const _MANEUVER_CLASSES = ['fighter', 'barbarian', 'paladin', 'monk'];   // cavalier rides the fighter DEFAULT_KIT
+for (const _ck of _MANEUVER_CLASSES) {
+  const _k = KITS[_ck]; if (!_k || !_k.abilities) continue;
+  const _have = new Set(_k.abilities.map(a => a.key));
+  for (const _mv of [_TRIP_MV, _DISARM_MV, _BULLRUSH_MV, _GRAPPLE_MV, _FIGHT_DEF]) {
+    if (!_have.has(_mv.key)) _k.abilities.push({ ..._mv });
+  }
+}
 // Wizards & sorcerers get Scribe Scroll + Eschew Materials free (the caster "tax"
 // feats), so their feat budget goes straight to Spell Focus / metamagic. Neither has
 // a dungeon-combat effect (no component tracking here — spells already cast freely),

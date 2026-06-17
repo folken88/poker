@@ -734,6 +734,7 @@
   let _dunSbMode = false;      // blind dungeon: spellbook open (numbers pick a spell LEVEL, Tab cycles spells)
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
   let _dunDispelPick = null;   // blind dungeon: Dispel Magic awaiting a target — {slot,label,targets:[{kind:'ally'|'foe',id,name}]} (numbers pick, Return = smart auto)
+  let _dunModePick = null;     // blind dungeon: Channel awaiting a mode — {slot,label} (1 = heal/defensive, 2 = sear/offensive, Return = auto)
   // Full-art PORTRAITS (paired from each token's Foundry source) used as the
   // background of hero/villain cards. The manifest lists which basenames have a
   // portrait; tokens without one keep the plain card background.
@@ -1256,6 +1257,14 @@
           const mark = ab.active ? '✓ ' : '';
           let ttl = ab.active ? `${ab.desc || ''}\n(active — click to revert to normal)` : (ab.desc || '');
           if (combat && !myTurn) ttl += '\n(⏳ not your turn — clicking QUEUES it to fire the moment your turn begins)';
+          // CHANNEL — offensive vs defensive: two buttons sharing the slot + use pool
+          // (Tobias). Heal mends the party; Sear blasts the undead instead.
+          if (ab.modePick) {
+            const dis = (combat && ok) ? '' : ' disabled';
+            const a = `${ab.key || ''}`;
+            return `<button class="${cls}" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(a)}" data-mode="defensive"${dis} title="${escapeAttr(ttl)}\nHeal the whole party.">${mark}💖 ${escapeText(ab.name)}: Heal${count}</button>`
+                 + `<button class="btn btn--ghost" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(a)}" data-mode="offensive"${dis} title="Channel offensively — SEAR the undead instead of healing.">🔥 ${escapeText(ab.name)}: Sear${count}</button>`;
+          }
           return `<button class="${cls}" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(ab.key || '')}"${(combat && ok) ? '' : ' disabled'} title="${escapeAttr(ttl)}">${mark}${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
         };
         // Spellbook tile: icon ONLY (name + short description show on hover).
@@ -1459,7 +1468,7 @@
     const act = b.dataset.dact;
     if (act === 'attack')       dungeonAction('attack', { targetUid: _dungeonSel[0] });
     else if (act === 'ability') {
-      const payload = { slot: Number(b.dataset.slot) || 0, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6), allyUid: _dungeonAllySel || undefined };
+      const payload = { slot: Number(b.dataset.slot) || 0, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6), allyUid: _dungeonAllySel || undefined, mode: b.dataset.mode || undefined };
       // Inquisitor Bane declares a creature TYPE: take it from the selected foe
       // (if any). With nothing selected the server auto-picks the commonest type.
       if (b.dataset.abkey === 'bane') {
@@ -1687,6 +1696,11 @@
           _dunDispelPick = { slot, label: ab.name, targets };
           const list = targets.map((t, i) => `${i + 1} ${t.name}${t.kind === 'ally' ? ' (cleanse)' : ' (strip)'}`).join(', ');
           sayU(`${ab.name} on whom? ${list}. Press a number, or Return for the best target.`);
+        } else if (ab.modePick) {
+          // Channel: 1 = heal the party (defensive), 2 = sear the undead (offensive),
+          // Return = the smart auto-pick (heal if anyone's hurt, else sear undead).
+          _dunModePick = { slot, label: ab.name };
+          sayU(`${ab.name}: press 1 to heal the party, 2 to sear the undead, or Return for the smart choice.`);
         } else {
           dungeonAction('ability', { slot });   // self / ally — server chooses
         }
@@ -1802,6 +1816,29 @@
           return;
         }
         _dunDispelPick = null;   // any other key cancels + falls through
+      }
+      // ----- Channel mode sub-mode (Channel awaiting offensive/defensive) -----
+      //   1 = heal the party · 2 = sear the undead · Return = smart auto · Esc cancels.
+      if (_dunModePick) {
+        if (e.key === 'Escape') { e.preventDefault(); _dunModePick = null; sayU('Cancelled.'); return; }
+        if (e.key === 'Enter' || e.code === 'NumpadEnter') {
+          e.preventDefault();
+          const p = _dunModePick; _dunModePick = null;
+          if (!myTurn) { sayU('Not your turn.'); return; }
+          sayU(`Channeling — the smart choice.`);
+          dungeonAction('ability', { slot: p.slot });   // no mode → server auto-decides
+          return;
+        }
+        if (e.key === '1' || e.key === '2') {
+          e.preventDefault();
+          const p = _dunModePick; _dunModePick = null;
+          if (!myTurn) { sayU('Not your turn.'); return; }
+          const mode = e.key === '1' ? 'defensive' : 'offensive';
+          sayU(e.key === '1' ? 'Channeling to heal the party.' : 'Channeling to sear the undead.');
+          dungeonAction('ability', { slot: p.slot, mode });
+          return;
+        }
+        _dunModePick = null;   // any other key cancels + falls through
       }
       // ----- Session menu (opened by Esc) ------------------------------------
       // A self-contained sub-mode for the spectate / leave / cancel controls. Done
@@ -2008,6 +2045,12 @@
           sayU(`${label} on whom? ${list}. Press a number, or Return for the best target.`);
           return;
         }
+        // Channel feature — offensive (sear undead) vs defensive (heal party).
+        if (ab && ab.modePick) {
+          _dunModePick = { slot: act.slot, label };
+          sayU(`${label}: press 1 to heal the party, 2 to sear the undead, or Return for the smart choice.`);
+          return;
+        }
         // Single-enemy-target actions (basic attack, or an ability that targets one
         // enemy) with MORE THAN ONE foe alive → ask which enemy; the next number
         // selects it. One foe (or an AoE/self/ally action) just fires.
@@ -2068,7 +2111,7 @@
         // party buffs, and notable conditions — but skip each character's personal
         // attack toggles (Power Attack / Deadly Aim / Rapid Shot), which are their
         // own business, not party info.
-        const PERSONAL = new Set(['powerattack', 'deadlyaim', 'rapidshot']);
+        const PERSONAL = new Set(['powerattack', 'deadlyaim', 'rapidshot', 'fightdefensively']);
         const lines = liveP.map(p => {
           const items = (p.buffs || []).filter(b => !PERSONAL.has(b.key)).map(b => b.label)
             .concat((p.conditions || []).map(c => c.label));
