@@ -116,6 +116,11 @@ function readJsonl(file, sinceMs) {
   } catch (_) { return []; }
 }
 
+// Public address of the poker table — dropped into the daily report so the
+// family can jump straight in. Overridable via the MEYANDA_TABLE_URL container
+// env var (docker-compose); defaults to the live domain.
+const TABLE_URL = process.env.MEYANDA_TABLE_URL || 'https://poker.folkengames.com';
+
 const gp = (n) => `${Math.round(n).toLocaleString()} gp`;
 const signedGp = (n) => `${n >= 0 ? '+' : '−'}${gp(Math.abs(n))}`;
 const chiDate = (d) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', weekday: 'long', month: 'long', day: 'numeric' }).format(d);
@@ -214,6 +219,7 @@ function dailyReport() {
   const ups = dunRows.filter(r => r.type === 'levelup').length;
   if (clears || ups) lines.push(`Dungeon${dun24.length ? '' : ' (all-time)'}: ${clears} room${clears === 1 ? '' : 's'} cleared, deepest depth ${deepest}, ${ups} level-up${ups === 1 ? '' : 's'}.`);
 
+  lines.push(`🪑 Pull up a chair: ${TABLE_URL}`);
   lines.push('— Meyanda, keeper of records');
   return lines.join('\n');
 }
