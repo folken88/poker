@@ -2380,7 +2380,9 @@ class Dungeon {
       parts.push(`${t.nickname} ${saved ? 'half ' : ''}−${dmg}${fireTag}`);
     }
     // cfg.verb lets a dragon BREATHE and a bomb devil LOB instead of "hellfire".
-    this._note(`🔥 ${e.glyph} ${e.name} ${cfg.verb || 'unleashes a HELLFIRE BLAST'} (${cfg.dice || 5}d${cfg.die || 6} → ${full}) — ${parts.join(', ')}! [Ref DC ${dc}]`, cfg.sound, { side: 'enemy' });
+    // Save type + DC stated in the SPOKEN text (Josh wants it) — not bracketed,
+    // since blind mode strips [..] roll math. Targets stay terse: name + damage.
+    this._note(`🔥 ${e.glyph} ${e.name} ${cfg.verb || 'unleashes a HELLFIRE BLAST'} — Ref DC ${dc} (${full} ${cfg.dtype || 'fire'}): ${parts.join(', ')}!`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
   }
   // Lich's Fireball (it casts as a wizard of its level): a roaring blast on a
@@ -2447,7 +2449,7 @@ class Dungeon {
       this._dmgToMember(t, dmg);
       parts.push(`${t.nickname} ${saved ? (t.evasion ? 'evades ' : 'half ') : ''}−${dmg}${fireTag}`);
     }
-    this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} (${cfg.dice}d${cfg.die || 6} ${cfg.dtype} → ${full}) — ${parts.join(', ')}! [Ref DC ${cfg.dc}]`, cfg.sound, { side: 'enemy' });
+    this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} — Ref DC ${cfg.dc} (${full} ${cfg.dtype}): ${parts.join(', ')}!`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
   }
   // A lich single-target nuke — optional save for partial (Disintegrate / Finger
@@ -3415,6 +3417,19 @@ class Dungeon {
       const tgt = this._oneEnemy(payload);
       if (tgt && fightsNatural(tgt)) return { ok: false, error: `${tgt.name} fights with natural weapons — there's nothing to disarm.` };
     }
+    // MELEE MANEUVERS need to physically REACH the foe — a grounded hero can't
+    // trip / disarm / bull rush / grapple / feint a flyer on the wing (Josh: you
+    // could cheat down airborne sorcerers & dragons with these). Unlike a basic
+    // attack there's no ranged fallback for a body-on-body maneuver, so refuse —
+    // keeping the action — with a told-to-the-caster reason. (Cleave handles its
+    // own reach above by drawing the backup crossbow.)
+    const MELEE_MANEUVERS = new Set(['trip', 'disarm', 'bullrush', 'grapple', 'feint', 'reckless']);
+    if (MELEE_MANEUVERS.has(ab.effect)) {
+      const tgt = this._oneEnemy(payload);
+      if (tgt && tgt.flying && !this._canReach(m, tgt)) {
+        return { ok: false, error: `${tgt.name} is flying out of reach — you can't ${ab.name.toLowerCase()} a foe on the wing. Use a ranged attack or get airborne.` };
+      }
+    }
     m.flatFooted = false;   // acting ends flat-footed
     const D = {
       trip:        () => this._abTrip(m, payload),
@@ -4027,15 +4042,23 @@ class Dungeon {
     // save area effect only). Resistance/vulnerability still applies per target.
     // Metamagic (Empower ×1.5 / Maximize) applies to the one shared roll.
     const full = this._rollSpell(m, dice, ab.die || 6, ab);
+    // CONCISE report (Josh): the save TYPE + DC + the rolled damage are stated ONCE
+    // up front, then targets are grouped into who FAILED (took it) vs who SAVED
+    // (half) — each with their own damage + a ☠️ on a kill. Drops the per-enemy
+    // d20 total + repeated "vs DC" that buried the line and slowed the narration.
+    const failed = [], saved = [];
     for (const e of chosen) {
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
       const evaded = sv.saved && saveStat === 'reflex' && e.evasion;
       const raw = sv.saved ? (evaded ? 0 : Math.floor(full / 2)) : full;
       const dmg = this._dmgE(e, raw, ab.dtype);
-      const outcome = sv.saved ? (evaded ? '🤸 EVADES — 0' : `half ${dmg}`) : `fail ${dmg}`;
-      parts.push(`${e.name}: ${saveLbl} ${sv.total} vs ${dc} ${outcome}${evaded ? '' : this._resistTag(e, ab.dtype)}${e.hp <= 0 ? ' ☠️' : ''}`);
+      const tag = `${e.name} ${evaded ? 'evaded' : dmg}${evaded ? '' : this._resistTag(e, ab.dtype)}${e.hp <= 0 ? ' ☠️' : ''}`;
+      (sv.saved ? saved : failed).push(tag);
     }
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} (${dice}d${ab.die || 6} → ${full} ${ab.dtype || ''}) — ${parts.join('; ')}.`, sound);
+    const segs = [];
+    if (failed.length) segs.push(`hit ${failed.join(', ')}`);
+    if (saved.length)  segs.push(`saved ${saved.join(', ')}`);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${saveLbl} DC ${dc} (${full} ${ab.dtype || ''}): ${segs.join('; ')}.`, sound);
     this._echoToTable(sound);
   }
   // Disintegrate (PF1e): a ranged TOUCH ATTACK; on a hit, 2d6 per caster level
@@ -5285,7 +5308,7 @@ class Dungeon {
         bits.push(`${target.name} FUMBLE`);
       } else if (r.hit) {
         this._dmgE(target, r.damage); downed = target.hp <= 0;
-        bits.push(`${target.name} ${r.damage}${r.drTag || ''}${downed ? ' ☠️' : ` (${Math.max(0, target.hp)}/${target.maxHp})`}${this._afterEnemyHit(target)}`);
+        bits.push(`${target.name} ${r.damage}${r.drTag || ''}${this._afterEnemyHit(target)}`);   // _afterEnemyHit already adds ☠️ or (hp/max) — don't print the total twice (Josh: "66 of 95 66 of 95")
         if (downed) { kills++; this._tryBanter(m, 'down', { enemy: target.name }); }
       } else {
         bits.push(`${target.name} miss`);
