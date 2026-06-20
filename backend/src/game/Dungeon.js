@@ -689,8 +689,16 @@ class Dungeon {
     // Darkvision Communal OR a blindsense hero (iku-turso) present → the party can
     // TARGET foes shrouded in magical darkness (and, when foes can turn invisible,
     // those too — blindsense pinpoints the unseen).
-    const dv = this.party.some(p => !p.left && p.hp > 0 && (p.darkvision || p.blindsense > 0));
-    return this.enemies.filter(e => e.hp > 0 && (dv || !(e.darkened > 0)));
+    // Seeing the UNSEEN — darkvision/blindsense (Rhyarca's Communal Darkvision,
+    // Bujon's blindsense) OR True Seeing — lets the party target foes shrouded in
+    // darkness AND foes who've gone INVISIBLE (enemy casters can now vanish).
+    const dv = this.party.some(p => !p.left && p.hp > 0 && (p.darkvision || p.blindsense > 0 || p.trueSeeing));
+    let list = this.enemies.filter(e => e.hp > 0 && (dv || (!(e.darkened > 0) && !e.invisible)));
+    // If invisibility/darkness hid EVERY foe, the party can still flail into the dark
+    // (each swing eats the 50% concealment miss in _swingVsAC) — never leave them with
+    // zero targets and a stuck room.
+    if (!list.length) list = this.enemies.filter(e => e.hp > 0);
+    return list;
   }
 
   hasMember(playerId) { const m = this.member(playerId); return !!(m && !m.left && m.hp > 0); }
@@ -894,6 +902,11 @@ class Dungeon {
     // they MUST appear here or the blind Dispel picker won't offer the foe (Josh:
     // "cannot target a foe"). Mirrors the server's foeEnchanted check.
     if (e.precast && e.precast.length) c.push({ key: 'warded', label: 'Warded', desc: `pre-cast wards (${e.precast.join(', ')}) — dispellable`, icon: `${I}magearmor.webp` });
+    // Mid-combat self-buffs (enemy casters) — all DISPELLABLE, so they show as
+    // strip-able boons + the Dispel picker offers the foe.
+    if (e.invisible)  c.push({ key: 'invisible',   label: 'Invisible',    desc: 'unseen — your hits suffer 50% concealment (True Seeing / blindsense pierce it); dispellable', icon: `${I}invisible.webp` });
+    if (e.images > 0) c.push({ key: 'mirrorimage', label: 'Mirror Image', desc: `${e.images} decoy${e.images === 1 ? '' : 's'} soaking your blows — dispellable`, icon: `${I}fly.webp` });
+    if (e.flyCast)    c.push({ key: 'flycast',     label: 'Flying',       desc: 'airborne by magic — grounded foes can\'t reach it; DISPEL it and it crashes', icon: `${I}fly.webp` });
     return c;
   }
 
@@ -1989,6 +2002,19 @@ class Dungeon {
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
     if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
+    // A foe that has self-buffed defenses turns a clean hit aside (enemy casters
+    // can now go Invisible / Mirror Image mid-fight). A hero who pierces the unseen
+    // — True Seeing or blindsense — ignores the concealment.
+    if (target && !attacker.trueSeeing && !(attacker.blindsense > 0)) {
+      if (target.invisible && dRoll(2) === 1) {   // total concealment vs an unseen foe → 50% miss
+        return { hit: false, conceal: true, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
+      }
+      if (target.images > 0) {                     // Mirror Image — the blow pops a decoy, not the real foe
+        target.images -= 1;
+        this._note(`🪞 ${target.name === undefined ? target.nickname : target.name}'s mirror image SHATTERS — ${target.images} decoy${target.images === 1 ? '' : 's'} left.`, null);
+        return { hit: false, image: true, roll, toHit, total, ac, sound: pick(SND.flesh) };
+      }
+    }
     // Damage = weapon dice (NdX) + enhancement + ½ level + ability mod + buff dmg (+ Point Blank).
     const judgDmg = attacker.judgment === 'destruction' ? Math.max(1, Math.floor(lvl / 3)) : 0;   // inquisitor Judgement: Destruction
     const flatDmg = _ap.dmgBonus + (buff.dmg || 0) + (baneOn ? BANE_DMG : 0) + pbs + judgDmg + ff.dmg + swashSpec + arcEnhDelta;
@@ -2196,6 +2222,7 @@ class Dungeon {
   }
   // One enemy swing at a chosen target (handles the paralysis rider + signature sound).
   _enemyMelee(e, target) {
+    e.invisible = false;   // striking in melee breaks Invisibility (same rule as heroes)
     // _acOf strips shield AC for dual-wielders AND ranged-weapon wielders.
     const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);   // helpless / rage / reckless / cleave: easier to hit
     const r = this._monsterSwing(e, effAC);
@@ -2407,6 +2434,30 @@ class Dungeon {
       const awake = heroes.filter(m => !(m.stunned > 0) && !(m.paralyzed > 0));
       if (awake.length) return this._enemyShout(e, pick(awake));
     }
+    // ── SELF-BUFF (arcane survival) ── a caster "does everything heroes can": it
+    //    conjures Mirror Image to soak blows, rises on Fly out of a melee swarm, or
+    //    winks out with Invisibility when wounded. Cast SPARINGLY (it still wants to
+    //    sling spells); each is DISPELLABLE and counters to Dispel / True Seeing /
+    //    blindsense. Invisibility breaks the moment it next attacks (see _monsterSwing
+    //    + the offensive casts below clearing e.invisible).
+    const hurt = e.hp < e.maxHp * 0.6;
+    const meleeSwarm = heroes.filter(m => MART.has(m.cls) && !m.flying).length >= 2;
+    if (cl >= 4 && !(e.images > 0) && (this.round <= 2 || hurt) && dRoll(3) === 1) {
+      e.images = Math.min(8, dRoll(4) + Math.floor(cl / 3));
+      this._note(`🪞 ${e.glyph} ${e.name} conjures ${e.images} mirror image${e.images > 1 ? 's' : ''} — decoys to soak your blows!`, '/audio/spell_invoke.mp3', { side: 'enemy' });
+      this._echoToTable('/audio/spell_invoke.mp3'); this._broadcast(); return;
+    }
+    if (cl >= 5 && !e.flying && meleeSwarm && dRoll(4) === 1) {
+      e.flying = true; e.flyCast = true;   // mid-combat Fly (flyCast → dispellable; crashes prone if stripped)
+      this._note(`🪽 ${e.glyph} ${e.name} rises into the air on wings of magic — grounded foes can't reach it!`, '/audio/spell_invoke.mp3', { side: 'enemy' });
+      this._echoToTable('/audio/spell_invoke.mp3'); this._broadcast(); return;
+    }
+    if (cl >= 3 && !e.invisible && hurt && dRoll(3) === 1) {
+      e.invisible = true;
+      this._note(`👻 ${e.glyph} ${e.name} winks out of sight — you'll need True Seeing or blindsense to strike it!`, '/audio/spell_invoke.mp3', { side: 'enemy' });
+      this._echoToTable('/audio/spell_invoke.mp3'); this._broadcast(); return;
+    }
+    e.invisible = false;   // any other cast below is hostile → invisibility drops
     // 1) Lock down a dangerous, un-held melee bruiser with Hold Monster (5th) —
     //    only if nobody's already held (don't waste it).
     const bruiser = heroes.find(m => !(m.paralyzed > 0) && MART.has(m.cls) && m.hp > m.maxHp * 0.4);
@@ -3463,7 +3514,7 @@ class Dungeon {
     // enchantments on the foes). The reason is toasted + spoken in blind mode.
     if (ab.effect === 'cleanse') {
       const allyAfflicted = (a) => (a.paralyzed > 0) || (a.stunned > 0) || (a.slowed > 0) || a.grappled || (a.blinded > 0) || (a.sickened > 0);
-      const foeEnchanted = (e) => (e.hasted > 0) || !!(e.precast && e.precast.length)
+      const foeEnchanted = (e) => (e.hasted > 0) || !!(e.precast && e.precast.length) || !!e.invisible || (e.images > 0) || !!e.flyCast
         || !!(e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0 || (e.buffs.bonusDice || 0) > 0));
       const pickedId = payload && (payload.allyUid || payload.targetUid);
       if (pickedId) {
@@ -4406,7 +4457,7 @@ class Dungeon {
     // 2) No ally debuff → strip the strongest buff off a foe (dispel check vs ITS CL).
     //    Boss PRE-CAST wards (mage armor / shield / stoneskin / fire ward / fly /
     //    shield of faith) count — plain Dispel peels ONE, Greater sweeps them all.
-    const foeScore = (e) => (e.hasted > 0 ? 3 : 0) + ((e.precast && e.precast.length) ? e.precast.length * 2 : 0) + (e.buffs ? ((e.buffs.toHit || 0) + (e.buffs.dmg || 0) + (e.buffs.ac || 0) + (e.buffs.bonusDice || 0)) : 0);
+    const foeScore = (e) => (e.hasted > 0 ? 3 : 0) + ((e.precast && e.precast.length) ? e.precast.length * 2 : 0) + (e.invisible ? 3 : 0) + (e.images > 0 ? 2 : 0) + (e.flyCast ? 2 : 0) + (e.buffs ? ((e.buffs.toHit || 0) + (e.buffs.dmg || 0) + (e.buffs.ac || 0) + (e.buffs.bonusDice || 0)) : 0);
     const foe = (tFoe && foeScore(tFoe) > 0) ? tFoe
               : (!explicit ? this._targetableEnemies().filter(e => foeScore(e) > 0).sort((x, y) => foeScore(y) - foeScore(x))[0] : null);
     if (foe) {
@@ -4428,13 +4479,19 @@ class Dungeon {
         stripped.push(PRE_NAME[key] || key);
         if (key === 'fly') stripped[stripped.length - 1] += ' (it CRASHES to the ground!)';
       };
-      if (foe.precast && foe.precast.length) {
-        if (ab.greater) { for (const k of foe.precast.splice(0)) revert(k); }
-        else revert(foe.precast.pop());
-      } else {
-        if (foe.hasted > 0) { foe.hasted = 0; stripped.push('haste'); }
-        if (foe.buffs) { foe.buffs = null; stripped.push('combat buffs'); }
-      }
+      // Peel ONE enchantment (plain Dispel) or ALL of them (Greater). Pre-cast wards
+      // first, then mid-combat self-buffs (Fly → Invisibility → Mirror Image → haste
+      // → combat buffs). Dispelled Fly crashes the foe prone.
+      const peelOne = () => {
+        if (foe.precast && foe.precast.length) { revert(foe.precast.pop()); return true; }
+        if (foe.flyCast)   { foe.flyCast = false; foe.flying = !!(foe.precast && foe.precast.includes('fly')); foe.prone = true; foe.loseTurn = true; stripped.push('Fly (it CRASHES to the ground!)'); return true; }
+        if (foe.invisible) { foe.invisible = false; stripped.push('Invisibility'); return true; }
+        if (foe.images > 0){ foe.images = 0; stripped.push('Mirror Image'); return true; }
+        if (foe.hasted > 0){ foe.hasted = 0; stripped.push('haste'); return true; }
+        if (foe.buffs)     { foe.buffs = null; stripped.push('combat buffs'); return true; }
+        return false;
+      };
+      if (ab.greater) { while (peelOne()) { /* sweep everything */ } } else { peelOne(); }
       this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${foe.name} — strips its ${stripped.join(' & ')}! [dispel ${dc.total} vs DC ${dc.dc}]`, sound);
       this._echoToTable(sound); return;
     }
@@ -4874,8 +4931,11 @@ class Dungeon {
     const lvl = m.level || 1;
     const sound = ab.sound || pick(SND.flesh);
     // Channel Positive — PF1e positive-energy burst: ½ caster level d6 (1d6 at
-    // L1, +1d6 every 2 levels → 6d6 at L11), to the whole party.
-    const channelAmt = () => Math.max(1, dRollN(Math.max(1, Math.ceil(lvl / 2)), 6));
+    // L1, +1d6 every 2 levels → 6d6 at L11), to the whole party. VESORIANNA
+    // (Shelyn / Life — a ghost who PROTECTS life) channels at +2 caster levels,
+    // reflecting her healing focus (Tobias).
+    const chLvl = lvl + (((m.playerId || '').toLowerCase() === 'vesorianna') ? 2 : 0);
+    const channelAmt = () => Math.max(1, dRollN(Math.max(1, Math.ceil(chLvl / 2)), 6));
     // Cure X Wounds — healDice d8 + caster level (capped: +5 light, +10 moderate).
     const cureAmt = () => Math.max(1, dRollN(ab.healDice || 1, 8) + Math.min(ab.healCap || lvl, lvl));
     if (ab.heal === 'party') {
