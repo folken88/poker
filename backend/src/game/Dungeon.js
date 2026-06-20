@@ -2667,6 +2667,15 @@ class Dungeon {
     if (neededOn >= 16) want = false;                         // too tough to power through → accuracy
     else if (neededOn <= 14) want = true;                     // comfortably hits → take the damage
     if (want !== on) this._useAbility(m, idx, {});            // free toggle (announces the change)
+    // FIGHT DEFENSIVELY — a survival stance: raise it when badly hurt (≤35% HP,
+    // trade offense for +2-3 dodge AC to live until a heal lands), drop it once
+    // recovered. Only matters for kits that HAVE the toggle (STR front-liners).
+    const fdIdx = kit.abilities.findIndex(a => a.fightdefensively);
+    if (fdIdx >= 0) {
+      const fdOn = !!(m.buffApplied && m.buffApplied.fightdefensively);
+      const wantFd = m.hp > 0 && m.hp <= (m.maxHp || 1) * 0.35;
+      if (wantFd !== fdOn) this._useAbility(m, fdIdx, {});
+    }
   }
   // Which foe a bot should strike. ROGUES hunt the HELPLESS (flat-footed / prone
   // / sickened / paralyzed / ASLEEP) for Sneak Attack — they'll happily stab a
@@ -3153,8 +3162,31 @@ class Dungeon {
         if (sw) { const tough = targets.slice().sort((a, b) => b.maxHp - a.maxHp)[0] || weakestFoe; offense.push({ ab: sw, payload: { targetUid: tough.uid } }); }
       }
       const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // can't Rapid Shot a bolt-action rifle
-      for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint', 'disarm', 'stunfist'].includes(a.effect)) {
+      for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint', 'disarm', 'stunfist', 'grapple', 'bullrush'].includes(a.effect)) {
         if (a.needsRepeating && boltAction) continue;
+        // GRAPPLE — lock down a DANGEROUS foe (caster/boss) the bot can reach; never
+        // an incorporeal or already-grappled one (those refuse + waste the turn).
+        if (a.effect === 'grapple') {
+          const grab = targets.filter(t => !t.grappled && !t.incorporeal && this._canReach(m, t));
+          if (!grab.length) continue;
+          const prey = grab.find(t => t.boss || t.arcane || t.caster || t.healer) || grab.slice().sort((x, y) => y.maxHp - x.maxHp)[0];
+          offense.push({ ab: a, payload: { targetUid: prey.uid } });
+          continue;
+        }
+        // BULL RUSH — shove a reachable, not-already-prone foe (a hard shove knocks it down).
+        if (a.effect === 'bullrush') {
+          const shove = targets.filter(t => this._canReach(m, t) && !t.prone);
+          if (!shove.length) continue;
+          offense.push({ ab: a, payload: { targetUid: shove.slice().sort((x, y) => y.maxHp - x.maxHp)[0].uid } });
+          continue;
+        }
+        // DISARM — only a reachable foe that fights with a real weapon (claws/fangs/fists refuse).
+        if (a.effect === 'disarm') {
+          const dis = targets.filter(t => !fightsNatural(t) && this._canReach(m, t));
+          if (!dis.length) continue;
+          offense.push({ ab: a, payload: { targetUid: dis.slice().sort((x, y) => y.maxHp - x.maxHp)[0].uid } });
+          continue;
+        }
         // Stunning Fist (monk, 1/room): a strike + Fort-or-stun. Spend it on the
         // BIGGEST threat that actually HAS a mind/body to stun (undead & constructs
         // are immune) — robbing a boss of a turn is its highest-value use.
