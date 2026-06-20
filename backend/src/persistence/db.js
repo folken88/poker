@@ -115,6 +115,13 @@ try {
   db.prepare("UPDATE players SET avatar_id = substr(avatar_id, 1, length(avatar_id) - 4) || '.webp' WHERE avatar_id LIKE '%.png'").run();
 } catch (_) { /* non-fatal: a broken avatar just shows the fallback glyph */ }
 
+// One-time cleanup (2026-06-20): retire the joke human seeds Boobs / Butt / Farts
+// (Tobias). Removed from ROSTER below so they never re-seed; this drops any
+// existing rows. is_bot=0 guard so a same-named bot could never be hit.
+try {
+  db.prepare("DELETE FROM players WHERE is_bot = 0 AND player_id IN ('boobs', 'butt', 'farts')").run();
+} catch (_) { /* non-fatal */ }
+
 // Champions Board — one row per Loot Lord. Logged when someone hits +5
 // in every slot. The reset-to-default that follows wipes everyone's
 // chips/gear but this table records the historical winners forever.
@@ -154,9 +161,6 @@ const ROSTER = [
   { name: 'Lowgan',    avatar: 'wolf'    },
   { name: 'Zachariah', avatar: 'lion'    },
   { name: 'Harry',     avatar: 'raccoon' },
-  { name: 'Farts',     avatar: 'cat'     },
-  { name: 'Butt',      avatar: 'wizard'  },
-  { name: 'Boobs',     avatar: 'robot'   },
   { name: 'Cram',      avatar: 'bear'    },
   { name: 'Daemon',    avatar: 'wolf'    },
   { name: 'Kip',       avatar: 'fox'     },
@@ -541,6 +545,20 @@ function getPlayer(playerId) {
 function listPlayers() {
   return stmts.listPlayers.all();
 }
+// Create a brand-new HUMAN player from a typed name (the "Create New Player"
+// lobby button). Sanitizes the name to a UNIQUE player_id, seeds a fresh
+// DEFAULT_STACK + a starter avatar, is_bot = 0. Returns the new row, or null on
+// a blank name. Used by sockets-lobby lobby:createPlayer.
+function createPlayer(rawName) {
+  const name = String(rawName || '').trim().replace(/\s+/g, ' ').slice(0, 24);
+  if (!name) return null;
+  const base = (name.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'player');
+  let id = base, n = 1;
+  while (stmts.getPlayer.get(id)) id = `${base}${++n}`;   // same name → name2, name3…
+  const now = Date.now();
+  stmts.seedPlayer.run(id, name, 'fox', DEFAULT_STACK, now, now, 0, null);
+  return stmts.getPlayer.get(id);
+}
 // ── Poker net winnings (won − lost), fed by persistence/logger.js ───────────
 // The logger owns the math (it replays hands.jsonl at boot, honors reset
 // markers, and updates per hand); it hands us its live Map once via
@@ -807,6 +825,7 @@ module.exports = {
   // Players
   getPlayer,
   listPlayers,
+  createPlayer,
   listHumans,
   listBots,
   listAll,

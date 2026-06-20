@@ -2256,6 +2256,31 @@
   function renderRoster() {
     const host = $('#rosterGrid');
     host.innerHTML = '';
+    // "Create New Player" — ALWAYS the first option (Tobias). Prompts for a name,
+    // creates a fresh human identity server-side, then drops into the avatar/confirm
+    // screen like any other pick.
+    {
+      const wrap = document.createElement('div');
+      wrap.className = 'roster-section-grid';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'roster-pick roster-pick--create';
+      btn.innerHTML = `<span class="roster-pick__badge roster-pick__badge--human" title="Make a brand-new human seat">✨ New</span>
+        <div class="roster-pick__avatar" style="font-size:2em;display:flex;align-items:center;justify-content:center">➕</div>
+        <div class="roster-pick__nick">Create New Player</div>
+        <div class="roster-pick__chips">Start a fresh seat</div>`;
+      btn.addEventListener('click', () => {
+        const name = (window.prompt('New player name:') || '').trim();
+        if (!name) return;
+        socket.emit('lobby:createPlayer', { name }, (resp) => {
+          if (!resp?.ok) { toast(resp?.error || 'Could not create player', true); return; }
+          state.roster = [...(state.roster || []).filter(r => r.player_id !== resp.player.player_id), resp.player];
+          onPickName(resp.player.player_id);
+        });
+      });
+      wrap.appendChild(btn);
+      host.appendChild(wrap);
+    }
     const all = state.roster || [];
     const humans = all.filter(p => !p.is_bot)
       .sort((a, b) => (a.nickname || '').localeCompare(b.nickname || '', undefined, { sensitivity: 'base' }));
@@ -2402,7 +2427,7 @@
       const CAMPAIGN_NAMES = {
         CC: 'Carrion Crown', TG: 'Tyrant\'s Grasp', IG: 'Iron Gods',
         HV: 'Hell\'s Vengeance', HR: 'Hell\'s Rebels', SS: 'Skull & Shackles',
-        JG: 'Jade Regent',
+        JG: 'Justice Gorls',
       };
       const subBits = [tok.race, tok.class].filter(Boolean);
       const subLine = (tok.pc || tok.villain) && subBits.length

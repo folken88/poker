@@ -44,6 +44,18 @@ function registerLobbyHandlers(io, socket, { tables }) {
     ack?.({ ok: true, bots: db.listBots() });
   });
 
+  // "Create New Player" — make a fresh HUMAN identity from a typed name and
+  // immediately adopt it as this socket's player (like choosePlayer). Broadcasts
+  // the roster so the new card shows for everyone.
+  socket.on('lobby:createPlayer', ({ name } = {}, ack) => {
+    const player = db.createPlayer(name);
+    if (!player) return ack?.({ ok: false, error: 'enter a name' });
+    socket.data.player = player;
+    db.touchPlayer(player.player_id);
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, player });
+  });
+
   // Banter-voice listener flag. Client pushes its current toggle
   // state here on connect AND on every change so the server can
   // skip 11labs synthesis when nobody at the table is listening.

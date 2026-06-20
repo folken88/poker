@@ -258,6 +258,7 @@ function registerTableHandlers(io, socket, { tables, dungeons }) {
     if (typeof text !== 'string') return ack?.({ ok: false, error: 'bad text' });
     const trimmed = text.trim().slice(0, 240);
     if (!trimmed) return ack?.({ ok: false, error: 'empty message' });
+    { const _s = table.findSeat(me.player_id); if (_s) _s.lastActiveAt = Date.now(); }   // chatting counts as present (AFK clock)
     // Cooldown: 1.5s per socket. socket.data.lastChatAt is the floor.
     const now = Date.now();
     const last = socket.data.lastChatAt || 0;
@@ -398,6 +399,7 @@ function registerTableHandlers(io, socket, { tables, dungeons }) {
     if (!table) return ack?.({ ok: false, error: 'not at a table' });
     const seat = table.findSeat(me.player_id);
     if (!seat) return ack?.({ ok: false, error: 'not seated' });
+    seat.lastActiveAt = Date.now();   // back at the keyboard — reset AFK clock
     if (!seat.sittingOut) return ack?.({ ok: true, alreadyIn: true });
     seat.sittingOut = false;
     table.chat('info', `🎲 ${me.nickname} rejoined the next deal.`);
@@ -427,6 +429,7 @@ function registerTableHandlers(io, socket, { tables, dungeons }) {
     if (!me) return ack?.({ ok: false, error: 'choose a player first' });
     const table = tables.get(socket.data.tableId);
     if (!table) return ack?.({ ok: false, error: 'not at a table' });
+    { const _s = table.findSeat(me.player_id); if (_s) _s.lastActiveAt = Date.now(); }   // genuine human action — reset the AFK clock
     const result = table.applyAction({ playerId: me.player_id, action, amount });
     if (!result.ok) return ack?.(result);
     io.to(table.roomName()).emit('table:state', table.publicState());

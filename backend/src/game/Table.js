@@ -32,6 +32,8 @@ const HAND_AUTOSTART_DELAY_MS = parseInt(process.env.HAND_AUTOSTART_DELAY_MS || 
 // hand begins (otherwise they have to wait another full hand).
 const HAND_GRACE_DELAY_MS     = parseInt(process.env.HAND_GRACE_DELAY_MS    || '5000', 10);
 const ACTION_TIMEOUT_MS = parseInt(process.env.ACTION_TIMEOUT_MS || '120000', 10);
+// A human idle (no sit/action/rejoin/chat) this long is auto-stood-up from their seat.
+const AFK_REAP_MS = parseInt(process.env.AFK_REAP_MS || '600000', 10);   // 10 minutes
 
 // Unique-per-process tag for chat entry ids. The client dedups chat lines by
 // id; a bare ++counter resets to 1 on every server restart, so the client's
@@ -64,6 +66,10 @@ class Seat {
     this.inHand = false;
     this.chipsAtTable = 0;
     this.isBot = false;
+    // Last genuine human interaction at this seat (sit / action / rejoin / chat).
+    // A human idle past AFK_REAP_MS is auto-stood-up (_reapAfk). Auto-fold on the
+    // action timeout deliberately does NOT bump this — that's what AFK looks like.
+    this.lastActiveAt = Date.now();
     // Player keeps their seat but isn't dealt in. They can rejoin at
     // any time. Takes effect on the NEXT deal — can't undo bets or
     // exit a hand already in progress (those still resolve normally).
@@ -104,6 +110,10 @@ class Table {
     this.seats = Array.from({ length: maxSeats }, (_, i) => new Seat(i));
     this.spectators = new Map();
     this.hand = null;
+    // Reap humans who've been AFK at the table too long (frees the seat). Runs
+    // every minute, unref'd so it never holds the process open.
+    this._afkTimer = setInterval(() => { try { this._reapAfk(); } catch (_) {} }, 60000);
+    if (this._afkTimer.unref) this._afkTimer.unref();
     /** position in the *seated-this-hand* participants array */
     this.dealerButtonSeatIndex = -1;
     this.io = io;
@@ -275,6 +285,7 @@ class Table {
     seat.player = player;
     seat.socketId = socketId;
     seat.chipsAtTable = player.chips;
+    seat.lastActiveAt = Date.now();   // fresh activity clock (AFK reaper)
     // A player is treated as a BOT at the seat only if EITHER:
     //   - the call was explicit (table.seatBot), OR
     //   - the player_record is is_bot AND no human socket is attached
@@ -498,6 +509,20 @@ class Table {
   /** True if this seat is a human who's currently disconnected. */
   _isSeatAfk(s) {
     return !s.isEmpty() && !s.isBot && !s.socketId;
+  }
+
+  /** Stand up any HUMAN who's been idle (no genuine interaction) past
+   *  AFK_REAP_MS — frees the seat (Tobias: 10-min AFK kick). Bots are never
+   *  reaped (they auto-play). Runs once a minute from the constructor timer. */
+  _reapAfk() {
+    const now = Date.now();
+    for (const s of this.seats) {
+      if (s.isEmpty() || s.isBot) continue;
+      if (now - (s.lastActiveAt || now) < AFK_REAP_MS) continue;
+      const nick = (s.player && s.player.nickname) || s.playerId;
+      this.chat('leave', `💤 ${nick} was away too long — stood up from the table.`);
+      this.stand(s.playerId);   // handles mid-hand fold + persists chips + vacates
+    }
   }
 
   _inHandPlayerIds() {
