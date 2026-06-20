@@ -2746,6 +2746,67 @@ class Dungeon {
       const b = bestBlast();
       if (b) return b;
     }
+    // ── MAGUS DOCTRINE ── the team's boss-killer. A buff or two to open, then it
+    //    SPELLSTRIKES the beefiest / most dangerous foe with its biggest crit-fishing
+    //    strike (the bigger the target, the better) — it KNOWS it's the party's best
+    //    bet at melting a boss fast, and saves those limited strikes for bosses/real
+    //    threats, not chaff. It only falls back to dispel / debuff / a minor buff when
+    //    the field is ALREADY under control (most foes grappled, prone, held, asleep);
+    //    otherwise it just swings steel. Self-contained: always returns a choice or
+    //    null (= weapon attack), so it never defaults to Grease/Slow/Tentacles.
+    if (m.cls === 'magus') {
+      const byHp = targets.slice().sort((a, b) => b.maxHp - a.maxHp);
+      const boss = targets.find(e => e.boss) || byHp[0];                    // beefiest = a boss, else highest-HP foe
+      const second = byHp[1] ? byHp[1].maxHp : 0;
+      const worthy = !!boss && (boss.boss || targets.length <= 2 || topCR >= lvl - 2 || boss.maxHp >= 1.5 * second);
+      const controlled = targets.length >= 2 &&
+        targets.filter(e => e.grappled || e.prone || e.paralyzed > 0 || e.fascinated || e.asleep).length * 2 >= targets.length;
+      const dmgPow = (a) => {   // honest output incl. Empower, for ranking strikes & nukes
+        const n = typeof a.dice === 'number' ? a.dice : (a.dice === 'halflevel' ? Math.ceil(lvl / 2) : lvl);
+        let p = Math.min(n, a.dcap || n) * (a.die || 6);
+        if (a.empowered) p = Math.floor(p * 1.5);
+        return p;
+      };
+      // (a) Open with AT MOST a buff or two (rounds 1-2) vs a real threat — one
+      //     defensive self-buff or Mirror Image not already up — THEN start blowing up.
+      if ((this.round || 1) <= 2 && worthy && !controlled) {
+        // Higher-level buff first when time is short (Tobias): Stoneskin (4) over
+        // Mirror Image (2) over Shield (1) — rank the openers by spell level.
+        const opens = avail.filter(a =>
+             (a.effect === 'buff' && a.sticky && a.target === 'self' && !a.powerattack && !a.deadlyaim
+               && !(m.buffApplied && m.buffApplied[a.key]) && !(m.runBuffApplied && m.runBuffApplied[a.key]))
+          || (a.effect === 'mirrorimage' && !(m.images > 0)))
+          .sort((x, y) => (y.slvl || 0) - (x.slvl || 0));
+        if (opens[0]) return { slot: slot(opens[0]), payload: {} };
+      }
+      // (b) PRIMARY — spellstrike the beefiest foe with the biggest strike; if the
+      //     strikes are spent, the hardest single-target nuke (Disintegrate / Chain
+      //     Lightning / Scorching Ray) on that same boss.
+      if (worthy) {
+        const ss = avail.filter(a => a.effect === 'spellstrike').sort((x, y) => dmgPow(y) - dmgPow(x))[0];
+        if (ss) return { slot: slot(ss), payload: { targetUid: boss.uid } };
+        const nuke = avail.filter(a => ['disintegrate', 'rays', 'touch', 'bolt'].includes(a.effect)).sort((x, y) => dmgPow(y) - dmgPow(x))[0];
+        if (nuke) return { slot: slot(nuke), payload: { targetUid: boss.uid } };
+      }
+      // (c) OPPORTUNITY — the field is already locked down (Black Tentacles, River of
+      //     Wind, mass Hold): now there's TIME to dispel a buffed foe / free a debuffed
+      //     ally, or debuff a foe still standing.
+      if (controlled) {
+        const cleanse = avail.find(a => a.effect === 'cleanse');
+        if (cleanse) {
+          const allyDebuffed = allies.some(a => a.paralyzed > 0 || a.stunned > 0 || a.slowed > 0 || a.sickened > 0 || a.grappled);
+          const foeBuffed = this._targetableEnemies().some(e => e.hasted > 0 || (e.precast && e.precast.length) || (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)));
+          if (allyDebuffed || foeBuffed) return { slot: slot(cleanse), payload: {} };
+        }
+        const active = targets.filter(e => !(e.grappled || e.prone || e.paralyzed > 0 || e.fascinated || e.asleep));
+        const dbf = avail.find(a => ['glitterdust', 'slow', 'grease', 'save_debuff'].includes(a.effect));
+        if (dbf && active.length) {
+          const cap = dbf.maxTargets || 1;
+          return { slot: slot(dbf), payload: cap < 2 ? { targetUid: active[0].uid } : { targetUids: active.slice(0, cap).map(e => e.uid) } };
+        }
+      }
+      return null;   // chaff / nothing magical worth a turn → swing steel (conserve the strikes)
+    }
     // 1) Healing. CHANNEL (party heal) is the better call when MULTIPLE allies are
     //    hurt or anyone's DOWNED (it revives the dying); a single big CURE is better
     //    when exactly ONE ally is badly hurt (more HP on one target). If nobody's
@@ -2901,16 +2962,20 @@ class Dungeon {
     // a poor use of a turn at mid-late levels — past L6 the bot stops babysitting each ally
     // and would rather drop a party buff or just attack. (Power Attack / Deadly Aim are
     // toggles handled by _botStance, never auto-picked here.)
-    const stickyBuffs = avail.filter(a => buffAppetite && potentEnough(a)
+    // HIGHER-LEVEL BUFFS FIRST when buff time is short (Tobias): rank every eligible
+    // sticky buff — AND Haste / Blessing of Fervor, which competes as a buff — by
+    // SPELL LEVEL, a party-wide buff winning ties (it reaches everyone). With lots of
+    // time they all get cast over successive rounds; in a hurry the meatiest goes
+    // first (Blessing of Fervor over Shield of Faith, Stoneskin over Shield). Past L6
+    // a PETTY single-ally buff (slvl < 4) is skipped, but a meaty one (Stoneskin) counts.
+    const buffCands = avail.filter(a => buffAppetite && potentEnough(a)
       && a.effect === 'buff' && a.sticky && !a.protectFire
-      && !a.powerattack && !a.deadlyaim && !buffFullyUp(a))
-      .sort((x, y) => (y.slvl || 0) - (x.slvl || 0));   // most potent first
-    const partyBuff = stickyBuffs.find(a => a.party);
-    if (partyBuff) return { slot: slot(partyBuff), payload: {} };
-    const selfBuff = stickyBuffs.find(a => a.target === 'self');
-    if (selfBuff) return { slot: slot(selfBuff), payload: {} };
-    const allyBuff = stickyBuffs.find(a => a.target === 'ally');
-    if (allyBuff && (m.level || 1) < 7) return { slot: slot(allyBuff), payload: {} };
+      && !a.powerattack && !a.deadlyaim && !buffFullyUp(a)
+      && (a.target !== 'ally' || (m.level || 1) < 7 || (a.slvl || 0) >= 4));
+    const fervor = avail.find(a => a.effect === 'haste');
+    if (fervor && buffAppetite && !this.livingParty().some(p => p.hasted > 0)) buffCands.push(fervor);   // Haste/Fervor ranks by its own spell level
+    buffCands.sort((x, y) => (y.slvl || 0) - (x.slvl || 0) || ((y.party ? 1 : 0) - (x.party ? 1 : 0)));
+    if (buffCands.length) return { slot: slot(buffCands[0]), payload: {} };
     // Invisibility — shields the most-hurt ally (it lands on the lowest-HP ally in
     // _abInvisible). Cast when an ally is badly hurt and nobody's hidden yet.
     const invis = avail.find(a => a.effect === 'invisible');
