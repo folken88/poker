@@ -1426,6 +1426,27 @@ class Dungeon {
       this._broadcast(); return this._nextTurn();
     }
     if (m.stunned > 0) { m.stunned -= 1; this._note(`😵 ${m.nickname} is stunned — loses the turn.`); this._broadcast(); return this._nextTurn(); }
+    // PRONE (tripped / bull-rushed by a foe): standing is a MOVE action — the hero
+    // clambers up at the start of their turn and still acts (keeps their standard).
+    // They were only easier to hit while down, between turns.
+    if (m.prone) { m.prone = false; this._note(`🧍 ${m.nickname} clambers back to their feet (a move action).`); this._broadcast(); }
+    // GRAPPLED by a foe: a PENALTY, not a lost turn (PF1 — they can still act at
+    // −2 to hit, and are easier to hit). They struggle at the top of the turn: a
+    // CMB check (DEX-or-STR homerule) vs the grappler's CMD breaks it; the grip
+    // also lapses if the grappler is gone or after ~2 rounds. Dispel/Grease free
+    // them early (see _abCleanse / _abGrease). They take their turn either way.
+    if (m.grappled) {
+      const grappler = this.enemies.find(x => x.uid === m.grappledBy && x.hp > 0);
+      if (!grappler) { m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; this._note(`🤼 ${m.nickname} is free — nothing holds them anymore.`); }
+      else {
+        m.grappleRounds = (m.grappleRounds || 1) - 1;
+        const cmb = this._heroCMB(m), cmd = this._enemyCMD(grappler);
+        const broke = cmb >= cmd;
+        if (broke || m.grappleRounds <= 0) { m.grappled = false; m.grappledBy = null; this._note(`🤼 ${m.nickname} ${broke ? 'breaks' : 'finally wrenches'} free of ${grappler.name}'s grapple! [CMB ${cmb} vs CMD ${cmd}]`); }
+        else this._note(`🤼 ${m.nickname} is caught in ${grappler.name}'s grip — −2 to hit until they break free. [CMB ${cmb} vs CMD ${cmd}]`);
+      }
+      this._broadcast();
+    }
     if (m.sickened > 0) m.sickened -= 1;
     if (m.judgment === 'healing' && m.hp > 0 && m.hp < m.maxHp) {   // Judgement: Healing regen each turn
       const h = Math.max(1, Math.floor((m.level || 1) / 3)); m.hp = Math.min(m.maxHp, m.hp + h);
@@ -2077,7 +2098,7 @@ class Dungeon {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
-    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0);
+    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0);   // Fight Defensively: −4 to attacks
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
@@ -2210,10 +2231,24 @@ class Dungeon {
         this._note(`${e.glyph} ${e.name} rises and closes on ${target.nickname} — no time left to strike.`, null, { side: 'enemy' });
         e._lastAtkTarget = target.playerId;
       } else {
-        const swings = (e.slowed > 0) ? 1 : (fullAttack ? Math.max(1, e.attacks || 1) : 1);
-        for (let i = 0; i < swings; i++) {
-          if (target.hp <= 0 || target.left) break;   // target dropped mid-routine — the rest of the swings are spent closing on someone new
-          this._enemyMelee(e, target);
+        // A badly-wounded foe may turtle up first (free action), then choose HOW to
+        // attack via a weighted decision (see _pickEnemyManeuver) — so it doesn't
+        // do the exact same thing every turn.
+        this._enemyFightDefensively(e);
+        if (target.grappled && target.grappledBy === e.uid) {
+          this._enemyMelee(e, target);   // already holding them — crush instead of re-grabbing
+        } else {
+          const mode = (e.slowed > 0) ? 'attack' : this._pickEnemyManeuver(e, target);
+          if (mode === 'grapple')       this._enemyGrapple(e, target);
+          else if (mode === 'trip')     this._enemyTrip(e, target);
+          else if (mode === 'bullrush') this._enemyBullRush(e, target);
+          else {
+            const swings = (e.slowed > 0) ? 1 : (fullAttack ? Math.max(1, e.attacks || 1) : 1);
+            for (let i = 0; i < swings; i++) {
+              if (target.hp <= 0 || target.left) break;   // target dropped mid-routine — the rest of the swings are spent closing on someone new
+              this._enemyMelee(e, target);
+            }
+          }
         }
         e._lastAtkTarget = target.playerId;
       }
@@ -2224,7 +2259,7 @@ class Dungeon {
   _enemyMelee(e, target) {
     e.invisible = false;   // striking in melee breaks Invisibility (same rule as heroes)
     // _acOf strips shield AC for dual-wielders AND ranged-weapon wielders.
-    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);   // helpless / rage / reckless / cleave: easier to hit
+    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - this._acPenalty(target);   // helpless / rage / reckless / cleave: easier to hit
     const r = this._monsterSwing(e, effAC);
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);   // monk's randomized "bruce" kiai (hit or miss)
     else if (r.hit && e.atkSound) r.sound = e.atkSound;                    // rogue's "riki" stab (hit only)
@@ -2274,6 +2309,71 @@ class Dungeon {
       this._note(`${e.glyph} ${e.name} misses ${target.nickname}. ${this._atkStr(r)}`, r.sound);
     }
     this._echoToTable(r.sound);
+  }
+  // ── ENEMY COMBAT MANEUVERS ──────────────────────────────────────────────────
+  // Foes don't just swing every turn. After their special abilities, a plain melee
+  // foe rolls a WEIGHTED decision (partly fixed weights, partly RNG) over the attack
+  // modes it can use on its target — so the same monster mixes things up turn to turn.
+  // A foe's maneuver bonus: its attack bonus stands in for BAB+STR.
+  _enemyMnvCMB(e) { return dRoll(20) + (e.toHit || 0); }
+  // Is this hero a soft, high-value backliner (a caster) — prime grapple bait?
+  _isSquishy(m) { return /wizard|sorcerer|cleric|oracle|druid|bard|witch|magus|inquisitor|summoner|alchemist/.test((m.cls || '').toLowerCase()); }
+  // Weighted random pick from [[key, weight], …].
+  _weightedPick(menu) {
+    const total = menu.reduce((s, [, w]) => s + w, 0);
+    if (total <= 0) return menu[0][0];
+    let r = dRoll(total);
+    for (const [k, w] of menu) { r -= w; if (r <= 0) return k; }
+    return menu[0][0];
+  }
+  // Build the menu of attack modes this foe could use on `target` and pick one.
+  // Plain ATTACK dominates; maneuvers are the spice. Capability gates: incorporeal
+  // foes can't grab/topple; you can't grapple the already-grappled or topple the
+  // already-prone. Casters draw a heavier grapple weight (drag off the squishy!).
+  _pickEnemyManeuver(e, target) {
+    if (e.ranged) return 'attack';                      // an archer doesn't wrestle
+    const corporeal = !e.incorporeal;
+    const menu = [['attack', 12]];
+    if (corporeal && !target.grappled) menu.push(['grapple', this._isSquishy(target) ? 6 : 3]);
+    if (corporeal && !target.prone)    { menu.push(['trip', 2]); menu.push(['bullrush', 2]); }
+    return this._weightedPick(menu);
+  }
+  // A free defensive-stance toggle (doesn't cost the action): a badly-wounded foe
+  // turtles up (+2 AC, −4 to hit) to survive; it drops the guard once recovered.
+  _enemyFightDefensively(e) {
+    const hurt = e.hp > 0 && e.hp <= e.maxHp * 0.35;
+    if (hurt && !e.fdOn) { e.fdOn = true; this._note(`🛡️ ${e.glyph} ${e.name}, badly wounded, takes a DEFENSIVE stance (+2 AC, −4 to hit).`, null, { side: 'enemy' }); }
+    else if (!hurt && e.fdOn) { e.fdOn = false; this._note(`${e.glyph} ${e.name} drops its guard and presses the attack.`, null, { side: 'enemy' }); }
+  }
+  // GRAPPLE a hero — CMB vs the hero's CMD. Success: seized (−2 to hit, easier to
+  // hit), crushed for a free strike, grip lasts ~2 rounds (the hero struggles free
+  // on their turn — see _advanceToActor). Dispel/Grease break it early.
+  _enemyGrapple(e, target) {
+    const cmb = this._enemyMnvCMB(e), cmd = this._heroCMD(target);
+    if (cmb < cmd) { this._note(`🤼 ${e.glyph} ${e.name} lunges to grab ${target.nickname}, who twists away. [CMB ${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword), { side: 'enemy' }); this._echoToTable(); return; }
+    target.grappled = true; target.grappledBy = e.uid; target.grappleRounds = 2;
+    this._note(`🤼 ${e.glyph} ${e.name} GRAPPLES ${target.nickname} — seized! −2 to hit and easier to strike until they break free. [CMB ${cmb} vs CMD ${cmd}]`, null, { side: 'enemy' });
+    this._broadcast();
+    this._enemyMelee(e, target);   // the crushing squeeze comes with the grab
+  }
+  // TRIP a hero — CMB vs CMD. Success: knocked prone (easier to hit until they
+  // stand on their turn). A pure setup — no follow-up strike.
+  _enemyTrip(e, target) {
+    const cmb = this._enemyMnvCMB(e), cmd = this._heroCMD(target);
+    if (cmb < cmd) { this._note(`🦵 ${e.glyph} ${e.name} sweeps at ${target.nickname}'s legs, but they keep their footing. [CMB ${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword), { side: 'enemy' }); this._echoToTable(); return; }
+    target.prone = true;
+    this._note(`🦵 ${e.glyph} ${e.name} TRIPS ${target.nickname} — knocked PRONE, easier to hit until they stand! [CMB ${cmb} vs CMD ${cmd}]`, null, { side: 'enemy' });
+    this._echoToTable(); this._broadcast();
+  }
+  // BULL RUSH a hero — CMB vs CMD. Success: bowled off their feet (prone) and the
+  // charge carries through into a strike. Aggressive cousin of the trip.
+  _enemyBullRush(e, target) {
+    const cmb = this._enemyMnvCMB(e), cmd = this._heroCMD(target);
+    if (cmb < cmd) { this._note(`💪 ${e.glyph} ${e.name} barrels into ${target.nickname}, who stands firm. [CMB ${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword), { side: 'enemy' }); this._echoToTable(); return; }
+    target.prone = true;
+    this._note(`💪 ${e.glyph} ${e.name} BULL RUSHES ${target.nickname} off their feet and barrels in after! [CMB ${cmb} vs CMD ${cmd}]`, null, { side: 'enemy' });
+    this._broadcast();
+    this._enemyMelee(e, target);   // the charge carries through into a strike
   }
   // Kobold shaman's Hold Person: fail a Will save (DC 10 + ½ caster level) → lose a turn.
   _enemyCastHold(e, target) {
@@ -2345,7 +2445,7 @@ class Dungeon {
   _enemyHook(e, target) {
     const cfg = e.hook || {};
     const snd = cfg.sound || null;
-    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);
+    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - this._acPenalty(target);
     const r = this._monsterSwing(e, effAC);
     if (!r.hit) {
       this._note(`⛓️ ${e.glyph} ${e.name} hurls its barbed chain at ${target.nickname} — the hook scrapes past. ${this._atkStr(r)}`, snd, { side: 'enemy' });
@@ -2539,7 +2639,7 @@ class Dungeon {
   // and the vampire HEALS the energy it drains.
   _enemySpellstrike(e, target) {
     const cfg = e.spellstrike || {};
-    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - this._acPenalty(target);
+    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - this._acPenalty(target);
     const r = this._monsterSwing(e, effAC);
     const snd = cfg.sound || null;
     if (!r.hit) { this._note(`🩸 ${e.glyph} ${e.name}'s draining touch misses ${target.nickname}. ${this._atkStr(r)}`, snd, { side: 'enemy' }); this._echoToTable(snd); this._broadcast(); return; }
@@ -3763,7 +3863,7 @@ class Dungeon {
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false;   // taunt / grapple / fire ward / flight / stoneskin / spiritual weapon / darkvision clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false;   // taunt / grapple / prone / fire ward / flight / stoneskin / spiritual weapon / darkvision clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
     m.queuedAction = null;   // pre-loaded actions never carry into a new room (stale targets)
@@ -3977,7 +4077,7 @@ class Dungeon {
   _enemyAC(e, opts = {}) {
     let base = opts.touch ? (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)) : e.ac;
     if (e.flatFooted) base = Math.max(10, base - 2);   // flat-footed: denied Dex
-    return base - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) + (e.flying ? HIGH_GROUND_AC : 0);
+    return base - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) + (e.flying ? HIGH_GROUND_AC : 0) + (e.fdOn ? 2 : 0);   // Fight Defensively: +2 dodge AC
   }
   // Energy-resistance multiplier for a damage type (see RESIST_BY_KEY): 0 immune,
   // 0.5 resistant, 1.5 vulnerable, 1 (default) unchanged. Physical/untyped (no
@@ -5313,12 +5413,21 @@ class Dungeon {
   // CMB = d20 + BAB + STR mod + the same situational hit mods a swing gets (buffs
   // incl. Power Attack / Fight Defensively penalties, Haste). Real STR from the
   // individualized build, falling back to the legacy +4 when a member has no mods.
+  // HOMERULE: a maneuver may be powered by DEX instead of STR when DEX is higher —
+  // so nimble, low-STR heroes (rogues, swashbucklers, monks) are just as good at
+  // combat maneuvers as bruisers. Used for the STR term of CMB.
+  _mnvMod(m) {
+    const str = (m.mods && m.mods.str != null) ? m.mods.str : ABILITY_MOD;
+    const dex = (m.mods && m.mods.dex != null) ? m.mods.dex : 0;
+    return Math.max(str, dex);
+  }
   _heroCMB(m) {
     return dRoll(20) + babFor(m.cls || 'fighter', m.level || 1)
-         + ((m.mods && m.mods.str != null) ? m.mods.str : ABILITY_MOD)
+         + this._mnvMod(m)                            // DEX-or-STR (homerule)
          + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m);
   }
-  // A hero's CMD (10 + BAB + STR + DEX) — what a grappled foe rolls against to slip free.
+  // A hero's CMD (10 + BAB + STR + DEX) — what a grappled foe rolls against to slip
+  // free. RAW already sums both stats, so a high-DEX hero already defends well.
   _heroCMD(m) {
     return 10 + babFor(m.cls || 'fighter', m.level || 1)
          + ((m.mods && m.mods.str != null) ? m.mods.str : ABILITY_MOD)
