@@ -5085,6 +5085,7 @@ class Dungeon {
     // Inspire Courage scales with BARD level, PF1-style: +1, rising to +2/+3/+4
     // at caster level 5 / 11 / 17. (`lvl` is the caster's level.)
     const inspMod = lvl >= 17 ? 4 : lvl >= 11 ? 3 : lvl >= 5 ? 2 : 1;
+    const gmwMod = Math.min(5, Math.floor(lvl / 4));   // Greater Magic Weapon: +1 enhancement per 4 caster levels (max +5)
     const apply = (who) => {
       who.buffApplied = who.buffApplied || {};
       if (ab.sticky && who.buffApplied[ab.key]) return;   // already active this room — don't stack
@@ -5100,8 +5101,8 @@ class Dungeon {
         return;
       }
       who.buffs = who.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
-      who.buffs.toHit += (ab.buff && ab.buff.toHit) || 0;
-      who.buffs.dmg += (ab.buff && ab.buff.dmg) || 0;
+      who.buffs.toHit += ab.gmw ? gmwMod : ((ab.buff && ab.buff.toHit) || 0);   // Greater Magic Weapon scales the enhancement with caster level
+      who.buffs.dmg += ab.gmw ? gmwMod : ((ab.buff && ab.buff.dmg) || 0);
       who.buffs.bonusDice += (ab.buff && ab.buff.bonusDice) || 0;
       who.buffs.acPen += (ab.buff && ab.buff.acPen) || 0;   // rage handled above; here magus Shield etc.
       who.buffs.ac += (ab.buff && ab.buff.ac) || 0;         // Shield / Cat's Grace: +AC (sticky)
@@ -5122,8 +5123,8 @@ class Dungeon {
       // Prayer floods the WHOLE battlefield — allies up, enemies down (−1 to hit,
       // damage & saves for the room). See _monsterSwing / _enemySave.
       if (ab.enemyPenalty) for (const e of this.livingEnemies()) e.prayed = Math.max(e.prayed || 0, ab.enemyPenalty);
-      const inspTag = ab.key === 'inspire' ? ` (+${inspMod} to hit & damage)` : '';
-      this._note(`${ab.icon} ${m.nickname} ${ab.enemyPenalty ? `intones ${ab.name} — allies blessed, enemies cursed across the field` : `strikes up ${ab.name} — the party is emboldened`}${inspTag}!`, sound);
+      const inspTag = ab.key === 'inspire' ? ` (+${inspMod} to hit & damage)` : ab.gmw ? ` (weapons +${gmwMod} to hit & damage)` : '';
+      this._note(`${ab.icon} ${m.nickname} ${ab.enemyPenalty ? `intones ${ab.name} — allies blessed, enemies cursed across the field` : ab.gmw ? `blesses the party's weapons with ${ab.name}` : `strikes up ${ab.name} — the party is emboldened`}${inspTag}!`, sound);
     }
     else if (ab.target === 'ally') { const t = this._buffTarget(m, ab, payload); apply(t); this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${t.nickname}.`, sound); }
     else { apply(m); this._note(`${ab.icon} ${m.nickname} uses ${ab.name}!`, sound); }

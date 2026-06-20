@@ -178,6 +178,11 @@ const SPELL = {
   riverofwind:   { key: 'riverofwind',   name: 'River of Wind',  icon: '🌬️', effect: 'grease', target: 'aoe', randN: 3, randDie: 4, save: 'fort', slvl: 4, sound: S.gust, desc: 'A roaring torrent of air bowls over a RANDOM 3d4 foes — Fortitude save or be knocked prone.' },
   // ── 5th-level ──
   stoneskincomm: { key: 'stoneskincomm', name: 'Stoneskin (Communal)', icon: '🪨', effect: 'buff', target: 'self', party: true, buff: {}, dr: 10, sticky: true, slvl: 5, sound: S.invoke, desc: 'The WHOLE party\'s skin turns to stone — DR 10 vs physical blows for every ally, for the rest of the room.' },
+  // Greater Magic Weapon — the CRAFT priests' (Brigh/Casandalee) signature team buff: it
+  // bumps the party's weapon potency. +1 enhancement per 4 caster levels (max +5), applied
+  // as +N to hit & +N damage to EVERY ally for the room. The `gmw` flag drives the level
+  // scaling in Dungeon._abBuff (like Inspire Courage).
+  greatermagicweapon: { key: 'greatermagicweapon', name: 'Greater Magic Weapon', icon: '🗡️', img: '/dungeon/buffs/bullsstrength.webp', effect: 'buff', target: 'self', party: true, sticky: true, gmw: true, slvl: 3, sound: S.invoke, desc: 'Bless the party\'s weapons — +1 enhancement per 4 caster levels (max +5): +N to hit and +N damage for EVERY ally, for the rest of the room.' },
   cloudkill:     { key: 'cloudkill',     name: 'Cloudkill',      icon: '☠️', effect: 'aoe', target: 'aoe', randN: 3, randDie: 4, maxTargets: 8, save: 'fort', die: 4, dice: 'level', dcap: 10, dtype: 'poison', slvl: 5, sound: S.acid, desc: 'A roiling bank of poison gas engulfs a RANDOM 3d4 foes — Fortitude for half (level d4 poison).' },
   suffocation:   { key: 'suffocation',   name: 'Suffocation',    icon: '🫁', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 5, sound: S.umbral, desc: 'Rip the air from one creature\'s lungs (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy damage.' },
   overlandflight:{ key: 'overlandflight',name: 'Overland Flight', icon: '🕊️', effect: 'overlandflight', target: 'self', slvl: 5, sound: S.invis, desc: 'Soar for the REST OF THE DUNGEON — grounded foes cannot reach you, and you can still cast on the wing. A FREE action, cast once per dungeon (like Mage Armor).' },
@@ -295,6 +300,7 @@ const KITS = {
     { key: 'searinglight', name: 'Searing Light',        icon: '🔆', cost: 'slot', slvl: 3, minLevel: 5, effect: 'touch', target: 'enemy', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.searing, desc: 'A ray of divine light — ranged touch for ½level d8 (extra vs undead).' },
     { key: 'cureserious',  name: 'Cure Serious Wounds',  icon: '💚', cost: 'slot', slvl: 3, minLevel: 5, effect: 'heal', heal: 'single', healDice: 3, healCap: 15, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 3d8 + caster level (max +15).' },
     { key: 'dispelmagic',  name: 'Dispel Magic',         icon: '🌀', cost: 'slot', slvl: 3, minLevel: 5, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'Strip a debuff off an afflicted ally (paralysis / hold / grapple / stun / sickness).' },
+    { ...SPELL.greatermagicweapon, cost: 'slot', minLevel: 5 },   // craft priests' team buff: party weapons +1/4 levels (max +5)
     // ── 4th-level prayers ──
     { key: 'curecritical', name: 'Cure Critical Wounds', icon: '💚', cost: 'slot', slvl: 4, minLevel: 7, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20).' },
     { key: 'protectfire',  name: 'Protection from Fire',  icon: '🔥', cost: 'slot', slvl: 4, minLevel: 7, effect: 'buff', target: 'self', party: true, protectFire: true, sticky: true, sound: S.invoke, desc: 'Ward the whole party against FIRE — each ally gains a ward that ABSORBS the next 12 fire damage per caster level (max 120), soaked before it burns, until spent. (PF1 Protection from Energy — cast it when fiery foes loom.)' },
@@ -508,6 +514,11 @@ const KITS = {
     { key: 'curecritical',  name: 'Cure Critical Wounds', icon: '💚', cost: 'slot', slvl: 4, minLevel: 10, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20).' },
     { key: 'holysmite',     name: 'Holy Smite',           icon: '🌟', cost: 'slot', slvl: 4, minLevel: 10, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
     { key: 'blessingoffervor', name: 'Blessing of Fervor', icon: '💨', cost: 'slot', slvl: 4, minLevel: 10, effect: 'haste', target: 'self', party: true, sounds: FERVOR_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (the haste choice).' },
+    // ── AGU — assassin/spy of Norgorber: stealth + single-target disable (Hold Person
+    //    is on the shared list above). char-gated to Agu via Dungeon._charAllows. ──
+    { ...SPELL.sleep,        cost: 'slot', char: 'Agu' },
+    { ...SPELL.displacement, cost: 'slot', minLevel: 7,  char: 'Agu' },
+    { ...SPELL.invisgreater, cost: 'slot', minLevel: 10, char: 'Agu' },
   ] },
   // BARD — spontaneous caster (spell SLOTS per level). The bardic-performance
   // CLASS FEATURES (Inspire Courage, Fascinate) are NOT spells and sit beside the
@@ -601,6 +612,7 @@ KITS.oracle.abilities = [
   { ...spontaneousSpell(SPELL.scorchingray, 3), char: 'Elfrip' },
   { ...spontaneousSpell(SPELL.fireball,  5),    char: 'Elfrip' },
   { ...spontaneousSpell(SPELL.firesnake, 10),   char: 'Elfrip' },
+  { ...spontaneousSpell(SPELL.fireshield, 7),   char: 'Elfrip' },   // Elfrip team buff (Protection from Fire communal already comes from the cleric list)
   // ── TIME mystery — Casandalee: she bends the battle's tempo (Haste/Slow) and
   //    her own timeline (Mirror Image's might-have-beens, Displacement's
   //    half-second sidestep). Other oracles keep the plain cleric list.
