@@ -5738,15 +5738,21 @@ class Dungeon {
       const foes = this._targetableEnemies();
       if (foes.some(f => f.flying) && foes.some(f => !f.flying) && dRoll(10) <= 4) forceRanged = true;
     }
+    let drewCrossbow = false;
     if (forceRanged || (e.flying && !m.weapon.ranged && !m.weapon.reachFly && !(m.canHitFlyers && m.flying))) {
       const bk = this._backupRangedKey(m);
       m.weapon = weaponOf(bk === 'lightcrossbow' ? {} : m.gear, bk);   // signature sidearms keep the wielder's enchant; the generic crossbow stays plain
+      // The improvised LIGHT CROSSBOW fires a SINGLE shot — PF1: a crossbow can't
+      // full-attack without Rapid Reload/Crossbow Mastery, so no iterative volley up
+      // at a flyer (Josh: "my primary can't hit a flyer but my secondary and tertiary
+      // can"). Signature SIDEARMS (Gaspar's/El Guapo's guns) keep their full volley.
+      if (bk === 'lightcrossbow') drewCrossbow = true;
       if (!quiet) this._note(`🔫 ${m.nickname} ${forceRanged ? 'draws' : `can't reach the airborne ${e.name} in melee — draws`} ${bk === 'lightcrossbow' ? 'a light crossbow' : (bk === 'gasparpistols' ? 'his paired pistols' : 'his pistol')}!`);
     }
     // Build the swing sequence as a list of to-hit OFFSETS (see _attackOffsets):
     // dual-wielders attack twice; staying on the same target adds PF1 iteratives.
-    // A Haste bonus swing (quiet) is always a single strike at full to-hit.
-    const offsets = quiet ? [{ off: 0, oh: false }] : this._attackOffsets(m, e);
+    // A Haste bonus swing (quiet) — or an improvised crossbow — is a single strike.
+    const offsets = (quiet || drewCrossbow) ? [{ off: 0, oh: false }] : this._attackOffsets(m, e);
     if (!quiet) m._lastAtkTarget = e.uid;   // remember the target → next turn's full-attack check
     const swings = offsets.length;
     // Sound: signature atkSound > a blunt "bap" for B-type weapons (quarterstaff,
