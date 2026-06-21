@@ -2510,20 +2510,23 @@ class Dungeon {
     const live = this._targetableParty().slice();
     for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
     const hit = live.slice(0, dRoll(cfg.count || 3));
-    const dc = cfg.dc || 18, full = dRollN(cfg.dice || 5, cfg.die || 6) + (cfg.bonus || 0), parts = [];   // bonus = the alchemist's Int rider
+    const dc = cfg.dc || 18, full = dRollN(cfg.dice || 5, cfg.die || 6) + (cfg.bonus || 0);   // bonus = the alchemist's Int rider
+    let hitN = 0, savedN = 0, downedN = 0;
     for (const t of hit) {
       const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
       let dmg = saved ? Math.floor(full / 2) : full;
-      let fireTag = '';   // the fire ward only absorbs FIRE (not a dragon's acid/cold breath)
-      if ((cfg.dtype || 'fire') === 'fire') ({ dmg, tag: fireTag } = this._fireSoak(t, dmg));
+      if ((cfg.dtype || 'fire') === 'fire') ({ dmg } = this._fireSoak(t, dmg));   // fire ward absorbs FIRE only
       this._dmgToMember(t, dmg);
-      parts.push(`${t.nickname} ${saved ? 'half ' : ''}−${dmg}${fireTag}`);
+      if (saved) savedN++; else hitN++;
+      if (t.hp <= 0) downedN++;
     }
     // cfg.verb lets a dragon BREATHE and a bomb devil LOB instead of "hellfire".
-    // Save type + DC stated in the SPOKEN text (Josh wants it) — not bracketed,
-    // since blind mode strips [..] roll math. Targets stay terse: name + damage.
-    this._note(`🔥 ${e.glyph} ${e.name} ${cfg.verb || 'unleashes a HELLFIRE BLAST'} — Ref DC ${dc} (${full} ${cfg.dtype || 'fire'}): ${parts.join(', ')}!`, cfg.sound, { side: 'enemy' });
+    // COUNTS-ONLY report (Josh): the save type + DC + the burst damage + a tally of
+    // hit/saved/downed — NOT a per-target list. Keeps mid-combat narration fast; the
+    // blind player checks exact party HP on their own turn with H.
+    const tally = `${hitN} hit${savedN ? `, ${savedN} saved` : ''}${downedN ? `, ${downedN} down` : ''}`;
+    this._note(`🔥 ${e.glyph} ${e.name} ${cfg.verb || 'unleashes a HELLFIRE BLAST'} — Ref DC ${dc} (${full} ${cfg.dtype || 'fire'}): ${tally}!`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
   }
   // Lich's Fireball (it casts as a wizard of its level): a roaring blast on a
@@ -2604,17 +2607,20 @@ class Dungeon {
     const live = this._targetableParty().slice();
     for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
     const hit = live.slice(0, Math.max(1, cfg.count ? cfg.count() : dRoll(3) + 1));
-    const full = dRollN(cfg.dice, cfg.die || 6), parts = [];
+    const full = dRollN(cfg.dice, cfg.die || 6);
+    let hitN = 0, savedN = 0, downedN = 0;
     for (const t of hit) {
       const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= cfg.dc;
       let dmg = (saved && t.evasion) ? 0 : saved ? Math.floor(full / 2) : full;   // Evasion: no damage on a made save
-      let fireTag = '';
-      if (cfg.dtype === 'fire') ({ dmg, tag: fireTag } = this._fireSoak(t, dmg));   // PF1 ward: absorption pool, not a halving
+      if (cfg.dtype === 'fire') ({ dmg } = this._fireSoak(t, dmg));   // PF1 ward: absorption pool, not a halving
       this._dmgToMember(t, dmg);
-      parts.push(`${t.nickname} ${saved ? (t.evasion ? 'evades ' : 'half ') : ''}−${dmg}${fireTag}`);
+      if (saved) savedN++; else hitN++;
+      if (t.hp <= 0) downedN++;
     }
-    this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} — Ref DC ${cfg.dc} (${full} ${cfg.dtype}): ${parts.join(', ')}!`, cfg.sound, { side: 'enemy' });
+    // COUNTS-ONLY (Josh): DC + burst damage + hit/saved/downed tally, no per-target list.
+    const tally = `${hitN} hit${savedN ? `, ${savedN} saved` : ''}${downedN ? `, ${downedN} down` : ''}`;
+    this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} — Ref DC ${cfg.dc} (${full} ${cfg.dtype}): ${tally}!`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
   }
   // A lich single-target nuke — optional save for partial (Disintegrate / Finger
@@ -4304,23 +4310,21 @@ class Dungeon {
     // save area effect only). Resistance/vulnerability still applies per target.
     // Metamagic (Empower ×1.5 / Maximize) applies to the one shared roll.
     const full = this._rollSpell(m, dice, ab.die || 6, ab);
-    // CONCISE report (Josh): the save TYPE + DC + the rolled damage are stated ONCE
-    // up front, then targets are grouped into who FAILED (took it) vs who SAVED
-    // (half) — each with their own damage + a ☠️ on a kill. Drops the per-enemy
-    // d20 total + repeated "vs DC" that buried the line and slowed the narration.
-    const failed = [], saved = [];
+    // COUNTS-ONLY report (Josh): the save TYPE + DC + the rolled damage stated ONCE,
+    // then a TALLY of how many failed / saved / were slain — NOT a per-enemy list.
+    // Keeps mid-combat narration fast; the blind player inspects enemies (E) on their
+    // own turn for exactly who's left and how hurt.
+    let failN = 0, savedN = 0, slainN = 0;
     for (const e of chosen) {
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
       const evaded = sv.saved && saveStat === 'reflex' && e.evasion;
       const raw = sv.saved ? (evaded ? 0 : Math.floor(full / 2)) : full;
-      const dmg = this._dmgE(e, raw, ab.dtype);
-      const tag = `${e.name} ${evaded ? 'evaded' : dmg}${evaded ? '' : this._resistTag(e, ab.dtype)}${e.hp <= 0 ? ' ☠️' : ''}`;
-      (sv.saved ? saved : failed).push(tag);
+      this._dmgE(e, raw, ab.dtype);
+      if (sv.saved) savedN++; else failN++;
+      if (e.hp <= 0) slainN++;
     }
-    const segs = [];
-    if (failed.length) segs.push(`hit ${failed.join(', ')}`);
-    if (saved.length)  segs.push(`saved ${saved.join(', ')}`);
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${saveLbl} DC ${dc} (${full} ${ab.dtype || ''}): ${segs.join('; ')}.`, sound);
+    const tally = `${failN} hit${savedN ? `, ${savedN} saved` : ''}${slainN ? `, ${slainN} slain` : ''}`;
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${saveLbl} DC ${dc} (${full} ${ab.dtype || ''}): ${tally}.`, sound);
     this._echoToTable(sound);
   }
   // Disintegrate (PF1e): a ranged TOUCH ATTACK; on a hit, 2d6 per caster level
