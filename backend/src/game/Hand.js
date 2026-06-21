@@ -54,7 +54,7 @@ function sortHoleHighFirst(hole) {
  *  was bluffing. Examples:
  *    "Pocket Aces"            (pair)
  *    "Ace-King suited"        (premium)
- *    "Ten-Two off — total bluff" (junk)
+ *    "Ten-Two off"            (junk)
  */
 function describeHoleCards(hole) {
   const sorted = sortHoleHighFirst(hole);
@@ -71,15 +71,10 @@ function describeHoleCards(hole) {
   }
   const high = rankWord(r1), low = rankWord(r2);
   const suit = s1 === s2 ? 'suited' : 'off';
-  // Bluff label: unconnected + low (both ≤ 10) is shouting "bluff".
-  const r1n = RANK_ORDER[r1] || 0;
-  const r2n = RANK_ORDER[r2] || 0;
-  const gap = r1n - r2n;
-  let suffix = '';
-  if (r1n <= 10 && gap >= 3 && s1 !== s2)       suffix = ' — total bluff';
-  else if (r1n <= 11 && gap >= 4)               suffix = ' — definite bluff';
-  else if (r1n <= 9)                            suffix = ' — sketchy bluff';
-  return `${high}-${low} ${suit}${suffix}`;
+  // No "bluff" appraisal: it judged only the hole cards, not the betting, so it
+  // was usually wrong (a low holding isn't a bluff if they had a reason to play
+  // it). Just describe the cards; let players read the action themselves.
+  return `${high}-${low} ${suit}`;
 }
 
 /** Take a pokersolver Hand result and return a sentence including kickers.
