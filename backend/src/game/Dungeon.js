@@ -926,6 +926,10 @@ class Dungeon {
 
   // ── Broadcasting ──────────────────────────────────────────────────────────
   publicState() {
+    // Initiative lookup (keyed p:/e:) so the client can sort cards into initiative
+    // order and animate the per-room re-order. Empty until _rollInitiative runs.
+    const _initOf = {};
+    for (const t of (this.turnOrder || [])) _initOf[t.kind[0] + ':' + t.id] = t.init;
     return {
       id: this.id,
       depth: this.depth,
@@ -933,7 +937,7 @@ class Dungeon {
       status: this.status,
       runGold: this.runGold,
       party: this.party.map(m => ({
-        playerId: m.playerId, nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot, crowned: !!m.crowned,
+        playerId: m.playerId, init: (_initOf['p:' + m.playerId] ?? null), nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot, crowned: !!m.crowned,
         cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
         race: m.race || 'human', raceName: RACES.raceName(m.race), vision: m.vision || 'normal', blindsense: m.blindsense || 0,   // PF1 race + vision (+ blindsense ft); blind mode reads vision; non-human shows on the hero card
         form: m.form ? { key: m.form.key, label: m.form.label, glyph: m.form.glyph, art: m.form.art } : null,   // active Wild Shape (drives the token swap on the hero card)
@@ -953,7 +957,7 @@ class Dungeon {
         kit: this._kitState(m),    // at-will + 2 abilities (+ remaining uses) for the action UI
       })),
       enemies: this.enemies.map(e => ({
-        uid: e.uid, name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
+        uid: e.uid, init: (_initOf['e:' + e.uid] ?? null), name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
         flying: !!e.flying,
         drDesc: e.dr ? this._drDesc(e.dr) : null,   // spoken in the blind E-inspector + shown on hover (why your hits run low)
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,

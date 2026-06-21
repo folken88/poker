@@ -1071,6 +1071,28 @@
       el.classList.toggle('is-urgent', (at - now) < 3000);
     });
   }, 250);
+  // ── Initiative re-order (FLIP) ──────────────────────────────────────────────
+  // Cards sort by initiative (highest → left); when that order changes — every
+  // room, as new initiative is rolled — they SLIDE to their new slots via a FLIP
+  // animation instead of snapping. Positions that don't change don't animate.
+  const _byInit = (a, b) => ((b.init ?? -Infinity) - (a.init ?? -Infinity));
+  function _flipCapture(container, attr) {
+    const m = {};
+    if (container) container.querySelectorAll('[' + attr + ']').forEach(el => { m[el.getAttribute(attr)] = el.getBoundingClientRect(); });
+    return m;
+  }
+  function _flipPlay(container, attr, old) {
+    if (!container) return;
+    container.querySelectorAll('[' + attr + ']').forEach(el => {
+      const o = old[el.getAttribute(attr)]; if (!o) return;
+      const n = el.getBoundingClientRect();
+      const dx = o.left - n.left, dy = o.top - n.top;
+      if ((dx || dy) && el.animate) el.animate(
+        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0,0)' }],
+        { duration: 340, easing: 'cubic-bezier(.2,.75,.3,1)' });
+    });
+  }
+  let _dunEneSig = null;   // last initiative signature → drives the villains' two-phase reveal
   function renderDungeon() {
     const d = state.dungeon;
     if (!d) return;
@@ -1096,8 +1118,8 @@
     // same color for the same person's 🎯 ring).
     const aimHue = (pid) => { let h = 7; for (const ch of String(pid)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
     const ene = $('#dungeonEnemies');
-    if (ene) ene.innerHTML = (d.enemies || []).length
-      ? d.enemies.map(e => {
+    const _buildEnemies = (list) => list.length
+      ? list.map(e => {
           const dead = !e.alive;
           const shrouded = !!e.darkened;   // Darkness — can't be targeted
           const sel = !dead && !shrouded && _dungeonSel.includes(e.uid);
@@ -1137,15 +1159,42 @@
     // room never spills past the box / pushes the spellbook off-screen. Only
     // the LIVING count — the dead collapse to tiny corpse chips (CSS .is-dead),
     // so a half-cleared room relaxes back to full-size cards.
-    if (ene) {
+    const _eneCompact = () => {
+      if (!ene) return;
       const n = (d.enemies || []).filter(e => e.alive).length;
       ene.classList.toggle('is-compact', n > 6 && n <= 12);
       ene.classList.toggle('is-packed', n > 12);
+    };
+    // Villains line up left→right by initiative. They spawn fresh each room, so on
+    // a newly-rolled initiative we paint them in SPAWN order for one frame, then
+    // FLIP them into init order (the "settle into initiative" reveal). Within a
+    // room the order is stable, so subsequent renders just re-paint sorted.
+    const _enemiesSorted = [...(d.enemies || [])].sort(_byInit);
+    const _eneSig = (d.status === 'combat' && _enemiesSorted.length)
+      ? 'd' + d.depth + ':' + (d.enemies || []).map(e => e.uid).join(',')
+      : null;
+    if (ene) {
+      if (_eneSig && _eneSig !== _dunEneSig) {
+        ene.innerHTML = _buildEnemies([...(d.enemies || [])]);   // spawn order
+        _eneCompact();
+        requestAnimationFrame(() => {
+          const _old = _flipCapture(ene, 'data-enemy');
+          ene.innerHTML = _buildEnemies(_enemiesSorted);          // init order
+          _eneCompact();
+          _flipPlay(ene, 'data-enemy', _old);
+        });
+      } else {
+        const _old = _flipCapture(ene, 'data-enemy');
+        ene.innerHTML = _buildEnemies(_enemiesSorted);
+        _eneCompact();
+        _flipPlay(ene, 'data-enemy', _old);
+      }
     }
+    _dunEneSig = _eneSig;
 
     const party = $('#dungeonParty');
     const meInRun = (d.party || []).some(x => x.playerId === meId && !x.left);
-    if (party) party.innerHTML = (d.party || []).map(m => {
+    const _buildParty = (list) => list.map(m => {
       const pct = m.maxHp ? Math.max(0, Math.round(100 * m.hp / m.maxHp)) : 0;
       const isMe = m.playerId === meId;
       const isTurn = m.playerId === turnId;
@@ -1178,7 +1227,7 @@
       const kickHtml = canKick
         ? `<button type="button" class="dpc__remove" data-dungeon-kick="${escapeAttr(m.playerId)}" title="Dismiss ${escapeAttr(m.nickname)} from the party" aria-label="Dismiss ${escapeAttr(m.nickname)} from the party">×</button>`
         : '';
-      return `<div class="${cls.join(' ')}" style="position:relative${portraitBg(heroPortrait)}"${(!m.dead && !m.left) ? ` data-ally="${escapeAttr(m.playerId)}" title="Click to target ${escapeAttr(m.nickname)} with your next buff or dispel (click again to clear)"` : ''}>${kickHtml}
+      return `<div class="${cls.join(' ')}" data-pid="${escapeAttr(m.playerId)}" style="position:relative${portraitBg(heroPortrait)}"${(!m.dead && !m.left) ? ` data-ally="${escapeAttr(m.playerId)}" title="Click to target ${escapeAttr(m.nickname)} with your next buff or dispel (click again to clear)"` : ''}>${kickHtml}
         <div class="dpc__ac" title="${escapeAttr(m.acBreak || 'Armor Class — current total')}" style="position:absolute;bottom:3px;right:5px;font-size:0.7rem;font-weight:700;color:var(--brass-bright);background:rgba(0,0,0,0.55);border-radius:6px;padding:0 5px;line-height:1.45;cursor:help;z-index:6">🛡 ${Number.isFinite(m.ac) ? m.ac : '?'}</div>
         <div class="dpc__avatar"${m.crowned ? ' style="position:relative"' : ''}>${renderAvatar((m.form && m.form.art) ? m.form.art : m.avatarId)}${m.form ? `<span class="dpc__form" title="Wild Shape: ${escapeAttr(m.form.label)}" style="position:absolute;bottom:-4px;right:-2px;font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.8))">${m.form.glyph || '🐾'}</span>` : ''}${m.crowned ? `<span class="dpc__crown" title="Loot Lord" style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:1.05em;line-height:1;z-index:6;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))">👑</span>` : ''}</div>${afk}${queuedChip}
         <div class="dpc__name">${escapeText(m.nickname)}${isMe ? ' (you)' : ''}${m.isBot ? ' 🤖' : ''}${m.form ? ` <span class="dpc__formtag" style="color:var(--brass-bright);font-size:.82em">${escapeText(m.form.label)}</span>` : ''}${tag}</div>
@@ -1188,13 +1237,18 @@
         <div class="dpc__hp">${hpText}</div>
       </div>`;
     }).join('');
-    // Shrink the hero cards as the party grows so they ALWAYS fit without scrolling
-    // (mirrors the enemy field's is-compact / is-packed). Dead/bailed heroes
-    // collapse to slim chips (CSS .is-out), so only the ACTIVE count drives it.
+    // Heroes line up left→right by initiative too. Their cards PERSIST across
+    // rooms, so they visibly SLIDE into the new order each room (no two-phase
+    // needed — they're already on screen). is-compact / is-packed shrink them as
+    // the party grows, exactly as before.
+    const _partySorted = [...(d.party || [])].sort(_byInit);
     if (party) {
+      const _old = _flipCapture(party, 'data-pid');
+      party.innerHTML = _buildParty(_partySorted);
       const np = (d.party || []).filter(x => !x.dead && !x.left).length;
       party.classList.toggle('is-compact', np > 4 && np <= 6);
       party.classList.toggle('is-packed', np > 6);
+      _flipPlay(party, 'data-pid', _old);
     }
 
     const turn = $('#dungeonTurn');
