@@ -646,6 +646,55 @@
     clearTimeout(toast._t);
     toast._t = setTimeout(() => { t.hidden = true; }, 3000);
   }
+  // In-app confirmation dialog. Used instead of native confirm() — confirm()
+  // blocks the JS thread and is NOT narrated by BlindMode (Josh would get a
+  // silent, invisible-to-TTS popup). Reuses the .modal CSS. Returns a Promise
+  // resolving true (confirmed) / false (cancelled). Backdrop / Escape / Cancel →
+  // false; focus defaults to Cancel (the safe choice for destructive actions).
+  function confirmDialog({ title = 'Are you sure?', body = '', confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false } = {}) {
+    return new Promise((resolve) => {
+      let el = $('#confirmDialog');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'confirmDialog';
+        el.className = 'modal';
+        el.setAttribute('role', 'dialog');
+        el.setAttribute('aria-modal', 'true');
+        el.setAttribute('aria-labelledby', 'confirmDialogTitle');
+        el.innerHTML =
+          '<div class="modal__backdrop"></div>' +
+          '<div class="modal__panel">' +
+            '<h2 class="modal__title" id="confirmDialogTitle"></h2>' +
+            '<p class="modal__body" id="confirmDialogBody"></p>' +
+            '<div class="modal__actions">' +
+              '<button class="btn btn--ghost" id="confirmDialogNo"></button>' +
+              '<button class="btn" id="confirmDialogYes"></button>' +
+            '</div>' +
+          '</div>';
+        document.body.appendChild(el);
+      }
+      const yes = $('#confirmDialogYes'), no = $('#confirmDialogNo'), backdrop = el.querySelector('.modal__backdrop');
+      const bodyEl = $('#confirmDialogBody');
+      $('#confirmDialogTitle').textContent = title;
+      bodyEl.textContent = body; bodyEl.hidden = !body;
+      yes.textContent = confirmLabel; no.textContent = cancelLabel;
+      yes.className = 'btn ' + (danger ? 'btn--danger' : 'btn--primary');
+      el.hidden = false;
+      if (window.BlindMode?.isOn?.()) window.BlindMode.speak(`${title} ${body} ${confirmLabel}, or ${cancelLabel}.`, 'urgent');
+      const close = (val) => {
+        el.hidden = true;
+        yes.onclick = no.onclick = backdrop.onclick = null;
+        document.removeEventListener('keydown', onKey, true);
+        resolve(val);
+      };
+      const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(false); } };
+      yes.onclick = () => close(true);
+      no.onclick = () => close(false);
+      backdrop.onclick = () => close(false);
+      document.addEventListener('keydown', onKey, true);
+      setTimeout(() => no.focus(), 0);   // safe default for keyboard / screen-reader users
+    });
+  }
 
   const socket = io({ autoConnect: false });
   socket.on('connect_error', (err) => toast('Connection issue: ' + (err.message || 'unknown'), true));
@@ -4386,9 +4435,14 @@
     // keeps gear, gold, and every OTHER class's progress (XP is per-class). Guarded
     // by a confirm; takes effect on the next dungeon run, not a fight in progress.
     const rbtn = $('#meResetLevel');
-    rbtn?.addEventListener('click', () => {
+    rbtn?.addEventListener('click', async () => {
       const clsName = state.pf1meta?.classes?.find(c => c.key === (state.me?.class || 'fighter'))?.name || 'this class';
-      if (!confirm(`Reset your ${clsName} back to Level 1?\n\nThis wipes your ${clsName} XP only — your gear, gold, and any other classes you've leveled are kept.`)) return;
+      const ok = await confirmDialog({
+        title: `Reset your ${clsName} to Level 1?`,
+        body: `This wipes your ${clsName} XP only — your gear, gold, and any other classes you've leveled are kept.`,
+        confirmLabel: 'Reset to Level 1', cancelLabel: 'Never mind', danger: true,
+      });
+      if (!ok) return;
       socket.emit('lobby:resetLevel', null, (resp) => {
         if (!resp?.ok) { toast(resp?.error || 'Could not reset level', true); return; }
         if (state.me) state.me.class_xp = resp.class_xp;
