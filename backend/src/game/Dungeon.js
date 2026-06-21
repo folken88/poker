@@ -441,6 +441,20 @@ const SICKENED_ROUNDS = 3;
 const SICKENED_PENALTY = 2;
 const BLIND_ROUNDS = 3;           // Glitterdust — how long a blinded foe stays blind
 const PARALYZE_DC = 14;
+// PF1 Dispel Magic: the check (1d20 + caster level) is made vs DC = 11 + the CL of
+// the EFFECT being dispelled (NOT dungeon depth). Each debuff is stamped with its
+// source's caster level when applied; these are the FLOORS (the minimum caster
+// level able to produce that effect — roughly the spell's level), so even a weak
+// mook's Hold Person is no easier to dispel than the spell allows, while a deep,
+// high-CL caster's magic is genuinely stubborn. Used by _dispellableCL.
+const EFFECT_CL_FLOOR = {
+  paralyzed: 3,   // Hold Person (2nd-level spell, min CL 3); Hold Monster stamps higher
+  stunned:   3,   // sonic shout / stunning effect
+  slowed:    5,   // Slow (3rd-level, min CL 5)
+  blinded:   3,   // Blindness (2nd-level, min CL 3)
+  sickened:  1,   // nausea cloud / minor effect
+  grappled:  3,   // magical/physical hold
+};
 // A flying creature holds the "high ground" over grounded foes: +1 to hit them,
 // +2 AC against their attacks. (Heroes are always grounded.)
 const HIGH_GROUND_HIT = 1;
@@ -2301,7 +2315,7 @@ class Dungeon {
         const pdc = e.paralyzeDC || PARALYZE_DC;
         const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
         const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= pdc;
-        if (!saved) { target.paralyzed = 1; this._note(`🥶 ${target.nickname} fails the paralysis save [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${pdc}] — paralyzed!`); }
+        if (!saved) { target.paralyzed = 1; target.paralyzedCL = this._enemyCL(e); this._note(`🥶 ${target.nickname} fails the paralysis save [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${pdc}] — paralyzed!`); }
         else this._note(`${target.nickname} resists paralysis [d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${pdc}].`);
       }
       if (target.hp > 0 && target.isBot) this._tryBanter(target, 'damage', { enemy: e.name, dmg: r.damage });
@@ -2351,7 +2365,7 @@ class Dungeon {
   _enemyGrapple(e, target) {
     const cmb = this._enemyMnvCMB(e), cmd = this._heroCMD(target);
     if (cmb < cmd) { this._note(`🤼 ${e.glyph} ${e.name} lunges to grab ${target.nickname}, who twists away. [CMB ${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword), { side: 'enemy' }); this._echoToTable(); return; }
-    target.grappled = true; target.grappledBy = e.uid; target.grappleRounds = 2;
+    target.grappled = true; target.grappledBy = e.uid; target.grappleRounds = 2; target.grappledCL = this._enemyCL(e);
     this._note(`🤼 ${e.glyph} ${e.name} GRAPPLES ${target.nickname} — seized! −2 to hit and easier to strike until they break free. [CMB ${cmb} vs CMD ${cmd}]`, null, { side: 'enemy' });
     this._broadcast();
     this._enemyMelee(e, target);   // the crushing squeeze comes with the grab
@@ -2385,7 +2399,7 @@ class Dungeon {
     if (!saved) {
       // HELD: multiple rounds, but the hero re-saves each of their turns (and the
       // attempt costs the turn either way) — see heldDC handling in _advanceToActor.
-      target.paralyzed = Math.max(target.paralyzed || 0, 3); target.heldDC = dc;
+      target.paralyzed = Math.max(target.paralyzed || 0, 3); target.heldDC = dc; target.paralyzedCL = this._enemyCL(e);
       this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname} — HELD! ${roll} (re-save each turn to break free)`, null, { side: 'enemy' });
     } else {
       this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname}, who breaks free. ${roll}`, null, { side: 'enemy' });
@@ -2407,7 +2421,7 @@ class Dungeon {
     if (!saved && target.hp > 0 && target.elemBody) {
       this._note(`🌪️ ${target.nickname}'s Elemental Body shrugs off the ${fear ? 'terror' : 'stun'}. ${roll}`, snd);
     } else if (!saved && target.hp > 0) {
-      target.stunned = Math.max(target.stunned || 0, 1);
+      target.stunned = Math.max(target.stunned || 0, 1); target.stunnedCL = this._enemyCL(e);
       this._note(fear
         ? `👁️ ${e.glyph} ${e.name}'s sinister gaze freezes ${target.nickname} in TERROR — loses a turn! ${roll}`
         : `📢 ${e.glyph} ${e.name} looses a bone-rattling shout — ${target.nickname} takes ${dmg} and is STUNNED! ${roll}`, snd);
@@ -2453,7 +2467,7 @@ class Dungeon {
     }
     const [hookDmg, hookDR] = this._physDR(target, r.damage);   // Stoneskin soaks the bite
     this._dmgToMember(target, hookDmg);
-    if (!target.dead && target.hp > -10) { target.grappled = true; target.grappledBy = e.uid; }
+    if (!target.dead && target.hp > -10) { target.grappled = true; target.grappledBy = e.uid; target.grappledCL = this._enemyCL(e); }
     this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR} and drags them into a GRAPPLE! ${this._atkStr(r)} (Dispel or Grease to break free)`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   }
@@ -2623,7 +2637,7 @@ class Dungeon {
     const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
     const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
-    if (!saved) { target.paralyzed = Math.max(target.paralyzed || 0, 3); target.heldDC = dc; this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — HELD! ${roll} (re-save each turn to break free)`, '/audio/spell_dimensional_anchor.mp3', { side: 'enemy' }); }
+    if (!saved) { target.paralyzed = Math.max(target.paralyzed || 0, 3); target.heldDC = dc; target.paralyzedCL = this._enemyCL(e); this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — HELD! ${roll} (re-save each turn to break free)`, '/audio/spell_dimensional_anchor.mp3', { side: 'enemy' }); }
     else this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname}, who resists. ${roll}`, null, { side: 'enemy' });
     this._broadcast();
   }
@@ -4553,6 +4567,22 @@ class Dungeon {
     const roll = dRoll(20), total = roll + cl, dc = 11 + Math.max(1, effectCL | 0);
     return { ok: total >= dc, roll, total, dc, cl };
   }
+  // A foe's effective caster level — what its OWN magic (pre-cast wards, self-buffs)
+  // is dispelled against. Its CR stands in for its caster level; NO dungeon-depth
+  // floor (that was the bug — depth, not the effect, inflated the DC).
+  _enemyCL(e) { return Math.max(1, crToNum(e.cr) || (e.level || 0) || 1); }
+  // The caster level of the WORST dispellable debuff on a hero — DC = 11 + this.
+  // Each debuff is stamped with its source's CL when applied (e.g. paralyzedCL);
+  // EFFECT_CL_FLOOR is the minimum (the spell's level), so the DC reflects the
+  // EFFECT, not how deep you've delved.
+  _dispellableCL(a) {
+    let cl = 1;
+    for (const k of Object.keys(EFFECT_CL_FLOOR)) {
+      const active = (k === 'grappled') ? a.grappled : (a[k] > 0);
+      if (active) cl = Math.max(cl, a[k + 'CL'] || 0, EFFECT_CL_FLOOR[k]);
+    }
+    return cl;
+  }
   _abCleanse(m, ab, payload) {
     const sound = ab.sound;
     const FAIL_SOUND = '/audio/vine_boom.mp3';   // a FAILED dispel check (Foundry sting)
@@ -4570,8 +4600,8 @@ class Dungeon {
     const hurt = (tAlly && sev(tAlly) > 0) ? tAlly
                : (!explicit ? this.livingParty().filter(a => sev(a) > 0).sort((x, y) => sev(y) - sev(x))[0] : null);
     if (hurt) {
-      const enemyCL = Math.max(this.depth || 1, ...this._targetableEnemies().map(e => crToNum(e.cr) || 1), 1);
-      const dc = this._dispelCheck(m, enemyCL, ab.greater);
+      const effectCL = this._dispellableCL(hurt);   // DC = 11 + the EFFECT's caster level (PF1), not depth
+      const dc = this._dispelCheck(m, effectCL, ab.greater);
       if (!dc.ok) {   // the weave HOLDS
         this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — but the hostile magic HOLDS! [dispel d20 ${dc.roll} +${dc.cl} = ${dc.total} vs DC ${dc.dc}]`, FAIL_SOUND);
         this._echoToTable(FAIL_SOUND); return;
@@ -4593,7 +4623,7 @@ class Dungeon {
     const foe = (tFoe && foeScore(tFoe) > 0) ? tFoe
               : (!explicit ? this._targetableEnemies().filter(e => foeScore(e) > 0).sort((x, y) => foeScore(y) - foeScore(x))[0] : null);
     if (foe) {
-      const dc = this._dispelCheck(m, Math.max(this.depth || 1, crToNum(foe.cr) || 1), ab.greater);
+      const dc = this._dispelCheck(m, this._enemyCL(foe), ab.greater);   // DC = 11 + the foe's caster level (PF1), not depth
       if (!dc.ok) {   // its enchantment HOLDS
         this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${foe.name} — but its enchantment HOLDS! [dispel d20 ${dc.roll} +${dc.cl} = ${dc.total} vs DC ${dc.dc}]`, FAIL_SOUND);
         this._echoToTable(FAIL_SOUND); return;
