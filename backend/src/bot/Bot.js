@@ -164,6 +164,15 @@ class Bot {
       ? Math.max(0.42, tuning.raiseThresh - 0.06)
       : tuning.raiseThresh) - mood * 0.05;   // braver mood opens a hair thinner
 
+    // PREFLOP PASSIVITY (Tobias: "shouldn't fold OR bet preflop as often"). Before
+    // the flop, bots play to SEE FLOPS: they only put a RAISE in with a genuine
+    // premium (PREFLOP_RAISE_FLOOR) and limp/check everything else, instead of the
+    // binary fold-or-raise that made them both muck and over-raise pre. Postflop
+    // bars are untouched (street > 0 keeps the normal value/raise thresholds).
+    const PREFLOP_RAISE_FLOOR = 0.62;
+    const openBar  = street === 0 ? Math.max(valueThresh, PREFLOP_RAISE_FLOOR) : valueThresh;
+    const raiseBar = street === 0 ? Math.max(tuning.raiseThresh, PREFLOP_RAISE_FLOOR) : tuning.raiseThresh;
+
     // ─── Wealth context (chips + magic items) ────────────────────────────────
     // High-intel bots use this accurately; low-intel ones mostly ignore it
     // (the noise on perception swamps the small wealth adjustment).
@@ -261,6 +270,7 @@ class Bot {
     const fewOpps = oppsLive.length <= 3;
     const bluffCrowdOk = fewOpps || (this.intelligence !== 'high' && street > 0);
     if (
+      street > 0 &&            // no PREFLOP bluff-raises — bots see flops, they don't open-bluff pre (Tobias)
       this.intelligence !== 'low' &&
       v < 0.45 &&
       cheapBluff &&
@@ -306,7 +316,7 @@ class Bot {
 
     // ─── No bet to call (we can check or open) ───────────────────────────────
     if (toCall === 0) {
-      if (v > valueThresh) {   // high-intel opens thinner value; others use raiseThresh
+      if (v > openBar) {   // preflop: premium only (openBar); postflop: high-intel opens thinner value
         // Risky + high-intel sometimes "traps" with a probe bet to induce raises.
         if (this.mode === 'risky' && this.intelligence === 'high' && v < 0.86 && rng() < 0.30) {
           return buildRaise(0.55, 'probe');
@@ -352,18 +362,19 @@ class Bot {
     const bb = Math.max(1, bigBlind || 1);
     let preflopDiscount = 0;
     if (street === 0) {
-      preflopDiscount = toCall <= bb * 1.5 ? 0.30
-                      : toCall <= bb * 3   ? 0.16
-                      :                      0.06;
+      preflopDiscount = toCall <= bb * 1.5 ? 0.42
+                      : toCall <= bb * 3   ? 0.28
+                      :                      0.12;
     }
     const foldThreshold = clamp01(baseFold + potOdds * 0.40 + tuning.foldBias + wealthFoldAdj + aggCredAdj + bluffAdj - preflopDiscount - mood * 0.08);
 
-    // Casual-game looseness: PREFLOP, a cheap call (≤1.5 BB ≈ 25-75g) is worth a
-    // limp with almost any playable hand — most starting hands score low, so the
-    // mode fold threshold mucks them even when it's cheap to see a flop. Only pure
-    // trash (v < 0.08) still folds; strong hands (v ≥ raiseThresh) fall through to
-    // raise; a real raise (toCall above 1.5 BB) routes to the normal fold logic.
-    if (street === 0 && toCall <= bb * 1.5 && v >= 0.15 && v < tuning.raiseThresh) {
+    // Casual-game looseness: PREFLOP, a cheap call (≤2 BB ≈ up to 100g at 25/50) is
+    // worth a LIMP with almost any hand — see the flop. Most starting hands score
+    // low, so without this the mode fold threshold mucks them even when it's cheap.
+    // Only near-trash (v < 0.08) still folds for a cost; premiums (v ≥ raiseBar)
+    // fall through to a raise; a real raise (toCall above 2 BB) routes to the
+    // normal fold logic. (Tobias: bots should see more flops, fold pre less.)
+    if (street === 0 && toCall <= bb * 2 && v >= 0.08 && v < raiseBar) {
       return { action: 'call', reason: `limp v=${v.toFixed(2)} odds=${potOdds.toFixed(2)} ${tag}` };
     }
 
@@ -378,7 +389,7 @@ class Bot {
 
     // Strong → raise. Risky promotes monsters to all-in; cautious does so
     // only on near-nuts (the patient bot's payoff move). Mood shades the bar.
-    if (v > tuning.raiseThresh - mood * 0.05) {
+    if (v > raiseBar - mood * 0.05) {   // preflop: raiseBar = premium-only; postflop: mode raiseThresh
       if (this.mode === 'risky' && v >= tuning.monsterThresh && street > 0) {
         return { action: 'allin', reason: `monster v=${v.toFixed(2)} ${tag}` };
       }
