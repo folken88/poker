@@ -5531,11 +5531,29 @@ class Dungeon {
   // ALL their combat math (buffs, feats, Prayer/Bless/Divine Favor) via _swingVsAC,
   // and gets an extra swing while the cleric is Hasted. Re-targets if its foe dies,
   // so the blade keeps fighting until its duration runs out.
+  // When a spiritual weapon outlives its target it re-acquires (Tobias). It's a
+  // FORCE blade — no reach problem — so it PREFERS airborne foes the party's melee
+  // can't touch, then the MOST DANGEROUS of those (boss > caster > CR/threat),
+  // rather than mopping up the weakest. Falls back to the deadliest grounded foe
+  // when nothing's flying.
+  _spiritTarget() {
+    const foes = this.livingEnemies();
+    if (!foes.length) return null;
+    const flyers = foes.filter(e => e.flying);
+    const pool = flyers.length ? flyers : foes;
+    const threat = (e) => (e.boss ? 100 : 0)
+      + ((e.arcane || e.healer || e.caster || e.spellstrike) ? 30 : 0)
+      + (crToNum(e.cr) || 0) * 4 + (e.toHit || 0);
+    return pool.slice().sort((a, b) => threat(b) - threat(a))[0];
+  }
   _spiritWeaponStrike(m) {
     const sw = m.spiritWeapon; if (!sw) return;
     sw.rounds -= 1;
     let e = this.enemies.find(x => x.uid === sw.targetUid && x.hp > 0);
-    if (!e) { e = this.livingEnemies().slice().sort((a, b) => a.hp - b.hp)[0]; if (e) sw.targetUid = e.uid; }
+    if (!e) {
+      e = this._spiritTarget();
+      if (e) { sw.targetUid = e.uid; this._note(`🗡️✨ ${m.nickname}'s Spiritual Weapon seeks a new mark — ${e.name}${e.flying ? ' on the wing' : ''}!`); }
+    }
     if (e) {
       m.weapon = weaponOf(m.gear, this._spiritWeaponKey(m));   // the god's weapon, riding the caster's enhancement
       const swings = 1 + (m.hasted > 0 ? 1 : 0);   // benefits from Haste — an extra strike
