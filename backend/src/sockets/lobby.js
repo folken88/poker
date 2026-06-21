@@ -102,6 +102,21 @@ function registerLobbyHandlers(io, socket, { tables }) {
     ack?.({ ok: true, cls: refreshed.class });
   });
 
+  // Reset the player's CURRENT class back to Level 1 (0 XP). Per-class: other
+  // classes' progress, gear, and gold are untouched (XP is per-class — see
+  // db.setXp / class_xp). Ability-score increases are level-derived, so dropping
+  // to 0 XP cleanly returns the hero to its base build at Level 1. A live dungeon
+  // run uses the hero snapshot taken at entry, so this only affects the NEXT run.
+  socket.on('lobby:resetLevel', (_payload, ack) => {
+    const player = socket.data.player;
+    if (!player) return ack?.({ ok: false, error: 'choose a player first' });
+    db.setXp(player.player_id, 0);
+    const refreshed = db.getPlayer(player.player_id);
+    socket.data.player = refreshed;
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, cls: refreshed.class, class_xp: refreshed.class_xp });
+  });
+
   socket.on('lobby:setWeapon', ({ weapon } = {}, ack) => {
     const player = socket.data.player;
     if (!player) return ack?.({ ok: false, error: 'choose a player first' });

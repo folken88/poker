@@ -4382,6 +4382,22 @@
         e.target.classList.toggle('is-nonprof', !!w && !isProficient(state.me?.class || 'fighter', w));
       });
     });
+    // Reset the CURRENT class back to Level 1 (0 XP). Destructive but bounded —
+    // keeps gear, gold, and every OTHER class's progress (XP is per-class). Guarded
+    // by a confirm; takes effect on the next dungeon run, not a fight in progress.
+    const rbtn = $('#meResetLevel');
+    rbtn?.addEventListener('click', () => {
+      const clsName = state.pf1meta?.classes?.find(c => c.key === (state.me?.class || 'fighter'))?.name || 'this class';
+      if (!confirm(`Reset your ${clsName} back to Level 1?\n\nThis wipes your ${clsName} XP only — your gear, gold, and any other classes you've leveled are kept.`)) return;
+      socket.emit('lobby:resetLevel', null, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not reset level', true); return; }
+        if (state.me) state.me.class_xp = resp.class_xp;
+        if (state.me) syncClassWeapon(state.me);   // re-label the class dropdown (now · Lv 1)
+        const name = state.pf1meta?.classes?.find(c => c.key === resp.cls)?.name || resp.cls;
+        toast(`Your ${name} is back to Level 1.`);
+        if (window.BlindMode?.isOn?.()) window.BlindMode.speak(`Your ${name} has been reset to level 1.`, 'urgent');
+      });
+    });
   })();
 
   // ===== Topbar — Abadar purse popover tap-to-toggle =====
