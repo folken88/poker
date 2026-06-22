@@ -236,7 +236,7 @@ const PRODUCE_FLAME = { key: 'produceflame', name: 'Produce Flame', icon: '🔥'
 const CANTRIPS = [RAY_OF_FROST, ACID_SPLASH, JOLT];
 const CANTRIP_BY_KEY = { rayoffrost: RAY_OF_FROST, acidsplash: ACID_SPLASH, jolt: JOLT, produceflame: PRODUCE_FLAME };
 
-const KITS = {
+let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3); hand-coded block is the FALLBACK
   // ── Martials (conditional maneuvers) ──
   // FIGHTER — earns PF1 bonus feats as it levels (Weapon Focus/Specialization,
   // Dodge, Toughness, the save feats, Improved Initiative, Improved Cleave) folded
@@ -738,6 +738,17 @@ for (const kit of Object.values(KITS)) {
     if (ab.slvl == null && SLVL_BY_KEY[ab.key] != null) ab.slvl = SLVL_BY_KEY[ab.key];
   }
 }
+
+// ── DB-AS-SOURCE-OF-TRUTH (Phase 3) ──────────────────────────────────────────
+// The kit DATA above is now codified in the content DB (kit_abilities) and
+// codegen'd into kits.generated.js by scripts/gen-kits.js. At runtime the
+// GENERATED file WINS — the hand-coded KITS above remains only as a fallback for
+// if the generated file is ever missing. To change a spell/kit: edit the DB →
+// regenerate kits.generated.js → commit it. (Don't hand-edit the block above.)
+try {
+  const _gen = require('./kits.generated');
+  if (_gen && Object.keys(_gen).length) KITS = _gen;
+} catch (_) { /* no generated file — keep the hand-coded fallback */ }
 
 const DEFAULT_KIT = KITS.fighter;
 // Classes a human may pick in the dropdown. Ranger has a kit (Danger uses it)
