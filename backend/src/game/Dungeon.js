@@ -4938,15 +4938,24 @@ class Dungeon {
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
-    // vs UNDEAD bonus (PF1 Searing Light): instead of ½level d8, the unliving take
-    // 1d6 per FULL caster level (cap from ab.vsUndead.cap, e.g. 10d6) — ~double.
-    const vsUndead = ab.vsUndead && e.type === 'undead';
-    const dice = vsUndead
-      ? Math.min(ab.vsUndead.cap || 10, Math.max(1, m.level || 1))
-      : this._spellDice(ab, m);
-    const raw = Math.max(1, this._rollSpell(m, dice, vsUndead ? (ab.vsUndead.die || 6) : (ab.die || 6), ab));
+    // SEARING LIGHT (ab.searing) — PF1's per-target-type damage table:
+    //   • normal creature        : 1d8 per 2 levels (max 5d8)  [the ab.die/dice default]
+    //   • undead                 : 1d6 per level     (max 10d6)
+    //   • light-vulnerable undead: 1d8 per level     (max 10d8)  — vampires (sunlight!)
+    //   • construct / object     : 1d6 per 2 levels  (max 5d6)
+    let dice, die, undeadTag = '';
+    if (ab.searing) {
+      const lvl = Math.max(1, m.level || 1);
+      const lightVuln = e.lightVuln || /vampire/i.test(e.name || '');   // vampires (sunlight!) — even if the type field is loose
+      if (lightVuln)                  { dice = Math.min(10, lvl);                          die = 8; undeadTag = ' — the holy light SCOURGES it!'; }
+      else if (e.type === 'undead')   { dice = Math.min(10, lvl);                          die = 6; undeadTag = ' — SEARS the undead!'; }
+      else if (e.type === 'construct'){ dice = Math.max(1, Math.min(5, Math.floor(lvl / 2))); die = 6; undeadTag = ' (a construct — the light barely marks it)'; }
+      else                            { dice = this._spellDice(ab, m);                     die = ab.die || 8; }
+    } else {
+      dice = this._spellDice(ab, m); die = ab.die || 6;
+    }
+    const raw = Math.max(1, this._rollSpell(m, dice, die, ab));
     const dmg = this._dmgE(e, raw, ab.dtype);
-    const undeadTag = vsUndead ? ' — SEARS the undead!' : '';
     // Lifesteal rider (antipaladin Vampiric Touch) — heal the caster by the
     // energy actually dealt, same as the magus spellstrike version.
     let stealNote = '';
