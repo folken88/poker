@@ -811,14 +811,28 @@ class Table {
           banter.maybeSpeak(this, { kind: action, description: desc, actorIds: [playerId], prob: 0.2 });
         } else if (action === 'check' || (action === 'call' && committed <= this.bigBlind * 2)) {
           // SOCIAL table talk — a quiet opening check or small/routine call is a fine
-          // moment for light banter ABOUT THE PERSON (a greeting, a friendly "good to
-          // see you again", a playful needle at their luck or their kind), NOT the bet.
-          // (User: "nice to see you again, X" / "hope your luck's better, <race>".)
-          // Low chance; each persona colours the tone — warm, sly, or menacing.
+          // moment for light banter ABOUT THE PERSON: a greeting or needle, NOT the bet.
+          // Feed the LLM a VARIED menu of opener styles (casual / warm / friendly-rude /
+          // competitive) and forbid "good to see you again" — it was being overused
+          // (Tobias). Each persona still colours the tone — warm, sly, or menacing.
           let raceName = null;
           try { const rk = db.getRace(playerId); if (rk && rk !== 'none' && rk !== 'human') raceName = races.raceName(rk); } catch (_) {}
           const who = raceName ? `${nick} (a ${raceName})` : nick;
-          const desc = `${who} settles in for the hand. Make a bit of light SOCIAL table talk aimed at ${nick} — a greeting, a "good to see you again", or a playful needle about who they are, their kind, or their luck. Use their NAME. Do NOT mention the check, the call, the bet, the pot, or any amount — this is about the person, never the play.`;
+          const OPENERS = [
+            `Hey, it's ${nick} — free money!`,            // competitive / cocky
+            `Well, well… ${nick} graces us again.`,        // sly
+            `${nick}! Pull up a chair, friend.`,           // warm
+            `Look who crawled back — ${nick}.`,            // friendly-rude
+            `${nick}, my favorite donor.`,                 // competitive
+            `Heads up, folks — ${nick}'s in.`,             // casual
+            `There's ${nick} — try not to cry this time.`, // friendly-rude
+            `Always a pleasure, ${nick}.`,                 // nice
+            `${nick}, ready to fund my evening?`,          // competitive
+            `Buckle up, ${nick}.`,                         // casual / cocky
+            `Welcome back, ${nick} — luck any better today?`, // warm needle
+            `Oh good, fresh chips. Hi ${nick}.`,           // friendly-rude
+          ];
+          const desc = `${who} settles in for the hand. Greet or needle ${nick} with ONE short line of social table talk, IN YOUR PERSONA'S VOICE. VARY the tone — casual, nice, friendly-rude, or competitive. Do NOT say "good to see you again" or "nice to see you" — those are overused. Riff in the spirit of examples like: ${OPENERS.join('  •  ')}. Use their NAME. Never mention the check, call, bet, pot, or any amount — this is about the person, not the play.`;
           banter.maybeSpeak(this, { kind: 'social', description: desc, actorIds: [playerId], prob: 0.06 });
         }
       } catch (_) { /* never let banter break a hand */ }
