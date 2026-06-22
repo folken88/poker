@@ -4938,9 +4938,15 @@ class Dungeon {
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
-    const dice = this._spellDice(ab, m);
-    const raw = Math.max(1, this._rollSpell(m, dice, ab.die || 6, ab));
+    // vs UNDEAD bonus (PF1 Searing Light): instead of ½level d8, the unliving take
+    // 1d6 per FULL caster level (cap from ab.vsUndead.cap, e.g. 10d6) — ~double.
+    const vsUndead = ab.vsUndead && e.type === 'undead';
+    const dice = vsUndead
+      ? Math.min(ab.vsUndead.cap || 10, Math.max(1, m.level || 1))
+      : this._spellDice(ab, m);
+    const raw = Math.max(1, this._rollSpell(m, dice, vsUndead ? (ab.vsUndead.die || 6) : (ab.die || 6), ab));
     const dmg = this._dmgE(e, raw, ab.dtype);
+    const undeadTag = vsUndead ? ' — SEARS the undead!' : '';
     // Lifesteal rider (antipaladin Vampiric Touch) — heal the caster by the
     // energy actually dealt, same as the magus spellstrike version.
     let stealNote = '';
@@ -4954,7 +4960,7 @@ class Dungeon {
       e.acid = { rounds, dice: Math.max(1, Math.floor(dice / 2)), die: ab.die || 6 };   // a fading burn (half the initial dice)
       dotNote = ` It clings and KEEPS BURNING (${rounds} more round${rounds > 1 ? 's' : ''}).`;
     }
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}.${stealNote}${dotNote}${this._afterEnemyHit(e)}`, sound);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}${undeadTag}.${stealNote}${dotNote}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   }
