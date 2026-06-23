@@ -4106,7 +4106,11 @@ class Dungeon {
     return t || this._targetableEnemies()[0] || null;
   }
   _saveVs(bonus, dc) { const r = dRoll(20); return { roll: r, total: r + bonus, saved: r === 20 ? true : r === 1 ? false : (r + bonus) >= dc }; }
-  _afterEnemyHit(e) { if (e.hp <= 0) return ' ☠️'; return ` (${Math.max(0, e.hp)}/${e.maxHp})`; }
+  // Drops the running enemy HP total from ally attack lines (Josh: "Ague hit X for
+  // 26, 128 of 154" was too much — he wants who hit whom for how much; he checks a
+  // foe's HP with E). Keep only the ☠️ kill marker. Enemy hits on HEROES keep the
+  // hero's HP (survival info) via their own line, not this helper.
+  _afterEnemyHit(e) { return e.hp <= 0 ? ' ☠️' : ''; }
   // Effective melee AC of an enemy: sickened = +2 to be hit, prone = +4 to be hit.
   // A flying creature holds the HIGH GROUND over the grounded party: +2 AC (hard
   // to reach a flyer from the floor). All heroes are grounded, so it always applies.
@@ -5157,13 +5161,18 @@ class Dungeon {
         this._note(`${ab.icon} ${m.nickname} readies an OFFENSIVE channel — but there are no undead here to sear; the energy mends the party instead.`);
       }
       if (wantSear && undead.length) {
-        const dmg = channelAmt(), dc = 10 + Math.floor(lvl / 2) + CAST_MOD, parts = [];
+        // COUNTS-ONLY report (Josh): a channel that sears undead lists a tally, not
+        // per-enemy damage. Will DC + the burst damage + hit/saved/slain counts.
+        const dmg = channelAmt(), dc = 10 + Math.floor(lvl / 2) + CAST_MOD;
+        let hitN = 0, savedN = 0, slainN = 0;
         for (const e of undead) {
           const sv = this._saveVs(this._enemySave(e, 'will'), dc);
-          const taken = this._dmgE(e, sv.saved ? Math.floor(dmg / 2) : dmg, 'positive');
-          parts.push(`${e.name} ${taken}${sv.saved ? ' (Will ' + sv.total + ' — half)' : ''}${e.hp <= 0 ? ' ☠️' : ''}`);
+          this._dmgE(e, sv.saved ? Math.floor(dmg / 2) : dmg, 'positive');
+          if (sv.saved) savedN++; else hitN++;
+          if (e.hp <= 0) slainN++;
         }
-        this._note(`${ab.icon} ${m.nickname} channels positive energy — it SEARS the undead for ${dmg} (${parts.join(', ')}).`, sound);
+        const tally = `${hitN} seared${savedN ? `, ${savedN} saved` : ''}${slainN ? `, ${slainN} destroyed` : ''}`;
+        this._note(`${ab.icon} ${m.nickname} channels positive energy — SEARS the undead, Will DC ${dc} (${dmg}): ${tally}.`, sound);
         this._echoToTable(sound);
         return;
       }
@@ -5837,7 +5846,7 @@ class Dungeon {
       const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '');
       if (!multi) {
         if (r.fumble) this._note(`${m.nickname} fumbles the attack! ${this._atkStr(r)}`, r.sound);
-        else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name} for ${r.damage}${r.drTag || ''}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, tgt.hp)}/${tgt.maxHp})`}`, r.sound); }
+        else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name} for ${r.damage}${r.drTag || ''}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`, r.sound); }
         else this._note(`${m.nickname} misses ${tgt.name}. ${this._atkStr(r)}`, r.sound);
       } else {
         let g = groups[groups.length - 1];
@@ -5857,7 +5866,7 @@ class Dungeon {
       this._echoToTable(r.sound);
     }
     if (multi && groups.length) {
-      const txt = groups.map(g => `${g.tgt.name}: ${g.bits.join(', ')}${g.tgt.hp <= 0 ? ' ☠️ Slain!' : ` (${Math.max(0, g.tgt.hp)}/${g.tgt.maxHp})`}`).join('; ');
+      const txt = groups.map(g => `${g.tgt.name}: ${g.bits.join(', ')}${g.tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`).join('; ');
       this._note(`⚔️ ${m.nickname} attacks — ${txt}`, flurrySound);
     }
     m.weapon = _realWeapon;   // drop any backup crossbow — restore the real weapon for later reads (e.g. next turn's target pick)
