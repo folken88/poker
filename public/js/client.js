@@ -278,6 +278,7 @@
             const g = ctx.createGain(); g.gain.value = _voiceVolume * VOICE_MUFFLE_VOL;
             srcNode.connect(lp); lp.connect(g); g.connect(ctx.destination);
             a.addEventListener('ended', () => { URL.revokeObjectURL(url); try { srcNode.disconnect(); lp.disconnect(); g.disconnect(); } catch (_) {} done(); });
+            window.BlindMode?.notifyBanterStart?.(a);   // claim the bus floor (so narration defers to muffled clips too)
             a.play().catch(() => { URL.revokeObjectURL(url); done(); });
             return;
           } catch (_) { /* fall through to plain playback */ }
@@ -291,17 +292,47 @@
     } catch (_) { done(); }
   }
 
-  // Serialize AI banter voices so two characters never talk over each other — each
-  // 11labs clip plays in FULL (its own end event marks its real length) before the
-  // next starts. A safety timer advances the queue if an end event never fires.
+  // EVERY character-voice clip (11labs base64 or pre-cached URL, dungeon or table)
+  // funnels through the SpeechBus in blindMode.js — the single turnstile that also
+  // owns the screen-reader narration — so a blind player NEVER hears two voices at
+  // once. The bus calls back into `playClip` (registered on first use) to actually
+  // emit a clip, and gates it against live narration. If BlindMode isn't present
+  // (shouldn't happen — it loads first), we fall back to a local serialize so banter
+  // still never overlaps itself.
   const _voiceQueue = [];
-  let _voiceBusy = false, _voiceFallback = null;
-  function enqueueVoice(b64, mime, muffle = false) {
-    if (!b64) return;
-    _voiceQueue.push({ b64, mime: mime || 'audio/mpeg', muffle: !!muffle });
+  let _voiceBusy = false, _voiceFallback = null, _clipPlayerReg = false;
+  // The bus's clip player: emit one clip and call onEnded when it finishes (or fails).
+  function playClip(item, onEnded) {
+    const done = () => { if (onEnded) { const cb = onEnded; onEnded = null; try { cb(); } catch (_) {} } };
+    try {
+      if (item.b64) { playBase64Mp3(item.b64, item.mime, item.muffle, done); return; }
+      if (item.url) {
+        const a = new Audio(item.url);
+        a.volume = _voiceVolume;
+        a.addEventListener('ended', done, { once: true });
+        a.addEventListener('error', done, { once: true });
+        window.BlindMode?.notifyBanterStart?.(a);   // claim the bus floor
+        a.play().catch(() => done());
+        return;
+      }
+    } catch (_) {}
+    done();
+  }
+  function _enqueueClip(item) {
+    if (!item || !(item.b64 || item.url)) return;
+    const bus = window.BlindMode;
+    if (bus?.enqueueClip) {
+      if (!_clipPlayerReg && bus.registerPlayer) { bus.registerPlayer(playClip); _clipPlayerReg = true; }
+      bus.enqueueClip(item);
+      return;
+    }
+    // Fallback (BlindMode absent): local one-at-a-time serialize.
+    _voiceQueue.push(item);
     while (_voiceQueue.length > 4) _voiceQueue.shift();   // don't pile up stale lines
     _drainVoiceQueue();
   }
+  function enqueueVoice(b64, mime, muffle = false) { _enqueueClip({ b64, mime: mime || 'audio/mpeg', muffle: !!muffle }); }
+  function enqueueVoiceUrl(url, muffle = false) { _enqueueClip({ url, muffle: !!muffle }); }
   function _drainVoiceQueue() {
     if (_voiceBusy) return;
     const next = _voiceQueue.shift();
@@ -310,7 +341,7 @@
     let advanced = false;
     const advance = () => { if (advanced) return; advanced = true; clearTimeout(_voiceFallback); _voiceBusy = false; _drainVoiceQueue(); };
     _voiceFallback = setTimeout(advance, 15000);   // hard safety so the queue can never stall
-    playBase64Mp3(next.b64, next.mime, next.muffle, advance);
+    playClip(next, advance);
   }
 
   // Warm up the cache so the first deal isn't a noticeable buffer
@@ -2302,16 +2333,9 @@
           // In the dungeon, table banter (incl. Crisp/Elfrip chirps) is muffled —
           // SAME muffle as the 11labs voices (shared VOICE_MUFFLE_* constants).
           if (_inDungeon) { playUrl(entry.audioUrl, _voiceVolume * VOICE_MUFFLE_VOL, true, VOICE_MUFFLE_HZ); }
-          else {
-            try {
-              const a = new Audio(entry.audioUrl);
-              a.volume = _voiceVolume;
-              window.BlindMode?.notifyBanterStart?.(a);
-              a.play().catch(()=>{});
-            } catch (_) { /* silent */ }
-          }
+          else { enqueueVoiceUrl(entry.audioUrl); }   // through the SpeechBus — no overlap with narration
         } else if (entry.audio) {
-          playBase64Mp3(entry.audio, entry.audioMime || 'audio/mpeg', _inDungeon);   // muffle when down in the dungeon
+          enqueueVoice(entry.audio, entry.audioMime || 'audio/mpeg', _inDungeon);   // muffle when down in the dungeon
         }
       }
       // Fight-gag SFX play for EVERYONE at the table, independent of the
@@ -3766,16 +3790,8 @@
       if (!id) return;
       const a = _chatAudioById.get(id);
       if (!a) return;
-      if (a.audioUrl) {
-        try {
-          const el = new Audio(a.audioUrl);
-          el.volume = _voiceVolume;
-          window.BlindMode?.notifyBanterStart?.(el);
-          el.play().catch(()=>{});
-        } catch (_) {}
-      } else if (a.audio) {
-        playBase64Mp3(a.audio, a.audioMime || 'audio/mpeg');
-      }
+      if (a.audioUrl) { enqueueVoiceUrl(a.audioUrl); }            // through the SpeechBus — no overlap
+      else if (a.audio) { enqueueVoice(a.audio, a.audioMime || 'audio/mpeg'); }
     });
   }
   function renderChatLog(entries) {
