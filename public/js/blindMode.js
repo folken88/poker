@@ -240,24 +240,19 @@
   // its OWN queue internally. We only call cancel() to interrupt (urgent), and we
   // resume() periodically to defeat the documented auto-pause. No manual flag to stick.
   const PRIO = { urgent: 3, event: 2, ambient: 1 };
-  // ── SpeechBus: ONE turnstile for the narrator (TTS) and the 11labs character
-  // voices. Blind players can't parse two voices at once, so only ONE holds the
-  // "floor" at a time: a character clip waits for narration to finish; non-urgent
-  // narration waits for a clip; an URGENT cue seizes the floor from either. The bus
-  // owns the CLIP queue (clips played via a player registered by client.js); the
-  // narrator stays on the browser's native engine queue (robust — see _engineSpeak),
-  // and the two are kept mutually exclusive by one shared floor token (banterAudio).
+  // ── Character-voice clip SERIALIZER. Two AI character voices must not talk over
+  // EACH OTHER, so clips play one-at-a-time (queued here, emitted via a player
+  // registered by client.js). They do NOT wait for the narrator — the screen reader
+  // is the PRIORITY voice and always speaks immediately; while it talks, the playing
+  // clip simply DUCKS to a low volume (see the ducking controller below) and keeps
+  // going. (Josh, blind tester: a hard mute/stop chopped character lines into
+  // word-salad, and a strict queue starved them entirely since narration is near-
+  // constant in a fight — ducking is the thing that actually works.)
   const bus = {
     clipQueue: [],          // [{b64|url, mime, muffle, ts}] character-voice clips waiting
-    deferred: [],           // narration lines that arrived while a clip held the floor
     player: null,           // (item, onEnded) => void — registered by client.js
     fallback: null,         // safety timer so a missing end-event can't stall the queue
-    // A character clip currently holds the floor (state.banterAudio is set by
-    // notifyBanterStart the instant a clip starts). Narration defers to this.
-    clipBusy() { return !!state.banterAudio; },
-    // Real narration is in flight — clips defer to THIS, but only while blind mode is
-    // on (sighted/voice-only players have no narration to protect, so clips flow).
-    ttsBusy() { return state.on && !!(TTS && (TTS.speaking || TTS.pending)); },
+    clipBusy() { return !!state.banterAudio; },   // a clip is currently playing
     registerPlayer(fn) { this.player = fn; },
     enqueueClip(item) {
       if (!item || !(item.b64 || item.url)) return;
@@ -268,38 +263,22 @@
     },
     drainClips() {
       if (!this.player) return;
-      if (this.clipBusy()) return;          // a clip already holds the floor
-      if (this.ttsBusy()) return;           // narration holds the floor — the pump retries when it clears
+      if (this.clipBusy()) return;          // one character voice at a time
       let next = null;
       while (this.clipQueue.length) {
         const c = this.clipQueue.shift();
-        if (Date.now() - c.ts <= 6000) { next = c; break; }   // skip stale banter — don't bury live combat
+        if (Date.now() - c.ts <= 6000) { next = c; break; }   // skip stale banter
       }
       if (!next) return;
       let advanced = false;
       const advance = () => {
         if (advanced) return; advanced = true;
         clearTimeout(this.fallback);
-        state.banterAudio = null;           // floor released
-        this.flushDeferred();               // narration that waited gets the floor first…
-        this.drainClips();                  // …then the next clip waits behind it
+        state.banterAudio = null;           // clip finished — free the slot
+        this.drainClips();                  // next clip (if any)
       };
       this.fallback = setTimeout(advance, 20000);   // hard safety: never stall on a missing end-event
       try { this.player(next, advance); } catch (_) { advance(); }
-    },
-    // Narration deferred behind a clip — replay it onto the engine once the floor frees.
-    flushDeferred() {
-      if (!this.deferred.length) return;
-      for (const l of this.deferred.splice(0)) _engineSpeak(l.text, l.prio);
-    },
-    // URGENT narration wins outright: stop the playing clip and discard everything queued.
-    seizeFromClips() {
-      if (state.banterAudio) {
-        try { state.banterAudio.pause(); state.banterAudio.currentTime = 0; } catch (_) {}
-        state.banterAudio = null;
-      }
-      this.clipQueue.length = 0;
-      this.deferred.length = 0;
     },
   };
   function speak(text, prio = 'event') {
@@ -330,33 +309,23 @@
     // Lengthen the pause after a divine-oath clause (see OATH_RE above).
     text = text.replace(OATH_RE, '$1$2...');
     const p = PRIO[prio] ?? PRIO.event;
-    // ── SpeechBus gating (see the `bus` object above) ──────────────────────
-    // urgent: seize the floor — cancel the engine queue AND stop/flush any character
-    // clip (playing + queued + deferred narration) so the cue lands clean and alone.
+    // The screen reader is ALWAYS priority and speaks immediately — it never waits on
+    // a character voice (that just DUCKS under it, see the ducking controller below).
+    // Only policy here: ambient is pure background, dropped if the engine is already
+    // busy; urgent interrupts the engine queue so a critical cue (your turn) lands at
+    // once. We do NOT stop the playing character clip — it ducks and keeps going.
+    if (p === PRIO.ambient && (TTS.speaking || TTS.pending)) return;
     if (p === PRIO.urgent) {
       try { TTS.cancel(); } catch (_) {}
-      bus.seizeFromClips();
       state.shadow.length = 0;   // engine queue is gone — drop everything shadowed
-      _engineSpeak(text, prio);
-      return;
-    }
-    // ambient: pure background — drop it if ANYTHING else holds/awaits the floor
-    // (engine busy OR a character clip is playing). Never let chatter pile up.
-    if (p === PRIO.ambient && ((TTS.speaking || TTS.pending) || bus.clipBusy())) return;
-    // event: if a character clip currently holds the floor, WAIT — defer the line and
-    // let it speak the moment the clip ends (flushed by the bus). THIS is what stops
-    // the narrator and a character voice from talking at once.
-    if (bus.clipBusy()) {
-      bus.deferred.push({ text, prio });
-      while (bus.deferred.length > 8) bus.deferred.shift();
-      return;
     }
     _engineSpeak(text, prio);
   }
   // Hand an (already-substituted) line straight to the browser's NATIVE engine queue,
   // with the watchdog shadow bookkeeping. The engine serializes its own utterances;
-  // the bus guarantees no character CLIP overlaps these. We never rely on `onend`
-  // (Chrome drops it), so a dropped end event can't wedge narration.
+  // any character clip playing alongside ducks under these rather than overlapping at
+  // full volume. We never rely on `onend` (Chrome drops it), so a dropped end event
+  // can't wedge narration.
   function _engineSpeak(text, prio) {
     const u = new SpeechSynthesisUtterance(text);
     u.rate = state.rate;
@@ -385,19 +354,29 @@
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     setInterval(() => { try { window.speechSynthesis.resume(); } catch (_) {} }, 8000);
   }
-  // SpeechBus PUMP — backstop to the event-driven paths. Every 200ms: if no clip
-  // holds the floor, release any deferred narration; then try to start the next clip
-  // (it self-gates on engine-busy). This lets a clip that arrived while the narrator
-  // was talking start the instant the narrator goes quiet, and vice-versa — replacing
-  // the old "duck the clip to volume 0" hack (which talked over it AND lost the clip's
-  // content) with true one-voice-at-a-time serialization.
+  // ── AUDIO DUCKING — the screen-reader voice is the PRIORITY; while it talks, the
+  // current AI character clip DUCKS to a low (but audible) volume and rises back when
+  // the reader is quiet. NOT a mute and NOT a stop: the character line keeps playing
+  // intelligibly underneath (Josh: muting/cutting chopped lines into word-salad, and a
+  // queue starved the voices entirely). Eased on a fast timer — attack is quick (duck
+  // down promptly when narration starts), release is gentle (slide back up) and slow
+  // enough to bridge the micro-gaps between back-to-back narration lines so the AI
+  // voice doesn't bob choppily. DUCK_FLOOR/ATTACK/RELEASE are the tunable ratio+slope.
+  const DUCK_FLOOR = 0.25;     // AI clip drops to 25% under narration (significant, not silent)
+  const DUCK_ATTACK = 0.25;    // per-tick step DOWN — reaches the floor in ~3 ticks (~120ms)
+  const DUCK_RELEASE = 0.07;   // per-tick step UP — gentle slope back (~430ms), bridges line gaps
+  let _duckCur = 1;
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     setInterval(() => {
       try {
-        if (!bus.clipBusy()) bus.flushDeferred();
-        bus.drainClips();
+        const narrating = state.on && (TTS.speaking || TTS.pending);
+        const target = narrating ? DUCK_FLOOR : 1;
+        if (_duckCur > target) _duckCur = Math.max(target, _duckCur - DUCK_ATTACK);
+        else if (_duckCur < target) _duckCur = Math.min(target, _duckCur + DUCK_RELEASE);
+        const a = state.banterAudio;
+        if (a && typeof a._duckApply === 'function') a._duckApply(_duckCur);
       } catch (_) {}
-    }, 200);
+    }, 40);
   }
   // ZOMBIE-ENGINE WATCHDOG. Chrome's speech engine can wedge for good when a
   // cancel() lands mid-utterance (it keeps claiming `speaking` with a dead queue —
@@ -1325,13 +1304,16 @@
   }
 
   // Called by client.js (and the bus's clip player) when a character-voice clip
-  // starts. `state.banterAudio` is the SpeechBus FLOOR TOKEN: while it's set, a clip
-  // holds the floor, so non-urgent narration defers (bus.clipBusy) and an urgent cue
-  // stops it (bus.seizeFromClips). Cleared on end/error/pause so a clip whose events
-  // never fire can't wedge anything (the bus's 20s fallback also frees the floor).
+  // starts. `state.banterAudio` tracks the CURRENT clip so (a) the serializer plays
+  // one at a time and (b) the ducking controller can lower its volume while the screen
+  // reader talks. Cleared on end/error/pause so a clip whose events never fire can't
+  // wedge anything (the bus's 20s fallback also frees the slot).
   function notifyBanterStart(audioEl) {
     if (!audioEl) return;
     state.banterAudio = audioEl;
+    // Start at the current duck level so a clip born mid-narration doesn't blast at
+    // full volume for a frame before the controller catches up.
+    try { if (typeof audioEl._duckApply === 'function') audioEl._duckApply(_duckCur); } catch (_) {}
     const clear = () => { if (state.banterAudio === audioEl) state.banterAudio = null; };
     audioEl.addEventListener('ended', clear, { once: true });
     audioEl.addEventListener('error', clear, { once: true });

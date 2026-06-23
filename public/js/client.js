@@ -275,17 +275,21 @@
             const a = new Audio(url);
             const srcNode = ctx.createMediaElementSource(a);
             const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = VOICE_MUFFLE_HZ; lp.Q.value = 0.7;
-            const g = ctx.createGain(); g.gain.value = _voiceVolume * VOICE_MUFFLE_VOL;
+            const mBase = _voiceVolume * VOICE_MUFFLE_VOL;
+            const g = ctx.createGain(); g.gain.value = mBase;
             srcNode.connect(lp); lp.connect(g); g.connect(ctx.destination);
+            a._duckApply = (f) => { try { g.gain.value = mBase * f; } catch (_) {} };   // ducked under narration
             a.addEventListener('ended', () => { URL.revokeObjectURL(url); try { srcNode.disconnect(); lp.disconnect(); g.disconnect(); } catch (_) {} done(); });
-            window.BlindMode?.notifyBanterStart?.(a);   // claim the bus floor (so narration defers to muffled clips too)
+            window.BlindMode?.notifyBanterStart?.(a);   // register clip for ducking + serialize
             a.play().catch(() => { URL.revokeObjectURL(url); done(); });
             return;
           } catch (_) { /* fall through to plain playback */ }
         }
       }
       const a = new Audio(url);
-      a.volume = _voiceVolume;
+      const pBase = _voiceVolume;
+      a.volume = pBase;
+      a._duckApply = (f) => { try { a.volume = pBase * f; } catch (_) {} };   // ducked under narration
       a.addEventListener('ended', () => { URL.revokeObjectURL(url); done(); });
       window.BlindMode?.notifyBanterStart?.(a);
       a.play().catch(() => { URL.revokeObjectURL(url); done(); });
@@ -293,12 +297,12 @@
   }
 
   // EVERY character-voice clip (11labs base64 or pre-cached URL, dungeon or table)
-  // funnels through the SpeechBus in blindMode.js — the single turnstile that also
-  // owns the screen-reader narration — so a blind player NEVER hears two voices at
-  // once. The bus calls back into `playClip` (registered on first use) to actually
-  // emit a clip, and gates it against live narration. If BlindMode isn't present
-  // (shouldn't happen — it loads first), we fall back to a local serialize so banter
-  // still never overlaps itself.
+  // funnels through the clip serializer in blindMode.js so two AI voices never talk
+  // over each other, and each clip gets a `_duckApply` handle so the ducking
+  // controller can lower its volume while the screen reader talks (the narrator is
+  // priority; the clip ducks but keeps playing). The bus calls back into `playClip`
+  // (registered on first use) to emit a clip. If BlindMode isn't present (shouldn't
+  // happen — it loads first), we fall back to a local serialize.
   const _voiceQueue = [];
   let _voiceBusy = false, _voiceFallback = null, _clipPlayerReg = false;
   // The bus's clip player: emit one clip and call onEnded when it finishes (or fails).
@@ -308,10 +312,12 @@
       if (item.b64) { playBase64Mp3(item.b64, item.mime, item.muffle, done); return; }
       if (item.url) {
         const a = new Audio(item.url);
-        a.volume = _voiceVolume;
+        const uBase = _voiceVolume;
+        a.volume = uBase;
+        a._duckApply = (f) => { try { a.volume = uBase * f; } catch (_) {} };   // ducked under narration
         a.addEventListener('ended', done, { once: true });
         a.addEventListener('error', done, { once: true });
-        window.BlindMode?.notifyBanterStart?.(a);   // claim the bus floor
+        window.BlindMode?.notifyBanterStart?.(a);   // register clip for ducking + serialize
         a.play().catch(() => done());
         return;
       }
