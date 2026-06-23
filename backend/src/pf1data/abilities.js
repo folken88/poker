@@ -60,6 +60,16 @@ const INQ_SLOTS_BY_LEVEL = {
   13: [6, 6, 5, 4, 2], 14: [6, 6, 6, 4, 3], 15: [6, 6, 6, 5, 3], 16: [6, 6, 6, 5, 4, 2],
   17: [6, 6, 6, 6, 4, 3], 18: [6, 6, 6, 6, 5, 3], 19: [6, 6, 6, 6, 5, 4], 20: [6, 6, 6, 6, 6, 5],
 };
+// PF1 PALADIN / RANGER / ANTIPALADIN spells per day — 4th-level prepared casters:
+// no spells until L4, max 4th-level spells. Base values ('0' = a slot only the
+// 18-stat bonus grants); _tableSlots folds in the +1/level (1-4) bonus. Empty
+// arrays for L1-3 = cannot cast yet.
+const PALADIN_SLOTS_BY_LEVEL = {
+  1: [], 2: [], 3: [],
+  4: [0], 5: [1], 6: [1], 7: [1, 0], 8: [1, 1], 9: [2, 1], 10: [2, 1, 0],
+  11: [2, 1, 1], 12: [2, 2, 1], 13: [3, 2, 1, 0], 14: [3, 2, 2, 1], 15: [3, 3, 2, 1],
+  16: [3, 3, 3, 2], 17: [4, 3, 3, 2], 18: [4, 4, 3, 3], 19: [4, 4, 4, 3], 20: [4, 4, 4, 4],
+};
 function _tableSlots(table, level) {
   const arr = table[Math.max(1, Math.min(20, level || 1))] || table[1];
   const out = {};
@@ -71,12 +81,19 @@ function _tableSlots(table, level) {
 }
 function spontaneousSlots(level) { return _tableSlots(SORC_SLOTS_BY_LEVEL, level); }
 // Slot table for any per-level slot caster (null = not a slot caster).
+const FULL_PREPARED   = new Set(['cleric', 'druid', 'wizard']);          // full 9-level prepared casters (share the cleric/druid/wizard progression)
+const FOURTH_PREPARED = new Set(['paladin', 'ranger', 'antipaladin']);   // 4th-level prepared casters — no spells before L4
 function slotsFor(cls, level) {
-  // Cleric is now a PREPARED caster (each prayer is cost:'room', uses:1 — see the
-  // cleric kit), NOT a slot pool, so it returns no slot table (like the wizard).
-  if (cls === 'inquisitor') return _tableSlots(INQ_SLOTS_BY_LEVEL, level);   // slower 6-level divine progression
-  if (SPONTANEOUS_CLASSES.has(cls)) return _tableSlots(SORC_SLOTS_BY_LEVEL, level);
-  return null;
+  let base;
+  if (FULL_PREPARED.has(cls))            base = _tableSlots(CLERIC_SLOTS_BY_LEVEL, level);
+  else if (FOURTH_PREPARED.has(cls))     base = _tableSlots(PALADIN_SLOTS_BY_LEVEL, level);
+  else if (cls === 'inquisitor')         base = _tableSlots(INQ_SLOTS_BY_LEVEL, level);   // 6-level SPONTANEOUS divine, slower
+  else if (SPONTANEOUS_CLASSES.has(cls)) base = _tableSlots(SORC_SLOTS_BY_LEVEL, level);
+  else return null;
+  // DOMAIN (cleric) / arcane SCHOOL (wizard): +1 spell slot per spell level — we do
+  // NOT model opposition schools (Tobias 2026-06-22).
+  if (cls === 'cleric' || cls === 'wizard') for (const sl of Object.keys(base)) base[sl] += 1;
+  return base;
 }
 
 const POOL_CLASSES   = new Set([]);   // (sorcerer is spontaneous-per-level now)
@@ -749,6 +766,21 @@ try {
   const _gen = require('./kits.generated');
   if (_gen && Object.keys(_gen).length) KITS = _gen;
 } catch (_) { /* no generated file — keep the hand-coded fallback */ }
+
+// PF1 CAST LIMITS (prepared casters): a leveled spell spends a SLOT of its level
+// (budget from slotsFor), NOT a per-room "one of each". Convert the prepared casters'
+// leveled spells (cost:'room' WITH an slvl) to cost:'slot'; class FEATURES (Channel,
+// Wild Shape, Smite, Lay on Hands — no slvl) and run/free spells (Bless, Mage Armor)
+// are left alone. Applied to the LIVE kits, so it works whether they came from the
+// DB-generated set or the hand-coded fallback. (Tobias 2026-06-22 — "more choices,
+// fewer casts.")
+const _PREPARED_CASTERS = new Set(['cleric', 'druid', 'wizard', 'paladin', 'ranger', 'antipaladin']);
+for (const _cls of _PREPARED_CASTERS) {
+  const _k = KITS[_cls]; if (!_k || !_k.abilities) continue;
+  for (const _ab of _k.abilities) {
+    if (_ab.cost === 'room' && _ab.slvl != null) { _ab.cost = 'slot'; delete _ab.uses; }
+  }
+}
 
 const DEFAULT_KIT = KITS.fighter;
 // Classes a human may pick in the dropdown. Ranger has a kit (Danger uses it)
