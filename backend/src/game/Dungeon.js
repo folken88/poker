@@ -919,7 +919,7 @@ class Dungeon {
     // Mid-combat self-buffs (enemy casters) — all DISPELLABLE, so they show as
     // strip-able boons + the Dispel picker offers the foe.
     if (e.invisible)  c.push({ key: 'invisible',   label: 'Invisible',    desc: 'unseen — your hits suffer 50% concealment (True Seeing / blindsense pierce it); dispellable', icon: `${I}invisible.webp` });
-    if (e.images > 0) c.push({ key: 'mirrorimage', label: 'Mirror Image', desc: `${e.images} decoy${e.images === 1 ? '' : 's'} soaking your blows — dispellable`, icon: `${I}fly.webp` });
+    if (e.images > 0) c.push({ key: 'mirrorimage', label: 'Mirror Image', n: e.images, desc: `${e.images} decoy${e.images === 1 ? '' : 's'} soaking your blows — each hit has a 1-in-${e.images + 1} chance to tag the REAL foe; the rest pop a decoy. Dispellable.`, icon: `${I}fly.webp` });
     if (e.flyCast)    c.push({ key: 'flycast',     label: 'Flying',       desc: 'airborne by magic — grounded foes can\'t reach it; DISPEL it and it crashes', icon: `${I}fly.webp` });
     return c;
   }
@@ -1413,8 +1413,10 @@ class Dungeon {
     if (m.infernalHeal > 0 && !m.dead && m.hp < m.maxHp) {
       const before = m.hp; m.hp = Math.min(m.maxHp, m.hp + m.infernalHeal);
       const gained = m.hp - before;
+      // Only narrate the IMPORTANT case (a revive). The routine per-turn tick applies
+      // SILENTLY — narrating every hero's regen each turn was "updates of everyone's
+      // hp" chatter (Josh: tell me it happened, I'll check HP on my turn).
       if (before <= 0 && m.hp > 0) { m.downed = false; this._note(`🩸 ${m.nickname}'s infernal ichor knits ${gained} HP — back on their feet!`); }
-      else this._note(`🩸 ${m.nickname}'s infernal ichor knits ${gained} HP.`);
     }
     if (m.hp <= 0) {
       // Orc / half-orc FEROCITY: keep fighting at 0 HP and below (until slain at
@@ -1466,9 +1468,8 @@ class Dungeon {
       this._broadcast();
     }
     if (m.sickened > 0) m.sickened -= 1;
-    if (m.judgment === 'healing' && m.hp > 0 && m.hp < m.maxHp) {   // Judgement: Healing regen each turn
+    if (m.judgment === 'healing' && m.hp > 0 && m.hp < m.maxHp) {   // Judgement: Healing regen each turn — applies SILENTLY (routine per-turn regen; Josh: don't narrate every tick)
       const h = Math.max(1, Math.floor((m.level || 1) / 3)); m.hp = Math.min(m.maxHp, m.hp + h);
-      this._note(`💗 ${m.nickname}'s Judgement of Healing mends ${h} HP.`);
     }
     if (m.isBot && this._fleeing) {
       // The party is in RETREAT (a human fled with no human left to lead) — the
@@ -1954,7 +1955,14 @@ class Dungeon {
       acBreak: `AC ${ac} = ${parts.join(' · ')}`,
     };
   }
-  _atkStr(r) { return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`; }
+  _atkStr(r) {
+    // A roll that BEAT the AC but was foiled by the foe's defenses shouldn't print
+    // "[40 vs AC 19]" as if the math failed — say what actually stopped it (Tobias:
+    // "the calculation does not make sense"). Mirror image / concealment, not a miss.
+    if (r && r.image)   return '— a mirror-image decoy soaks the hit (not the real foe).';
+    if (r && r.conceal) return '— the foe is UNSEEN: 50% concealment foils it (True Seeing / blindsense pierces it).';
+    return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`;
+  }
   _swingVsAC(attacker, ac, target, extraToHit = 0, offHand = false) {
     const weapon = attacker.weapon;
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
@@ -2048,10 +2056,17 @@ class Dungeon {
       if (target.invisible && dRoll(2) === 1) {   // total concealment vs an unseen foe → 50% miss
         return { hit: false, conceal: true, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
       }
-      if (target.images > 0) {                     // Mirror Image — the blow pops a decoy, not the real foe
+      // PF1 MIRROR IMAGE: the blow HIT the AC — now roll which of (real + N figments)
+      // it lands on. 1/(N+1) chance it's the REAL foe (fall through to normal damage;
+      // DR & other defenses still apply); otherwise it strikes a figment, destroyed
+      // outright (one hit, no damage). So piling on attacks BOTH whittles the decoys
+      // AND keeps a real-hit chance each swing — exactly RAW. (True Seeing / blindsense
+      // skip the whole illusion, handled by the guard above.)
+      if (target.images > 0 && dRoll(target.images + 1) !== 1) {
         target.images -= 1;
-        this._note(`🪞 ${target.name === undefined ? target.nickname : target.name}'s mirror image SHATTERS — ${target.images} decoy${target.images === 1 ? '' : 's'} left.`, null);
-        return { hit: false, image: true, roll, toHit, total, ac, sound: pick(SND.flesh) };
+        const _nm = target.name === undefined ? target.nickname : target.name;
+        this._note(`🪞 a mirror image of ${_nm} POPS — ${target.images} decoy${target.images === 1 ? '' : 's'} left.`, null);
+        return { hit: false, image: true, imagesLeft: target.images, roll, toHit, total, ac, sound: pick(SND.flesh) };
       }
     }
     // Damage = weapon dice (NdX) + enhancement + ½ level + ability mod + buff dmg (+ Point Blank).
@@ -2496,7 +2511,7 @@ class Dungeon {
     const dark = e.evil || e.type === 'undead';
     const self = ally.uid === e.uid;
     const target = self ? 'its own wounds' : `${ally.name}'s wounds`;
-    this._note(`${dark ? '🖤' : '💚'} ${e.glyph} ${e.name} ${dark ? 'hisses a PROFANE PRAYER — black energy knits' : 'chants a HEALING PRAYER — light mends'} ${target}: +${ally.hp - before} HP (${ally.hp}/${ally.maxHp}).`, '/audio/spell_cure.mp3', { side: 'enemy' });
+    this._note(`${dark ? '🖤' : '💚'} ${e.glyph} ${e.name} ${dark ? 'hisses a PROFANE PRAYER — black energy knits' : 'chants a HEALING PRAYER — light mends'} ${target}: +${ally.hp - before} HP.`, '/audio/spell_cure.mp3', { side: 'enemy' });
     this._echoToTable('/audio/spell_cure.mp3'); this._broadcast();
   }
   // PF1 Protection from Energy (fire): the ward is an ABSORPTION POOL (12 per
