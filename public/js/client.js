@@ -1048,9 +1048,17 @@
   const statusTitle = (c) => c.desc ? `${c.label} — ${c.desc}` : c.label;
   function condIcons(list) {
     if (!list || !list.length) return '';
-    return `<div class="dcond">` + list.map(c =>
-      `<img class="dcond__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(statusTitle(c))}" loading="lazy" />`
-    ).join('') + `</div>`;
+    return `<div class="dcond">` + list.map(c => {
+      const img = `<img class="dcond__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(statusTitle(c))}" loading="lazy" />`;
+      // A COUNT badge (e.g. Mirror Image decoys remaining) — overlaid on the icon so
+      // you can watch it tick down as decoys pop. Inline-styled to avoid a CSS dep.
+      if (c.n != null && c.n >= 1) {
+        return `<span style="position:relative;display:inline-block;line-height:0">${img}`
+          + `<span title="${escapeAttr(statusTitle(c))}" style="position:absolute;bottom:-3px;right:-3px;min-width:11px;height:13px;padding:0 2px;background:#1a1208;border:1px solid var(--brass-bright,#c9a44a);color:var(--brass-bright,#c9a44a);font-size:9px;font-weight:800;line-height:12px;text-align:center;border-radius:7px">${c.n}</span>`
+          + `</span>`;
+      }
+      return img;
+    }).join('') + `</div>`;
   }
   // A strip of active BUFF icons (rage / shield / bless / smite / judgement…) at
   // the top-left of a hero token — green ring marks a boon (vs the red debuff ring).
