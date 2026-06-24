@@ -790,6 +790,7 @@ class Dungeon {
       flexStat,                                // chosen ability for a flex race's floating +2 ('' = auto)
       vision: RACES.raceVision(race),          // 'normal' | 'low-light' | 'darkvision60' (read by blind mode; Phase-2 will negate darkness penalties)
       blindsense: RACES.raceBlindsense(race),  // ft of blindsense (iku-turso 30): pinpoints unseen foes — invisibility/darkness can't hide a target from this hero (see _targetableEnemies)
+      lightningCL: ((playerId || '').toLowerCase() === 'olbryn') ? 2 : 0,   // Staff of Lightning: +2 caster level to electricity spells (see _spellDice)
       abilityScores,
       gear, level, xp,
       crowned: !!(db.getPlayer(playerId)?.crowned),   // permanent Loot Lord crown
@@ -4084,7 +4085,11 @@ class Dungeon {
   _spellDice(ab, m) {
     const mm = this._mmForCast(m, ab);
     const eab = (mm.intensify && ab.dcap && ab.dice) ? { ...ab, dcap: ab.dcap + 5 } : ab;
-    return diceCount(eab, m.level || 1);
+    // Staff of Lightning (Olbryn): +2 caster level to ELECTRICITY spells → +2 to the
+    // level used for dice scaling, so Shocking Grasp / Lightning Bolt / Chain Lightning /
+    // Jolt roll more dice and reach their caps two levels sooner.
+    const clBonus = (m.lightningCL && ab.dtype === 'electricity') ? m.lightningCL : 0;
+    return diceCount(eab, (m.level || 1) + clBonus);
   }
   // Roll a spell's damage dice with METAMAGIC applied. PF1 RAW stacking: MAXIMIZE sets
   // every die to max; EMPOWER adds +50% — and the two STACK (max the dice, then add

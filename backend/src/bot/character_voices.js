@@ -43,6 +43,7 @@ const CHARACTER_VOICES = {
   'Mr. Brow':          'UoOL4r5ZefvNkwdKzfLN', // Hank
   'Adimarus':          '5mU8WBEmVJQ3n5J4fkzR', // Okole
   'Bujon':             'KLs0efvyfWnIfXc9u1Jk', // Sanjay - profound and deep
+  'Olbryn':            'KLs0efvyfWnIfXc9u1Jk', // Sanjay - same voice as Bujon (Tobias 2026-06-23)
   'Fera':              'SxrdCBV2iTasBWWDffJ4', // Paris Hilton
   'Texas Holden':      '0exky5u6rYq7ksXZEN5G', // Nick (display name is "Texas Holden" — the poker pun he never caught)
   'Danger':            '0exky5u6rYq7ksXZEN5G', // Nick — Rodney "Danger" Smith, redneck CP-USS ranger

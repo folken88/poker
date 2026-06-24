@@ -16,6 +16,7 @@ const PRONUNCIATIONS = [
   ['Lirienne',   'leery-ehn'],    // one three-syllable word (hyphen → no mid-name pause)
   ['Rissa',      'Riss-uh'],      // short for Clarissa Caromarc — RIH-suh, short 'i'
   ['Bujon',      'Boo han'],
+  ['Olbryn',     'Old brin'],   // Josh's drow sorcerer (his speech-to-text garbles it as "old brain")
   ['Casandalee', 'Cassan dah-lee'],
   ['Tobis',      'Toe biss'],
   ['Adimarus',   'Add ih mare us'],

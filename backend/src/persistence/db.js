@@ -12,6 +12,8 @@ const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
 const { CLASSES } = require('../pf1data/classes');
+const loadouts = require('../pf1data/loadouts');     // default spell loadouts (Phase B)
+const { levelFromXp } = require('../pf1data/xp');     // per-class level from XP (default scales with level)
 const { STAPLE_BY_KEY, WEAPON_LOOKUP, DEFAULT_WEAPON } = require('../pf1data/staples');
 const abilityProfiles = require('../pf1data/characterProfiles');
 const { validateBuild } = require('../pf1data/abilityScores');
@@ -96,6 +98,16 @@ ensureColumn('players', 'ability_scores', "TEXT NOT NULL DEFAULT '{}'");
 // vision, and save bonuses (see pf1data/races.js). Default 'human'; pinned per
 // character from pf1data/characterBuilds.js (BUILDS) and re-synced at boot.
 ensureColumn('players', 'race', "TEXT NOT NULL DEFAULT 'none'");
+// PF1 SPELL LOADOUTS — per-class, mirroring class_xp/ability_scores (see
+// SPELL-LOADOUTS-DESIGN.md). PREPARED casters (cleric/druid/wizard/paladin/ranger/
+// antipaladin) store which spells are readied into each slot LEVEL:
+//   prepared_spells = { <class>: { <slotLevel>: [spellKey, …] } }
+// SPONTANEOUS casters (sorcerer/bard/oracle/inquisitor) store their spells KNOWN:
+//   known_spells    = { <class>: [spellKey, …] }
+// Empty {} = "use the class default loadout" (built lazily on first access). The
+// runtime (Phase C) reads these to decide what a character may cast.
+ensureColumn('players', 'prepared_spells', "TEXT NOT NULL DEFAULT '{}'");
+ensureColumn('players', 'known_spells', "TEXT NOT NULL DEFAULT '{}'");
 // The chosen ability for a FLEX race's floating +2 (human/half-elf/half-orc),
 // e.g. 'str'. Empty = auto (highest base stat). Pinned from characterBuilds.
 ensureColumn('players', 'race_flex', "TEXT NOT NULL DEFAULT ''");
@@ -254,6 +266,7 @@ const BOT_ROSTER = [
   { name: 'Duristan Silvio',      nickname: 'Duristan', avatar: '/tokens/duristan-silvio.webp',        baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // Ustalavian nobleman buffoon — displayed as "Duristan", persistence key stays
   { name: 'Bujon, Storm of Cheliax', nickname: 'Bujon', avatar: '/tokens/bujon-storm-of-cheliax.webp', baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // Iku-Turso eel-form storm-sorcerer, Kill-Steal helm
   { name: 'Rodney Smith',         nickname: 'Danger', avatar: '/tokens/rodney-danger-smith.webp', baseMode: 'cautious', intelligence: 'average', gender: 'he' }, // Rodney "Danger" Smith — CP-USS ranger/archer from Courtaud, killed Auren Vrood at Feldgrau; works under Daramid; redneck; "Nick" voice
+  { name: 'Olbryn',               avatar: '/tokens/olbryn.webp',                 baseMode: 'risky',    intelligence: 'high', gender: 'he'     }, // Josh's Drow storm-sorcerer (Iron Gods) — Staff of Lightning (+2 CL to electricity); wild-magic, selfish-but-loyal
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
@@ -415,7 +428,7 @@ const BOT_CLASSES = {
   'Auren Vrood': 'wizard', 'Casandalee': 'oracle', 'Meyanda': 'cleric', 'Daramid': 'wizard',
   'Kovira': 'wizard', 'Tokala': 'barbarian', 'Mr. Brow': 'investigator', 'Tamsin': 'bard',
   'Concetta': 'swashbuckler', 'Farrah': 'sorcerer', 'Fera': 'rogue',
-  'Elfrip': 'oracle', 'Rodney Smith': 'ranger',   // Elfrip is a Flame-mystery oracle (fire blaster); Rodney "Danger" Smith is an archer
+  'Elfrip': 'oracle', 'Rodney Smith': 'ranger', 'Olbryn': 'sorcerer',   // Elfrip is a Flame-mystery oracle (fire blaster); Rodney "Danger" Smith is an archer; Olbryn is a Drow storm-sorcerer (lightning)
   'Vesorianna': 'oracle', 'Farrus Richton': 'barbarian', 'Dinvaya': 'cleric', 'Storgrim Thunderbeard': 'fighter',
   'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'rogue', 'Kai Ginn': 'ranger', 'Lirienne': 'ranger',   // Crisp = deinonychus: no real class, but rogue is closest (pounce + sneak); keeps his 'bite' natural multi-attack (3 attacks, no iteratives) via BOT_WEAPONS + _attackOffsets
   'Rissa': 'druid', 'Taelys': 'gunslinger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'gunslinger',   // Taelys + Duristan: PF1 gunslingers (rifles)
@@ -707,6 +720,57 @@ function setAbilityScores(playerId, cls, scores) {
   db.prepare('UPDATE players SET ability_scores = ? WHERE player_id = ?').run(JSON.stringify(map), playerId);
 }
 
+// ---- PF1 spell loadouts (per class — see prepared_spells/known_spells cols + loadouts.js) ----
+// The character's CURRENT level for a class (drives default slot/known counts).
+function _classLevel(p, klass) {
+  let xp = 0;
+  try { xp = Number(_classXp(p)[klass] || 0); } catch (_) { xp = 0; }
+  return levelFromXp(Math.max(0, xp)) || 1;
+}
+/** Prepared loadout { <slotLevel>: [spellKey…] } for a class. Returns the player's SAVED
+ *  loadout if they've customized one, else a fresh CRB-staple default for their current
+ *  level (defaults are NOT persisted, so they auto-grow as the character levels up). */
+function getPreparedSpells(playerId, cls) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return {};
+  const klass = cls || p.class || 'fighter';
+  let map = {};
+  try { map = JSON.parse(p.prepared_spells || '{}') || {}; } catch { map = {}; }
+  if (map[klass] && typeof map[klass] === 'object' && Object.keys(map[klass]).length) return map[klass];
+  return loadouts.buildDefaultPrepared(klass, _classLevel(p, klass)) || {};
+}
+/** Save a prepared loadout for a class (the Spellbook UI's write path — Phase D). */
+function setPreparedSpells(playerId, cls, prepared) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return;
+  const klass = cls || p.class || 'fighter';
+  let map = {};
+  try { map = JSON.parse(p.prepared_spells || '{}') || {}; } catch { map = {}; }
+  map[klass] = (prepared && typeof prepared === 'object') ? prepared : {};
+  db.prepare('UPDATE players SET prepared_spells = ? WHERE player_id = ?').run(JSON.stringify(map), playerId);
+}
+/** Spells-known list [spellKey…] for a spontaneous class. Saved list if customized, else
+ *  the full implemented kit in priority order (v1: no spells-known cap yet). */
+function getKnownSpells(playerId, cls) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return [];
+  const klass = cls || p.class || 'fighter';
+  let map = {};
+  try { map = JSON.parse(p.known_spells || '{}') || {}; } catch { map = {}; }
+  if (Array.isArray(map[klass]) && map[klass].length) return map[klass];
+  return loadouts.buildDefaultKnown(klass, _classLevel(p, klass)) || [];
+}
+/** Save a spells-known list for a class (the Spellbook UI's write path — Phase D). */
+function setKnownSpells(playerId, cls, known) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return;
+  const klass = cls || p.class || 'fighter';
+  let map = {};
+  try { map = JSON.parse(p.known_spells || '{}') || {}; } catch { map = {}; }
+  map[klass] = Array.isArray(known) ? known : [];
+  db.prepare('UPDATE players SET known_spells = ? WHERE player_id = ?').run(JSON.stringify(map), playerId);
+}
+
 // ---- PF1 race (one per character; see pf1data/races.js + characterBuilds.js) ----
 const _setRaceStmt = db.prepare('UPDATE players SET race = ? WHERE player_id = ?');
 const _setFlexStmt = db.prepare('UPDATE players SET race_flex = ? WHERE player_id = ?');
@@ -810,6 +874,10 @@ module.exports = {
   setGear,
   getAbilityScores,
   setAbilityScores,
+  getPreparedSpells,
+  setPreparedSpells,
+  getKnownSpells,
+  setKnownSpells,
   getRace,
   getRaceFlex,
   setRace,

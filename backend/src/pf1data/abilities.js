@@ -767,6 +767,18 @@ try {
   if (_gen && Object.keys(_gen).length) KITS = _gen;
 } catch (_) { /* no generated file — keep the hand-coded fallback */ }
 
+// Olbryn's STORM specialization — injected AFTER the generated-kit override so it
+// survives regeneration. Base sorcerers are fire/force themed; these char-tagged
+// lightning spells (only Olbryn sees them, gated by Dungeon._charAllows) make him the
+// Staff-of-Lightning storm-sorcerer. Chain Lightning he already shares with every
+// sorcerer. TODO: migrate into kit_abilities (char='Olbryn') when the DB is next regen'd.
+if (KITS.sorcerer && Array.isArray(KITS.sorcerer.abilities)) {
+  KITS.sorcerer.abilities.push(
+    { ...spontaneousSpell(SPELL.shockinggrasp, 1), char: 'Olbryn' },
+    { ...spontaneousSpell(SPELL.lightningbolt, 6), char: 'Olbryn' },
+  );
+}
+
 // PF1 CAST LIMITS (prepared casters): a leveled spell spends a SLOT of its level
 // (budget from slotsFor), NOT a per-room "one of each". Convert the prepared casters'
 // leveled spells (cost:'room' WITH an slvl) to cost:'slot'; class FEATURES (Channel,
