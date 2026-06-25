@@ -1684,7 +1684,7 @@ class Dungeon {
     if (feats.length) parts.push(`feat: ${feats.join(', ')}`);
     const kit = kitFor(cls), spells = [];
     if (kit && kit.abilities) for (const ab of kit.abilities) if (ab.minLevel && ab.minLevel > from && ab.minLevel <= to) spells.push(ab.name);
-    const s0 = slotsFor(cls, from) || {}, s1 = slotsFor(cls, to) || {};
+    const s0 = slotsFor(cls, from, m.castingMod) || {}, s1 = slotsFor(cls, to, m.castingMod) || {};
     const newSlot = Object.keys(s1).filter(L => !s0[L]).map(L => `${L}${({ 1: 'st', 2: 'nd', 3: 'rd' })[L] || 'th'}-level`);
     if (newSlot.length) parts.push(`new ${newSlot.join(' & ')} spell slots`);
     if (spells.length) parts.push(`spells: ${spells.slice(0, 4).join(', ')}`);
@@ -3902,7 +3902,7 @@ class Dungeon {
   _resetAbilities(m) {
     const kit = kitFor(m.cls);
     m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
-    m.slots = slotsFor(m.cls, m.level || 1);   // per-spell-level slots (sorcerer/bard/oracle/cleric)
+    m.slots = slotsFor(m.cls, m.level || 1, m.castingMod);   // per-spell-level slots (base + casting-stat bonus + domain/school)
     m.abilityUses = {};
     for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
@@ -3972,7 +3972,7 @@ class Dungeon {
     const kit = kitFor(m.cls);
     const lvl = m.level || 1;
     const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // single-shot rifle → no Rapid Shot
-    const maxSlots = slotsFor(m.cls, lvl);
+    const maxSlots = slotsFor(m.cls, lvl, m.castingMod);
     // Stance BUTTONS only show for the style that can use them: a MELEE wielder
     // sees Power Attack, a RANGED wielder sees Deadly Aim, and pure casters (whose
     // at-will is a cantrip, not a weapon swing) see NEITHER. The full kit keeps

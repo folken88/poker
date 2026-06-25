@@ -11,7 +11,7 @@
 const Database = require('better-sqlite3');
 const fs = require('fs');
 const path = require('path');
-const { CLASSES } = require('../pf1data/classes');
+const { CLASSES, castingAbilityFor } = require('../pf1data/classes');
 const loadouts = require('../pf1data/loadouts');     // default spell loadouts (Phase B)
 const { levelFromXp } = require('../pf1data/xp');     // per-class level from XP (default scales with level)
 const { STAPLE_BY_KEY, WEAPON_LOOKUP, DEFAULT_WEAPON } = require('../pf1data/staples');
@@ -727,6 +727,21 @@ function _classLevel(p, klass) {
   try { xp = Number(_classXp(p)[klass] || 0); } catch (_) { xp = 0; }
   return levelFromXp(Math.max(0, xp)) || 1;
 }
+// The casting-stat MODIFIER for a class (base 25-pt array + racial mod), so the default
+// loadout's slot count includes PF1 bonus spells. (ASIs are omitted here — a minor
+// under-count only matters for big-pool casters like wizard; cleric/druid prepare their
+// whole implemented list regardless.)
+function _castMod(playerId, klass) {
+  try {
+    const stat = castingAbilityFor(klass);
+    if (!stat) return 0;
+    const scores = getAbilityScores(playerId, klass) || {};
+    const p = stmts.getPlayer.get(playerId);
+    const rm = (p && RACES.raceModsFor) ? (RACES.raceModsFor(RACES.raceKey(p.race), scores, p.race_flex || '') || {}) : {};
+    const score = (scores[stat] || 10) + (rm[stat] || 0);
+    return Math.floor((score - 10) / 2);
+  } catch (_) { return 0; }
+}
 /** Prepared loadout { <slotLevel>: [spellKey…] } for a class. Returns the player's SAVED
  *  loadout if they've customized one, else a fresh CRB-staple default for their current
  *  level (defaults are NOT persisted, so they auto-grow as the character levels up). */
@@ -737,7 +752,7 @@ function getPreparedSpells(playerId, cls) {
   let map = {};
   try { map = JSON.parse(p.prepared_spells || '{}') || {}; } catch { map = {}; }
   if (map[klass] && typeof map[klass] === 'object' && Object.keys(map[klass]).length) return map[klass];
-  return loadouts.buildDefaultPrepared(klass, _classLevel(p, klass)) || {};
+  return loadouts.buildDefaultPrepared(klass, _classLevel(p, klass), _castMod(playerId, klass)) || {};
 }
 /** Save a prepared loadout for a class (the Spellbook UI's write path — Phase D). */
 function setPreparedSpells(playerId, cls, prepared) {

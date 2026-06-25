@@ -51,9 +51,10 @@ function orderedByPriority(cls, spells) {
   return spells.slice().sort((a, b) => rank(a.key) - rank(b.key) || a.slvl - b.slvl || String(a.key).localeCompare(String(b.key)));
 }
 
-/** PREPARED default: { <slotLevel>: [spellKey, …] }, each level filled to its slot count. */
-function buildDefaultPrepared(cls, level) {
-  const slots = slotsFor(cls, level) || {};               // { <spellLevel>: count }
+/** PREPARED default: { <slotLevel>: [spellKey, …] }, each level filled to its slot count.
+ *  castMod = the caster's casting-stat modifier (so bonus spells widen the prepared list). */
+function buildDefaultPrepared(cls, level, castMod = 0) {
+  const slots = slotsFor(cls, level, castMod) || {};      // { <spellLevel>: count } (base + stat bonus + domain)
   const byLevel = {};
   for (const s of kitSpells(cls)) (byLevel[s.slvl] = byLevel[s.slvl] || []).push(s);
   const out = {};
@@ -72,10 +73,10 @@ function buildDefaultKnown(cls /* , level */) {
 }
 
 /** Convenience: the right default shape for either caster type (or null for non-casters). */
-function buildDefault(cls, level) {
+function buildDefault(cls, level, castMod = 0) {
   if (!cls) return null;
   if (SPONTANEOUS_CLASSES && SPONTANEOUS_CLASSES.has(cls)) return buildDefaultKnown(cls, level);
-  if (PRIORITY[cls] !== undefined && slotsFor(cls, level)) return buildDefaultPrepared(cls, level);
+  if (PRIORITY[cls] !== undefined && slotsFor(cls, level, castMod)) return buildDefaultPrepared(cls, level, castMod);
   return null;   // non-caster
 }
 

@@ -44,11 +44,15 @@ const SORC_SLOTS_BY_LEVEL = {
 };
 // PF1 CLERIC base spells/day (prepared divine). Clerics prepare a number of
 // spells of each level; spare slots get filled with more cures.
+// PF1 full-caster BASE spells/day (cleric/druid/wizard share it) — caps at 4 per spell
+// level. This is the BASE only: the +1 domain/school and the casting-stat bonus spells
+// are added in slotsFor (NOT baked in here), so a high-Wis cleric with a domain ends up
+// at the real PF1 totals.
 const CLERIC_SLOTS_BY_LEVEL = {
-  1: [2], 2: [3], 3: [3, 2], 4: [4, 3], 5: [4, 3, 2], 6: [4, 4, 3], 7: [5, 4, 3, 2], 8: [5, 4, 4, 3],
-  9: [5, 5, 4, 3, 2], 10: [5, 5, 4, 4, 3], 11: [5, 5, 5, 4, 3, 2], 12: [5, 5, 5, 4, 4, 3],
-  13: [5, 5, 5, 5, 4, 3, 2], 14: [5, 5, 5, 5, 4, 4, 3], 15: [5, 5, 5, 5, 5, 4, 3, 2], 16: [5, 5, 5, 5, 5, 4, 4, 3],
-  17: [5, 5, 5, 5, 5, 5, 4, 3, 2], 18: [5, 5, 5, 5, 5, 5, 4, 4, 3], 19: [5, 5, 5, 5, 5, 5, 5, 4, 4], 20: [5, 5, 5, 5, 5, 5, 5, 5, 5],
+  1: [1], 2: [2], 3: [2, 1], 4: [3, 2], 5: [3, 2, 1], 6: [3, 3, 2], 7: [4, 3, 2, 1], 8: [4, 3, 3, 2],
+  9: [4, 4, 3, 2, 1], 10: [4, 4, 3, 3, 2], 11: [4, 4, 4, 3, 2, 1], 12: [4, 4, 4, 3, 3, 2],
+  13: [4, 4, 4, 4, 3, 2, 1], 14: [4, 4, 4, 4, 3, 3, 2], 15: [4, 4, 4, 4, 4, 3, 2, 1], 16: [4, 4, 4, 4, 4, 3, 3, 2],
+  17: [4, 4, 4, 4, 4, 4, 3, 2, 1], 18: [4, 4, 4, 4, 4, 4, 3, 3, 2], 19: [4, 4, 4, 4, 4, 4, 4, 3, 3], 20: [4, 4, 4, 4, 4, 4, 4, 4, 4],
 };
 // PF1 INQUISITOR spells/day — a 6-level SPONTANEOUS divine caster (Wisdom). He
 // draws from the cleric list but progresses SLOWER than a cleric: he only ever
@@ -73,23 +77,33 @@ const PALADIN_SLOTS_BY_LEVEL = {
 function _tableSlots(table, level) {
   const arr = table[Math.max(1, Math.min(20, level || 1))] || table[1];
   const out = {};
-  // An 18 CASTING STAT (Int/Wis/Cha) — assumed for every caster, mirroring the
-  // 18 STR/DEX behind attacks — grants PF1 BONUS SPELLS: +1 per day to spell
-  // levels 1–4. The base tables don't include it, so fold it in here.
-  arr.forEach((n, i) => { const sl = i + 1; out[sl] = n + (sl <= 4 ? 1 : 0); });
-  return out;   // { 1: n, 2: n, … } slots per spell level (incl. the 18-stat bonus)
+  arr.forEach((n, i) => { out[i + 1] = n; });   // PURE base spells/day; stat-bonus + domain added in slotsFor
+  return out;   // { 1: n, 2: n, … } base slots per spell level
+}
+// PF1 BONUS SPELLS from a casting-ability MODIFIER (CRB Table 1-3): you gain a bonus
+// spell of a given spell level only if your modifier is at least that spell level, plus
+// one more for every +4 of modifier beyond it. e.g. a +5 mod → +2 at 1st, +1 at 2nd–5th,
+// nothing at 6th+. A 0/'0'-base slot (paladin/ranger at-the-edge) only exists if the
+// stat grants it — exactly PF1.
+function bonusSpells(spellLevel, mod) {
+  if (!mod || mod < spellLevel) return 0;
+  return 1 + Math.floor((mod - spellLevel) / 4);
 }
 function spontaneousSlots(level) { return _tableSlots(SORC_SLOTS_BY_LEVEL, level); }
 // Slot table for any per-level slot caster (null = not a slot caster).
 const FULL_PREPARED   = new Set(['cleric', 'druid', 'wizard']);          // full 9-level prepared casters (share the cleric/druid/wizard progression)
 const FOURTH_PREPARED = new Set(['paladin', 'ranger', 'antipaladin']);   // 4th-level prepared casters — no spells before L4
-function slotsFor(cls, level) {
+function slotsFor(cls, level, castMod = 0) {
   let base;
   if (FULL_PREPARED.has(cls))            base = _tableSlots(CLERIC_SLOTS_BY_LEVEL, level);
   else if (FOURTH_PREPARED.has(cls))     base = _tableSlots(PALADIN_SLOTS_BY_LEVEL, level);
   else if (cls === 'inquisitor')         base = _tableSlots(INQ_SLOTS_BY_LEVEL, level);   // 6-level SPONTANEOUS divine, slower
   else if (SPONTANEOUS_CLASSES.has(cls)) base = _tableSlots(SORC_SLOTS_BY_LEVEL, level);
   else return null;
+  // ABILITY-SCORE BONUS SPELLS — the caster's Int/Wis/Cha modifier grants extra spells
+  // per day (PF1 Table 1-3). castMod is the casting-stat modifier (m.castingMod).
+  const mod = castMod | 0;
+  if (mod > 0) for (const sl of Object.keys(base)) base[sl] += bonusSpells(+sl, mod);
   // DOMAIN (cleric) / arcane SCHOOL (wizard): +1 spell slot per spell level — we do
   // NOT model opposition schools (Tobias 2026-06-22).
   if (cls === 'cleric' || cls === 'wizard') for (const sl of Object.keys(base)) base[sl] += 1;
