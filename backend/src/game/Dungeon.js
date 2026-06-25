@@ -805,6 +805,7 @@ class Dungeon {
       runAbilityUses: {}, runBuffs: { toHit: 0, dmg: 0 }, runBuffApplied: {},
       left: false, dead: false,
     };
+    this._computeCastable(m);   // PHASE C: which spells this character may actually cast (prepared/known loadout)
     for (const ab of kitFor(cls).abilities) {
       if (ab.cost === 'run') m.runAbilityUses[ab.key] = (typeof ab.uses === 'function' ? ab.uses(level) : (ab.uses || 1));
     }
@@ -1884,6 +1885,7 @@ class Dungeon {
     const gain = nmax - m.maxHp;
     m.level = nl; m.maxHp = nmax;
     this._setDerived(m);                    // refresh ability mods / iteratives at the new level
+    this._computeCastable(m);               // PHASE C: new level → default loadout may unlock more prepared/known spells
     if (gain > 0) m.hp += gain;             // level up heals the new HP
     else if (m.hp > nmax) m.hp = nmax;      // level down caps current HP to the new max
     return nl - old;
@@ -2888,6 +2890,7 @@ class Dungeon {
     const usable = (ab) => {
       if (!ab || lvl < (ab.minLevel || 1)) return false;
       if (!this._charAllows(ab, m)) return false;   // char-gated forms (Rissa vs generic druids)
+      if (!this._loadoutAllows(ab, m)) return false;   // PHASE C: bot only casts prepared/known spells
       if (ab.effect === 'form' && m.form && m.form.key === (ab.form && ab.form.key)) return false;   // already in this form
       if (ab.cost === 'pool') return (m.spellPool || 0) > 0;
       if (ab.cost === 'slot') return ((m.slots && m.slots[ab.slvl]) || 0) > 0;   // spontaneous: a slot of that level
@@ -3644,6 +3647,7 @@ class Dungeon {
     const ab = kit.abilities[slot];
     if (!ab) return { ok: false, error: 'no such ability' };
     if (!this._charAllows(ab, m)) return { ok: false, error: 'not your ability' };   // char-gated form (e.g. Rissa's Beast Mode)
+    if (!this._loadoutAllows(ab, m)) return { ok: false, error: `${ab.name} isn't prepared` };   // PHASE C: prepared/known loadout gate
     const lvl = m.level || 1;
     if (ab.minLevel && lvl < ab.minLevel) return { ok: false, error: `${ab.name} needs level ${ab.minLevel}` };
     // Raise Dead / Resurrection are powerful rituals — only between rooms (out of
@@ -3829,6 +3833,25 @@ class Dungeon {
     if (ab.notChar) { const c = ab.notChar.toLowerCase(); if (who === c || pid === c) return false; }
     return true;
   }
+  // ── PHASE C: prepared/known LOADOUT gating (SPELL-LOADOUTS-DESIGN.md). A leveled
+  // spell is castable only if it's in the character's loadout — PREPARED casters use
+  // their prepared list, SPONTANEOUS casters their known list (default known = the whole
+  // implemented kit, so spontaneous casters are unaffected). Cantrips (no slvl) and
+  // class FEATURES are always available. m.castableKeys is the precomputed Set of
+  // allowed spell keys (null = non-caster / gating off). Built in addMember + refreshed
+  // on level-up; the loadout itself comes from db (saved customization or curated default).
+  _computeCastable(m) {
+    try {
+      if (!isCaster(m.cls)) { m.castableKeys = null; return; }
+      if (isSpontaneous(m.cls)) m.castableKeys = new Set(db.getKnownSpells(m.playerId, m.cls) || []);
+      else m.castableKeys = new Set(Object.values(db.getPreparedSpells(m.playerId, m.cls) || {}).flat());
+    } catch (_) { m.castableKeys = null; }
+  }
+  _loadoutAllows(ab, m) {
+    if (!ab || ab.slvl == null || ab.slvl < 1) return true;   // cantrips + class features: always castable
+    if (!m || !m.castableKeys) return true;                   // non-caster / gating disabled
+    return m.castableKeys.has(ab.key);
+  }
   /** Wild Shape: toggle a druid form on/off. Re-casting the active form reverts;
    *  casting a different form swaps. Forms override the weapon (natural attacks),
    *  add a stat package to m.buffs, and may grant flight / DR / temp HP. */
@@ -3981,7 +4004,7 @@ class Dungeon {
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
       // Per-spell-level slots for spontaneous casters: { 1: {remaining,max}, … }.
       slots: maxSlots ? Object.fromEntries(Object.keys(maxSlots).map(L => [L, { remaining: (m.slots && m.slots[L]) || 0, max: maxSlots[L] }])) : null,
-      abilities: kit.abilities.filter(ab => this._charAllows(ab, m) && _showStance(ab)).map(ab => {
+      abilities: kit.abilities.filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m) && _showStance(ab)).map(ab => {
         // Slot spells re-level by the active metamagic; the UI shows the effective
         // level, draws the right slot count, and greys out if there's no slot there
         // (or it pushes past 9th).
