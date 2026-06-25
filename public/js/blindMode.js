@@ -1386,11 +1386,30 @@
       const fresh = st.log.filter(e => e.t > _dun.logT);
       if (fresh.length) {
         _dun.logT = Math.max(_dun.logT, ...st.log.map(e => e.t));
-        const toSay = fresh.length > 8 ? fresh.slice(-8) : fresh;
-        if (toSay.length < fresh.length) speak(`Skipping ${fresh.length - toSay.length} earlier lines.`, 'event');
-        // Skip VOICED banter — the 11labs character voice already says it out loud,
-        // so reading it again would be the narrator doing double duty (Josh's ask).
-        for (const e of toSay) { if (e.voiced) continue; const t = _stripGlyphs(e.text); if (t) speak(t, 'event'); }
+        // Skip VOICED banter — the 11labs character voice already says it out loud.
+        const said = (t) => { if (t) speak(t, 'event'); };
+        // BIG-ROOM CONDENSE (Josh): in crowded fights the per-enemy flavor floods the
+        // queue and his allies' actions never finish reading before his turn. So in a
+        // big room, speak EVERY party/ally line + anything that happened to HIM in full,
+        // and collapse the rest of the enemy actions into a single tally. (Small rooms
+        // and non-big fights keep the full play-by-play — the flavor he likes.)
+        const enemyCount = (st.enemies || []).filter(e => e.alive).length;
+        const meM = (st.party || []).find(m => m.playerId === meId) || {};
+        const myNick = String(meM.trueNick || meM.nickname || '').toLowerCase();
+        const live = fresh.filter(e => !e.voiced);
+        if (enemyCount >= 6 && live.length > 6) {
+          const isMine = (e) => e.side !== 'enemy' || (myNick && _stripGlyphs(e.text).toLowerCase().includes(myNick));
+          const mine = live.filter(isMine);
+          const enemyTally = live.length - mine.length;          // collapsed enemy actions
+          const show = mine.length > 8 ? mine.slice(-8) : mine;   // cap a reconnect flood of ally lines too
+          if (show.length < mine.length) said(`Skipping ${mine.length - show.length} earlier ally lines.`);
+          for (const e of show) said(_stripGlyphs(e.text));
+          if (enemyTally) said(`Plus ${enemyTally} more enemy action${enemyTally > 1 ? 's' : ''} — press E to inspect the foes.`);
+        } else {
+          const toSay = live.length > 8 ? live.slice(-8) : live;
+          if (toSay.length < live.length) said(`Skipping ${live.length - toSay.length} earlier lines.`);
+          for (const e of toSay) said(_stripGlyphs(e.text));
+        }
       }
     }
     // Turn changes.
