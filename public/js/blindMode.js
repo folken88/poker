@@ -227,6 +227,10 @@
     else if (kind === 'turn')  { make(now, 0.07, 880); make(now + 0.10, 0.07, 880); make(now + 0.20, 0.07, 880); }
     else if (kind === 'error') { make(now, 0.10, 220); make(now + 0.13, 0.10, 220); }
     else if (kind === 'ack')   make(now, 0.08, 1200);
+    // 'clear' — a rising C-E-G chime: the ROOM IS CLEARED, the end-of-room report is
+    // starting (Josh: he had no audible cue a room ended, so he'd press keys and cut
+    // the report off). Distinct from 'turn' (three flat 880 pulses).
+    else if (kind === 'clear') { make(now, 0.12, 523); make(now + 0.13, 0.12, 659); make(now + 0.26, 0.16, 784); }
   }
 
   // ---------- TTS: 3-tier priority on the browser's NATIVE utterance queue ----------
@@ -1397,6 +1401,7 @@
         const me = (st.party||[]).find(m => m.playerId === meId) || {};
         speak(`Your turn. ${me.hp} hit points. ${_dunEnemyPhrase(st)} ${_dunActionsHint(st)}`, 'urgent');
       } else if (st.status === 'exploring' && _dun.status === 'combat') {
+        earcon('clear');   // audible "room cleared" cue so a blind player knows the end-of-room report is coming (Josh)
         speak('Room clear. Open the next door, or bail with your gold.', 'event');
       }
     }
@@ -1411,7 +1416,10 @@
     if (lrKey !== _dun.lootKey) {
       _dun.lootKey = lrKey;
       if (lr && (lr.eligible || []).includes(meId) && (lr.decided || {})[meId] === undefined) {
-        speak(`A plus ${lr.tier} ${lr.label} dropped. Press R to roll a d20 for it, or P to pass.`, 'urgent');
+        // EVENT, not urgent — an urgent prompt cancelled the queued XP/level-up report
+        // (Josh: "level-up got cut off by the loot roll"). Queued, it speaks in order
+        // after the report; the 35s roll window leaves ample time to press R/P.
+        speak(`Loot drop: a plus ${lr.tier} ${lr.label}. Press R to roll a d20 for it, or P to pass.`, 'event');
       }
     }
   }

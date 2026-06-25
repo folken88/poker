@@ -491,7 +491,7 @@ const MAGUS_SPELLSTRIKE_SFX = {
   Toni:    '/audio/spellstrike_toni.mp3',         // Toni — arcane sword-lightning yell
 };
 const BOSS_EVERY     = 5;
-const LOOT_ROLL_MS   = 20_000; // window to roll/pass on a dropped magic item
+const LOOT_ROLL_MS   = 35_000; // window to roll/pass on a dropped magic item (long enough that the auto-pass never fires while a blind player's end-of-room report is still reading)
 
 // Every applied spell/feat buff that should show an icon on a hero's buff strip,
 // keyed by the ability key recorded in m.buffApplied / m.runBuffApplied. Each
@@ -1640,11 +1640,14 @@ class Dungeon {
     this.runGold += gold;
     this._note(`✨ Room cleared! +${gold} gp (pool ${this.runGold} gp).`);
     this._log('clear', { gold, runGold: this.runGold });
-    this._awardRoomXp();         // PF1 XP for the vanquished foes → split among the survivors
-    this._maybeDropLoot();
+    // END-OF-ROOM ORDER (Josh, blind-tester flow): loot roll FIRST (so a blind player
+    // hears the prompt and can roll before the rest of the report scrolls past), THEN
+    // XP + money, and LEVEL-UPS LAST so they are never cut off by the loot prompt.
+    this._maybeDropLoot();       // loot roll prompt up front
     this._maybeDropPotion();     // can revive a downed ally before they bleed
-    this._bleedDowned();         // the still-dying lose 1 HP this room (toward −10)
     this._endOfRoomRaise();      // a cleric/oracle raises the SLAIN now the fight is over
+    this._awardRoomXp();         // PF1 XP for the vanquished foes + LEVEL-UPS (announced last)
+    this._bleedDowned();         // the still-dying lose 1 HP this room (toward −10)
     if (!this._humansInRun()) { this._wrapUp(); return; }   // last human bled out → AI allies cash out
     this._broadcast();
   }
@@ -1779,7 +1782,7 @@ class Dungeon {
   _startLootRoll(slot, tier, eligibleIds) {
     this.lootRoll = { slot, tier, eligible: eligibleIds, decided: {} };
     const label = db.GEAR_BY_KEY[slot]?.label || slot;
-    this._note(`💎 A +${tier} ${label} drops! Roll a d20 for it, or pass.`);
+    this._note(`💎 A +${tier} ${label} drops! Press R to roll a d20 for it, or P to pass.`, '/audio/spell_revive.mp3');
     this._log('lootdrop', { slot, tier, eligible: eligibleIds.length });
     // Decide immediately for anyone who can't benefit, and for bots:
     //   • ANY delver (human or bot) already wearing an equal-or-better item in this
@@ -4784,14 +4787,15 @@ class Dungeon {
     const free = this._targetableEnemies().filter(e => !e.grappled && e.hp > 0);
     if (!free.length) return;
     for (let i = free.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [free[i], free[j]] = [free[j], free[i]]; }
-    const grabbed = free.slice(0, dRoll(4) + 1), parts = [];   // 1d4+1 foes
+    const grabbed = free.slice(0, dRoll(4) + 1);   // 1d4+1 foes
+    let seized = 0, resisted = 0;                   // COUNTS-ONLY report (Josh: consistent AoE narration)
     for (const e of grabbed) {
       const ecmd = 10 + (e.toHit || 0) + 2;                    // foe's CMD (rough)
       const roll = dRoll(20), tot = roll + bt.cmb;
-      if (roll === 20 || tot >= ecmd) { e.grappled = true; e.grappledBy = 'tentacles'; e.grappleRounds = 99; parts.push(`${e.name} SEIZED [${tot} vs ${ecmd}]`); }
-      else parts.push(`${e.name} resists [${tot} vs ${ecmd}]`);
+      if (roll === 20 || tot >= ecmd) { e.grappled = true; e.grappledBy = 'tentacles'; e.grappleRounds = 99; seized++; }
+      else resisted++;
     }
-    if (parts.length) { this._note(`🦑 The black tentacles lash out — ${parts.join('; ')}.`, bt.sound); this._broadcast(); }
+    if (seized || resisted) { this._note(`🦑 The black tentacles lash out — ${seized} seized${resisted ? `, ${resisted} resisted` : ''}.`, bt.sound); this._broadcast(); }
   }
   // Suffocation — single living target (not undead/constructs): Fort save or DIE.
   // A made save (or a boss too tough to fell outright) still takes heavy damage.

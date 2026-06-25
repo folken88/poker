@@ -1803,7 +1803,7 @@
       // locked target (or the deadliest foe); AoE hits everything; self/ally let
       // the server pick (e.g. healing finds the lowest-HP ally).
       const castSpell = (ab) => {
-        if (!myTurn) { sayU('Not your turn.'); return; }   // hard gate — never cast off-turn
+        if (!myTurn) { window.BlindMode.speak('Not your turn.', 'ambient'); return; }   // hard gate; AMBIENT so it can't cut off the end-of-room report (Josh)
         const slot = (ab.slot != null ? ab.slot : 0);
         if (ab.target === 'enemy') {
           // Single-target enemy spells (Suffocation, Hold Person, Disintegrate,
@@ -2168,7 +2168,7 @@
           sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level, Tab through spells, Return to cast, Escape to close.`);
           return;
         }
-        if (!myTurn) { window.BlindMode.speak('Not your turn.', 'urgent'); return; }
+        if (!myTurn) { window.BlindMode.speak('Not your turn.', 'ambient'); return; }   // AMBIENT — never cut off the end-of-room report (Josh)
         const ab = act.ab || null;
         const label = act.label;
         // Ally-targeted FEATURE (a druid's Cure, Barkskin, Bull's Strength…) →
