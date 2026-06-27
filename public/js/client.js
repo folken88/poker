@@ -2135,7 +2135,10 @@
         const hp = Math.max(0, meM.hp | 0), max = meM.maxHp | 0;
         const buffs = (meM.buffs || []).map(b => String(b.label || '').toLowerCase()).filter(Boolean);
         const conds = (meM.conditions || []).map(c => String(c.label || '').toLowerCase()).filter(Boolean);
-        let s = `${hp} of ${max} HP`;
+        // Lead with LEVEL + class so a blind player can confirm what level they are at
+        // any time (Josh: "I cannot confirm my level by any means in the dungeon").
+        const lvl = meM.level ? `Level ${meM.level}${meM.cls ? ' ' + meM.cls : ''}, ` : '';
+        let s = `${lvl}${hp} of ${max} HP`;
         if (meM.dead) s += ', dead';
         else if (meM.downed || hp <= 0) s += ', downed';
         const statuses = [...buffs, ...conds];   // buffs (boons) then conditions (debuffs)
