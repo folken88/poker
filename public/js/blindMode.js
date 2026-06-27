@@ -1415,7 +1415,10 @@
         speak(`Your turn. ${me.hp} hit points. ${_dunEnemyPhrase(st)} ${_dunActionsHint(st)}`, 'urgent');
       } else if (st.status === 'exploring' && _dun.status === 'combat') {
         earcon('clear');   // audible "room cleared" cue so a blind player knows the end-of-room report is coming (Josh)
-        speak('Room clear. Open the next door, or bail with your gold.', 'event');
+        // Only give the "open the next door / bail" prompt NOW if there's no loot to
+        // settle. If a loot roll is dropping, the prompt is deferred until the roll
+        // resolves (see the loot block below) so it never splits the loot sequence (Josh).
+        if (!st.lootRoll) speak('Room clear. Open the next door, or bail with your gold.', 'event');
       }
     }
     // Run end.
@@ -1427,8 +1430,13 @@
     // Loot roll prompt (only when it's mine to decide).
     const lr = st.lootRoll, lrKey = lr ? `${lr.slot}:${lr.tier}` : '';
     if (lrKey !== _dun.lootKey) {
+      const hadLoot = !!_dun.lootKey;   // a roll was in progress and just resolved
       _dun.lootKey = lrKey;
-      if (lr && (lr.eligible || []).includes(meId) && (lr.decided || {})[meId] === undefined) {
+      if (!lr && hadLoot && st.status === 'exploring') {
+        // The loot roll just SETTLED — give the deferred "what next" prompt now, so it
+        // lands AFTER the whole loot result instead of splitting it (Josh).
+        speak('Loot settled. Open the next door, or bail with your gold.', 'event');
+      } else if (lr && (lr.eligible || []).includes(meId) && (lr.decided || {})[meId] === undefined) {
         // EVENT, not urgent — an urgent prompt cancelled the queued XP/level-up report
         // (Josh: "level-up got cut off by the loot roll"). Queued, it speaks in order
         // after the report; the 35s roll window leaves ample time to press R/P.

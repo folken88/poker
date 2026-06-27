@@ -1343,7 +1343,7 @@
         const myLoot = (d.pendingLoot || []).filter(l => l.owner === meId);
         if (myLoot.length && !d.lootRoll && (Date.now() - _dunLootClaiming > 1500)) {
           _dunLootClaiming = Date.now();
-          window.BlindMode.speak(`You won the plus ${myLoot[0].tier} ${escapeText(myLoot[0].label)} — claiming it.`, 'urgent');
+          window.BlindMode.speak(`You won the plus ${myLoot[0].tier} ${escapeText(myLoot[0].label)} — claiming it.`, 'event');   // EVENT not urgent — winning loot must not cancel the queued level-up report (Josh)
           dungeonAction('equip', { idx: myLoot[0].idx });
         }
       }
@@ -2280,7 +2280,7 @@
       // moved to the Escape session menu so a stray B can't end your run.
       if (k === 'b') {
         e.preventDefault();
-        if (_blindHelp) { sayU('B: read every party member’s active buffs and conditions. Bail now lives in the Escape menu.'); return; }
+        if (_blindHelp) { sayU('B: read every party member’s active buffs. Debuffs are on the D key now. Bail lives in the Escape menu.'); return; }
         const liveP = (d.party || []).filter(p => !p.left && !p.dead);
         if (!liveP.length) { sayU('No party members.'); return; }
         // Streamlined (Josh): report buffs that matter to the PARTY — haste, communal/
@@ -2289,8 +2289,7 @@
         // own business, not party info.
         const PERSONAL = new Set(['powerattack', 'deadlyaim', 'rapidshot', 'fightdefensively']);
         const lines = liveP.map(p => {
-          const items = (p.buffs || []).filter(b => !PERSONAL.has(b.key)).map(b => b.label)
-            .concat((p.conditions || []).map(c => c.label));
+          const items = (p.buffs || []).filter(b => !PERSONAL.has(b.key)).map(b => b.label);   // BUFFS only — debuffs moved to the D key (Josh), keeps B short
           return `${p.nickname}: ${items.length ? items.join(', ') : 'no buffs'}`;   // no "you," self-label (Josh knows which character he plays)
         });
         sayU('Party buffs. ' + lines.join('. ') + '.');
