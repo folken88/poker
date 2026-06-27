@@ -152,6 +152,7 @@
     // PERSISTED to localStorage and adjustable live with [ (slower) and
     // ] (faster), so anyone can dial in their own pace and it sticks.
     rate: 1.2,
+    volume: 1.0,              // narration loudness (0.1..1) — adjustable live with - / = (Josh), PERSISTED
     pitch: 1.0,
     voice: null,              // chosen voice object once available
     queue: [],                // [{text, prio}, ...]
@@ -333,6 +334,7 @@
   function _engineSpeak(text, prio) {
     const u = new SpeechSynthesisUtterance(text);
     u.rate = state.rate;
+    u.volume = state.volume;
     u.pitch = state.pitch;
     if (state.voice) u.voice = state.voice;
     blog('speak', `[${prio}]`, text.length > 90 ? text.slice(0, 90) + '…' : text);
@@ -358,30 +360,11 @@
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     setInterval(() => { try { window.speechSynthesis.resume(); } catch (_) {} }, 8000);
   }
-  // ── AUDIO DUCKING — the screen-reader voice is the PRIORITY; while it talks, the
-  // current AI character clip DUCKS to a low (but audible) volume and rises back when
-  // the reader is quiet. NOT a mute and NOT a stop: the character line keeps playing
-  // intelligibly underneath (Josh: muting/cutting chopped lines into word-salad, and a
-  // queue starved the voices entirely). Eased on a fast timer — attack is quick (duck
-  // down promptly when narration starts), release is gentle (slide back up) and slow
-  // enough to bridge the micro-gaps between back-to-back narration lines so the AI
-  // voice doesn't bob choppily. DUCK_FLOOR/ATTACK/RELEASE are the tunable ratio+slope.
-  const DUCK_FLOOR = 0.25;     // AI clip drops to 25% under narration (significant, not silent)
-  const DUCK_ATTACK = 0.25;    // per-tick step DOWN — reaches the floor in ~3 ticks (~120ms)
-  const DUCK_RELEASE = 0.07;   // per-tick step UP — gentle slope back (~430ms), bridges line gaps
-  let _duckCur = 1;
-  if (typeof window !== 'undefined' && window.speechSynthesis) {
-    setInterval(() => {
-      try {
-        const narrating = state.on && (TTS.speaking || TTS.pending);
-        const target = narrating ? DUCK_FLOOR : 1;
-        if (_duckCur > target) _duckCur = Math.max(target, _duckCur - DUCK_ATTACK);
-        else if (_duckCur < target) _duckCur = Math.min(target, _duckCur + DUCK_RELEASE);
-        const a = state.banterAudio;
-        if (a && typeof a._duckApply === 'function') a._duckApply(_duckCur);
-      } catch (_) {}
-    }, 40);
-  }
+  // Audio ducking was REMOVED (Josh, 2026-06-26): the audio-settings AI-voice slider
+  // already lets him set a comfortable static level, so the screen reader doesn't need
+  // to duck the character voices — they just play at their chosen volume, and his
+  // narration is loud/clear via its own volume control (see setVolume). Simpler, and
+  // no bobbing. (client.js still defines a harmless no-op _duckApply on each clip.)
   // ZOMBIE-ENGINE WATCHDOG. Chrome's speech engine can wedge for good when a
   // cancel() lands mid-utterance (it keeps claiming `speaking` with a dead queue —
   // this is what killed narration after leaving + re-entering the dungeon: every
@@ -428,6 +411,18 @@
     if (announce) speak(`Reading speed ${state.rate.toFixed(2)}.`, 'urgent');
   }
   function nudgeRate(delta) { setRate(state.rate + delta); }
+  // Narration LOUDNESS (0.1..1) — Josh asked to adjust the screen-reader voice volume
+  // the same way as the rate (so he can balance it against Discord chat / game audio).
+  // It IS adjustable: SpeechSynthesisUtterance.volume. Persisted, live via - and =.
+  function setVolume(newVol, announce = true) {
+    const v = Math.max(0.1, Math.min(1, Number(newVol)));
+    if (!Number.isFinite(v)) return;
+    state.volume = Math.round(v * 100) / 100;
+    try { localStorage.setItem('blindVolume', String(state.volume)); } catch (_) {}
+    blog('setVolume', state.volume);
+    if (announce) speak(`Voice volume ${Math.round(state.volume * 100)} percent.`, 'urgent');
+  }
+  function nudgeVolume(delta) { setVolume(state.volume + delta); }
 
   // ---------- Mode toggle ----------
   function toggle() {
@@ -488,7 +483,7 @@
       earcon('ack');
       try {
         const u = new SpeechSynthesisUtterance('Blind support off.');
-        u.rate = state.rate; if (state.voice) u.voice = state.voice;
+        u.rate = state.rate; u.volume = state.volume; if (state.voice) u.voice = state.voice;
         TTS.speak(u);
       } catch (_) {}
     }
@@ -1276,6 +1271,8 @@
     try {
       const savedRate = parseFloat(localStorage.getItem('blindRate'));
       if (Number.isFinite(savedRate)) state.rate = Math.max(0.8, Math.min(2.5, savedRate));
+      const savedVol = parseFloat(localStorage.getItem('blindVolume'));
+      if (Number.isFinite(savedVol)) state.volume = Math.max(0.1, Math.min(1, savedVol));
     } catch (_) {}
     // Restore mode from sessionStorage
     try {
@@ -1315,9 +1312,6 @@
   function notifyBanterStart(audioEl) {
     if (!audioEl) return;
     state.banterAudio = audioEl;
-    // Start at the current duck level so a clip born mid-narration doesn't blast at
-    // full volume for a frame before the controller catches up.
-    try { if (typeof audioEl._duckApply === 'function') audioEl._duckApply(_duckCur); } catch (_) {}
     const clear = () => { if (state.banterAudio === audioEl) state.banterAudio = null; };
     audioEl.addEventListener('ended', clear, { once: true });
     audioEl.addEventListener('error', clear, { once: true });
@@ -1522,6 +1516,6 @@
     // Configurable push-to-talk binding
     getPttCode, isRebinding, beginRebind, consumeRebind, pttLabel,
     // Reading-speed control (bound to [ and ] in client.js) + diagnostics.
-    setRate, nudgeRate, getLogs, log: blog,
+    setRate, nudgeRate, setVolume, nudgeVolume, getLogs, log: blog,
   };
 })();

@@ -818,6 +818,7 @@
   let _dunQueuedAttack = null; // blind dungeon: enemy uid chosen (Return in E-mode) to attack when your turn comes
   let _dunPrevMyTurn = false;  // edge-detect the start of the blind player's dungeon turn
   let _dunSbMode = false;      // blind dungeon: spellbook open (numbers pick a spell LEVEL, Tab cycles spells)
+  let _dunMmMenu = null;       // blind dungeon: metamagic toggle menu open ([{key,name,adj,on}] or null) — numbers toggle
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
   let _dunDispelPick = null;   // blind dungeon: Dispel Magic awaiting a target — {slot,label,targets:[{kind:'ally'|'foe',id,name}]} (numbers pick, Return = smart auto)
   let _dunModePick = null;     // blind dungeon: Channel awaiting a mode — {slot,label} (1 = heal/defensive, 2 = sear/offensive, Return = auto)
@@ -1785,6 +1786,33 @@
       const meM = (d.party || []).find(m => m.playerId === meId) || {};
       const kit = meM.kit || { atwill: { name: 'Attack' }, abilities: [] };
       const myTurn = d.status === 'combat' && d.turn && d.turn.kind === 'party' && d.turn.id === meId;
+      // ----- Metamagic menu (G) — blind access to the metamagic toggles -------
+      // A spontaneous caster (e.g. Olbryn) toggles metamagic feats before casting.
+      // Blind players had no way to reach the on-screen toggle buttons (Josh, L20
+      // sorcerer). G opens/closes a little menu; while it's open a number toggles
+      // that feat on/off. The toggles re-level the next damaging spell, same as the UI.
+      const _mm = kit.metamagic || [];
+      if (_dunMmMenu) {
+        if (e.key === 'Escape') { e.preventDefault(); _dunMmMenu = null; sayU('Metamagic menu closed.'); return; }
+        if (/^[1-9]$/.test(k)) {
+          e.preventDefault();
+          const mm = _dunMmMenu[parseInt(k, 10) - 1];
+          if (!mm) { sayU(`No metamagic ${k}.`); return; }
+          dungeonAction('metamagic', { key: mm.key });
+          mm.on = !mm.on;   // keep the captured menu in sync so repeat toggles stay accurate
+          sayU(`${mm.name} ${mm.on ? 'on' : 'off'}.`);
+          return;
+        }
+      }
+      if (k === 'g') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('G: metamagic. If you have metamagic feats, press G then a number to toggle one on or off before you cast.'); return; }
+        if (!_mm.length) { sayU('You have no metamagic feats.'); return; }
+        if (_dunMmMenu) { _dunMmMenu = null; sayU('Metamagic menu closed.'); return; }
+        _dunMmMenu = _mm.map(x => ({ ...x }));
+        sayU('Metamagic: ' + _dunMmMenu.map((x, i) => `${i + 1} ${x.name} ${x.on ? 'on' : 'off'}`).join(', ') + '. Press a number to toggle, Escape to close.');
+        return;
+      }
       // ----- Blind action list -----------------------------------------------
       // 1 = Attack, then each class FEATURE (no spell level), then a single
       // "Spellbook" entry for casters. Spells are NOT individually numbered —
@@ -2266,6 +2294,21 @@
           return `${p.nickname}: ${items.length ? items.join(', ') : 'no buffs'}`;   // no "you," self-label (Josh knows which character he plays)
         });
         sayU('Party buffs. ' + lines.join('. ') + '.');
+        return;
+      }
+      // D = DEBUFFS ONLY, on you and the party (Josh): a fast "who's held / what bad
+      // thing is up" without wading through everyone's buffs (the B report). Lists only
+      // members who actually HAVE a debuff (conditions), so it stays short mid-fight.
+      if (k === 'd') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('D: debuffs only — bad conditions on you and the party, like held or sickened.'); return; }
+        const liveP = (d.party || []).filter(p => !p.left && !p.dead);
+        if (!liveP.length) { sayU('No party members.'); return; }
+        const lines = liveP.map(p => {
+          const debs = (p.conditions || []).map(c => c.label).filter(Boolean);
+          return debs.length ? `${p.nickname}: ${debs.join(', ')}` : null;
+        }).filter(Boolean);
+        sayU(lines.length ? 'Debuffs. ' + lines.join('. ') + '.' : 'No debuffs on the party.');
         return;
       }
       // Blind mode NEVER falls through to the sighted letter scheme below — that
@@ -4922,6 +4965,10 @@
       // recognition (which may be unavailable in their browser).
       if (e.code === 'BracketLeft')  { e.preventDefault(); window.BlindMode.nudgeRate?.(-0.1); return; }
       if (e.code === 'BracketRight') { e.preventDefault(); window.BlindMode.nudgeRate?.(+0.1); return; }
+      // - / = (and numpad -/+) adjust the SCREEN-READER VOLUME live (Josh) — same idea
+      // as [ / ] for speed, so he can balance the narration against Discord / game audio.
+      if (e.code === 'Minus' || e.code === 'NumpadSubtract') { e.preventDefault(); window.BlindMode.nudgeVolume?.(-0.1); return; }
+      if (e.code === 'Equal' || e.code === 'NumpadAdd')      { e.preventDefault(); window.BlindMode.nudgeVolume?.(+0.1); return; }
       // S — stop talking now (works on every screen).
       if (e.code === 'KeyS') { e.preventDefault(); window.BlindMode.stopSpeaking?.(); return; }
       // ----- Explore hotkeys (poker table only) -----
