@@ -1457,7 +1457,10 @@ class Dungeon {
     // CMB check (DEX-or-STR homerule) vs the grappler's CMD breaks it; the grip
     // also lapses if the grappler is gone or after ~2 rounds. Dispel/Grease free
     // them early (see _abCleanse / _abGrease). They take their turn either way.
-    if (m.grappled) {
+    if (m.grappled && this._freedomOfMovement(m)) {
+      m.grappled = false; m.grappledBy = null; m.grappleRounds = 0;
+      this._note(`🕊️ ${m.nickname} slips the grip instantly — Liberation's freedom of movement.`);
+    } else if (m.grappled) {
       const grappler = this.enemies.find(x => x.uid === m.grappledBy && x.hp > 0);
       if (!grappler) { m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; this._note(`🤼 ${m.nickname} is free — nothing holds them anymore.`); }
       else {
@@ -2387,7 +2390,16 @@ class Dungeon {
   // GRAPPLE a hero — CMB vs the hero's CMD. Success: seized (−2 to hit, easier to
   // hit), crushed for a free strike, grip lasts ~2 rounds (the hero struggles free
   // on their turn — see _advanceToActor). Dispel/Grease break it early.
+  // PF1 INQUISITOR domain grant (default = LIBERATION): "freedom of movement" — the
+  // inquisitor ignores grapples and other movement-impeding holds (Tim, an inquisitor
+  // player: "never grapple me again"). Defaults to Liberation for every inquisitor for
+  // now; a per-character domain/inquisition picker could override this later.
+  _freedomOfMovement(m) { return !!m && m.cls === 'inquisitor'; }
   _enemyGrapple(e, target) {
+    if (this._freedomOfMovement(target)) {
+      this._note(`🕊️ ${e.glyph} ${e.name} lunges to grab ${target.nickname} — but Liberation's freedom of movement slips every hold. No grapple.`, pick(SND.whiffSword), { side: 'enemy' });
+      this._echoToTable(); return;
+    }
     const cmb = this._enemyMnvCMB(e), cmd = this._heroCMD(target);
     if (cmb < cmd) { this._note(`🤼 ${e.glyph} ${e.name} lunges to grab ${target.nickname}, who twists away. [CMB ${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword), { side: 'enemy' }); this._echoToTable(); return; }
     target.grappled = true; target.grappledBy = e.uid; target.grappleRounds = 2; target.grappledCL = this._enemyCL(e);
@@ -2492,8 +2504,9 @@ class Dungeon {
     }
     const [hookDmg, hookDR] = this._physDR(target, r.damage);   // Stoneskin soaks the bite
     this._dmgToMember(target, hookDmg);
-    if (!target.dead && target.hp > -10) { target.grappled = true; target.grappledBy = e.uid; target.grappledCL = this._enemyCL(e); }
-    this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR} and drags them into a GRAPPLE! ${this._atkStr(r)} (Dispel or Grease to break free)`, snd, { side: 'enemy' });
+    const _fom = this._freedomOfMovement(target);
+    if (!target.dead && target.hp > -10 && !_fom) { target.grappled = true; target.grappledBy = e.uid; target.grappledCL = this._enemyCL(e); }
+    this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : ' and drags them into a GRAPPLE! (Dispel or Grease to break free)'} ${this._atkStr(r)}`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   }
   // Crush a hero the devil is already grappling — automatic chain damage.
