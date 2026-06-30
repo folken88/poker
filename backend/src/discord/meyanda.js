@@ -148,6 +148,11 @@ function dailyReport() {
   const humanRows = allRows.filter(r => (r.players || []).some(p => p.bot === false));
   const rows24 = allRows.filter(r => (Date.parse(r.ts) || 0) >= since);
   const hands24 = rows24.filter(r => (r.players || []).some(p => p.bot === false));
+  // Human-vs-human = a completed hand with 2+ human-driven dealt-in seats (same bar as
+  // the live hand lines). If the last day had NONE, skip the whole report — no bot-only
+  // recap, no archive fallback. (Tobias: "skip if there's no human v human games that day.")
+  const h2h24 = rows24.filter(r => (r.players || []).filter(p => p.bot === false).length >= 2);
+  if (!h2h24.length) return null;
   const lines = [`📊 Daily poker report — ${chiDate(new Date())}`];
 
   if (hands24.length) {
@@ -240,7 +245,11 @@ let _dailyTimer = null;
 function armDaily() {
   clearTimeout(_dailyTimer);
   _dailyTimer = setTimeout(async () => {
-    try { await post(dailyReport()); } catch (e) { console.error('[meyanda] daily:', e.message); }
+    try {
+      const report = dailyReport();
+      if (report) await post(report);
+      else console.log('[meyanda] daily report skipped — no human-vs-human poker in the last 24h');
+    } catch (e) { console.error('[meyanda] daily:', e.message); }
     armDaily();
   }, msUntilChicago11());
   if (_dailyTimer.unref) _dailyTimer.unref();   // never hold the process open
