@@ -137,11 +137,15 @@ function casterFeats(level) {
   if (n >= 3) f.combatCasting = true;    // Combat Casting — cast defensively / while threatened
   if (n >= 4) f.spellDC = 2;             // Spell Focus — +2 to all spell save DCs
   if (n >= 5) f.spellPen = 2;            // Spell Penetration — +2 on caster checks vs SR
-  if (n >= 6) f.intensify = true;        // Intensified Spell — raise the damage cap
-  if (n >= 7) f.empower = true;          // Empower Spell — ×1.5 spell damage
   if (n >= 8) f.spellDC = 4;             // Greater Spell Focus — +2 more (→ +4 DC total)
-  if (n >= 9) f.maximize = true;         // Maximize Spell — max damage dice
-  if (n >= 10) f.quicken = true;         // Quicken Spell — a 2nd (swift) cast each turn
+  // METAMAGIC — pulled onto an EARLIER, PF1-appropriate track (2026-07-01). A real
+  // sorcerer's bloodline bonus feats + feat picks give a blaster the full metamagic
+  // suite well before the old L11/13/17/19 pacing. These are keyed on character LEVEL
+  // (not the odd-level feat counter) so a mid-high caster like L17 Olbryn has ALL FOUR.
+  if (L >= 5)  f.intensify = true;       // Intensified Spell — raise the damage cap
+  if (L >= 9)  f.empower = true;         // Empower Spell — ×1.5 spell damage
+  if (L >= 13) f.maximize = true;        // Maximize Spell — max damage dice
+  if (L >= 15) f.quicken = true;         // Quicken Spell — a 2nd (swift) cast each turn
   return f;
 }
 // ── Class feat trees (user-approved 2026-06-10) — one feat every ODD level
@@ -2402,7 +2406,7 @@ class Dungeon {
     }
     const cmb = this._enemyMnvCMB(e), cmd = this._heroCMD(target);
     if (cmb < cmd) { this._note(`🤼 ${e.glyph} ${e.name} lunges to grab ${target.nickname}, who twists away. [CMB ${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword), { side: 'enemy' }); this._echoToTable(); return; }
-    target.grappled = true; target.grappledBy = e.uid; target.grappleRounds = 2; target.grappledCL = this._enemyCL(e);
+    target.grappled = true; target.grappledBy = e.uid; target.grappleRounds = 2; target.grappledCL = this._enemyCL(e); target.grappleCMB = e.toHit || 0;   // stamp CMB for the cast-while-grappled concentration DC
     this._note(`🤼 ${e.glyph} ${e.name} GRAPPLES ${target.nickname} — seized! −2 to hit and easier to strike until they break free. [CMB ${cmb} vs CMD ${cmd}]`, null, { side: 'enemy' });
     this._broadcast();
     this._enemyMelee(e, target);   // the crushing squeeze comes with the grab
@@ -2505,7 +2509,7 @@ class Dungeon {
     const [hookDmg, hookDR] = this._physDR(target, r.damage);   // Stoneskin soaks the bite
     this._dmgToMember(target, hookDmg);
     const _fom = this._freedomOfMovement(target);
-    if (!target.dead && target.hp > -10 && !_fom) { target.grappled = true; target.grappledBy = e.uid; target.grappledCL = this._enemyCL(e); }
+    if (!target.dead && target.hp > -10 && !_fom) { target.grappled = true; target.grappledBy = e.uid; target.grappledCL = this._enemyCL(e); target.grappleCMB = e.toHit || 0; }   // stamp CMB for the cast-while-grappled concentration DC
     this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : ' and drags them into a GRAPPLE! (Dispel or Grease to break free)'} ${this._atkStr(r)}`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   }
@@ -3736,6 +3740,28 @@ class Dungeon {
       const tgt = this._oneEnemy(payload);
       if (tgt && tgt.flying && !this._canReach(m, tgt)) {
         return { ok: false, error: `${tgt.name} is flying out of reach — you can't ${ab.name.toLowerCase()} a foe on the wing. Use a ranged attack or get airborne.` };
+      }
+    }
+    // ── PF1: CASTING WHILE GRAPPLED needs a concentration check or the spell is LOST ──
+    // DC = 10 + the grappler's CMB + the spell's (metamagic-adjusted) level. The caster
+    // rolls d20 + caster level + casting-stat mod (+4 with Combat Casting, which PF1 lets
+    // apply to grappled casting). Only SPELLS are gated (cost slot/pool) — not rage /
+    // channel / judgment / maneuvers. Inquisitors (Liberation / freedom of movement) are
+    // exempt: their grip never holds, so their casting is never disrupted. On a FAIL the
+    // slot/pool is still spent (RAW) and the turn is consumed. (Josh, 2026-07-01.)
+    if (m.grappled && !this._freedomOfMovement(m) && (ab.cost === 'slot' || ab.cost === 'pool')) {
+      const slvl = this._slotLevelFor(m, ab) || ab.slvl || 0;
+      const grapCMB = (m.grappleCMB != null) ? m.grappleCMB : (m.grappledCL || 0);
+      const dc = 10 + grapCMB + slvl;
+      const cc = fighterFeats(m.cls, m.level, this._isRanged(m)).combatCasting ? 4 : 0;
+      const bonus = (m.level || 1) + (m.castingMod != null ? m.castingMod : CAST_MOD) + cc;
+      const roll = dRoll(20), total = roll + bonus;
+      if (total < dc) {
+        if (ab.cost === 'pool') m.spellPool = Math.max(0, (m.spellPool || 0) - 1);
+        else { m.slots = m.slots || {}; const _L = this._slotLevelFor(m, ab); m.slots[_L] = Math.max(0, (m.slots[_L] || 0) - 1); }
+        this._note(`🪢 ${m.nickname} is grappled and can't hold the casting of ${ab.name} together — concentration fails. [d20 ${roll}+${bonus} = ${total} vs DC ${dc}] The spell is lost.`, pick(SND.whiffSword));
+        this._echoToTable(); this._broadcast();
+        return { ok: true, fizzled: true };
       }
     }
     m.flatFooted = false;   // acting ends flat-footed
