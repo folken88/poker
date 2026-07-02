@@ -819,6 +819,9 @@
   let _dunPrevMyTurn = false;  // edge-detect the start of the blind player's dungeon turn
   let _dunSbMode = false;      // blind dungeon: spellbook open (numbers pick a spell LEVEL, Tab cycles spells)
   let _dunMmMenu = null;       // blind dungeon: metamagic toggle menu open ([{key,name,adj,on}] or null) — numbers toggle
+  let _sbpOpen = false;        // caster "🧠 Prepare ▾" spell-LOADOUT picker popover open/closed (sighted)
+  let _sbpModel = null;        // fetched loadout model { spont, pool, caps, prepared|known } — shared by sighted panel + blind S menu
+  let _dunSbp = null;          // blind dungeon: prepare-spells menu open — { lvl: null|number } (S opens; number picks a level, then toggles; 0 back; Escape closes)
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
   let _dunDispelPick = null;   // blind dungeon: Dispel Magic awaiting a target — {slot,label,targets:[{kind:'ally'|'foe',id,name}]} (numbers pick, Return = smart auto)
   let _dunModePick = null;     // blind dungeon: Channel awaiting a mode — {slot,label} (1 = heal/defensive, 2 = sear/offensive, Return = auto)
@@ -903,6 +906,54 @@
     if (u === _lastAim) return;
     _lastAim = u;
     socket.emit('dungeon:target', { uid: u });
+  }
+  // SPELL-LOADOUT picker I/O ('loadout' action). No payload → fetch the model;
+  // { toggle: key } → flip that spell and get the updated model back. Errors
+  // toast + speak (slot caps: "level 3 is full…"); success stores the model,
+  // calls `spoken(model)` for the blind menu's announcement, and re-renders.
+  function sbpickSend(payload, spoken) {
+    socket.emit('dungeon:action', { kind: 'loadout', ...(payload || {}) }, (resp) => {
+      if (resp && resp.ok === false) {
+        if (resp.error) {
+          toast(resp.error, true);
+          try { if (window.BlindMode?.isOn?.()) window.BlindMode.speak(resp.error, 'urgent'); } catch (_) {}
+        }
+        return;
+      }
+      if (resp && resp.ok) {
+        _sbpModel = resp;
+        try { if (spoken) spoken(resp); } catch (_) {}
+        if (document.body.dataset.screen === 'dungeon') renderDungeon();
+      }
+    });
+  }
+  // Sighted "🧠 Prepare ▾" popover: choose which spells are PREPARED (per level,
+  // capped by your slots) or KNOWN (spontaneous). Reuses the Spellbook popover's
+  // CSS; its own wrap class keeps its open state independent of the viewer.
+  // Changes save instantly and land at the NEXT DOOR. Blind players: the S key.
+  function _sbpickHtml() {
+    let body;
+    if (!_sbpModel) body = `<div class="dungeon__sb-head">Loading your spell list…</div>`;
+    else {
+      const mdl = _sbpModel;
+      const byLvl = {};
+      for (const s of (mdl.pool || [])) (byLvl[s.slvl] = byLvl[s.slvl] || []).push(s);
+      const lvls = Object.keys(byLvl).map(Number).sort((a, b) => a - b);
+      const picked = (s) => mdl.spont ? (mdl.known || []).includes(s.key) : (((mdl.prepared || {})[s.slvl]) || []).includes(s.key);
+      body = `<div class="dungeon__sb-head">${mdl.spont ? 'Known spells — toggle freely' : 'Prepared spells — fill each level\'s slots'} · lands at the next door</div>` +
+        `<div class="dungeon__sb-scroll">` + lvls.map(L => {
+          const cnt = byLvl[L].filter(picked).length;
+          const cap = mdl.spont ? null : (((mdl.caps || {})[L]) | 0);
+          return `<div class="dungeon__sb-head">Level ${L} — ${cnt}${cap != null ? ` of ${cap} prepared` : ' known'}</div>` +
+            byLvl[L].map(s =>
+              `<button class="btn ${picked(s) ? 'btn--primary' : 'btn--ghost'} btn--sm" data-dact="sbpick" data-sbkey="${escapeAttr(s.key)}" aria-pressed="${picked(s)}" title="${escapeAttr(s.name)} — ${picked(s) ? 'remove from' : 'add to'} your loadout (takes effect at the next door)">${s.icon || '✨'} ${escapeText(s.name)}</button>`
+            ).join('');
+        }).join('') + `</div>`;
+    }
+    return `<span class="dungeon__sb-wrap dungeon__sbp-wrap">` +
+      `<button type="button" class="btn ${_sbpOpen ? 'btn--primary' : 'btn--ghost'}" data-sbp-toggle aria-expanded="${_sbpOpen}" title="Choose which spells you have prepared or known — changes land at the next door (blind: S key)">🧠 Prepare ▾</button>` +
+      `<div class="dungeon__spellbook ${_sbpOpen ? 'is-open' : ''}">${body}</div>` +
+    `</span>`;
   }
   function dungeonAction(kind, payload) {
     if (payload && typeof payload.targetUid === 'string') emitAim(payload.targetUid);   // acting on a foe IS targeting it
@@ -1505,6 +1556,10 @@
               kit.metamagic.map(mm =>
                 `<button class="btn ${mm.on ? 'btn--primary' : 'btn--ghost'} btn--sm" data-dact="metamagic" data-mmkey="${escapeAttr(mm.key)}" aria-pressed="${!!mm.on}" title="${escapeAttr(mm.name)} (${mm.adj} slot level) — toggle before you cast; stacks with others">✨${escapeText(mm.name)} ${mm.adj}</button>`
               ).join('') + `</span>` : '') +
+            // Spell-LOADOUT picker ("🧠 Prepare ▾") — casters choose their prepared/
+            // known spells; server enforces per-level slot caps; lands at the next
+            // door. Blind players use the S key (same model, spoken).
+            (kit.caster ? _sbpickHtml() : '') +
             abilHtml +
           `</div>` +
           `<div class="dungeon__actrow dungeon__actrow--nav" role="group" aria-label="Navigation and session controls">` +
@@ -1613,6 +1668,8 @@
   $('#dungeonActions')?.addEventListener('click', (ev) => {
     // Spellbook expand/collapse (caster classes).
     if (ev.target.closest('[data-spellbook-toggle]')) { _spellbookOpen = !_spellbookOpen; renderDungeon(); return; }
+    // Prepare (spell-loadout) picker expand/collapse — fetches the model on first open.
+    if (ev.target.closest('[data-sbp-toggle]')) { _sbpOpen = !_sbpOpen; if (_sbpOpen && !_sbpModel) sbpickSend(); renderDungeon(); return; }
     const b = ev.target.closest('[data-dact]'); if (!b || b.disabled) return;
     const act = b.dataset.dact;
     if (act === 'attack')       dungeonAction('attack', { targetUid: _dungeonSel[0] });
@@ -1628,6 +1685,7 @@
     }
     else if (act === 'cantrip') dungeonAction('cantrip', { key: b.dataset.cankey });   // switch at-will element — free, any time
     else if (act === 'metamagic') dungeonAction('metamagic', { key: b.dataset.mmkey });   // toggle a metamagic on/off (spontaneous casters)
+    else if (act === 'sbpick')  sbpickSend({ toggle: b.dataset.sbkey });   // toggle a spell in the loadout picker (server enforces slot caps)
     else if (act === 'door')    dungeonAction('door');
     else if (act === 'bail')    dungeonAction('bail');
     else if (act === 'join')    enterDungeon();        // spectator → combatant
@@ -1649,6 +1707,20 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape' && _spellbookOpen && document.body.dataset.screen === 'dungeon') {
       _spellbookOpen = false;
+      renderDungeon();
+    }
+  });
+  // The Prepare (loadout) popover follows the same dismissal rules as the
+  // Spellbook viewer: click anywhere outside its wrap — or Escape — closes it.
+  document.addEventListener('click', (ev) => {
+    if (!_sbpOpen || document.body.dataset.screen !== 'dungeon') return;
+    if (ev.target.closest('.dungeon__sbp-wrap')) return;   // inside the picker/toggle — keep it
+    _sbpOpen = false;
+    renderDungeon();
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && _sbpOpen && document.body.dataset.screen === 'dungeon') {
+      _sbpOpen = false;
       renderDungeon();
     }
   });
@@ -1791,6 +1863,68 @@
       // Blind players had no way to reach the on-screen toggle buttons (Josh, L20
       // sorcerer). G opens/closes a little menu; while it's open a number toggles
       // that feat on/off. The toggles re-level the next damaging spell, same as the UI.
+      // ----- Prepare-spells (spell loadout) menu — S ---------------------------
+      // Two levels, mirroring the metamagic G-menu: S opens and speaks a per-
+      // level summary ("level 2, 3 of 4 prepared"); a NUMBER picks a spell level
+      // and lists its spells; then numbers TOGGLE spells in/out (the server
+      // enforces slot caps and speaks refusals); 0 backs up to the level list;
+      // Escape closes. Changes save instantly and land at the NEXT DOOR.
+      const _sbpLvls = (mdl) => {
+        const set = new Set(); for (const s of (mdl.pool || [])) set.add(s.slvl);
+        return [...set].sort((a, b) => a - b);
+      };
+      const _sbpPicked = (mdl, s) => mdl.spont ? (mdl.known || []).includes(s.key) : (((mdl.prepared || {})[s.slvl]) || []).includes(s.key);
+      const _sbpSpeakLevels = () => {
+        const mdl = _sbpModel; if (!mdl) { sayU('Still loading your spell list.'); return; }
+        const parts = _sbpLvls(mdl).map(L => {
+          const at = (mdl.pool || []).filter(s => s.slvl === L);
+          const picked = at.filter(s => _sbpPicked(mdl, s)).length;
+          const cap = mdl.spont ? null : (((mdl.caps || {})[L]) | 0);
+          return `level ${L}, ${picked}${cap != null ? ` of ${cap} prepared` : ' known'}`;
+        });
+        sayU(`Prepare spells: ${parts.join('; ')}. Press a level number, Escape to close.`);
+      };
+      const _sbpSpeakLevel = (L) => {
+        const mdl = _sbpModel; if (!mdl) return;
+        const at = (mdl.pool || []).filter(s => s.slvl === L);
+        sayU(`Level ${L}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + '. Press a number to toggle, 0 to go back, Escape to close.');
+      };
+      if (_dunSbp) {
+        if (e.key === 'Escape') { e.preventDefault(); _dunSbp = null; sayU('Prepare menu closed.'); return; }
+        if (k === '0') { e.preventDefault(); _dunSbp.lvl = null; _sbpSpeakLevels(); return; }
+        if (/^[1-9]$/.test(k)) {
+          e.preventDefault();
+          const mdl = _sbpModel;
+          if (!mdl) { sayU('Still loading your spell list.'); return; }
+          if (_dunSbp.lvl == null) {
+            const L = parseInt(k, 10);
+            if (!(mdl.pool || []).some(s => s.slvl === L)) { sayU(`No level ${L} spells.`); return; }
+            _dunSbp.lvl = L; _sbpSpeakLevel(L);
+            return;
+          }
+          const L = _dunSbp.lvl;
+          const sp = (mdl.pool || []).filter(s => s.slvl === L)[parseInt(k, 10) - 1];
+          if (!sp) { sayU(`No spell ${k} at level ${L}.`); return; }
+          sbpickSend({ toggle: sp.key }, (m2) => {
+            const on = m2.spont ? (m2.known || []).includes(sp.key) : (((m2.prepared || {})[L]) || []).includes(sp.key);
+            const at = (m2.pool || []).filter(s => s.slvl === L);
+            const cnt = at.filter(s => m2.spont ? (m2.known || []).includes(s.key) : (((m2.prepared || {})[L]) || []).includes(s.key)).length;
+            const cap = m2.spont ? null : (((m2.caps || {})[L]) | 0);
+            sayU(`${sp.name} ${on ? (m2.spont ? 'known' : 'prepared') : 'removed'}. ${cnt}${cap != null ? ` of ${cap}` : ''} at level ${L}. Takes effect at the next door.`);
+          });
+          return;
+        }
+      }
+      if (k === 's') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('S: prepare spells. Opens your spell loadout — press a level number, then a number to toggle a spell in or out. Changes land at the next door.'); return; }
+        if (!kit.caster) { sayU('Your class has no spells to prepare.'); return; }
+        if (_dunSbp) { _dunSbp = null; sayU('Prepare menu closed.'); return; }
+        _dunSbp = { lvl: null };
+        if (_sbpModel) _sbpSpeakLevels();
+        else { sayU('Opening your spell loadout.'); sbpickSend({}, () => { if (_dunSbp && _dunSbp.lvl == null) _sbpSpeakLevels(); }); }
+        return;
+      }
       const _mm = kit.metamagic || [];
       if (_dunMmMenu) {
         if (e.key === 'Escape') { e.preventDefault(); _dunMmMenu = null; sayU('Metamagic menu closed.'); return; }

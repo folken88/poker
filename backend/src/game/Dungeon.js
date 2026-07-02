@@ -25,6 +25,7 @@ const banter = require('../bot/banter');
 const { deriveCharacter, attackProfile } = require('./character');
 const { MON, MON_GANGS, BOSS_KEYS, SPAWNABLE, crToNum, SIZE_RANK, SIZE_NAME } = require('../pf1data/monsters');
 const RACES = require('../pf1data/races');   // racial ability mods, vision, save bonuses (Phase 1)
+const loadouts = require('../pf1data/loadouts');   // spell-loadout pool + defaults (Phase B) — the Spellbook picker reads kitSpells from here
 
 // ── Tuning knobs ────────────────────────────────────────────────────────────
 // LEVEL = 1 + sum of all gear bonuses (min 1). Level drives HP, to-hit, and
@@ -1102,7 +1103,7 @@ class Dungeon {
     this.depth += 1;
     this._spawnRoom();
     this.blackTentacles = null;   // the tentacle field doesn't carry between rooms
-    for (const m of this.present()) { this._resetAbilities(m); m.flatFooted = !fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy; }  // refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy: never caught flat-footed)
+    for (const m of this.present()) { this._computeCastable(m); this._resetAbilities(m); m.flatFooted = !fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy; }  // re-read the spell LOADOUT (Spellbook picker edits land at the door) + refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy: never caught flat-footed)
     if (Math.random() < 0.05) { try { this._reskinVorkstag(); } catch (_) {} }   // skinwalker drifts to a new face between rooms (rare)
     this._maintainBardSongs();   // Inspire Courage is a passive aura — always up, no action spent
     this.status = 'combat';
@@ -3586,6 +3587,7 @@ class Dungeon {
     if (kind === 'hock')  { const r = this.hockLoot(playerId, payload.idx); this._broadcast(); return r; }
     if (kind === 'cantrip') return this.setCantrip(playerId, payload.key);   // pick at-will element (free, any time)
     if (kind === 'metamagic') return this.setMetamagic(playerId, payload.key);   // spontaneous caster toggles a metamagic on/off
+    if (kind === 'loadout') return this.loadout(playerId, payload);   // Spellbook picker: fetch the loadout model / toggle a spell (lands at the next door)
 
     if (this.status === 'exploring') {
       if (kind === 'door') return this.openDoor();
@@ -4341,6 +4343,58 @@ class Dungeon {
     m.metamagic[key] = !m.metamagic[key];
     this._broadcast();
     return { ok: true, metamagic: m.metamagic };
+  }
+  // ── SPELLBOOK PICKER (spell loadouts, Phase D) ────────────────────────────
+  // One action, two ops. No `toggle` → return the picker MODEL: the class's
+  // implemented spell pool (char-gated, level-gated) grouped by spell level,
+  // what's currently prepared/known, and the per-level slot caps. With
+  // `toggle: key` → flip that spell in/out of the loadout (per-level cap
+  // enforced for prepared casters) and return the updated model. Changes SAVE
+  // immediately (per class, like class_xp) but land at the NEXT DOOR — the
+  // castable set re-reads the DB in openDoor (PF1: you prepare between fights).
+  loadout(playerId, payload = {}) {
+    const m = this.member(playerId);
+    if (!m || m.left) return { ok: false, error: 'not in this run' };
+    if (!isCaster(m.cls)) return { ok: false, error: 'your class has no spells to prepare' };
+    if (payload.toggle) {
+      const r = this._loadoutToggle(m, String(payload.toggle));
+      if (!r.ok) return r;
+    }
+    return { ok: true, ...this._loadoutModel(m) };
+  }
+  _loadoutModel(m) {
+    const spont = isSpontaneous(m.cls);
+    const pool = loadouts.kitSpells(m.cls)
+      .filter(ab => this._charAllows(ab, m) && (m.level || 1) >= (ab.minLevel || 1))   // only spells THIS character can cast at their level
+      .map(ab => ({ key: ab.key, name: ab.name, icon: ab.icon || '✨', slvl: ab.slvl }));
+    const caps = spont ? null : (slotsFor(m.cls, m.level || 1, m.castingMod) || {});
+    return spont
+      ? { spont, pool, caps, known: db.getKnownSpells(m.playerId, m.cls) || [] }
+      : { spont, pool, caps, prepared: db.getPreparedSpells(m.playerId, m.cls) || {} };
+  }
+  _loadoutToggle(m, key) {
+    const ab = loadouts.kitSpells(m.cls).find(s => s.key === key && this._charAllows(s, m));
+    if (!ab) return { ok: false, error: 'not a spell your class can learn' };
+    if ((m.level || 1) < (ab.minLevel || 1)) return { ok: false, error: `${ab.name} needs level ${ab.minLevel}` };
+    if (isSpontaneous(m.cls)) {
+      const known = db.getKnownSpells(m.playerId, m.cls) || [];
+      const next = known.includes(key) ? known.filter(k => k !== key) : [...known, key];
+      if (!next.length) return { ok: false, error: 'you must know at least one spell' };
+      db.setKnownSpells(m.playerId, m.cls, next);
+    } else {
+      const prep = { ...(db.getPreparedSpells(m.playerId, m.cls) || {}) };
+      const sl = String(ab.slvl);
+      const list = Array.isArray(prep[sl]) ? [...prep[sl]] : [];
+      if (list.includes(key)) prep[sl] = list.filter(k => k !== key);
+      else {
+        const cap = ((slotsFor(m.cls, m.level || 1, m.castingMod) || {})[sl]) | 0;
+        if (cap <= 0) return { ok: false, error: `you have no level-${sl} slots yet` };
+        if (list.length >= cap) return { ok: false, error: `level ${sl} is full (${cap} slot${cap === 1 ? '' : 's'}) — unprepare something first` };
+        prep[sl] = [...list, key];
+      }
+      db.setPreparedSpells(m.playerId, m.cls, prep);
+    }
+    return { ok: true };
   }
   // Improved at-will: casting stat to-hit AND to-damage (1d6 + casting mod), with
   // BAB-based iteratives (2nd ray at BAB 6, 3rd at 11, 4th at 16). Each ray is a
