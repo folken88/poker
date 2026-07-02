@@ -348,7 +348,7 @@ const NATURAL_TYPES = new Set(['animal', 'vermin', 'ooze', 'magical beast', 'abe
 function fightsNatural(e) { return !!e && (e.natural || NATURAL_TYPES.has(e.type)); }
 // "Already taken out of the fight" by crowd control — don't waste fresh CC on them
 // (asleep / fascinated / held / prone / stunned). Used to target CC intelligently.
-function ccd(o) { return !!o && (o.asleep || o.fascinated || o.charmed || (o.paralyzed > 0) || o.prone || (o.stunned > 0)); }
+function ccd(o) { return !!o && (o.asleep || o.fascinated || o.charmed || (o.paralyzed > 0) || o.prone || (o.stunned > 0) || (o.nauseated > 0)); }
 // A "finessable" melee weapon (light, or a one-handed fencing blade) — what a
 // swashbuckler's Precise Strike, Weapon Focus/Specialization and Improved
 // Critical key off of.
@@ -1395,7 +1395,7 @@ class Dungeon {
         }
       }
       if (e.loseTurn) { e.loseTurn = false; this._note(`${e.glyph} ${e.name} is off-balance — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
-      if (e.sickened > 0) { e.sickened -= 1; this._note(`${e.glyph} ${e.name} retches in the cloud — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
+      if (e.nauseated > 0) { e.nauseated -= 1; this._note(`${e.glyph} ${e.name} retches — nauseated, loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       // Slow (PF1 STAGGERED): the creature still acts every turn — the single-
       // action limit (move OR attack, never both, never a full attack) is
       // enforced down in _enemyAct's action economy. Just tick the duration.
@@ -1452,6 +1452,7 @@ class Dungeon {
       this._broadcast(); return this._nextTurn();
     }
     if (m.stunned > 0) { m.stunned -= 1; this._note(`😵 ${m.nickname} is stunned — loses the turn.`); this._broadcast(); return this._nextTurn(); }
+    if (m.nauseated > 0) { m.nauseated -= 1; this._note(`🤮 ${m.nickname} is nauseated — can only retch, loses the turn.`); this._broadcast(); return this._nextTurn(); }
     // PRONE (tripped / bull-rushed by a foe): standing is a MOVE action — the hero
     // clambers up at the start of their turn and still acts (keeps their standard).
     // They were only easier to hit while down, between turns.
@@ -1477,6 +1478,7 @@ class Dungeon {
       this._broadcast();
     }
     if (m.sickened > 0) m.sickened -= 1;
+    if (m.slowed > 0) { m.slowed -= 1; this._note(`🐌 ${m.nickname} is slowed — a single action only this turn.`); }
     if (m.judgment === 'healing' && m.hp > 0 && m.hp < m.maxHp) {   // Judgement: Healing regen each turn — applies SILENTLY (routine per-turn regen; Josh: don't narrate every tick)
       const h = Math.max(1, Math.floor((m.level || 1) / 3)); m.hp = Math.min(m.maxHp, m.hp + h);
     }
@@ -1906,7 +1908,7 @@ class Dungeon {
   // stack with itself and ends exactly when Haste does. (Engine saves are generic,
   // so the Reflex bonus reads as +1 to all saves — a small, benign approximation.)
   _hasteMod(m) { return (m && m.hasted > 0 && m.hasteFull) ? 1 : 0; }
-  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged)
+  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
   _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
@@ -2003,7 +2005,7 @@ class Dungeon {
       if (lvl >= 8) { if (cls === 'paladin') arcHoly = 2; else arcUnholy = 2; }
     }
     // Dimensional Blade — for 1 round the magus's strikes resolve as TOUCH attacks.
-    if (attacker.touchStrike > 0 && target) ac = this._enemyAC(target, { touch: true });
+    if (attacker.touchStrike > 0 && target) ac = this._enemyAC(target, { touch: true, melee: true });   // Dimensional Blade = a MELEE touch → prone stays a −4 (melee) AC
     // Fly / Overland Flight (magus) — a flyer can melee airborne foes (no high-ground gap).
     if (attacker.canHitFlyers && attacker.flying && target && target.flying) ac -= HIGH_GROUND_AC;
     // Point Blank Shot: +1 to hit & damage with a bow/crossbow, but ONLY against a
@@ -2057,7 +2059,7 @@ class Dungeon {
     // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
     // now carry high-level scaling — see the iterative loop in _playerAttack).
     const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon, { offHand }) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };   // off-hand swing → ½ ability mod to DAMAGE (PF1 two-weapon fighting)
-    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) + ff.hit + swashWF;
+    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) + ff.hit + swashWF;
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
@@ -2305,7 +2307,7 @@ class Dungeon {
   _enemyMelee(e, target) {
     e.invisible = false;   // striking in melee breaks Invisibility (same rule as heroes)
     // _acOf strips shield AC for dual-wielders AND ranged-weapon wielders.
-    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - this._acPenalty(target);   // helpless / rage / reckless / cleave: easier to hit
+    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - (target.stunned > 0 ? 2 : 0) - (target.slowed > 0 ? 1 : 0) - this._acPenalty(target);   // helpless / stunned / slowed / rage / reckless / cleave: easier to hit (enemy melee vs prone = −4)
     const r = this._monsterSwing(e, effAC);
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);   // monk's randomized "bruce" kiai (hit or miss)
     else if (r.hit && e.atkSound) r.sound = e.atkSound;                    // rogue's "riki" stab (hit only)
@@ -3967,7 +3969,7 @@ class Dungeon {
     m.smiteActive = false;
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
-    m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0;   // hold / slow wear off between rooms
+    m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
     m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false;   // taunt / grapple / prone / fire ward / flight / stoneskin / spiritual weapon / darkvision clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
@@ -4190,7 +4192,12 @@ class Dungeon {
   _enemyAC(e, opts = {}) {
     let base = opts.touch ? (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)) : e.ac;
     if (e.flatFooted) base = Math.max(10, base - 2);   // flat-footed: denied Dex
-    return base - (e.sickened > 0 ? 2 : 0) - (e.prone ? 4 : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) + (e.flying ? HIGH_GROUND_AC : 0) + (e.fdOn ? 2 : 0);   // Fight Defensively: +2 dodge AC
+    // PF1 prone: −4 AC vs MELEE (easier to hit), but +4 AC vs RANGED (harder). Ranged =
+    // an explicit ranged weapon OR a ranged-touch spell — every {touch} call except the
+    // magus's MELEE touch, which passes {melee:true}. Sickened grants NO AC penalty in
+    // PF1 (the old −2 here was really nauseated, now its own flag). Stunned = −2 AC.
+    const rangedAtk = !!(opts.ranged || (opts.touch && !opts.melee));
+    return base - (e.stunned > 0 ? 2 : 0) + (e.prone ? (rangedAtk ? 4 : -4) : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) + (e.flying ? HIGH_GROUND_AC : 0) + (e.fdOn ? 2 : 0);   // Fight Defensively: +2 dodge AC
   }
   // Energy-resistance multiplier for a damage type (see RESIST_BY_KEY): 0 immune,
   // 0.5 resistant, 1.5 vulnerable, 1 (default) unchanged. Physical/untyped (no
@@ -4257,7 +4264,7 @@ class Dungeon {
   }
   // Enemy save bonus. Monsters carry Fort + Reflex; Will is approximated.
   _enemySave(e, which) {
-    const pray = e.prayed || 0;   // Prayer: −1 to all the enemy's saves
+    const pray = (e.prayed || 0) + (e.sickened > 0 ? SICKENED_PENALTY : 0);   // Prayer −1 + sickened −2 (PF1): both drag every save
     if (which === 'fort') return (e.fort || 0) - pray;
     if (which === 'reflex') return (e.reflex || 0) - pray;
     return Math.floor(((e.fort || 0) + (e.reflex || 0)) / 2) - pray;   // will (approx)
@@ -4513,7 +4520,7 @@ class Dungeon {
     this._dmgE(e, total);
     let extra = '';
     if (r.crit) extra += ' — CRIT!';
-    if (ab.debuff === 'sickened' && e.hp > 0) { e.sickened = SICKENED_ROUNDS; extra += ' — staggered!'; }
+    if (ab.debuff === 'sickened' && e.hp > 0) { e.sickened = SICKENED_ROUNDS; extra += ' — sickened (−2 to hit/dmg/saves)!'; }
     // Vampiric Touch: the negative energy heals the magus for what it drained.
     if (ab.lifesteal && bonus > 0) {
       const healed = Math.min(bonus, m.maxHp - m.hp);
@@ -4710,6 +4717,7 @@ class Dungeon {
       if (hurt.grappled)      { hurt.grappled = false; hurt.grappledBy = null; cleared.push('grapple'); }
       if (hurt.blinded > 0)   { hurt.blinded = 0;   cleared.push('blindness'); }
       if (hurt.sickened > 0)  { hurt.sickened = 0;  cleared.push('sickness'); }
+      if (hurt.nauseated > 0) { hurt.nauseated = 0; cleared.push('nausea'); }
       this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — clears ${cleared.join(', ')}! [dispel ${dc.total} vs DC ${dc.dc}]`, sound);
       this._echoToTable(sound); return;
     }
@@ -5016,8 +5024,8 @@ class Dungeon {
     // but a NEW Will save each of the foe's turns can end it early (the re-save
     // costs its turn either way) — see the heldDC handling in _advanceToActor.
     if (!sv.saved && ab.debuff === 'paralyzed') { e.paralyzed = Math.max(2, Math.min(12, m.level || 1)); e.heldDC = dc; }
-    else if (!sv.saved && ab.debuff === 'sickened') e.sickened = SICKENED_ROUNDS;
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${String(ab.debuff).toUpperCase()}!`}`, sound);
+    else if (!sv.saved && ab.debuff === 'sickened') e.nauseated = SICKENED_ROUNDS;   // save-or-NAUSEATED (Stinking Cloud): retches, loses turns while it lingers
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${(ab.debuff === 'sickened' ? 'NAUSEATED' : String(ab.debuff).toUpperCase())}!`}`, sound);
     this._echoToTable(sound);
   }
   // Touch spell (Shocking Grasp): a ranged touch attack for level d6.
@@ -5888,7 +5896,7 @@ class Dungeon {
     // Build the swing sequence as a list of to-hit OFFSETS (see _attackOffsets):
     // dual-wielders attack twice; staying on the same target adds PF1 iteratives.
     // A Haste bonus swing (quiet) — or an improvised crossbow — is a single strike.
-    const offsets = (quiet || drewCrossbow) ? [{ off: 0, oh: false }] : this._attackOffsets(m, e);
+    const offsets = (quiet || drewCrossbow || m.slowed > 0) ? [{ off: 0, oh: false }] : this._attackOffsets(m, e);   // slowed/staggered → a SINGLE attack, no full-attack iteratives (PF1)
     if (!quiet) m._lastAtkTarget = e.uid;   // remember the target → next turn's full-attack check
     const swings = offsets.length;
     // Sound: signature atkSound > a blunt "bap" for B-type weapons (quarterstaff,
@@ -5908,7 +5916,7 @@ class Dungeon {
       // a backup crossbow, being ranged, redirects freely).
       const tgt = (e.hp > 0) ? e : this._targetableEnemies().find(x => this._canReach(m, x));
       if (!tgt) break;
-      const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms' }), tgt, offsets[i].off, offsets[i].oh);   // firearms hit vs touch AC; offset = iterative/TWF penalty; oh = off-hand (½ mod)
+      const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms', ranged: !!m.weapon.ranged }), tgt, offsets[i].off, offsets[i].oh);   // firearms hit vs touch AC; ranged flag drives prone ±4; offset = iterative/TWF penalty; oh = off-hand (½ mod)
       if (i > 0 || quiet) r.sound = null;            // one report for the whole flurry; haste swing silent
       else if (baseSound) r.sound = baseSound;       // signature / blunt report on the first swing
       // Rogue Sneak Attack with a light blade (dagger/kukri/shortsword) → Riki.
