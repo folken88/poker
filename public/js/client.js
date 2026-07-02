@@ -959,10 +959,13 @@
           const cap = mdl.spont ? null : (((mdl.caps || {})[L]) | 0);
           // ICON-ONLY toggles (Tobias: full-width name buttons wasted space) — the
           // spell's name lives in the hover tooltip + aria-label; lit = in the loadout.
+          // The popover lays children out as a stretched column, so each level's
+          // icons sit in their own flex-wrap ROW and the buttons size to the icon.
           return `<div class="dungeon__sb-head">Level ${L} — ${cnt}${cap != null ? ` of ${cap} prepared` : ' known'}</div>` +
+            `<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">` +
             byLvl[L].map(s =>
-              `<button class="btn ${picked(s) ? 'btn--primary' : 'btn--ghost'} btn--sm" data-dact="sbpick" data-sbkey="${escapeAttr(s.key)}" aria-pressed="${picked(s)}" aria-label="${escapeAttr(s.name)}${picked(s) ? ' — in your loadout' : ''}" title="${escapeAttr(s.name)} — ${picked(s) ? 'remove from' : 'add to'} your loadout (takes effect at the next door)">${s.icon || '✨'}</button>`
-            ).join('');
+              `<button class="btn ${picked(s) ? 'btn--primary' : 'btn--ghost'} btn--sm" style="flex:0 0 auto;width:auto;min-width:0;padding:4px 9px;font-size:1.15em" data-dact="sbpick" data-sbkey="${escapeAttr(s.key)}" aria-pressed="${picked(s)}" aria-label="${escapeAttr(s.name)}${picked(s) ? ' — in your loadout' : ''}" title="${escapeAttr(s.name)} — ${picked(s) ? 'remove from' : 'add to'} your loadout (takes effect at the next door)">${s.icon || '✨'}</button>`
+            ).join('') + `</div>`;
         }).join('') + `</div>`;
     }
     return `<span class="dungeon__sb-wrap dungeon__sbp-wrap">` +
