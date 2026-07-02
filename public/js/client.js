@@ -923,9 +923,22 @@
       if (resp && resp.ok) {
         _sbpModel = resp;
         try { if (spoken) spoken(resp); } catch (_) {}
-        if (document.body.dataset.screen === 'dungeon') renderDungeon();
+        if (document.body.dataset.screen === 'dungeon') _sbpKeepScroll(renderDungeon);
       }
     });
+  }
+  // Re-render WITHOUT the scroll jump: innerHTML-rebuilding the action panel
+  // destroys the focused toggle button and zeroes the popover's scroll, which
+  // yanked the view to the top on every click (Tobias). Capture the page +
+  // panel scroll, re-render, restore both.
+  function _sbpKeepScroll(rerender) {
+    const sc = document.querySelector('.dungeon__sbp-wrap .dungeon__sb-scroll');
+    const panelY = sc ? sc.scrollTop : 0;
+    const pageX = window.scrollX, pageY = window.scrollY;
+    rerender();
+    const sc2 = document.querySelector('.dungeon__sbp-wrap .dungeon__sb-scroll');
+    if (sc2) sc2.scrollTop = panelY;
+    window.scrollTo(pageX, pageY);
   }
   // Sighted "🧠 Prepare ▾" popover: choose which spells are PREPARED (per level,
   // capped by your slots) or KNOWN (spontaneous). Reuses the Spellbook popover's
@@ -944,9 +957,11 @@
         `<div class="dungeon__sb-scroll">` + lvls.map(L => {
           const cnt = byLvl[L].filter(picked).length;
           const cap = mdl.spont ? null : (((mdl.caps || {})[L]) | 0);
+          // ICON-ONLY toggles (Tobias: full-width name buttons wasted space) — the
+          // spell's name lives in the hover tooltip + aria-label; lit = in the loadout.
           return `<div class="dungeon__sb-head">Level ${L} — ${cnt}${cap != null ? ` of ${cap} prepared` : ' known'}</div>` +
             byLvl[L].map(s =>
-              `<button class="btn ${picked(s) ? 'btn--primary' : 'btn--ghost'} btn--sm" data-dact="sbpick" data-sbkey="${escapeAttr(s.key)}" aria-pressed="${picked(s)}" title="${escapeAttr(s.name)} — ${picked(s) ? 'remove from' : 'add to'} your loadout (takes effect at the next door)">${s.icon || '✨'} ${escapeText(s.name)}</button>`
+              `<button class="btn ${picked(s) ? 'btn--primary' : 'btn--ghost'} btn--sm" data-dact="sbpick" data-sbkey="${escapeAttr(s.key)}" aria-pressed="${picked(s)}" aria-label="${escapeAttr(s.name)}${picked(s) ? ' — in your loadout' : ''}" title="${escapeAttr(s.name)} — ${picked(s) ? 'remove from' : 'add to'} your loadout (takes effect at the next door)">${s.icon || '✨'}</button>`
             ).join('');
         }).join('') + `</div>`;
     }
@@ -1669,7 +1684,7 @@
     // Spellbook expand/collapse (caster classes).
     if (ev.target.closest('[data-spellbook-toggle]')) { _spellbookOpen = !_spellbookOpen; renderDungeon(); return; }
     // Prepare (spell-loadout) picker expand/collapse — fetches the model on first open.
-    if (ev.target.closest('[data-sbp-toggle]')) { _sbpOpen = !_sbpOpen; if (_sbpOpen && !_sbpModel) sbpickSend(); renderDungeon(); return; }
+    if (ev.target.closest('[data-sbp-toggle]')) { _sbpOpen = !_sbpOpen; if (_sbpOpen && !_sbpModel) sbpickSend(); _sbpKeepScroll(renderDungeon); return; }
     const b = ev.target.closest('[data-dact]'); if (!b || b.disabled) return;
     const act = b.dataset.dact;
     if (act === 'attack')       dungeonAction('attack', { targetUid: _dungeonSel[0] });
