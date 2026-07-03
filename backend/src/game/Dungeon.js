@@ -3268,7 +3268,7 @@ class Dungeon {
       const dangerous = targets.find(e => e.boss)
         || ((byHp.length >= 2 && byHp[0].maxHp >= 1.6 * byHp[1].maxHp) ? byHp[0] : null);
       const hold = avail.find(a => a.effect === 'save_debuff');
-      if (hold && dangerous && !(dangerous.paralyzed > 0)) return { slot: slot(hold), payload: { targetUid: dangerous.uid } };
+      if (hold && dangerous && !(dangerous.paralyzed > 0) && this._spellWorksOn(hold, dangerous)) return { slot: slot(hold), payload: { targetUid: dangerous.uid } };
       return null;   // → Bane/Judgement-boosted weapon attack
     }
     if (m.cls === 'wizard' || m.cls === 'sorcerer' || m.cls === 'oracle') {
@@ -3277,15 +3277,20 @@ class Dungeon {
       const cand = [];
       for (const a of avail) {
         if (!SPELLISH.includes(a.effect)) continue;
+        // Only foes this spell actually WORKS on (mind-immune shrug off Hold /
+        // Sleep / Fascinate; element-immune shrug off the blast) — a spell with
+        // no eligible target is never queued (see _spellWorksOn).
+        const el = weakFirst.filter(t => this._spellWorksOn(a, t));
+        if (!el.length) continue;
         const cap = a.maxTargets || 1;
-        const affects = Math.max(1, Math.min(targets.length, cap));
+        const affects = Math.max(1, Math.min(el.length, cap));
         const single = cap < 2;
         const isDebuff = a.effect === 'save_debuff' || ['grease', 'sleep', 'fascinate'].includes(a.effect);
         // Rough damage rank for boss focus: honest dice count ('halflevel' scales
         // at lvl/2, dcap respected); a numeric count is taken as-is. Debuffs rank 0.
         const nDice = typeof a.dice === 'number' ? a.dice : (a.dice === 'halflevel' ? Math.ceil(lvl / 2) : lvl);
         const power = isDebuff ? 0 : Math.min(nDice, a.dcap || nDice) * (a.die || 6);
-        const payload = single ? { targetUid: weakFirst[0].uid } : { targetUids: weakFirst.slice(0, cap).map(e => e.uid) };
+        const payload = single ? { targetUid: el[0].uid } : { targetUids: el.slice(0, cap).map(e => e.uid) };
         cand.push({ ab: a, payload, affects, single, isDebuff, power });
       }
       if (cand.length) {
@@ -3296,9 +3301,9 @@ class Dungeon {
         if (boss) {
           // Hardest single-target nuke on the boss (Disintegrate first), else a
           // single-target debuff (Hold Person) to take it out of the fight.
-          const nuke = cand.filter(c => c.single && !c.isDebuff)
+          const nuke = cand.filter(c => c.single && !c.isDebuff && this._spellWorksOn(c.ab, boss))
                            .sort((x, y) => (y.power - x.power) || ((y.ab.minLevel || 1) - (x.ab.minLevel || 1)))[0];
-          const dbf = cand.find(c => c.single && c.ab.effect === 'save_debuff');
+          const dbf = cand.find(c => c.single && c.ab.effect === 'save_debuff' && this._spellWorksOn(c.ab, boss));
           const c = nuke || dbf;
           if (c) chosen = { ab: c.ab, payload: { targetUid: boss.uid } };
         }
@@ -3321,12 +3326,25 @@ class Dungeon {
     const offense = [];
     if (targets.length >= 2) {
       for (const a of avail) if (['aoe', 'grease', 'sleep', 'slow', 'fascinate'].includes(a.effect)) {
-        offense.push({ ab: a, payload: { targetUids: targets.slice(0, a.maxTargets || 3).map(e => e.uid) } });
+        // Only foes the spell WORKS on (a Sleep with nothing but skeletons on the
+        // field is never queued) — see _spellWorksOn.
+        const el = targets.filter(t => this._spellWorksOn(a, t));
+        if (!el.length) continue;
+        offense.push({ ab: a, payload: { targetUids: el.slice(0, a.maxTargets || 3).map(e => e.uid) } });
       }
     }
     if (weakestFoe) {
-      for (const a of avail) if (['bolt', 'missile', 'touch', 'rays', 'spellstrike', 'save_debuff'].includes(a.effect)) {
-        offense.push({ ab: a, payload: { targetUid: weakestFoe.uid } });
+      for (const a of avail) if (['bolt', 'missile', 'touch', 'rays', 'spellstrike', 'save_debuff', 'savedie', 'charm'].includes(a.effect)) {
+        // Immunity-aware single-target pick: the BARD's Hideous Laughter skips the
+        // undead (no mind to tickle); death spells skip the unliving; element
+        // blasts skip the immune. Death/charm spend on the BIGGEST eligible threat
+        // (best case), plain damage on the weakest (finish it off).
+        const el = targets.filter(t => this._spellWorksOn(a, t) && !(a.effect === 'charm' && ccd(t)));
+        if (!el.length) continue;
+        const pick = (a.effect === 'savedie' || a.effect === 'charm')
+          ? el.slice().sort((x, y) => y.maxHp - x.maxHp)[0]
+          : (el.includes(weakestFoe) ? weakestFoe : el.slice().sort((x, y) => x.hp - y.hp)[0]);
+        offense.push({ ab: a, payload: { targetUid: pick.uid } });
       }
       // Spiritual Weapon — conjure it onto the TOUGHEST foe (sustained damage) and
       // never re-cast while one is already fighting; the cleric then does other things.
@@ -3387,6 +3405,28 @@ class Dungeon {
       return { slot: slot(choice.ab), payload: choice.payload };
     }
     return null;   // nothing fit → basic attack
+  }
+  // ── AI SPELL KNOWLEDGE ─────────────────────────────────────────────────────
+  // Would this spell actually WORK on this foe? The bot brain consults the same
+  // immunity rules the cast handlers enforce, so an AI caster never spends its
+  // turn on a cast the engine will refuse — a bard doesn't Hideous-Laughter a
+  // skeleton, a wizard doesn't Fireball a fire-immune devil (Tobias 2026-07-03:
+  // "AI casters know the limitations & best cases for their spells").
+  _spellWorksOn(ab, t) {
+    if (!ab || !t) return true;
+    const eff = ab.effect;
+    // Mind-affecting: charm / sleep / fascinate + the mind-seizing debuffs
+    // (Hold Person, Hideous Laughter) — undead & constructs have no mind.
+    if ((eff === 'charm' || eff === 'sleep' || eff === 'fascinate') && mindImmune(t)) return false;
+    if (eff === 'save_debuff' && ab.debuff === 'paralyzed' && mindImmune(t)) return false;
+    // Death effects (Suffocation / Slay Living / Finger of Death / Implosion /
+    // Wail) need a living, breathing body — mirror _abSaveDie's immune set.
+    if (eff === 'savedie' && (t.type === 'undead' || t.type === 'construct'
+      || /golem|skelet|zombie|wraith|ghost|lich|vampire|wight|ghoul|ghast|shadow|ooze|elemental|construct|undead/i.test(t.name || ''))) return false;
+    // Damage spells: skip a foe IMMUNE to the element (mere resistance still
+    // halves through — that cast is weaker but not wasted).
+    if (ab.dtype && ab.dice && this._resistMult(t, ab.dtype) === 0) return false;
+    return true;
   }
   // 0 to −9 HP: down and dying — can't act (the turn loop skips hp<=0), but a Cure
   // potion can still bring them back. Dead only once they pass −10.
