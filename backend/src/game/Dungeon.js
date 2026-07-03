@@ -436,13 +436,19 @@ const MAGUS_FEAT_AT = {
   4: 'Intensified Spell (raise damage cap)', 5: 'Empower Spell (×1.5 spell damage)', 6: 'Maximize Spell (max dice)',
   7: 'Improved Critical', 8: 'Greater Spell Focus (+4 spell DC total)', 9: 'Weapon Specialization (+2 dmg)', 10: 'Critical Focus',
 };
+// SELECTIVE CHANNELING (Tobias 2026-07-03): every channel-capable class takes it
+// EARLY — the feat slot pays for channels (offensive AND healing, positive AND
+// negative) affecting ONLY whom the channeler intends. This is why hero sears
+// never singe undead comrades, party heals never mend foes, Channel Negative
+// mends the undead without draining the living, and the undead court's priests
+// can burst-mend their dead without searing their living allies.
 const CLERIC_FEAT_AT = {
-  1: 'Toughness (+HP)', 2: 'Weapon Focus (+1 to hit)', 3: 'Combat Casting', 4: 'Spell Focus (+2 spell DC)',
+  1: 'Toughness (+HP)', 2: 'Selective Channeling (channels touch only whom you intend) & Weapon Focus (+1 to hit)', 3: 'Combat Casting', 4: 'Spell Focus (+2 spell DC)',
   5: 'Improved Initiative', 6: 'Heavy Armor Mastery (+1 AC)', 7: 'Greater Spell Focus (+4 spell DC total)',
   8: 'Quicken Channel (1st channel is swift)', 9: 'Iron Will (+2 saves)', 10: 'Improved Critical',
 };
 const ORACLE_FEAT_AT = {
-  1: 'Toughness (+HP)', 2: 'Combat Casting', 3: 'Spell Focus (+2 spell DC)', 4: 'Improved Initiative',
+  1: 'Toughness (+HP)', 2: 'Selective Channeling (channels touch only whom you intend) & Combat Casting', 3: 'Spell Focus (+2 spell DC)', 4: 'Improved Initiative',
   5: 'Spell Penetration', 6: 'Greater Spell Focus (+4 spell DC total)', 7: 'Lightning Reflexes (+1 saves)',
   8: 'Iron Will (+2 saves)', 9: 'Quicken Spell (2nd cast)', 10: 'Great Fortitude (+3 saves)',
 };
@@ -2320,6 +2326,15 @@ class Dungeon {
       // most-wounded living ally (itself included) once anyone drops below half —
       // but never wastes the prayer when the line is still healthy.
       if (e.healer && e.healsLeft > 0) {
+        // SELECTIVE CHANNELING (Tobias 2026-07-03 — every channeler takes it): an
+        // UNDEAD priest with 2+ wounded undead allies bursts negative energy over
+        // ALL of them at once — and the feat keeps its LIVING allies out of the
+        // burst entirely (no friendly sear either way). One wounded ally → the
+        // old single-target prayer.
+        if (e.type === 'undead') {
+          const courtHurt = this.livingEnemies().filter(x => x.hp > 0 && x.type === 'undead' && x.hp <= x.maxHp * 0.5);
+          if (courtHurt.length >= 2) return this._enemyChannelNeg(e, courtHurt);
+        }
         const wounded = this.livingEnemies().filter(x => x.hp > 0 && x.hp <= x.maxHp * 0.5)
           .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
         if (wounded) return this._enemyHeal(e, wounded);
@@ -2677,6 +2692,18 @@ class Dungeon {
   // Reflex for half. Rolls its damage once for the whole burst.
   // An enemy priest channels restorative (or, for the undead court, profane)
   // energy into the most-wounded ally — cure dice scale with the priest's grade.
+  // An undead priest's SELECTIVE Channel Negative — one burst mends every wounded
+  // undead ally at once; Selective Channeling keeps living allies (and the burst's
+  // harm side) out of it entirely. Costs one heal use, same dice as _enemyHeal.
+  _enemyChannelNeg(e, courtHurt) {
+    e.healsLeft = Math.max(0, (e.healsLeft || 0) - 1);
+    const d = (e.healer && e.healer.dice) || 1;
+    const heal = dRollN(d, 6) + ((crToNum(e.cr) || 0) >= 5 ? d : 0);   // burst d6s + Healer's Blessing at CR5+
+    for (const a of courtHurt) a.hp = Math.min(a.maxHp, a.hp + heal);
+    const living = this.livingEnemies().some(x => x.hp > 0 && x.type !== 'undead');
+    this._note(`🌑 ${e.glyph} ${e.name} channels NEGATIVE energy over the court — black vitality knits ${courtHurt.length} undead for +${heal} HP each${living ? ' (Selective Channeling spares its living allies)' : ''}.`, '/audio/spell_umbral_bolt.mp3', { side: 'enemy' });
+    this._echoToTable('/audio/spell_umbral_bolt.mp3'); this._broadcast();
+  }
   _enemyHeal(e, ally) {
     e.healsLeft = Math.max(0, (e.healsLeft || 0) - 1);
     const d = (e.healer && e.healer.dice) || 1;
@@ -5672,6 +5699,11 @@ class Dungeon {
   // Adimarus's CHANNEL NEGATIVE — the dark mirror of Channel Positive: the same
   // ½ level d6 burst, but it mends the party's UNDEAD members (who take nothing
   // from positive energy). The living feel only a cold draft.
+  // SELECTIVE CHANNELING (feat — every channeler takes it early, see the note at
+  // CLERIC_FEAT_AT): both channel handlers below touch ONLY intended targets.
+  // Channel Negative mends the undead comrades and the living take nothing;
+  // Channel Positive heals the party (never foes) and its sear mode burns only
+  // enemy undead, never an undead comrade. The feat slot pays for all of it.
   _abChannelNeg(m, ab) {
     const lvl = m.level || 1;
     const sound = ab.sound || pick(SND.flesh);

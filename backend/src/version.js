@@ -3,6 +3,9 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.3.2  2026-07-03  Selective Channeling codified for all channelers (feat
+//                     tables + descs); undead-court priests burst-mend ALL
+//                     wounded undead allies selectively (living spared)
 //  3.3.1  2026-07-03  AI uses domain powers: bot 1d stage (ward/rage/bleed vs
 //                     real fights, once/room) · enemy priests get Healer's
 //                     Blessing (CR5+) + Death Priest/Vampire Priest Bleeding
@@ -23,4 +26,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.3.1' };
+module.exports = { VERSION: '3.3.2' };
