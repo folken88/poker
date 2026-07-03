@@ -26,6 +26,22 @@ const { deriveCharacter, attackProfile } = require('./character');
 const { MON, MON_GANGS, BOSS_KEYS, SPAWNABLE, crToNum, SIZE_RANK, SIZE_NAME } = require('../pf1data/monsters');
 const RACES = require('../pf1data/races');   // racial ability mods, vision, save bonuses (Phase 1)
 const loadouts = require('../pf1data/loadouts');   // spell-loadout pool + defaults (Phase B) — the Spellbook picker reads kitSpells from here
+const { DOMAINS, maxDomainsFor } = require('../pf1data/domains');   // cleric/inquisitor domains (DOMAINS-DESIGN.md Phase B)
+
+// ── DOMAIN granted powers (DOMAINS-DESIGN.md §2/§3.3) ───────────────────────
+// The ACTIVE powers, injected as synthetic room-cost abilities AFTER the class
+// kit (_abilitiesFor) so the existing slot-index pipeline (buttons, blind menu,
+// uses display) carries them for free. Uses = 3 + Wis per room (PF1 "3+Wis/day";
+// the room is the game's day). Passive auras (Healing/Sun) and the auto-firing
+// Liberation pool are flags set in _domainSetup, not entries here.
+const DOM_USES = (lvl, m) => 3 + Math.max(0, (m && m.mods && m.mods.wis) || 0);
+const DOMAIN_POWERS = {
+  attackbuff: { key: 'dom_strength', name: 'Strength Surge', icon: '💪', cost: 'room', effect: 'domstrike', target: 'self', uses: DOM_USES, sound: '/audio/spell_buff_invoke.mp3', desc: 'Domain (Strength): surge with divine might — +½ level to hit AND damage on your next attack action.' },
+  smite:      { key: 'dom_war', name: 'Battle Rage', icon: '⚔️', cost: 'room', effect: 'domsmite', target: 'self', uses: DOM_USES, sound: '/audio/spell_buff_invoke.mp3', desc: 'Domain (War): a battle-blessing — +level damage on your next attack action.' },
+  reroll:     { key: 'dom_luck', name: 'Good Fortune', icon: '🍀', cost: 'room', effect: 'domfortune', target: 'self', uses: DOM_USES, sound: '/audio/spell_buff_invoke.mp3', desc: 'Domain (Luck): fortune favors you — your next MISSED attack is rerolled (keep the better).' },
+  saveward:   { key: 'dom_protection', name: 'Resistant Touch', icon: '🛡️', cost: 'room', effect: 'domward', target: 'ally', uses: DOM_USES, sound: '/audio/spell_buff_invoke.mp3', desc: 'Domain (Protection): ward an ally (or yourself) — +2 on ALL saves for 3 rounds.' },
+  bleed:      { key: 'dom_death', name: 'Bleeding Touch', icon: '💀', cost: 'room', effect: 'dombleed', target: 'self', uses: DOM_USES, sound: '/audio/spell_buff_invoke.mp3', desc: 'Domain (Death): your next hit opens a wound that BLEEDS 1d6 each round until the foe falls.' },
+};
 
 // ── Tuning knobs ────────────────────────────────────────────────────────────
 // LEVEL = 1 + sum of all gear bonuses (min 1). Level drives HP, to-hit, and
@@ -824,8 +840,8 @@ class Dungeon {
     for (const ab of kitFor(cls).abilities) {
       if (ab.cost === 'run') m.runAbilityUses[ab.key] = (typeof ab.uses === 'function' ? ab.uses(level) : (ab.uses || 1));
     }
+    this._setDerived(m);       // cache PF1 ability mods / CON-HP / iteratives FIRST — the reset below stocks Wis-scaled pools (domain powers) and stat-bonus slots from them
     this._resetAbilities(m);   // stock the per-room spell/channel pool by level
-    this._setDerived(m);       // cache PF1 ability mods / CON-HP / iteratives on the member
     // Vorkstag the skinwalker wears a partymate's face + name (true identity
     // hidden) — same as his poker-seat disguise. He keeps his own creepy
     // personality but is shown/voiced as whoever he's impersonating.
@@ -1442,6 +1458,14 @@ class Dungeon {
       // action limit (move OR attack, never both, never a full attack) is
       // enforced down in _enemyAct's action economy. Just tick the duration.
       if (e.slowed > 0) e.slowed -= 1;
+      // Death domain — Bleeding Touch: the wound bleeds 1d6 at the top of each
+      // of the foe's turns until it drops (PF1 bleed, no heal-check sim).
+      if (e._bleeding && e.hp > 0) {
+        const b = dRoll(6);
+        this._dmgE(e, b, 'bleed');
+        this._note(`🩸 ${e.glyph} ${e.name} BLEEDS for ${b}.${e.hp <= 0 ? ' ☠️ It collapses in a pool of its own blood!' : ''}`, null, { side: 'enemy' });
+        if (e.hp <= 0) { this._broadcast(); return this._nextTurn(); }
+      }
       this._stepTimer = setTimeout(() => { this._withSide('enemy', () => this._enemyAct(e)); this._nextTurn(); }, aiStepMs(e));
       this._broadcast();
       return;
@@ -1456,6 +1480,7 @@ class Dungeon {
     m._swiftUsed = false;         // PF1: ONE swift action per turn (shared by Curator / Quicken Channel / metamagic Quicken)
     if (m.untargetable) m.untargetable = false;   // Bladed Dash blur ends at the start of the magus's next turn
     if (m.touchStrike > 0) m.touchStrike -= 1;     // Dimensional Blade touch-strikes lapse after the round
+    if (m._domWardRounds > 0) m._domWardRounds -= 1;   // Resistant Touch (Protection domain) ticks down
     if (m.blinded > 0) m.blinded -= 1;             // (heroes can be blinded by future foes too)
     // Infernal Healing (Greater): fast healing at the START of the turn — BEFORE the
     // down/skip check, so it can knit a dying ally (below 0 HP) back onto their feet.
@@ -1505,9 +1530,8 @@ class Dungeon {
     // CMB check (DEX-or-STR homerule) vs the grappler's CMD breaks it; the grip
     // also lapses if the grappler is gone or after ~2 rounds. Dispel/Grease free
     // them early (see _abCleanse / _abGrease). They take their turn either way.
-    if (m.grappled && this._freedomOfMovement(m)) {
+    if (m.grappled && this._fomSpend(m, 'the grapple')) {
       m.grappled = false; m.grappledBy = null; m.grappleRounds = 0;
-      this._note(`🕊️ ${m.nickname} slips the grip instantly — Liberation's freedom of movement.`);
     } else if (m.grappled) {
       const grappler = this.enemies.find(x => x.uid === m.grappledBy && x.hp > 0);
       if (!grappler) { m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; this._note(`🤼 ${m.nickname} is free — nothing holds them anymore.`); }
@@ -1961,7 +1985,7 @@ class Dungeon {
   // stack with itself and ends exactly when Haste does. (Engine saves are generic,
   // so the Reflex bonus reads as +1 to all saves — a small, benign approximation.)
   _hasteMod(m) { return (m && m.hasted > 0 && m.hasteFull) ? 1 : 0; }
-  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.slowed > 0 && tags && tags.includes('reflex') ? 1 : 0); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged; Slow drags Reflex −1 — PF1)
+  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.slowed > 0 && tags && tags.includes('reflex') ? 1 : 0) + (m._domWardRounds > 0 ? 2 : 0); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged; Slow drags Reflex −1 — PF1; Resistant Touch (Protection domain) +2 while warded)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
   _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
@@ -2112,11 +2136,19 @@ class Dungeon {
     // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
     // now carry high-level scaling — see the iterative loop in _playerAttack).
     const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon, { offHand }) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };   // off-hand swing → ½ ability mod to DAMAGE (PF1 two-weapon fighting)
-    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + ff.hit + swashWF;   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified)
+    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + (attacker._domStrike || 0) + ff.hit + swashWF;   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides the next attack
     const roll = dRoll(20), total = roll + toHit;
-    if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
+    // Luck domain — GOOD FORTUNE: the next missed swing (fumble included) is
+    // rerolled once, keep the better outcome. Consumed on the reroll.
+    const _fortune = () => {
+      if (!attacker._domFortune) return null;
+      attacker._domFortune = false;
+      this._note(`🍀 GOOD FORTUNE — ${attacker.nickname}'s miss is rerolled!`);
+      return this._swingVsAC(attacker, ac, target, extraToHit, offHand);
+    };
+    if (roll === 1) return _fortune() || { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
-    if (!hit) return { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
+    if (!hit) return _fortune() || { hit: false, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
     // A foe that has self-buffed defenses turns a clean hit aside (enemy casters
     // can now go Invisible / Mirror Image mid-fight). A hero who pierces the unseen
     // — True Seeing or blindsense — ignores the concealment.
@@ -2171,6 +2203,24 @@ class Dungeon {
     if (buff.bonusDice) dmg += dRollN(buff.bonusDice, 6);   // misc bonus dice
     if (baneOn) dmg += dRollN(BANE_DICE, 6);                // Inquisitor Bane — +2d6 vs the declared type
     if (smite) dmg += 2 * lvl;   // Smite Evil: +double level damage
+    // DOMAIN riders — Strength Surge (+½ level dmg, to-hit added above) and War's
+    // Battle Rage (+level dmg). They last the whole attack ACTION (all iteratives);
+    // _playerAttack clears them when the action ends. Not crit-multiplied.
+    if (attacker._domStrike) dmg += attacker._domStrike;
+    if (attacker._domSmite) dmg += attacker._domSmite;
+    // Sun domain — passive: the faithful's blows BURN the undead (+½ level, min 1).
+    if (attacker.domainSunVuln && target && target.type === 'undead') dmg += Math.max(1, Math.ceil(lvl / 2));
+    // Death domain — Bleeding Touch rides the first landed hit: the foe bleeds
+    // 1d6 at the top of each of its turns until it drops (no heal-check sim).
+    // PF1: bloodless creatures (undead, constructs, oozes, elementals) can't bleed
+    // — the touch is spent anyway (the hit landed), it just finds no blood.
+    if (attacker._domBleed && target) {
+      attacker._domBleed = false;
+      const bloodless = target.type === 'undead' || target.type === 'construct'
+        || /golem|skelet|zombie|ooze|elemental|wraith|ghost|shadow|specter|spectre/i.test(target.name || '');
+      if (bloodless) this._note(`💀 ${attacker.nickname}'s Bleeding Touch finds no blood in ${target.name} — no wound to open.`);
+      else { target._bleeding = true; this._note(`🩸 ${target.name} is BLEEDING (Death domain) — 1d6 each round until it falls!`); }
+    }
     // PHYSICAL DR: the foe soaks the weapon's physical damage (dice + static + crit +
     // precision/sneak/bane/smite) unless this weapon's TYPE (S/P/B) or its magic
     // bypasses the foe's DR. A clean hit is ≥1 before DR; DR can soak it to 0 (a sword
@@ -2457,14 +2507,21 @@ class Dungeon {
   // GRAPPLE a hero — CMB vs the hero's CMD. Success: seized (−2 to hit, easier to
   // hit), crushed for a free strike, grip lasts ~2 rounds (the hero struggles free
   // on their turn — see _advanceToActor). Dispel/Grease break it early.
-  // PF1 INQUISITOR domain grant (default = LIBERATION): "freedom of movement" — the
-  // inquisitor ignores grapples and other movement-impeding holds (Tim, an inquisitor
-  // player: "never grapple me again"). Defaults to Liberation for every inquisitor for
-  // now; a per-character domain/inquisition picker could override this later.
-  _freedomOfMovement(m) { return !!m && m.cls === 'inquisitor'; }
+  // LIBERATION domain (Phase B — was the hardcoded inquisitor grant): freedom of
+  // movement is now a POOLED, auto-firing domain power — CASTER LEVEL rounds per
+  // room (PF1 "level rounds/day"; the room is the day). Each prevented impediment
+  // spends one round via _fomSpend; at 0 the grapple/hold lands normally.
+  // Inquisitors DEFAULT to Liberation (db.getDomains), so Tim's "never grapple me
+  // again" behavior persists — now with the real PF1 limit.
+  _freedomOfMovement(m) { return !!m && (m._domFoMRounds || 0) > 0; }
+  _fomSpend(m, what) {
+    if (!this._freedomOfMovement(m)) return false;
+    m._domFoMRounds -= 1;
+    this._note(`🕊️ LIBERATION — ${m.nickname} shrugs off ${what} (${m._domFoMRounds} round${m._domFoMRounds === 1 ? '' : 's'} of freedom left).`);
+    return true;
+  }
   _enemyGrapple(e, target) {
-    if (this._freedomOfMovement(target)) {
-      this._note(`🕊️ ${e.glyph} ${e.name} lunges to grab ${target.nickname} — but Liberation's freedom of movement slips every hold. No grapple.`, pick(SND.whiffSword), { side: 'enemy' });
+    if (this._fomSpend(target, `${e.name}'s grab`)) {
       this._echoToTable(); return;
     }
     const cmb = this._enemyMnvCMB(e), cmd = this._heroCMD(target);
@@ -2582,7 +2639,7 @@ class Dungeon {
     }
     const [hookDmg, hookDR] = this._physDR(target, r.damage);   // Stoneskin soaks the bite
     this._dmgToMember(target, hookDmg);
-    const _fom = this._freedomOfMovement(target);
+    const _fom = (!target.dead && target.hp > -10) ? this._fomSpend(target, 'the dragging hook') : false;
     if (!target.dead && target.hp > -10 && !_fom) { target.grappled = true; target.grappledBy = e.uid; target.grappledCL = this._enemyCL(e); target.grappleCMB = e.toHit || 0; }   // stamp CMB for the cast-while-grappled concentration DC
     this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : ' and drags them into a GRAPPLE! (Dispel or Grease to break free)'} ${this._atkStr(r)}`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
@@ -2857,7 +2914,7 @@ class Dungeon {
       if (!m.greaterInvis) {
         const c = this._botAbility(m);
         if (c) {
-          const ab = kitFor(m.cls).abilities[c.slot];
+          const ab = this._abilitiesFor(m)[c.slot];
           if (ab && ab.target !== 'enemy' && ab.target !== 'aoe' && ab.effect !== 'attack') {
             const r = this._useAbility(m, c.slot, c.payload);
             if (r && r.ok && ab) m._lastAbilityKey = ab.key;
@@ -2877,7 +2934,7 @@ class Dungeon {
     // blast, spell). If so, use it; otherwise fall back to a basic attack.
     const choice = this._botAbility(m);
     if (choice) {
-      const ab = kitFor(m.cls).abilities[choice.slot];
+      const ab = this._abilitiesFor(m)[choice.slot];
       m._botMM = this._botPickMetamagic(m, ab);   // spontaneous bot may empower/maximize a damage spell when flush on high slots
       const r = this._useAbility(m, choice.slot, choice.payload);
       m._botMM = null;                            // one-shot — never leaks past the cast
@@ -3744,7 +3801,7 @@ class Dungeon {
       // Humans may pre-cast their RUN-LONG buffs (Mage Armor / Bless / Overland
       // Flight) before opening the door — their choice, never auto-cast for them.
       if (kind === 'ability' && m) {
-        const ab = kitFor(m.cls).abilities[payload.slot | 0];
+        const ab = this._abilitiesFor(m)[payload.slot | 0];
         if (this._isRunLongBuff(ab)) return this._useAbility(m, payload.slot | 0, payload || {});
         return { ok: false, error: 'only long-lasting buffs (Mage Armor, Bless, Overland Flight) can be cast before the door' };
       }
@@ -3766,7 +3823,7 @@ class Dungeon {
           if (!Array.isArray(payload.targetUids) || !payload.targetUids.length) payload.targetUids = [payload.targetUid];
         }
         const label = kind === 'attack' ? 'attack'
-          : ((kitFor(m.cls).abilities[payload.slot | 0] || {}).name || 'ability');
+          : ((this._abilitiesFor(m)[payload.slot | 0] || {}).name || 'ability');
         m.queuedAction = { kind, payload, label };
         this._broadcast();   // the ⏳ chip appears on their hero card
         return { ok: true, queued: true, label };
@@ -3781,7 +3838,7 @@ class Dungeon {
       // Taunted → a single-target offensive ability is dragged onto the taunter.
       const forced = this._forcedFoe(m);
       if (forced) {
-        const ab = kitFor(m.cls).abilities[payload.slot | 0];
+        const ab = this._abilitiesFor(m)[payload.slot | 0];
         if (ab && ab.target === 'enemy') payload.targetUid = forced.uid;
       }
       const r = this._useAbility(m, payload.slot | 0, payload);
@@ -3826,8 +3883,7 @@ class Dungeon {
   // One of the class's abilities (slot index). Gates on level + cost:
   //   'pool' → spend a shared spell slot; 'room' → spend its own use; 'free' → unlimited.
   _useAbility(m, slot, payload) {
-    const kit = kitFor(m.cls);
-    const ab = kit.abilities[slot];
+    const ab = this._abilitiesFor(m)[slot];   // class kit + injected domain powers
     if (!ab) return { ok: false, error: 'no such ability' };
     if (!this._charAllows(ab, m)) return { ok: false, error: 'not your ability' };   // char-gated form (e.g. Rissa's Beast Mode)
     if (!this._loadoutAllows(ab, m)) return { ok: false, error: `${ab.name} isn't prepared` };   // PHASE C: prepared/known loadout gate
@@ -3997,6 +4053,12 @@ class Dungeon {
       rapidshot:   () => this._abRapidShot(m, ab, payload),
       bullseye:    () => this._abBullseye(m, ab, payload),
       stunfist:    () => this._abStunningFist(m, ab, payload),
+      // DOMAIN granted powers (DOMAINS-DESIGN.md Phase B)
+      domstrike:   () => this._abDomStrike(m, ab),
+      domsmite:    () => this._abDomSmite(m, ab),
+      domfortune:  () => this._abDomFortune(m, ab),
+      domward:     () => this._abDomWard(m, ab, payload),
+      dombleed:    () => this._abDomBleed(m, ab),
     }[ab.effect];
     if (!D) return { ok: false, error: 'unknown ability' };
     D();
@@ -4132,14 +4194,37 @@ class Dungeon {
     m.form = null;
     // (any temp HP the form granted lingers until the room resets — same as Rage/Bear's Endurance)
   }
+  // The member's full action list: class kit + injected DOMAIN powers. Domain
+  // entries append AFTER the kit so slot indices (the action payload contract
+  // with the client) stay stable within a room; picks only change at the door.
+  _abilitiesFor(m) {
+    const kit = kitFor(m.cls).abilities;
+    return (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
+  }
+  // DOMAINS Phase B — re-read the picks (they may change between rooms), rebuild
+  // the injected powers, stock the Liberation pool, set the passive auras.
+  _domainSetup(m) {
+    const lvl = m.level || 1;
+    m.domains = maxDomainsFor(m.cls) > 0 ? (db.getDomains(m.playerId, m.cls) || []) : [];
+    m._domPowers = []; m._domFoMRounds = 0; m.domainHealBoost = false; m.domainSunVuln = false;
+    m._domStrike = 0; m._domSmite = 0; m._domFortune = false; m._domBleed = false; m._domWardRounds = 0;
+    for (const key of m.domains) {
+      const g = DOMAINS[key] && DOMAINS[key].granted;
+      if (!g) continue;
+      if (g.kind === 'fom') m._domFoMRounds = lvl;               // Liberation: level rounds/room, auto-fires
+      else if (g.kind === 'healboost') m.domainHealBoost = true; // Healing: passive — cures & channels +1/die
+      else if (g.kind === 'sunvuln') m.domainSunVuln = true;     // Sun: passive — bonus damage vs undead
+      else if (DOMAIN_POWERS[g.kind]) m._domPowers.push(DOMAIN_POWERS[g.kind]);
+    }
+  }
   // Per-room reset: refill the shared spell pool (full casters) + own-count
   // abilities, and clear sticky room buffs. Called each room and on join.
   _resetAbilities(m) {
-    const kit = kitFor(m.cls);
+    this._domainSetup(m);   // domains first — the uses loop below stocks their pools
     m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
     m.slots = slotsFor(m.cls, m.level || 1, m.castingMod);   // per-spell-level slots (base + casting-stat bonus + domain/school)
     m.abilityUses = {};
-    for (const ab of kit.abilities) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
+    for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
     // from the turn loop when downed). HOME-RULE: paladins (and antipaladins) get
     // their spellcasting from LEVEL 1, not 4 — still the slowest progression in the
@@ -4239,7 +4324,7 @@ class Dungeon {
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
       // Per-spell-level slots for spontaneous casters: { 1: {remaining,max}, … }.
       slots: maxSlots ? Object.fromEntries(Object.keys(maxSlots).map(L => [L, { remaining: (m.slots && m.slots[L]) || 0, max: maxSlots[L] }])) : null,
-      abilities: kit.abilities.filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m) && _showStance(ab)).map(ab => {
+      abilities: this._abilitiesFor(m).filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m) && _showStance(ab)).map(ab => {
         // Slot spells re-level by the active metamagic; the UI shows the effective
         // level, draws the right slot count, and greys out if there's no slot there
         // (or it pushes past 9th).
@@ -4253,6 +4338,7 @@ class Dungeon {
           (ab.effect === 'buff' && ab.target === 'ally' && !ab.party && !ab.powerattack && !ab.deadlyaim) ||
           (ab.effect === 'invisible') ||
           (ab.effect === 'infernalheal') ||
+          (ab.effect === 'domward') ||   // Protection domain's Resistant Touch aims at one ally (default self)
           (ab.effect === 'revive' && !ab.raiseDead);
         // dispelPick: Dispel Magic can be aimed at EITHER an afflicted ally or an
         // enchanted foe — the blind picker offers both sides; sighted uses the
@@ -4263,7 +4349,7 @@ class Dungeon {
         const modePick = ab.effect === 'heal' && ab.heal === 'party';
         return {
         key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
-        slot: kit.abilities.indexOf(ab),   // stable index into kit.abilities (the action payload `slot`) — survives the char filter
+        slot: this._abilitiesFor(m).indexOf(ab),   // stable index into kit+domain abilities (the action payload `slot`) — survives the char filter
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null,
         available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction) && !(ab.cost === 'slot' && (slvlEff > 9 || !(maxSlots && maxSlots[slvlEff]))), desc: ab.desc || '',
@@ -5560,9 +5646,12 @@ class Dungeon {
     // (Shelyn / Life — a ghost who PROTECTS life) channels at +2 caster levels,
     // reflecting her healing focus (Tobias).
     const chLvl = lvl + (((m.playerId || '').toLowerCase() === 'vesorianna') ? 2 : 0);
-    const channelAmt = () => Math.max(1, dRollN(Math.max(1, Math.ceil(chLvl / 2)), 6));
+    // HEALING domain (passive — Healer's Blessing): cures & channels heal +1 PER DIE.
+    const _hb = m.domainHealBoost ? 1 : 0;
+    const _chDice = Math.max(1, Math.ceil(chLvl / 2));
+    const channelAmt = () => Math.max(1, dRollN(_chDice, 6) + _hb * _chDice);
     // Cure X Wounds — healDice d8 + caster level (capped: +5 light, +10 moderate).
-    const cureAmt = () => Math.max(1, dRollN(ab.healDice || 1, 8) + Math.min(ab.healCap || lvl, lvl));
+    const cureAmt = () => Math.max(1, dRollN(ab.healDice || 1, 8) + Math.min(ab.healCap || lvl, lvl) + _hb * (ab.healDice || 1));
     if (ab.heal === 'party') {
       // Offensive channel (PF1 cleric): if NOBODY needs healing but UNDEAD are on
       // the field, channeling positive energy SEARS them instead — ½ level d6, a
@@ -5584,7 +5673,8 @@ class Dungeon {
       if (wantSear && undead.length) {
         // COUNTS-ONLY report (Josh): a channel that sears undead lists a tally, not
         // per-enemy damage. Will DC + the burst damage + hit/saved/slain counts.
-        const dmg = channelAmt(), dc = 10 + Math.floor(lvl / 2) + CAST_MOD;
+        // SUN domain (passive — Sun's Blessing, PF1): +cleric level to the sear.
+        const dmg = channelAmt() + (m.domainSunVuln ? lvl : 0), dc = 10 + Math.floor(lvl / 2) + CAST_MOD;
         let hitN = 0, savedN = 0, slainN = 0;
         for (const e of undead) {
           const sv = this._saveVs(this._enemySave(e, 'will'), dc);
@@ -5858,6 +5948,37 @@ class Dungeon {
     const sound = ab.sound || '/audio/into_the_light.mp3';
     this._note(`${ab.icon || '🎯'} ${m.nickname} calls DETECT EVIL — the room floods with revealing light; ${n || foes.length} foe(s) MARKED for Smite!`, sound);
     this._echoToTable(sound);
+  }
+  // ── DOMAIN granted powers (DOMAINS-DESIGN.md §2) ───────────────────────────
+  // Pool-limited actives (3+Wis/room via the normal room-uses pipeline). The
+  // attack riders (_domStrike/_domSmite/_domBleed) are consumed by _swingVsAC /
+  // _playerAttack on the hero's next attack action; the ward ticks down at the
+  // hero's turn start; Good Fortune spends itself on the next missed swing.
+  _abDomStrike(m, ab) {
+    m._domStrike = Math.max(1, Math.floor((m.level || 1) / 2));
+    this._note(`💪 ${m.nickname} SURGES with the Strength domain — +${m._domStrike} to hit and damage on their next attack!`, ab.sound);
+    this._echoToTable(ab.sound); this._broadcast();
+  }
+  _abDomSmite(m, ab) {
+    m._domSmite = m.level || 1;
+    this._note(`⚔️ ${m.nickname} rouses BATTLE RAGE (War domain) — +${m._domSmite} damage on their next attack!`, ab.sound);
+    this._echoToTable(ab.sound); this._broadcast();
+  }
+  _abDomFortune(m, ab) {
+    m._domFortune = true;
+    this._note(`🍀 ${m.nickname} courts GOOD FORTUNE (Luck domain) — their next missed attack will be rerolled.`, ab.sound);
+    this._echoToTable(ab.sound); this._broadcast();
+  }
+  _abDomWard(m, ab, payload) {
+    const t = (payload && payload.allyUid && this.member(payload.allyUid)) || m;
+    t._domWardRounds = 3;
+    this._note(`🛡️ ${m.nickname} lays a RESISTANT TOUCH (Protection domain) on ${t === m ? 'themself' : t.nickname} — +2 on all saves for 3 rounds.`, ab.sound);
+    this._echoToTable(ab.sound); this._broadcast();
+  }
+  _abDomBleed(m, ab) {
+    m._domBleed = true;
+    this._note(`💀 ${m.nickname}'s hand darkens (Death domain) — their next hit will open a BLEEDING wound (1d6/round).`, ab.sound);
+    this._echoToTable(ab.sound); this._broadcast();
   }
   // Trip: an ATTACK ROLL (no damage). On a hit the foe is knocked prone, LOSES
   // its turn, and you get an immediate free attack (prone = +4 for all to hit).
@@ -6292,6 +6413,7 @@ class Dungeon {
       const txt = groups.map(g => `${g.tgt.name}: ${g.bits.join(', ')}${g.tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`).join('; ');
       this._note(`⚔️ ${m.nickname} attacks — ${txt}`, flurrySound);
     }
+    m._domStrike = 0; m._domSmite = 0;   // Strength Surge / Battle Rage last ONE attack action — spent now, hit or miss
     m.weapon = _realWeapon;   // drop any backup crossbow — restore the real weapon for later reads (e.g. next turn's target pick)
   }
   // ── Loot (per owner) ──────────────────────────────────────────────────────

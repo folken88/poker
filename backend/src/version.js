@@ -3,6 +3,10 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.3.0  2026-07-03  Domains Phase B: runtime granted powers — Liberation pool
+//                     (level rounds/room, auto), Strength/War/Luck/Protection/
+//                     Death actives (3+Wis/room, injected into the action list),
+//                     Healing/Sun passives; hardcoded inquisitor FoM replaced
 //  3.2.1  2026-07-03  Hold Person humanoid-only (PF1 RAW, Tobias's call) —
 //                     _isHumanoid gate + AI knowledge + kit descs
 //  3.2.0  2026-07-03  enemy metamagic parity (lich/arcane blasts+nukes Empower
@@ -14,4 +18,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.2.1' };
+module.exports = { VERSION: '3.3.0' };
