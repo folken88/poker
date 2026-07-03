@@ -825,6 +825,7 @@
   let _dmpOpen = false;        // "⛪ Domains ▾" DOMAIN picker popover open/closed (sighted, Domains Phase C)
   let _dmpModel = null;        // fetched domain model { max, picks, domains } — shared by the sighted panel + blind V menu
   let _dunDmp = false;         // blind dungeon: domain menu open (V opens; a number toggles a domain; Escape closes)
+  let _dunProg = null;         // blind dungeon: class-progression reference open — the fetched { level, cls, next } (X opens; 1-9 speak later levels; Escape closes)
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
   let _dunDispelPick = null;   // blind dungeon: Dispel Magic awaiting a target — {slot,label,targets:[{kind:'ally'|'foe',id,name}]} (numbers pick, Return = smart auto)
   let _dunModePick = null;     // blind dungeon: Channel awaiting a mode — {slot,label} (1 = heal/defensive, 2 = sear/offensive, Return = auto)
@@ -2092,6 +2093,34 @@
         _dunDmp = true;
         if (_dmpModel) _dmpSpeak();
         else { sayU('Opening your domains.'); dmpickSend({}, () => { if (_dunDmp) _dmpSpeak(); }); }
+        return;
+      }
+      // ----- Class-progression reference — X (Josh: "what does each level give
+      // me?"). X speaks your level + what the NEXT level grants; while open,
+      // digits 1-9 speak the gains at current+N; Escape closes. Pure lookup —
+      // the data comes from the same _levelGains the level-up announcer uses.
+      // (X audited free across global + poker + dungeon handlers.)
+      if (_dunProg) {
+        if (e.key === 'Escape') { e.preventDefault(); _dunProg = null; sayU('Progression closed.'); return; }
+        if (/^[1-9]$/.test(k)) {
+          e.preventDefault();
+          const entry = (_dunProg.next || [])[parseInt(k, 10) - 1];
+          if (!entry) { sayU(`Nothing that far — you cap at level 20.`); return; }
+          sayU(`Level ${entry.level}: ${entry.gains}.`);
+          return;
+        }
+      }
+      if (k === 'x') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('X: class progression. Speaks what your next level grants — feats, spells, slots. While open, press 1 through 9 for further levels; Escape closes.'); return; }
+        if (_dunProg) { _dunProg = null; sayU('Progression closed.'); return; }
+        sayU('Looking up your progression.');
+        socket.emit('dungeon:action', { kind: 'progression' }, (resp) => {
+          if (!resp || resp.ok === false) { sayU((resp && resp.error) || 'Progression unavailable.'); return; }
+          _dunProg = resp;
+          const first = (resp.next || [])[0];
+          sayU(`You are level ${resp.level} ${resp.cls}. ` + (first ? `Level ${first.level} grants: ${first.gains}. Press 2 through 9 for later levels, Escape to close.` : 'You are at the level cap.'));
+        });
         return;
       }
       const _mm = kit.metamagic || [];

@@ -1772,10 +1772,16 @@ class Dungeon {
     for (const u of ups) this._announceLevelUp(u.m, u.from, u.to);
     this._notePhase = 'xp';        // caller (_clearRoom) resets to null
   }
-  // Announce a level-up with a short summary of what the hero gained.
-  _announceLevelUp(m, from, to) {
+  // What a hero GAINS going from level `from` to `to` — BAB/HP/saves deltas,
+  // feats crossed, new abilities/spells unlocked, new spell-slot levels. Shared
+  // by the level-up announcement and the class-progression reference (Josh:
+  // "what does each level give me" — the blind X key).
+  _levelGains(m, from, to) {
     const cls = m.cls;
-    const parts = [`BAB +${babFor(cls, to) - babFor(cls, from)}`, `+${maxHpFor(cls, to) - maxHpFor(cls, from)} HP`];
+    const parts = [];
+    const babD = babFor(cls, to) - babFor(cls, from);
+    if (babD > 0) parts.push(`BAB +${babD}`);
+    parts.push(`+${maxHpFor(cls, to) - maxHpFor(cls, from)} HP`);
     const sv = ['fort', 'ref', 'will'].reduce((a, w) => a + (saveFor(cls, w, to) - saveFor(cls, w, from)), 0);
     if (sv > 0) parts.push(`saves +${sv}`);
     const feats = [];
@@ -1791,6 +1797,13 @@ class Dungeon {
     const newSlot = Object.keys(s1).filter(L => !s0[L]).map(L => `${L}${({ 1: 'st', 2: 'nd', 3: 'rd' })[L] || 'th'}-level`);
     if (newSlot.length) parts.push(`new ${newSlot.join(' & ')} spell slots`);
     if (spells.length) parts.push(`spells: ${spells.slice(0, 4).join(', ')}`);
+    return parts;
+  }
+  // Announce a level-up with a short summary of what the hero gained.
+  _announceLevelUp(m, from, to) {
+    const cls = m.cls;
+    const gains = this._levelGains(m, from, to);
+    const parts = gains.length ? gains : ['steady growth'];
     this._note(`⭐ LEVEL UP! ${m.nickname} reaches level ${to} (${cls})! ${parts.join(' · ')}`, '/audio/spell_channel_charge.mp3');
     this._echoToTable('/audio/spell_channel_charge.mp3');
     this._log('levelup', { who: m.playerId, from, to });
@@ -3872,6 +3885,7 @@ class Dungeon {
     if (kind === 'metamagic') return this.setMetamagic(playerId, payload.key);   // spontaneous caster toggles a metamagic on/off
     if (kind === 'loadout') return this.loadout(playerId, payload);   // Spellbook picker: fetch the loadout model / toggle a spell (lands at the next door)
     if (kind === 'domains') return this.domains(playerId, payload);   // Domain picker (Phase C): fetch the model / toggle a domain (lands at the next door)
+    if (kind === 'progression') return this.progression(playerId);    // class-progression reference (Josh's blind X key) — pure lookup, any time
 
     if (this.status === 'exploring') {
       if (kind === 'door') return this.openDoor();
@@ -4814,6 +4828,22 @@ class Dungeon {
       if (!r.ok) return r;
     }
     return { ok: true, ...this._domainModel(m) };
+  }
+  // ── CLASS-PROGRESSION REFERENCE (Josh: "what does each level give me?") ───
+  // A pure lookup: per-level gain summaries for the member's class from their
+  // next level up to +9 (capped at 20), built from the same _levelGains the
+  // level-up announcement uses so the two never drift. The blind X key speaks
+  // these ("press 1 for level N+1…"); no state changes.
+  progression(playerId) {
+    const m = this.member(playerId);
+    if (!m || m.left) return { ok: false, error: 'not in this run' };
+    const cur = m.level || 1;
+    const next = [];
+    for (let L = cur + 1; L <= Math.min(20, cur + 9); L++) {
+      const gains = this._levelGains(m, L - 1, L);
+      next.push({ level: L, gains: gains.length ? gains.join(', ') : 'steady growth' });
+    }
+    return { ok: true, level: cur, cls: m.cls, next };
   }
   _domainModel(m) {
     const picks = db.getDomains(m.playerId, m.cls) || [];
