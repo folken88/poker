@@ -951,6 +951,7 @@
       const mdl = _sbpModel;
       const byLvl = {};
       for (const s of (mdl.pool || [])) (byLvl[s.slvl] = byLvl[s.slvl] || []).push(s);
+      for (const L of Object.keys(byLvl)) byLvl[L].sort((a, b) => String(a.name).localeCompare(String(b.name)));   // alphabetical, matching the blind menu's numbering
       const lvls = Object.keys(byLvl).map(Number).sort((a, b) => a - b);
       const picked = (s) => mdl.spont ? (mdl.known || []).includes(s.key) : (((mdl.prepared || {})[s.slvl]) || []).includes(s.key);
       body = `<div class="dungeon__sb-head">${mdl.spont ? 'Known spells — toggle freely' : 'Prepared spells — fill each level\'s slots'} · lands at the next door</div>` +
@@ -969,7 +970,7 @@
         }).join('') + `</div>`;
     }
     return `<span class="dungeon__sb-wrap dungeon__sbp-wrap">` +
-      `<button type="button" class="btn ${_sbpOpen ? 'btn--primary' : 'btn--ghost'}" data-sbp-toggle aria-expanded="${_sbpOpen}" title="Choose which spells you have prepared or known — changes land at the next door (blind: S key)">🧠 Prepare ▾</button>` +
+      `<button type="button" class="btn ${_sbpOpen ? 'btn--primary' : 'btn--ghost'}" data-sbp-toggle aria-expanded="${_sbpOpen}" title="Choose which spells you have prepared or known — changes land at the next door (blind: K key)">🧠 Prepare ▾</button>` +
       `<div class="dungeon__spellbook ${_sbpOpen ? 'is-open' : ''}">${body}</div>` +
     `</span>`;
   }
@@ -1895,11 +1896,13 @@
         const set = new Set(); for (const s of (mdl.pool || [])) set.add(s.slvl);
         return [...set].sort((a, b) => a - b);
       };
+      // ALPHABETICAL within each level (Josh) — the numbers follow this order.
+      const _sbpAt = (mdl, L) => (mdl.pool || []).filter(s => s.slvl === L).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
       const _sbpPicked = (mdl, s) => mdl.spont ? (mdl.known || []).includes(s.key) : (((mdl.prepared || {})[s.slvl]) || []).includes(s.key);
       const _sbpSpeakLevels = () => {
         const mdl = _sbpModel; if (!mdl) { sayU('Still loading your spell list.'); return; }
         const parts = _sbpLvls(mdl).map(L => {
-          const at = (mdl.pool || []).filter(s => s.slvl === L);
+          const at = _sbpAt(mdl, L);
           const picked = at.filter(s => _sbpPicked(mdl, s)).length;
           const cap = mdl.spont ? null : (((mdl.caps || {})[L]) | 0);
           return `level ${L}, ${picked}${cap != null ? ` of ${cap} prepared` : ' known'}`;
@@ -1908,7 +1911,7 @@
       };
       const _sbpSpeakLevel = (L) => {
         const mdl = _sbpModel; if (!mdl) return;
-        const at = (mdl.pool || []).filter(s => s.slvl === L);
+        const at = _sbpAt(mdl, L);
         sayU(`Level ${L}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + '. Press a number to toggle, 0 to go back, Escape to close.');
       };
       if (_dunSbp) {
@@ -1925,11 +1928,11 @@
             return;
           }
           const L = _dunSbp.lvl;
-          const sp = (mdl.pool || []).filter(s => s.slvl === L)[parseInt(k, 10) - 1];
+          const sp = _sbpAt(mdl, L)[parseInt(k, 10) - 1];
           if (!sp) { sayU(`No spell ${k} at level ${L}.`); return; }
           sbpickSend({ toggle: sp.key }, (m2) => {
             const on = m2.spont ? (m2.known || []).includes(sp.key) : (((m2.prepared || {})[L]) || []).includes(sp.key);
-            const at = (m2.pool || []).filter(s => s.slvl === L);
+            const at = _sbpAt(m2, L);
             const cnt = at.filter(s => m2.spont ? (m2.known || []).includes(s.key) : (((m2.prepared || {})[L]) || []).includes(s.key)).length;
             const cap = m2.spont ? null : (((m2.caps || {})[L]) | 0);
             sayU(`${sp.name} ${on ? (m2.spont ? 'known' : 'prepared') : 'removed'}. ${cnt}${cap != null ? ` of ${cap}` : ''} at level ${L}. Takes effect at the next door.`);
@@ -1937,9 +1940,12 @@
           return;
         }
       }
-      if (k === 's') {
+      // K (spell KIT) — NOT S: S is the global "stop talking" key, and the first
+      // Prepare build sat on it — Josh pressed S to silence a report and silently
+      // un-prepared spells instead (2026-07-03). K is free in the dungeon.
+      if (k === 'k') {
         e.preventDefault();
-        if (_blindHelp) { sayU('S: prepare spells. Opens your spell loadout — press a level number, then a number to toggle a spell in or out. Changes land at the next door.'); return; }
+        if (_blindHelp) { sayU('K: prepare spells, your spell kit. Press a level number, then a number to toggle a spell in or out of your loadout. Changes land at the next door.'); return; }
         if (!kit.caster) { sayU('Your class has no spells to prepare.'); return; }
         if (_dunSbp) { _dunSbp = null; sayU('Prepare menu closed.'); return; }
         _dunSbp = { lvl: null };
@@ -1977,6 +1983,9 @@
       const spells = (kit.abilities || []).filter(a => a.slvl != null);
       const hasSpellbook = !!kit.caster && spells.length > 0;
       const spellLevels = [...new Set(spells.map(s => s.slvl))].sort((a, b) => a - b);
+      // Spellbook order is ALPHABETICAL within each level (Josh: "no discernible
+      // order... alphabetical just makes sense") — numbering follows this sort.
+      const sbAt = (L) => spells.filter(s => s.slvl === L).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
       const blindActions = [{ kind: 'attack', label: kit.atwill?.name || 'Attack' }];
       (kit.abilities || []).forEach((ab, i) => {   // class FEATURES only (spells live in the spellbook)
         if (ab.slvl != null) return;
@@ -2054,18 +2063,38 @@
         }
         if (/^[1-9]$/.test(k)) {
           e.preventDefault();
-          const lvl = parseInt(k, 10);
-          const at = spells.filter(s => s.slvl === lvl);
-          if (!at.length) { sayU(`No level ${ord(lvl)} spells.`); return; }
-          _dunSbLevel = lvl; _dunSbIdx = -1;
-          const names = at.map(s => s.name).join(', ');
-          sayU(`${ord(lvl)} level: ${names}. Tab through spells, Return to cast.`);
+          const n = parseInt(k, 10);
+          if (_dunSbLevel == null) {
+            // First number picks the spell LEVEL; the spells read back NUMBERED,
+            // alphabetically — then a number CASTS (Josh's long-standing ask).
+            const at = sbAt(n);
+            if (!at.length) { sayU(`No level ${ord(n)} spells.`); return; }
+            _dunSbLevel = n; _dunSbIdx = -1;
+            sayU(`${ord(n)} level: ` + at.map((s, i) => `${i + 1} ${s.name}${s.available === false ? ', no slots' : ''}`).join(', ') + '. Press a number to cast, Tab to browse, 0 to go back.');
+            return;
+          }
+          // Level already chosen → the number CASTS that spell.
+          const at = sbAt(_dunSbLevel);
+          const sp = at[n - 1];
+          if (!sp) { sayU(`No spell ${n} at this level.`); return; }
+          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (sp.available === false) { sayU(`${sp.name} is out of slots.`); return; }
+          closeSb();
+          const willPrompt = sp.allyPick || sp.dispelPick
+            || (sp.target === 'enemy' && sp.effect !== 'missile' && aliveE.length > 1);
+          if (!willPrompt) sayU(`Casting ${sp.name}.`);
+          castSpell(sp);
+          return;
+        }
+        if (k === '0') {
+          e.preventDefault();
+          if (_dunSbLevel != null) { _dunSbLevel = null; _dunSbIdx = -1; sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level.`); }
           return;
         }
         if (e.key === 'Tab') {
           e.preventDefault();
           if (_dunSbLevel == null) { sayU(`Pick a spell level first: ${spellLevels.map(ord).join(', ')}.`); return; }
-          const at = spells.filter(s => s.slvl === _dunSbLevel);
+          const at = sbAt(_dunSbLevel);
           if (!at.length) { sayU('No spells at this level.'); return; }
           _dunSbIdx = e.shiftKey ? _dunSbIdx - 1 : _dunSbIdx + 1;
           if (_dunSbIdx < 0) _dunSbIdx = at.length - 1;
@@ -2076,8 +2105,8 @@
         }
         if (e.key === 'Enter' || e.code === 'NumpadEnter') {
           e.preventDefault();
-          if (_dunSbLevel == null || _dunSbIdx < 0) { sayU('Tab to a spell first, then Return to cast.'); return; }
-          const at = spells.filter(s => s.slvl === _dunSbLevel);
+          if (_dunSbLevel == null || _dunSbIdx < 0) { sayU('Tab to a spell first, then Return to cast — or just press its number.'); return; }
+          const at = sbAt(_dunSbLevel);
           const sp = at[_dunSbIdx];
           if (!sp) { sayU('No spell selected.'); return; }
           if (!myTurn) { sayU('Not your turn.'); return; }
@@ -2352,7 +2381,7 @@
         if (act.kind === 'spellbook') {
           _dunSbMode = true; _dunSbLevel = null; _dunSbIdx = -1; _spellbookOpen = true;
           if (document.body.dataset.screen === 'dungeon') renderDungeon();
-          sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level, Tab through spells, Return to cast, Escape to close.`);
+          sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level, then press a spell's number to cast it. Escape to close.`);
           return;
         }
         if (!myTurn) { window.BlindMode.speak('Not your turn.', 'ambient'); return; }   // AMBIENT — never cut off the end-of-room report (Josh)
