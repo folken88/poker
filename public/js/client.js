@@ -1710,7 +1710,11 @@
     else if (act === 'spectate') bailToSpectate();     // combatant → spectator (keeps watching)
     else if (act === 'leave')   returnFromDungeon();   // self bails + back to table
     else if (act === 'cancel')  cancelDungeon();       // force-end the whole run
-    if (act === 'attack' || act === 'ability') _dungeonSel = [];
+    // Clear the target pick only after a LIVE action — an off-turn click QUEUES,
+    // and clearing then meant a replacement queue went out target-less (the spell
+    // fired at the auto-pick, not the selected foe — Tobias, 2026-07-02).
+    const _live = !!(state.dungeon && state.dungeon.turn && state.me && state.dungeon.turn.id === state.me.player_id);
+    if ((act === 'attack' || act === 'ability') && _live) _dungeonSel = [];
   });
   // The Spellbook is a popover that overlays the other action buttons, so it
   // must always be dismissable: a click anywhere outside its wrap — or Escape —
@@ -2518,7 +2522,9 @@
     if (act === 'attack') dungeonAction('attack', { targetUid: _dungeonSel[0] });
     else if (act === 'ability') dungeonAction('ability', { slot, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6) });
     else dungeonAction(act);
-    if (act === 'attack' || act === 'ability') _dungeonSel = [];
+    // Keep the pick when the action QUEUED (off-turn) — see the click handler above.
+    const _live2 = !!(state.dungeon && state.dungeon.turn && state.me && state.dungeon.turn.id === state.me.player_id);
+    if ((act === 'attack' || act === 'ability') && _live2) _dungeonSel = [];
   });
 
   // Incremental chat events (in addition to the snapshot in table:state).

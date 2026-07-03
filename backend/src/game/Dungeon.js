@@ -3613,6 +3613,15 @@ class Dungeon {
       // action fires the moment your turn begins. Queueing again REPLACES the
       // earlier pick (last one wins) — line up your move and go get a drink.
       if ((kind === 'attack' || kind === 'ability') && !m.dead && !m.downed && m.hp > 0) {
+        // A queue with NO explicit target inherits the player's last 🎯 AIM (their
+        // most recent enemy click, tracked in this.targeting). The client clears its
+        // local pick after each send, so a REPLACEMENT queue ("queue again to
+        // replace") used to go out target-less and fire at the auto-pick instead of
+        // the foe the player had selected (Tobias, 2026-07-02).
+        if (payload.targetUid == null && this.targeting[playerId]) {
+          payload.targetUid = this.targeting[playerId];
+          if (!Array.isArray(payload.targetUids) || !payload.targetUids.length) payload.targetUids = [payload.targetUid];
+        }
         const label = kind === 'attack' ? 'attack'
           : ((kitFor(m.cls).abilities[payload.slot | 0] || {}).name || 'ability');
         m.queuedAction = { kind, payload, label };
