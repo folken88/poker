@@ -36,7 +36,7 @@ const RACES = {
   tiefling: { name: 'Tiefling', mods: { dex: 2, int: 2, cha: -2 }, size: 'medium', speed: 30, vision: 'darkvision60', saves: {},                     traits: ['+2 DEX, +2 INT, −2 CHA', 'Fire/cold/electricity resist 5', 'Darkvision 60'] },
   aasimar:  { name: 'Aasimar',  mods: { wis: 2, cha: 2 },          size: 'medium', speed: 30, vision: 'darkvision60', saves: {},                     traits: ['+2 WIS, +2 CHA', 'Acid/cold/electricity resist 5', 'Darkvision 60'] },
   // ── Extended roster races (Folken cast) ──────────────────────────────────
-  drow:     { name: 'Drow',     mods: { dex: 2, cha: 2, con: -2 }, size: 'medium', speed: 30, vision: 'darkvision120', saves: { enchantment: 2 },  traits: ['+2 DEX, +2 CHA, −2 CON', 'Spell resistance', '+2 vs enchantment', 'Darkvision 120', 'Light blindness'] },
+  drow:     { name: 'Drow',     mods: { dex: 2, cha: 2, con: -2 }, size: 'medium', speed: 30, vision: 'darkvision120', srBase: 6, saves: { enchantment: 2 },  traits: ['+2 DEX, +2 CHA, −2 CON', 'Spell resistance 6 + level', '+2 vs enchantment', 'Darkvision 120', 'Light blindness'] },
   catfolk:  { name: 'Catfolk',  mods: { dex: 2, cha: 2, wis: -2 }, size: 'medium', speed: 30, vision: 'low-light',     saves: {},                     traits: ['+2 DEX, +2 CHA, −2 WIS', 'Cat’s luck', 'Low-light vision'] },
   goblin:   { name: 'Goblin',   mods: { dex: 4, str: -2, cha: -2 }, size: 'small', speed: 30, vision: 'darkvision60',  saves: {},                     traits: ['+4 DEX, −2 STR, −2 CHA', 'Small', 'Darkvision 60'] },
   tengu:    { name: 'Tengu',    mods: { dex: 2, wis: 2, con: -2 }, size: 'medium', speed: 30, vision: 'low-light',     saves: {},                     traits: ['+2 DEX, +2 WIS, −2 CON', 'Swordtrained', 'Gifted linguist', 'Low-light vision'] },
@@ -90,6 +90,10 @@ function raceSaveBonus(k, tags) {
 }
 
 function raceBlindsense(k) { return raceFor(k).blindsense || 0; }
+/** Racial SPELL RESISTANCE at a given level (PF1 drow: SR 6 + class levels).
+ *  0 = none. Hostile spells must win a caster-level check (d20+CL) vs this;
+ *  friendly casts assume the PF1 "lower your SR voluntarily" standard action. */
+function raceSR(k, level) { const b = raceFor(k).srBase; return b != null ? b + (level || 1) : 0; }
 function raceVision(k) { return raceFor(k).vision || 'normal'; }
 function raceSize(k)   { return raceFor(k).size || 'medium'; }
 function raceName(k)   { return raceFor(k).name || 'Human'; }
@@ -98,5 +102,5 @@ function raceList()    { return Object.keys(RACES).map(k => ({ key: k, name: RAC
 
 module.exports = {
   RACES, DEFAULT_RACE, raceKey, raceFor, raceModsFor, raceSaveBonus,
-  raceVision, raceSize, raceName, raceTraits, raceList, raceBlindsense,
+  raceVision, raceSize, raceName, raceTraits, raceList, raceBlindsense, raceSR,
 };

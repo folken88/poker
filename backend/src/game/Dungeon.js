@@ -2865,8 +2865,9 @@ class Dungeon {
     for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
     const hit = live.slice(0, Math.max(1, cfg.count ? cfg.count() : dRoll(3) + 1));
     const full = this._metaDmg(cfg, dRollN(cfg.dice, cfg.die || 6));   // Empower/Maximize (see _enemyMeta)
-    let hitN = 0, savedN = 0, downedN = 0;
+    let hitN = 0, savedN = 0, downedN = 0, srN = 0;
     for (const t of hit) {
+      if (this._srBlocksHero(e, t, 'the blast')) { srN++; continue; }   // PF1 SR (drow heroes)
       const sm = this._partySaveMod(t, ['reflex']), sroll = dRoll(20), stot = sroll + sm;   // blast = Reflex save (Slow −1 applies)
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= cfg.dc;
       let dmg = (saved && t.evasion) ? 0 : saved ? Math.floor(full / 2) : full;   // Evasion: no damage on a made save
@@ -2876,13 +2877,15 @@ class Dungeon {
       if (t.hp <= 0) downedN++;
     }
     // COUNTS-ONLY (Josh): DC + burst damage + hit/saved/downed tally, no per-target list.
-    const tally = `${hitN} hit${savedN ? `, ${savedN} saved` : ''}${downedN ? `, ${downedN} down` : ''}`;
+    const tally = `${hitN} hit${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${downedN ? `, ${downedN} down` : ''}`;
     this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} — Ref DC ${cfg.dc} (${full} ${cfg.dtype}): ${tally}!`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
   }
   // A lich single-target nuke — optional save for partial (Disintegrate / Finger
   // of Death). A foe reduced past −10 by Disintegrate crumbles to dust.
   _enemyNuke(e, target, cfg) {
+    // PF1 SR: a drow hero's spell resistance can turn the whole nuke aside.
+    if (this._srBlocksHero(e, target, cfg.verb ? `the ${(cfg.verb.match(/[A-Z][A-Z ]+[A-Z]/) || ['spell'])[0]}` : 'the spell')) { this._echoToTable(); this._broadcast(); return; }
     const full = this._metaDmg(cfg, dRollN(cfg.dice, cfg.die || 6));   // Empower/Maximize (see _enemyMeta)
     let dmg = full, tag = '';
     const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
@@ -2899,6 +2902,7 @@ class Dungeon {
   _enemyHoldHero(e, target, dc, label) {
     // PF1: a mind-affecting compulsion — no effect on an undead hero.
     if (target.undead) { this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — but the undead have no mind to seize. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
+    if (this._srBlocksHero(e, target, label)) { this._broadcast(); return; }   // PF1 SR (drow heroes)
     const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
     const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
@@ -2908,6 +2912,8 @@ class Dungeon {
   }
   // Lich Magic Missile — N unerring bolts (no save, no attack roll), 1d4+1 each.
   _enemyMissiles(e, target, n) {
+    // PF1: SR applies even to Magic Missile's unerring bolts.
+    if (this._srBlocksHero(e, target, 'the missiles')) { this._echoToTable(); this._broadcast(); return; }
     const dmg = dRollN(n, 4) + n;
     this._dmgToMember(target, dmg);
     this._note(`✨ ${e.glyph} ${e.name} looses ${n} Magic Missile${n > 1 ? 's' : ''} at ${target.nickname} — ${dmg} force, unerring.${target.hp <= 0 ? ' ☠️' : ` (${Math.max(0, target.hp)}/${target.maxHp})`}`, '/audio/spell_magicmissile.mp3', { side: 'enemy' });
@@ -3673,6 +3679,11 @@ class Dungeon {
     // Damage spells: skip a foe IMMUNE to the element (mere resistance still
     // halves through — that cast is weaker but not wasted).
     if (ab.dtype && ab.dice && this._resistMult(t, ab.dtype) === 0) return false;
+    // SPELL RESISTANCE no caster can EVER beat (d20 20 + CL 20 + Spell Pen 2):
+    // a smart caster doesn't waste the slot. (_spellWorksOn doesn't know the
+    // caster, so this is the absolute bound; beatable SR is still worth trying —
+    // PF1 casters roll the check, they don't pre-give-up.)
+    if (t.sr > 42 && ab.slvl != null) return false;
     return true;
   }
   // PF1 RAW (Tobias 2026-07-03): Hold Person affects HUMANOIDS only. Most foes
@@ -4159,7 +4170,16 @@ class Dungeon {
       dombleed:    () => this._abDomBleed(m, ab),
     }[ab.effect];
     if (!D) return { ok: false, error: 'unknown ability' };
-    D();
+    // PF1 SPELL RESISTANCE — single-target hostile spells test the target's SR
+    // BEFORE their handler runs (_abAoe tests per target inside). A blocked
+    // cast still spends the slot and the action below, per PF1.
+    const SR_SINGLE = new Set(['savedie', 'save_debuff', 'charm', 'dominate', 'touch', 'bolt', 'missile', 'rays', 'disintegrate', 'fascinate', 'slow', 'sleep', 'exhaust']);
+    let _srStopped = false;
+    if (ab.slvl != null && SR_SINGLE.has(ab.effect)) {
+      const _t = this._oneEnemy(payload);
+      if (_t && this._srBlocks(m, _t, ab)) { _srStopped = true; this._echoToTable(); this._broadcast(); }
+    }
+    if (!_srStopped) D();
     if (ab.cost === 'pool') m.spellPool = Math.max(0, (m.spellPool || 0) - 1);
     else if (ab.cost === 'slot') { m.slots = m.slots || {}; const _L = this._slotLevelFor(m, ab); m.slots[_L] = Math.max(0, (m.slots[_L] || 0) - 1); }   // metamagic draws from the HIGHER slot
     else if (ab.cost === 'room' && !formOff) m.abilityUses[ab.key] = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 0) - 1);
@@ -4482,6 +4502,35 @@ class Dungeon {
   _spellDC(m, ab) {
     const base = (ab && ab.slvl >= 1) ? ab.slvl : Math.floor((m.level || 1) / 2);
     return 10 + base + (m.castingMod != null ? m.castingMod : CAST_MOD) + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0);
+  }
+  // ── PF1 SPELL RESISTANCE ──────────────────────────────────────────────────
+  // A creature with SR shrugs off SPELLS unless the caster wins a caster-level
+  // check: d20 + CL (+2 Spell Penetration, fighterFeats.spellPen) ≥ SR — rolled
+  // once per target per cast (Tobias 2026-07-03: "follow pf1 conventions").
+  // Only leveled SPELLS (ab.slvl) test SR; weapons, maneuvers and channel
+  // energy (PF1: SR does not apply) pass through. A failed check still SPENDS
+  // the slot and the action — the spell was cast, it just fails to bite.
+  // `quiet` suppresses the per-target note (AoE handlers tally counts instead).
+  _srBlocks(m, e, ab, quiet = false) {
+    if (!e || !(e.sr > 0) || !ab || ab.slvl == null) return false;
+    const pen = fighterFeats(m.cls, m.level, this._isRanged(m)).spellPen || 0;
+    const bonus = (m.level || 1) + pen;
+    const roll = dRoll(20), total = roll + bonus;
+    if (total >= e.sr) return false;   // punched through (PF1: caster-level checks have NO auto 20/1)
+    if (!quiet) { this._note(`🛡️ ${e.glyph || ''} ${e.name}'s SPELL RESISTANCE turns ${ab.name} aside! [d20 ${roll}+${bonus} = ${total} vs SR ${e.sr}]`); }
+    return true;
+  }
+  // Enemy spell vs a hero with racial SR (drow Olbryn: SR 6 + level). The
+  // check is d20 + the foe's caster level vs the hero's SR. Supernatural
+  // abilities (gazes, shouts, breath) never test SR — only their spells do.
+  _srBlocksHero(e, m, label) {
+    const sr = RACES.raceSR(m.race, m.level);
+    if (!(sr > 0)) return false;
+    const cl = this._enemyCL(e);
+    const roll = dRoll(20), total = roll + cl;
+    if (total >= sr) return false;   // (PF1: caster-level checks have NO auto 20/1)
+    this._note(`🛡️ ${m.nickname}'s SPELL RESISTANCE turns ${label || 'the spell'} aside! [d20 ${roll}+${cl} = ${total} vs SR ${sr}]`);
+    return true;
   }
   // Ranged-touch SPELL attack bonus. HOUSE RULE: casters aim their leveled touch
   // spells (Disintegrate, Scorching Ray, Shocking Grasp, elemental bolts) with their
@@ -4946,8 +4995,9 @@ class Dungeon {
     // then a TALLY of how many failed / saved / were slain — NOT a per-enemy list.
     // Keeps mid-combat narration fast; the blind player inspects enemies (E) on their
     // own turn for exactly who's left and how hurt.
-    let failN = 0, savedN = 0, slainN = 0, blindN = 0;
+    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0;
     for (const e of chosen) {
+      if (this._srBlocks(m, e, ab, true)) { srN++; continue; }   // PF1 SR: checked per target, tallied (counts-only for Josh)
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
       const evaded = sv.saved && saveStat === 'reflex' && e.evasion;
       const raw = sv.saved ? (evaded ? 0 : Math.floor(full / 2)) : full;
@@ -4957,7 +5007,7 @@ class Dungeon {
       if (sv.saved) savedN++; else failN++;
       if (e.hp <= 0) slainN++;
     }
-    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${savedN ? `, ${savedN} saved` : ''}${slainN ? `, ${slainN} slain` : ''}`;
+    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${slainN ? `, ${slainN} slain` : ''}`;
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${saveLbl} DC ${dc} (${full} ${ab.dtype || ''}): ${tally}.`, sound);
     this._echoToTable(sound);
   }

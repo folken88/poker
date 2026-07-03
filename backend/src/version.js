@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.6.0  2026-07-03  PF1 SPELL RESISTANCE: devils/demon + vampire court CR8+
+//                     carry SR (11+CR-ish); hero spells test d20+CL(+Spell Pen)
+//                     per target (slot spent on failure, AoE tallies); drow
+//                     heroes (Olbryn) get SR 6+level vs enemy spells; AI skips
+//                     unbeatable SR; supernatural gazes/shouts/channel exempt
 //  3.5.3  2026-07-03  Chain Lightning joins the SND.lightning rotation (the
 //                     Hetfield one-off stays on Storm of Vengeance)
 //  3.5.2  2026-07-03  hero-card names left-justified (clear the face) ·
@@ -39,4 +44,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.5.3' };
+module.exports = { VERSION: '3.6.0' };
