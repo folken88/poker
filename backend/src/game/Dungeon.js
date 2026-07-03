@@ -1481,6 +1481,14 @@ class Dungeon {
     if (m.untargetable) m.untargetable = false;   // Bladed Dash blur ends at the start of the magus's next turn
     if (m.touchStrike > 0) m.touchStrike -= 1;     // Dimensional Blade touch-strikes lapse after the round
     if (m._domWardRounds > 0) m._domWardRounds -= 1;   // Resistant Touch (Protection domain) ticks down
+    // Bleeding (a death-priest's touch): 1d6 at the turn's top until magically healed.
+    if (m._bleeding && m.hp > 0 && !m.dead) {
+      const b = dRoll(6);
+      m.hp -= b;
+      this._note(`🩸 ${m.nickname} BLEEDS for ${b} — magical healing will staunch it. (${Math.max(0, m.hp)}/${m.maxHp} HP)`);
+      if (m.hp <= -10) { this._memberDown(m); this._broadcast(); return this._nextTurn(); }
+      if (m.hp <= 0)   { this._downMember(m); this._broadcast(); return this._nextTurn(); }
+    }
     if (m.blinded > 0) m.blinded -= 1;             // (heroes can be blinded by future foes too)
     // Infernal Healing (Greater): fast healing at the START of the turn — BEFORE the
     // down/skip check, so it can knit a dying ally (below 0 HP) back onto their feet.
@@ -2060,6 +2068,10 @@ class Dungeon {
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
     const lvl = attacker.level || 1;
     const cls = attacker.cls || 'fighter';
+    // Strength Surge (domain): +½ level hit & damage on ONE attack — consumed by
+    // THIS swing whether it lands or not (a Good Fortune reroll restores it first).
+    const _dStrike = attacker._domStrike || 0;
+    if (_dStrike) attacker._domStrike = 0;
     // MAGUS Arcane Pool — an automatic, level-scaled weapon enhancement (the magus
     // is always treated as wielding at least this grade): +1@1, +2@5, keen@6,
     // flaming@8, +3@9, flaming burst@11, +4@13, +5@17. The real weapon's enchant
@@ -2136,13 +2148,14 @@ class Dungeon {
     // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
     // now carry high-level scaling — see the iterative loop in _playerAttack).
     const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon, { offHand }) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };   // off-hand swing → ½ ability mod to DAMAGE (PF1 two-weapon fighting)
-    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + (attacker._domStrike || 0) + ff.hit + swashWF;   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides the next attack
+    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF;   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
     const roll = dRoll(20), total = roll + toHit;
     // Luck domain — GOOD FORTUNE: the next missed swing (fumble included) is
     // rerolled once, keep the better outcome. Consumed on the reroll.
     const _fortune = () => {
       if (!attacker._domFortune) return null;
       attacker._domFortune = false;
+      if (_dStrike) attacker._domStrike = _dStrike;   // the surge rides into the reroll
       this._note(`🍀 GOOD FORTUNE — ${attacker.nickname}'s miss is rerolled!`);
       return this._swingVsAC(attacker, ac, target, extraToHit, offHand);
     };
@@ -2203,11 +2216,12 @@ class Dungeon {
     if (buff.bonusDice) dmg += dRollN(buff.bonusDice, 6);   // misc bonus dice
     if (baneOn) dmg += dRollN(BANE_DICE, 6);                // Inquisitor Bane — +2d6 vs the declared type
     if (smite) dmg += 2 * lvl;   // Smite Evil: +double level damage
-    // DOMAIN riders — Strength Surge (+½ level dmg, to-hit added above) and War's
-    // Battle Rage (+level dmg). They last the whole attack ACTION (all iteratives);
-    // _playerAttack clears them when the action ends. Not crit-multiplied.
-    if (attacker._domStrike) dmg += attacker._domStrike;
-    if (attacker._domSmite) dmg += attacker._domSmite;
+    // DOMAIN riders — Strength Surge (+½ level dmg on this one swing; to-hit added
+    // above, consumed at the top) and War's Battle Rage (+level dmg on ONE landed
+    // hit — consumed here; a fully-missed action forfeits it, cleared in
+    // _playerAttack). Neither is crit-multiplied (precision-style riders).
+    if (_dStrike) dmg += _dStrike;
+    if (attacker._domSmite) { dmg += attacker._domSmite; attacker._domSmite = 0; }
     // Sun domain — passive: the faithful's blows BURN the undead (+½ level, min 1).
     if (attacker.domainSunVuln && target && target.type === 'undead') dmg += Math.max(1, Math.ceil(lvl / 2));
     // Death domain — Bleeding Touch rides the first landed hit: the foe bleeds
@@ -2452,6 +2466,13 @@ class Dungeon {
       let drTag = ''; [dmg, drTag] = this._physDR(target, dmg);   // Stoneskin soaks physical blows
       target.hp -= dmg;
       this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${dmg}.${sneakTag}${drTag} ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
+      // Domain parity (Death — Bleeding Touch): a death-priest foe's first landed
+      // blow each room opens a BLEED on the hero (1d6 at their turn start, until
+      // any magical healing staunches it). Undead heroes have no blood to spill.
+      if (e.bleedTouch && !e._bleedUsed && target.hp > 0 && !target.undead && !target._bleeding) {
+        e._bleedUsed = true; target._bleeding = true;
+        this._note(`🩸 ${e.glyph} ${e.name}'s BLEEDING TOUCH opens a wound — ${target.nickname} bleeds 1d6 each round until magically healed!`, null, { side: 'enemy' });
+      }
       this._fireShieldRetaliate(target, e);   // Fire Shield scorches a melee attacker
       if (target.hp <= -10) { this._memberDown(target); this._echoToTable(r.sound); return; }   // dead at −10
       if (target.hp <= 0)   { this._downMember(target); this._echoToTable(r.sound); return; }    // 0..−9 = down/dying
@@ -2659,7 +2680,9 @@ class Dungeon {
   _enemyHeal(e, ally) {
     e.healsLeft = Math.max(0, (e.healsLeft || 0) - 1);
     const d = (e.healer && e.healer.dice) || 1;
-    const heal = dRollN(d, 8) + d * 3;
+    // Domain parity (Healing — Healer's Blessing): a REAL priest (CR 5+) channels
+    // deeper, +1 per die — the same aura the party's Healing-domain clerics get.
+    const heal = dRollN(d, 8) + d * 3 + ((crToNum(e.cr) || 0) >= 5 ? d : 0);
     const before = ally.hp;
     ally.hp = Math.min(ally.maxHp, ally.hp + heal);
     const dark = e.evil || e.type === 'undead';
@@ -3076,8 +3099,9 @@ class Dungeon {
       if (ab.cost === 'run')  return ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) > 0;   // don't re-pick a spent run cast (e.g. auto-Inspire/Bless)
       return true;                                         // 'free'
     };
-    const slot = (ab) => kit.abilities.indexOf(ab);
-    const avail = kit.abilities.filter(usable);
+    const allAbs = this._abilitiesFor(m);   // class kit + injected DOMAIN powers
+    const slot = (ab) => allAbs.indexOf(ab);
+    const avail = allAbs.filter(usable);
     if (!avail.length) return null;
     const allies = this.livingParty();
     const someoneHurt = allies.some(a => !a.undead && a.hp < a.maxHp * 0.55);   // the undead don't count — positive energy can't help them anyway
@@ -3244,6 +3268,31 @@ class Dungeon {
         if (allAirborne) chosen = forms.find(a => a.form.weapon === 'form_promethean' || a.form.weapon === 'form_beast');
         if (!chosen) chosen = ['beast', 'promethean', 'bear', 'tiger'].map(k => forms.find(a => a.form.key === k)).find(Boolean) || forms[0];
         if (chosen) return { slot: slot(chosen), payload: {} };
+      }
+    }
+    // 1d) DOMAIN actives (Phase B) — spend them like a real battle-priest.
+    //     Only when the fight is REAL (a boss, or CR at/above our level): chaff
+    //     dies to plain attacks; burning actions on buffs there is a waste.
+    //     · Resistant Touch: ward the frailest living ally once, early.
+    //     · Battle Rage / Strength Surge: ONE opener per room vs a tough foe —
+    //       activating costs the action, so the AI doesn't chain-rebuff.
+    //     · Bleeding Touch: once, vs a high-HP foe with blood to spill.
+    //     (Good Fortune is deliberately NOT bot-picked: a whole action for a
+    //     conditional reroll is a bad trade a human may still choose to make.)
+    const bigFight = targets.some(e => e.boss) || topCR >= lvl;
+    if (bigFight && !sevHurt && !m._domAIBuffed) {
+      const ward = avail.find(a => a.effect === 'domward');
+      if (ward && !allies.some(a => (a._domWardRounds || 0) > 0)) {
+        const frail = allies.filter(a => !a.dead && a.hp > 0).sort((a, b) => a.maxHp - b.maxHp)[0];
+        if (frail) { m._domAIBuffed = true; return { slot: slot(ward), payload: { allyUid: frail.playerId } }; }
+      }
+      const toughFoe = targets.some(e => e.hp >= 40);
+      const rage = avail.find(a => (a.effect === 'domsmite' && !m._domSmite) || (a.effect === 'domstrike' && !m._domStrike));
+      if (rage && toughFoe && !someoneHurt) { m._domAIBuffed = true; return { slot: slot(rage), payload: {} }; }
+      const bleedT = avail.find(a => a.effect === 'dombleed');
+      if (bleedT && !m._domBleed) {
+        const bloodless = (e) => e.type === 'undead' || e.type === 'construct' || /golem|skelet|zombie|ooze|elemental|wraith|ghost|shadow|specter|spectre/i.test(e.name || '');
+        if (targets.some(e => e.hp >= 50 && !e._bleeding && !bloodless(e))) { m._domAIBuffed = true; return { slot: slot(bleedT), payload: {} }; }
       }
     }
     // ── CR CALCULUS (full casters) ── when the toughest foe's CR is BELOW the
@@ -4208,6 +4257,7 @@ class Dungeon {
     m.domains = maxDomainsFor(m.cls) > 0 ? (db.getDomains(m.playerId, m.cls) || []) : [];
     m._domPowers = []; m._domFoMRounds = 0; m.domainHealBoost = false; m.domainSunVuln = false;
     m._domStrike = 0; m._domSmite = 0; m._domFortune = false; m._domBleed = false; m._domWardRounds = 0;
+    m._domAIBuffed = false;   // bot AI: one domain-buff action per room (see _botAbility 1d)
     for (const key of m.domains) {
       const g = DOMAINS[key] && DOMAINS[key].granted;
       if (!g) continue;
@@ -4246,7 +4296,7 @@ class Dungeon {
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false;   // taunt / grapple / prone / fire ward / flight / stoneskin / spiritual weapon / darkvision clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
     m.queuedAction = null;   // pre-loaded actions never carry into a new room (stale targets)
@@ -5702,6 +5752,7 @@ class Dungeon {
       for (const a of allies) {
         const wasDown = a.hp <= 0;
         a.hp = Math.min(a.maxHp, a.hp + h);
+        a._bleeding = false;   // magical healing staunches a Bleeding Touch wound
         if (wasDown && a.hp > 0) { a.downed = false; revived.push(a.nickname); }   // back on their feet
       }
       const upNote = revived.length ? ` ${revived.join(' & ')} back up!` : '';
@@ -5721,6 +5772,7 @@ class Dungeon {
                    : (cands.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m);
       const wasDown = target.hp <= 0;
       const h = cureAmt(); target.hp = Math.min(target.maxHp, target.hp + h);
+      target._bleeding = false;   // magical healing staunches a Bleeding Touch wound
       const up = wasDown && target.hp > 0;
       if (up) target.downed = false;   // healed back to consciousness
       this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${target.nickname} heals ${h} (${target.hp}/${target.maxHp})${up ? ' ⤴up!' : ''}.`, sound);
