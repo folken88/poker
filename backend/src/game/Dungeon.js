@@ -3871,6 +3871,7 @@ class Dungeon {
     if (kind === 'cantrip') return this.setCantrip(playerId, payload.key);   // pick at-will element (free, any time)
     if (kind === 'metamagic') return this.setMetamagic(playerId, payload.key);   // spontaneous caster toggles a metamagic on/off
     if (kind === 'loadout') return this.loadout(playerId, payload);   // Spellbook picker: fetch the loadout model / toggle a spell (lands at the next door)
+    if (kind === 'domains') return this.domains(playerId, payload);   // Domain picker (Phase C): fetch the model / toggle a domain (lands at the next door)
 
     if (this.status === 'exploring') {
       if (kind === 'door') return this.openDoor();
@@ -4217,7 +4218,20 @@ class Dungeon {
     try {
       if (!isCaster(m.cls)) { m.castableKeys = null; return; }
       if (isSpontaneous(m.cls)) m.castableKeys = new Set(db.getKnownSpells(m.playerId, m.cls) || []);
-      else m.castableKeys = new Set(Object.values(db.getPreparedSpells(m.playerId, m.cls) || {}).flat());
+      else {
+        m.castableKeys = new Set(Object.values(db.getPreparedSpells(m.playerId, m.cls) || {}).flat());
+        // DOMAINS Phase C: a cleric's chosen domains' SPELLS ride the +1 domain
+        // slot per level (slotsFor already counts it) — castable even when not
+        // in the prepared list. Keys missing from the cleric kit (e.g. Divine
+        // Power, not yet implemented) are harmless no-ops. Inquisitors get the
+        // granted POWER only (PF1) — no domain spells.
+        if (m.cls === 'cleric') {
+          for (const dk of (db.getDomains(m.playerId, m.cls) || [])) {
+            const d = DOMAINS[dk];
+            if (d && d.spells) for (const sk of Object.values(d.spells)) m.castableKeys.add(sk);
+          }
+        }
+      }
     } catch (_) { m.castableKeys = null; }
   }
   _loadoutAllows(ab, m) {
@@ -4396,6 +4410,7 @@ class Dungeon {
         return { key: a.key, name: a.name, icon: a.icon, img: a.img || at.img || null };
       })(),
       caster: isCaster(m.cls),
+      domainsMax: maxDomainsFor(m.cls) || 0,   // cleric 2 / inquisitor 1 / else 0 — shows the Domain picker (Phase C)
       spellNote: kit.note || null,
       metamagic: mmFeats.length ? mmFeats : null,    // null → no buttons (prepared casters bake metamagic into spell entries)
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
@@ -4771,6 +4786,47 @@ class Dungeon {
       db.setPreparedSpells(m.playerId, m.cls, prep);
     }
     return { ok: true };
+  }
+  // ── DOMAIN PICKER (Domains Phase C) ───────────────────────────────────────
+  // One action, two ops (mirrors the Spellbook). No `toggle` → the picker MODEL:
+  // all 8 domains (name/icon/blurb + granted power), the member's current picks
+  // and the class cap. With `toggle: key` → flip that domain in/out (cap
+  // enforced with a spoken-able reason). Changes SAVE immediately but land at
+  // the NEXT DOOR (_domainSetup re-reads the DB each room) — "takes effect next
+  // room". Dropping every pick reverts to the class default (a power always
+  // exists — DOMAINS-DESIGN.md §5).
+  domains(playerId, payload = {}) {
+    const m = this.member(playerId);
+    if (!m || m.left) return { ok: false, error: 'not in this run' };
+    const max = maxDomainsFor(m.cls);
+    if (!max) return { ok: false, error: 'your class has no domains' };
+    if (payload.toggle) {
+      const key = String(payload.toggle);
+      if (!DOMAINS[key]) return { ok: false, error: 'no such domain' };
+      const cur = db.getDomains(m.playerId, m.cls) || [];
+      let next;
+      if (cur.includes(key)) next = cur.filter(k => k !== key);
+      else {
+        if (cur.length >= max) return { ok: false, error: `a ${m.cls} may choose ${max} domain${max === 1 ? '' : 's'} — drop one first` };
+        next = [...cur, key];
+      }
+      const r = db.setDomains(m.playerId, m.cls, next);
+      if (!r.ok) return r;
+    }
+    return { ok: true, ...this._domainModel(m) };
+  }
+  _domainModel(m) {
+    const picks = db.getDomains(m.playerId, m.cls) || [];
+    return {
+      max: maxDomainsFor(m.cls),
+      picks,
+      domains: Object.values(DOMAINS).map(d => ({
+        key: d.key, name: d.name, icon: d.icon, blurb: d.blurb,
+        power: d.granted ? d.granted.name : null,
+        limit: d.granted ? d.granted.limit : null,
+        picked: picks.includes(d.key),
+      })),
+    };
   }
   // Improved at-will: casting stat to-hit AND to-damage (1d6 + casting mod), with
   // BAB-based iteratives (2nd ray at BAB 6, 3rd at 11, 4th at 16). Each ray is a

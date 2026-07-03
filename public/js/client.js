@@ -822,6 +822,9 @@
   let _sbpOpen = false;        // caster "🧠 Prepare ▾" spell-LOADOUT picker popover open/closed (sighted)
   let _sbpModel = null;        // fetched loadout model { spont, pool, caps, prepared|known } — shared by sighted panel + blind S menu
   let _dunSbp = null;          // blind dungeon: prepare-spells menu open — { lvl: null|number } (S opens; number picks a level, then toggles; 0 back; Escape closes)
+  let _dmpOpen = false;        // "⛪ Domains ▾" DOMAIN picker popover open/closed (sighted, Domains Phase C)
+  let _dmpModel = null;        // fetched domain model { max, picks, domains } — shared by the sighted panel + blind V menu
+  let _dunDmp = false;         // blind dungeon: domain menu open (V opens; a number toggles a domain; Escape closes)
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
   let _dunDispelPick = null;   // blind dungeon: Dispel Magic awaiting a target — {slot,label,targets:[{kind:'ally'|'foe',id,name}]} (numbers pick, Return = smart auto)
   let _dunModePick = null;     // blind dungeon: Channel awaiting a mode — {slot,label} (1 = heal/defensive, 2 = sear/offensive, Return = auto)
@@ -981,6 +984,45 @@
     return `<span class="dungeon__sb-wrap dungeon__sbp-wrap">` +
       `<button type="button" class="btn ${_sbpOpen ? 'btn--primary' : 'btn--ghost'}" data-sbp-toggle aria-expanded="${_sbpOpen}" title="Choose which spells you have prepared or known — changes land at the next door (blind: K key)">🧠 Prepare ▾</button>` +
       `<div class="dungeon__spellbook ${_sbpOpen ? 'is-open' : ''}">${body}</div>` +
+    `</span>`;
+  }
+  // DOMAIN picker I/O ('domains' action, Domains Phase C). Mirrors sbpickSend:
+  // no payload → fetch the model; { toggle: key } → flip a domain (server
+  // enforces the cleric-2/inquisitor-1 cap and speaks refusals). Changes save
+  // instantly and land at the NEXT ROOM (_domainSetup re-reads at the door).
+  function dmpickSend(payload, spoken) {
+    socket.emit('dungeon:action', { kind: 'domains', ...(payload || {}) }, (resp) => {
+      if (resp && resp.ok === false) {
+        if (resp.error) {
+          toast(resp.error, true);
+          try { if (window.BlindMode?.isOn?.()) window.BlindMode.speak(resp.error, 'urgent'); } catch (_) {}
+        }
+        return;
+      }
+      if (resp && resp.ok) {
+        _dmpModel = resp;
+        try { if (spoken) spoken(resp); } catch (_) {}
+        if (document.body.dataset.screen === 'dungeon') _sbpKeepScroll(renderDungeon);
+      }
+    });
+  }
+  // Sighted "⛪ Domains ▾" popover (clerics pick 2, inquisitors 1). Reuses the
+  // Spellbook popover CSS; name+icon tiles (only 8, so names fit); the blurb +
+  // granted power live in the tooltip. Blind players: the V key.
+  function _dmpickHtml() {
+    let body;
+    if (!_dmpModel) body = `<div class="dungeon__sb-head">Loading domains…</div>`;
+    else {
+      const mdl = _dmpModel;
+      body = `<div class="dungeon__sb-head">Choose ${mdl.max} domain${mdl.max === 1 ? '' : 's'} — ${(mdl.picks || []).length} picked · powers land at the next room</div>` +
+        `<div class="dungeon__sb-scroll"><div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">` +
+        (mdl.domains || []).map(d =>
+          `<button class="btn ${d.picked ? 'btn--primary' : 'btn--ghost'} btn--sm" style="flex:0 0 auto;width:auto;min-width:0;padding:4px 9px" data-dact="dmpick" data-dmkey="${escapeAttr(d.key)}" aria-pressed="${d.picked}" title="${escapeAttr(d.name)}: ${escapeAttr(d.blurb || '')} Granted power: ${escapeAttr(d.power || '—')}. Click to ${d.picked ? 'drop' : 'pick'} — takes effect next room.">${d.icon || '⛪'} ${escapeText(d.name)}</button>`
+        ).join('') + `</div></div>`;
+    }
+    return `<span class="dungeon__sb-wrap dungeon__dmp-wrap">` +
+      `<button type="button" class="btn ${_dmpOpen ? 'btn--primary' : 'btn--ghost'}" data-dmp-toggle aria-expanded="${_dmpOpen}" title="Choose your divine domains — granted powers (and, for clerics, domain spells); changes land at the next room (blind: V key)">⛪ Domains ▾</button>` +
+      `<div class="dungeon__spellbook ${_dmpOpen ? 'is-open' : ''}">${body}</div>` +
     `</span>`;
   }
   function dungeonAction(kind, payload) {
@@ -1612,6 +1654,9 @@
             // known spells; server enforces per-level slot caps; lands at the next
             // door. Blind players use the S key (same model, spoken).
             (kit.caster ? _sbpickHtml() : '') +
+            // Domain picker (Phase C) — clerics & inquisitors choose their domains;
+            // granted powers/spells land at the next room. Blind: the V key.
+            (kit.domainsMax ? _dmpickHtml() : '') +
             abilHtml +
           `</div>` +
           `<div class="dungeon__actrow dungeon__actrow--nav" role="group" aria-label="Navigation and session controls">` +
@@ -1734,6 +1779,7 @@
     if (ev.target.closest('[data-spellbook-toggle]')) { _spellbookOpen = !_spellbookOpen; renderDungeon(); return; }
     // Prepare (spell-loadout) picker expand/collapse — fetches the model on first open.
     if (ev.target.closest('[data-sbp-toggle]')) { _sbpOpen = !_sbpOpen; if (_sbpOpen && !_sbpModel) sbpickSend(); _sbpKeepScroll(renderDungeon); return; }
+    if (ev.target.closest('[data-dmp-toggle]')) { _dmpOpen = !_dmpOpen; if (_dmpOpen && !_dmpModel) dmpickSend(); _sbpKeepScroll(renderDungeon); return; }
     const b = ev.target.closest('[data-dact]'); if (!b || b.disabled) return;
     const act = b.dataset.dact;
     if (act === 'attack')       dungeonAction('attack', { targetUid: _dungeonSel[0] });
@@ -1750,6 +1796,7 @@
     else if (act === 'cantrip') dungeonAction('cantrip', { key: b.dataset.cankey });   // switch at-will element — free, any time
     else if (act === 'metamagic') dungeonAction('metamagic', { key: b.dataset.mmkey });   // toggle a metamagic on/off (spontaneous casters)
     else if (act === 'sbpick')  sbpickSend({ toggle: b.dataset.sbkey });   // toggle a spell in the loadout picker (server enforces slot caps)
+    else if (act === 'dmpick')  dmpickSend({ toggle: b.dataset.dmkey });   // toggle a domain (server enforces the 2/1 cap)
     else if (act === 'door')    dungeonAction('door');
     else if (act === 'bail')    dungeonAction('bail');
     else if (act === 'join')    enterDungeon();        // spectator → combatant
@@ -1789,6 +1836,19 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape' && _sbpOpen && document.body.dataset.screen === 'dungeon') {
       _sbpOpen = false;
+      renderDungeon();
+    }
+  });
+  // The Domain popover follows the same dismissal rules.
+  document.addEventListener('click', (ev) => {
+    if (!_dmpOpen || document.body.dataset.screen !== 'dungeon') return;
+    if (ev.target.closest('.dungeon__dmp-wrap')) return;   // inside the picker/toggle — keep it
+    _dmpOpen = false;
+    renderDungeon();
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && _dmpOpen && document.body.dataset.screen === 'dungeon') {
+      _dmpOpen = false;
       renderDungeon();
     }
   });
@@ -1996,6 +2056,42 @@
         _dunSbp = { lvl: null };
         if (_sbpModel) _sbpSpeakLevels();
         else { sayU('Opening your spell loadout.'); sbpickSend({}, () => { if (_dunSbp && _dunSbp.lvl == null) _sbpSpeakLevels(); }); }
+        return;
+      }
+      // ----- Domain menu — V (Domains Phase C) -------------------------------
+      // V opens and speaks the 8 domains numbered, with your current picks; a
+      // NUMBER toggles a domain in/out (the server enforces the cleric-2 /
+      // inquisitor-1 cap and speaks the refusal); Escape closes. Changes save
+      // instantly and land at the NEXT ROOM. (V audited free across global +
+      // poker + dungeon handlers — the S-key lesson.)
+      const _dmpSpeak = () => {
+        const mdl = _dmpModel; if (!mdl) { sayU('Still loading your domains.'); return; }
+        const list = (mdl.domains || []).map((d, i) => `${i + 1} ${d.name}${d.picked ? ', picked' : ''}`).join('; ');
+        sayU(`Domains — choose ${mdl.max}, ${(mdl.picks || []).length} picked: ${list}. Press a number to toggle, Escape to close. Takes effect next room.`);
+      };
+      if (_dunDmp) {
+        if (e.key === 'Escape') { e.preventDefault(); _dunDmp = false; sayU('Domain menu closed.'); return; }
+        if (/^[1-8]$/.test(k)) {
+          e.preventDefault();
+          const mdl = _dmpModel;
+          if (!mdl) { sayU('Still loading your domains.'); return; }
+          const d = (mdl.domains || [])[parseInt(k, 10) - 1];
+          if (!d) { sayU(`No domain ${k}.`); return; }
+          dmpickSend({ toggle: d.key }, (m2) => {
+            const now = (m2.picks || []).includes(d.key);
+            sayU(`${d.name} ${now ? 'picked' : 'dropped'}. ${(m2.picks || []).length} of ${m2.max} picked. Takes effect next room.`);
+          });
+          return;
+        }
+      }
+      if (k === 'v') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('V: domains. Clerics choose two domains, inquisitors one — granted powers, and domain spells for clerics. Press V, then a number to toggle a domain. Changes land at the next room.'); return; }
+        if (!kit.domainsMax) { sayU('Your class has no domains.'); return; }
+        if (_dunDmp) { _dunDmp = false; sayU('Domain menu closed.'); return; }
+        _dunDmp = true;
+        if (_dmpModel) _dmpSpeak();
+        else { sayU('Opening your domains.'); dmpickSend({}, () => { if (_dunDmp) _dmpSpeak(); }); }
         return;
       }
       const _mm = kit.metamagic || [];
