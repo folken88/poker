@@ -44,9 +44,11 @@ const SND = {
     '/audio/fight_lightning_2.mp3',  // direct thunderclap
     '/audio/fight_lightning_3.mp3',  // direct thunderclap
     '/audio/fight_lightning_4.mp3',  // direct thunderclap
-    '/audio/fight_lightning_5.mp3',  // Mjolnir thunderclap
     '/audio/fight_lightning_7.mp3',  // lightning charge-up
-    '/audio/fight_lightning_8.mp3',  // arcane umbral bolt
+    // Pulled from rotation (Tobias 2026-07-03), files kept on disk:
+    //   fight_lightning_5.mp3 (Mjolnir) — reserved for future THROWN-WEAPON hits
+    //   fight_lightning_8.mp3 (umbral bolt) — reserved for umbral spells
+    //   (it's byte-identical to spell_umbral_bolt.mp3, which they already use)
   ],
   // Stinking Cloud — a whole bouquet of farts, picked at random.
   stink: [
