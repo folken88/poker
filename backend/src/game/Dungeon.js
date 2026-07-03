@@ -3287,8 +3287,12 @@ class Dungeon {
     // offense phase (the mild-wounds stop below). Nobody hurt → no healing.
     const sevHurt = anyDowned || allies.some(a => !a.undead && a.hp < a.maxHp * 0.3);
     if (sevHurt) { const h = pickHeal(); if (h) return h; }
-    // Nobody hurt, but undead on the field → channel to HARM them (PF1 cleric).
-    if (channelHeal && !someoneHurt && targets.some(e => e.type === 'undead')) return { slot: slot(channelHeal), payload: {} };
+    // Nobody hurt, but a CROWD of undead → channel to SEAR them (PF1 cleric).
+    // The sear is an AoE spend (Tobias): vs a single undead a martial's weapon
+    // + Smite out-damages it, so PALADINS never open with it at all, and the
+    // priestly classes want 2+ undead up before burning the action.
+    if (channelHeal && !someoneHurt && m.cls !== 'paladin' && m.cls !== 'antipaladin'
+        && targets.filter(e => e.type === 'undead').length >= 2) return { slot: slot(channelHeal), payload: {} };
     // 1b) Dispel Magic — cleanse a debuffed ally (paralysis / stun / sickness).
     const cleanse = avail.find(a => a.effect === 'cleanse');
     if (cleanse) {
@@ -4466,7 +4470,16 @@ class Dungeon {
     };
   }
   // Spell save DC + caster level for this member (level = 1 + gear).
-  _spellDC(m) { return 10 + (m.level || 1) + (m.castingMod != null ? m.castingMod : CAST_MOD) + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0); }   // 10 + level + casting-stat mod + Spell Focus
+  // PF1 spell save DC = 10 + SPELL LEVEL + casting-stat mod (+ Spell Focus).
+  // Was 10 + CASTER level — a L17 Chain Lightning showed DC 37 (Tobias: "dc
+  // should follow normal pf1 convention"); now 10 + 6 + mod ≈ 23. Metamagic
+  // never raises it (ab.slvl is the BASE spell level, not the slot it rides
+  // in). Class features with no slvl (Stunning Fist, gaze-likes) use PF1's
+  // ability-DC shape instead: 10 + ½ level + casting mod.
+  _spellDC(m, ab) {
+    const base = (ab && ab.slvl >= 1) ? ab.slvl : Math.floor((m.level || 1) / 2);
+    return 10 + base + (m.castingMod != null ? m.castingMod : CAST_MOD) + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0);
+  }
   // Ranged-touch SPELL attack bonus. HOUSE RULE: casters aim their leveled touch
   // spells (Disintegrate, Scorching Ray, Shocking Grasp, elemental bolts) with their
   // SPELL stat, not Dex — so a wizard's ray lands as reliably as he casts. BAB +
@@ -4903,7 +4916,7 @@ class Dungeon {
   // Area damage with a save for half — Burning Hands / Holy Smite / Lightning
   // Bolt / Fireball. Hits up to ab.maxTargets foes (chosen or auto).
   _abAoe(m, ab, payload) {
-    const dc = this._spellDC(m), dice = this._spellDice(ab, m);
+    const dc = this._spellDC(m, ab), dice = this._spellDice(ab, m);
     let chosen;
     if (ab.randFoes || ab.randBase || ab.randN) {
       // Fireball-style: a RANDOM 1dN of the living enemies. Cone of Cold uses
@@ -4959,7 +4972,7 @@ class Dungeon {
       this._echoToTable(sound); return;
     }
     const ndice = 2 * Math.min(20, m.level || 1);          // 2d6 / level, max 40d6
-    const dc = this._spellDC(m);
+    const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'fort'), dc);
     const raw = sv.saved ? dRollN(5, 6) : dRollN(ndice, 6);   // Fort partial → only 5d6 on a save
     const dmg = this._dmgE(e, raw, ab.dtype);
@@ -5090,7 +5103,7 @@ class Dungeon {
   // Blinded = −4 to its own attacks, denied Dex (easier to hit, Sneak-Attackable).
   _abGlitterdust(m, ab, payload) {
     const sound = ab.sound;
-    const dc = this._spellDC(m);
+    const dc = this._spellDC(m, ab);
     const n = (ab.randBase || 1) + dRoll(ab.randDie || 4);
     const pool = this._targetableEnemies().slice();
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
@@ -5375,7 +5388,7 @@ class Dungeon {
       this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — but it doesn't breathe. No effect.`, sound);
       this._echoToTable(sound); return;
     }
-    const dc = this._spellDC(m);
+    const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'fort'), dc);
     if (!sv.saved && !e.boss) {
       this._dmgE(e, e.hp + 20, ab.dtype);   // lethal
@@ -5522,7 +5535,7 @@ class Dungeon {
   _abMassCharm(m, ab, payload) {
     const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => e.hp > 0 && !mindImmune(e) && !e.charmed && !(e.dominated > 0));
     if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — but there are no minds there to sway.`); this._echoToTable(); return; }
-    const dc = this._spellDC(m);
+    const dc = this._spellDC(m, ab);
     let got = 0, held = 0;
     for (const e of chosen) {
       const sv = this._saveVs(this._enemySave(e, 'will'), dc);
@@ -5549,7 +5562,7 @@ class Dungeon {
   _abPrismatic(m, ab, payload) {
     const chosen = this._enemyTargets(payload, ab.maxTargets || 6).filter(e => e.hp > 0);
     if (!chosen.length) return;
-    const dc = this._spellDC(m), dice = this._spellDice(ab, m);
+    const dc = this._spellDC(m, ab), dice = this._spellDice(ab, m);
     let failN = 0, savedN = 0, slainN = 0;
     const violets = [];
     for (const e of chosen) {
@@ -5578,7 +5591,7 @@ class Dungeon {
     const e = this._oneEnemy(payload); if (!e) return;
     if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — undead and constructs have no mind to command.`); this._echoToTable(); return; }
     if (e.dominated > 0) { this._note(`${ab.icon} ${e.name} is already dominated.`); return; }
-    const dc = this._spellDC(m);
+    const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, 'will'), dc);
     if (sv.saved) {
       this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — its will holds. [Will ${sv.total} vs DC ${dc}]`, ab.sound);
@@ -5597,7 +5610,7 @@ class Dungeon {
     const e = this._oneEnemy(payload); if (!e) return;
     if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — undead and constructs have no mind to charm.`); this._echoToTable(); return; }
     if (e.charmed) { this._note(`${ab.icon} ${e.name} is already charmed.`); return; }
-    const dc = this._spellDC(m);
+    const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
     const sound = ab.sound || pick(SND.stink);
     if (!sv.saved) { e.charmed = true; e.taunted = null; }
@@ -5608,7 +5621,7 @@ class Dungeon {
   _abSaveDebuff(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     if (ab.debuff === 'paralyzed' && mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — undead and constructs have no mind to seize.`); this._echoToTable(); return; }
-    const dc = this._spellDC(m);
+    const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
     const sound = ab.sound || pick(SND.stink);
     // Hold Person / Hideous Laughter: HELD for up to 1 round per caster level,
@@ -5664,7 +5677,7 @@ class Dungeon {
   }
   // Grease: up to maxTargets foes Reflex-save or slip prone (and lose the turn).
   _abGrease(m, ab, payload) {
-    const dc = this._spellDC(m);
+    const dc = this._spellDC(m, ab);
     // Grease is slippery enough to let a GRAPPLED ally slither out of the chains.
     if (ab.effect === 'grease') for (const a of this.livingParty()) {
       if (a.grappled) { a.grappled = false; a.grappledBy = null; this._note(`🛢️ ${a.nickname} slips free of the grapple in the grease!`); }
@@ -5702,7 +5715,7 @@ class Dungeon {
   // Sleep: the weakest foes (lowest HP) must make a Will save or fall asleep —
   // helpless (flat-footed) and losing turns until something strikes them.
   _abSleep(m, ab, payload) {
-    const dc = this._spellDC(m);
+    const dc = this._spellDC(m, ab);
     const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !ccd(e) && !mindImmune(e)).slice().sort((a, b) => a.hp - b.hp);   // skip already-CC'd foes + mind-immune (undead/construct)
     if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name}, but those foes are immune or already entranced.`); this._echoToTable(); return; }
     const sound = ab.sound || pick(SND.flesh), parts = [];
@@ -5721,7 +5734,7 @@ class Dungeon {
   // caster level — sluggish (acts only every other turn) and a touch easier to
   // hit (−1 AC). Plays the Evil Morty theme.
   _abSlow(m, ab, payload) {
-    const dc = this._spellDC(m);
+    const dc = this._spellDC(m, ab);
     const living = this._targetableEnemies().slice();
     for (let i = living.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [living[i], living[j]] = [living[j], living[i]]; }
     const n = dRollN(ab.randN || 2, ab.randDie || 4);   // 2d4 targets

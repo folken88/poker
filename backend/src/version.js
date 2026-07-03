@@ -3,6 +3,9 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.5.1  2026-07-03  PF1 spell DCs: 10 + SPELL level + mod (was 10 + CASTER
+//                     level — L17 Chain Lightning read DC 37, now ~23) ·
+//                     bots sear-channel only vs 2+ undead, paladins never
 //  3.5.0  2026-07-03  class-progression reference (Josh): 'progression' action
 //                     + blind X key — next-9-levels gains from _levelGains
 //  3.4.0  2026-07-03  Domains Phase C: Domain picker — sighted "⛪ Domains ▾"
@@ -31,4 +34,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.5.0' };
+module.exports = { VERSION: '3.5.1' };
