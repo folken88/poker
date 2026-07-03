@@ -861,7 +861,10 @@ class Dungeon {
     this._log('join', { who: playerId, level, maxHp, party: this.present().length });
     // Mid-combat join → add to the current turn order so they act this round.
     if (this.status === 'combat') this.turnOrder.push({ kind: 'party', id: playerId, init: dRoll(20) + 2 + Math.floor((m.level || 1) / 2) });
-    this._maintainBardSongs();   // a bard's Inspire aura covers the newcomer (or the newcomer IS the bard)
+    // A bard's Inspire aura covers a MID-RUN newcomer — but the song doesn't
+    // strike up at character selection (Tobias: it fired in the quiet room at
+    // depth 0). The FIRST door's openDoor() call starts it like every other room.
+    if (this.depth > 0) this._maintainBardSongs();
     this._broadcast();
     return m;
   }

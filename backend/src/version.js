@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.5.3  2026-07-03  Chain Lightning joins the SND.lightning rotation (the
+//                     Hetfield one-off stays on Storm of Vengeance)
+//  3.5.2  2026-07-03  hero-card names left-justified (clear the face) ·
+//                     Inspire Courage waits for the FIRST door (was singing
+//                     at character selection) · Dismas real art (3.5.1 tail)
 //  3.5.1  2026-07-03  PF1 spell DCs: 10 + SPELL level + mod (was 10 + CASTER
 //                     level — L17 Chain Lightning read DC 37, now ~23) ·
 //                     bots sear-channel only vs 2+ undead, paladins never
@@ -34,4 +39,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.5.1' };
+module.exports = { VERSION: '3.5.3' };

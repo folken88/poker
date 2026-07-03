@@ -208,7 +208,9 @@ button, input { font: inherit; color: inherit; }
 .dpc.is-down { border-color: rgba(200,40,40,0.95); animation: dpc-dying 1s ease-in-out infinite; }
 .dpc.is-down .dpc__hp { color: #e06a6a; font-weight: 700; }
 @keyframes dpc-dying { 0%,100% { box-shadow: 0 0 0 1px rgba(200,40,40,0.5); } 50% { box-shadow: 0 0 8px 2px rgba(200,40,40,0.85); } }
-.dpc__name { font-size: 0.82rem; font-weight: 600; }
+/* Name sits LEFT (like the HP line) so it clears the portrait's face — the
+   art crops center faces, and a centered name sat right on the nose (Tobias). */
+.dpc__name { font-size: 0.82rem; font-weight: 600; align-self: flex-start; text-align: left; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dpc__hpbar span { display: block; height: 100%; background: linear-gradient(90deg,#3fa34d,#7bd06a); }
 .dpc.is-low .dpc__hpbar span { background: linear-gradient(90deg,#c84a4a,#e8a15b); }
 /* HP/Lv line sits BOTTOM-LEFT (the card centers everything else) so the
