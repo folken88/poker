@@ -3511,6 +3511,7 @@ class Dungeon {
     if ((eff === 'charm' || eff === 'dominate' || eff === 'masscharm' || eff === 'sleep' || eff === 'fascinate') && mindImmune(t)) return false;
     if (eff === 'exhaust' && (t.type === 'undead' || t.type === 'construct')) return false;   // no living body to tire
     if (ab.onlyOutsiders && !(t.type === 'outsider' || /demon|devil|daemon|fiend/i.test(t.name || ''))) return false;   // Banishment
+    if (ab.onlyHumanoids && !this._isHumanoid(t)) return false;   // Hold Person (PF1 RAW)
     if (eff === 'save_debuff' && ab.debuff === 'paralyzed' && mindImmune(t)) return false;
     // Death effects (Suffocation / Slay Living / Finger of Death / Implosion /
     // Wail) need a living, breathing body — mirror _abSaveDie's immune set.
@@ -3520,6 +3521,15 @@ class Dungeon {
     // halves through — that cast is weaker but not wasted).
     if (ab.dtype && ab.dice && this._resistMult(t, ab.dtype) === 0) return false;
     return true;
+  }
+  // PF1 RAW (Tobias 2026-07-03): Hold Person affects HUMANOIDS only. Most foes
+  // carry no .type, so classify by type when present, else by name. Giants ARE
+  // humanoids in PF1 (the humanoid [giant] subtype: ogres, ettins, hill/stone
+  // giants), while MONSTROUS humanoids (harpy, medusa, minotaur, gargoyle),
+  // beasts, vermin, oozes, constructs, dragons, outsiders and undead are not.
+  _isHumanoid(t) {
+    if (t.type && ['undead', 'construct', 'outsider', 'dragon', 'aberration', 'animal', 'vermin', 'ooze', 'plant', 'magical beast', 'monstrous humanoid'].includes(t.type)) return false;
+    return !/golem|dragon|drake|wyvern|devil|demon|daemon|fiend|ooze|mouther|spider|centipede|\brat\b|badger|boar|bear\b|\bape\b|wolf|caimon|basilisk|chimera|ettercap|harpy|gargoyle|minotaur|medusa|horror|elemental|shadow|skelet|zombie|ghoul|ghast|wight|vampire|lich|ghost|wraith|specter|spectre|spirit/i.test(t.name || '');
   }
   // 0 to −9 HP: down and dying — can't act (the turn loop skips hp<=0), but a Cure
   // potion can still bring them back. Dead only once they pass −10.
@@ -3888,6 +3898,14 @@ class Dungeon {
       const tgt = this._oneEnemy(payload);
       if (tgt && !(tgt.type === 'outsider' || /demon|devil|daemon|fiend/i.test(tgt.name || ''))) {
         return { ok: false, error: `${ab.name} only banishes OUTSIDERS — ${tgt.name} is of this world.` };
+      }
+    }
+    // HOLD PERSON only seizes HUMANOIDS (PF1 RAW, Tobias 2026-07-03) — refuse
+    // (keeping the slot) vs beasts, dragons, monstrous humanoids and worse.
+    if (ab.onlyHumanoids) {
+      const tgt = this._oneEnemy(payload);
+      if (tgt && !this._isHumanoid(tgt)) {
+        return { ok: false, error: `${ab.name} only holds HUMANOIDS — ${tgt.name} is no person.` };
       }
     }
     // MELEE MANEUVERS need to physically REACH the foe — a grounded hero can't

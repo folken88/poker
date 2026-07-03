@@ -68,12 +68,24 @@ Legend: ✓ faithful · ⚠ partial / abstracted · ✗ conflicts with RAW (see 
 4. **Stunned −2 AC.** Stunned targets take −2 AC (in `_enemyAC` and the hero-target AC),
    on top of the existing turn-skip.
 
+### Resolved 2026-07-03 (v3.2.0–3.2.1, deployed to prod + testbed)
+5. **Slowed −1 Reflex.** Heroes: `_partySaveMod(m, ['reflex'])` — the tag is passed at the
+   Reflex call sites (enemy blasts); enemies: `_enemySave(e,'reflex')` subtracts 1 while
+   slowed. Other saves untouched.
+6. **Prone attacker’s own −4 melee.** In the hero to-hit line (`_swingVsAC` toHit): −4 when
+   `attacker.prone` and the weapon isn’t ranged. Mostly future-proofing — both sides still
+   auto-stand — but the rule is now in place for any path that leaves someone prone.
+7. **Hold Person = HUMANOIDS only (PF1 RAW, Tobias's call 2026-07-03).** `ab.onlyHumanoids`
+   on every holdperson kit entry; `_useAbility` refuses (keeping the slot) with a spoken
+   reason, mirroring Banishment's outsiders-only gate; `_spellWorksOn` teaches AI casters to
+   never waste it. `Dungeon._isHumanoid(t)`: explicit non-humanoid `type` wins, else a
+   non-humanoid name regex. PF1 nuance honored: ogres/ettins/hill+stone giants ARE humanoid
+   (giant subtype) → holdable; harpy/medusa/minotaur/gargoyle are MONSTROUS humanoids → not.
+   Verified against all 87 monsters.js entries. Hold Monster (enemy-cast) stays universal.
+
 ### Still deferred (minor / abstracted)
-- **Slowed −1 Reflex** — save helper is generic (all saves); adding −1 only to Reflex needs
-  per-save tagging. Skipped to avoid nerfing all saves.
 - **Grappled martial nuance** — no 2-handed-weapon lockout, no AoO suppression (abstract
   weapon model).
-- **Prone attacker’s own −4 melee** — moot: everyone stands (a move action) before striking.
 - **Enemy ranged vs prone hero** — enemies attack via `_enemyMelee` (−4, correct); no enemy
   ranged-attack path to apply the +4.
 
