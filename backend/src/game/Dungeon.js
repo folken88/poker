@@ -673,7 +673,11 @@ class Dungeon {
     // gently colour heals (gold), deaths (red), buffs (blue), debuffs (purple).
     const side = meta.side || this._noteSide || this._inferSide(text);
     const kind = meta.kind || this._inferKind(text);
-    this.log.push({ t: ++this._logSeq, text, sound: sound || null, side, kind, voiced: !!meta.voiced });
+    // `phase` tags each line's REPORT SECTION ('combat' / 'loot' / 'xp' / 'levelup')
+    // so the blind narrator's stop key can skip just the section now reading instead
+    // of the whole end-of-room report (Josh's segmented silence, 2026-07-03).
+    const phase = meta.phase || this._notePhase || (this.lootRoll ? 'loot' : (this.status === 'combat' ? 'combat' : null));
+    this.log.push({ t: ++this._logSeq, text, sound: sound || null, side, kind, voiced: !!meta.voiced, phase });
     if (this.log.length > 150) this.log.shift();
     if (sound) { try { recordSound('dungeon', sound, text); } catch (_) {} }
   }
@@ -1655,15 +1659,23 @@ class Dungeon {
     this.status = 'exploring';
     const gold = this.enemies.reduce((s, e) => s + (e.gold || 0), 0);
     this.runGold += gold;
+    // Each end-of-room block stamps its notes with a SECTION (see _note's phase) so
+    // the blind stop key can skip section-by-section: loot → xp → level-ups (Josh).
+    this._notePhase = 'xp';
     this._note(`✨ Room cleared! +${gold} gp (pool ${this.runGold} gp).`);
+    this._notePhase = null;
     this._log('clear', { gold, runGold: this.runGold });
     // END-OF-ROOM ORDER (Josh, blind-tester flow): loot roll FIRST (so a blind player
     // hears the prompt and can roll before the rest of the report scrolls past), THEN
     // XP + money, and LEVEL-UPS LAST so they are never cut off by the loot prompt.
+    this._notePhase = 'loot';
     this._maybeDropLoot();       // loot roll prompt up front
+    this._notePhase = null;
     this._maybeDropPotion();     // can revive a downed ally before they bleed
     this._endOfRoomRaise();      // a cleric/oracle raises the SLAIN now the fight is over
+    this._notePhase = 'xp';
     this._awardRoomXp();         // PF1 XP for the vanquished foes + LEVEL-UPS (announced last)
+    this._notePhase = null;
     this._bleedDowned();         // the still-dying lose 1 HP this room (toward −10)
     if (!this._humansInRun()) { this._wrapUp(); return; }   // last human bled out → AI allies cash out
     this._broadcast();
@@ -1687,7 +1699,9 @@ class Dungeon {
       if (this._applyLevelFromXp(m, newXp) > 0) ups.push({ m, from, to: m.level });
     }
     this._note(`✨ Foes vanquished — the party earns ${roomXp} XP (${per} each).`);
+    this._notePhase = 'levelup';   // level-ups are their own skippable section (Josh)
     for (const u of ups) this._announceLevelUp(u.m, u.from, u.to);
+    this._notePhase = 'xp';        // caller (_clearRoom) resets to null
   }
   // Announce a level-up with a short summary of what the hero gained.
   _announceLevelUp(m, from, to) {

@@ -286,7 +286,7 @@
       try { this.player(next, advance); } catch (_) { advance(); }
     },
   };
-  function speak(text, prio = 'event') {
+  function speak(text, prio = 'event', section = null) {
     if (!state.on || !supportsTTS || !text) return;
     text = String(text);
     // Drop the currency word entirely. Josh asked for the bare number
@@ -323,15 +323,17 @@
     if (p === PRIO.urgent) {
       try { TTS.cancel(); } catch (_) {}
       state.shadow.length = 0;   // engine queue is gone — drop everything shadowed
+      if (state.spool) state.spool.length = 0;   // the section spool mirrors the engine queue
+      state.curSection = null;
     }
-    _engineSpeak(text, prio);
+    _engineSpeak(text, prio, section);
   }
   // Hand an (already-substituted) line straight to the browser's NATIVE engine queue,
   // with the watchdog shadow bookkeeping. The engine serializes its own utterances;
   // any character clip playing alongside ducks under these rather than overlapping at
   // full volume. We never rely on `onend` (Chrome drops it), so a dropped end event
   // can't wedge narration.
-  function _engineSpeak(text, prio) {
+  function _engineSpeak(text, prio, section = null) {
     const u = new SpeechSynthesisUtterance(text);
     u.rate = state.rate;
     u.volume = state.volume;
@@ -344,10 +346,19 @@
     const rec = { text, prio };
     state.shadow.push(rec);
     if (state.shadow.length > 6) state.shadow.shift();
+    // SECTION SPOOL — a parallel ledger of every not-yet-started utterance, tagged
+    // with its report section ('combat' / 'loot' / 'xp' / 'levelup'). stopSpeaking()
+    // uses it to skip ONLY the section now reading and re-queue the rest (Josh's
+    // segmented end-of-room silence). Rides onstart/onerror only — never onend.
+    const spool = (state.spool = state.spool || []);
+    const srec = { text, prio, section: section || null };
+    spool.push(srec);
+    if (spool.length > 60) spool.shift();
+    const sdrop = () => { const j = spool.indexOf(srec); if (j > -1) spool.splice(j, 1); };
     const alive = () => { state.lastAliveTs = Date.now(); const i = state.shadow.indexOf(rec); if (i > -1) state.shadow.splice(i, 1); };
-    u.onstart = alive;
+    u.onstart = () => { state.curSection = srec.section; sdrop(); alive(); };
     u.onboundary = () => { state.lastAliveTs = Date.now(); };   // fires per word — proof the engine is really talking
-    u.onerror = alive;   // errored utterances must not count as "pending forever"
+    u.onerror = () => { sdrop(); alive(); };   // errored utterances must not count as "pending forever"
     // Hand it straight to the engine's queue — it plays this after anything already
     // queued, and advances itself. We do NOT rely on onend, so a dropped onend can
     // never wedge narration.
@@ -1094,15 +1105,26 @@
    *  confirms the key registered. */
   function stopSpeaking() {
     if (!state.on) return;
-    blog('stopSpeaking (user pressed stop)');
+    // SEGMENTED SILENCE (Josh, 2026-07-03): during a tagged report the stop key
+    // skips ONLY the section now reading — post-turn combat, then loot, then XP,
+    // then level-ups each silence separately, so one press never nukes the whole
+    // end-of-room report. Outside tagged reports (no current section) it behaves
+    // as before: silence everything.
+    const spool = state.spool || [];
+    const cur = state.curSection || (spool[0] && spool[0].section) || null;
+    const keep = cur ? spool.filter(r => r.section && r.section !== cur) : [];
+    blog('stopSpeaking', cur ? `(skip section ${cur} — ${keep.length} lines resume)` : '(all)');
     try { TTS.cancel(); } catch (_) {}
     state.queue.length = 0;
     state.speaking = false;
+    spool.length = 0;
+    state.curSection = null;
     if (state.banterAudio) {
       try { state.banterAudio.pause(); state.banterAudio.currentTime = 0; } catch (_) {}
       state.banterAudio = null;
     }
     earcon('close');
+    for (const r of keep) _engineSpeak(r.text, r.prio, r.section);   // the REST of the report reads on
   }
   function announceActor() {
     const st = state.deps?.state?.table;
@@ -1381,7 +1403,9 @@
       if (fresh.length) {
         _dun.logT = Math.max(_dun.logT, ...st.log.map(e => e.t));
         // Skip VOICED banter — the 11labs character voice already says it out loud.
-        const said = (t) => { if (t) speak(t, 'event'); };
+        // Each line carries its report SECTION (server-stamped `phase`) so the stop
+        // key can skip section-by-section (Josh's segmented silence).
+        const said = (t, ph) => { if (t) speak(t, 'event', ph || null); };
         // BIG-ROOM CONDENSE (Josh): in crowded fights the per-enemy flavor floods the
         // queue and his allies' actions never finish reading before his turn. So in a
         // big room, speak EVERY party/ally line + anything that happened to HIM in full,
@@ -1396,13 +1420,13 @@
           const mine = live.filter(isMine);
           const enemyTally = live.length - mine.length;          // collapsed enemy actions
           const show = mine.length > 8 ? mine.slice(-8) : mine;   // cap a reconnect flood of ally lines too
-          if (show.length < mine.length) said(`Skipping ${mine.length - show.length} earlier ally lines.`);
-          for (const e of show) said(_stripGlyphs(e.text));
-          if (enemyTally) said(`Plus ${enemyTally} more enemy action${enemyTally > 1 ? 's' : ''} — press E to inspect the foes.`);
+          if (show.length < mine.length) said(`Skipping ${mine.length - show.length} earlier ally lines.`, 'combat');
+          for (const e of show) said(_stripGlyphs(e.text), e.phase || 'combat');
+          if (enemyTally) said(`Plus ${enemyTally} more enemy action${enemyTally > 1 ? 's' : ''} — press E to inspect the foes.`, 'combat');
         } else {
           const toSay = live.length > 8 ? live.slice(-8) : live;
-          if (toSay.length < live.length) said(`Skipping ${live.length - toSay.length} earlier lines.`);
-          for (const e of toSay) said(_stripGlyphs(e.text));
+          if (toSay.length < live.length) said(`Skipping ${live.length - toSay.length} earlier lines.`, toSay[0] && toSay[0].phase);
+          for (const e of toSay) said(_stripGlyphs(e.text), e.phase || (st.status === 'combat' ? 'combat' : null));
         }
       }
     }
@@ -1435,12 +1459,12 @@
       if (!lr && hadLoot && st.status === 'exploring') {
         // The loot roll just SETTLED — give the deferred "what next" prompt now, so it
         // lands AFTER the whole loot result instead of splitting it (Josh).
-        speak('Loot settled. Open the next door, or bail with your gold.', 'event');
+        speak('Loot settled. Open the next door, or bail with your gold.', 'event', 'loot');
       } else if (lr && (lr.eligible || []).includes(meId) && (lr.decided || {})[meId] === undefined) {
         // EVENT, not urgent — an urgent prompt cancelled the queued XP/level-up report
         // (Josh: "level-up got cut off by the loot roll"). Queued, it speaks in order
         // after the report; the 35s roll window leaves ample time to press R/P.
-        speak(`Loot drop: a plus ${lr.tier} ${lr.label}. Press R to roll a d20 for it, or P to pass.`, 'event');
+        speak(`Loot drop: a plus ${lr.tier} ${lr.label}. Press R to roll a d20 for it, or P to pass.`, 'event', 'loot');
       }
     }
   }
