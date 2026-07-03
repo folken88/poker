@@ -2217,7 +2217,9 @@ class Dungeon {
       }
       // Kobold shaman: cast Hold Person on an unheld target before resorting to melee.
       if (e.caster === 'holdperson' && e.castsLeft > 0) {
-        const free = this._targetableParty().filter(m => !(m.paralyzed > 0));
+        // Smart caster: never Hold an UNDEAD hero — no mind to seize (same
+        // knowledge the hero bots use; Tobias: "enemies play smart").
+        const free = this._targetableParty().filter(m => !(m.paralyzed > 0) && !m.undead);
         if (free.length) return this._enemyCastHold(e, pick(free));
       }
       // Lich — a full WIZARD of its level. It casts every turn; its spellbook and
@@ -2228,7 +2230,8 @@ class Dungeon {
       if (e.arcane && this._targetableParty().length) return this._lichCast(e);
       // Skeletal Champion: a bone-rattling shout — 1d8 + save-or-stunned.
       if (e.shout && e.shoutsLeft > 0 && dRoll(2) === 1) {
-        const awake = this._targetableParty().filter(m => !(m.stunned > 0) && !(m.paralyzed > 0));
+        // Undead heroes are immune to the stun (and to fear) — shout at the living.
+        const awake = this._targetableParty().filter(m => !(m.stunned > 0) && !(m.paralyzed > 0) && !m.undead);
         if (awake.length) return this._enemyShout(e, pick(awake));
       }
       // Vampire (magus of its level): a Vampiric Touch spellstrike — a draining
@@ -2236,7 +2239,9 @@ class Dungeon {
       // vampire reaches for it every turn — the drain is its self-heal; a healthy
       // one mixes it in on a coin flip.
       if (e.spellstrike && (e.hp < e.maxHp * 0.7 || dRoll(2) === 1)) {
-        const reach = this._targetableParty().filter(m => !m.flying);
+        // Vampiric Touch drains LIFE — an undead hero has none to drink (the
+        // negative energy washes over them). Reach for the living.
+        const reach = this._targetableParty().filter(m => !m.flying && !m.undead);
         if (reach.length) return this._enemySpellstrike(e, pick(reach.filter(m => m.paralyzed > 0).length ? reach.filter(m => m.paralyzed > 0) : reach));
       }
       // Goblin Barbarian: roar a taunt (once) to pull the party's AI onto it.
@@ -2251,7 +2256,10 @@ class Dungeon {
       if (e.hook) {
         const victim = this._targetableParty().find(p => p.grappled && p.grappledBy === e.uid);
         if (victim) return this._enemyConstrict(e, victim);
-        const weakest = this._targetableParty().slice().sort((a, b) => a.hp - b.hp)[0];
+        // Smart hooker: skip Liberation inquisitors — their freedom of movement
+        // slips every hold, so the chain would land damage but never grab.
+        const hookable = this._targetableParty().filter(p => !this._freedomOfMovement(p));
+        const weakest = (hookable.length ? hookable : this._targetableParty()).slice().sort((a, b) => a.hp - b.hp)[0];
         if (weakest) return this._enemyHook(e, weakest);
       }
     }
@@ -2443,6 +2451,9 @@ class Dungeon {
   // Kobold shaman's Hold Person: fail a Will save (DC 10 + ½ caster level) → lose a turn.
   _enemyCastHold(e, target) {
     e.castsLeft -= 1;
+    // PF1: Hold is a mind-affecting compulsion — UNDEAD heroes (Tar-Baphon, Vrood,
+    // Vesorianna, Farrus) have no mind to seize. (Mirrors the heroes' rule.)
+    if (target.undead) { this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname} — but the undead have no mind to seize. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
     const dc = e.spellDC || 13;
     const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
@@ -2464,6 +2475,14 @@ class Dungeon {
     const fear = !!cfg.fear;   // Lich/Vampire sinister gaze: no damage, Will save or frozen in terror
     const dmg = fear ? 0 : dRollN(1, 8);
     if (dmg) this._dmgToMember(target, dmg);
+    // PF1: undead are immune to FEAR and to STUNNING — a gaze does nothing to
+    // them; the sonic shout still hurts but can't daze what doesn't breathe.
+    if (target.undead) {
+      this._note(fear
+        ? `👁️ ${e.glyph} ${e.name} glares at ${target.nickname} — but the undead know no fear. No effect.`
+        : `📢 ${e.glyph} ${e.name} shouts at ${target.nickname} for ${dmg} — the dead don't daze.`, cfg.sound || null);
+      this._echoToTable(cfg.sound || null); this._broadcast(); return;
+    }
     const dc = cfg.dc || e.spellDC || 14;
     const sm = this._partySaveMod(target, fear ? ['fear'] : []), sroll = dRoll(20), stot = sroll + sm;   // fear gaze → halfling/etc. fear bonus
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
@@ -2600,7 +2619,8 @@ class Dungeon {
 
     // ~1-in-6: freeze a hero with the dread gaze (its limited fear attack).
     if (e.shout && e.shoutsLeft > 0 && dRoll(6) === 1) {
-      const awake = heroes.filter(m => !(m.stunned > 0) && !(m.paralyzed > 0));
+      // The dread gaze is FEAR — undead heroes don't feel it; glare at the living.
+      const awake = heroes.filter(m => !(m.stunned > 0) && !(m.paralyzed > 0) && !m.undead);
       if (awake.length) return this._enemyShout(e, pick(awake));
     }
     // ── SELF-BUFF (arcane survival) ── a caster "does everything heroes can": it
@@ -2629,7 +2649,7 @@ class Dungeon {
     e.invisible = false;   // any other cast below is hostile → invisibility drops
     // 1) Lock down a dangerous, un-held melee bruiser with Hold Monster (5th) —
     //    only if nobody's already held (don't waste it).
-    const bruiser = heroes.find(m => !(m.paralyzed > 0) && MART.has(m.cls) && m.hp > m.maxHp * 0.4);
+    const bruiser = heroes.find(m => !(m.paralyzed > 0) && !m.undead && MART.has(m.cls) && m.hp > m.maxHp * 0.4);   // undead heroes have no mind to hold
     if (cl >= 9 && bruiser && !heroes.some(m => m.paralyzed > 0)) return this._enemyHoldHero(e, bruiser, dc(5), 'Hold Monster');
     // 2) Finish a badly-wounded hero with auto-hitting Magic Missile (1st).
     if (weakest.hp <= weakest.maxHp * 0.28) return this._enemyMissiles(e, weakest, Math.min(5, Math.floor((cl + 1) / 2)));
@@ -2639,7 +2659,11 @@ class Dungeon {
       const blasts = [{ verb: 'hurls a FIREBALL', icon: '🔥', dtype: 'fire', dice: Math.min(10, cl), slvl: 3, count: () => dRoll(3) + 1, sound: '/audio/spell_fireball.mp3' }];
       if (cl >= 9)  blasts.push({ verb: 'breathes a CONE OF COLD', icon: '❄️', dtype: 'cold', dice: Math.min(15, cl), slvl: 5, count: () => dRoll(3) + 1, sound: '/audio/spell_coneofcold.mp3' });
       if (cl >= 11) blasts.push({ verb: 'looses CHAIN LIGHTNING', icon: '⚡', dtype: 'electricity', dice: Math.min(20, cl), slvl: 6, count: () => dRoll(4), sound: '/audio/spell_lightning.mp3' });
-      const b = pick(blasts);
+      // Smart blaster: a party wrapped in fire wards (Protection from Fire) eats
+      // fireballs for free — reach for cold/lightning instead when it can.
+      const unwarded = heroes.some(m => !m.protectFire);
+      const pool = blasts.filter(b => b.dtype !== 'fire' || unwarded);
+      const b = pick(pool.length ? pool : blasts);
       return this._enemyBlast(e, { ...b, die: 6, dc: dc(b.slvl) });
     }
     // 4) Delete the most VALUABLE hero with a big single-target nuke — a lich
@@ -2692,6 +2716,8 @@ class Dungeon {
   // Lich Hold Monster — a hero fails a Will save or is HELD (re-saves each turn,
   // the attempt costing the turn). Same mechanic as the shaman's Hold Person.
   _enemyHoldHero(e, target, dc, label) {
+    // PF1: a mind-affecting compulsion — no effect on an undead hero.
+    if (target.undead) { this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — but the undead have no mind to seize. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
     const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
     const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
@@ -2716,6 +2742,13 @@ class Dungeon {
     const snd = cfg.sound || null;
     if (!r.hit) { this._note(`🩸 ${e.glyph} ${e.name}'s draining touch misses ${target.nickname}. ${this._atkStr(r)}`, snd, { side: 'enemy' }); this._echoToTable(snd); this._broadcast(); return; }
     const [phys, drTag] = this._physDR(target, r.damage);   // Stoneskin soaks the weapon part only
+    // PF1: negative energy doesn't harm the undead — vs an undead hero the touch
+    // is just a weapon blow: no drain, no life to drink.
+    if (target.undead) {
+      this._dmgToMember(target, phys);
+      this._note(`🩸 ${e.glyph} ${e.name}'s VAMPIRIC TOUCH strikes ${target.nickname} for ${phys}${drTag} — but the negative energy washes over the undead harmlessly. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, cfg.sound || null, { side: 'enemy' });
+      this._echoToTable(cfg.sound || null); this._broadcast(); return;
+    }
     const bonus = dRollN(cfg.dice || 4, cfg.die || 6);       // negative energy ignores DR
     const total = phys + bonus;
     this._dmgToMember(target, total);
