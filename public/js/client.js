@@ -907,6 +907,15 @@
     _lastAim = u;
     socket.emit('dungeon:target', { uid: u });
   }
+  // App VERSION badge — the topbar brand shows "Folken Poker v3.1.0" (semver from
+  // /api/version; see backend src/version.js and the living-docs mandate). Fails
+  // silent on old backends that lack the route.
+  fetch('/api/version').then(r => r.json()).then(v => {
+    if (!v || !v.version) return;
+    document.querySelectorAll('.topbar__brand').forEach(el => {
+      if (!el.querySelector('.topbar__ver')) el.insertAdjacentHTML('beforeend', ` <span class="topbar__ver" style="font-size:.62em;opacity:.55;font-weight:400" title="App version — see src/version.js">v${String(v.version).replace(/[^0-9a-z.\-]/gi, '')}</span>`);
+    });
+  }).catch(() => {});
   // SPELL-LOADOUT picker I/O ('loadout' action). No payload → fetch the model;
   // { toggle: key } → flip that spell and get the updated model back. Errors
   // toast + speak (slot caps: "level 3 is full…"); success stores the model,

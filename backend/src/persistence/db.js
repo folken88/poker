@@ -108,6 +108,11 @@ ensureColumn('players', 'race', "TEXT NOT NULL DEFAULT 'none'");
 // runtime (Phase C) reads these to decide what a character may cast.
 ensureColumn('players', 'prepared_spells', "TEXT NOT NULL DEFAULT '{}'");
 ensureColumn('players', 'known_spells', "TEXT NOT NULL DEFAULT '{}'");
+// DOMAINS (Phase A, 2026-07-03) — per-class map like prepared_spells:
+//   domains = { "cleric": ["healing","war"], "inquisitor": ["liberation"] }
+// Cleric picks 2 (powers + domain spells), inquisitor 1 (power only). See
+// pf1data/domains.js + DOMAINS-DESIGN.md; changes land between rooms.
+ensureColumn('players', 'domains', "TEXT NOT NULL DEFAULT '{}'");
 // The chosen ability for a FLEX race's floating +2 (human/half-elf/half-orc),
 // e.g. 'str'. Empty = auto (highest base stat). Pinned from characterBuilds.
 ensureColumn('players', 'race_flex', "TEXT NOT NULL DEFAULT ''");
@@ -786,6 +791,38 @@ function setKnownSpells(playerId, cls, known) {
   db.prepare('UPDATE players SET known_spells = ? WHERE player_id = ?').run(JSON.stringify(map), playerId);
 }
 
+// ---- DOMAINS (Phase A — see pf1data/domains.js + DOMAINS-DESIGN.md) ----------
+// Per-class picks, mirroring prepared/known spells. Empty/unset = the class
+// DEFAULT (inquisitor liberation; cleric healing+war). setDomains validates the
+// count (cleric ≤2, inquisitor ≤1) and that every key is a known domain.
+const domainsData = require('../pf1data/domains');
+function getDomains(playerId, cls) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return [];
+  const klass = cls || p.class || 'fighter';
+  const max = domainsData.maxDomainsFor(klass);
+  if (!max) return [];
+  let map = {};
+  try { map = JSON.parse(p.domains || '{}') || {}; } catch { map = {}; }
+  const saved = Array.isArray(map[klass]) ? map[klass].filter(k => domainsData.DOMAINS[k]) : [];
+  if (saved.length) return saved.slice(0, max);
+  return (domainsData.DEFAULTS[klass] || []).slice(0, max);
+}
+function setDomains(playerId, cls, picks) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return { ok: false, error: 'no such player' };
+  const klass = cls || p.class || 'fighter';
+  const max = domainsData.maxDomainsFor(klass);
+  if (!max) return { ok: false, error: 'your class has no domains' };
+  const clean = (Array.isArray(picks) ? picks : []).filter(k => domainsData.DOMAINS[k]);
+  if (clean.length > max) return { ok: false, error: `a ${klass} may choose at most ${max} domain${max === 1 ? '' : 's'}` };
+  let map = {};
+  try { map = JSON.parse(p.domains || '{}') || {}; } catch { map = {}; }
+  map[klass] = clean;   // empty = revert to the class default
+  db.prepare('UPDATE players SET domains = ? WHERE player_id = ?').run(JSON.stringify(map), playerId);
+  return { ok: true, domains: getDomains(playerId, klass) };
+}
+
 // ---- PF1 race (one per character; see pf1data/races.js + characterBuilds.js) ----
 const _setRaceStmt = db.prepare('UPDATE players SET race = ? WHERE player_id = ?');
 const _setFlexStmt = db.prepare('UPDATE players SET race_flex = ? WHERE player_id = ?');
@@ -893,6 +930,8 @@ module.exports = {
   setPreparedSpells,
   getKnownSpells,
   setKnownSpells,
+  getDomains,
+  setDomains,
   getRace,
   getRaceFlex,
   setRace,

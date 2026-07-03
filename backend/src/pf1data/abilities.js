@@ -253,6 +253,13 @@ const SPELL = {
   stormofvengeance: { key: 'stormofvengeance', name: 'Storm of Vengeance', icon: '🌩️', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'electricity', slvl: 9, sound: '/audio/wizard_lightningbolt_hetfield_metallica_james.mp3', desc: 'A black tempest of hail and lightning batters up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
   dominateperson:  { key: 'dominateperson',  name: 'Dominate Person',  icon: '💫', effect: 'dominate', target: 'enemy', save: 'will', slvl: 5, sound: '/audio/spell_fascinate.mp3', desc: 'Seize a foe\'s mind — Will save or it FIGHTS FOR YOU, savaging its own allies each turn (it re-saves each turn; breaks if you fall). No effect on the mindless.' },
   dominatemonster: { key: 'dominatemonster', name: 'Dominate Monster', icon: '🌀', effect: 'dominate', target: 'enemy', save: 'will', slvl: 9, sound: '/audio/spell_fascinate.mp3', desc: 'Seize ANY creature\'s mind — Will save or it FIGHTS FOR YOU, savaging its own allies each turn (re-saves each turn; breaks if you fall). No effect on the mindless.' },
+  // ── Wave-2 expansion (Tobias approved 2026-07-03) ──
+  heroismgreater:  { key: 'heroismgreater',  name: 'Greater Heroism',     icon: '🦸', effect: 'buff', target: 'ally', buff: { toHit: 4, save: 4 }, sticky: true, slvl: 5, sound: '/audio/spell_buff_invoke.mp3', desc: 'One ally becomes a LEGEND — +4 to hit and +4 to saves for the rest of the room.' },
+  masssuggestion:  { key: 'masssuggestion',  name: 'Mass Suggestion',     icon: '🗣️', effect: 'masscharm', target: 'aoe', maxTargets: 3, save: 'will', slvl: 6, sound: '/audio/spell_fascinate.mp3', desc: 'Up to 3 foes, Will save or CHARMED — they stop attacking the party; a hit snaps each out. No effect on the mindless.' },
+  banishment:      { key: 'banishment',      name: 'Banishment',          icon: '🚪', effect: 'savedie', target: 'enemy', save: 'will', onlyOutsiders: true, slvl: 5, sound: '/audio/spell_dimensional_anchor.mp3', desc: 'Hurl an OUTSIDER back to its home plane — Will save or GONE; a made save still wracks it. Only works on outsiders (demons, devils, fiends).' },
+  waveexhaustion:  { key: 'waveexhaustion',  name: 'Waves of Exhaustion', icon: '🌊', effect: 'exhaust', target: 'aoe', maxTargets: 6, slvl: 7, sound: '/audio/spell_umbral_bolt.mp3', desc: 'A wave of crushing fatigue — up to 6 LIVING foes are EXHAUSTED, NO save (one action a turn, −1 hit, −1 AC). Undead and constructs are untouched.' },
+  prismaticspray:  { key: 'prismaticspray',  name: 'Prismatic Spray',     icon: '🌈', effect: 'prismatic', target: 'aoe', maxTargets: 6, die: 6, dice: 'level', dcap: 12, slvl: 7, sound: '/audio/spell_holysmite.mp3', desc: 'A fan of clashing rays — every foe struck takes a RANDOM element for level d6 (Reflex half, max 12d6), and a violet ray (1-in-8) UNMAKES the living outright on a failed Fortitude save.' },
+  sunburst:        { key: 'sunburst',        name: 'Sunburst',            icon: '☀️', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 12, blindRider: true, slvl: 8, sound: '/audio/spell_searinglight.mp3', desc: 'A globe of blazing daylight — up to 6 foes take level d6 (max 12d6, Reflex half); a failed save also BLINDS for 3 rounds.' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
@@ -414,6 +421,9 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     preparedSpell(SPELL.wailbanshee,     17),
     preparedSpell(SPELL.freezingsphere,  11),   // high-level expansion (2026-07-02)
     preparedSpell(SPELL.dominatemonster, 17),   // Dominate Phase A (2026-07-03)
+    preparedSpell(SPELL.waveexhaustion, 13),    // wave-2 expansion (2026-07-03)
+    preparedSpell(SPELL.prismaticspray, 13),
+    preparedSpell(SPELL.sunburst,       15),
     // ── METAMAGIC prepared spells (PF1: the wizard prepares the metamagic version
     //    in a HIGHER slot — modelled here as separate once-per-room entries gated to
     //    the level that slot opens up; each carries its boost flag). Gated on having
@@ -475,6 +485,9 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     spontaneousSpell(SPELL.wailbanshee,     18),
     spontaneousSpell(SPELL.freezingsphere,  12),   // high-level expansion (2026-07-02)
     spontaneousSpell(SPELL.dominatemonster, 18),   // Dominate Phase A (2026-07-03)
+    spontaneousSpell(SPELL.waveexhaustion, 14),    // wave-2 expansion (2026-07-03)
+    spontaneousSpell(SPELL.prismaticspray, 14),
+    spontaneousSpell(SPELL.sunburst,       16),
   ] },
   // ORACLE — spontaneous DIVINE caster on the CLERIC spell list, at oracle (full
   // spontaneous caster) progression: per-spell-level slots from the SORC table via
@@ -581,6 +594,9 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { ...SPELL.sleep,        cost: 'slot', char: 'Agu' },
     { ...SPELL.displacement, cost: 'slot', minLevel: 7,  char: 'Agu' },
     { ...SPELL.invisgreater, cost: 'slot', minLevel: 10, char: 'Agu' },
+    // ── Wave-2 expansion (2026-07-03): the inquisitor's 5th–6th finally exist ──
+    spontaneousSpell(SPELL.banishment, 13),
+    { key: 'dispelmagicgreater', name: 'Dispel Magic, Greater', icon: '🌀', effect: 'cleanse', greater: true, target: 'ally', slvl: 6, cost: 'slot', minLevel: 16, sound: S.dispel, desc: 'A sweeping unweaving — strip ALL debuffs off an afflicted ally (paralysis, hold, slow, sicken, blind, grapple), or tear the buffs off a foe.' },
   ] },
   // BARD — spontaneous caster (spell SLOTS per level). The bardic-performance
   // CLASS FEATURES (Inspire Courage, Fascinate) are NOT spells and sit beside the
@@ -610,6 +626,8 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { key: 'heroism',   name: 'Heroism',         icon: '🦸', cost: 'slot', slvl: 3, minLevel: 7, effect: 'buff', target: 'ally', buff: { toHit: 2, save: 2 }, sticky: true, sound: S.invoke, desc: 'One ally becomes heroic — +2 to hit and +2 to saves for the rest of the room.' },
     { key: 'dispelmagic', name: 'Dispel Magic',  icon: '🌀', cost: 'slot', slvl: 3, minLevel: 7, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'Strip a debuff off an afflicted ally (paralysis / hold / grapple / stun / sickness) — or tear a buff off a foe.' },
     spontaneousSpell(SPELL.dominateperson, 13),   // Dominate Phase A (2026-07-03): bard 5th, turns a foe against its own
+    spontaneousSpell(SPELL.heroismgreater, 13),   // wave-2 expansion (2026-07-03)
+    spontaneousSpell(SPELL.masssuggestion, 16),
   ] },
   // DRUID — prepared nature caster: one casting of each spell per room.
   druid: { atwill: ATTACK('🌿'), note: 'One casting of each spell, per room. WILD SHAPE forms last until you drop them (each usable once per room).', abilities: [
@@ -659,6 +677,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     // High-level expansion (2026-07-02): druid tops out with real 7th/9th picks.
     { ...preparedSpell(SPELL.firestorm, 13), slvl: 7 },   // PF1: Fire Storm is druid 7 (cleric 8)
     preparedSpell(SPELL.stormofvengeance, 17),
+    preparedSpell(SPELL.sunburst, 15),   // wave-2 expansion (2026-07-03): druid 8th
   ] },
 };
 

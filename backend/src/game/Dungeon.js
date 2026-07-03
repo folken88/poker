@@ -3403,7 +3403,7 @@ class Dungeon {
     //      now alternates Holy Smite / Hold Person instead.
     const offense = [];
     if (targets.length >= 2) {
-      for (const a of avail) if (['aoe', 'grease', 'sleep', 'slow', 'fascinate'].includes(a.effect)) {
+      for (const a of avail) if (['aoe', 'grease', 'sleep', 'slow', 'fascinate', 'exhaust', 'prismatic', 'masscharm'].includes(a.effect)) {
         // Only foes the spell WORKS on (a Sleep with nothing but skeletons on the
         // field is never queued) — see _spellWorksOn.
         const el = targets.filter(t => this._spellWorksOn(a, t));
@@ -3495,7 +3495,9 @@ class Dungeon {
     const eff = ab.effect;
     // Mind-affecting: charm / sleep / fascinate + the mind-seizing debuffs
     // (Hold Person, Hideous Laughter) — undead & constructs have no mind.
-    if ((eff === 'charm' || eff === 'dominate' || eff === 'sleep' || eff === 'fascinate') && mindImmune(t)) return false;
+    if ((eff === 'charm' || eff === 'dominate' || eff === 'masscharm' || eff === 'sleep' || eff === 'fascinate') && mindImmune(t)) return false;
+    if (eff === 'exhaust' && (t.type === 'undead' || t.type === 'construct')) return false;   // no living body to tire
+    if (ab.onlyOutsiders && !(t.type === 'outsider' || /demon|devil|daemon|fiend/i.test(t.name || ''))) return false;   // Banishment
     if (eff === 'save_debuff' && ab.debuff === 'paralyzed' && mindImmune(t)) return false;
     // Death effects (Suffocation / Slay Living / Finger of Death / Implosion /
     // Wail) need a living, breathing body — mirror _abSaveDie's immune set.
@@ -3867,6 +3869,14 @@ class Dungeon {
       const tgt = this._oneEnemy(payload);
       if (tgt && fightsNatural(tgt)) return { ok: false, error: `${tgt.name} fights with natural weapons — there's nothing to disarm.` };
     }
+    // BANISHMENT only works on OUTSIDERS (PF1) — refuse (keeping the slot) vs a
+    // creature of this world; the reason is toasted + spoken in blind mode.
+    if (ab.onlyOutsiders) {
+      const tgt = this._oneEnemy(payload);
+      if (tgt && !(tgt.type === 'outsider' || /demon|devil|daemon|fiend/i.test(tgt.name || ''))) {
+        return { ok: false, error: `${ab.name} only banishes OUTSIDERS — ${tgt.name} is of this world.` };
+      }
+    }
     // MELEE MANEUVERS need to physically REACH the foe — a grounded hero can't
     // trip / disarm / bull rush / grapple / feint a flyer on the wing (Josh: you
     // could cheat down airborne sorcerers & dragons with these). Unlike a basic
@@ -3945,6 +3955,9 @@ class Dungeon {
       save_debuff: () => this._abSaveDebuff(m, ab, payload),
       charm:       () => this._abCharm(m, ab, payload),
       dominate:    () => this._abDominate(m, ab, payload),
+      masscharm:   () => this._abMassCharm(m, ab, payload),
+      exhaust:     () => this._abExhaust(m, ab, payload),
+      prismatic:   () => this._abPrismatic(m, ab, payload),
       grease:      () => this._abGrease(m, ab, payload),
       fascinate:   () => this._abFascinate(m, ab, payload),
       sleep:       () => this._abSleep(m, ab, payload),
@@ -4637,16 +4650,18 @@ class Dungeon {
     // then a TALLY of how many failed / saved / were slain — NOT a per-enemy list.
     // Keeps mid-combat narration fast; the blind player inspects enemies (E) on their
     // own turn for exactly who's left and how hurt.
-    let failN = 0, savedN = 0, slainN = 0;
+    let failN = 0, savedN = 0, slainN = 0, blindN = 0;
     for (const e of chosen) {
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
       const evaded = sv.saved && saveStat === 'reflex' && e.evasion;
       const raw = sv.saved ? (evaded ? 0 : Math.floor(full / 2)) : full;
       this._dmgE(e, raw, ab.dtype);
+      // SUNBURST-style rider: a failed save also BLINDS (3 rounds, like Glitterdust).
+      if (ab.blindRider && !sv.saved && e.hp > 0) { e.blinded = Math.max(e.blinded || 0, 3); blindN++; }
       if (sv.saved) savedN++; else failN++;
       if (e.hp <= 0) slainN++;
     }
-    const tally = `${failN} hit${savedN ? `, ${savedN} saved` : ''}${slainN ? `, ${slainN} slain` : ''}`;
+    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${savedN ? `, ${savedN} saved` : ''}${slainN ? `, ${slainN} slain` : ''}`;
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${saveLbl} DC ${dc} (${full} ${ab.dtype || ''}): ${tally}.`, sound);
     this._echoToTable(sound);
   }
@@ -5221,6 +5236,59 @@ class Dungeon {
     const h = healBig(); target.hp = Math.min(target.maxHp, target.hp + h);
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${target.nickname} heals ${h} (${target.hp}/${target.maxHp}).`, sound);
     this._echoToTable(sound);
+  }
+  // Mass Suggestion (bard 6th) — up to 3 foes, Will save or CHARMED (the existing
+  // charm state: they stop attacking the party; a hit snaps each out).
+  _abMassCharm(m, ab, payload) {
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => e.hp > 0 && !mindImmune(e) && !e.charmed && !(e.dominated > 0));
+    if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — but there are no minds there to sway.`); this._echoToTable(); return; }
+    const dc = this._spellDC(m);
+    let got = 0, held = 0;
+    for (const e of chosen) {
+      const sv = this._saveVs(this._enemySave(e, 'will'), dc);
+      if (!sv.saved) { e.charmed = true; e.taunted = null; got++; } else held++;
+    }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} (Will DC ${dc}) — ${got} charmed${held ? `, ${held} resisted` : ''}.`, ab.sound);
+    this._echoToTable(ab.sound);
+  }
+  // Waves of Exhaustion (7th, necromancy) — NO SAVE: living foes in the wave are
+  // EXHAUSTED, modelled as the slowed/staggered condition (one action a turn,
+  // −1 to hit, −1 AC). Undead and constructs (no living body) are untouched.
+  _abExhaust(m, ab, payload) {
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 6).filter(e => e.hp > 0);
+    const living = chosen.filter(e => !(e.type === 'undead' || e.type === 'construct'));
+    if (!living.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — nothing there lives to tire.`); this._echoToTable(); return; }
+    const dur = Math.max(3, Math.min(8, Math.floor((m.level || 1) / 2)));
+    for (const e of living) e.slowed = Math.max(e.slowed || 0, dur);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — a wave of crushing fatigue, NO save: ${living.length} foe${living.length === 1 ? '' : 's'} EXHAUSTED (one action a turn, ${dur} rounds).`, ab.sound);
+    this._echoToTable(ab.sound);
+  }
+  // Prismatic Spray (7th) — every foe in the fan takes a RANDOM ray: one of the
+  // four elements for level d6 (Reflex half), or on a violet ray (1-in-8) a
+  // Fortitude save or be UNMADE outright (no effect on the unliving).
+  _abPrismatic(m, ab, payload) {
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 6).filter(e => e.hp > 0);
+    if (!chosen.length) return;
+    const dc = this._spellDC(m), dice = this._spellDice(ab, m);
+    let failN = 0, savedN = 0, slainN = 0;
+    const violets = [];
+    for (const e of chosen) {
+      if (dRoll(8) === 8 && !(e.type === 'undead' || e.type === 'construct')) {
+        const sv = this._saveVs(this._enemySave(e, 'fort'), dc);
+        if (!sv.saved) { this._dmgE(e, e.hp + 10, 'force'); violets.push(e.name); slainN++; }
+        else savedN++;
+        continue;
+      }
+      const dtype = pick(['fire', 'cold', 'electricity', 'acid']);
+      const sv = this._saveVs(this._enemySave(e, 'reflex'), dc);
+      const full = this._rollSpell(m, dice, ab.die || 6, ab);
+      this._dmgE(e, sv.saved ? Math.floor(full / 2) : full, dtype);
+      if (sv.saved) savedN++; else failN++;
+      if (e.hp <= 0) slainN++;
+    }
+    const violetNote = violets.length ? ` — the VIOLET RAY unmakes ${violets.join(' & ')}!` : '';
+    this._note(`${ab.icon} ${m.nickname} fans a PRISMATIC SPRAY (DC ${dc}) — ${failN} blasted${savedN ? `, ${savedN} saved` : ''}${slainN ? `, ${slainN} slain` : ''}.${violetNote}`, ab.sound);
+    this._echoToTable(ab.sound);
   }
   // Dominate Person / Monster — a Will save or the foe FIGHTS FOR THE PARTY:
   // each of its turns it attacks its own allies; a fresh Will save each turn can

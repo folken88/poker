@@ -22,8 +22,13 @@ const app = express();
 app.use(express.json({ limit: '4kb' }));
 app.set('trust proxy', true);
 
+const { VERSION } = require('./version');   // ONE app semver — see src/version.js (bump per the living-docs mandate)
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, version: 3, defaultStack: db.DEFAULT_STACK });
+  res.json({ ok: true, version: VERSION, defaultStack: db.DEFAULT_STACK });
+});
+app.get('/api/version', (_req, res) => {
+  res.set('Cache-Control', 'no-cache');
+  res.json({ version: VERSION });
 });
 
 app.get('/api/roster', (_req, res) => {
@@ -191,7 +196,7 @@ process.on('unhandledRejection', (reason) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[poker] v3 listening on :${PORT}  defaultStack=${db.DEFAULT_STACK}  roster=${db.ROSTER.length}`);
+  console.log(`[poker] v${VERSION} listening on :${PORT}  defaultStack=${db.DEFAULT_STACK}  roster=${db.ROSTER.length}`);
   // Meyanda, the family Discord herald — a silent no-op unless data/.meyanda.env
   // enables her (so the testbed stays dark and her failures stay her own).
   try { require('./discord/meyanda').start(); } catch (e) { console.error('[meyanda]', e.message); }
