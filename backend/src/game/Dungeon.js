@@ -878,6 +878,7 @@ class Dungeon {
     }
     else if (o.fascinated) c.push({ key: 'fascinated', label: 'Fascinated', desc: 'enthralled — loses turns; the first hit snaps it out', icon: `${I}fascinated.webp` });
     if (o.charmed)       c.push({ key: 'charmed',    label: 'Charmed',    desc: "won't attack your party — only tends its own side; a hit snaps it out", icon: `${I}fascinated.webp` });
+    if (o.dominated > 0) c.push({ key: 'dominated',  label: 'Dominated',  desc: 'FIGHTS FOR THE PARTY — savages its own allies; a fresh Will save each of its turns can shake the hold', icon: `${I}fascinated.webp` });
     if (o.darkened > 0)  c.push({ key: 'darkened',  label: 'Darkness',  desc: 'shrouded in darkness — cannot act or be attacked (2 rounds)', icon: `${I}darkened.webp` });
     if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
     if (o.markedEvil)    c.push({ key: 'markedevil', label: 'Marked',   desc: 'revealed by Detect Evil — smite-able', icon: `${I}markedevil.webp` });
@@ -981,6 +982,7 @@ class Dungeon {
         align: e.align || 'NE', evil: !!e.evil, type: e.type || null,
         ac: e.ac, touchAC: (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)), ffAC: Math.max(10, e.ac - 2),
         flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep, charmed: !!e.charmed, darkened: (e.darkened > 0),
+        dominated: (e.dominated > 0),   // Phase B: the client renders a dominated foe's card IN THE HERO ROW
         conditions: e.hp > 0 ? this._condList(e) : [],
         buffs: e.hp > 0 ? this._enemyBuffList(e) : [],
       })),

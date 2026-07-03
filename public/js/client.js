@@ -1252,6 +1252,7 @@
           const artBg = portraitFor(e.art);   // full-art backdrop when one was paired
           const styles = [];
           if (shrouded) styles.push('opacity:.45');
+          if (e.dominated && !dead) styles.push('outline:2px solid #a78bfa;box-shadow:0 0 14px 3px rgba(167,139,250,.75)');   // 💫 possessed glow
           if (shadows.length) styles.push(`box-shadow:${shadows.join(', ')}`);
           if (artBg) styles.push(portraitBg(artBg).replace(/^;/, ''));
           const aimChip = aimedBy.length
@@ -1261,9 +1262,9 @@
           const portrait = e.art
             ? `<div class="dmon__art" style="background-image:url('${escapeAttr(e.art)}')">${e.boss ? '<span class="dmon__crown">👑</span>' : ''}</div>`
             : `<div class="dmon__glyph">${e.glyph || '❓'}${e.boss ? ' 👑' : ''}</div>`;
-          return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''} ${isTurn ? 'is-turn' : ''} ${artBg ? 'has-portrait' : ''}"${styles.length ? ` style="${styles.join(';')}"` : ''} data-enemy="${escapeAttr(e.uid)}" ${(dead || shrouded) ? 'disabled' : ''} title="${shrouded ? 'Shrouded in darkness — cannot be targeted' : ''}">
+          return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''} ${isTurn ? 'is-turn' : ''} ${e.dominated && !dead ? 'is-dominated' : ''} ${artBg ? 'has-portrait' : ''}"${styles.length ? ` style="${styles.join(';')}"` : ''} data-enemy="${escapeAttr(e.uid)}" ${(dead || shrouded) ? 'disabled' : ''} title="${shrouded ? 'Shrouded in darkness — cannot be targeted' : (e.dominated && !dead ? 'DOMINATED — fighting for the party (Will re-save each of its turns)' : '')}">
             ${portrait}
-            <div class="dmon__name">${escapeText(e.name)}${e.flying ? ` <span class="dmon__fly" title="Flying — immune to prone (can't be tripped); holds the high ground: +1 to hit and +2 AC vs grounded heroes">🪽</span>` : ''}</div>
+            <div class="dmon__name">${e.dominated && !dead ? '💫 ' : ''}${escapeText(e.name)}${e.flying ? ` <span class="dmon__fly" title="Flying — immune to prone (can't be tripped); holds the high ground: +1 to hit and +2 AC vs grounded heroes">🪽</span>` : ''}</div>
             ${aimChip}
             ${condIcons(e.conditions)}${buffIcons(e.buffs)}
             <div class="dmon__hpbar" title="${dead ? 'Slain' : `${e.hp}/${e.maxHp} HP`}"><span style="width:${pct}%"></span></div>
@@ -1289,19 +1290,27 @@
     const _eneSig = (d.status === 'combat' && _enemiesSorted.length)
       ? 'd' + d.depth + ':' + (d.enemies || []).map(e => e.uid).join(',')
       : null;
+    // Phase B (Dominate): a dominated foe's card LEAVES the villain row and renders
+    // among the heroes. Capture every enemy card's position DOC-WIDE before any
+    // re-render, so the card visibly GLIDES between the rows (_playCross, after the
+    // party row renders below). Dead dominated foes fall back to the villain row
+    // as corpse chips like everyone else.
+    const _crossOld = _flipCapture(document, 'data-enemy');
+    const _domFoes = _enemiesSorted.filter(e => e.dominated && e.alive);
+    const _eneList = _enemiesSorted.filter(e => !(e.dominated && e.alive));
     if (ene) {
       if (_eneSig && _eneSig !== _dunEneSig) {
-        ene.innerHTML = _buildEnemies([...(d.enemies || [])]);   // spawn order
+        ene.innerHTML = _buildEnemies([...(d.enemies || [])].filter(e => !(e.dominated && e.alive)));   // spawn order
         _eneCompact();
         requestAnimationFrame(() => {
           const _old = _flipCapture(ene, 'data-enemy');
-          ene.innerHTML = _buildEnemies(_enemiesSorted);          // init order
+          ene.innerHTML = _buildEnemies(_eneList);                // init order
           _eneCompact();
           _flipPlay(ene, 'data-enemy', _old);
         });
       } else {
         const _old = _flipCapture(ene, 'data-enemy');
-        ene.innerHTML = _buildEnemies(_enemiesSorted);
+        ene.innerHTML = _buildEnemies(_eneList);
         _eneCompact();
         _flipPlay(ene, 'data-enemy', _old);
       }
@@ -1360,11 +1369,26 @@
     const _partySorted = [...(d.party || [])].sort(_byInit);
     if (party) {
       const _old = _flipCapture(party, 'data-pid');
-      party.innerHTML = _buildParty(_partySorted);
+      // DOMINATED foes fight for the party — their cards join the HERO row (💫
+      // purple glow), and glide back to the villains when the hold breaks.
+      party.innerHTML = _buildParty(_partySorted) + (_domFoes.length ? _buildEnemies(_domFoes) : '');
       const np = (d.party || []).filter(x => !x.dead && !x.left).length;
       party.classList.toggle('is-compact', np > 4 && np <= 6);
       party.classList.toggle('is-packed', np > 6);
       _flipPlay(party, 'data-pid', _old);
+      // Cross-row GLIDE: any enemy card whose position jumped a row's worth of
+      // height since _crossOld was captured just crossed between the villain and
+      // hero rows — animate the crossing. In-row shuffles were already animated
+      // by the per-row FLIPs above, so small deltas are skipped.
+      document.querySelectorAll('#dungeonParty [data-enemy], #dungeonEnemies [data-enemy]').forEach(el => {
+        const o = _crossOld[el.getAttribute('data-enemy')]; if (!o) return;
+        const n = el.getBoundingClientRect();
+        const dx = o.left - n.left, dy = o.top - n.top;
+        if (Math.abs(dy) < 60) return;   // same row — the per-row FLIP handled it
+        if (el.animate) el.animate(
+          [{ transform: `translate(${dx}px, ${dy}px)`, zIndex: 50 }, { transform: 'translate(0,0)', zIndex: 50 }],
+          { duration: 700, easing: 'cubic-bezier(.2,.75,.3,1)' });
+      });
     }
 
     const turn = $('#dungeonTurn');
@@ -1664,6 +1688,18 @@
       socket.emit('dungeon:kick', { botId: k.dataset.dungeonKick }, (resp) => {
         if (!resp?.ok) toast(resp?.error || 'Could not dismiss ally', true);
       });
+      return;
+    }
+    // A DOMINATED foe's card lives in the party row (Phase B) — clicking it still
+    // TARGETS it like any enemy (heroes may cut a dominated foe down early).
+    const domCard = ev.target.closest?.('[data-enemy]');
+    if (domCard && !domCard.disabled) {
+      const uid = domCard.dataset.enemy;
+      const i = _dungeonSel.indexOf(uid);
+      if (i >= 0) _dungeonSel.splice(i, 1);
+      else { _dungeonSel.push(uid); if (_dungeonSel.length > 2) _dungeonSel.shift(); }
+      emitAim(_dungeonSel[0] || null);
+      renderDungeon();
       return;
     }
     // Click a party card to TARGET an ally — buffs / dispels aim at them
