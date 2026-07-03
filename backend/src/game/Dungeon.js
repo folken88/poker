@@ -1961,7 +1961,7 @@ class Dungeon {
   // stack with itself and ends exactly when Haste does. (Engine saves are generic,
   // so the Reflex bonus reads as +1 to all saves — a small, benign approximation.)
   _hasteMod(m) { return (m && m.hasted > 0 && m.hasteFull) ? 1 : 0; }
-  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged)
+  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.slowed > 0 && tags && tags.includes('reflex') ? 1 : 0); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged; Slow drags Reflex −1 — PF1)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
   _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
@@ -2112,7 +2112,7 @@ class Dungeon {
     // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
     // now carry high-level scaling — see the iterative loop in _playerAttack).
     const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon, { offHand }) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };   // off-hand swing → ½ ability mod to DAMAGE (PF1 two-weapon fighting)
-    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) + ff.hit + swashWF;
+    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + ff.hit + swashWF;   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified)
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, fumble: true, roll, toHit, total, ac, sound: SND.fumble };
     const hit = roll === 20 || total >= ac;
@@ -2709,7 +2709,7 @@ class Dungeon {
       const unwarded = heroes.some(m => !m.protectFire);
       const pool = blasts.filter(b => b.dtype !== 'fire' || unwarded);
       const b = pick(pool.length ? pool : blasts);
-      return this._enemyBlast(e, { ...b, die: 6, dc: dc(b.slvl) });
+      return this._enemyBlast(e, this._enemyMeta(e, cl, { ...b, die: 6, dc: dc(b.slvl) }));
     }
     // 4) Delete the most VALUABLE hero with a big single-target nuke — a lich
     //    knows to kill the CASTER first (the party's healing and blasting engine);
@@ -2718,20 +2718,33 @@ class Dungeon {
     const CASTERISH = new Set(['cleric', 'oracle', 'wizard', 'sorcerer', 'druid', 'bard', 'witch']);
     const priority = heroes.find(m => CASTERISH.has(m.cls) && m.hp > m.maxHp * 0.3) || strongest;
     if (cl >= 13 && dRoll(2) === 1) {
-      return this._enemyNuke(e, priority, { verb: 'speaks a FINGER OF DEATH at', icon: '💀', dtype: 'negative', dice: Math.min(25, cl), die: 8, dc: dc(7), saveLbl: 'Fort', partialDice: Math.floor(cl / 2), sound: '/audio/spell_umbral_bolt.mp3' });
+      return this._enemyNuke(e, priority, this._enemyMeta(e, cl, { verb: 'speaks a FINGER OF DEATH at', icon: '💀', dtype: 'negative', dice: Math.min(25, cl), die: 8, dc: dc(7), saveLbl: 'Fort', partialDice: Math.floor(cl / 2), sound: '/audio/spell_umbral_bolt.mp3' }));
     }
-    return this._enemyNuke(e, priority, { verb: 'fires a DISINTEGRATE ray at', icon: '☢️', dtype: 'force', dice: Math.min(40, cl * 2), die: 6, dc: dc(6), saveLbl: 'Fort', partialDice: 5, dust: true, sound: '/audio/spell_disintegrate.mp3' });
+    return this._enemyNuke(e, priority, this._enemyMeta(e, cl, { verb: 'fires a DISINTEGRATE ray at', icon: '☢️', dtype: 'force', dice: Math.min(40, cl * 2), die: 6, dc: dc(6), saveLbl: 'Fort', partialDice: 5, dust: true, sound: '/audio/spell_disintegrate.mp3' }));
   }
+  // PF1 metamagic parity — enemy casters spend big slots the way heroes do. Once
+  // per room each, a CL12+ caster may EMPOWER (×1.5 damage) and a CL16+ caster may
+  // MAXIMIZE (all dice max) a blast or nuke. Spell DC is unchanged (PF1 metamagic
+  // never raises the DC), and the roll happens in _enemyBlast/_enemyNuke via cfg.meta.
+  _enemyMeta(e, cl, cfg) {
+    if (cl >= 16 && !e._maxUsed && dRoll(3) === 1) { e._maxUsed = true; cfg.meta = 'MAXIMIZED'; }
+    else if (cl >= 12 && !e._empUsed && dRoll(3) <= 2) { e._empUsed = true; cfg.meta = 'EMPOWERED'; }
+    if (cfg.meta) cfg.verb = cfg.verb.replace(/\b(?=[A-Z]{3,})/, `${cfg.meta} `).replace(/\ba (EMPOWERED)/, 'an $1');
+    return cfg;
+  }
+  // Apply cfg.meta to a rolled damage total (dice already capped — Empower
+  // multiplies the ROLLED result, Maximize replaces it, both per PF1).
+  _metaDmg(cfg, rolled, dice) { return cfg.meta === 'MAXIMIZED' ? (dice != null ? dice : cfg.dice) * (cfg.die || 6) : cfg.meta === 'EMPOWERED' ? Math.floor(rolled * 1.5) : rolled; }
   // A lich AoE blast on a random handful of heroes — save for half (Evasion = none
   // on a made save; Fire Ward halves fire). Damage rolled once for the whole burst.
   _enemyBlast(e, cfg) {
     const live = this._targetableParty().slice();
     for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
     const hit = live.slice(0, Math.max(1, cfg.count ? cfg.count() : dRoll(3) + 1));
-    const full = dRollN(cfg.dice, cfg.die || 6);
+    const full = this._metaDmg(cfg, dRollN(cfg.dice, cfg.die || 6));   // Empower/Maximize (see _enemyMeta)
     let hitN = 0, savedN = 0, downedN = 0;
     for (const t of hit) {
-      const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
+      const sm = this._partySaveMod(t, ['reflex']), sroll = dRoll(20), stot = sroll + sm;   // blast = Reflex save (Slow −1 applies)
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= cfg.dc;
       let dmg = (saved && t.evasion) ? 0 : saved ? Math.floor(full / 2) : full;   // Evasion: no damage on a made save
       if (cfg.dtype === 'fire') ({ dmg } = this._fireSoak(t, dmg));   // PF1 ward: absorption pool, not a halving
@@ -2747,11 +2760,11 @@ class Dungeon {
   // A lich single-target nuke — optional save for partial (Disintegrate / Finger
   // of Death). A foe reduced past −10 by Disintegrate crumbles to dust.
   _enemyNuke(e, target, cfg) {
-    const full = dRollN(cfg.dice, cfg.die || 6);
+    const full = this._metaDmg(cfg, dRollN(cfg.dice, cfg.die || 6));   // Empower/Maximize (see _enemyMeta)
     let dmg = full, tag = '';
     const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= cfg.dc;
-    if (saved) { dmg = (saved && target.evasion) ? 0 : dRollN(cfg.partialDice || 5, cfg.die || 6); tag = ` [${cfg.saveLbl || 'Fort'} ${stot} vs ${cfg.dc}: ${target.evasion ? 'evaded' : 'partial'}]`; }
+    if (saved) { dmg = (saved && target.evasion) ? 0 : this._metaDmg(cfg, dRollN(cfg.partialDice || 5, cfg.die || 6), cfg.partialDice || 5); tag = ` [${cfg.saveLbl || 'Fort'} ${stot} vs ${cfg.dc}: ${target.evasion ? 'evaded' : 'partial'}]`; }
     else tag = ` [${cfg.saveLbl || 'Fort'} ${stot} vs ${cfg.dc}: fail]`;
     this._dmgToMember(target, dmg);
     const dust = cfg.dust && target.hp <= -10;
@@ -4426,7 +4439,7 @@ class Dungeon {
   _enemySave(e, which) {
     const pray = (e.prayed || 0) + (e.sickened > 0 ? SICKENED_PENALTY : 0);   // Prayer −1 + sickened −2 (PF1): both drag every save
     if (which === 'fort') return (e.fort || 0) - pray;
-    if (which === 'reflex') return (e.reflex || 0) - pray;
+    if (which === 'reflex') return (e.reflex || 0) - pray - (e.slowed > 0 ? 1 : 0);   // Slow: −1 Reflex (PF1)
     return Math.floor(((e.fort || 0) + (e.reflex || 0)) / 2) - pray;   // will (approx)
   }
   // A bare attack roll (to-hit only, no damage) using the member's weapon.
