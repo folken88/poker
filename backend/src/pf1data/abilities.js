@@ -251,6 +251,8 @@ const SPELL = {
   implosion:      { key: 'implosion',      name: 'Implosion',         icon: '🕳️', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 9, sound: S.umbral, desc: 'A creature\'s body collapses in on itself (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy damage.' },
   freezingsphere: { key: 'freezingsphere', name: 'Freezing Sphere',   icon: '🧊', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'cold', slvl: 6, sound: '/audio/spell_coneofcold.mp3', desc: 'A globe of absolute cold detonates among up to 6 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
   stormofvengeance: { key: 'stormofvengeance', name: 'Storm of Vengeance', icon: '🌩️', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'electricity', slvl: 9, sound: '/audio/wizard_lightningbolt_hetfield_metallica_james.mp3', desc: 'A black tempest of hail and lightning batters up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
+  dominateperson:  { key: 'dominateperson',  name: 'Dominate Person',  icon: '💫', effect: 'dominate', target: 'enemy', save: 'will', slvl: 5, sound: '/audio/spell_fascinate.mp3', desc: 'Seize a foe\'s mind — Will save or it FIGHTS FOR YOU, savaging its own allies each turn (it re-saves each turn; breaks if you fall). No effect on the mindless.' },
+  dominatemonster: { key: 'dominatemonster', name: 'Dominate Monster', icon: '🌀', effect: 'dominate', target: 'enemy', save: 'will', slvl: 9, sound: '/audio/spell_fascinate.mp3', desc: 'Seize ANY creature\'s mind — Will save or it FIGHTS FOR YOU, savaging its own allies each turn (re-saves each turn; breaks if you fall). No effect on the mindless.' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
@@ -411,6 +413,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     preparedSpell(SPELL.meteorswarm,     17),
     preparedSpell(SPELL.wailbanshee,     17),
     preparedSpell(SPELL.freezingsphere,  11),   // high-level expansion (2026-07-02)
+    preparedSpell(SPELL.dominatemonster, 17),   // Dominate Phase A (2026-07-03)
     // ── METAMAGIC prepared spells (PF1: the wizard prepares the metamagic version
     //    in a HIGHER slot — modelled here as separate once-per-room entries gated to
     //    the level that slot opens up; each carries its boost flag). Gated on having
@@ -471,6 +474,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     spontaneousSpell(SPELL.meteorswarm,     18),
     spontaneousSpell(SPELL.wailbanshee,     18),
     spontaneousSpell(SPELL.freezingsphere,  12),   // high-level expansion (2026-07-02)
+    spontaneousSpell(SPELL.dominatemonster, 18),   // Dominate Phase A (2026-07-03)
   ] },
   // ORACLE — spontaneous DIVINE caster on the CLERIC spell list, at oracle (full
   // spontaneous caster) progression: per-spell-level slots from the SORC table via
@@ -605,6 +609,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { key: 'goodhope',  name: 'Good Hope',       icon: '🌟', cost: 'slot', slvl: 3, minLevel: 7, effect: 'buff', target: 'self', party: true, buff: { toHit: 2, dmg: 2, save: 2 }, sticky: true, sound: S.bardsong, desc: 'Fill the party with hope — all allies get +2 to hit, damage, and saves for the rest of the room.' },
     { key: 'heroism',   name: 'Heroism',         icon: '🦸', cost: 'slot', slvl: 3, minLevel: 7, effect: 'buff', target: 'ally', buff: { toHit: 2, save: 2 }, sticky: true, sound: S.invoke, desc: 'One ally becomes heroic — +2 to hit and +2 to saves for the rest of the room.' },
     { key: 'dispelmagic', name: 'Dispel Magic',  icon: '🌀', cost: 'slot', slvl: 3, minLevel: 7, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'Strip a debuff off an afflicted ally (paralysis / hold / grapple / stun / sickness) — or tear a buff off a foe.' },
+    spontaneousSpell(SPELL.dominateperson, 13),   // Dominate Phase A (2026-07-03): bard 5th, turns a foe against its own
   ] },
   // DRUID — prepared nature caster: one casting of each spell per room.
   druid: { atwill: ATTACK('🌿'), note: 'One casting of each spell, per room. WILD SHAPE forms last until you drop them (each usable once per room).', abilities: [

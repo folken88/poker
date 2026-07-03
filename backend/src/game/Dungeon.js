@@ -1369,6 +1369,35 @@ class Dungeon {
       }
       if (e.blinded > 0) e.blinded -= 1;   // Glitterdust wears off (doesn't cost the turn — just −4 to hit / denied Dex while it lasts)
       if (e.fascinated) { this._note(`${e.glyph} ${e.name} ${e.asleep ? 'sleeps soundly' : 'stands fascinated'} — does nothing.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
+      // DOMINATED (hero magic): the foe fights FOR the party this turn — it turns
+      // on its own allies. A fresh Will save each of its turns can shake the hold;
+      // it also breaks if the dominator has fallen. (Dominate Phase A, 2026-07-03.)
+      if (e.dominated > 0) {
+        const dominator = this.member(e.dominatedBy);
+        if (!dominator || dominator.left || dominator.hp <= 0) {
+          e.dominated = 0; e.dominatedBy = null;
+          this._note(`💫 ${e.name} shakes off the domination — its master has fallen.`, null, { side: 'enemy' });
+        } else {
+          const sv = this._saveVs(this._enemySave(e, 'will'), e.dominateDC || 15);
+          if (sv.saved) {
+            e.dominated = 0; e.dominatedBy = null;
+            this._note(`💫 ${e.name} tears its will free of the domination! [Will ${sv.total} vs ${e.dominateDC || 15}]`, null, { side: 'enemy' });
+          } else {
+            e.dominated -= 1;
+            const kin = this.livingEnemies().filter(x => x.uid !== e.uid && x.hp > 0);
+            if (kin.length) {
+              const prey = kin.slice().sort((a, b) => b.maxHp - a.maxHp)[0];
+              const r = this._monsterSwing(e, this._enemyAC(prey));
+              if (r.hit) { this._dmgE(prey, r.damage); this._note(`💫 ${e.name}, DOMINATED, savages its ally ${prey.name} for ${r.damage}!${prey.hp <= 0 ? ' ☠️ Slain!' : ''}`, null, { side: 'enemy' }); }
+              else this._note(`💫 ${e.name}, DOMINATED, claws at its ally ${prey.name} — and misses.`, null, { side: 'enemy' });
+            } else {
+              this._note(`💫 ${e.name} stands slack under the domination — no allies left to turn on.`, null, { side: 'enemy' });
+            }
+            if (e.dominated <= 0) { e.dominatedBy = null; this._note(`💫 the domination on ${e.name} fades.`, null, { side: 'enemy' }); }
+            this._broadcast(); return this._nextTurn();
+          }
+        }
+      }
       if (e.paralyzed > 0) {
         if (e.heldDC) {   // Hold Person / Hideous Laughter: a NEW Will save each turn — costs the turn either way (PF1e).
           e.paralyzed -= 1; const hdc = e.heldDC;
@@ -3381,14 +3410,14 @@ class Dungeon {
       }
     }
     if (weakestFoe) {
-      for (const a of avail) if (['bolt', 'missile', 'touch', 'rays', 'spellstrike', 'save_debuff', 'savedie', 'charm'].includes(a.effect)) {
+      for (const a of avail) if (['bolt', 'missile', 'touch', 'rays', 'spellstrike', 'save_debuff', 'savedie', 'charm', 'dominate'].includes(a.effect)) {
         // Immunity-aware single-target pick: the BARD's Hideous Laughter skips the
         // undead (no mind to tickle); death spells skip the unliving; element
         // blasts skip the immune. Death/charm spend on the BIGGEST eligible threat
         // (best case), plain damage on the weakest (finish it off).
-        const el = targets.filter(t => this._spellWorksOn(a, t) && !(a.effect === 'charm' && ccd(t)));
+        const el = targets.filter(t => this._spellWorksOn(a, t) && !((a.effect === 'charm' || a.effect === 'dominate') && (ccd(t) || t.dominated > 0)));
         if (!el.length) continue;
-        const pick = (a.effect === 'savedie' || a.effect === 'charm')
+        const pick = (a.effect === 'savedie' || a.effect === 'charm' || a.effect === 'dominate')
           ? el.slice().sort((x, y) => y.maxHp - x.maxHp)[0]
           : (el.includes(weakestFoe) ? weakestFoe : el.slice().sort((x, y) => x.hp - y.hp)[0]);
         offense.push({ ab: a, payload: { targetUid: pick.uid } });
@@ -3464,7 +3493,7 @@ class Dungeon {
     const eff = ab.effect;
     // Mind-affecting: charm / sleep / fascinate + the mind-seizing debuffs
     // (Hold Person, Hideous Laughter) — undead & constructs have no mind.
-    if ((eff === 'charm' || eff === 'sleep' || eff === 'fascinate') && mindImmune(t)) return false;
+    if ((eff === 'charm' || eff === 'dominate' || eff === 'sleep' || eff === 'fascinate') && mindImmune(t)) return false;
     if (eff === 'save_debuff' && ab.debuff === 'paralyzed' && mindImmune(t)) return false;
     // Death effects (Suffocation / Slay Living / Finger of Death / Implosion /
     // Wail) need a living, breathing body — mirror _abSaveDie's immune set.
@@ -3913,6 +3942,7 @@ class Dungeon {
       dimensionalblade: () => this._abDimBlade(m, ab),
       save_debuff: () => this._abSaveDebuff(m, ab, payload),
       charm:       () => this._abCharm(m, ab, payload),
+      dominate:    () => this._abDominate(m, ab, payload),
       grease:      () => this._abGrease(m, ab, payload),
       fascinate:   () => this._abFascinate(m, ab, payload),
       sleep:       () => this._abSleep(m, ab, payload),
@@ -5189,6 +5219,26 @@ class Dungeon {
     const h = healBig(); target.hp = Math.min(target.maxHp, target.hp + h);
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${target.nickname} heals ${h} (${target.hp}/${target.maxHp}).`, sound);
     this._echoToTable(sound);
+  }
+  // Dominate Person / Monster — a Will save or the foe FIGHTS FOR THE PARTY:
+  // each of its turns it attacks its own allies; a fresh Will save each turn can
+  // shake the hold, and it breaks if the caster drops. (Dominate Phase B slides
+  // the victim's card across the battlefield; for now the 💫 narration carries it.)
+  _abDominate(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — undead and constructs have no mind to command.`); this._echoToTable(); return; }
+    if (e.dominated > 0) { this._note(`${ab.icon} ${e.name} is already dominated.`); return; }
+    const dc = this._spellDC(m);
+    const sv = this._saveVs(this._enemySave(e, 'will'), dc);
+    if (sv.saved) {
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — its will holds. [Will ${sv.total} vs DC ${dc}]`, ab.sound);
+    } else {
+      e.dominated = Math.max(2, Math.floor((m.level || 1) / 2));
+      e.dominatedBy = m.playerId; e.dominateDC = dc;
+      e.charmed = false; e.taunted = null;   // domination supersedes lesser sway
+      this._note(`${ab.icon} 💫 ${m.nickname} casts ${ab.name} — ${e.name}'s eyes glaze; it is DOMINATED and turns on its own! [Will ${sv.total} vs DC ${dc}]`, ab.sound);
+    }
+    this._echoToTable(ab.sound);
   }
   // Charm Person — a living foe, Will save or CHARMED: it stops attacking the
   // party (only tends its own side) until a hero's blow snaps it out. Mindless
