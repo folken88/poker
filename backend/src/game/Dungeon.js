@@ -231,8 +231,14 @@ function oracleFeats(level) {
   if (n >= 6) f.spellDC = 4;            // Greater Spell Focus
   if (n >= 7) f.save = 1;               // Lightning Reflexes
   if (n >= 8) f.save = 2;               // Iron Will
-  if (n >= 9) f.quicken = true;         // Quicken Spell (flagged; wiring later, same as wizard)
   if (n >= 10) f.save = 3;              // Great Fortitude
+  // METAMAGIC — same LEVEL-keyed track as casterFeats (2026-07-02 audit): the
+  // oracle is a spontaneous blaster (Elfrip, Flame mystery) and toggles these
+  // like a sorcerer. The old lone quicken@n9 was flagged "wiring later" — wired.
+  if (L >= 5)  f.intensify = true;      // Intensified Spell
+  if (L >= 9)  f.empower = true;        // Empower Spell
+  if (L >= 13) f.maximize = true;       // Maximize Spell
+  if (L >= 15) f.quicken = true;        // Quicken Spell
   return f;
 }
 // BARD — support gish (Lingering Performance dropped per the user).
@@ -1412,6 +1418,7 @@ class Dungeon {
     // the field re-grabs when its conjurer acts (free; doesn't cost the turn).
     if (this.blackTentacles && this.blackTentacles.caster === m.playerId && m.hp > 0) this._blackTentaclesTick();
     m._curatorBuffUsed = false;   // Curator: the once-per-turn swift buff resets each turn
+    m._swiftUsed = false;         // PF1: ONE swift action per turn (shared by Curator / Quicken Channel / metamagic Quicken)
     if (m.untargetable) m.untargetable = false;   // Bladed Dash blur ends at the start of the magus's next turn
     if (m.touchStrike > 0) m.touchStrike -= 1;     // Dimensional Blade touch-strikes lapse after the round
     if (m.blinded > 0) m.blinded -= 1;             // (heroes can be blinded by future foes too)
@@ -3831,31 +3838,41 @@ class Dungeon {
     if (m.isBot && (ab.key === 'fireball' || ab.key === 'firesnake')) {
       try { this._tryBanter(m, 'cast_fire', { spell: ab.name }); } catch (_) {}
     }
+    // ── ONE SWIFT ACTION PER TURN (PF1) — 2026-07-02 audit. The three quickened
+    // paths below (Curator, Quicken Channel, metamagic Quicken) each had their own
+    // once-flag, so they could STACK into 2-3 free actions a turn. m._swiftUsed is
+    // the shared per-turn budget (reset at turn start with _curatorBuffUsed).
     // Curator (Gaspar's bastard sword): the FIRST buff SPELL each turn is quickened
     // to a SWIFT action — it's cast for free and the wielder keeps their turn for a
     // second buff or a strike. The second buff (or any other action) takes the turn
     // as normal. So a Curator-wielder can stack TWO buffs in a single turn.
-    if (this._wieldsCurator(m) && this._isBuffSpell(ab) && !m._curatorBuffUsed) {
-      m._curatorBuffUsed = true;
+    if (this._wieldsCurator(m) && this._isBuffSpell(ab) && !m._curatorBuffUsed && !m._swiftUsed) {
+      m._curatorBuffUsed = true; m._swiftUsed = true;
       this._note(`📖 ${m.nickname}'s Curator quickens the casting — a swift action! (cast again or strike this turn)`);
       return { ok: true, freeAction: true };
     }
     // Cleric QUICKEN CHANNEL (feat tree n8): the FIRST party-heal channel each room
     // is a SWIFT action — the cleric keeps their turn to strike or cast.
-    if (ab.effect === 'heal' && ab.heal === 'party' && !m._qcUsed && fighterFeats(m.cls, m.level, this._isRanged(m)).quickChannel) {
-      m._qcUsed = true;
+    if (ab.effect === 'heal' && ab.heal === 'party' && !m._qcUsed && !m._swiftUsed && fighterFeats(m.cls, m.level, this._isRanged(m)).quickChannel) {
+      m._qcUsed = true; m._swiftUsed = true;
       this._note(`✨ ${m.nickname} QUICKENS the channel — a swift action! (act again this turn)`);
       return { ok: true, freeAction: true };
     }
     // METAMAGIC QUICKEN: a quickened spell is a SWIFT action — the caster acts again
     // (cast a second spell, or strike). PF1: one swift action per turn, so it consumes
-    // itself — the quicken toggle / bot one-shot clears after firing.
+    // itself — the quicken toggle / bot one-shot clears after firing. If the swift is
+    // already spent this turn, the spell still lands but costs the turn normally.
     if (ab.cost === 'slot' && this._mmForCast(m, ab).quicken) {
       if (m.metamagic) m.metamagic.quicken = false;
       if (m._botMM) m._botMM.quicken = false;
-      this._note(`⚡ ${m.nickname} QUICKENS the casting — a swift action! (cast again or strike this turn)`);
-      this._broadcast();
-      return { ok: true, freeAction: true };
+      if (m._swiftUsed) {
+        this._note(`⚡ ${m.nickname}'s quickened casting lands — but their swift action is already spent, so the turn is used.`);
+      } else {
+        m._swiftUsed = true;
+        this._note(`⚡ ${m.nickname} QUICKENS the casting — a swift action! (cast again or strike this turn)`);
+        this._broadcast();
+        return { ok: true, freeAction: true };
+      }
     }
     if (ab.effect === 'judgment' || ab.freeAction) return { ok: true, freeAction: true };   // judgement switch / barbarian Rage cost no action
     return { ok: true };
@@ -4370,7 +4387,31 @@ class Dungeon {
     const caps = spont ? null : (slotsFor(m.cls, m.level || 1, m.castingMod) || {});
     return spont
       ? { spont, pool, caps, known: db.getKnownSpells(m.playerId, m.cls) || [] }
-      : { spont, pool, caps, prepared: db.getPreparedSpells(m.playerId, m.cls) || {} };
+      : { spont, pool, caps, prepared: this._loadoutRebucket(m, db.getPreparedSpells(m.playerId, m.cls) || {}) };
+  }
+  // Self-heal a stored prepared map when a spell's slot LEVEL changes (e.g. the
+  // metamagic-baked variants moving to their PF1-correct effective levels): any
+  // key filed under the wrong level is re-bucketed to the spell's CURRENT slvl;
+  // unknown keys drop; over-cap overflow trims. Keeps old saves from jamming a
+  // level's cap with strays. (View-only here; a toggle persists the clean map.)
+  _loadoutRebucket(m, prep) {
+    const bySlvl = {};
+    for (const s of loadouts.kitSpells(m.cls)) bySlvl[s.key] = String(s.slvl);
+    const caps = slotsFor(m.cls, m.level || 1, m.castingMod) || {};
+    const out = {};
+    for (const arr of Object.values(prep || {})) {
+      for (const key of (Array.isArray(arr) ? arr : [])) {
+        const sl = bySlvl[key];
+        if (!sl) continue;                                   // spell no longer exists
+        out[sl] = out[sl] || [];
+        if (!out[sl].includes(key)) out[sl].push(key);
+      }
+    }
+    for (const sl of Object.keys(out)) {
+      const cap = caps[sl] | 0;
+      if (out[sl].length > cap) out[sl] = out[sl].slice(0, Math.max(0, cap));
+    }
+    return out;
   }
   _loadoutToggle(m, key) {
     const ab = loadouts.kitSpells(m.cls).find(s => s.key === key && this._charAllows(s, m));
@@ -4382,7 +4423,7 @@ class Dungeon {
       if (!next.length) return { ok: false, error: 'you must know at least one spell' };
       db.setKnownSpells(m.playerId, m.cls, next);
     } else {
-      const prep = { ...(db.getPreparedSpells(m.playerId, m.cls) || {}) };
+      const prep = this._loadoutRebucket(m, db.getPreparedSpells(m.playerId, m.cls) || {});   // heal stray levels before toggling
       const sl = String(ab.slvl);
       const list = Array.isArray(prep[sl]) ? [...prep[sl]] : [];
       if (list.includes(key)) prep[sl] = list.filter(k => k !== key);
@@ -5313,7 +5354,9 @@ class Dungeon {
       // That includes the DOWNED/dying (negative HP but not dead at −10) — a
       // channel is positive energy and can pull a dying ally back onto their feet.
       const allies = this.present().filter(a => !a.dead && !a.undead);
-      const h = channelAmt();
+      // MASS HEAL (cleric 9th) rides the party-heal path but rolls CURE-sized dice
+      // (15d8 + CL) instead of the channel's ½level d6 burst.
+      const h = ab.massHeal ? cureAmt() : channelAmt();
       // Concise report (Josh): a channel announces the HEAL AMOUNT + anyone it
       // pulled back to their feet — NOT every member's HP. (The old per-member
       // "Name X/Y" list got read aloud as a full party-health dump that buried

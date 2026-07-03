@@ -240,6 +240,17 @@ const SPELL = {
   polarray: { key: 'polarray', name: 'Polar Ray', icon: '❄️', effect: 'touch', target: 'enemy', die: 6, dice: 'level', dcap: 25, dtype: 'cold', slvl: 8, sound: S.coldcone, desc: 'A lance of utter cold — ranged touch, 1d6 per caster level (max 25d6).' },
   meteorswarm: { key: 'meteorswarm', name: 'Meteor Swarm', icon: '☄️', effect: 'aoe', target: 'aoe', maxTargets: 12, save: 'reflex', die: 6, dice: 'level', dcap: 24, dtype: 'fire', slvl: 9, sounds: FIREBALL_SFX, desc: 'Four blazing meteors scatter the room — up to 12 foes, 1d6 fire per caster level (max 24d6), Reflex for half.' },
   wailbanshee: { key: 'wailbanshee', name: 'Wail of the Banshee', icon: '😱', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 9, sound: S.umbral, desc: 'A keening cry of death (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy damage.' },
+  // ── HIGH-LEVEL LIST EXPANSION (Tobias approved 2026-07-02) — CRB staples riding
+  // existing effects, filling the cliff above 5th (cleric had NO 6/8/9th spells).
+  flamestrike:    { key: 'flamestrike',    name: 'Flame Strike',      icon: '🔥', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'fire', slvl: 5, sounds: FIREBALL_SFX, desc: 'A column of divine fire scours up to 4 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
+  slayliving:     { key: 'slayliving',     name: 'Slay Living',       icon: '☠️', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 5, sound: S.umbral, desc: 'A death-touch stops one living heart (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy damage.' },
+  healspell:      { key: 'healspell',      name: 'Heal',              icon: '💖', effect: 'heal', heal: 'single', healDice: 15, healCap: 25, target: 'ally', slvl: 6, sound: '/audio/spell_cure.mp3', desc: 'A torrent of positive energy knits the most-hurt ally — 15d8 + caster level (max +25).' },
+  bladebarrier:   { key: 'bladebarrier',   name: 'Blade Barrier',     icon: '🌪️', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, slvl: 6, sound: '/audio/spell_holysmite.mp3', desc: 'A whirling wall of blades slices through up to 4 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
+  firestorm:      { key: 'firestorm',      name: 'Fire Storm',        icon: '🌋', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'fire', slvl: 8, sounds: FIREBALL_SFX, desc: 'Sheets of divine flame roar over up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
+  massheal:       { key: 'massheal',       name: 'Mass Heal',         icon: '💗', effect: 'heal', heal: 'party', massHeal: true, healDice: 15, healCap: 25, target: 'ally', slvl: 9, sound: '/audio/spell_channel_charge.mp3', desc: 'A tidal wave of positive energy — the WHOLE party heals 15d8 + caster level (max +25).' },
+  implosion:      { key: 'implosion',      name: 'Implosion',         icon: '🕳️', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 9, sound: S.umbral, desc: 'A creature\'s body collapses in on itself (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy damage.' },
+  freezingsphere: { key: 'freezingsphere', name: 'Freezing Sphere',   icon: '🧊', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'cold', slvl: 6, sound: '/audio/spell_coneofcold.mp3', desc: 'A globe of absolute cold detonates among up to 6 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
+  stormofvengeance: { key: 'stormofvengeance', name: 'Storm of Vengeance', icon: '🌩️', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'electricity', slvl: 9, sound: '/audio/wizard_lightningbolt_hetfield_metallica_james.mp3', desc: 'A black tempest of hail and lightning batters up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
@@ -344,6 +355,14 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { key: 'breathoflife', name: 'Breath of Life',       icon: '🌬️', cost: 'room', uses: 1, slvl: 5, minLevel: 9,  effect: 'revive', reviveDice: 5, reviveCap: 25, target: 'ally', sound: S.revive, desc: 'Snatch a DYING ally back — revive & heal them 5d8 + caster level (max +25).' },
     { key: 'raisedead',    name: 'Raise Dead',           icon: '⚰️', cost: 'room', uses: 1, slvl: 5, minLevel: 9,  effect: 'revive', raiseDead: true, target: 'ally', sound: S.revive, desc: 'Call a SLAIN ally back into the run, restored to half health.' },
     { key: 'resurrection', name: 'Resurrection',         icon: '✨', cost: 'room', uses: 1, slvl: 7, minLevel: 13, effect: 'revive', raiseDead: true, full: true, target: 'ally', sound: S.revive, desc: 'Fully resurrect a SLAIN ally — back in the run at FULL health.' },
+    // High-level expansion (2026-07-02): the cleric finally has 5th–9th picks.
+    preparedSpell(SPELL.flamestrike,  9),
+    preparedSpell(SPELL.slayliving,   9),
+    preparedSpell(SPELL.healspell,   11),
+    preparedSpell(SPELL.bladebarrier, 11),
+    preparedSpell(SPELL.firestorm,   15),
+    preparedSpell(SPELL.massheal,    17),
+    preparedSpell(SPELL.implosion,   17),
   ] },
   // ── Full arcane casters ──
   // WIZARD — prepared caster: a BROAD spellbook, but ONE casting of each spell
@@ -391,17 +410,21 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     preparedSpell(SPELL.polarray,        15),
     preparedSpell(SPELL.meteorswarm,     17),
     preparedSpell(SPELL.wailbanshee,     17),
+    preparedSpell(SPELL.freezingsphere,  11),   // high-level expansion (2026-07-02)
     // ── METAMAGIC prepared spells (PF1: the wizard prepares the metamagic version
     //    in a HIGHER slot — modelled here as separate once-per-room entries gated to
     //    the level that slot opens up; each carries its boost flag). Gated on having
     //    both the spell and the metamagic feat (Intensify n6/L11, Empower n7/L13,
     //    Maximize n9/L17 in casterFeats). ──
     { ...SPELL.magicmissile,  key: 'magicmissile_quick', name: 'Quickened Magic Missile', icon: '⚡', cost: 'room', uses: 1, minLevel: 9, slvl: 5, freeAction: true, desc: 'Magic Missile crammed into a 5th-level slot — a SWIFT action: the darts fly unerringly and you STILL cast or act this turn. Once per room. (Needs 5th-level slots — wizard 9.)' },
-    { ...SPELL.fireball,      key: 'fireball_int',  name: 'Intensified Fireball',  icon: '💥', cost: 'room', uses: 1, minLevel: 11, intensified: true, desc: 'Fireball in a 4th-level slot — the damage cap climbs +5 dice (level d6 to 15, Reflex half).' },
-    { ...SPELL.fireball,      key: 'fireball_emp',  name: 'Empowered Fireball',    icon: '🔥', cost: 'room', uses: 1, minLevel: 13, empowered: true,   desc: 'Fireball in a 5th-level slot — ×1.5 damage (Reflex half).' },
-    { ...SPELL.scorchingray,  key: 'scorch_emp',    name: 'Empowered Scorching Ray', icon: '🔥', cost: 'room', uses: 1, minLevel: 13, empowered: true, desc: 'Scorching Ray in a 4th-level slot — ×1.5 fire on every ray.' },
-    { ...SPELL.coneofcold,    key: 'cone_max',      name: 'Maximized Cone of Cold', icon: '🥶', cost: 'room', uses: 1, minLevel: 17, maximized: true,  desc: 'Cone of Cold in an 8th-level slot — every die maxed (Reflex half).' },
-    { ...SPELL.disintegrate,  key: 'disint_max',    name: 'Maximized Disintegrate', icon: '☢️', cost: 'room', uses: 1, minLevel: 17, maximized: true,  desc: 'Disintegrate in a 9th-level slot — every die maxed on a hit.' },
+    // Metamagic-baked variants carry their PF1 EFFECTIVE slot level (base + adjust)
+    // — the spread inherits the BASE spell's slvl, which filed Empowered Fireball
+    // as 3rd (Tobias, 2026-07-02). Explicit slvl overrides the spread.
+    { ...SPELL.fireball,      key: 'fireball_int',  name: 'Intensified Fireball',  icon: '💥', cost: 'room', uses: 1, minLevel: 11, slvl: 4, intensified: true, desc: 'Fireball in a 4th-level slot — the damage cap climbs +5 dice (level d6 to 15, Reflex half).' },
+    { ...SPELL.fireball,      key: 'fireball_emp',  name: 'Empowered Fireball',    icon: '🔥', cost: 'room', uses: 1, minLevel: 13, slvl: 5, empowered: true,   desc: 'Fireball in a 5th-level slot — ×1.5 damage (Reflex half).' },
+    { ...SPELL.scorchingray,  key: 'scorch_emp',    name: 'Empowered Scorching Ray', icon: '🔥', cost: 'room', uses: 1, minLevel: 13, slvl: 4, empowered: true, desc: 'Scorching Ray in a 4th-level slot — ×1.5 fire on every ray.' },
+    { ...SPELL.coneofcold,    key: 'cone_max',      name: 'Maximized Cone of Cold', icon: '🥶', cost: 'room', uses: 1, minLevel: 17, slvl: 8, maximized: true,  desc: 'Cone of Cold in an 8th-level slot — every die maxed (Reflex half).' },
+    { ...SPELL.disintegrate,  key: 'disint_max',    name: 'Maximized Disintegrate', icon: '☢️', cost: 'room', uses: 1, minLevel: 17, slvl: 9, maximized: true,  desc: 'Disintegrate in a 9th-level slot — every die maxed on a hit.' },
   ] },
   // SORCERER — spontaneous caster: knows FEWER spells, drawn from a shared
   // per-room cast pool (his limited casts/day = casts/room). A focused blaster's
@@ -447,6 +470,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     spontaneousSpell(SPELL.polarray,        16),
     spontaneousSpell(SPELL.meteorswarm,     18),
     spontaneousSpell(SPELL.wailbanshee,     18),
+    spontaneousSpell(SPELL.freezingsphere,  12),   // high-level expansion (2026-07-02)
   ] },
   // ORACLE — spontaneous DIVINE caster on the CLERIC spell list, at oracle (full
   // spontaneous caster) progression: per-spell-level slots from the SORC table via
@@ -627,6 +651,9 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     // the fallen hero is REPLACED by a random hero from the bench (one who is
     // not seated at the poker table and not already in the dungeon).
     { key: 'reincarnate', name: 'Reincarnate', icon: '🌱', cost: 'room', uses: 1, minLevel: 7, slvl: 4, effect: 'revive', raiseDead: true, reincarnate: true, target: 'ally', sound: S.revive, desc: 'Grow a SLAIN ally a new body — their soul returns as a DIFFERENT hero (random, from those not at the table or in the dungeon), at full health.' },
+    // High-level expansion (2026-07-02): druid tops out with real 7th/9th picks.
+    { ...preparedSpell(SPELL.firestorm, 13), slvl: 7 },   // PF1: Fire Storm is druid 7 (cleric 8)
+    preparedSpell(SPELL.stormofvengeance, 17),
   ] },
 };
 
