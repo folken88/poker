@@ -276,7 +276,7 @@ class Dungeon {
   livingParty() { return this.alivePresent(); }
   // Heroes the enemy can actually target — invisible ones are unseen (until they
   // attack). If EVERY living hero is invisible, fall back so combat can resolve.
-  _targetableParty() { const live = this.alivePresent(); const seen = live.filter(m => !m.invisible && !m.untargetable); return seen.length ? seen : live; }
+  _targetableParty() { const live = this.alivePresent(); const seen = live.filter(m => !m.invisible && !m.untargetable && !m.blinkedBy); return seen.length ? seen : live; }   // blinkedBy: teleported — untouchable until the caster's next turn
   livingEnemies() { return this.enemies.filter(e => e.hp > 0); }
   // Foes a hero can actually hit — excludes those shrouded in DARKNESS (can't be
   // attacked for 2 rounds). They're still "alive" (room stays active until it lifts).
@@ -321,6 +321,7 @@ class Dungeon {
   // Can this member's CURRENT weapon reach foe `e`? Grounded melee can't touch a
   // flyer; ranged/reach weapons and airborne attackers (Overland Flight) can.
   _canReach(m, e) {
+    if (m && m._tpStrike > 0) return true;   // Dimension Door/Teleport: the next strike reaches ANY foe
     if (!e || !e.flying) return true;
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
     return !!(w.ranged || w.reachFly || (m.canHitFlyers && m.flying));
@@ -532,6 +533,10 @@ class Dungeon {
     this._fleeing = false;   // a fresh room — any prior retreat is moot
     this._rollInitiative();
     this._note(`🚪 Door creaks open — room ${this.depth}. ${this._enemySummary()}`);
+    // HYPE TRACK — a boss with a Maestro theme (extracted from the FVTT worlds)
+    // makes an entrance: its music rides the reveal line and echoes to the table.
+    const hypeBoss = this.enemies.find(e => e.boss && e.hype);
+    if (hypeBoss) { this._note(`🎵 ${hypeBoss.name.replace(/^Boss: /, '')}'s theme rolls through the door…`, hypeBoss.hype, { side: 'enemy' }); this._echoToTable(hypeBoss.hype); }
     this._log('room', { boss: this.enemies.some(e => e.boss), party: this.present().length, enemies: this.enemies.map(e => ({ name: e.name, cr: e.cr, hp: e.maxHp, ac: e.ac, toHit: e.toHit })) });
     this._beginTurnCycle();
     return { ok: true };
@@ -556,7 +561,7 @@ class Dungeon {
   _encounterCR(boss) {
     let cr = this._minLevel() + Math.floor(this.depth / 4);
     if (boss) cr += 2;
-    return Math.max(1, Math.min(13, cr));
+    return Math.max(1, Math.min(20, cr));   // cap tracks the bestiary — Tar-Baphon is CR 20 (the old 13 locked out every boss above 15)
   }
   // Strongest thematic foe (incl. boss-only creatures) the party can handle.
   _pickBoss(capCR) {
@@ -614,14 +619,18 @@ class Dungeon {
     }
     return [...new Set(w)];
   }
-  _makeEnemy(base, boss) {
+  _makeEnemy(base, boss, elite = 0) {
     // BOSS ADVANCEMENT — a designated boss gains 1d4 EXTRA LEVELS (PF1 advancing
     // by class levels/HD): +12% HP and +1 to-hit per level; +1 AC, saves, damage,
     // ability DCs and special-use counts per 2 levels; bigger sneak/spellstrike/
     // heal dice; +1 effective CR per 2 levels (so XP and loot scale with the
     // tougher fight); and a fatter gold pouch. `bossLevels` feeds the lich's
     // caster level too, so its spells grow with the advancement.
-    const extra = boss ? dRoll(4) : 0;
+    // ADVANCEMENT (PF1, Tobias 2026-07-04): +2..4 class levels = +1-2 CR, and
+    // the levels bring EVERYTHING — hp, to-hit, saves, DCs. A boss ALWAYS
+    // advances (2-4 levels; the old 1d4 could roll a wet +1); a regular spawn
+    // advances only when the spawner flags it ELITE to fill a thin CR band.
+    const extra = boss ? 1 + dRoll(3) : (elite || 0);
     const half = Math.floor(extra / 2);
     // BOSS PRE-CAST WARDS — a caster boss "cheats": every long-duration buff
     // (anything NOT measured in rounds/level — Mage Armor, Shield, Stoneskin,
@@ -633,10 +642,11 @@ class Dungeon {
     const preTouch = pre.includes('shieldoffaith') ? 3 : 0;   // deflection counts vs touch; armor/shield bonuses don't
     return {
       uid: `e${++_uidSeq}`,
-      name: boss ? `Boss: ${base.name}${extra ? ` +${extra}` : ''}` : base.name,
+      name: boss ? `Boss: ${base.name}${extra ? ` +${extra}` : ''}` : (extra ? `Elite ${base.name} +${extra}` : base.name),
       glyph: base.glyph, art: base.tokenPool ? pick(base.tokenPool) : (base.art || null), boss,
-      cr: (boss && half) ? String((base.crNum || 0) + half) : (base.cr || null),   // advanced CR → bigger XP + loot rolls
+      cr: half ? String((base.crNum || 0) + half) : (base.cr || null),   // advanced CR (boss OR elite) → bigger XP + loot rolls
       bossLevels: extra,
+      hype: base.hype || null,   // Maestro hype track (from the FVTT worlds) — plays when the boss room opens
       hp: Math.round(base.hp * (1 + 0.12 * extra)), maxHp: Math.round(base.hp * (1 + 0.12 * extra)),
       ac: base.ac + half + preAC,
       // PF1 AC types. touchAC: spells/firearms ignore armor & natural armor (an
@@ -729,6 +739,10 @@ class Dungeon {
       const bk = this._pickBoss(encCR);   // one strong foe — its gang themes the minions
       keys.push(bk);
       adoptGang(bk);
+      // Barzillai Thrune NEVER rides alone — Rivozair, his devil-bound blue
+      // dragon, descends with her master (and the dragon brings him along too).
+      if (bk === 'barzillai' && MON.rivozair) keys.push('rivozair');
+      else if (bk === 'rivozair' && MON.barzillai) keys.push('barzillai');
       // Boss rooms also mob a big party — minions at a notch below the room CR.
       const baseCR = this._minLevel() + Math.floor(this.depth / 4);
       fill(Math.round(rawXpForCR(baseCR) * Math.max(0, partyN - 1) * 0.6),
@@ -738,7 +752,16 @@ class Dungeon {
            Math.max(0.25, encCR - 4), encCR, Math.min(14, 4 + partyN * 2));
     }
     if (!keys.length) keys.push(pickByCR(this.depth));
-    keys.forEach((k, i) => this.enemies.push(this._makeEnemy(MON[k], boss && i === 0)));
+    // ELITE ADVANCEMENT (Tobias: "+1-2 CR to any being by adding more levels"):
+    // when a picked mook sits well below the room's CR, it sometimes shows up
+    // as an ELITE (+2..4 levels → +1-2 CR: hp, to-hit, saves, DCs all rise).
+    // Fills thin CR bands with tougher takes on creatures we already have.
+    keys.forEach((k, i) => {
+      const isBoss = boss && i === 0;
+      const pairBoss = boss && i === 1 && ((keys[0] === 'barzillai' && k === 'rivozair') || (keys[0] === 'rivozair' && k === 'barzillai'));   // the Thrune pair are BOTH bosses
+      const elite = !isBoss && !pairBoss && (encCR - MON[k].crNum >= 1.5) && dRoll(4) === 1 ? 1 + dRoll(3) : 0;
+      this.enemies.push(this._makeEnemy(MON[k], isBoss || pairBoss, elite));
+    });
     this._log('encounter', { depth: this.depth, minLevel: this._minLevel(), encCR, partyN, count: keys.length, gang: roomGang || 'mixed' });
   }
   _enemySummary() {
@@ -871,6 +894,8 @@ class Dungeon {
     m._curatorBuffUsed = false;   // Curator: the once-per-turn swift buff resets each turn
     m._swiftUsed = false;         // PF1: ONE swift action per turn (shared by Curator / Quicken Channel / metamagic Quicken)
     if (m.untargetable) m.untargetable = false;   // Bladed Dash blur ends at the start of the magus's next turn
+    if (m._tpStrike > 0) m._tpStrike -= 1;         // Dimension Door/Teleport strike-window ticks down at the recipient's turns
+    for (const x of this.present()) if (x.blinkedBy === m.playerId) x.blinkedBy = null;   // the CASTER's turn arrived — their blinked allies become targetable again
     if (m.touchStrike > 0) m.touchStrike -= 1;     // Dimensional Blade touch-strikes lapse after the round
     if (m._domWardRounds > 0) m._domWardRounds -= 1;   // Resistant Touch (Protection domain) ticks down
     // Bleeding (a death-priest's touch): 1d6 at the turn's top until magically healed.
@@ -1693,6 +1718,18 @@ class Dungeon {
       if (ab.cost === 'run')  return ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) > 0;   // don't re-pick a spent run cast (e.g. auto-Inspire/Bless)
       return true;                                         // 'free'
     };
+    // TELEPORT TACTICS (Tobias 2026-07-04): a flying foe + a grounded melee ally
+    // who can't reach it → blink the ally in (Dimension Door / Teleport). The
+    // recipient becomes untouchable until this caster's next turn, and their
+    // next strike reaches ANY foe with a full attack.
+    const flyFoe = targets.find(e => e.flying);
+    if (flyFoe) {
+      const stuck = this.livingParty().find(a => a.hp > 0 && !this._isRanged(a) && !this._canReach(a, flyFoe) && !(a._tpStrike > 0) && !a.blinkedBy);
+      if (stuck) {
+        const tpIdx = this._abilitiesFor(m).findIndex(ab => ab.effect === 'tpstrike' && usable(ab));
+        if (tpIdx >= 0) return { slot: tpIdx, payload: { allyUid: stuck.playerId } };
+      }
+    }
     const allAbs = this._abilitiesFor(m);   // class kit + injected DOMAIN powers
     const slot = (ab) => allAbs.indexOf(ab);
     const avail = allAbs.filter(usable);

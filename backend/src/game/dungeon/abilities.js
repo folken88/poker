@@ -273,6 +273,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       domfortune:  () => this._abDomFortune(m, ab),
       domward:     () => this._abDomWard(m, ab, payload),
       dombleed:    () => this._abDomBleed(m, ab),
+      tpstrike:    () => this._abTpStrike(m, ab, payload),
     }[ab.effect];
     if (!D) return { ok: false, error: 'unknown ability' };
     // PF1 SPELL RESISTANCE — single-target hostile spells test the target's SR
@@ -665,6 +666,23 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // hero's HP (survival info) via their own line, not this helper.
   _afterEnemyHit(e) { return e.hp <= 0 ? ' ☠️' : ''; },
   // Effective melee AC of an enemy: sickened = +2 to be hit, prone = +4 to be hit.
+  // Dimension Door / Teleport cast ON a melee ally (Tobias 2026-07-04): the
+  // recipient blinks through folded space — (1) their NEXT turn is a guaranteed
+  // full attack on ANY enemy they choose (_canReach always true while the
+  // strike-window is up), and (2) NOBODY can target them until the CASTER's
+  // next turn comes around (blinkedBy, cleared in _advanceToActor).
+  _abTpStrike(m, ab, payload) {
+    const pickedId = payload && (payload.allyUid || payload.targetUid);
+    const explicit = pickedId ? this.livingParty().find(a => a.playerId === pickedId) : null;
+    const melee = this.livingParty().filter(a => a.hp > 0 && !this._isRanged(a) && !(a._tpStrike > 0) && !a.blinkedBy);
+    const a = explicit || melee.sort((x, y) => (y.level || 1) - (x.level || 1))[0];
+    if (!a) return { ok: false, error: 'no melee ally to send — everyone is already placed (or ranged)' };
+    a._tpStrike = 2;            // survives the cast round; active through their next attack
+    a.blinkedBy = m.playerId;   // untouchable until the CASTER's next turn
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${a.playerId === m.playerId ? 'they blink' : `${a.nickname} blinks`} through folded space! Untouchable until ${m.nickname} acts again — and their next strike reaches ANY foe with a FULL attack.`, ab.sound);
+    this._broadcast();
+    return { ok: true };
+  },
   // A flying creature holds the HIGH GROUND over the grounded party: +2 AC (hard
   // to reach a flyer from the floor). All heroes are grounded, so it always applies.
   // Effective AC for an attack. opts.touch → TOUCH AC (spells & firearms ignore

@@ -3,6 +3,30 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.13.0 2026-07-04  TELEPORT TACTICS + THE THRUNE PAIR: Dimension Door/
+//                     Teleport (wiz/sorc/magus) blink a melee ally —
+//                     untouchable until the caster's next turn, next strike
+//                     reaches ANY foe w/ full attack (bots use it on flyers);
+//                     WW Deathblade spellstrikes = Inflict Critical Wounds
+//                     4d8+11 (HEALS undead struck); Barzillai RAW I16 w/ +5
+//                     flaming-burst mace + cover art, ALWAYS paired with
+//                     Rivozair, devil-bound blue dragon (18 HD boss: 12d8
+//                     lightning breath, arcane fire, her own roar as hype)
+//  3.12.0 2026-07-04  HYPE TRACKS: Maestro themes extracted from the FVTT
+//                     worlds play when a boss room opens (echoes to the poker
+//                     table) — Kevoth-Kul/Tool, Brogwort/Backstreet, Vrood/
+//                     Radiohead, Ikualo'a/roar, Saurian/gibberish. PLUS the
+//                     Black Sovereign draws BURNING HATE (+5 VICIOUS
+//                     greatsword: 4d6+17, 1d6 recoil/hit, disarmable,
+//                     flaming-eviscerate SFX). ALL 10 imported bosses
+//                     recomputed PF1-LEGIT from source-actor scores, even
+//                     where OP (Kevoth +30/AC 19 raging, T-rex 4d6+16,
+//                     wizard-HP wizards, Tar-Baphon paralyzing touch DC 25).
+//                     ADVANCEMENT: bosses always +2..4 levels (+1-2 CR, all
+//                     stats); ELITE regular spawns fill thin CR bands; boss
+//                     cap 13→20 (Warden/Abrogail/Kevoth/Overlord/Amalokla/
+//                     Brogwort/Tar-Baphon were unreachable!); boss marker is
+//                     now a ☠️ + blood-red ring (crown = Loot Lord only)
 //  3.11.0 2026-07-04  BOSS EXPANSION 8→18: Golden Saurian rename+gibberish SFX,
 //                     dragons get the FULL kit (melee+arcane+divine, boss-only),
 //                     ex-PCs Blackout (drow slayer, SR-25 rifle) & Ragh (orc,
@@ -101,4 +125,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.11.0' };
+module.exports = { VERSION: '3.13.0' };

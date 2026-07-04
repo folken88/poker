@@ -130,6 +130,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing', 'regenerate HP each turn');
     if (m.bane)                       push('bane', `Bane: ${titleCase(m.bane.type)}`, `+2 hit, +2d6+2 vs ${titleCase(m.bane.type)} (this room)`);
     if (m.mageArmor)                  push('magearmor', 'Mage Armor', '+4 armor AC (this dungeon)');
+    if (m.blinkedBy || m._tpStrike > 0) push('blink', 'Blinked', 'stepped through folded space — untouchable until the caster next acts; next strike reaches ANY foe', '/dungeon/buffs/fly.webp');
     // Wild Shape — show the form's token as a buff badge (hawk has no token, but its
     // Flying badge already covers it above).
     if (m.form && m.form.art && !pushed.has('form_' + m.form.key)) { pushed.add('form_' + m.form.key); c.push({ key: 'form_' + m.form.key, label: m.form.label, desc: `Wild Shape: ${m.form.label}`, icon: m.form.art }); }

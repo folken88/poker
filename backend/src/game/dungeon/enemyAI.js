@@ -244,6 +244,16 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
         this._note(`🩸 ${e.glyph} ${e.name}'s BLEEDING TOUCH opens a wound — ${target.nickname} bleeds 1d6 each round until magically healed!`, null, { side: 'enemy' });
       }
       this._fireShieldRetaliate(target, e);   // Fire Shield scorches a melee attacker
+      // VICIOUS weapon (PF1): the blade bites its own wielder for 1d6 on every
+      // hit (Burning Hate, the Black Sovereign's +5 vicious greatsword). The
+      // recoil lands BEFORE the target-death returns so it's never skipped;
+      // self-destruction follows the fire-skeleton precedent (hp → 0, note).
+      if (e.vicious) {
+        const recoil = dRoll(e.vicious);
+        e.hp -= recoil;
+        if (e.hp <= 0) { e.hp = 0; this._note(`🩸 The VICIOUS blade drinks ${recoil} from its wielder — ☠️ ${e.glyph} ${e.name} is consumed by his own weapon's hunger!`, null, { side: 'enemy' }); }
+        else this._note(`🩸 The VICIOUS blade drinks ${recoil} from its own wielder (${e.hp}/${e.maxHp}).`, null, { side: 'enemy' });
+      }
       if (target.hp <= -10) { this._memberDown(target); this._echoToTable(r.sound); return; }   // dead at −10
       if (target.hp <= 0)   { this._downMember(target); this._echoToTable(r.sound); return; }    // 0..−9 = down/dying
       if (e.paralyze && target.elemBody) { this._note(`🌪️ ${target.nickname}'s Elemental Body shrugs off the paralysis.`); }
@@ -663,24 +673,34 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
   // and the vampire HEALS the energy it drains.
   _enemySpellstrike(e, target) {
     const cfg = e.spellstrike || {};
+    const SS = cfg.name || 'VAMPIRIC TOUCH';
     const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - this._acPenalty(target);
     const r = this._monsterSwing(e, effAC);
     const snd = cfg.sound || null;
-    if (!r.hit) { this._note(`🩸 ${e.glyph} ${e.name}'s draining touch misses ${target.nickname}. ${this._atkStr(r)}`, snd, { side: 'enemy' }); this._echoToTable(snd); this._broadcast(); return; }
+    if (!r.hit) { this._note(`🩸 ${e.glyph} ${e.name}'s ${SS.toLowerCase()} misses ${target.nickname}. ${this._atkStr(r)}`, snd, { side: 'enemy' }); this._echoToTable(snd); this._broadcast(); return; }
     const [phys, drTag] = this._physDR(target, r.damage);   // Stoneskin soaks the weapon part only
     // PF1: negative energy doesn't harm the undead — vs an undead hero the touch
     // is just a weapon blow: no drain, no life to drink.
     if (target.undead) {
       this._dmgToMember(target, phys);
-      this._note(`🩸 ${e.glyph} ${e.name}'s VAMPIRIC TOUCH strikes ${target.nickname} for ${phys}${drTag} — but the negative energy washes over the undead harmlessly. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, cfg.sound || null, { side: 'enemy' });
+      // PF1: an INFLICT spell is negative energy — it HEALS the undead it strikes
+      // (a WW Deathblade carving Adimarus mends him); Vampiric Touch just finds
+      // no life to drink (weapon damage only).
+      if (cfg.healsUndead) {
+        const mend = dRollN(cfg.dice || 4, cfg.die || 8) + (cfg.bonus || 0);
+        target.hp = Math.min(target.maxHp, target.hp + mend);
+        this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} strikes ${target.nickname} for ${phys}${drTag} — but the negative energy KNITS the undead for ${mend}! ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, cfg.sound || null, { side: 'enemy' });
+      } else {
+        this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} strikes ${target.nickname} for ${phys}${drTag} — but the negative energy washes over the undead harmlessly. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, cfg.sound || null, { side: 'enemy' });
+      }
       this._echoToTable(cfg.sound || null); this._broadcast(); return;
     }
-    const bonus = dRollN(cfg.dice || 4, cfg.die || 6);       // negative energy ignores DR
+    const bonus = dRollN(cfg.dice || 4, cfg.die || 6) + (cfg.bonus || 0);       // negative energy ignores DR (flat bonus = +CL on inflicts)
     const total = phys + bonus;
     this._dmgToMember(target, total);
     let lifeTag = '';
     if (cfg.lifesteal && e.hp > 0) { const healed = Math.min(bonus, e.maxHp - e.hp); if (healed > 0) { e.hp += healed; lifeTag = ` and drinks ${healed} life (${e.hp}/${e.maxHp})`; } }
-    this._note(`🩸 ${e.glyph} ${e.name}'s VAMPIRIC TOUCH rips ${target.nickname} for ${phys}${drTag}+${bonus} = ${total}${lifeTag}! ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, snd, { side: 'enemy' });
+    this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} rips ${target.nickname} for ${phys}${drTag}+${bonus} = ${total}${lifeTag}! ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   },
   // Fire Skeleton suicide bomber: on its turn it rushes in and DETONATES — one

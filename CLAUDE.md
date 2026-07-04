@@ -41,7 +41,11 @@ accessibility is a core requirement (Josh, VoiceOver tester).
    narration is COUNTS-ONLY ("3 hit, 1 saved, 2 spell-resisted").
 7. **PF1 first**: rules follow PF1 RAW unless a documented homerule exists
    (see `docs/project/PF1-CONDITIONS.md`). Enemies can do everything heroes
-   can (parity mandate). Per-room = the game's "per day".
+   can (parity mandate). Per-room = the game's "per day". STAT BLOCKS stay
+   PF1-legit even when the numbers look overpowered — compute from the
+   source actor's real abilities/class/level, never sandbag for balance
+   (Tobias 2026-07-04: "that's just pf1, baby!"). Balance lives in CR
+   placement and party tools, not in fudged math.
 8. **PF1CORE boundary** (docs/project/PF1CORE-PLAN.md): a future PGM app
    shares the rules engine. **`src/pf1core/index.js` is THE door** — 13
    concept namespaces (abilities/feats/classes/races/domains/monsters/

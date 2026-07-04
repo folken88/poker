@@ -115,7 +115,9 @@ button, input { font: inherit; color: inherit; }
 .dungeon__enemies .dmon.is-dead .dmon__hp { font-size: 0.7rem; line-height: 1; }
 .dmon__glyph { font-size: 2rem; line-height: 1; }
 .dmon__art { position: relative; width: 64px; height: 64px; border-radius: 50%; background-size: cover; background-position: center; border: 1px solid rgba(0,0,0,0.4); }
-.dmon.is-boss .dmon__art { border-color: rgba(220,170,60,0.9); box-shadow: 0 0 0 2px rgba(220,170,60,0.5); }
+/* Boss ring is BLOOD RED with a skull — gold ring + crown are the poker Loot
+   Lord's regalia and belong to heroes only (Tobias 2026-07-04). */
+.dmon.is-boss .dmon__art { border-color: rgba(205,45,45,0.9); box-shadow: 0 0 0 2px rgba(205,45,45,0.5); }
 .dmon__crown { position: absolute; top: -8px; right: -4px; font-size: 0.95rem; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6)); }
 .dpc__avatar { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; margin: 0 auto 0.15rem; }
 .dpc__avatar img, .dpc__avatar svg { width: 100%; height: 100%; object-fit: cover; display: block; }
