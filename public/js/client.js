@@ -848,11 +848,22 @@
   }
   // Inline style for a card whose backdrop is a full-art portrait — a dark
   // gradient over the cover keeps the name/HP/AC text legible on any art.
+  // Per-portrait framing nudges (Tobias 2026-07-04): a bigger Y% slides the
+  // visible crop band DOWN the source image, so the face sits HIGHER on the
+  // card. Keyed by token filename substring; unlisted art keeps 'center top'.
+  const PORTRAIT_FRAME = {
+    'rhyarca-jillyr': 'center 22%',   // crown filled the card — face was below the fold (image also padded server-side to zoom out)
+    'elfrip':         'center 28%',   // goblin sat too low
+    'chief':          'center 14%',   // Tobis — slightly too low
+  };
   function portraitBg(url) {
     // Lighter scrim so the portrait shows through (was .60→.84, which crushed dark
     // art like the vampires). Stays darker toward the BOTTOM, where the name/HP
     // text sits, so legibility holds (text also carries its own shadow).
-    return url ? `;background-image:linear-gradient(rgba(8,10,8,.20),rgba(8,10,8,.40) 55%,rgba(8,10,8,.78)),url('${escapeAttr(url)}');background-size:cover;background-position:center top` : '';
+    if (!url) return '';
+    const fk = Object.keys(PORTRAIT_FRAME).find(k => url.includes(k));
+    const pos = fk ? PORTRAIT_FRAME[fk] : 'center top';
+    return `;background-image:linear-gradient(rgba(8,10,8,.20),rgba(8,10,8,.40) 55%,rgba(8,10,8,.78)),url('${escapeAttr(url)}');background-size:cover;background-position:${pos}`;
   }
   let _dunSbLevel = null;      // blind spellbook: currently-chosen spell level
   let _dunSbIdx = -1;          // blind spellbook: current spell index within the chosen level (Tab cycles)
@@ -1312,7 +1323,7 @@
             : '';
           const pct = e.maxHp ? Math.max(0, Math.round(100 * e.hp / e.maxHp)) : 0;
           const portrait = e.art
-            ? `<div class="dmon__art" style="background-image:url('${escapeAttr(e.art)}')">${e.boss ? '<span class="dmon__crown" title="Boss">☠️</span>' : ''}</div>`
+            ? `<div class="dmon__art" style="background-image:url('${escapeAttr(e.art)}')${e.artPos ? `;background-position:${escapeAttr(e.artPos)}` : ''}">${e.boss ? '<span class="dmon__crown" title="Boss">☠️</span>' : ''}</div>`
             : `<div class="dmon__glyph">${e.glyph || '❓'}${e.boss ? ' ☠️' : ''}</div>`;
           return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''} ${isTurn ? 'is-turn' : ''} ${e.dominated && !dead ? 'is-dominated' : ''} ${artBg ? 'has-portrait' : ''}"${styles.length ? ` style="${styles.join(';')}"` : ''} data-enemy="${escapeAttr(e.uid)}" ${(dead || shrouded) ? 'disabled' : ''} title="${shrouded ? 'Shrouded in darkness — cannot be targeted' : (e.dominated && !dead ? 'DOMINATED — fighting for the party (Will re-save each of its turns)' : '')}">
             ${portrait}
