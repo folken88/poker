@@ -3,6 +3,10 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.7.4  2026-07-04  Phase-2 seam 3: ENEMY-AI mixin — the whole villain brain
+//                     (_monsterSwing/_enemyAct/maneuvers/caster brains/
+//                     _detonate, 28 methods) moved VERBATIM to
+//                     game/dungeon/enemyAI.js (factory: tuning consts)
 //  3.7.3  2026-07-03  dispel ECONOMICS (bards fight/buff/heal too — foe-dispel
 //                     only for spell-Fly/Invis/Haste-tier, never AC wards;
 //                     peel order high-value-first) · Melee/Ranged attack
@@ -58,4 +62,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.7.3' };
+module.exports = { VERSION: '3.7.4' };
