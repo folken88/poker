@@ -480,13 +480,12 @@ const PARALYZE_DC = 14;
 // level able to produce that effect — roughly the spell's level), so even a weak
 // mook's Hold Person is no easier to dispel than the spell allows, while a deep,
 // high-CL caster's magic is genuinely stubborn. Used by _dispellableCL.
+// SPELL effects only (Tobias 2026-07-03: Dispel ends active spells — grapple,
+// stun, sickness and nausea are PHYSICAL and undispellable).
 const EFFECT_CL_FLOOR = {
-  paralyzed: 3,   // Hold Person (2nd-level spell, min CL 3); Hold Monster stamps higher
-  stunned:   3,   // sonic shout / stunning effect
+  paralyzed: 3,   // Hold Person (2nd-level spell, min CL 3); Hold Monster stamps higher — spell-held only (heldDC set)
   slowed:    5,   // Slow (3rd-level, min CL 5)
-  blinded:   3,   // Blindness (2nd-level, min CL 3)
-  sickened:  1,   // nausea cloud / minor effect
-  grappled:  3,   // magical/physical hold
+  blinded:   3,   // Blindness/Glitterdust (2nd-level, min CL 3)
 };
 // A flying creature holds the "high ground" over grounded foes: +1 to hit them,
 // +2 AC against their attacks. (Heroes are always grounded.)
@@ -843,171 +842,7 @@ class Dungeon {
     this._broadcast();
     return m;
   }
-
-  // Active debuffs on a hero or monster, as PF1-system condition icons for the
-  // dungeon UI. Members carry sickened/paralyzed; enemies add asleep/prone.
-  // (Same flag names on both, so one helper serves heroes and monsters.)
-  _condList(o) {
-    const I = '/dungeon/conditions/', c = [];
-    if (o.sickened > 0)  c.push({ key: 'sickened',  label: 'Sickened',  desc: '−2 to attacks & damage', icon: `${I}sickened.webp` });
-    if (o.blinded > 0)   c.push({ key: 'blinded',   label: 'Blinded',   desc: '−4 to hit, denied Dex (easier to hit, Sneak-Attackable)', icon: `${I}sickened.webp` });
-    if (o.paralyzed > 0) c.push(o.heldDC
-      ? { key: 'held',      label: 'Held',      desc: 'helpless — re-saves each turn (the attempt costs the turn)', icon: `${I}paralyzed.webp` }
-      : { key: 'paralyzed', label: 'Paralyzed', desc: 'frozen — loses turns; easy to hit', icon: `${I}paralyzed.webp` });
-    if (o.slowed > 0)    c.push({ key: 'slowed',    label: 'Slowed',    desc: 'STAGGERED — one single action a turn: move OR attack, never both, never a full attack; −1 AC', icon: `${I}slowed.webp` });
-    if (o.grappled)      c.push({ key: 'grappled',  label: 'Grappled',  desc: 'chained — −2 to hit, easier to strike; crushed each turn (Dispel or Grease frees you)', icon: `${I}grappled.webp` });
-    if (o.prayed > 0)    c.push({ key: 'prayed',     label: 'Prayer',    desc: `−${o.prayed} to hit, damage & saves (cleric Prayer covers the battlefield)`, icon: `${I}shaken.webp` });
-    if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
-    if (o.asleep)        c.push({ key: 'asleep',     label: 'Asleep',     desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
-    // Undead/ghost PARTY members — so everyone can see why the cures skip them.
-    if (o.undead)        c.push({ key: 'undeadhero', label: 'Undead',     desc: 'positive energy does NOTHING (cures, channel, potions) — mend with Infernal Healing or Channel Negative', icon: `${I}markedevil.webp` });
-    if (o.ghost)         c.push({ key: 'ghosthero',  label: 'Incorporeal', desc: 'a ghost — always flying, and half of all physical blows pass straight through her', icon: `${I}darkened.webp` });
-    // Boss PRE-CAST wards — shown so the party knows what Dispel Magic can strip.
-    if (o.precast && o.precast.length) {
-      const PRE = {
-        magearmor:     ['Mage Armor', '+4 armor AC (dispellable)'],
-        shield:        ['Shield', '+4 AC and IMMUNE to Magic Missile (dispellable)'],
-        shieldoffaith: ['Shield of Faith', '+3 deflection AC, even vs touch (dispellable)'],
-        stoneskin:     ['Stoneskin', 'DR 10 vs physical blows (dispellable)'],
-        protfire:      ['Fire Ward', `absorbs the next ${o.fireWard || 0} fire damage (dispellable)`],
-        fly:           ['Fly (spell)', 'airborne by magic — DISPEL it and the boss crashes prone'],
-      };
-      // Ward chips reuse the PLAYER buff art — /dungeon/buffs/ already carries
-      // every one of these by name (protfire's file is spelled protectfire).
-      for (const k of o.precast) { const p = PRE[k]; if (p) c.push({ key: `pre_${k}`, label: p[0], desc: p[1], icon: `/dungeon/buffs/${k === 'protfire' ? 'protectfire' : k}.webp` }); }
-    }
-    else if (o.fascinated) c.push({ key: 'fascinated', label: 'Fascinated', desc: 'enthralled — loses turns; the first hit snaps it out', icon: `${I}fascinated.webp` });
-    if (o.charmed)       c.push({ key: 'charmed',    label: 'Charmed',    desc: "won't attack your party — only tends its own side; a hit snaps it out", icon: `${I}fascinated.webp` });
-    if (o.dominated > 0) c.push({ key: 'dominated',  label: 'Dominated',  desc: 'FIGHTS FOR THE PARTY — savages its own allies; a fresh Will save each of its turns can shake the hold', icon: `${I}fascinated.webp` });
-    if (o.darkened > 0)  c.push({ key: 'darkened',  label: 'Darkness',  desc: 'shrouded in darkness — cannot act or be attacked (2 rounds)', icon: `${I}darkened.webp` });
-    if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
-    if (o.markedEvil)    c.push({ key: 'markedevil', label: 'Marked',   desc: 'revealed by Detect Evil — smite-able', icon: `${I}markedevil.webp` });
-    return c;
-  }
-
-  // Active BUFFS on a hero, as Foundry-art icons for the dungeon UI. Sticky room
-  // buffs (rage/bane/divine favor/prayer/shield) come from buffApplied; run-long
-  // ones (bless/inspire) from runBuffApplied; smite/haste/invisible/judgement are
-  // their own flags.
-  _buffList(m) {
-    const I = '/dungeon/buffs/', c = [], pushed = new Set();
-    const push = (k, label, desc, icon) => { if (pushed.has(k)) return; pushed.add(k); c.push({ key: k, label, desc, icon: icon || `${I}${k}.webp` }); };
-    // Every applied spell/feat buff carries its own icon via BUFF_META — walk the
-    // recorded keys so any buff (new ones included) lights up automatically.
-    // Only TRUTHY entries are active: a toggled-OFF Power Attack / Deadly Aim
-    // leaves its key set to FALSE (not deleted), so checking key-existence alone
-    // kept reporting it as "on" forever (Josh: L always said Power Attack on).
-    for (const src of [m.buffApplied || {}, m.runBuffApplied || {}]) {
-      for (const key of Object.keys(src)) {
-        if (!src[key]) continue;
-        const meta = BUFF_META[key];
-        if (meta) push(key, meta.label, meta.desc, meta.icon);
-      }
-    }
-    // Transient states tracked by their own flags, not in buffApplied:
-    if (m.smiteActive)  push('smite', 'Smite', '+hit & +2×level damage vs evil');
-    if (m.hasted > 0)   push('haste', 'Haste', `an extra attack each turn (${m.hasted} left)`);
-    if (m.invisible)    push('invisible', 'Invisible', 'unseen — until you attack');
-    if (m.flying)       push('fly', 'Flying', 'airborne — grounded foes cannot reach you');
-    if (m.images > 0)   push('mirrorimage', 'Mirror Image', `${m.images} decoy${m.images > 1 ? 's' : ''} soaking incoming attacks`, '/dungeon/buffs/fly.webp');   // no mirrorimage.webp exists — reuse the shimmer icon (matches BUFF_META)
-    if (m.untargetable) push('blur', 'Blurred', 'untargetable until your next turn (Bladed Dash)', '/dungeon/buffs/fly.webp');
-    if (m.touchStrike > 0) push('dimblade', 'Dimensional Blade', 'your strikes hit on TOUCH this round', '/dungeon/buffs/magearmor.webp');
-    if (m.protectFire > 0) push('protectfire', 'Fire Ward', `absorbs the next ${m.protectFire} fire damage (Protection from Fire)`);
-    if (m.judgment === 'destruction') push('judg_destruction', 'Judgement: Destruction', '+damage on your strikes');
-    if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection', '+AC');
-    if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing', 'regenerate HP each turn');
-    if (m.bane)                       push('bane', `Bane: ${titleCase(m.bane.type)}`, `+2 hit, +2d6+2 vs ${titleCase(m.bane.type)} (this room)`);
-    if (m.mageArmor)                  push('magearmor', 'Mage Armor', '+4 armor AC (this dungeon)');
-    // Wild Shape — show the form's token as a buff badge (hawk has no token, but its
-    // Flying badge already covers it above).
-    if (m.form && m.form.art && !pushed.has('form_' + m.form.key)) { pushed.add('form_' + m.form.key); c.push({ key: 'form_' + m.form.key, label: m.form.label, desc: `Wild Shape: ${m.form.label}`, icon: m.form.art }); }
-    return c;
-  }
-
-  // Active BOONS on an enemy (green-ringed buff icons), so players can see a foe
-  // that's been hasted or pumped with combat buffs. Debuffs ride _condList.
-  _enemyBuffList(e) {
-    const I = '/dungeon/buffs/', c = [];
-    if (e.hasted > 0) c.push({ key: 'haste', label: 'Hasted', desc: 'an extra attack each turn', icon: `${I}haste.webp` });
-    if (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)) c.push({ key: 'buffed', label: 'Strengthened', desc: 'combat buffs active (+hit / +damage / +AC)', icon: `${I}bullsstrength.webp` });
-    // Pre-cast wards (boss casters walk in pre-buffed) — these are DISPELLABLE, so
-    // they MUST appear here or the blind Dispel picker won't offer the foe (Josh:
-    // "cannot target a foe"). Mirrors the server's foeEnchanted check.
-    if (e.precast && e.precast.length) c.push({ key: 'warded', label: 'Warded', desc: `pre-cast wards (${e.precast.join(', ')}) — dispellable`, icon: `${I}magearmor.webp` });
-    // Mid-combat self-buffs (enemy casters) — all DISPELLABLE, so they show as
-    // strip-able boons + the Dispel picker offers the foe.
-    if (e.invisible)  c.push({ key: 'invisible',   label: 'Invisible',    desc: 'unseen — your hits suffer 50% concealment (True Seeing / blindsense pierce it); dispellable', icon: `${I}invisible.webp` });
-    if (e.images > 0) c.push({ key: 'mirrorimage', label: 'Mirror Image', n: e.images, desc: `${e.images} decoy${e.images === 1 ? '' : 's'} soaking your blows — each hit has a 1-in-${e.images + 1} chance to tag the REAL foe; the rest pop a decoy. Dispellable.`, icon: `${I}fly.webp` });
-    if (e.flyCast)    c.push({ key: 'flycast',     label: 'Flying',       desc: 'airborne by magic — grounded foes can\'t reach it; DISPEL it and it crashes', icon: `${I}fly.webp` });
-    return c;
-  }
-
-  // ── Broadcasting ──────────────────────────────────────────────────────────
-  publicState() {
-    // Initiative lookup (keyed p:/e:) so the client can sort cards into initiative
-    // order and animate the per-room re-order. Empty until _rollInitiative runs.
-    const _initOf = {};
-    for (const t of (this.turnOrder || [])) _initOf[t.kind[0] + ':' + t.id] = t.init;
-    return {
-      id: this.id,
-      depth: this.depth,
-      round: this.round,
-      status: this.status,
-      runGold: this.runGold,
-      party: this.party.map(m => ({
-        playerId: m.playerId, init: (_initOf['p:' + m.playerId] ?? null), nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot, crowned: !!m.crowned,
-        cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
-        race: m.race || 'human', raceName: RACES.raceName(m.race), vision: m.vision || 'normal', blindsense: m.blindsense || 0,   // PF1 race + vision (+ blindsense ft); blind mode reads vision; non-human shows on the hero card
-        form: m.form ? { key: m.form.key, label: m.form.label, glyph: m.form.glyph, art: m.form.art } : null,   // active Wild Shape (drives the token swap on the hero card)
-        level: m.level, ...this._xpInfo(m), ...this._heroACs(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
-        abilityScores: m.abilityScores || null, abilityMods: m.mods || null, cantrip: this._cantripState(m),
-        dead: !!m.dead, downed: !m.dead && !m.left && m.hp <= 0 && !this._hasFerocity(m),
-        dyingHp: (!m.dead && !m.left && m.hp <= 0 && !this._hasFerocity(m)) ? m.hp : null,
-        ferocious: !m.dead && !m.left && m.hp <= 0 && this._hasFerocity(m),   // orc fighting on at/below 0 HP
-        left: !!m.left,
-        sickened: m.sickened > 0, paralyzed: m.paralyzed > 0,
-        // Auto-skip countdown — only for the human whose turn it currently is.
-        afkAt: (this.status === 'combat' && !m.isBot && this._currentActorId() === m.playerId && m.afkDeadline) ? m.afkDeadline : null,
-        queued: (!m.isBot && m.queuedAction) ? m.queuedAction.label : null,   // ⏳ pre-loaded action chip
-        conditions: (!m.dead && !m.left && m.hp > 0) ? this._condList(m) : [],
-        buffs: (!m.dead && !m.left && m.hp > 0) ? this._buffList(m) : [],
-        smiteActive: !!m.smiteActive, buffed: !!(m.buffs && (m.buffs.toHit || m.buffs.dmg || m.buffs.bonusDice || m.buffs.ac)),
-        kit: this._kitState(m),    // at-will + 2 abilities (+ remaining uses) for the action UI
-      })),
-      enemies: this.enemies.map(e => ({
-        uid: e.uid, init: (_initOf['e:' + e.uid] ?? null), name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
-        flying: !!e.flying,
-        drDesc: e.dr ? this._drDesc(e.dr) : null,   // spoken in the blind E-inspector + shown on hover (why your hits run low)
-        hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,
-        align: e.align || 'NE', evil: !!e.evil, type: e.type || null,
-        ac: e.ac, touchAC: (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)), ffAC: Math.max(10, e.ac - 2),
-        flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep, charmed: !!e.charmed, darkened: (e.darkened > 0),
-        dominated: (e.dominated > 0),   // Phase B: the client renders a dominated foe's card IN THE HERO ROW
-        conditions: e.hp > 0 ? this._condList(e) : [],
-        buffs: e.hp > 0 ? this._enemyBuffList(e) : [],
-      })),
-      turn: this._currentTurn(),
-      // 🎯 aim telegraphy — only present, living humans' picks are shown.
-      targeting: Object.fromEntries(Object.entries(this.targeting).filter(([pid]) =>
-        this.party.some(p => p.playerId === pid && !p.left && !p.dead && !p.isBot))),
-      botCount: this.botCount(),
-      recruitable: this._recruitableFn ? this._recruitableFn() : [],   // unseated bots, set by the socket layer
-      lootRoll: this.lootRoll ? {
-        slot: this.lootRoll.slot, tier: this.lootRoll.tier,
-        label: db.GEAR_BY_KEY[this.lootRoll.slot]?.label || this.lootRoll.slot,
-        hockValue: db.gearHockValue(this.lootRoll.slot, this.lootRoll.tier),
-        decided: this.lootRoll.decided,
-        pending: this.lootRoll.eligible.filter(id => !(id in this.lootRoll.decided)),
-        eligible: this.lootRoll.eligible,
-      } : null,
-      pendingLoot: this.pendingLoot.map((l, i) => ({
-        idx: i, slot: l.slot, tier: l.tier, owner: l.owner,
-        label: (db.GEAR_BY_KEY[l.slot]?.label || l.slot),
-        hockValue: db.gearHockValue(l.slot, l.tier),
-      })),
-      log: this.log.slice(-60),
-    };
-  }
+  // (_condList/_buffList/_enemyBuffList/publicState moved to game/dungeon/serialize.js — Phase-2 seam 2)
   _broadcast() {
     if (!this.io) return;
     this.io.to(this.roomName()).emit('dungeon:state', this.publicState());
@@ -1824,8 +1659,7 @@ class Dungeon {
   // ── Combat math (rolls shown in the log) ─────────────────────────────────
   _fmtBonus(n) { return (n >= 0 ? '+' : '') + n; }
   // Recompute a member's level + HP from current gear (level = 1 + gear bonuses).
-  // XP progress fields for the client (current band into/span + XP to next level).
-  _xpInfo(m) { const p = xpProgress(m.xp || 0); return { xp: p.xp, xpInto: p.into, xpSpan: p.span, xpToNext: p.toNext, maxLevel: p.next == null }; }
+  // (_xpInfo moved to game/dungeon/serialize.js — Phase-2 seam 2)
   // Apply a hero's level + HP from their XP total — handles level UP (room-clear
   // awards) and the death-penalty level DOWN. Returns the signed level delta.
   _applyLevelFromXp(m, xp) {
@@ -1876,41 +1710,7 @@ class Dungeon {
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
     return acOf(m.gear, m.cls, { noShield: !!(w && (w.noShield || w.ranged)) });
   }
-  _heroACs(m) {
-    const a = this._acOf(m);
-    const ac = a.ac + this._acBonus(m);
-    // Itemized breakdown for the party-card tooltip — mirrors acOf + _acBonus
-    // exactly (only GRANTED sources are listed; a suppressed shield shows why).
-    const parts = ['10 base'];
-    const w = m.weapon || weaponOf(m.gear, m.weaponKey);
-    const armor = Number(m.gear?.armor) || 0, shield = Number(m.gear?.shield) || 0, ring = Number(m.gear?.ring) || 0;
-    const arcaneNoArmor = (m.cls === 'wizard' || m.cls === 'sorcerer');
-    if (arcaneNoArmor) { if (armor > 0) parts.push(`+${armor} armor enchant (no armor worn)`); }
-    else { const base = (m.cls === 'barbarian' || m.cls === 'oracle') ? 6 : 9; parts.push(`+${base + armor} ${base === 6 ? 'breastplate' : 'full plate'}${armor ? ` +${armor}` : ''}`); }
-    const noShield = !!(w && (w.noShield || w.ranged));
-    if (shield >= 1 && m.cls !== 'swashbuckler' && m.cls !== 'magus' && !arcaneNoArmor && !noShield) parts.push(`+${2 + shield} shield +${shield}`);
-    else if (shield >= 1) parts.push(m.cls === 'magus'
-      ? '(shield owned but unused — the off hand is for spell combat; the Shield SPELL works)'
-      : '(shield owned but unusable — hands full)');
-    if (ring >= 1) parts.push(`+${ring} ring of protection`);
-    if (m.mageArmor) parts.push('+4 Mage Armor');
-    const buffAC = (m.buffs && m.buffs.ac) || 0;
-    if (buffAC) parts.push(`+${buffAC} spell buffs`);
-    if (m.judgment === 'protection') parts.push(`+${Math.max(1, Math.floor((m.level || 1) / 3))} Judgement: Protection`);
-    const featAC = fighterFeats(m.cls, m.level, this._isRanged(m)).ac;
-    if (featAC) parts.push(`+${featAC} feats (Dodge)`);
-    if (this._hasteMod(m)) parts.push('+1 Haste (dodge)');
-    if (m._fdAc) parts.push(`+${m._fdAc} Fighting Defensively (dodge)`);
-    if (m._offDef) parts.push('+2 Offensive Defense');
-    if (fighterFeats(m.cls, m.level, this._isRanged(m)).twDef && this._isDualWielding(m)) parts.push('+1 Two-Weapon Defense');
-    return {
-      ac,
-      touchAC: Math.max(10, ac - a.physical - (m.mageArmor ? 4 : 0)),
-      ffAC:    Math.max(10, ac - fighterFeats(m.cls, m.level, this._isRanged(m)).ac - (m._fdAc || 0)),   // a dodge bonus (Fight Defensively) is lost when flat-footed
-
-      acBreak: `AC ${ac} = ${parts.join(' · ')}`,
-    };
-  }
+  // (_heroACs moved to game/dungeon/serialize.js — Phase-2 seam 2)
   _atkStr(r) {
     // A roll that BEAT the AC but was foiled by the foe's defenses shouldn't print
     // "[40 vs AC 19]" as if the math failed — say what actually stopped it (Tobias:
@@ -2527,7 +2327,7 @@ class Dungeon {
     this._dmgToMember(target, hookDmg);
     const _fom = (!target.dead && target.hp > -10) ? this._fomSpend(target, 'the dragging hook') : false;
     if (!target.dead && target.hp > -10 && !_fom) { target.grappled = true; target.grappledBy = e.uid; target.grappledCL = this._enemyCL(e); target.grappleCMB = e.toHit || 0; }   // stamp CMB for the cast-while-grappled concentration DC
-    this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : ' and drags them into a GRAPPLE! (Dispel or Grease to break free)'} ${this._atkStr(r)}`, snd, { side: 'enemy' });
+    this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : ' and drags them into a GRAPPLE! (Grease it or struggle free — no spell to dispel)'} ${this._atkStr(r)}`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   }
   // Crush a hero the devil is already grappling — automatic chain damage.
@@ -2535,7 +2335,7 @@ class Dungeon {
     const cfg = e.hook || {};
     const [dmg, drTag] = this._physDR(target, dRollN(2, 8) + 4);   // Stoneskin soaks the crush
     this._dmgToMember(target, dmg);
-    this._note(`⛓️ ${e.glyph} ${e.name}'s chains CRUSH the grappled ${target.nickname} for ${dmg}${drTag}! (Dispel or Grease to break free)`, cfg.sound, { side: 'enemy' });
+    this._note(`⛓️ ${e.glyph} ${e.name}'s chains CRUSH the grappled ${target.nickname} for ${dmg}${drTag}! (Grease it or struggle free — no spell to dispel)`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
   }
   // Barbed Devil's Hellfire Blast — fire AoE on a random handful of heroes,
@@ -3082,7 +2882,7 @@ class Dungeon {
       if (controlled) {
         const cleanse = avail.find(a => a.effect === 'cleanse');
         if (cleanse) {
-          const allyDebuffed = allies.some(a => a.paralyzed > 0 || a.stunned > 0 || a.slowed > 0 || a.sickened > 0 || a.grappled);
+          const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0);   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
           const foeBuffed = this._targetableEnemies().some(e => e.hasted > 0 || (e.precast && e.precast.length) || (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)));
           if (allyDebuffed || foeBuffed) return { slot: slot(cleanse), payload: {} };
         }
@@ -3139,7 +2939,7 @@ class Dungeon {
     // 1b) Dispel Magic — cleanse a debuffed ally (paralysis / stun / sickness).
     const cleanse = avail.find(a => a.effect === 'cleanse');
     if (cleanse) {
-      const allyDebuffed = allies.some(a => a.paralyzed > 0 || a.stunned > 0 || a.slowed > 0 || a.sickened > 0 || a.grappled);
+      const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0);   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
       const foeBuffed = this._targetableEnemies().some(e => e.hasted > 0 || (e.precast && e.precast.length) || (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)));
       if (allyDebuffed || foeBuffed) return { slot: slot(cleanse), payload: {} };
     }
@@ -3871,7 +3671,7 @@ class Dungeon {
     // is nothing to dispel ANYWHERE (no hostile magic on the party, no
     // enchantments on the foes). The reason is toasted + spoken in blind mode.
     if (ab.effect === 'cleanse') {
-      const allyAfflicted = (a) => (a.paralyzed > 0) || (a.stunned > 0) || (a.slowed > 0) || a.grappled || (a.blinded > 0) || (a.sickened > 0);
+      const allyAfflicted = (a) => (a.paralyzed > 0) || (a.slowed > 0) || (a.blinded > 0);   // dispel/remove-paralysis candidates: SPELL effects (any paralysis passes here — Remove Paralysis takes non-spell paralysis too; _abCleanse sorts out which spell may clear what)
       const foeEnchanted = (e) => (e.hasted > 0) || !!(e.precast && e.precast.length) || !!e.invisible || (e.images > 0) || !!e.flyCast
         || !!(e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0 || (e.buffs.bonusDice || 0) > 0));
       const pickedId = payload && (payload.allyUid || payload.targetUid);
@@ -4253,79 +4053,7 @@ class Dungeon {
       this._note(`${ab.icon} ${bard.nickname} keeps ${ab.name} up — the whole party stays emboldened all delve!`, ab.sound);
     }
   }
-  // The member's kit + remaining uses + level-availability, for the action UI.
-  _kitState(m) {
-    const kit = kitFor(m.cls);
-    const lvl = m.level || 1;
-    const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // single-shot rifle → no Rapid Shot
-    const maxSlots = slotsFor(m.cls, lvl, m.castingMod);
-    // Stance BUTTONS only show for the style that can use them: a MELEE wielder
-    // sees Power Attack, a RANGED wielder sees Deadly Aim, and pure casters (whose
-    // at-will is a cantrip, not a weapon swing) see NEITHER. The full kit keeps
-    // both — the bot AI manages stances from it (_botStance) and a weapon swap
-    // re-serializes the right button on the next broadcast.
-    const _weaponFighter = (kit.atwill || {}).effect === 'attack';
-    const _rangedNow = this._isRanged(m);
-    const _showStance = (ab) => !(ab.powerattack || ab.deadlyaim)
-      || (_weaponFighter && (ab.powerattack ? !_rangedNow : _rangedNow));
-    // Metamagic — for SPONTANEOUS casters: the toggle buttons (one per feat owned)
-    // and which are active. Slot spells re-level by the active toggles below.
-    const ff = fighterFeats(m.cls, m.level, this._isRanged(m));
-    const mmActive = this._spontMM(m) || {};
-    const mmFeats = isSpontaneous(m.cls)
-      ? [['intensify', 'Intensify', '+1'], ['empower', 'Empower', '+2'], ['maximize', 'Maximize', '+3'], ['quicken', 'Quicken', '+4']]
-          .filter(([k]) => ff[k]).map(([key, name, adj]) => ({ key, name, adj, on: !!mmActive[key] }))
-      : [];
-    return {
-      // The at-will button wears the CHOSEN cantrip's face — a caster who has
-      // cycled to Acid Splash or Jolt sees that name, not a stale "Ray of Frost".
-      atwill: (() => {
-        const at = kit.atwill;
-        const a = (at && at.effect === 'bolt' && CANTRIP_BY_KEY[m.cantrip]) ? CANTRIP_BY_KEY[m.cantrip] : at;
-        return { key: a.key, name: a.name, icon: a.icon, img: a.img || at.img || null };
-      })(),
-      caster: isCaster(m.cls),
-      domainsMax: maxDomainsFor(m.cls) || 0,   // cleric 2 / inquisitor 1 / else 0 — shows the Domain picker (Phase C)
-      spellNote: kit.note || null,
-      metamagic: mmFeats.length ? mmFeats : null,    // null → no buttons (prepared casters bake metamagic into spell entries)
-      spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
-      // Per-spell-level slots for spontaneous casters: { 1: {remaining,max}, … }.
-      slots: maxSlots ? Object.fromEntries(Object.keys(maxSlots).map(L => [L, { remaining: (m.slots && m.slots[L]) || 0, max: maxSlots[L] }])) : null,
-      abilities: this._abilitiesFor(m).filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m) && _showStance(ab)).map(ab => {
-        // Slot spells re-level by the active metamagic; the UI shows the effective
-        // level, draws the right slot count, and greys out if there's no slot there
-        // (or it pushes past 9th).
-        const slvlEff = ab.cost === 'slot' ? this._slotLevelFor(m, ab) : ab.slvl;
-        // allyPick: this spell can be aimed at ONE chosen ally (the sighted
-        // party-card click and the blind ally-picker both set payload.allyUid;
-        // the server honors it, else smart-auto-picks). True for single cures,
-        // single-ally buffs, invisibility, infernal healing, and Breath of Life.
-        const allyPick =
-          (ab.effect === 'heal' && ab.heal === 'single') ||
-          (ab.effect === 'buff' && ab.target === 'ally' && !ab.party && !ab.powerattack && !ab.deadlyaim) ||
-          (ab.effect === 'invisible') ||
-          (ab.effect === 'infernalheal') ||
-          (ab.effect === 'domward') ||   // Protection domain's Resistant Touch aims at one ally (default self)
-          (ab.effect === 'revive' && !ab.raiseDead);
-        // dispelPick: Dispel Magic can be aimed at EITHER an afflicted ally or an
-        // enchanted foe — the blind picker offers both sides; sighted uses the
-        // party-card / enemy selection. No pick → smart auto / refuse if nothing.
-        const dispelPick = ab.effect === 'cleanse';
-        // modePick: a CHANNEL (heal:'party') can be aimed OFFENSIVELY (sear undead)
-        // or DEFENSIVELY (heal the party) — the client prompts and sends payload.mode.
-        const modePick = ab.effect === 'heal' && ab.heal === 'party';
-        return {
-        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
-        slot: this._abilitiesFor(m).indexOf(ab),   // stable index into kit+domain abilities (the action payload `slot`) — survives the char filter
-        active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
-        minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null,
-        available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction) && !(ab.cost === 'slot' && (slvlEff > 9 || !(maxSlots && maxSlots[slvlEff]))), desc: ab.desc || '',
-        remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'slot' ? ((m.slots && m.slots[slvlEff]) || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
-        max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'slot' ? ((maxSlots && maxSlots[slvlEff]) || 0) : ab.cost === 'room' ? roomUses(ab, lvl, m) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl, m) : (ab.uses || 1)) : null,
-        };
-      }),
-    };
-  }
+  // (_kitState moved to game/dungeon/serialize.js — Phase-2 seam 2)
   // Spell save DC + caster level for this member (level = 1 + gear).
   // PF1 spell save DC = 10 + SPELL LEVEL + casting-stat mod (+ Spell Focus).
   // Was 10 + CASTER level — a L17 Chain Lightning showed DC 37 (Tobias: "dc
@@ -5100,7 +4828,7 @@ class Dungeon {
   _dispellableCL(a) {
     let cl = 1;
     for (const k of Object.keys(EFFECT_CL_FLOOR)) {
-      const active = (k === 'grappled') ? a.grappled : (a[k] > 0);
+      const active = (k === 'paralyzed') ? (a.paralyzed > 0 && a.heldDC != null) : (a[k] > 0);   // spell-held only — ghoul paralysis isn't a spell
       if (active) cl = Math.max(cl, a[k + 'CL'] || 0, EFFECT_CL_FLOOR[k]);
     }
     return cl;
@@ -5108,7 +4836,16 @@ class Dungeon {
   _abCleanse(m, ab, payload) {
     const sound = ab.sound;
     const FAIL_SOUND = '/audio/vine_boom.mp3';   // a FAILED dispel check (Foundry sting)
-    const sev = (a) => (a.paralyzed > 0 ? 5 : 0) + (a.stunned > 0 ? 4 : 0) + (a.slowed > 0 ? 2 : 0) + (a.grappled ? 2 : 0) + (a.blinded > 0 ? 2 : 0) + (a.sickened > 0 ? 1 : 0);
+    // PF1 (Tobias 2026-07-03): Dispel Magic ends active SPELL effects ONLY —
+    // hold/paralysis from a SPELL (heldDC set), Slow, magical blindness. A
+    // monster's grapple, a stunning blow, sickness and lingering nausea are
+    // PHYSICAL and stay (struggle, Grease, or heal them instead). REMOVE
+    // PARALYSIS is the exception spell: it frees paralysis of ANY source —
+    // even a ghoul's Su touch, which Dispel can't reach — plus Slow (PF1).
+    const isRemovePara = ab.key === 'removeparalysis';
+    const sev = isRemovePara
+      ? (a) => (a.paralyzed > 0 ? 5 : 0) + (a.slowed > 0 ? 2 : 0)
+      : (a) => ((a.paralyzed > 0 && a.heldDC != null) ? 5 : 0) + (a.slowed > 0 ? 2 : 0) + (a.blinded > 0 ? 2 : 0);
     // EXPLICIT pick (human party-card / enemy selection) — honor it. Invalid
     // explicit targets were already refused in _useAbility with a told-to-the-
     // caster reason, so a resolved pick here is a valid one. No pick → the
@@ -5129,13 +4866,10 @@ class Dungeon {
         this._echoToTable(FAIL_SOUND); return;
       }
       const cleared = [];
-      if (hurt.paralyzed > 0) { hurt.paralyzed = 0; hurt.heldDC = null; cleared.push('paralysis'); }
-      if (hurt.stunned > 0)   { hurt.stunned = 0;   cleared.push('stun'); }
+      // Spell effects only (see the ruling above) — grapple/stun/sickness/nausea stay.
+      if (hurt.paralyzed > 0 && (isRemovePara || hurt.heldDC != null)) { hurt.paralyzed = 0; hurt.heldDC = null; cleared.push('paralysis'); }
       if (hurt.slowed > 0)    { hurt.slowed = 0; hurt._slowTick = 0; cleared.push('slow'); }
-      if (hurt.grappled)      { hurt.grappled = false; hurt.grappledBy = null; cleared.push('grapple'); }
-      if (hurt.blinded > 0)   { hurt.blinded = 0;   cleared.push('blindness'); }
-      if (hurt.sickened > 0)  { hurt.sickened = 0;  cleared.push('sickness'); }
-      if (hurt.nauseated > 0) { hurt.nauseated = 0; cleared.push('nausea'); }
+      if (!isRemovePara && hurt.blinded > 0) { hurt.blinded = 0; cleared.push('blindness'); }
       this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — clears ${cleared.join(', ')}! [dispel ${dc.total} vs DC ${dc.dc}]`, sound);
       this._echoToTable(sound); return;
     }
@@ -6592,5 +6326,6 @@ class Dungeon {
 // and are grafted onto the prototype; `this` semantics are identical to class
 // methods. ONE seam per deploy (see CLAUDE.md + REFACTOR-AND-RACES-PLAN).
 Object.assign(Dungeon.prototype, require('./dungeon/loot'));
+Object.assign(Dungeon.prototype, require('./dungeon/serialize')({ fighterFeats }));
 
 module.exports = { Dungeon, MON, BOSS_KEYS };

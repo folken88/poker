@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.7.2  2026-07-03  Dispel Magic = SPELL effects only (PF1, Tobias): clears
+//                     spell-hold/slow/blindness; grapple/stun/sickness/nausea
+//                     are physical and stay; Remove Paralysis frees ANY
+//                     paralysis (even ghoul Su) + slow; bots pick accordingly
+//  3.7.1  2026-07-03  Phase-2 seam 2: SERIALIZE mixin — publicState + cond/buff
+//                     strips + _kitState/_heroACs/_xpInfo moved VERBATIM to
+//                     game/dungeon/serialize.js (factory: takes fighterFeats)
 //  3.7.0  2026-07-03  Phase-2 restructure seam 1: LOOT mixin — drops/roll-offs/
 //                     equip/hock/potions + loot tuning moved VERBATIM to
 //                     game/dungeon/loot.js (Object.assign onto the prototype)
@@ -47,4 +54,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.7.0' };
+module.exports = { VERSION: '3.7.2' };
