@@ -19,7 +19,7 @@ const { weaponOf, SND, dRoll, dRollN, pick } = require('../combat');
 const { crToNum } = require('../../pf1data/monsters');
 const { babFor } = require('../../pf1data/classes');
 
-module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD }) => ({
+module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC }) => ({
   _monsterSwing(e, targetAC) {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage

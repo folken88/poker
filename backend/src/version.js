@@ -3,6 +3,10 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.8.2  2026-07-04  HOTFIX: 4 mixin free-variable crashes from the Phase-2
+//                     split — BUFF_META (Power Attack toast, the live one),
+//                     titleCase (Bane badge), PARALYZE_DC (ghoul melee),
+//                     MAGUS_SPELLSTRIKE_SFX (spellstrike) + sweep test
 //  3.8.1  2026-07-04  pf1core façade: src/pf1core/index.js — THE one door to
 //                     the rules engine (13 concept namespaces), purity gate in
 //                     the suite; PGM (pgm.folkengames.com) consumes this
@@ -72,4 +76,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.8.1' };
+module.exports = { VERSION: '3.8.2' };

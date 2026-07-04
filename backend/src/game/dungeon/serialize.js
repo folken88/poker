@@ -17,7 +17,45 @@ const { xpProgress } = require('../../pf1data/xp');
 const RACES = require('../../pf1data/races');
 const { maxDomainsFor } = require('../../pf1data/domains');
 
-module.exports = ({ fighterFeats }) => ({
+// Every applied spell/feat buff that should show an icon on a hero's buff strip,
+// keyed by the ability key recorded in m.buffApplied / m.runBuffApplied. Each
+// needs a matching /dungeon/buffs/<key>.webp. _buffList walks the applied keys,
+// so adding a new buff spell is just: give it a kit entry + an icon + a line here.
+const BUFF_META = {
+  rage:          { label: 'Rage',            desc: '+2 hit & damage, −2 AC (this room)' },
+  bane:          { label: 'Bane',            desc: '+2 hit, +2d6+2 vs foes (this room)' },
+  divinefavor:   { label: 'Divine Favor',    desc: '+3 hit & damage (this room)' },
+  prayer:        { label: 'Prayer',          desc: 'allies +1 hit, damage & saves (this room)' },
+  shield:        { label: 'Shield',          desc: '+4 AC (this room)' },
+  shieldoffaith: { label: 'Shield of Faith', desc: '+2 deflection AC (this room)' },
+  protevil:      { label: 'Protection from Evil', desc: '+2 AC & +2 saves (this room)' },
+  magearmor:     { label: 'Mage Armor',      desc: '+4 armor AC (this dungeon)' },
+  stoneskin:     { label: 'Stoneskin',       desc: 'DR 10 vs physical blows (this room)' },
+  stoneskincomm: { label: 'Stoneskin (Communal)', desc: 'DR 10 vs physical blows — whole party (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
+  ironskin:      { label: 'Iron Skin',       desc: 'DR 10 vs physical blows (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
+  barkskin:      { label: 'Barkskin',        desc: '+3 natural-armor AC (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
+  magicfang:     { label: 'Magic Fang',      desc: '+1 to hit & damage — natural weapons (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  catsgrace:     { label: "Cat's Grace",     desc: '+2 AC & +1 to hit — Dexterity (this room)' },
+  bullsstrength: { label: "Bull's Strength", desc: '+2 hit & damage — Strength (this room)' },
+  bearsendurance:{ label: "Bear's Endurance",desc: '+temporary HP — Constitution (this room)' },
+  heroism:       { label: 'Heroism',         desc: '+2 to hit & +2 on saves (this room)' },
+  goodhope:      { label: 'Good Hope',       desc: 'allies +2 hit, damage & saves (this room)' },
+  deadlyaim:     { label: 'Deadly Aim',      desc: 'trading aim for power — −hit, +damage' },
+  powerattack:   { label: 'Power Attack',    desc: 'trading accuracy for power — −hit, +damage' },
+  fightdefensively: { label: 'Fighting Defensively', desc: '−4 to hit for a dodge AC bonus', icon: '/dungeon/buffs/shieldoffaith.webp' },
+  fly:           { label: 'Flying',          desc: 'airborne — grounded foes cannot reach you' },
+  protectfire:   { label: 'Fire Ward',       desc: 'absorbs incoming fire damage until spent (Protection from Fire)' },
+  bless:         { label: 'Bless',           desc: '+1 to hit — whole dungeon' },
+  inspire:       { label: 'Inspire Courage', desc: 'allies +1 hit & damage — whole dungeon' },
+  // ── Magus buffs (icons fall back to fitting existing art) ──
+  displacement:  { label: 'Displacement',    desc: '50% of incoming attacks miss (this room)', icon: '/dungeon/buffs/fly.webp' },
+  fireshield:    { label: 'Fire Shield',     desc: 'melee attackers scorched for 1d6+level fire (this room)', icon: '/dungeon/buffs/protevil.webp' },
+  elementalbody: { label: 'Elemental Body',  desc: 'immune to crits, paralysis, stun, sicken & blind (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
+  trueseeing:    { label: 'True Seeing',     desc: 'see through darkness, illusions & invisibility (this room)', icon: '/dungeon/buffs/magearmor.webp' },
+  mirrorimage:   { label: 'Mirror Image',    desc: 'shimmering decoys soak incoming attacks', icon: '/dungeon/buffs/fly.webp' },
+};
+
+module.exports = ({ fighterFeats, titleCase }) => ({
   // Active debuffs on a hero or monster, as PF1-system condition icons for the
   // dungeon UI. Members carry sickened/paralyzed; enemies add asleep/prone.
   // (Same flag names on both, so one helper serves heroes and monsters.)

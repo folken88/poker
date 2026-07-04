@@ -42,6 +42,14 @@ const DOMAIN_POWERS = {
   bleed:      { key: 'dom_death', name: 'Bleeding Touch', icon: '💀', cost: 'room', effect: 'dombleed', target: 'self', uses: DOM_USES, sound: '/audio/spell_buff_invoke.mp3', desc: 'Domain (Death): your next hit opens a wound that BLEEDS 1d6 each round until the foe falls.' },
 };
 
+// Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
+// magi (and any unlisted magus) fall back to the spell's default electric zap.
+const MAGUS_SPELLSTRIKE_SFX = {
+  Kate:    '/audio/spellstrike_boudicca.mp3',     // Kate Blackwood — "boudicca" battle cry
+  Vaughan: '/audio/spellstrike_vaughan.mp3',      // Vaughan — Genji-style sword ult
+  Toni:    '/audio/spellstrike_toni.mp3',         // Toni — arcane sword-lightning yell
+};
+
 module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BLIND_ROUNDS, HIGH_GROUND_AC, EFFECT_CL_FLOOR, mindImmune, fightsNatural, isSneakClass, titleCase, ccd, stepDamage }) => ({
   // ── Ability system ───────────────────────────────────────────────────────
   // At-will: a weapon swing (martials) or a cantrip (full casters), every turn.
