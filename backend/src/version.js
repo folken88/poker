@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.10.1 2026-07-04  ART PURGE + boss enforcement: badger removed (no real
+//                     token exists), goblin rogue/shaman get real tokens
+//                     (Commando + cleric-priest) — 124/124 enemies have art;
+//                     zernibeth & abrogail now IN BOSS_KEYS (were boss-only
+//                     by comment, spawnable in fact)
 //  3.10.0 2026-07-04  THE SHACKLES (task #61 batch 2): 21 imports from the
 //                     03-shackletastic world — 'pirate' gang (lubber→Capt.
 //                     Maris + the Fungal zombie crew), 'sahuagin' + 'charauka'
@@ -90,4 +95,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.10.0' };
+module.exports = { VERSION: '3.10.1' };

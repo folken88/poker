@@ -33,7 +33,7 @@ const BRUCE_SFX = [
 //   attacks = number of separate swings per turn (default 1)
 const MON = {
   dire_rat:          { name: 'Dire Rat',          glyph: '🐀', cr: '1/3', hp: 5,   ac: 14, toHit: 1,  dmgDie: 4,  dmgBonus: 0, fort: 3,  reflex: 3,  gold: [3, 10], atkSound: '/audio/enemy_badger.mp3' },
-  badger:            { name: 'Badger',            glyph: '🦡', cr: '1/2', hp: 6,   ac: 14, toHit: 2,  dmgDie: 3,  dmgBonus: 1, fort: 3,  reflex: 3,  gold: [3, 9], atkSound: '/audio/enemy_badger.mp3' },   // small animal — snarling bite/claw
+  // (badger removed 2026-07-04 — no real token art in the library; dire_rat covers the CR 1/2 beast-chaff slot)
   giant_centipede:   { name: 'Giant Centipede',   glyph: '🐛', cr: '1/2', hp: 5,   ac: 14, toHit: 2,  dmgDie: 6,  dmgBonus: 0, fort: 1,  reflex: 3,  gold: [3, 10] },
   goblin:            { name: 'Goblin',            glyph: '👺', cr: '1/3', hp: 6,   ac: 16, toHit: 2,  dmgDie: 4,  dmgBonus: 0, fort: 3,  reflex: 2,  gold: [6, 16] },
   kobold:            { name: 'Kobold',            glyph: '🦎', cr: '1/4', hp: 5,   ac: 15, toHit: 1,  dmgDie: 6,  dmgBonus: 0, fort: 2,  reflex: 1,  gold: [6, 14] },
@@ -204,7 +204,7 @@ const MON = {
 const SIZE_RANK = { F: -4, D: -3, T: -2, S: -1, M: 0, L: 1, H: 2, G: 3, C: 4 };
 const SIZE_NAME = { F: 'Fine', D: 'Diminutive', T: 'Tiny', S: 'Small', M: 'Medium', L: 'Large', H: 'Huge', G: 'Gargantuan', C: 'Colossal' };
 const MON_BODY = {
-  dire_rat: { size: 'S', legs: 4 }, badger: { size: 'S', legs: 4 }, giant_centipede: { size: 'M', legs: 8 },
+  dire_rat: { size: 'S', legs: 4 }, giant_centipede: { size: 'M', legs: 8 },
   goblin: { size: 'S' }, kobold: { size: 'S' }, kobold_spearman: { size: 'S' }, kobold_shaman: { size: 'S' },
   monk_puff: { size: 'S' }, monk_kobold: { size: 'S' }, monk_kobold_big: { size: 'S' },
   kobold_rogue: { size: 'S' }, goblin_rogue: { size: 'S' }, goblin_shaman: { size: 'S' }, goblin_barbarian: { size: 'S' },
@@ -261,7 +261,7 @@ const MON_GANGS = {
   vamp_warrior: ['undead'], vamp_bodyguard: ['undead'], vamp_priest: ['undead'], vamp_assassin: ['undead'],
   vamp_nightguard: ['undead'], vamp_noble: ['undead'], vamp_techwitch: ['undead'],
   // beasts of the wild
-  badger: ['beast'], dire_ape: ['beast'], dire_boar: ['beast'], winter_wolf: ['beast'],
+  dire_ape: ['beast'], dire_boar: ['beast'], winter_wolf: ['beast'],
   blood_caimon: ['beast'], dire_bear: ['beast'],
   // aberrations & horrors — the weird monstrous things
   gray_ooze: ['horror'], gibbering_mouther: ['horror'], abyssal_horror: ['horror'], bog_brute: ['horror'],
@@ -300,6 +300,7 @@ const MON_ART = {
   dire_rat: 'dire_rat',
   kobold_spearman: 'kobold_spearman', kobold_shaman: 'kobold_shaman', kobold_rogue: 'kobold_rogue',
   giant_centipede: 'centipede', goblin: 'goblin', goblin_barbarian: 'goblin', kobold: 'kobold', skeleton: 'skeleton',
+  goblin_rogue: 'goblin_rogue', goblin_shaman: 'goblin_shaman',   // real tokens at last (Commando + cleric-priest) — were emoji-only
   giant_spider: 'spider', zombie: 'zombie', ghoul: 'ghoul', cultist: 'cultist',
   // Undead with fresh Foundry token art (were emoji-only): a burning skull,
   // a fanged vampire lord, and a skeletal lich in his mitre.
@@ -353,7 +354,7 @@ for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dung
 // ONE type; the bane bonus applies only to foes of that type). Every MON key
 // should be covered; anything missed defaults to 'humanoid' below.
 const MON_TYPE = {
-  dire_rat: 'animal', badger: 'animal', dire_ape: 'animal', dire_boar: 'animal', blood_caimon: 'animal', dire_bear: 'animal',
+  dire_rat: 'animal', dire_ape: 'animal', dire_boar: 'animal', blood_caimon: 'animal', dire_bear: 'animal',
   giant_centipede: 'vermin', giant_spider: 'vermin',
   goblin: 'humanoid', goblin_rogue: 'humanoid', goblin_shaman: 'humanoid', goblin_barbarian: 'humanoid',
   kobold: 'humanoid', kobold_spearman: 'humanoid', kobold_shaman: 'humanoid', kobold_rogue: 'humanoid',
@@ -480,7 +481,8 @@ function crToNum(cr) {
   if (String(cr).includes('/')) { const [a, b] = String(cr).split('/').map(Number); return b ? a / b : a; }
   return Number(cr) || 0;
 }
-const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overlord', 'ikualoa', 'captain_thrune']);   // boss-only, never regular spawns
+const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overlord', 'ikualoa', 'captain_thrune',
+  'zernibeth', 'abrogail']);   // boss-only, never regular spawns (zernibeth/abrogail always SAID boss-only — now enforced)
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 
