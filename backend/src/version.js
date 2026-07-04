@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.9.0  2026-07-04  THE MACHINES (task #61): 17 Iron Gods robots imported
+//                     from the f1 Foundry world — gearsmen/drones/mechas CR
+//                     1/3→17, construct gang, elec-vulnerable, repair drones,
+//                     Thought Harvester holds, Scraper grab-shock-crush,
+//                     Warden + Overlord bosses; tokens from foundry-media
 //  3.8.2  2026-07-04  HOTFIX: 4 mixin free-variable crashes from the Phase-2
 //                     split — BUFF_META (Power Attack toast, the live one),
 //                     titleCase (Bane badge), PARALYZE_DC (ghoul melee),
@@ -76,4 +81,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.8.2' };
+module.exports = { VERSION: '3.9.0' };

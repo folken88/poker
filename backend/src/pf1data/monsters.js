@@ -129,6 +129,30 @@ const MON = {
   ww_archnecromancer:{ name: 'WW Archnecromancer', glyph: '🧙', cr: '11',  hp: 75,  ac: 19, toHit: 8,  dmgDie: 4,  dmgBonus: 0,  fort: 7,  reflex: 7,  gold: [130, 260], evil: true, arcane: true, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['magearmor', 'shield', 'stoneskin', 'fly'] },   // W12 — the cell's master, a lich-in-waiting
   // ── TECHNIC LEAGUE & THRUNE — named villains ──
   zernibeth:         { name: 'Zernibeth',         glyph: '🤖', cr: '13',  hp: 120, ac: 24, toHit: 12, dmgDie: 6,  dmgBonus: 4,  fort: 9,  reflex: 9,  gold: [280, 480], evil: true, arcane: true, precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // android W14 of the Technic League (LE) — full wizard casting; walks in pre-buffed (boss only)
+  // ── THE MACHINES — Numerian robots from the Iron Gods campaign (Tobias's
+  //    custom builds in the f1 world 03irongodspub / folken-constructs pack).
+  //    Robot subtype: constructs (mind-immune, unaligned unless intelligent),
+  //    adamantine chassis modeled as DR, and the classic Iron Gods weakness —
+  //    VULNERABLE to electricity (×1.5, see RESIST_BY_KEY). They march with
+  //    Zernibeth and the golems in the 'construct' gang. ──
+  drone_rhoomba:     { name: 'Drone 0.5 Rhoomba', glyph: '🤖', cr: '1/3', hp: 4,   ac: 14, toHit: 2,  dmgDie: 4,  dmgBonus: 0,  fort: 0,  reflex: 3,  gold: [3, 10] },   // feral floor-cleaner — shin-bumps and blade-nicks
+  drone_collector:   { name: 'Drone 1.0 Collector', glyph: '🤖', cr: '1', hp: 13,  ac: 16, toHit: 3,  dmgDie: 4,  dmgBonus: 2,  fort: 2,  reflex: 1,  attacks: 2, gold: [12, 26], flying: true },   // hovering salvage grabber — two grasping claws
+  gearsman_mk1:      { name: 'Gearsman 1.0',      glyph: '🤖', cr: '2',   hp: 26,  ac: 17, toHit: 6,  dmgDie: 6,  dmgBonus: 4,  fort: 2,  reflex: 1,  attacks: 2, gold: [22, 48], dr: { amount: 5, bypass: '—' }, atkSound: '/audio/spell_shock.mp3' },   // the classic Numerian trooper — slam + integrated tazer
+  drone_stinger:     { name: 'Drone 2.5 Stinger', glyph: '🤖', cr: '3',   hp: 26,  ac: 18, toHit: 8,  dmgDie: 6,  dmgBonus: 2,  fort: 1,  reflex: 6,  attacks: 2, sneakDice: 2, gold: [26, 60], flying: true },   // darting fly-spy — burrowing blades find the gaps
+  drone_repair:      { name: 'Drone 3.0 Repairs', glyph: '🔧', cr: '3',   hp: 30,  ac: 17, toHit: 6,  dmgDie: 6,  dmgBonus: 3,  fort: 2,  reflex: 2,  gold: [26, 60], healer: { dice: 2, uses: 3 } },   // field mechanic — welds battered squadmates back together mid-fight
+  gearsman_pugilist: { name: 'Gearsman 3.6 Pugilist', glyph: '🥊', cr: '5', hp: 52, ac: 19, toHit: 10, dmgDie: 8, dmgBonus: 5,  fort: 5,  reflex: 6,  attacks: 3, evasion: true, gold: [42, 90], dr: { amount: 5, bypass: '—' }, atkSounds: BRUCE_SFX },   // Monk 5 boxing chassis — carbon-fiber flurry (the Terminator variant)
+  gearghost:         { name: 'Gearghost',         glyph: '👻', cr: '5',   hp: 45,  ac: 18, toHit: 9,  dmgDie: 6,  dmgBonus: 3,  fort: 2,  reflex: 7,  gold: [42, 95], flying: true, dr: { amount: 10, bypass: 'magic' }, healer: { dice: 2, uses: 2 } },   // haunted clockwork wisp — half construct, half ghost; mends its machine kin
+  gearsman_gunslinger:{ name: 'Gearsman 5.0 Gunslinger', glyph: '🔫', cr: '6', hp: 60, ac: 20, toHit: 12, dmgDie: 8, dmgBonus: 6, fort: 4, reflex: 9, attacks: 2, gold: [55, 115], atkSound: '/audio/rifle_longue_carabine.mp3' },   // ronin chassis — fanning an integrated revolver
+  gearsman_sniper:   { name: 'Gearsman 5.5 Sniper', glyph: '🎯', cr: '7', hp: 68,  ac: 20, toHit: 13, dmgDie: 8,  dmgBonus: 6,  fort: 4,  reflex: 10, attacks: 2, sneakDice: 4, evasion: true, gold: [70, 150], atkSound: '/audio/rifle_dvl_silenced.mp3' },   // Rogue 3/Gunslinger 7 — silenced shots to the vitals
+  gearsman_riot:     { name: 'Gearsman 3.0 Riot Suppressor', glyph: '🛡️', cr: '8', hp: 95, ac: 22, toHit: 15, dmgDie: 8, dmgBonus: 9, fort: 6, reflex: 4, attacks: 2, gold: [95, 190], dr: { amount: 5, bypass: '—' }, taunt: { dc: 16, sound: '/audio/spell_shock.mp3' } },   // crowd-control frame — a COMPLIANCE bark taunts AI heroes onto its shield
+  gearsman_harvester:{ name: 'Gearsman 6.0 Thought Harvester', glyph: '🧠', cr: '9', hp: 100, ac: 22, toHit: 14, dmgDie: 6, dmgBonus: 6, fort: 6, reflex: 6, attacks: 2, gold: [110, 220], caster: 'holdperson', spellDC: 19 },   // skull-drill chassis — neural clamp locks a hero rigid (Hold, Will DC 19), then it harvests
+  gearsman_juggernaut:{ name: 'Gearsman 4.0 Juggernaut', glyph: '🤖', cr: '11', hp: 130, ac: 24, toHit: 17, dmgDie: 10, dmgCount: 2, dmgBonus: 10, fort: 8, reflex: 4, attacks: 2, gold: [260, 460], dr: { amount: 10, bypass: '—' } },   // HUGE siege frame — two 2d10+10 pistons; DR 10/— (adamantine plate)
+  mecha_railgun:     { name: 'Mecha 3.4 Railgun Tank', glyph: '🚂', cr: '12', hp: 140, ac: 24, toHit: 18, dmgDie: 12, dmgCount: 2, dmgBonus: 8, fort: 9, reflex: 3, gold: [280, 500], dr: { amount: 10, bypass: '—' }, atkSound: '/audio/rovadra_dragonrifle.mp3' },   // HUGE treaded tank — one hypersonic slug per turn (2d12+8)
+  mecha_repeater:    { name: 'Mecha 3.2 Repeater Tank', glyph: '🚂', cr: '13', hp: 155, ac: 25, toHit: 18, dmgDie: 8, dmgBonus: 8, fort: 9, reflex: 4, attacks: 4, gold: [300, 540], dr: { amount: 10, bypass: '—' }, atkSound: '/audio/rifle_sv98.mp3' },   // HUGE four-legged walker — repeater battery, four shots a round
+  gearsman_scraper:  { name: 'Gearsman 6.7 Scraper', glyph: '🏗️', cr: '14', hp: 175, ac: 26, toHit: 21, dmgDie: 8, dmgCount: 2, dmgBonus: 12, fort: 11, reflex: 5, attacks: 2, gold: [340, 600], dr: { amount: 10, bypass: '—' },
+                       hook: { dmgDie: 8, dmgCount: 2, dmgBonus: 12, constrict: 16, sound: '/audio/spell_shock.mp3' } },   // HUGE rail-scraper mech — GRAB SHOCK CRUSH: seizes a hero, then crushes with live current each turn
+  mecha_warden:      { name: 'Mecha 5.5 Warden',  glyph: '🤖', cr: '15',  hp: 190, ac: 27, toHit: 21, dmgDie: 10, dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 6, attacks: 3, gold: [380, 680], dr: { amount: 10, bypass: '—' }, atkSounds: ['/audio/rifle_lapua.mp3', '/audio/rifle_sv98.mp3', '/audio/rovadra_dragonrifle.mp3'] },   // BOSS — gatling arms + sniper arm, three barrels a round (boss only)
+  overlord:          { name: 'Overlord',          sr: 28, glyph: '👁️', cr: '17',  hp: 210, ac: 28, toHit: 20, dmgDie: 8, dmgBonus: 11, fort: 13, reflex: 11, attacks: 2, gold: [450, 800], dr: { amount: 10, bypass: '—' }, evil: true, arcane: true, precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // BOSS — Unity's herald, a Construct-25 war-mind: full arcane barrage, pre-warded, SR 28
   barzillai:         { name: 'Barzillai Thrune',  glyph: '😈', cr: '15',  hp: 220, ac: 28, toHit: 22, dmgDie: 6,  dmgCount: 2, dmgBonus: 12, fort: 14, reflex: 9, attacks: 2, gold: [340, 580], evil: true, shout: { fear: true, dc: 22, sound: '/audio/enemy_lich_gaze.mp3' } },   // I16 inquisitor of Asmodeus — greathammer (2d6+12), a deep-room villain
   abrogail:          { name: 'Abrogail Thrune II',glyph: '👑', cr: '16',  hp: 200, ac: 27, toHit: 14, dmgDie: 4,  dmgBonus: 4,  fort: 11, reflex: 12, gold: [400, 700], evil: true, arcane: true, shout: { fear: true, dc: 23, sound: '/audio/enemy_lich_gaze.mp3' }, art: '/dungeon/monsters/abrogail.png', precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // S17 — Queen of Cheliax, full arcane barrage; pre-buffed (boss only)
   // ── THE INFERNAL COURT — classed devils (devil template: DR 10/magic, fire-immune,
@@ -170,6 +194,13 @@ const MON_BODY = {
   // The vampire court / infernal court are classed humanoid shapes (Medium bipeds —
   // the default — so no entries needed); the dragons are Large quadrupeds.
   black_dragon: { size: 'L', legs: 4 }, void_dragon: { size: 'L', legs: 4 },
+  // The machines: drones hover/roll (legs 0 — nothing to trip), tanks ride
+  // treads or four legs, the big frames are Huge.
+  drone_rhoomba: { size: 'T', legs: 0 }, drone_collector: { legs: 0 }, drone_stinger: { legs: 0 },
+  drone_repair: { legs: 0 }, gearghost: { size: 'T', legs: 0 },
+  gearsman_juggernaut: { size: 'H' }, mecha_railgun: { size: 'H', legs: 0 },
+  mecha_repeater: { size: 'H', legs: 4 }, gearsman_scraper: { size: 'H' },
+  mecha_warden: { size: 'H' }, overlord: { size: 'L' },
 };
 for (const [k, b] of Object.entries(MON_BODY)) if (MON[k]) Object.assign(MON[k], b);
 // ── ENCOUNTER GANGS ── rooms spawn THEMED warbands: the first creature picked
@@ -212,6 +243,13 @@ const MON_GANGS = {
   ogre: ['giant', 'goblinoid'], ettin: ['giant'], hill_giant: ['giant'], stone_giant: ['giant'],
   // constructs stand guard together (Zernibeth marches with the Technic League's machines)
   wood_golem: ['construct'], brass_golem: ['construct'], zernibeth: ['construct'],
+  // the Numerian robots (Iron Gods) — one machine gang with the golems
+  drone_rhoomba: ['construct'], drone_collector: ['construct'], gearsman_mk1: ['construct'],
+  drone_stinger: ['construct'], drone_repair: ['construct'], gearsman_pugilist: ['construct'],
+  gearghost: ['construct', 'undead'], gearsman_gunslinger: ['construct'], gearsman_sniper: ['construct'],
+  gearsman_riot: ['construct'], gearsman_harvester: ['construct'], gearsman_juggernaut: ['construct'],
+  mecha_railgun: ['construct'], mecha_repeater: ['construct'], gearsman_scraper: ['construct'],
+  mecha_warden: ['construct'], overlord: ['construct'],
   // the infernal court — devils and the Thrune villains who serve Hell
   barbed_devil: ['devil'], devil_swordsman: ['devil'], devil_samurai: ['devil'], devil_rogue: ['devil'],
   bomb_devil: ['devil'], barzillai: ['devil'], abrogail: ['devil'],
@@ -255,6 +293,13 @@ const MON_ART = {
   bomb_devil: 'bomb_devil', black_dragon: 'black_dragon', void_dragon: 'void_dragon',
   harpy_sorcerer: 'harpy_sorcerer',
   blood_caimon: 'blood_caimon',
+  // The Numerian robots — tokens straight from the Iron Gods Foundry world.
+  drone_rhoomba: 'drone_rhoomba', drone_collector: 'drone_collector', gearsman_mk1: 'gearsman_mk1',
+  drone_stinger: 'drone_stinger', drone_repair: 'drone_repair', gearsman_pugilist: 'gearsman_pugilist',
+  gearghost: 'gearghost', gearsman_gunslinger: 'gearsman_gunslinger', gearsman_sniper: 'gearsman_sniper',
+  gearsman_riot: 'gearsman_riot', gearsman_harvester: 'gearsman_harvester', gearsman_juggernaut: 'gearsman_juggernaut',
+  mecha_railgun: 'mecha_railgun', mecha_repeater: 'mecha_repeater', gearsman_scraper: 'gearsman_scraper',
+  mecha_warden: 'mecha_warden', overlord: 'overlord',
 };
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
 
@@ -277,6 +322,12 @@ const MON_TYPE = {
   basilisk: 'magical beast', winter_wolf: 'magical beast', chimera: 'magical beast',
   ettercap: 'aberration', gibbering_mouther: 'aberration', bog_brute: 'aberration', abyssal_horror: 'aberration',
   wood_golem: 'construct', brass_golem: 'construct',
+  drone_rhoomba: 'construct', drone_collector: 'construct', gearsman_mk1: 'construct',
+  drone_stinger: 'construct', drone_repair: 'construct', gearsman_pugilist: 'construct',
+  gearghost: 'construct', gearsman_gunslinger: 'construct', gearsman_sniper: 'construct',
+  gearsman_riot: 'construct', gearsman_harvester: 'construct', gearsman_juggernaut: 'construct',
+  mecha_railgun: 'construct', mecha_repeater: 'construct', gearsman_scraper: 'construct',
+  mecha_warden: 'construct', overlord: 'construct',
   gray_ooze: 'ooze',
   // The infernal court are DEVILS (outsiders) and the dragons are DRAGONS —
   // they were missing here and defaulted to 'humanoid', so a Bane: Humanoids
@@ -302,6 +353,16 @@ const RESIST_BY_KEY = {
   vampire:       { cold: 0, electricity: 0.5 },  // user rule: vampires are IMMUNE to cold (electricity still half)
   fire_elemental: { fire: 0, cold: 1.5 },
 };
+// Iron Gods robot subtype: VULNERABLE to electricity (×1.5) — lightning casters
+// finally get a favored prey. (The Gearghost haunt shares its kin's weakness.)
+const ROBOT_KEYS = ['drone_rhoomba', 'drone_collector', 'gearsman_mk1', 'drone_stinger', 'drone_repair',
+  'gearsman_pugilist', 'gearghost', 'gearsman_gunslinger', 'gearsman_sniper', 'gearsman_riot',
+  'gearsman_harvester', 'gearsman_juggernaut', 'mecha_railgun', 'mecha_repeater', 'gearsman_scraper',
+  'mecha_warden', 'overlord'];
+for (const k of ROBOT_KEYS) {
+  const r = RESIST_BY_KEY[k] || (RESIST_BY_KEY[k] = {});
+  if (r.electricity == null) r.electricity = 1.5;
+}
 for (const k of UNDEAD_KEYS) {                      // undead are immune to cold unless told otherwise
   if (!MON[k]) continue;
   const r = RESIST_BY_KEY[k] || (RESIST_BY_KEY[k] = {});
@@ -318,6 +379,13 @@ const ALIGN_BY_KEY = {
   dire_rat: 'N', giant_centipede: 'N', giant_spider: 'N', dire_ape: 'N', dire_boar: 'N',
   dire_bear: 'N', gray_ooze: 'N', gibbering_mouther: 'N', basilisk: 'N', stone_giant: 'N',
   brass_golem: 'N', wood_golem: 'N',
+  // mindless machinery is true-neutral (not smite-able); the intelligent
+  // machines — the Thought Harvester, the haunted Gearghost, Unity's Overlord —
+  // are another story.
+  drone_rhoomba: 'N', drone_collector: 'N', gearsman_mk1: 'N', drone_stinger: 'N', drone_repair: 'N',
+  gearsman_pugilist: 'N', gearsman_gunslinger: 'N', gearsman_sniper: 'N', gearsman_riot: 'N',
+  gearsman_juggernaut: 'N', mecha_railgun: 'N', mecha_repeater: 'N', gearsman_scraper: 'N', mecha_warden: 'N',
+  gearsman_harvester: 'LE', gearghost: 'NE', overlord: 'LE',
   // lawful evil
   kobold: 'LE', kobold_spearman: 'LE', kobold_shaman: 'LE', kobold_rogue: 'LE',
   wight: 'LE', medusa: 'LE', barbed_devil: 'LE',
@@ -346,7 +414,7 @@ function crToNum(cr) {
   if (String(cr).includes('/')) { const [a, b] = String(cr).split('/').map(Number); return b ? a / b : a; }
   return Number(cr) || 0;
 }
-const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil']);   // boss-only, never regular spawns
+const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overlord']);   // boss-only, never regular spawns
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 
@@ -355,6 +423,6 @@ const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 // also treats animals/vermin/oozes/magical beasts/aberrations as natural by TYPE).
 // Flag the monks (unarmed) and the named natural-attackers that aren't those types.
 const NATURAL_KEYS = ['zombie', 'ghoul', 'ghast', 'shadow', 'wight', 'skeletal_champion', 'gargoyle', 'harpy', 'medusa', 'gibbering_mouther', 'abyssal_horror', 'bog_brute', 'ettercap'];
-for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k)) MON[k].natural = true;
+for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k) || ROBOT_KEYS.includes(k)) MON[k].natural = true;   // robots: integrated weaponry — nothing to disarm
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX };
