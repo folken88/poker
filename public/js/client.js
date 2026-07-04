@@ -1200,6 +1200,15 @@
     if (document.body.dataset.screen === 'dungeon') renderDungeon();
     setTimeout(() => {
       const dead = exit.reason === 'dead';
+      // AFTERMATH (Tobias 2026-07-04): dying used to yank you back to the table
+      // before you could read what killed you. Now the final battle log stays
+      // on screen — the run's last broadcast (status 'over') keeps rendering,
+      // and its '↩ Back to the table' button leaves whenever you're ready.
+      if (dead && document.body.dataset.screen === 'dungeon') {
+        toast('☠️ You fell — read how it ended, then ↩ Back to the table when ready.', true);
+        try { window.BlindMode?.speak?.('You have fallen. The battle log stays open — review it, then choose Back to the table.', 'polite'); } catch (_) {}
+        return;
+      }
       toast(dead ? '☠️ You fell in the dungeon — your share is lost.'
                  : `🪜 Back at the table with ${formatChips(exit.goldBanked || 0)} gp.`, dead);
       returnFromDungeon();
