@@ -3,6 +3,10 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.10.0 2026-07-04  THE SHACKLES (task #61 batch 2): 21 imports from the
+//                     03-shackletastic world — 'pirate' gang (lubber→Capt.
+//                     Maris + the Fungal zombie crew), 'sahuagin' + 'charauka'
+//                     warbands, bosses Ikualo'a (Huge T-rex) & Capt. Thrune
 //  3.9.1  2026-07-04  POST-RESTRUCTURE AUDIT (Tobias mandate → CLAUDE.md #9):
 //                     require graph + destructured exports verified clean;
 //                     fixed 7 refs to nonexistent spell_invoke.mp3 (pre-cast
@@ -86,4 +90,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.9.1' };
+module.exports = { VERSION: '3.10.0' };

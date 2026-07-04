@@ -153,6 +153,32 @@ const MON = {
                        hook: { dmgDie: 8, dmgCount: 2, dmgBonus: 12, constrict: 16, sound: '/audio/spell_shock.mp3' } },   // HUGE rail-scraper mech — GRAB SHOCK CRUSH: seizes a hero, then crushes with live current each turn
   mecha_warden:      { name: 'Mecha 5.5 Warden',  glyph: '🤖', cr: '15',  hp: 190, ac: 27, toHit: 21, dmgDie: 10, dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 6, attacks: 3, gold: [380, 680], dr: { amount: 10, bypass: '—' }, atkSounds: ['/audio/rifle_lapua.mp3', '/audio/rifle_sv98.mp3', '/audio/rovadra_dragonrifle.mp3'] },   // BOSS — gatling arms + sniper arm, three barrels a round (boss only)
   overlord:          { name: 'Overlord',          sr: 28, glyph: '👁️', cr: '17',  hp: 210, ac: 28, toHit: 20, dmgDie: 8, dmgBonus: 11, fort: 13, reflex: 11, attacks: 2, gold: [450, 800], dr: { amount: 10, bypass: '—' }, evil: true, arcane: true, precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // BOSS — Unity's herald, a Construct-25 war-mind: full arcane barrage, pre-warded, SR 28
+  // ── THE SHACKLES — pirate crews, the Fungal dead, sahuagin sea-devils and
+  //    Charau-Ka ape-men from Tobias's f1 world 03-shackletastic (task #61
+  //    batch 2). Gangs: 'pirate' (crews + the Fungal, who also run with the
+  //    restless dead), 'sahuagin' (a sea-devil raiding party), 'charauka'
+  //    (a shrieking ape warband). ──
+  shackles_lubber:   { name: 'Damned Lubber',     glyph: '🏴‍☠️', cr: '1/3', hp: 6, ac: 14, toHit: 2,  dmgDie: 6,  dmgBonus: 1,  fort: 2,  reflex: 1,  gold: [5, 14] },   // press-ganged deckhand with a belaying pin
+  shackles_buccaneer:{ name: 'Fever Sea Buccaneer', glyph: '🏴‍☠️', cr: '1', hp: 16, ac: 15, toHit: 4, dmgDie: 6,  dmgBonus: 2,  fort: 3,  reflex: 2,  gold: [12, 26] },   // cutlass tar of the Fever Sea
+  shackles_scallywag:{ name: 'Fever Sea Scallywag', glyph: '🏹', cr: '1',  hp: 14,  ac: 15, toHit: 4,  dmgDie: 8,  dmgBonus: 2,  fort: 2,  reflex: 4,  gold: [12, 26], atkSound: '/audio/bow_shot.mp3' },   // longboat archer
+  shackles_marine:   { name: 'Chelish Marine',    glyph: '🔫', cr: '3',   hp: 28,  ac: 17, toHit: 7,  dmgDie: 12, dmgBonus: 3,  fort: 4,  reflex: 5,  gold: [26, 60], atkSound: '/audio/rifle_longue_carabine.mp3' },   // Gunslinger 5 — musket volley from the fighting top
+  shackles_seacaster:{ name: 'Shackles Sea-Caster', glyph: '🌊', cr: '3', hp: 24,  ac: 15, toHit: 4,  dmgDie: 4,  dmgBonus: 1,  fort: 2,  reflex: 3,  gold: [26, 60], evil: true, arcane: true },   // S4 storm-blooded deck wizard
+  shackles_swashbuckler:{ name: 'Bloodcove Swashbuckler', glyph: '🤺', cr: '4', hp: 38, ac: 19, toHit: 9, dmgDie: 6, dmgBonus: 4, fort: 4, reflex: 7, attacks: 2, evasion: true, gold: [36, 78] },   // Swashbuckler 5 — parry-and-riposte scimitar
+  shackles_officer:  { name: 'Bronze Fleet Officer', glyph: '🏴‍☠️', cr: '5', hp: 48, ac: 19, toHit: 10, dmgDie: 6, dmgBonus: 5, fort: 5, reflex: 6, attacks: 2, gold: [42, 90] },   // slaver fleet mate — cutlass + pistol grip
+  sahuagin_scout:    { name: 'Sahuagin Scout',    glyph: '🦈', cr: '3',   hp: 26,  ac: 17, toHit: 7,  dmgDie: 6,  dmgBonus: 2,  fort: 3,  reflex: 6,  attacks: 2, sneakDice: 2, evasion: true, gold: [26, 60] },   // tidal trickster — knife-work from the surf
+  sahuagin_rager:    { name: 'Sahuagin Rager',    glyph: '🦈', cr: '5',   hp: 55,  ac: 17, toHit: 11, dmgDie: 8,  dmgBonus: 7,  fort: 8,  reflex: 4,  gold: [42, 90] },   // bloodrager — a frothing frenzy of trident and teeth
+  sahuagin_shaman:   { name: 'Sahuagin Shaman',   glyph: '🦈', cr: '5',   hp: 45,  ac: 17, toHit: 8,  dmgDie: 6,  dmgBonus: 3,  fort: 5,  reflex: 4,  gold: [42, 95], healer: { dice: 2, uses: 2 }, caster: 'holdperson', spellDC: 16 },   // deep-god witchery: holds a hero rigid, mends the raiders
+  sahuagin_prince:   { name: 'Sahuagin Prince',   glyph: '👑', cr: '7',   hp: 76,  ac: 21, toHit: 13, dmgDie: 8,  dmgBonus: 7,  fort: 8,  reflex: 6,  attacks: 2, gold: [70, 150] },   // Cavalier 7 — the raiding party's crowned lance
+  charauka_warrior:  { name: 'Charau-Ka Warrior', glyph: '🐒', cr: '5',   hp: 50,  ac: 19, toHit: 10, dmgDie: 6,  dmgBonus: 4,  fort: 5,  reflex: 7,  attacks: 3, evasion: true, gold: [42, 90] },   // Brawler 6 ape-man — a shrieking flurry of fists and thrown stones
+  charauka_stepper:  { name: 'Charau-Ka Stepper', glyph: '🐒', cr: '6',   hp: 55,  ac: 20, toHit: 11, dmgDie: 6,  dmgBonus: 4,  fort: 4,  reflex: 9,  attacks: 2, sneakDice: 4, evasion: true, gold: [55, 115], atkSound: '/audio/fight_riki.mp3' },   // Rogue 7 — drops from the canopy onto your back
+  charauka_mancer:   { name: 'Charau-Ka Mancer',  glyph: '🐒', cr: '7',   hp: 60,  ac: 18, toHit: 8,  dmgDie: 4,  dmgBonus: 1,  fort: 5,  reflex: 6,  gold: [70, 150], evil: true, arcane: true },   // Witch 8 — jungle hexes and Angazhan's fire
+  fungal_pirate:     { name: 'Fungal Pirate',     glyph: '🧟', cr: '5',   hp: 52,  ac: 18, toHit: 10, dmgDie: 6,  dmgBonus: 5,  fort: 4,  reflex: 4,  attacks: 2, gold: [42, 90], type: 'undead', evil: true, dr: { amount: 5, bypass: 'S' } },   // drowned crew re-risen, cutlass still in hand, spores in the wounds
+  fungal_oracle:     { name: 'Fungal Oracle',     glyph: '🧟', cr: '7',   hp: 66,  ac: 19, toHit: 10, dmgDie: 8,  dmgBonus: 4,  fort: 6,  reflex: 5,  gold: [70, 150], type: 'undead', evil: true, dr: { amount: 5, bypass: 'S' }, healer: { dice: 3, uses: 3 } },   // rot-priest — black mendings knit the crew's fungus flesh
+  fungal_captain:    { name: 'Fungal Captain',    glyph: '🧟', cr: '8',   hp: 85,  ac: 20, toHit: 14, dmgDie: 6,  dmgBonus: 6,  fort: 7,  reflex: 6,  attacks: 2, gold: [95, 190], type: 'undead', evil: true, dr: { amount: 5, bypass: 'S' }, shout: { fear: true, dc: 16, sound: '/audio/enemy_lich_gaze.mp3' } },   // the wreck's master — a moldering bellow that breaks nerve
+  bentbeak_charney:  { name: 'Bent-Beak Charney', glyph: '🥊', cr: '7',   hp: 72,  ac: 20, toHit: 13, dmgDie: 8,  dmgBonus: 6,  fort: 7,  reflex: 8,  attacks: 3, evasion: true, gold: [70, 150], atkSounds: BRUCE_SFX, taunt: { dc: 16, sound: '/audio/taunt_predator_goblin.mp3' } },   // Brawler 7 dock legend — bare knuckles and a mouth that starts fights
+  captain_maris:     { name: 'Captain Maris',     glyph: '🏴‍☠️', cr: '9', hp: 90, ac: 22, toHit: 15, dmgDie: 6,  dmgBonus: 7,  fort: 7,  reflex: 10, attacks: 3, evasion: true, gold: [110, 220], evil: true },   // Swashbuckler 10 tiefling captain — rapier bleeding-wounds and perfect footwork
+  ikualoa:           { name: "Ikualo'a",          glyph: '🦖', cr: '10',  hp: 130, ac: 19, toHit: 17, dmgDie: 8,  dmgCount: 3, dmgBonus: 10, fort: 12, reflex: 7, gold: [240, 420], atkSound: '/audio/enemy_caimon_bite.mp3' },   // BOSS — the tattooed tyrant-lizard the islanders worship (3d8+10 bite, boss only)
+  captain_thrune:    { name: 'Captain Elliot Thrune', glyph: '🎩', cr: '13', hp: 115, ac: 23, toHit: 12, dmgDie: 6, dmgBonus: 3, fort: 8, reflex: 8, gold: [300, 520], evil: true, arcane: true, precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // BOSS — W12 Chelish navy captain, full arcane broadside, pre-warded (boss only)
   barzillai:         { name: 'Barzillai Thrune',  glyph: '😈', cr: '15',  hp: 220, ac: 28, toHit: 22, dmgDie: 6,  dmgCount: 2, dmgBonus: 12, fort: 14, reflex: 9, attacks: 2, gold: [340, 580], evil: true, shout: { fear: true, dc: 22, sound: '/audio/enemy_lich_gaze.mp3' } },   // I16 inquisitor of Asmodeus — greathammer (2d6+12), a deep-room villain
   abrogail:          { name: 'Abrogail Thrune II',glyph: '👑', cr: '16',  hp: 200, ac: 27, toHit: 14, dmgDie: 4,  dmgBonus: 4,  fort: 11, reflex: 12, gold: [400, 700], evil: true, arcane: true, shout: { fear: true, dc: 23, sound: '/audio/enemy_lich_gaze.mp3' }, art: '/dungeon/monsters/abrogail.png', precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // S17 — Queen of Cheliax, full arcane barrage; pre-buffed (boss only)
   // ── THE INFERNAL COURT — classed devils (devil template: DR 10/magic, fire-immune,
@@ -201,6 +227,9 @@ const MON_BODY = {
   gearsman_juggernaut: { size: 'H' }, mecha_railgun: { size: 'H', legs: 0 },
   mecha_repeater: { size: 'H', legs: 4 }, gearsman_scraper: { size: 'H' },
   mecha_warden: { size: 'H' }, overlord: { size: 'L' },
+  // Shackles: charau-ka are Small apes; Ikualo'a is a Huge biped tyrant-lizard.
+  charauka_warrior: { size: 'S' }, charauka_stepper: { size: 'S' }, charauka_mancer: { size: 'S' },
+  ikualoa: { size: 'H' },
 };
 for (const [k, b] of Object.entries(MON_BODY)) if (MON[k]) Object.assign(MON[k], b);
 // ── ENCOUNTER GANGS ── rooms spawn THEMED warbands: the first creature picked
@@ -250,6 +279,15 @@ const MON_GANGS = {
   gearsman_riot: ['construct'], gearsman_harvester: ['construct'], gearsman_juggernaut: ['construct'],
   mecha_railgun: ['construct'], mecha_repeater: ['construct'], gearsman_scraper: ['construct'],
   mecha_warden: ['construct'], overlord: ['construct'],
+  // the Shackles — pirate crews sail together; the Fungal dead crew with
+  // pirates AND the restless dead; sea-devils and ape-men raid as warbands
+  shackles_lubber: ['pirate'], shackles_buccaneer: ['pirate'], shackles_scallywag: ['pirate'],
+  shackles_marine: ['pirate'], shackles_seacaster: ['pirate'], shackles_swashbuckler: ['pirate'],
+  shackles_officer: ['pirate'], bentbeak_charney: ['pirate'], captain_maris: ['pirate'],
+  fungal_pirate: ['pirate', 'undead'], fungal_oracle: ['pirate', 'undead'], fungal_captain: ['pirate', 'undead'],
+  sahuagin_scout: ['sahuagin'], sahuagin_rager: ['sahuagin'], sahuagin_shaman: ['sahuagin'], sahuagin_prince: ['sahuagin'],
+  charauka_warrior: ['charauka'], charauka_stepper: ['charauka'], charauka_mancer: ['charauka'],
+  ikualoa: ['charauka'], captain_thrune: ['pirate', 'devil'],
   // the infernal court — devils and the Thrune villains who serve Hell
   barbed_devil: ['devil'], devil_swordsman: ['devil'], devil_samurai: ['devil'], devil_rogue: ['devil'],
   bomb_devil: ['devil'], barzillai: ['devil'], abrogail: ['devil'],
@@ -300,6 +338,14 @@ const MON_ART = {
   gearsman_riot: 'gearsman_riot', gearsman_harvester: 'gearsman_harvester', gearsman_juggernaut: 'gearsman_juggernaut',
   mecha_railgun: 'mecha_railgun', mecha_repeater: 'mecha_repeater', gearsman_scraper: 'gearsman_scraper',
   mecha_warden: 'mecha_warden', overlord: 'overlord',
+  // The Shackles — tokens from the 03-shackletastic Foundry world.
+  shackles_lubber: 'shackles_lubber', shackles_buccaneer: 'shackles_buccaneer', shackles_scallywag: 'shackles_scallywag',
+  shackles_marine: 'shackles_marine', shackles_seacaster: 'shackles_seacaster', shackles_swashbuckler: 'shackles_swashbuckler',
+  shackles_officer: 'shackles_officer', bentbeak_charney: 'bentbeak_charney', captain_maris: 'captain_maris',
+  fungal_pirate: 'fungal_pirate', fungal_oracle: 'fungal_oracle', fungal_captain: 'fungal_captain',
+  sahuagin_scout: 'sahuagin_scout', sahuagin_rager: 'sahuagin_rager', sahuagin_shaman: 'sahuagin_shaman',
+  sahuagin_prince: 'sahuagin_prince', charauka_warrior: 'charauka_warrior', charauka_stepper: 'charauka_stepper',
+  charauka_mancer: 'charauka_mancer', ikualoa: 'ikualoa', captain_thrune: 'captain_thrune',
 };
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
 
@@ -328,6 +374,17 @@ const MON_TYPE = {
   gearsman_riot: 'construct', gearsman_harvester: 'construct', gearsman_juggernaut: 'construct',
   mecha_railgun: 'construct', mecha_repeater: 'construct', gearsman_scraper: 'construct',
   mecha_warden: 'construct', overlord: 'construct',
+  // Shackles: pirates are humans; sahuagin are MONSTROUS humanoids (aquatic —
+  // Hold Person correctly refuses them); charau-ka are Small humanoids (RAW);
+  // the Fungal are undead; Ikualo'a is an animal.
+  shackles_lubber: 'humanoid', shackles_buccaneer: 'humanoid', shackles_scallywag: 'humanoid',
+  shackles_marine: 'humanoid', shackles_seacaster: 'humanoid', shackles_swashbuckler: 'humanoid',
+  shackles_officer: 'humanoid', bentbeak_charney: 'humanoid', captain_maris: 'humanoid', captain_thrune: 'humanoid',
+  charauka_warrior: 'humanoid', charauka_stepper: 'humanoid', charauka_mancer: 'humanoid',
+  sahuagin_scout: 'monstrous humanoid', sahuagin_rager: 'monstrous humanoid',
+  sahuagin_shaman: 'monstrous humanoid', sahuagin_prince: 'monstrous humanoid',
+  fungal_pirate: 'undead', fungal_oracle: 'undead', fungal_captain: 'undead',
+  ikualoa: 'animal',
   gray_ooze: 'ooze',
   // The infernal court are DEVILS (outsiders) and the dragons are DRAGONS —
   // they were missing here and defaulted to 'humanoid', so a Bane: Humanoids
@@ -345,7 +402,7 @@ for (const k of Object.keys(MON)) if (!MON[k].type) MON[k].type = 'humanoid';   
 // 1.5 = vulnerable (takes 50% more). Physical (B/S/P) and untyped damage are
 // never modified here. Most undead shrug off cold (PF1e) — a Fire Skeleton is
 // the exception (made of fire: immune to its own element, vulnerable to cold).
-const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'zombie', 'ghoul', 'ghast', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich'];
+const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'zombie', 'ghoul', 'ghast', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich', 'fungal_pirate', 'fungal_oracle', 'fungal_captain'];
 const RESIST_BY_KEY = {
   fire_skeleton: { fire: 0, cold: 1.5 },          // burning bones: fireproof, but cold shatters them
   wood_golem:    { fire: 1.5 },                    // dry timber: catches fire easily
@@ -386,6 +443,15 @@ const ALIGN_BY_KEY = {
   gearsman_pugilist: 'N', gearsman_gunslinger: 'N', gearsman_sniper: 'N', gearsman_riot: 'N',
   gearsman_juggernaut: 'N', mecha_railgun: 'N', mecha_repeater: 'N', gearsman_scraper: 'N', mecha_warden: 'N',
   gearsman_harvester: 'LE', gearghost: 'NE', overlord: 'LE',
+  // the Shackles: freebooters run chaotic evil, the Chelish and the sea-devils
+  // lawful evil, the Fungal dead neutral evil; the tyrant-lizard is just hungry
+  shackles_lubber: 'CE', shackles_buccaneer: 'CE', shackles_scallywag: 'CE', shackles_swashbuckler: 'CE',
+  shackles_officer: 'CE', bentbeak_charney: 'CE', captain_maris: 'CE', shackles_seacaster: 'CE',
+  charauka_warrior: 'CE', charauka_stepper: 'CE', charauka_mancer: 'CE',
+  shackles_marine: 'LE', captain_thrune: 'LE',
+  sahuagin_scout: 'LE', sahuagin_rager: 'LE', sahuagin_shaman: 'LE', sahuagin_prince: 'LE',
+  fungal_pirate: 'NE', fungal_oracle: 'NE', fungal_captain: 'NE',
+  ikualoa: 'N',
   // lawful evil
   kobold: 'LE', kobold_spearman: 'LE', kobold_shaman: 'LE', kobold_rogue: 'LE',
   wight: 'LE', medusa: 'LE', barbed_devil: 'LE',
@@ -414,7 +480,7 @@ function crToNum(cr) {
   if (String(cr).includes('/')) { const [a, b] = String(cr).split('/').map(Number); return b ? a / b : a; }
   return Number(cr) || 0;
 }
-const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overlord']);   // boss-only, never regular spawns
+const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overlord', 'ikualoa', 'captain_thrune']);   // boss-only, never regular spawns
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 
@@ -423,6 +489,7 @@ const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 // also treats animals/vermin/oozes/magical beasts/aberrations as natural by TYPE).
 // Flag the monks (unarmed) and the named natural-attackers that aren't those types.
 const NATURAL_KEYS = ['zombie', 'ghoul', 'ghast', 'shadow', 'wight', 'skeletal_champion', 'gargoyle', 'harpy', 'medusa', 'gibbering_mouther', 'abyssal_horror', 'bog_brute', 'ettercap'];
+NATURAL_KEYS.push('charauka_warrior', 'bentbeak_charney', 'ikualoa');   // bare-knuckle brawlers + a bite
 for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k) || ROBOT_KEYS.includes(k)) MON[k].natural = true;   // robots: integrated weaponry — nothing to disarm
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX };
