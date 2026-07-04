@@ -16,7 +16,7 @@ const { CLASSES, DEFAULT_CLASS, babFor, saveFor, castingAbilityFor, asiPatternFo
 
 // 1h finesse melee weapons (light weapons are finesse by category; these are the
 // non-light weapons that are still finesse-capable in this game).
-const FINESSE_KEYS = new Set(['rapier', 'whip']);
+const FINESSE_KEYS = new Set(['rapier', 'whip', 'bastardsblade']);   // Bastard's Blade: Kai Ginn's fauchard rides his DEX for hit AND damage (Tobias 2026-07-04)
 
 /** Number of attacks from iteratives at a BAB (PF1: +1 at 6/11/16), and their
  *  to-hit offsets. bab 1–5 → [0]; 6–10 → [0,-5]; 11–15 → [0,-5,-10]; 16+ → […,-15]. */

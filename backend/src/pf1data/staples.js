@@ -48,6 +48,12 @@ const DEFAULT_WEAPON = 'dagger';
 // specific characters in db.js. `custom: true` means the wielder is always
 // proficient (it's their iconic weapon). `atkSound` overrides the hit sound.
 const CUSTOM_WEAPONS = {
+  // Kai Ginn's polearm "Bastard's Blade" — functions as a PF1 FAUCHARD (1d10,
+  // 18-20/×2, reach) and Kai is trained with it (prof martial here — it's HIS
+  // signature blade). impCritAt 9: Improved Critical folds in at level 9+
+  // (threat 15-20). It's in FINESSE_KEYS (character.js + Dungeon.js): despite
+  // being a STR polearm, this blade rides Kai's DEX 20 for attack AND damage.
+  bastardsblade: { key: 'bastardsblade', name: "Bastard's Blade", cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 18, mult: 2, type: 'S', group: 'polearms', prof: 'martial', custom: true, reachFly: true, impCritAt: 9 },
   // Dismas's holy dragon-rifle. A firearm (1d12, ×4 crit) — he smites with it.
   rovadra: { key: 'rovadra', name: 'Rovadra', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 12, crit: 20, mult: 4, type: 'B', group: 'firearms', prof: 'exotic', custom: true, atkSound: '/audio/rovadra_dragonrifle.mp3' },   // Dismas's holy-gun report — the dragonrifle "delay" recording (single shot)
   // Gaspar's bastard sword "Curator".

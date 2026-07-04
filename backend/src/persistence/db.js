@@ -459,7 +459,7 @@ const weaponForClass = (cls) => CLASS_WEAPON[cls] || 'dagger';
 const BOT_WEAPONS = {
   'Dismas': 'rovadra', 'Gaspar': 'curator', 'Elodie': 'rapier', 'Rodney Smith': 'longbow',
   'Vesorianna': 'ghosttouch', 'Farrus Richton': 'twoaxes', 'Dinvaya': 'warhammer', 'Storgrim Thunderbeard': 'battleaxe',
-  'Agu': 'rapier', 'Chef': 'battleaxe', 'Crisp': 'bite', 'Kai Ginn': 'glaive', 'Lirienne': 'repeatingcrossbow',
+  'Agu': 'rapier', 'Chef': 'battleaxe', 'Crisp': 'bite', 'Kai Ginn': 'bastardsblade', 'Lirienne': 'repeatingcrossbow',
   'Rissa': 'claws', 'Taelys': 'dvl', 'Ulfred': 'voidshard', 'Vaughan': 'radiance', 'Duristan Silvio': 'lapua',
   'Holden': 'rapier', 'Rhyarca': 'rapier', 'Concetta': 'rapier', 'Kovira': 'unarmed',   // Kovira (wizard) attacks with her Elemental Ray at-will
   'Tokala': 'chainsaw',   // 3d6 slashing two-hander, crits on 18

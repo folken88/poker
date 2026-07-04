@@ -80,7 +80,7 @@ function ccd(o) { return !!o && (o.asleep || o.fascinated || o.charmed || (o.par
 // A "finessable" melee weapon (light, or a one-handed fencing blade) — what a
 // swashbuckler's Precise Strike, Weapon Focus/Specialization and Improved
 // Critical key off of.
-const FINESSE_KEYS = new Set(['rapier', 'scimitar', 'shortsword', 'dagger', 'kukri', 'cutlass', 'estoc', 'sword_cane', 'starknife', 'sap', 'radiance', 'curator']);
+const FINESSE_KEYS = new Set(['rapier', 'scimitar', 'shortsword', 'dagger', 'kukri', 'cutlass', 'estoc', 'sword_cane', 'starknife', 'sap', 'radiance', 'curator', 'bastardsblade']);   // bastardsblade: Kai Ginn's DEX-ridden fauchard
 function isFinesseWeapon(w) { return !!w && !w.ranged && (w.cat === 'light' || FINESSE_KEYS.has(w.key)); }
 function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fighterFeats(cls, level).hp; }
 // (gatingLevel + the *_FEAT_AT tables moved to pf1data/feats.js — concept split 2026-07-04)
@@ -1458,7 +1458,7 @@ class Dungeon {
     let dmg = rollDmg() - sick, crit = false;
     // Improved Critical doubles the weapon's threat range (fighter L8; swashbuckler
     // L5 with a finesse blade). Critical Focus (fighter L9) adds +4 to confirm.
-    const impCrit = ff.impCrit || (swashFin && lvl >= 5) || arcKeen;   // fighter / swashbuckler / magus arcane-pool keen (don't stack)
+    const impCrit = ff.impCrit || (weapon.impCritAt && lvl >= weapon.impCritAt) || (swashFin && lvl >= 5) || arcKeen;   // fighter / swashbuckler / magus arcane-pool keen / weapon-borne (Bastard's Blade at 9) — don't stack
     const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
     const critFocus = (ff.critFocus ? 4 : 0) + (ff.critMastery ? 4 : 0);   // Critical Focus +4, Critical Mastery +4 more (+8 confirm)
     if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }

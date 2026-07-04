@@ -734,7 +734,7 @@
   }
 
   const socket = io({ autoConnect: false });
-  socket.on('connect_error', (err) => toast('Connection issue: ' + (err.message || 'unknown'), true));
+  socket.on('connect_error', () => toast('Connection lost — the server is rebooting for an update. Reconnecting…', true));   // 'xhr poll error' meant nothing to anyone (Tobias 2026-07-04)
 
   socket.on('roster', ({ players, defaultStack }) => {
     state.roster = players || [];

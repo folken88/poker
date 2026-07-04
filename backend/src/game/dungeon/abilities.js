@@ -2152,7 +2152,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const hp = mod * lvl;          // +Con mod per Hit Die
       this._grantTempHp(m, hp);
       const tier = lvl >= 20 ? 'MIGHTY ' : lvl >= 11 ? 'GREATER ' : '';
-      this._note(`😤 ${m.nickname} flies into a ${tier}RAGE — +${mod} hit, +${mod + 1} dmg, +${mod} Will, +${hp} HP (${m.hp}/${m.maxHp}), −2 AC!`, sound);
+      this._note(`😤 ${m.nickname} flies into a ${tier}RAGE!`, sound);   // the numbers live on the buff chip — the bellow is enough (Josh 2026-07-04)
       this._echoToTable(sound);
       return;
     }
@@ -2214,13 +2214,14 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // yell (ab.sound); goblin barbarians use their own yell via _enemyTaunt.
     const TAUNT_VOICE = { 'farrus richton': '/audio/farrah_summon_grandpa_short.mp3' };   // shorter recording (new URL dodges the 1h browser cache on the old file)
     const sound = TAUNT_VOICE[(m.playerId || '').toLowerCase()] || (ab.sounds ? pick(ab.sounds) : ab.sound);
-    const parts = [];
+    // Counts-only result (Josh 2026-07-04: "group them like other multi-target
+    // spells" — nobody needs every enemy's save read out one by one).
+    let pulled = 0, shrugged = 0;
     for (const e of this.livingEnemies()) {
       const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
-      if (!sv.saved) e.taunted = m.playerId;
-      parts.push(`${e.name}: Will ${sv.total} vs ${dc} ${sv.saved ? 'shrugs it off' : `📢 must come for ${m.nickname}`}`);
+      if (!sv.saved) { e.taunted = m.playerId; pulled++; } else shrugged++;
     }
-    this._note(`${ab.icon} ${m.nickname} bellows a furious challenge — ${parts.join('; ')}.`, sound);
+    this._note(`${ab.icon} ${m.nickname} bellows a furious challenge [Will DC ${dc}] — 📢 ${pulled} enraged and coming for ${m.nickname}${shrugged ? `, ${shrugged} shrug${shrugged === 1 ? 's' : ''} it off` : ''}.`, sound);
     this._echoToTable(sound);
   },
   // Smite Evil — your strikes smite evil foes this room.
