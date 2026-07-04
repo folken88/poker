@@ -186,6 +186,13 @@ function registerTableHandlers(io, socket, { tables, dungeons }) {
     if (!table) return ack?.({ ok: false, error: 'not at a table' });
     const emptyCount = table.seats.filter(s => s.isEmpty()).length;
     if (emptyCount === 0) return ack?.({ ok: false, error: 'no empty seats' });
+    // "Fill 4" (Tobias 2026-07-04): { upTo: N } seats random AI only until the
+    // table holds N TOTAL players (human + AI) — the quick small-table setup.
+    // No payload keeps the old behavior: fill every empty seat.
+    const upTo = (_p && Number(_p.upTo) > 0) ? Math.floor(Number(_p.upTo)) : null;
+    const seatedNow = table.seats.filter(s => s.playerId).length;
+    const wanted = upTo ? Math.min(emptyCount, Math.max(0, upTo - seatedNow)) : emptyCount;
+    if (wanted === 0) return ack?.({ ok: false, error: `already ${seatedNow} at the table` });
     const seatedIds = new Set(table.seats.filter(s => s.playerId).map(s => s.playerId));
     // Available bots (is_bot=1, not already seated, with chips), shuffled.
     const pool = db.listBots().filter(b => b.is_bot === 1 && !seatedIds.has(b.player_id) && b.chips > 0 && !inAnyDungeon(b.player_id));
@@ -195,7 +202,7 @@ function registerTableHandlers(io, socket, { tables, dungeons }) {
     }
     let seated = 0;
     for (const bot of pool) {
-      if (seated >= emptyCount) break;
+      if (seated >= wanted) break;
       if (table.seatBot(bot.player_id).ok) seated++;
     }
     if (seated === 0) return ack?.({ ok: false, error: 'no available bots' });

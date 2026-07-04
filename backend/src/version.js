@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.14.0 2026-07-04  FILL 4: one click seats random AI until the poker
+//                     table holds 4 total players (table:fillBots upTo) —
+//                     the quick small-game setup. + banter variety rule
+//                     (BANNED STOCK OPENERS: no more "well well look who")
+//  3.13.3 2026-07-04  MONK STRIKE POOL: every monk (hero AND villain, plus
+//                     the Pugilist robot and Bent-Beak) alternates bruce kiai
+//                     / punisher yell / bamboo smacks per attack (MONK_SFX,
+//                     11 sounds, exported from monsters.js)
 //  3.13.2 2026-07-04  NEGATIVE ENERGY MENDS UNDEAD: antipaladin bots skip
 //                     undead targets for Touch of Corruption/Vampiric Touch
 //                     (_spellWorksOn), humans get a spoken refusal (action
@@ -134,4 +142,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.13.2' };
+module.exports = { VERSION: '3.14.0' };

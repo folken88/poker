@@ -5189,6 +5189,15 @@
   }
   // "+ Bot" = random AI (fast path), "Pick AI ▾" opens the modal picker.
   $('#addBotBtn').addEventListener('click', () => emitAddBot(null));
+  // "Fill 4" (Tobias 2026-07-04): random AI until the table holds 4 TOTAL
+  // players (humans included) — the one-click small-game setup.
+  $('#fill4Btn')?.addEventListener('click', () => {
+    socket.emit('table:fillBots', { upTo: 4 }, (resp) => {
+      if (!resp?.ok) { toast(resp?.error || 'Could not fill to 4', true); return; }
+      toast(`🤖 Seated ${resp.seated} AI — table's at 4. Shuffle up!`);
+      try { window.BlindMode?.speak?.(`Seated ${resp.seated} A I players. The table is now four-handed.`, 'polite'); } catch (_) {}
+    });
+  });
   // ↻ Last party — re-seat the AI lineup this browser's human last played with
   // (stored in localStorage by the table:state handler; seating bots is free).
   $('#botPickerLast')?.addEventListener('click', () => {

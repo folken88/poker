@@ -20,7 +20,7 @@ const db = require('../../persistence/db');
 const { weaponOf, SND, dRoll, dRollN, pick } = require('../combat');
 const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, slotsFor, diceCount, CANTRIPS, CANTRIP_BY_KEY } = require('../../pf1data/abilities');
 const { babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../../pf1data/classes');
-const { crToNum, SIZE_RANK, SIZE_NAME } = require('../../pf1data/monsters');
+const { crToNum, SIZE_RANK, SIZE_NAME, MONK_SFX } = require('../../pf1data/monsters');
 const RACES = require('../../pf1data/races');
 const { DOMAINS, maxDomainsFor } = require('../../pf1data/domains');
 const { fighterFeats } = require('../../pf1data/feats');
@@ -2498,7 +2498,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (!grounded.length) return this._playerAttack(m, firstTarget.uid);
       firstTarget = pick(grounded);
     }
-    const baseSound = m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null);
+    const baseSound = (m.cls === 'monk' && !m.weapon.atkSound) ? pick(MONK_SFX) : (m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null));   // monks alternate bruce/punisher/bamboo per swing (Tobias 2026-07-04)
     const struck = new Set();
     const sounds = [];
     let target = firstTarget, bonus = false, kills = 0;
@@ -2668,7 +2668,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const swings = offsets.length;
     // Sound: signature atkSound > a blunt "bap" for B-type weapons (quarterstaff,
     // warhammer…) > the swing's own hit/whiff. Plays ONCE for the whole flurry.
-    let baseSound = m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null);
+    let baseSound = (m.cls === 'monk' && !m.weapon.atkSound) ? pick(MONK_SFX) : (m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null));   // monks alternate bruce/punisher/bamboo per swing (Tobias 2026-07-04)
     if (m.smiteActive && m.weaponKey === 'warhammer') baseSound = '/audio/weapon_warhammer_smite.mp3';   // holy hammer-ring on a smite
     // MULTI-SWING flurries collapse into ONE line — "Josh attacks Lich: 35, CRIT 62,
     // miss — Slain!" — instead of a name-prefixed line per swing (Josh's TTS report).

@@ -550,6 +550,7 @@ function buildMessages(speaker, eventDescription, table) {
         `"Mary", "saints", etc.) — EXCEPT the single sanctioned Sirona/Elfrip gag noted below. Generic Earth profanity (fuck, shit, damn, hell, ass, piss, bitch, bastard) ` +
         `is FINE as raw modifier — just don't pair it with an Earth god. \n` +
         `Do NOT lean on "god," / "oh god" / "my god" as a filler interjection — it's an Earth reference AND it's overused. Vary your openings; if you want an oath, use a Golarion deity from the list below. \n` +
+        `BANNED STOCK OPENERS (Tobias 2026-07-04 — these are worn OUT from overuse): "well, well…", "well well, look who…", "look who decided to…", "look what the cat dragged in", "oh ho ho", "my my my", "so it begins", "ah, [name], we meet again". NEVER open two lines in a row the same way; if you catch yourself reaching for a smug stock opener, say the thing DIRECTLY in your character's own voice instead — Danger drawls a hunting metaphor, Duristan flourishes, a monk stays terse. The best table talk sounds like a PERSON, not a saloon villain. \n` +
         `Some go-to deity blasphemies — invoke the god whose domain fits the moment: \n` +
         `  • Sarenrae (sun, healing; SIRONA's patron) — "Sarenrae's tits!", "Sarenrae fucking damn it", ` +
         `"Hotter than Dawnflower's farts!", "Dawnflower's mercy", "by the Sunlord's nuts", "Sarenrae wept", and for weary despair a spoken stage direction "*heavy sigh of the Dawnflower*" \n` +
