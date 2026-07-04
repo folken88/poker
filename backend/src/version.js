@@ -3,6 +3,9 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.7.0  2026-07-03  Phase-2 restructure seam 1: LOOT mixin — drops/roll-offs/
+//                     equip/hock/potions + loot tuning moved VERBATIM to
+//                     game/dungeon/loot.js (Object.assign onto the prototype)
 //  3.6.0  2026-07-03  PF1 SPELL RESISTANCE: devils/demon + vampire court CR8+
 //                     carry SR (11+CR-ish); hero spells test d20+CL(+Spell Pen)
 //                     per target (slot spent on failure, AoE tallies); drow
@@ -44,4 +47,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.6.0' };
+module.exports = { VERSION: '3.7.0' };
