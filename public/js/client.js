@@ -5282,6 +5282,142 @@
     return window.FolkenAvatars[id] || '';
   }
 
+  // ===== CROP STATION (Tobias 2026-07-04) =====
+  // Settings-menu-only panel: pick any card image (enemy portraits + hero
+  // tokens), drag to pan / scroll to zoom inside a REAL dungeon-card preview
+  // (name + HP bar + level + AC chip), Save bakes the crop server-side
+  // (first save keeps a .orig on disk). Tokenator-style pan/zoom math.
+  (() => {
+    const btn = document.getElementById('cropArtBtn');
+    if (!btn) return;
+    const CW = 190, CH = 200, SCALE = 2;              // true card size + editor magnification
+    let items = [], cur = -1, img = null, cover = 1, zoom = 1, ox = 0, oy = 0, dirty = false;
+    let root = null, edArt = null, trueArt = null, sel = null, saveBtn = null, nameEls = [];
+    const srcUrl = (it) => '/' + (it.kind === 'portraits' ? 'portraits' : 'tokens') + '/' + it.name + '.webp';
+    const clampPan = () => {
+      const bw = img.naturalWidth * cover * zoom, bh = img.naturalHeight * cover * zoom;
+      ox = Math.min(0, Math.max(CW - bw, ox)); oy = Math.min(0, Math.max(CH - bh, oy));
+    };
+    const paint = () => {
+      if (!img) return;
+      const bw = img.naturalWidth * cover * zoom, bh = img.naturalHeight * cover * zoom;
+      for (const [el, k] of [[edArt, SCALE], [trueArt, 1]]) {
+        el.style.backgroundImage = 'url(' + srcUrl(items[cur]) + ')';
+        el.style.backgroundSize = (bw * k) + 'px ' + (bh * k) + 'px';
+        el.style.backgroundPosition = (ox * k) + 'px ' + (oy * k) + 'px';
+      }
+    };
+    const load = (i) => {
+      cur = ((i % items.length) + items.length) % items.length;
+      const it = items[cur];
+      sel.value = cur;
+      for (const el of nameEls) el.textContent = it.name.replace(/[_-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      dirty = false; saveBtn.textContent = '💾 Save crop';
+      img = new Image();
+      img.onload = () => {
+        cover = Math.max(CW / img.naturalWidth, CH / img.naturalHeight);   // background-size: cover
+        zoom = 1; ox = (CW - img.naturalWidth * cover) / 2; oy = 0;        // start: cover, centered X, top Y (the game default)
+        clampPan(); paint();
+      };
+      img.onerror = () => toast('Could not load ' + it.name, true);
+      img.src = srcUrl(it) + '?t=' + Date.now();
+    };
+    const save = () => {
+      if (!img || cur < 0) return;
+      const it = items[cur];
+      const s = cover * zoom;
+      const c = document.createElement('canvas');
+      const outScale = Math.min(3, 1 / s * 2);   // bake at up to ~2x card px, never upscale past source
+      c.width = Math.round(CW * Math.max(1, outScale)); c.height = Math.round(CH * Math.max(1, outScale));
+      const g = c.getContext('2d');
+      g.drawImage(img, -ox / s, -oy / s, CW / s, CH / s, 0, 0, c.width, c.height);
+      const dataUrl = c.toDataURL('image/webp', 0.9);
+      saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+      fetch('/api/cropsave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: it.kind, name: it.name, dataUrl }) })
+        .then(r => r.json())
+        .then(r => {
+          saveBtn.disabled = false;
+          if (!r.ok) { saveBtn.textContent = '💾 Save crop'; toast(r.error || 'Save failed', true); return; }
+          saveBtn.textContent = '✓ Saved';
+          sel.options[cur].textContent = '✓ ' + sel.options[cur].textContent.replace(/^✓ /, '');
+          toast('🖼 ' + it.name + ' saved — live on the next render.');
+          setTimeout(() => load(cur + 1), 450);   // auto-advance to the next image
+        })
+        .catch(() => { saveBtn.disabled = false; saveBtn.textContent = '💾 Save crop'; toast('Save failed', true); });
+    };
+    const cardChrome = (k) => '<div style="position:absolute;inset:0;background:linear-gradient(rgba(8,10,8,.20),rgba(8,10,8,.40) 55%,rgba(8,10,8,.78));pointer-events:none"></div>' +
+      '<div style="position:absolute;left:' + 8 * k + 'px;right:' + 8 * k + 'px;bottom:' + 8 * k + 'px;pointer-events:none;text-align:left">' +
+      '<div data-cropname style="color:#fff;font-weight:700;font-size:' + 0.85 * k + 'rem;text-shadow:0 1px 2px #000">Name</div>' +
+      '<div style="height:' + 5 * k + 'px;border-radius:' + 3 * k + 'px;background:#243324;margin:' + 3 * k + 'px 0"><div style="width:82%;height:100%;border-radius:inherit;background:#7fc97f"></div></div>' +
+      '<div style="height:' + 4 * k + 'px;border-radius:' + 2 * k + 'px;background:#1f2a3a;margin-bottom:' + 3 * k + 'px"><div style="width:55%;height:100%;border-radius:inherit;background:#7aa7e0"></div></div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;color:#cfc9bd;font-size:' + 0.68 * k + 'rem;text-shadow:0 1px 2px #000"><span>162/162 HP · Lv 18</span><span style="background:rgba(0,0,0,.55);border:1px solid rgba(217,176,106,.4);border-radius:' + 6 * k + 'px;padding:0 ' + 5 * k + 'px">🛡 24</span></div></div>';
+    const build = () => {
+      root = document.createElement('div');
+      root.id = 'cropStation';
+      root.style.cssText = 'position:fixed;inset:0;z-index:4000;background:rgba(6,8,10,.88);display:flex;align-items:center;justify-content:center';
+      root.innerHTML =
+        '<div style="background:#15181d;border:1px solid rgba(217,176,106,.35);border-radius:12px;padding:16px;max-width:720px;width:94vw">' +
+        '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">' +
+        '<strong style="color:#d9b06a">🖼 Crop Station</strong>' +
+        '<select id="cropSel" style="flex:1;min-width:180px;background:#0e1013;color:#eee;border:1px solid #333;border-radius:6px;padding:4px"></select>' +
+        '<button class="btn btn--ghost btn--sm" id="cropPrev">◀</button><button class="btn btn--ghost btn--sm" id="cropNext">▶</button>' +
+        '<button class="btn btn--primary btn--sm" id="cropSave">💾 Save crop</button>' +
+        '<button class="btn btn--ghost btn--sm" id="cropClose">✕</button></div>' +
+        '<div style="display:flex;gap:16px;align-items:flex-start;justify-content:center;flex-wrap:wrap">' +
+        '<div><div style="color:#888;font-size:.7rem;margin-bottom:4px">EDITOR — drag to pan · scroll to zoom</div>' +
+        '<div id="cropEd" style="position:relative;width:' + CW * SCALE + 'px;height:' + CH * SCALE + 'px;border-radius:14px;overflow:hidden;border:1px solid rgba(217,176,106,.5);cursor:grab;background:#2b2e35">' +
+        '<div id="cropEdArt" style="position:absolute;inset:0;background-repeat:no-repeat"></div>' + cardChrome(SCALE) + '</div></div>' +
+        '<div><div style="color:#888;font-size:.7rem;margin-bottom:4px">IN-GAME SIZE</div>' +
+        '<div style="position:relative;width:' + CW + 'px;height:' + CH + 'px;border-radius:10px;overflow:hidden;border:1px solid rgba(217,176,106,.3);background:#2b2e35">' +
+        '<div id="cropTrueArt" style="position:absolute;inset:0;background-repeat:no-repeat"></div>' + cardChrome(1) + '</div>' +
+        '<div style="color:#666;font-size:.65rem;margin-top:6px;max-width:190px">Save overwrites the image (first save keeps a .orig on the server). Cropped cards need no framing nudges.</div></div></div></div>';
+      document.body.appendChild(root);
+      sel = root.querySelector('#cropSel'); saveBtn = root.querySelector('#cropSave');
+      edArt = root.querySelector('#cropEdArt'); trueArt = root.querySelector('#cropTrueArt');
+      nameEls = [...root.querySelectorAll('[data-cropname]')];
+      const og = { portraits: '— ENEMY PORTRAITS —', tokens: '— HERO TOKENS —' };
+      for (const kind of ['portraits', 'tokens']) {
+        const grp = document.createElement('optgroup'); grp.label = og[kind];
+        items.forEach((it, i) => { if (it.kind === kind) { const o = document.createElement('option'); o.value = i; o.textContent = it.name; grp.appendChild(o); } });
+        sel.appendChild(grp);
+      }
+      sel.addEventListener('change', () => load(Number(sel.value)));
+      root.querySelector('#cropPrev').addEventListener('click', () => load(cur - 1));
+      root.querySelector('#cropNext').addEventListener('click', () => load(cur + 1));
+      root.querySelector('#cropClose').addEventListener('click', () => { root.remove(); root = null; });
+      saveBtn.addEventListener('click', save);
+      const ed = root.querySelector('#cropEd');
+      let drag = null;
+      ed.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, ox, oy }; ed.setPointerCapture(e.pointerId); ed.style.cursor = 'grabbing'; });
+      ed.addEventListener('pointermove', (e) => { if (!drag) return; ox = drag.ox + (e.clientX - drag.x) / SCALE; oy = drag.oy + (e.clientY - drag.y) / SCALE; clampPan(); paint(); dirty = true; });
+      ed.addEventListener('pointerup', () => { drag = null; ed.style.cursor = 'grab'; });
+      ed.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        if (!img) return;
+        const r = ed.getBoundingClientRect();
+        const px = (e.clientX - r.left) / SCALE, py = (e.clientY - r.top) / SCALE;   // cursor point in card coords
+        const old = zoom;
+        zoom = Math.min(6, Math.max(1, zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+        const f = (cover * zoom) / (cover * old);
+        ox = px - (px - ox) * f; oy = py - (py - oy) * f;   // zoom about the cursor (tokenator-style)
+        clampPan(); paint(); dirty = true;
+      }, { passive: false });
+      document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape' && root) { root.remove(); root = null; document.removeEventListener('keydown', esc); } });
+    };
+    btn.addEventListener('click', () => {
+      fetch('/api/croplist').then(r => r.json()).then(d => {
+        items = [
+          ...(d.portraits || []).map(n => ({ kind: 'portraits', name: n })),
+          ...(d.tokens || []).map(n => ({ kind: 'tokens', name: n })),
+        ];
+        if (!items.length) { toast('No images found (is the crop endpoint deployed?)', true); return; }
+        if (root) root.remove();
+        build();
+        load(0);
+      }).catch(() => toast('Crop Station needs the new server build (queued behind the gate)', true));
+    });
+  })();
+
   // ===== Boot =====
   socket.on('connect', () => {
     const savedId = (() => { try { return sessionStorage.getItem(PLAYER_KEY); } catch (_) { return null; } })();

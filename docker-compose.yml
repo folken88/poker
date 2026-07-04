@@ -44,6 +44,7 @@ services:
     volumes:
       - ./backend/data:/app/data
       - ./backend/logs:/app/logs
+      - ./public:/app/public   # CROP STATION (2026-07-04): save endpoint bakes cropped art into the served dir
     restart: unless-stopped
     networks:
       - poker-net

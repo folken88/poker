@@ -19,7 +19,8 @@ const { Table } = require('./game/Table');
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
 const app = express();
-app.use(express.json({ limit: '4kb' }));
+const _json4k = express.json({ limit: '4kb' });
+app.use((req, res, next) => (req.path === '/api/cropsave' ? next() : _json4k(req, res, next)));   // cropsave carries an IMAGE — its route mounts its own 12mb parser (the 4kb gate would 413 it first)
 app.set('trust proxy', true);
 
 const { VERSION } = require('./version');   // ONE app semver — see src/version.js (bump per the living-docs mandate)
@@ -114,6 +115,50 @@ try { require('./devpages').registerDevPages(app); } catch (e) { console.warn('[
 app.get('/api/sounds', (req, res) => {
   const n = Math.min(60, Math.max(1, parseInt(req.query.n, 10) || 15));
   res.json(require('./persistence/logger').recentSounds(n));
+});
+
+// ── CROP STATION (Tobias 2026-07-04) — the settings-menu art cropper.
+// GET  /api/croplist -> { portraits: [names], tokens: [names] }
+// POST /api/cropsave -> { kind, name, dataUrl } bakes the crop over the
+// original (first save keeps a .orig) and regenerates the portraits manifest.
+// Family-LAN app (no auth anywhere), but the write is locked hard anyway:
+// whitelisted dir, basename-only, webp-only, must already exist, 8 MB cap.
+// Needs the ./public:/app/public volume from docker-compose.yml.
+const CROP_DIRS = { portraits: 'portraits', tokens: 'tokens' };
+const cropDir = (kind) => path.join(__dirname, '..', 'public', CROP_DIRS[kind]);
+app.get('/api/croplist', (_req, res) => {
+  try {
+    const fsx = require('fs');
+    const out = {};
+    for (const kind of Object.keys(CROP_DIRS)) {
+      const d = cropDir(kind);
+      out[kind] = fsx.existsSync(d) ? fsx.readdirSync(d).filter(f => f.endsWith('.webp')).map(f => f.slice(0, -5)).sort() : [];
+    }
+    res.json(out);
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+app.post('/api/cropsave', express.json({ limit: '12mb' }), (req, res) => {
+  try {
+    const fsx = require('fs');
+    const { kind, name, dataUrl } = req.body || {};
+    if (!CROP_DIRS[kind]) return res.status(400).json({ error: 'bad kind' });
+    const base = String(name || '').replace(/\.webp$/i, '');
+    if (!/^[\w.-]+$/.test(base) || base.includes('..')) return res.status(400).json({ error: 'bad name' });
+    const m = /^data:image\/webp;base64,(.+)$/.exec(String(dataUrl || ''));
+    if (!m) return res.status(400).json({ error: 'need a webp data URL' });
+    const buf = Buffer.from(m[1], 'base64');
+    if (!buf.length || buf.length > 8 * 1024 * 1024) return res.status(400).json({ error: 'bad size' });
+    const dest = path.join(cropDir(kind), base + '.webp');
+    if (!fsx.existsSync(dest)) return res.status(404).json({ error: 'no such image' });   // crop EDITS existing art only
+    if (!fsx.existsSync(dest + '.orig')) fsx.copyFileSync(dest, dest + '.orig');           // first save keeps the original
+    fsx.writeFileSync(dest, buf);
+    if (kind === 'portraits') {   // keep the pairing manifest true
+      const d = cropDir('portraits');
+      const names = fsx.readdirSync(d).filter(f => f.endsWith('.webp')).map(f => f.slice(0, -5)).sort();
+      fsx.writeFileSync(path.join(d, 'manifest.json'), JSON.stringify(names));
+    }
+    res.json({ ok: true, bytes: buf.length });
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
 });
 
 if (process.env.SERVE_STATIC === '1') {

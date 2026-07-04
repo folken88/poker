@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.15.0 2026-07-04  CROP STATION: settings-menu panel — pick any card
+//                     image (enemy portraits + hero tokens), drag/scroll to
+//                     reframe inside a live dungeon-card preview (name, HP
+//                     bar, level, AC), Save bakes the crop server-side
+//                     (/api/croplist + /api/cropsave; first save keeps .orig;
+//                     NEW ./public:/app/public volume)
 //  3.14.2 2026-07-04  FULL-CARD ART FOR EVERYONE: every monster token now
 //                     pairs a /portraits/ entry (no more circular-mask
 //                     fallback on fungal/charau-ka/robots/new bosses);
@@ -150,4 +156,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.14.2' };
+module.exports = { VERSION: '3.15.0' };
