@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.13.2 2026-07-04  NEGATIVE ENERGY MENDS UNDEAD: antipaladin bots skip
+//                     undead targets for Touch of Corruption/Vampiric Touch
+//                     (_spellWorksOn), humans get a spoken refusal (action
+//                     kept); vamp_bodyguard token recentered on his helmet
+//                     (new per-monster artPos field)
 //  3.13.1 2026-07-04  KAI'S BASTARD'S BLADE (fauchard: 1d10 18-20/×2 REACH,
 //                     rides his DEX for hit+dmg, Improved Crit at L9+) +
 //                     Josh quick wins (taunt results counts-only, RAGE line
@@ -129,4 +134,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.13.1' };
+module.exports = { VERSION: '3.13.2' };

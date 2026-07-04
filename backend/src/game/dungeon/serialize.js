@@ -188,7 +188,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         kit: this._kitState(m),    // at-will + 2 abilities (+ remaining uses) for the action UI
       })),
       enemies: this.enemies.map(e => ({
-        uid: e.uid, init: (_initOf['e:' + e.uid] ?? null), name: e.name, glyph: e.glyph, art: e.art || null, boss: !!e.boss, cr: e.cr || null,
+        uid: e.uid, init: (_initOf['e:' + e.uid] ?? null), name: e.name, glyph: e.glyph, art: e.art || null, artPos: e.artPos || null, boss: !!e.boss, cr: e.cr || null,
         flying: !!e.flying,
         drDesc: e.dr ? this._drDesc(e.dr) : null,   // spoken in the blind E-inspector + shown on hover (why your hits run low)
         hp: Math.max(0, e.hp), maxHp: e.maxHp, alive: e.hp > 0, sickened: e.sickened > 0,

@@ -276,6 +276,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       tpstrike:    () => this._abTpStrike(m, ab, payload),
     }[ab.effect];
     if (!D) return { ok: false, error: 'unknown ability' };
+    // NEGATIVE ENERGY MENDS THE UNDEAD (PF1, Tobias 2026-07-04): a Touch of
+    // Corruption / Vampiric Touch aimed at a vampire would only HEAL it.
+    // Refuse the cast with a spoken reason and KEEP the action — same pattern
+    // as the Melee/Ranged weapon refusals. (Bot targeting already skips these
+    // via _spellWorksOn; this catches an explicit human pick.)
+    if (ab.dtype === 'negative' && ab.target === 'enemy') {
+      const _tn = this._oneEnemy(payload);
+      if (_tn && _tn.type === 'undead') return { ok: false, error: `${ab.name} would only HEAL ${_tn.name} — negative energy mends the undead. Pick a living target.` };
+    }
     // PF1 SPELL RESISTANCE — single-target hostile spells test the target's SR
     // BEFORE their handler runs (_abAoe tests per target inside). A blocked
     // cast still spends the slot and the action below, per PF1.

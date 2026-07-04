@@ -552,17 +552,18 @@ function buildMessages(speaker, eventDescription, table) {
         `Do NOT lean on "god," / "oh god" / "my god" as a filler interjection — it's an Earth reference AND it's overused. Vary your openings; if you want an oath, use a Golarion deity from the list below. \n` +
         `Some go-to deity blasphemies — invoke the god whose domain fits the moment: \n` +
         `  • Sarenrae (sun, healing; SIRONA's patron) — "Sarenrae's tits!", "Sarenrae fucking damn it", ` +
-        `"Hotter than Dawnflower's farts!", "Dawnflower's mercy", "by the Sunlord's nuts" \n` +
-        `  • Cayden Cailean (drink, freedom) — "Cayden's cup!", "Cayden's tab", "Cayden's crotch, that's a terrible hand!", "by the Drunken Hero" \n` +
+        `"Hotter than Dawnflower's farts!", "Dawnflower's mercy", "by the Sunlord's nuts", "Sarenrae wept", and for weary despair a spoken stage direction "*heavy sigh of the Dawnflower*" \n` +
+        `  • Cayden Cailean (drink, freedom) — "Cayden's cup!", "Cayden's tab", "Cayden's taint!", "Cayden's hangover", "Cayden's crotch, that's a terrible hand!", "by the Drunken Hero" \n` +
         `  • Gorum (war) — "Gorum's iron balls", "By Gorum's gigantic ballsack!", "Lord in Iron", "Gorum fucking damn it", "rust take you" \n` +
-        `  • Shelyn (beauty, love, ART & MUSIC) — "sweet Shelyn", "Shelyn weep", "Eternal Rose preserve me", and to mourn an ugly or disappointing play "And Shelyn wept, for all art had died." \n` +
-        `  • Pharasma (death, judgment) — "Pharasma's grave", "the Lady's spiral", "by the Boneyard" \n` +
-        `  • Desna (luck, travel) — "Desna damn it", "Song's mercy", "by the Tender's wings" \n` +
-        `  • Iomedae (justice) — "Iomedae's blade", "Inheritor's witness" \n` +
+        `  • Shelyn (beauty, love, ART & MUSIC) — "sweet Shelyn", "Shelyn weep", "by Shelyn's rainbow cape", "Eternal Rose preserve me", and to mourn an ugly or disappointing play "And Shelyn wept, for all art had died." \n` +
+        `  • Pharasma (death, judgment) — "Pharasma's grave", "the Lady's spiral", "Pharasma judge this dealer", "by the Boneyard" \n` +
+        `  • Abadar (coin, cities — THE poker god) — "Abadar's empty vault", "by the First Vault", "Abadar audit you", "coin-father's mercy" \n` +
+        `  • Desna (luck, travel) — "Desna damn it", "Desna's crooked dice", "Desna rolled snake eyes tonight", "Song's mercy", "by the Tender's wings" \n` +
+        `  • Iomedae (justice) — "Iomedae's blade", "By Iomedae's tight ass!", "Inheritor's witness" \n` +
         `  • Calistria (revenge, lust) — "by Calistria's whip", "By Calistria's thong!", "Savored Sting take you", "Calistria's wasps" \n` +
-        `  • Torag / Droskar (dwarves) — "Torag's beard", "by Droskar's furnace", "anvil-take me" \n` +
+        `  • Torag / Droskar (dwarves) — "Torag's beard", "pull on Torag's beard!", "by Droskar's furnace", "anvil-take me" \n` +
         `  • Brigh / Casandalee (Numerians) — "by Brigh's gears", "Casandalee witness this" \n` +
-        `  • Asmodeus (Hellknights, Chelaxians) — "Asmodeus take you", "Prince of Lies", "by the Pit" \n` +
+        `  • Asmodeus (Hellknights, Chelaxians) — "Asmodeus take you", "Asmodeus laughs at us", "Prince of Lies", "by the Pit" \n` +
         `  • Norgorber (assassins) — "Norgorber take you", "Reaper's eye", "Father Skinsaw" \n` +
         `  • Nethys (magic) — "Nethys split me", "All-Seeing Eye" \n` +
         `  • Rovagug (destruction) — "Rovagug's maw", "your bluff stinks like Rovagug's taint", "Worm-that-walks take this hand" \n` +

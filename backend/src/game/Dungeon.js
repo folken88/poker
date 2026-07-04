@@ -643,7 +643,7 @@ class Dungeon {
     return {
       uid: `e${++_uidSeq}`,
       name: boss ? `Boss: ${base.name}${extra ? ` +${extra}` : ''}` : (extra ? `Elite ${base.name} +${extra}` : base.name),
-      glyph: base.glyph, art: base.tokenPool ? pick(base.tokenPool) : (base.art || null), boss,
+      glyph: base.glyph, art: base.tokenPool ? pick(base.tokenPool) : (base.art || null), artPos: base.artPos || null, boss,
       cr: half ? String((base.crNum || 0) + half) : (base.cr || null),   // advanced CR (boss OR elite) → bigger XP + loot rolls
       bossLevels: extra,
       hype: base.hype || null,   // Maestro hype track (from the FVTT worlds) — plays when the boss room opens
@@ -2265,6 +2265,10 @@ class Dungeon {
     // Wail) need a living, breathing body — mirror _abSaveDie's immune set.
     if (eff === 'savedie' && (t.type === 'undead' || t.type === 'construct'
       || /golem|skelet|zombie|wraith|ghost|lich|vampire|wight|ghoul|ghast|shadow|ooze|elemental|construct|undead/i.test(t.name || ''))) return false;
+    // NEGATIVE ENERGY HEALS THE UNDEAD (PF1, Tobias 2026-07-04): an antipaladin's
+    // Touch of Corruption / Vampiric Touch on a vampire would MEND it — never a
+    // legal hostile cast. Adimarus knows better now.
+    if (ab.dtype === 'negative' && t.type === 'undead') return false;
     // Damage spells: skip a foe IMMUNE to the element (mere resistance still
     // halves through — that cast is weaker but not wasted).
     if (ab.dtype && ab.dice && this._resistMult(t, ab.dtype) === 0) return false;
