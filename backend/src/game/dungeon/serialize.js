@@ -46,7 +46,7 @@ const BUFF_META = {
   fly:           { label: 'Flying',          desc: 'airborne — grounded foes cannot reach you' },
   protectfire:   { label: 'Fire Ward',       desc: 'absorbs incoming fire damage until spent (Protection from Fire)' },
   bless:         { label: 'Bless',           desc: '+1 to hit — whole dungeon' },
-  inspire:       { label: 'Inspire Courage', desc: 'allies +1 hit & damage — whole dungeon' },
+  inspire:       { label: 'Inspire Courage', desc: 'allies +hit & damage — whole dungeon (scales with the bard: +1, +2 at 5, +3 at 11, +4 at 17)' },
   // ── Magus buffs (icons fall back to fitting existing art) ──
   displacement:  { label: 'Displacement',    desc: '50% of incoming attacks miss (this room)', icon: '/dungeon/buffs/fly.webp' },
   fireshield:    { label: 'Fire Shield',     desc: 'melee attackers scorched for 1d6+level fire (this room)', icon: '/dungeon/buffs/protevil.webp' },

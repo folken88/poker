@@ -511,11 +511,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // every ally that doesn't already have it (guarded per-ally so multiple bards
   // or repeated rooms never stack it). Announced + played once per run, when the
   // song first goes up. Called at every room start and on join.
+  // PF1 Inspire Courage progression: +1 at 1, +2 at 5, +3 at 11, +4 at 17
+  // (Tobias 2026-07-04: "Elodie is a level 17 bard — her inspire courage
+  // should be much more than +1"). One formula, used by the auto-aura AND
+  // a manual cast.
+  _inspireBonus(lvl) { return 1 + Math.floor(((lvl || 1) + 1) / 6); },
   _maintainBardSongs() {
     const bard = this.present().find(m => m.cls === 'bard' && !m.dead);
     if (!bard) return;
     const ab = (kitFor('bard').abilities || []).find(a => a.key === 'inspire');
     if (!ab) return;
+    const insp = this._inspireBonus(bard.level);
     let fresh = false;
     for (const a of this.present()) {
       if (a.dead) continue;
@@ -523,15 +529,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (a.runBuffApplied.inspire) continue;
       a.runBuffApplied.inspire = true;
       a.runBuffs = a.runBuffs || { toHit: 0, dmg: 0 };
-      a.runBuffs.toHit += (ab.buff && ab.buff.toHit) || 0;
-      a.runBuffs.dmg   += (ab.buff && ab.buff.dmg) || 0;
+      a.runBuffs.toHit += insp;
+      a.runBuffs.dmg   += insp;
       fresh = true;
     }
     bard.runAbilityUses = bard.runAbilityUses || {};
     bard.runAbilityUses.inspire = 0;   // the song is up — no manual cast needed (won't be re-picked)
     if (fresh && !this._inspireAnnounced) {
       this._inspireAnnounced = true;
-      this._note(`${ab.icon} ${bard.nickname} keeps ${ab.name} up — the whole party stays emboldened all delve!`, ab.sound);
+      this._note(`${ab.icon} ${bard.nickname} keeps ${ab.name} up — the whole party fights at +${insp} to hit and damage, all delve!`, ab.sound);
     }
   },
   // (_kitState moved to game/dungeon/serialize.js — Phase-2 seam 2)
@@ -2143,6 +2149,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abBuff(m, ab, payload) {
     const sound = ab.sound || pick(SND.flesh);
     const lvl = m.level || 1;
+    // A MANUAL Inspire Courage cast scales like the auto-aura (PF1 progression).
+    if (ab.key === 'inspire' && ab.buff) { const b = this._inspireBonus(lvl); ab = { ...ab, buff: { ...ab.buff, toHit: b, dmg: b } }; }
     // Power Attack / Deadly Aim / Fight Defensively — stance toggles; shared helpers.
     if (ab.deadlyaim)        { this._applyDeadlyAim(m, !(m.buffApplied && m.buffApplied.deadlyaim), { sound }); return; }
     if (ab.powerattack)      { this._applyPowerAttack(m, !(m.buffApplied && m.buffApplied.powerattack), { sound }); return; }
