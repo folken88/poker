@@ -540,18 +540,18 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     const meleeSwarm = heroes.filter(m => MART.has(m.cls) && !m.flying).length >= 2;
     if (cl >= 4 && !(e.images > 0) && (this.round <= 2 || hurt) && dRoll(3) === 1) {
       e.images = Math.min(8, dRoll(4) + Math.floor(cl / 3));
-      this._note(`🪞 ${e.glyph} ${e.name} conjures ${e.images} mirror image${e.images > 1 ? 's' : ''} — decoys to soak your blows!`, '/audio/spell_invoke.mp3', { side: 'enemy' });
-      this._echoToTable('/audio/spell_invoke.mp3'); this._broadcast(); return;
+      this._note(`🪞 ${e.glyph} ${e.name} conjures ${e.images} mirror image${e.images > 1 ? 's' : ''} — decoys to soak your blows!`, '/audio/spell_buff_invoke.mp3', { side: 'enemy' });
+      this._echoToTable('/audio/spell_buff_invoke.mp3'); this._broadcast(); return;
     }
     if (cl >= 5 && !e.flying && meleeSwarm && dRoll(4) === 1) {
       e.flying = true; e.flyCast = true;   // mid-combat Fly (flyCast → dispellable; crashes prone if stripped)
-      this._note(`🪽 ${e.glyph} ${e.name} rises into the air on wings of magic — grounded foes can't reach it!`, '/audio/spell_invoke.mp3', { side: 'enemy' });
-      this._echoToTable('/audio/spell_invoke.mp3'); this._broadcast(); return;
+      this._note(`🪽 ${e.glyph} ${e.name} rises into the air on wings of magic — grounded foes can't reach it!`, '/audio/spell_buff_invoke.mp3', { side: 'enemy' });
+      this._echoToTable('/audio/spell_buff_invoke.mp3'); this._broadcast(); return;
     }
     if (cl >= 3 && !e.invisible && hurt && dRoll(3) === 1) {
       e.invisible = true;
-      this._note(`👻 ${e.glyph} ${e.name} winks out of sight — you'll need True Seeing or blindsense to strike it!`, '/audio/spell_invoke.mp3', { side: 'enemy' });
-      this._echoToTable('/audio/spell_invoke.mp3'); this._broadcast(); return;
+      this._note(`👻 ${e.glyph} ${e.name} winks out of sight — you'll need True Seeing or blindsense to strike it!`, '/audio/spell_buff_invoke.mp3', { side: 'enemy' });
+      this._echoToTable('/audio/spell_buff_invoke.mp3'); this._broadcast(); return;
     }
     e.invisible = false;   // any other cast below is hostile → invisibility drops
     // 1) Lock down a dangerous, un-held melee bruiser with Hold Monster (5th) —

@@ -15,10 +15,13 @@ each one was learned the painful way.
    a run still costs the party their depth/progress. Wait for the whole run.
 2. **Testbed first.** Deploy every change to the testbed stack (`:32096`),
    verify inside the container, then promote to prod behind the gate.
-3. **Backend code is BAKED into the Docker image.** `up -d --build` can serve a
-   stale cached layer. Always: `docker compose -p <proj> build --no-cache backend`
-   then `up -d --force-recreate backend`, then grep a unique new string inside
-   the running container to prove the new code is live.
+3. **Backend code is BAKED into the Docker image.** Builds are CACHED and fast
+   (1–20s): `docker compose -p <proj> build backend` then
+   `up -d --force-recreate backend` — the `--force-recreate` is the part that
+   matters (the old "stale layer" scare was a missing recreate, not the cache).
+   Prove freshness via the `version.js` bump + `curl /api/version`, or grep a
+   unique new string inside the running container. `--no-cache` is the escape
+   hatch only if the Dockerfile/package layer itself misbehaves.
 4. **`public/` is a live read-only bind mount** into the nginx container —
    client JS/CSS/HTML changes are live instantly, no rebuild, no gate. Bump the
    cache-buster query (`client.js?v=YYYYMMDD-tag`) in `public/index.html`.

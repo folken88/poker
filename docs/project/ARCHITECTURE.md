@@ -30,7 +30,13 @@ poker/                          # /mnt/fast/apps/stacks/poker (PROD, IS the git 
 | `sockets/dungeon.js` | `dungeon:enter/action/leave/cancel`, recruit (fee = 50g + 10g×level), recruitRandom, reconnect grace |
 | `game/Table.js` | poker table: seats, hand loop, bot auto-invest in gear (comfort band 5k–50k), Loot Lord check, hand logging + Meyanda hand lines, chatter |
 | `game/Hand.js` | Hold'em hand state machine, pots/side-pots (`pot.buildSidePots`) |
-| `game/Dungeon.js` | THE big one (~5k lines): the whole PF1 crawler — see DUNGEON.md |
+| `game/Dungeon.js` | the crawler CORE (~2.6k lines): constructor, rooms/spawns, turn loop, action router, hero-bot AI, party/exits, leveling — see DUNGEON.md. The rest lives in the `game/dungeon/` mixins below (Phase-2 split, 2026-07-04) |
+| `game/dungeon/abilities.js` | HERO ability system mixin (~2.7k lines): `_useAtwill` (Melee/Ranged), `_useAbility` + every `_ab*` handler, pickers (loadout/domains/progression), spell DC/SR/dice math |
+| `game/dungeon/enemyAI.js` | the VILLAIN BRAIN mixin: `_monsterSwing`/`_enemyAct`, maneuvers, caster brains, heal/channel/taunt/hook, `_detonate` (28 methods) |
+| `game/dungeon/serialize.js` | view-model mixin: `publicState`, cond/buff icon lists (`BUFF_META` lives HERE), `_kitState`, `_heroACs`, `_xpInfo` |
+| `game/dungeon/loot.js` | loot-roll mixin (R/P d20, hock pool) |
+| `pf1core/index.js` | THE one door to the pure PF1 rules engine — 13 concept namespaces; the future PGM app imports rules ONLY through it (see PF1CORE-PLAN.md) |
+| `pf1data/feats.js` | feat trees, `fighterFeats`, gating levels, per-class `*_FEAT_AT` tables (pure — split out of Dungeon.js by PF1 concept) |
 | `game/character.js` | `deriveCharacter` (HP/BAB/saves from class+level+ability scores), `attackProfile` (STR/DEX/finesse/2h/offhand math) |
 | `game/combat.js` | `weaponOf` (staple+custom lookup, masterwork/+N normalization), shared dice/sound helpers |
 | `pf1data/abilities.js` | every class KIT (at-will + ability list), SPELL dictionary, cantrips, metamagic wrappers, `SELECTABLE_CLASSES`, `CASTER_CLASSES`/`SPONTANEOUS_CLASSES`, slot tables |

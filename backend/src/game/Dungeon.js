@@ -460,7 +460,7 @@ class Dungeon {
         });
       }
     } finally { this._silentSfx = false; }
-    if (cast.length) this._note(`✨ The party readies before the door: ${cast.join(', ')}.`, '/audio/spell_invoke.mp3');
+    if (cast.length) this._note(`✨ The party readies before the door: ${cast.join(', ')}.`, '/audio/spell_buff_invoke.mp3');
   }
 
   // ── Between-rooms economy (AI personas) ──────────────────────────────────────

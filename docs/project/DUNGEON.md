@@ -1,4 +1,12 @@
-# Dungeon (game/Dungeon.js)
+# Dungeon (game/Dungeon.js + game/dungeon/* mixins)
+
+Since the Phase-2 split (2026-07-04) the engine is one class spread over five
+files: `Dungeon.js` (core: rooms, turn loop, action router, hero-bot AI) plus
+`game/dungeon/{abilities,enemyAI,serialize,loot}.js` grafted onto the
+prototype via `Object.assign` factories at the bottom of Dungeon.js. `this`
+semantics are identical — mixins cross-call freely. A mixin that needs a
+Dungeon module-scope const receives it as a FACTORY PARAM (never reach for a
+global you weren't handed — see CLAUDE.md mandate 9, the BUFF_META lesson).
 
 One shared co-op run per table. Leave your poker seat ("Hit the Dungeon"),
 descend room by room, fight PF1-flavored monsters, haul gold back up. Gold =

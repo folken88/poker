@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.9.1  2026-07-04  POST-RESTRUCTURE AUDIT (Tobias mandate → CLAUDE.md #9):
+//                     require graph + destructured exports verified clean;
+//                     fixed 7 refs to nonexistent spell_invoke.mp3 (pre-cast
+//                     + enemy mirror/fly/invis casts were MUTE); docs synced
+//                     to the split (ARCHITECTURE/DUNGEON/AI-NOTES/map)
 //  3.9.0  2026-07-04  THE MACHINES (task #61): 17 Iron Gods robots imported
 //                     from the f1 Foundry world — gearsmen/drones/mechas CR
 //                     1/3→17, construct gang, elec-vulnerable, repair drones,
@@ -81,4 +86,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.9.0' };
+module.exports = { VERSION: '3.9.1' };

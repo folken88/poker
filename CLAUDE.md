@@ -50,6 +50,22 @@ accessibility is a core requirement (Josh, VoiceOver tester).
    persistence/sockets/bot (the test suite's purity gate enforces this).
    Rules math goes core-side; loops/narration/economy stay app-side.
    Expedient rules code in Dungeon.js gets a `// PF1CORE:` breadcrumb.
+9. **Structural changes REQUIRE a reference audit** (Tobias 2026-07-04:
+   "restructuring is not a benefit if it breaks things we could easily have
+   updated"). Moving/renaming/splitting a file is NOT done until you have
+   audited every reference class the same day, in the same batch:
+   - module-scope names the moved code used (pass via factory params or move
+     the const with its only user — the BUFF_META/titleCase/PARALYZE_DC/
+     MAGUS_SPELLSTRIKE_SFX bug family);
+   - every `require()` path and every DESTRUCTURED import vs the target's
+     actual exports (a dropped export is `undefined` until called);
+   - asset paths in code (`/audio/*`, `/dungeon/*`) vs files on disk;
+   - server-side pipeline scripts and the DOCS (ARCHITECTURE/DUNGEON/AI-NOTES/
+     the structural map) that describe the old shape.
+   The test suite's sweep tests (mixin free-variable gate) are the floor, not
+   the audit. Audit scripts: session scratchpad `audit1.js` (require graph +
+   exports, runs in-container) and `audit2.js` (asset refs, node:20 + stack
+   mount) — rerun both after any structural batch.
 
 ## Verification habit
 Backend logic ships with in-container unit tests (`docker cp test.js
