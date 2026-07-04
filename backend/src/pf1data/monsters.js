@@ -90,7 +90,7 @@ const MON = {
   medusa:            { name: 'Medusa',            glyph: '🐍', cr: '7',   hp: 76,  ac: 15, toHit: 9,  dmgDie: 4,  dmgBonus: 2,  fort: 6,  reflex: 8,  attacks: 2, paralyze: true, paralyzeDC: 15, gold: [80, 165] },  // petrifying gaze
   stone_giant:       { name: 'Stone Giant',       glyph: '🗿', cr: '8',   hp: 102, ac: 24, toHit: 17, dmgDie: 8,  dmgCount: 2, dmgBonus: 12, fort: 12, reflex: 5, gold: [95, 190] },                  // greatclub 2d8+12
   abyssal_horror:    { name: 'Abyssal Horror',    sr: 19, glyph: '🐙', cr: '8',   hp: 95,  ac: 19, toHit: 14, dmgDie: 8,  dmgBonus: 6,  fort: 9,  reflex: 6,  attacks: 2, gold: [95, 190] },                  // eldritch chaos beast
-  brass_golem:       { name: 'Brass Golem',       glyph: '🗿', cr: '9',   hp: 92,  ac: 24, toHit: 14, dmgDie: 10, dmgCount: 2, dmgBonus: 9, fort: 3, reflex: 3, attacks: 2, gold: [180, 320], dr: { amount: 10, bypass: '—' } },                  // 8-HD construct, two 2d10+9 slams; DR 10/— (forged metal — only adamantine would bite, which no one carries)
+  brass_golem:       { name: 'The Golden Saurian', glyph: '🗿', cr: '9',  hp: 92,  ac: 24, toHit: 14, dmgDie: 10, dmgCount: 2, dmgBonus: 9, fort: 3, reflex: 3, attacks: 2, gold: [180, 320], dr: { amount: 10, bypass: '—' }, atkSound: '/audio/robot_gibberish.mp3' },   // 8-HD construct, two 2d10+9 slams; DR 10/—; chatters machine-gibberish as it swings (renamed from Brass Golem — Tobias 2026-07-04)
   barbed_devil:      { name: 'Barbed Devil',      sr: 22, glyph: '😈', cr: '11',  hp: 138, ac: 26, toHit: 18, dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 12, reflex: 9, attacks: 2, gold: [260, 460],
                        dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 10, acid: 10 },   // PF1 barbed devil — DR 10/good (modelled as /magic, no alignment weapons here); immune fire, resist cold/acid
                        atkSounds: ['/audio/slorr_sever.mp3', '/audio/slorr_crush.mp3', '/audio/slorr_fury.mp3'],   // Slorr voicelines on its barbed claws
@@ -190,10 +190,28 @@ const MON = {
                        hellfire: { count: 3, dice: 6, die: 6, bonus: 4, dc: 20, uses: 6, eager: true, verb: 'lobs a sputtering GRENADE into the party', sound: '/audio/tarkov_grenade_frag_full_.mp3' } },   // ALCHEMIST of its HD (11): bombs = 6d6+4 (1d6 per 2 levels + Int), a deep satchel (6), and it BOMBS ON SIGHT (eager) — Tarkov frag report from foundry media
   // ── DRAGONS — winged terrors with breath weapons (reuse the hellfire AoE with a
   //    breath verb + element). ──
+  // Dragons are inherently EVERYTHING (Tobias): claws/bite melee, arcane blasting
+  // at range, divine support casting, breath weapon, frightful presence, wings.
+  // That toolkit is boss material — both are BOSS-ONLY now (they still lead
+  // kobold warrens: the boss room fills its minions from the dragon's gangs).
   black_dragon:      { name: 'Black Dragon',      glyph: '🐉', cr: '11',  hp: 150, ac: 26, toHit: 20, dmgDie: 6,  dmgCount: 2, dmgBonus: 9, fort: 12, reflex: 9, attacks: 2, flying: true, gold: [200, 400], evil: true, dr: { amount: 5, bypass: 'magic' }, resist: { acid: 0 }, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' },
-                       hellfire: { count: 3, dice: 8, die: 6, dc: 20, dtype: 'acid', verb: 'breathes a hissing LINE OF ACID across the party', sound: '/audio/spell_acidsplash.mp3' } },   // adult black dragon — acid breath, frightful presence
+                       arcane: true, healer: { dice: 3, uses: 2 }, precast: ['magearmor', 'shield'],
+                       hellfire: { count: 3, dice: 8, die: 6, dc: 20, dtype: 'acid', verb: 'breathes a hissing LINE OF ACID across the party', sound: '/audio/spell_acidsplash.mp3' } },   // adult black dragon — acid breath, frightful presence, sorcerer-casts + divine mendings
   void_dragon:       { name: 'Void Dragon',       glyph: '🐉', cr: '13',  hp: 175, ac: 27, toHit: 21, dmgDie: 8,  dmgCount: 2, dmgBonus: 9, fort: 13, reflex: 10, attacks: 2, flying: true, gold: [260, 480], evil: true, dr: { amount: 5, bypass: 'magic' }, resist: { cold: 0 }, shout: { fear: true, dc: 21, sound: '/audio/enemy_lich_gaze.mp3' },
-                       hellfire: { count: 3, dice: 10, die: 6, dc: 21, dtype: 'cold', verb: 'exhales a freezing GULF OF THE VOID over the party', sound: '/audio/spell_coneofcold.mp3' } },   // void dragon — entropic cold breath
+                       arcane: true, healer: { dice: 4, uses: 2 }, precast: ['magearmor', 'shield'],
+                       hellfire: { count: 3, dice: 10, die: 6, dc: 21, dtype: 'cold', verb: 'exhales a freezing GULF OF THE VOID over the party', sound: '/audio/spell_coneofcold.mp3' } },   // void dragon — entropic cold breath, full caster on the wing
+  // ── EX-PC BOSSES — retired player characters back as villains ──
+  blackout:          { name: 'Blackout',          sr: 20, glyph: '🎯', cr: '13',  hp: 145, ac: 26, toHit: 21, dmgDie: 10, dmgBonus: 8, fort: 10, reflex: 13, attacks: 3, sneakDice: 5, evasion: true, gold: [340, 600], evil: true, atkSound: '/audio/tarkov_sr25_silenced_3shot_burst.mp3' },   // BOSS — drow Slayer 14 (ex-PC, Iron Gods): SR-25 marksman rifle, 3-round bursts into studied vitals; drow SR 20
+  ragh:              { name: 'Ragh',              glyph: '🔨', cr: '9',   hp: 125, ac: 19, toHit: 16, dmgDie: 8,  dmgCount: 2, dmgBonus: 9, fort: 12, reflex: 6, attacks: 2, gold: [110, 220], evil: true, atkSound: '/audio/mjolnir_short_hitd.mp3' },   // BOSS — orc Barbarian 10 (ex-PC): hurls a THROW-AND-RETURN STEEL BEAM (2d8+9) that always comes back
+  // ── PALACE UNIQUES & CARRION CROWN CANON — bosses pulled from the Iron Gods
+  //    world's Palace Uniques folder and the carrioncrown archive, at their
+  //    in-story canonical levels (Tobias 2026-07-04). ──
+  black_sovereign:   { name: 'Kevoth-Kul, the Black Sovereign', glyph: '👑', cr: '16', hp: 230, ac: 26, toHit: 24, dmgDie: 8, dmgCount: 2, dmgBonus: 13, fort: 16, reflex: 9, attacks: 3, gold: [400, 700], atkSound: '/audio/punisher_yell_punch.mp3' },   // BOSS — Barbarian 17, the Black Sovereign of Numeria: bare-handed fury (CN — enthralled, not evil; smite finds no purchase)
+  amalokla:          { name: 'Amalokla, the First Sovereign', sr: 28, glyph: '👻', cr: '17', hp: 200, ac: 27, toHit: 22, dmgDie: 8, dmgBonus: 10, fort: 12, reflex: 11, attacks: 2, flying: true, gold: [440, 760], evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 22, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 6, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // BOSS — the dybbuk who first ruled Numeria: PAIN TOUCH drains the living, dread presence, SR 28
+  brogwort:          { name: 'Brogwort the Dim',  glyph: '🪨', cr: '17',  hp: 240, ac: 25, toHit: 23, dmgDie: 8,  dmgCount: 2, dmgBonus: 13, fort: 15, reflex: 8, attacks: 3, gold: [440, 760], atkSounds: ['/audio/wolf_bite_.mp3', '/audio/sword_smack_big.mp3'] },   // BOSS — Huge athach (18 HD): bite + two slams a round, dim but VERY thorough
+  auren_vrood:       { name: 'Auren Vrood',       glyph: '🕯️', cr: '13',  hp: 110, ac: 22, toHit: 10, dmgDie: 4,  dmgBonus: 1,  fort: 8,  reflex: 8, gold: [300, 520], evil: true, arcane: true, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['magearmor', 'shield', 'stoneskin', 'fly'] },   // BOSS — Necromancer 14 (Agent of the Grave), the Whispering Way's field commander: full arcane, dread litany, pre-warded
+  vorkstag:          { name: 'Vorkstag',          glyph: '🔪', cr: '9',   hp: 95,  ac: 23, toHit: 15, dmgDie: 6,  dmgBonus: 6,  fort: 7,  reflex: 12, attacks: 2, sneakDice: 5, evasion: true, gold: [110, 220], evil: true, atkSound: '/audio/fight_riki.mp3' },   // BOSS — Rogue 10, the skinstealing half of Vorkstag & Grine: wears other people's faces, knives from the dark
+  tar_baphon:        { name: 'Tar-Baphon, the Whispering Tyrant', sr: 31, glyph: '💀', cr: '20', hp: 300, ac: 30, toHit: 22, dmgDie: 8, dmgBonus: 8, fort: 14, reflex: 12, gold: [800, 1500], evil: true, arcane: true, dr: { amount: 15, bypass: 'B' }, shout: { fear: true, dc: 24, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // BOSS — Wizard 20 archlich, the Whispering Tyrant himself: the deepest thing in the dungeon (SR 31, DR 15/B, full arcane)
   // ── HARPY SORCERER — harpy stats + 9 sorcerer levels (full arcane barrage on the wing). ──
   harpy_sorcerer:    { name: 'Harpy Sorcerer',    glyph: '🦅', cr: '10',  hp: 95,  ac: 21, toHit: 13, dmgDie: 6,  dmgBonus: 4,  fort: 6,  reflex: 10, attacks: 2, flying: true, gold: [120, 240], evil: true, arcane: true, precast: ['magearmor', 'shield', 'stoneskin'] },   // pre-buffed as a boss (already on the wing)
 };
@@ -230,6 +248,7 @@ const MON_BODY = {
   // Shackles: charau-ka are Small apes; Ikualo'a is a Huge biped tyrant-lizard.
   charauka_warrior: { size: 'S' }, charauka_stepper: { size: 'S' }, charauka_mancer: { size: 'S' },
   ikualoa: { size: 'H' },
+  brogwort: { size: 'H' },   // athach
 };
 for (const [k, b] of Object.entries(MON_BODY)) if (MON[k]) Object.assign(MON[k], b);
 // ── ENCOUNTER GANGS ── rooms spawn THEMED warbands: the first creature picked
@@ -293,6 +312,12 @@ const MON_GANGS = {
   bomb_devil: ['devil'], barzillai: ['devil'], abrogail: ['devil'],
   // dragons — kobold warrens famously serve them
   black_dragon: ['dragon', 'kobold'], void_dragon: ['dragon', 'kobold'],
+  // ex-PC bosses: Blackout stalks with the Numerian machines; Ragh muscles
+  // with the big folk and the goblinoid warbands he bullies
+  blackout: ['construct'], ragh: ['giant', 'goblinoid'],
+  // Palace Uniques rule Numeria (machine minions); the CC canon lead the dead
+  black_sovereign: ['construct'], amalokla: ['undead', 'construct'], brogwort: ['giant'],
+  auren_vrood: ['undead'], vorkstag: ['undead'], tar_baphon: ['undead'],
 };
 // Real token art from the Foundry library (public/dungeon/monsters/). dire_rat
 // has no token in the library, so it falls back to its emoji glyph.
@@ -347,6 +372,9 @@ const MON_ART = {
   sahuagin_scout: 'sahuagin_scout', sahuagin_rager: 'sahuagin_rager', sahuagin_shaman: 'sahuagin_shaman',
   sahuagin_prince: 'sahuagin_prince', charauka_warrior: 'charauka_warrior', charauka_stepper: 'charauka_stepper',
   charauka_mancer: 'charauka_mancer', ikualoa: 'ikualoa', captain_thrune: 'captain_thrune',
+  blackout: 'blackout', ragh: 'ragh',
+  black_sovereign: 'black_sovereign', amalokla: 'amalokla', brogwort: 'brogwort',
+  auren_vrood: 'auren_vrood', vorkstag: 'vorkstag', tar_baphon: 'tar_baphon',
 };
 for (const [k, name] of Object.entries(MON_ART)) if (MON[k]) MON[k].art = `/dungeon/monsters/${name}.webp`;
 
@@ -381,6 +409,9 @@ const MON_TYPE = {
   shackles_lubber: 'humanoid', shackles_buccaneer: 'humanoid', shackles_scallywag: 'humanoid',
   shackles_marine: 'humanoid', shackles_seacaster: 'humanoid', shackles_swashbuckler: 'humanoid',
   shackles_officer: 'humanoid', bentbeak_charney: 'humanoid', captain_maris: 'humanoid', captain_thrune: 'humanoid',
+  blackout: 'humanoid', ragh: 'humanoid',
+  black_sovereign: 'humanoid', vorkstag: 'humanoid', auren_vrood: 'humanoid',
+  amalokla: 'undead', tar_baphon: 'undead', brogwort: 'giant',
   charauka_warrior: 'humanoid', charauka_stepper: 'humanoid', charauka_mancer: 'humanoid',
   sahuagin_scout: 'monstrous humanoid', sahuagin_rager: 'monstrous humanoid',
   sahuagin_shaman: 'monstrous humanoid', sahuagin_prince: 'monstrous humanoid',
@@ -403,7 +434,7 @@ for (const k of Object.keys(MON)) if (!MON[k].type) MON[k].type = 'humanoid';   
 // 1.5 = vulnerable (takes 50% more). Physical (B/S/P) and untyped damage are
 // never modified here. Most undead shrug off cold (PF1e) — a Fire Skeleton is
 // the exception (made of fire: immune to its own element, vulnerable to cold).
-const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'zombie', 'ghoul', 'ghast', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich', 'fungal_pirate', 'fungal_oracle', 'fungal_captain'];
+const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'zombie', 'ghoul', 'ghast', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich', 'fungal_pirate', 'fungal_oracle', 'fungal_captain', 'amalokla', 'tar_baphon'];
 const RESIST_BY_KEY = {
   fire_skeleton: { fire: 0, cold: 1.5 },          // burning bones: fireproof, but cold shatters them
   wood_golem:    { fire: 1.5 },                    // dry timber: catches fire easily
@@ -453,6 +484,9 @@ const ALIGN_BY_KEY = {
   sahuagin_scout: 'LE', sahuagin_rager: 'LE', sahuagin_shaman: 'LE', sahuagin_prince: 'LE',
   fungal_pirate: 'NE', fungal_oracle: 'NE', fungal_captain: 'NE',
   ikualoa: 'N',
+  blackout: 'NE', ragh: 'CE',
+  black_sovereign: 'CN',   // enthralled, not evil — smite finds no purchase
+  amalokla: 'NE', brogwort: 'CE', auren_vrood: 'NE', vorkstag: 'CE', tar_baphon: 'NE',
   // lawful evil
   kobold: 'LE', kobold_spearman: 'LE', kobold_shaman: 'LE', kobold_rogue: 'LE',
   wight: 'LE', medusa: 'LE', barbed_devil: 'LE',
@@ -482,7 +516,11 @@ function crToNum(cr) {
   return Number(cr) || 0;
 }
 const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overlord', 'ikualoa', 'captain_thrune',
-  'zernibeth', 'abrogail']);   // boss-only, never regular spawns (zernibeth/abrogail always SAID boss-only — now enforced)
+  'zernibeth', 'abrogail',   // (always SAID boss-only — now enforced)
+  'black_dragon', 'void_dragon',   // dragons are inherently everything — boss material (Tobias 2026-07-04)
+  'blackout', 'ragh',   // ex-PC villains
+  'black_sovereign', 'amalokla', 'brogwort',   // the Palace Uniques (Iron Gods)
+  'auren_vrood', 'vorkstag', 'tar_baphon']);   // Carrion Crown canon — boss-only, never regular spawns
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 
@@ -491,7 +529,8 @@ const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 // also treats animals/vermin/oozes/magical beasts/aberrations as natural by TYPE).
 // Flag the monks (unarmed) and the named natural-attackers that aren't those types.
 const NATURAL_KEYS = ['zombie', 'ghoul', 'ghast', 'shadow', 'wight', 'skeletal_champion', 'gargoyle', 'harpy', 'medusa', 'gibbering_mouther', 'abyssal_horror', 'bog_brute', 'ettercap'];
-NATURAL_KEYS.push('charauka_warrior', 'bentbeak_charney', 'ikualoa');   // bare-knuckle brawlers + a bite
+NATURAL_KEYS.push('charauka_warrior', 'bentbeak_charney', 'ikualoa',
+  'black_sovereign', 'amalokla', 'brogwort');   // bare knuckles, pain touch, athach limbs — nothing to disarm
 for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k) || ROBOT_KEYS.includes(k)) MON[k].natural = true;   // robots: integrated weaponry — nothing to disarm
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX };

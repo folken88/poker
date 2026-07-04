@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.11.0 2026-07-04  BOSS EXPANSION 8→18: Golden Saurian rename+gibberish SFX,
+//                     dragons get the FULL kit (melee+arcane+divine, boss-only),
+//                     ex-PCs Blackout (drow slayer, SR-25 rifle) & Ragh (orc,
+//                     return-beam+mjolnir), Palace Uniques (Kevoth-Kul CN,
+//                     Amalokla, Brogwort), CC canon (Vrood 14, Vorkstag 10,
+//                     TAR-BAPHON W20 capstone)
 //  3.10.1 2026-07-04  ART PURGE + boss enforcement: badger removed (no real
 //                     token exists), goblin rogue/shaman get real tokens
 //                     (Commando + cleric-priest) — 124/124 enemies have art;
@@ -95,4 +101,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.10.1' };
+module.exports = { VERSION: '3.11.0' };
