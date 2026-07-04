@@ -3,6 +3,10 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.7.3  2026-07-03  dispel ECONOMICS (bards fight/buff/heal too — foe-dispel
+//                     only for spell-Fly/Invis/Haste-tier, never AC wards;
+//                     peel order high-value-first) · Melee/Ranged attack
+//                     buttons (mode param; bow+Melee refused turn kept)
 //  3.7.2  2026-07-03  Dispel Magic = SPELL effects only (PF1, Tobias): clears
 //                     spell-hold/slow/blindness; grapple/stun/sickness/nausea
 //                     are physical and stay; Remove Paralysis frees ANY
@@ -54,4 +58,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.7.2' };
+module.exports = { VERSION: '3.7.3' };

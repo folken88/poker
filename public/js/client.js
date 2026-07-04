@@ -1636,7 +1636,13 @@
           // actions, then the navigation/session controls.
           `<div class="dungeon__actrow dungeon__actrow--abilities" role="group" aria-label="Combat actions">` +
             `<h2 class="sr-only">Combat actions</h2>` +
-            B('attack', atName, combat, combat) +   // off-turn click queues the attack
+            // MELEE / RANGED split (Tobias 2026-07-03): two explicit attack
+            // buttons. Melee = your weapon swing (server refuses, turn kept, if
+            // your weapon is ranged); Ranged = a caster's cantrip (it wears the
+            // cantrip's name), a ranged weapon's shot, or the backup crossbow /
+            // sidearm for melee martials. Off-turn clicks queue either one.
+            B('attackmelee', '⚔️ Melee', combat, combat) +
+            B('attackranged', kit.caster && kit.atwill && kit.atwill.name !== 'Attack' ? atName : '🏹 Ranged', combat, combat) +
             // Caster cantrip ELEMENT selector (cold/acid/electricity, + the class's
             // own if distinct) — free, clickable any time, current pick highlighted.
             // Blind: the C key cycles the same choices.
@@ -1784,6 +1790,8 @@
     const b = ev.target.closest('[data-dact]'); if (!b || b.disabled) return;
     const act = b.dataset.dact;
     if (act === 'attack')       dungeonAction('attack', { targetUid: _dungeonSel[0] });
+    else if (act === 'attackmelee')  dungeonAction('attack', { targetUid: _dungeonSel[0], mode: 'melee' });
+    else if (act === 'attackranged') dungeonAction('attack', { targetUid: _dungeonSel[0], mode: 'ranged' });
     else if (act === 'ability') {
       const payload = { slot: Number(b.dataset.slot) || 0, targetUid: _dungeonSel[0], targetUids: _dungeonSel.slice(0, 6), allyUid: _dungeonAllySel || undefined, mode: b.dataset.mode || undefined };
       // Inquisitor Bane declares a creature TYPE: take it from the selected foe
@@ -1808,7 +1816,7 @@
     // and clearing then meant a replacement queue went out target-less (the spell
     // fired at the auto-pick, not the selected foe — Tobias, 2026-07-02).
     const _live = !!(state.dungeon && state.dungeon.turn && state.me && state.dungeon.turn.id === state.me.player_id);
-    if ((act === 'attack' || act === 'ability') && _live) _dungeonSel = [];
+    if ((act === 'attack' || act === 'attackmelee' || act === 'attackranged' || act === 'ability') && _live) _dungeonSel = [];
   });
   // The Spellbook is a popover that overlays the other action buttons, so it
   // must always be dismissable: a click anywhere outside its wrap — or Escape —

@@ -2883,8 +2883,12 @@ class Dungeon {
         const cleanse = avail.find(a => a.effect === 'cleanse');
         if (cleanse) {
           const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0);   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
-          const foeBuffed = this._targetableEnemies().some(e => e.hasted > 0 || (e.precast && e.precast.length) || (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)));
-          if (allyDebuffed || foeBuffed) return { slot: slot(cleanse), payload: {} };
+          // Foe-side dispel ECONOMICS (Tobias: bards over-dispelled): grounding
+          // SPELL-flight, unveiling Invisibility or stripping Haste is worth the
+          // turn; a static AC ward (Shield/Mage Armor) is NOT — fall through to
+          // fighting/buffing/debuffing/healing instead.
+          const worthy = this._dispelWorthyFoe();
+          if (allyDebuffed || worthy) return { slot: slot(cleanse), payload: (worthy && !allyDebuffed) ? { targetUid: worthy.uid } : {} };
         }
         const active = targets.filter(e => !(e.grappled || e.prone || e.paralyzed > 0 || e.fascinated || e.asleep));
         const dbf = avail.find(a => ['glitterdust', 'slow', 'grease', 'save_debuff'].includes(a.effect));
@@ -2936,12 +2940,15 @@ class Dungeon {
     // priestly classes want 2+ undead up before burning the action.
     if (channelHeal && !someoneHurt && m.cls !== 'paladin' && m.cls !== 'antipaladin'
         && targets.filter(e => e.type === 'undead').length >= 2) return { slot: slot(channelHeal), payload: {} };
-    // 1b) Dispel Magic — cleanse a debuffed ally (paralysis / stun / sickness).
+    // 1b) Dispel Magic — free a SPELL-debuffed ally, or strip a foe buff that's
+    //     genuinely WORTH the turn (Tobias: bards over-dispelled — grounding
+    //     spell-flight yes, peeling a Shield ward no; otherwise fall through to
+    //     fight/buff/debuff/heal like a real bard).
     const cleanse = avail.find(a => a.effect === 'cleanse');
     if (cleanse) {
       const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0);   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
-      const foeBuffed = this._targetableEnemies().some(e => e.hasted > 0 || (e.precast && e.precast.length) || (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)));
-      if (allyDebuffed || foeBuffed) return { slot: slot(cleanse), payload: {} };
+      const worthy = this._dispelWorthyFoe();
+      if (allyDebuffed || worthy) return { slot: slot(cleanse), payload: (worthy && !allyDebuffed) ? { targetUid: worthy.uid } : {} };
     }
     // 1c) Druid WILD SHAPE — most druids fight shapeshifted. If not already in a
     //     form, shift into a combat shape: prefer a reach form when every foe is
@@ -3565,7 +3572,7 @@ class Dungeon {
           payload.targetUid = this.targeting[playerId];
           if (!Array.isArray(payload.targetUids) || !payload.targetUids.length) payload.targetUids = [payload.targetUid];
         }
-        const label = kind === 'attack' ? 'attack'
+        const label = kind === 'attack' ? (payload.mode === 'ranged' ? 'ranged attack' : payload.mode === 'melee' ? 'melee attack' : 'attack')
           : ((this._abilitiesFor(m)[payload.slot | 0] || {}).name || 'ability');
         m.queuedAction = { kind, payload, label };
         this._broadcast();   // the ⏳ chip appears on their hero card
@@ -3576,7 +3583,10 @@ class Dungeon {
     m.queuedAction = null;   // acting live always clears a stale pre-load
     clearTimeout(this._turnTimer);
     this._log('action', { who: playerId, kind, hp: m.hp, enemiesAlive: this.livingEnemies().length });
-    if (kind === 'attack') this._useAtwill(m, payload);
+    if (kind === 'attack') {
+      const r = this._useAtwill(m, payload);
+      if (r && r.ok === false) { this._armAfkTimer(m); return r; }   // refused (Melee pressed with a bow) → reason toasted/spoken, turn kept
+    }
     else if (kind === 'ability') {
       // Taunted → a single-target offensive ability is dragged onto the taunter.
       const forced = this._forcedFoe(m);
@@ -3599,8 +3609,25 @@ class Dungeon {
 
   // ── Ability system ───────────────────────────────────────────────────────
   // At-will: a weapon swing (martials) or a cantrip (full casters), every turn.
+  // MELEE / RANGED buttons (Tobias 2026-07-03) send an explicit payload.mode:
+  //   'melee'  → your weapon swing; REFUSED (action kept) if your weapon is
+  //              ranged — switch weapons at the door instead.
+  //   'ranged' → a caster's cantrip ray, a ranged weapon's shot, or the backup
+  //              crossbow / signature sidearm for a melee martial.
+  //   no mode  → the old smart auto (blind A key, queues, bots, AFK swings).
   _useAtwill(m, payload) {
     if (!m.greaterInvis) m.invisible = false;   // attacking breaks Invisibility — but NOT Greater Invisibility
+    const mode = payload && payload.mode;
+    if (mode === 'melee') {
+      const w = weaponOf(m.gear, m.weaponKey);
+      if (w.ranged) return { ok: false, error: `your ${w.label || m.weaponKey} is a RANGED weapon — use the Ranged attack (or switch weapons between runs)` };
+      return this._playerAttack(m, payload.targetUid);
+    }
+    if (mode === 'ranged') {
+      const at = kitFor(m.cls).atwill;
+      if (at && at.effect === 'bolt') return this._abBolt(m, this._activeCantrip(m, payload.targetUid, at), payload.targetUid);
+      return this._playerAttack(m, payload.targetUid, false, { forceRanged: true });
+    }
     return this._basicAttack(m, payload.targetUid);
   }
   // The basic attack for any combatant (human input, bot turn, or AFK auto-swing)
@@ -4833,6 +4860,18 @@ class Dungeon {
     }
     return cl;
   }
+  // The foe most WORTH a dispel turn, or null (Tobias's economics, 2026-07-03):
+  // SPELL-flight 4 (grounds an untouchable caster — "very valuable"), Invisibility
+  // 3, Haste 3, big combat buffs 3, Mirror Image on a boss 2. Static AC wards
+  // (Shield / Mage Armor / Shield of Faith / Stoneskin) score 0 — "not worth a
+  // turn". Threshold 3. Innate wings (harpy, dragon) are NOT spell-flight.
+  _dispelWorthyFoe() {
+    const worth = (e) => ((e.flyCast || (e.precast && e.precast.includes('fly'))) && e.flying ? 4 : 0)
+      + (e.invisible ? 3 : 0) + (e.hasted > 0 ? 3 : 0)
+      + ((e.buffs && ((e.buffs.toHit || 0) + (e.buffs.dmg || 0)) >= 3) ? 3 : 0)
+      + (e.images > 0 && e.boss ? 2 : 0);
+    return this._targetableEnemies().filter(e => worth(e) >= 3).sort((a, b) => worth(b) - worth(a))[0] || null;
+  }
   _abCleanse(m, ab, payload) {
     const sound = ab.sound;
     const FAIL_SOUND = '/audio/vine_boom.mp3';   // a FAILED dispel check (Foundry sting)
@@ -4898,16 +4937,18 @@ class Dungeon {
         stripped.push(PRE_NAME[key] || key);
         if (key === 'fly') stripped[stripped.length - 1] += ' (it CRASHES to the ground!)';
       };
-      // Peel ONE enchantment (plain Dispel) or ALL of them (Greater). Pre-cast wards
-      // first, then mid-combat self-buffs (Fly → Invisibility → Mirror Image → haste
-      // → combat buffs). Dispelled Fly crashes the foe prone.
+      // Peel ONE enchantment (plain Dispel) or ALL of them (Greater) — HIGH-VALUE
+      // first (Tobias 2026-07-03: grounding spell-flight is worth the turn, a
+      // static AC ward is not, so wards peel only when nothing better remains):
+      // spell-Fly → Invisibility → Haste → Mirror Image → combat buffs → wards.
       const peelOne = () => {
-        if (foe.precast && foe.precast.length) { revert(foe.precast.pop()); return true; }
         if (foe.flyCast)   { foe.flyCast = false; foe.flying = !!(foe.precast && foe.precast.includes('fly')); foe.prone = true; foe.loseTurn = true; stripped.push('Fly (it CRASHES to the ground!)'); return true; }
+        if (foe.precast && foe.precast.includes('fly')) { foe.precast.splice(foe.precast.indexOf('fly'), 1); revert('fly'); return true; }
         if (foe.invisible) { foe.invisible = false; stripped.push('Invisibility'); return true; }
-        if (foe.images > 0){ foe.images = 0; stripped.push('Mirror Image'); return true; }
         if (foe.hasted > 0){ foe.hasted = 0; stripped.push('haste'); return true; }
+        if (foe.images > 0){ foe.images = 0; stripped.push('Mirror Image'); return true; }
         if (foe.buffs)     { foe.buffs = null; stripped.push('combat buffs'); return true; }
+        if (foe.precast && foe.precast.length) { revert(foe.precast.pop()); return true; }
         return false;
       };
       if (ab.greater) { while (peelOne()) { /* sweep everything */ } } else { peelOne(); }
@@ -6128,7 +6169,7 @@ class Dungeon {
     }
     return off;
   }
-  _playerAttack(m, targetUid, quiet = false) {
+  _playerAttack(m, targetUid, quiet = false, opts = {}) {
     m.flatFooted = false;   // acting ends flat-footed
     if (!quiet) m._offDef = false;   // Offensive Defense lasts until the rogue next acts
     if (!m.greaterInvis) m.invisible = false;    // attacking breaks Invisibility (Greater persists)
@@ -6146,7 +6187,7 @@ class Dungeon {
     // GASPAR's 60/40: facing a MIXED field (flyers AND grounded), bot Gaspar draws
     // the paired pistols 40% of the time — bane-boosted touch-AC full attacks at
     // whatever he's targeting — and works the Curator the other 60%.
-    let forceRanged = false;
+    let forceRanged = !!(opts && opts.forceRanged && !m.weapon.ranged);   // the Ranged button: a melee martial draws the backup crossbow / sidearm (a real ranged weapon just shoots normally)
     if (!quiet && m.isBot && (m.playerId || '').toLowerCase() === 'gaspar' && !m.weapon.ranged) {
       const foes = this._targetableEnemies();
       if (foes.some(f => f.flying) && foes.some(f => !f.flying) && dRoll(10) <= 4) forceRanged = true;
