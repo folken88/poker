@@ -42,6 +42,11 @@ accessibility is a core requirement (Josh, VoiceOver tester).
 7. **PF1 first**: rules follow PF1 RAW unless a documented homerule exists
    (see `docs/project/PF1-CONDITIONS.md`). Enemies can do everything heroes
    can (parity mandate). Per-room = the game's "per day".
+8. **PF1CORE boundary** (docs/project/PF1CORE-PLAN.md): a future PGM app
+   shares the rules engine. `pf1data/*`, `game/character.js`, `game/combat.js`
+   are pf1core — pure rules, NEVER import persistence/sockets/poker. Rules
+   math goes there; loops/narration/economy stay app-side. Expedient rules
+   code left in Dungeon.js gets a `// PF1CORE:` breadcrumb for the sweep.
 
 ## Verification habit
 Backend logic ships with in-container unit tests (`docker cp test.js
