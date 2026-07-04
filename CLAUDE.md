@@ -43,10 +43,13 @@ accessibility is a core requirement (Josh, VoiceOver tester).
    (see `docs/project/PF1-CONDITIONS.md`). Enemies can do everything heroes
    can (parity mandate). Per-room = the game's "per day".
 8. **PF1CORE boundary** (docs/project/PF1CORE-PLAN.md): a future PGM app
-   shares the rules engine. `pf1data/*`, `game/character.js`, `game/combat.js`
-   are pf1core — pure rules, NEVER import persistence/sockets/poker. Rules
-   math goes there; loops/narration/economy stay app-side. Expedient rules
-   code left in Dungeon.js gets a `// PF1CORE:` breadcrumb for the sweep.
+   shares the rules engine. **`src/pf1core/index.js` is THE door** — 13
+   concept namespaces (abilities/feats/classes/races/domains/monsters/
+   weapons/xp/abilityScores/loadouts/profiles/character/combat); NEW code
+   imports rules through it. Everything behind it is pure — NEVER imports
+   persistence/sockets/bot (the test suite's purity gate enforces this).
+   Rules math goes core-side; loops/narration/economy stay app-side.
+   Expedient rules code in Dungeon.js gets a `// PF1CORE:` breadcrumb.
 
 ## Verification habit
 Backend logic ships with in-container unit tests (`docker cp test.js

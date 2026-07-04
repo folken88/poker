@@ -3,6 +3,9 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.8.1  2026-07-04  pf1core façade: src/pf1core/index.js — THE one door to
+//                     the rules engine (13 concept namespaces), purity gate in
+//                     the suite; PGM (pgm.folkengames.com) consumes this
 //  3.8.0  2026-07-04  Phase-2 COMPLETE — seam 4: HERO-ABILITIES mixin (attacks,
 //                     every _ab* handler, pickers, spell math, SR — 2,686
 //                     lines) to game/dungeon/abilities.js. Dungeon.js is now
@@ -69,4 +72,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.8.0' };
+module.exports = { VERSION: '3.8.1' };
