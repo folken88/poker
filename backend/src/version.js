@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.14.2 2026-07-04  FULL-CARD ART FOR EVERYONE: every monster token now
+//                     pairs a /portraits/ entry (no more circular-mask
+//                     fallback on fungal/charau-ka/robots/new bosses);
+//                     CONSTRUCT healers REPAIR with drills (drill SFX),
+//                     no more black-magic prayers from the Gearghost
+//  3.14.1 2026-07-04  INSPIRE COURAGE scales per PF1 (+1/+2/+3/+4 at
+//                     1/5/11/17) — Elodie at 17 sings the party to +4 hit
+//                     and damage (aura + manual cast; one _inspireBonus)
 //  3.14.0 2026-07-04  FILL 4: one click seats random AI until the poker
 //                     table holds 4 total players (table:fillBots upTo) —
 //                     the quick small-game setup. + banter variety rule
@@ -142,4 +150,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.14.0' };
+module.exports = { VERSION: '3.14.2' };

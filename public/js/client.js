@@ -834,7 +834,7 @@
   // portrait; tokens without one keep the plain card background.
   let _portraitSet = null;
   (function loadPortraits() {
-    fetch('/portraits/manifest.json', { cache: 'force-cache' })
+    fetch('/portraits/manifest.json', { cache: 'no-cache' })   // revalidate — new enemies pair portraits often (was force-cache, which hid them)
       .then(r => (r.ok ? r.json() : []))
       .then(arr => { _portraitSet = new Set(Array.isArray(arr) ? arr : []); if (state.dungeon) renderDungeon(); })
       .catch(() => { _portraitSet = new Set(); });

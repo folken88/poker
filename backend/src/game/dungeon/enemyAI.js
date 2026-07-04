@@ -480,6 +480,15 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     const dark = e.evil || e.type === 'undead';
     const self = ally.uid === e.uid;
     const target = self ? 'its own wounds' : `${ally.name}'s wounds`;
+    // CONSTRUCT support units don't pray — they REPAIR (Tobias 2026-07-04:
+    // "instead of healing robots with black magic, they should repair, with
+    // the drill sound"). Gearghost, Drone 3.0 Repairs, Fission Repair et al.
+    if (e.type === 'construct') {
+      const plating = self ? 'its own plating' : `${ally.name}'s plating`;
+      this._note(`🔧 ${e.glyph} ${e.name} whirs alive — drills and welders REPAIR ${plating}: +${ally.hp - before} HP.`, '/audio/drill_lugnuts_airdrill.mp3', { side: 'enemy' });
+      this._echoToTable('/audio/drill_lugnuts_airdrill.mp3'); this._broadcast();
+      return;
+    }
     this._note(`${dark ? '🖤' : '💚'} ${e.glyph} ${e.name} ${dark ? 'hisses a PROFANE PRAYER — black energy knits' : 'chants a HEALING PRAYER — light mends'} ${target}: +${ally.hp - before} HP.`, '/audio/spell_cure.mp3', { side: 'enemy' });
     this._echoToTable('/audio/spell_cure.mp3'); this._broadcast();
   },
