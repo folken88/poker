@@ -5295,8 +5295,12 @@
     let root = null, edArt = null, trueArt = null, sel = null, saveBtn = null, nameEls = [];
     const srcUrl = (it) => '/' + (it.kind === 'portraits' ? 'portraits' : 'tokens') + '/' + it.name + '.webp';
     const clampPan = () => {
+      // When the art is BIGGER than the card, clamp so no gap shows. When it's
+      // SMALLER (zoomed out below cover — for the pre-tight art like Conchobar),
+      // CENTER it and let the grey card show through (matches the in-game look).
       const bw = img.naturalWidth * cover * zoom, bh = img.naturalHeight * cover * zoom;
-      ox = Math.min(0, Math.max(CW - bw, ox)); oy = Math.min(0, Math.max(CH - bh, oy));
+      ox = bw >= CW ? Math.min(0, Math.max(CW - bw, ox)) : (CW - bw) / 2;
+      oy = bh >= CH ? Math.min(0, Math.max(CH - bh, oy)) : (CH - bh) / 2;
     };
     const paint = () => {
       if (!img) return;
@@ -5365,10 +5369,10 @@
         '<button class="btn btn--ghost btn--sm" id="cropClose">✕</button></div>' +
         '<div style="display:flex;gap:16px;align-items:flex-start;justify-content:center;flex-wrap:wrap">' +
         '<div><div style="color:#888;font-size:.7rem;margin-bottom:4px">EDITOR — drag to pan · scroll to zoom</div>' +
-        '<div id="cropEd" style="position:relative;width:' + CW * SCALE + 'px;height:' + CH * SCALE + 'px;border-radius:14px;overflow:hidden;border:1px solid rgba(217,176,106,.5);cursor:grab;background:#2b2e35">' +
+        '<div id="cropEd" style="position:relative;width:' + CW * SCALE + 'px;height:' + CH * SCALE + 'px;border-radius:14px;overflow:hidden;border:1px solid rgba(217,176,106,.5);cursor:grab;background:#4a4a4a">' +
         '<div id="cropEdArt" style="position:absolute;inset:0;background-repeat:no-repeat"></div>' + cardChrome(SCALE) + '</div></div>' +
         '<div><div style="color:#888;font-size:.7rem;margin-bottom:4px">IN-GAME SIZE</div>' +
-        '<div style="position:relative;width:' + CW + 'px;height:' + CH + 'px;border-radius:10px;overflow:hidden;border:1px solid rgba(217,176,106,.3);background:#2b2e35">' +
+        '<div style="position:relative;width:' + CW + 'px;height:' + CH + 'px;border-radius:10px;overflow:hidden;border:1px solid rgba(217,176,106,.3);background:#4a4a4a">' +
         '<div id="cropTrueArt" style="position:absolute;inset:0;background-repeat:no-repeat"></div>' + cardChrome(1) + '</div>' +
         '<div style="color:#666;font-size:.65rem;margin-top:6px;max-width:190px">Save overwrites the image (first save keeps a .orig on the server). Cropped cards need no framing nudges.</div></div></div></div>';
       document.body.appendChild(root);
@@ -5397,7 +5401,7 @@
         const r = ed.getBoundingClientRect();
         const px = (e.clientX - r.left) / SCALE, py = (e.clientY - r.top) / SCALE;   // cursor point in card coords
         const old = zoom;
-        zoom = Math.min(6, Math.max(1, zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+        zoom = Math.min(6, Math.max(0.25, zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));   // min 0.25 → can zoom OUT below cover for pre-tight art
         const f = (cover * zoom) / (cover * old);
         ox = px - (px - ox) * f; oy = py - (py - oy) * f;   // zoom about the cursor (tokenator-style)
         clampPan(); paint(); dirty = true;

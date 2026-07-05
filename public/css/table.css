@@ -95,7 +95,7 @@ button, input { font: inherit; color: inherit; }
    — their token is the only art they have. */
 /* A solid dark-grey fill UNDER the portrait so transparent art (e.g. the ooze
    PNG) sits on grey rather than showing the felt through it. */
-.dpc.has-portrait, .dmon.has-portrait { background-color: #2b2e35; }
+.dpc.has-portrait, .dmon.has-portrait { background-color: #4a4a4a; }   /* medium grey blends with dark AI art far better than the old blue-black (Tobias 2026-07-04) */
 .dpc.has-portrait .dpc__avatar { background: transparent; border: none; box-shadow: none; }
 .dpc.has-portrait .dpc__avatar .avatar-img,
 .dpc.has-portrait .dpc__avatar > svg { display: none; }
