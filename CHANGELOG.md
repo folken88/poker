@@ -19,7 +19,29 @@ Thanks to the regulars whose suggestions made it into the game:
 
 ---
 
-## 2026-06-09 (newest)
+## 2026-07-05 (newest)
+- **Combat reporting — consistent and succinct (Josh).** Attack lines no longer read out HP
+  totals after every hit — just "X hits Y for N" — for allies and enemies, every class (check
+  party HP yourself with `H`). The rogue **Sneak Attack** rider now reads "(+21 sneak)" so base
+  and bonus are clear. **Taunt** and other multi-target effects report grouped counts instead
+  of a per-target roll-call. (More coming: a shorter turn prompt, a terse target list with the
+  details in the enemy inspector, and an `S` key that silences one report section at a time.)
+- **Celeb is a Theurge** (Kobold Press) — a dual arcane+divine caster with the widest spell
+  list in the game (the whole wizard AND cleric lists), half-arcane/half-divine prepared casts,
+  and his signature **Spell Synthesis**: a few times per room he casts one arcane + one divine
+  spell in a single turn, and that pair lands harder (−4 to enemy saves, +4 vs spell resistance).
+- **Slayer is a playable class** (ranger + rogue) — pick it in the class menu. **Kai Ginn** is a
+  Slayer now, sneak attack riding his fauchard.
+- **Flanking (Tobis).** When a second melee ally joins the same foe, both **flank** it: +2 to hit,
+  and **Sneak Attack** switches on for rogues/slayers (Kelda + Kai). The first one in moved up
+  alone and gets nothing.
+- **Gearghost** reworked into a grounded **heavy mech** (no more flying); the old "Zombie" art now
+  fronts a CR-13 **Ghoul Antipaladin**. Two new AI heroes earlier in the batch: **Binch** (Cleric
+  of Besmara) and **Celeb** (now the Theurge).
+- **Crop Station** (settings ▸ 🖼) is non-destructive — it always edits the pristine original and
+  never downsamples your art. New art standard: webp, max 1920px wide.
+
+## 2026-06-09
 - **Dungeon death is no longer an instant kick.** A slain hero stays in the run as a fallen
   body — you keep **spectating** instead of being booted back to the table, and a cleric or
   oracle can still bring you back. **Breath of Life** (in combat) now revives the *freshly

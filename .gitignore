@@ -33,3 +33,7 @@ public/tokens/*.jpeg
 # code change once shipped with 266 KB of mp3 noise). The DB was already
 # ignored; now the whole data dir stays out of git.
 backend/data/
+
+# crop-save originals + archived token art (backups, not game assets)
+public/portraits/*.orig
+public/_archive_tokenart/

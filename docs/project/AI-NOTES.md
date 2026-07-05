@@ -83,9 +83,22 @@ under distinct temp names.
   abilities (`_charAllows`), `BOT_WEAPONS` named-weapon map, `CUSTOM_WEAPONS`
   staples, `MAGUS_SPELLSTRIKE_SFX`, oracle mysteries, spiritual-weapon deity map.
 - **Narration is part of accessibility.** Every combat note is read aloud to
-  blind players. Keep lines speakable; aggregate multi-swing turns into one
-  line; counts not lists for 3+ target save spells; always include the
-  `−N DR` soak tag in hit lines.
+  blind players (Josh). The dungeon-log `_note` text IS both the on-screen line
+  and the TTS, so keep them succinct and CONSISTENT across every class.
+  **Unified reporting standard (Tobias approved 2026-07-05):**
+  - **Hit** = `X hits Y for N` — plus a terse rider only when it applies
+    (`(+21 sneak)`, `⚔️Smite`, `−N DR` soak). **NO HP totals ever** (no `(45/80)`) —
+    the blind player checks party HP himself with `H`, enemy state with `E`. Do
+    not print a die count on riders (`(5d6)` is noise).
+  - **Miss / crit** = `X misses Y` / `X CRITS Y for N`.
+  - **Any 3+-target effect** (AoE, channel, taunt) = grouped COUNTS
+    (`3 hit, 1 saved, 2 slain`), never a per-target roll-call.
+  - **Ability use** = the EVENT (`Grukk rages`, `Elodie casts Haste`), not the
+    full mechanical description.
+  - Keep multi-swing turns aggregated into one line.
+  (Still-open passes from Josh's 2026-07-04/05 report: turn prompt → just "Your
+  turn"; terse target list with CR/DR/rating in the enemy inspector; segmented
+  `S` — silence one report section at a time; dominated-foe reporting.)
 - **Commit style**: one logical change per commit, message explains the WHY and
   the mechanics, ends with `Co-Authored-By: Claude <model> <noreply@anthropic.com>`.
   Commits happen ON THE SERVER repo (the prod checkout) and push to GitHub with
