@@ -2387,22 +2387,22 @@ class Dungeon {
     if (bypass === 'magic') bypassed = !!(weapon && (weapon.dmgBonus > 0 || weapon.custom));
     else if (bypass && bypass !== '—') bypassed = !!(weapon && weapon.dtype === bypass);   // matching S/P/B
     if (bypassed) return [dmg, ''];
-    const soaked = Math.min(dmg, amount);
-    return [Math.max(0, dmg - amount), soaked > 0 ? ` 🛡️−${soaked} DR` : ''];
+    // DR still SOAKS the damage; we just don't tag every hit with "−N DR" (Josh
+    // 2026-07-05: redundant noise — the once-per-fight "DR 10/magic" reveal already
+    // says the foe has DR, and the reduced damage number speaks for itself).
+    return [Math.max(0, dmg - amount), ''];
   }
   // A readable description of a creature's DR — for the once-per-fight reveal so the
   // party knows to switch weapons (and so Josh hears it in the log).
   _drDesc(dr) {
+    // TERSE (Josh 2026-07-05): just the fact — "DR 10/magic" — no "rely on spell
+    // damage / glances off" fluff. The once-per-fight reveal still tells the party
+    // a foe HAS DR; the mechanical soak still applies. Cuts a big chunk of noise.
     if (!dr) return '';
     const amount = (typeof dr === 'object') ? dr.amount : dr;
     const bypass = (typeof dr === 'object') ? dr.bypass : null;
     const TYPE = { S: 'slashing', P: 'piercing', B: 'bludgeoning' };
-    if (bypass === 'magic') return `DR ${amount}/magic — only an enchanted weapon (a +1 or a signature weapon) bites through`;
-    if (TYPE[bypass]) {
-      const weak = Object.keys(TYPE).filter(k => k !== bypass).map(k => TYPE[k]).join(' & ');
-      return `DR ${amount}/${TYPE[bypass]} — ${weak} glance off; only ${TYPE[bypass]} cuts deep`;
-    }
-    return `DR ${amount}/— — almost nothing physical gets through; lean on spells and energy`;
+    return `DR ${amount}/${bypass === 'magic' ? 'magic' : (TYPE[bypass] || '—')}`;
   }
   _downMember(m) {
     if (m.dead) return;

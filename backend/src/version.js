@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.23.2 2026-07-05  Reporting pass 3 (Josh): cut the DR FLUFF — the once-
+//                     per-fight reveal is now terse "DR 10/magic" (was "…only an
+//                     enchanted weapon bites through / rely on spell damage"),
+//                     and the per-hit "−N DR" tag is gone everywhere (DR still
+//                     soaks; the reduced number speaks for itself). Blind TURN
+//                     PROMPT restored to "Your turn." + the terse enemy list
+//                     (name, N of M HP, flying) so he can numpad-target — I'd
+//                     over-trimmed it to just "Your turn."
 //  3.23.1 2026-07-05  Reporting pass 2 (Josh, mostly client/live): blind TURN
 //                     PROMPT is now just "Your turn." (no HP/enemy/spell dump —
 //                     he uses H/E/?); the quick TARGET LIST is name + HP + flying
@@ -250,4 +258,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.23.1' };
+module.exports = { VERSION: '3.23.2' };
