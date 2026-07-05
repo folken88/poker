@@ -437,7 +437,7 @@ const BOT_CLASSES = {
   'Concetta': 'swashbuckler', 'Farrah': 'sorcerer', 'Fera': 'rogue',
   'Elfrip': 'oracle', 'Rodney Smith': 'ranger', 'Olbryn': 'sorcerer', 'Binch': 'cleric', 'Celeb': 'theurge',   // Elfrip is a Flame-mystery oracle (fire blaster); Rodney "Danger" Smith is an archer; Olbryn is a Drow storm-sorcerer (lightning); Celeb is a Kobold Press THEURGE (dual arcane+divine)
   'Vesorianna': 'oracle', 'Farrus Richton': 'barbarian', 'Dinvaya': 'cleric', 'Storgrim Thunderbeard': 'fighter',
-  'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'rogue', 'Kai Ginn': 'ranger', 'Lirienne': 'ranger',   // Crisp = deinonychus: no real class, but rogue is closest (pounce + sneak); keeps his 'bite' natural multi-attack (3 attacks, no iteratives) via BOT_WEAPONS + _attackOffsets
+  'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'rogue', 'Kai Ginn': 'slayer', 'Lirienne': 'ranger',   // Crisp = deinonychus: no real class, but rogue is closest (pounce + sneak); keeps his 'bite' natural multi-attack (3 attacks, no iteratives) via BOT_WEAPONS + _attackOffsets. Kai Ginn = the detective-SLAYER (ranger+rogue hybrid; DEX-finesse fauchard, sneak attack)
   'Rissa': 'druid', 'Taelys': 'gunslinger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'gunslinger',   // Taelys + Duristan: PF1 gunslingers (rifles)
   'Holden': 'swashbuckler',
   'Ser Toche': 'rogue', 'El Guapo': 'swashbuckler', 'Gabriel': 'paladin',

@@ -178,6 +178,7 @@ const ABILITY_PRIORITY = {
   investigator: ['int', 'dex', 'con', 'wis'],  // studied combat (INT)
   gunslinger:   ['dex', 'wis', 'con', 'cha'],  // DEX shooting + WIS grit
   theurge:      ['int', 'wis', 'con', 'dex'],  // dual caster — INT arcane (P1) + WIS divine (P2), both pumped (MAD)
+  slayer:       ['dex', 'str', 'con', 'wis'],  // DEX-finesse hunter (Kai Ginn's DEX-riding fauchard); STR slayers override
 };
 const ASI_PATTERN = {
   fighter: ['str'], barbarian: ['str'], rogue: ['dex'], wizard: ['int'], sorcerer: ['cha'], druid: ['wis'],
@@ -187,6 +188,7 @@ const ASI_PATTERN = {
   swashbuckler: ['dex', 'cha'], investigator: ['int', 'dex'],   // two-stat (MAD) — keep the 17/14/14/12 spread
   gunslinger: ['dex'],    // SAD — pump DEX (18/14/12 spread); guns hit touch AC anyway
   theurge: ['int', 'wis'],   // MAD dual caster — alternate INT (arcane) and WIS (divine)
+  slayer: ['dex'],   // DEX-finesse hunter — pump DEX
 };
 
 /** The class's casting ability ('int'|'wis'|'cha'|'con') or null for non-casters. */

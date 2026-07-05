@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.20.0 2026-07-04  SLAYER is a playable class (ACG, ranger+rogue) — Stage 1:
+//                     now human-selectable, DEX-finesse build, and Kai Ginn is a
+//                     Slayer. He already had the chassis (d10/full-BAB/good
+//                     Fort+Ref), martial weapons, an 8-ability maneuver kit, and
+//                     Sneak Attack (SNEAK_CLASSES) — this wires it up. Studied
+//                     Target (swift per-foe mark) lands in Stage 2.
 //  3.19.3 2026-07-04  Theurge spellbook fix: the loadout system has no 'theurge'
 //                     KIT, so Celeb's Spellbook pool read EMPTY at every level
 //                     (looked like "no level-1 spells"). _loadoutModel/_rebucket
@@ -219,4 +225,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.19.3' };
+module.exports = { VERSION: '3.20.0' };
