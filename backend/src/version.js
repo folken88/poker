@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.18.1 2026-07-04  ART FIX + POLICY: the v3.17.1 "remove token-* files"
+//                     also stripped 63 HERO-AVATAR tokens the picker uses —
+//                     un-archived; pruned 3 dead manifest entries (Clenchjaw/
+//                     Kelda Rogue/Nigel). NEW asset standard (Tobias): keep
+//                     full art, just webp + max 1920 wide — downscaled 48
+//                     oversized portraits to 1920w and converted the last 2
+//                     PNGs (gabriel, form_tiger) to webp (DB kit_json + refs).
 //  3.18.0 2026-07-04  CROP STATION made NON-DESTRUCTIVE (after the earlier
 //                     display bug caused silent repeat-saves that baked 215
 //                     portraits down to 570×600): all 216 restored from their
@@ -191,4 +198,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.18.0' };
+module.exports = { VERSION: '3.18.1' };

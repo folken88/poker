@@ -637,7 +637,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     // form is usable once per room. Generic druids get Tiger/Bear/Hawk; Rissa gets
     // her own Beast Mode + Promethean in place of Tiger/Bear (Hawk is shared). ──
     { key: 'tigerform', name: 'Tiger Form', icon: '🐯', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
-      form: { key: 'tiger', label: 'Tiger Form', glyph: '🐯', art: '/tokens/form_tiger.png', weapon: 'form_tiger', sizeSteps: 1, ac: 1, toHit: 2, dmg: 4, sound: '/audio/enemy_yak.mp3' },
+      form: { key: 'tiger', label: 'Tiger Form', glyph: '🐯', art: '/tokens/form_tiger.webp', weapon: 'form_tiger', sizeSteps: 1, ac: 1, toHit: 2, dmg: 4, sound: '/audio/enemy_yak.mp3' },
       desc: 'Become a DIRE TIGER — pounce on prey with claws + bite (3 attacks at full strength), +2 to hit, +4 damage, +1 AC. Lasts until you change back.' },
     { key: 'bearform', name: 'Bear Form', icon: '🐻', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
       form: { key: 'bear', label: 'Bear Form', glyph: '🐻', art: '/tokens/token-animal-great-spirit-bear-dd-monster-resembles-griz.webp', weapon: 'form_bear', sizeSteps: 1, ac: 3, toHit: 2, dmg: 4, tempHpPerLevel: 2, sound: '/audio/enemy_yak.mp3' },
