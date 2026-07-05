@@ -1441,7 +1441,13 @@
       _dun.turnKey = turnKey;
       if (st.status === 'combat' && st.turn && st.turn.kind === 'party' && st.turn.id === meId) {
         const me = (st.party||[]).find(m => m.playerId === meId) || {};
-        speak('Your turn. ' + _dunEnemyPhrase(st), 'urgent');   // Josh 2026-07-05: prompt + the TERSE enemy list (name, HP, flying) so he can numpad-target without opening the inspector — but NOT the spell enumeration. He uses ? for actions.
+        earcon('turn');   // immediate audible cue (three pulses) so he knows his turn is up…
+        // …but the SPOKEN prompt is 'event', NOT 'urgent' — urgent calls TTS.cancel()
+        // and WIPES the queued foe-action lines, so Josh never heard what the foes
+        // (incl. DOMINATED ones savaging their allies) did before his turn. 'event'
+        // queues it AFTER those reports finish. Prompt + terse enemy list (name, HP,
+        // flying) so he can numpad-target; no spell enumeration (he uses ?).
+        speak('Your turn. ' + _dunEnemyPhrase(st), 'event');
       } else if (st.status === 'exploring' && _dun.status === 'combat') {
         earcon('clear');   // audible "room cleared" cue so a blind player knows the end-of-room report is coming (Josh)
         // Only give the "open the next door / bail" prompt NOW if there's no loot to
