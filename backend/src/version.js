@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.19.2 2026-07-04  Theurge PREP SPLIT: Celeb's casts each spell level are now
+//                     HALF arcane / HALF divine (two pools). Spells on BOTH class
+//                     lists (Dispel Magic, Prot. Evil, Hold Person…) are 'both' —
+//                     they fill whichever half he needs and their save DC rides
+//                     his BETTER stat. Non-theurges keep one shared pool.
 //  3.19.1 2026-07-04  Theurge fix: the runtime cleric kit carries a `channel`
 //                     ability that leaked into Celeb's union — skip it (a
 //                     theurge does NOT channel energy).
@@ -209,4 +214,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.19.1' };
+module.exports = { VERSION: '3.19.2' };

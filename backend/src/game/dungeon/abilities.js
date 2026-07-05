@@ -57,9 +57,21 @@ const CELEB_SKIP = new Set(['channel', 'deadlyaim', 'powerattack', 'magicmissile
 let _celebKit = null;
 function celebKit() {
   if (_celebKit) return _celebKit;
-  const seen = new Set();
-  const take = (abs, dcStat, side) => abs.filter(a => !CELEB_SKIP.has(a.key) && !seen.has(a.key) && seen.add(a.key)).map(a => ({ ...a, dcStat, side, char: 'celeb' }));
-  _celebKit = take(kitFor('cleric').abilities, 'wis', 'divine').concat(take(kitFor('wizard').abilities, 'int', 'arcane'));
+  const cleric = kitFor('cleric').abilities.filter(a => !CELEB_SKIP.has(a.key));
+  const wizard = kitFor('wizard').abilities.filter(a => !CELEB_SKIP.has(a.key));
+  const cKeys = new Set(cleric.map(a => a.key)), wKeys = new Set(wizard.map(a => a.key));
+  const seen = new Set(), out = [];
+  const add = (a, dfltSide) => {
+    if (seen.has(a.key)) return; seen.add(a.key);
+    // A spell on BOTH class lists (Dispel Magic, Protection from Evil, Hold
+    // Person…) is 'both' — it fills whichever HALF of his prepared casts he needs,
+    // and its save DC rides his BETTER casting stat ("counts however he needs it").
+    const both = cKeys.has(a.key) && wKeys.has(a.key);
+    out.push({ ...a, side: both ? 'both' : dfltSide, dcStat: both ? 'best' : (dfltSide === 'arcane' ? 'int' : 'wis'), char: 'celeb' });
+  };
+  for (const a of cleric) add(a, 'divine');
+  for (const a of wizard) add(a, 'arcane');
+  _celebKit = out;
   return _celebKit;
 }
 
@@ -130,7 +142,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // Dropping a Wild Shape form you're already in is FREE (no use spent, always allowed).
     const formOff = ab.effect === 'form' && ab.form && m.form && m.form.key === ab.form.key;
     if (ab.cost === 'pool' && (m.spellPool || 0) <= 0) return { ok: false, error: 'out of spell casts this room' };
-    if (ab.cost === 'slot' && ((m.slots && m.slots[ab.slvl]) || 0) <= 0) return { ok: false, error: `no level-${ab.slvl || '?'} spell slots left this room` };
+    if (ab.cost === 'slot' && !this._slotAvail(m, ab, ab.slvl)) return { ok: false, error: (m.playerId === 'celeb' && ab.side && ab.side !== 'both') ? `no ${ab.side} level-${ab.slvl || '?'} casts left this room` : `no level-${ab.slvl || '?'} spell slots left this room` };
     if (ab.cost === 'room' && !formOff && ((m.abilityUses && m.abilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is spent for this room` };
     if (ab.cost === 'run'  && ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is already cast for this dungeon` };
     // Don't waste Sleep/Fascinate on a foe that's already asleep OR fascinated —
@@ -228,7 +240,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const roll = dRoll(20), total = roll + bonus;
       if (total < dc) {
         if (ab.cost === 'pool') m.spellPool = Math.max(0, (m.spellPool || 0) - 1);
-        else { m.slots = m.slots || {}; const _L = this._slotLevelFor(m, ab); m.slots[_L] = Math.max(0, (m.slots[_L] || 0) - 1); }
+        else { const _L = this._slotLevelFor(m, ab); this._spendSlot(m, ab, _L); }
         this._note(`🪢 ${m.nickname} is grappled and can't hold the casting of ${ab.name} together — concentration fails. [d20 ${roll}+${bonus} = ${total} vs DC ${dc}] The spell is lost.`, pick(SND.whiffSword));
         this._echoToTable(); this._broadcast();
         return { ok: true, fizzled: true };
@@ -317,7 +329,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     if (!_srStopped) D();
     if (ab.cost === 'pool') m.spellPool = Math.max(0, (m.spellPool || 0) - 1);
-    else if (ab.cost === 'slot') { m.slots = m.slots || {}; const _L = this._slotLevelFor(m, ab); m.slots[_L] = Math.max(0, (m.slots[_L] || 0) - 1); }   // metamagic draws from the HIGHER slot
+    else if (ab.cost === 'slot') { const _L = this._slotLevelFor(m, ab); this._spendSlot(m, ab, _L); }   // metamagic draws from the HIGHER slot; theurge draws from the arcane/divine half
     else if (ab.cost === 'room' && !formOff) m.abilityUses[ab.key] = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 0) - 1);
     else if (ab.cost === 'run') m.runAbilityUses[ab.key] = Math.max(0, ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) - 1);
     if ((ab.target === 'enemy' || ab.target === 'aoe') && !m.greaterInvis) m.invisible = false;   // attacking breaks Invisibility (Greater persists)
@@ -419,6 +431,34 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (!m || !m.castableKeys) return true;                   // non-caster / gating disabled
     return m.castableKeys.has(ab.key);
   },
+  // ── THEURGE (Celeb) split-slot economy ──────────────────────────────────────
+  // A theurge prepares HALF arcane + HALF divine per spell level. A spell tagged
+  // side:'arcane' draws only the arcane half, 'divine' only the divine half, and
+  // 'both' (on BOTH class lists) draws from whichever half he still has. Everyone
+  // else uses the single shared pool (m.slots) — these helpers are transparent for
+  // them, so non-theurge behaviour is byte-identical to before.
+  _splitTheurgeSlots(m) {
+    if (m.playerId !== 'celeb' || !m.slots) { m.arcSlots = null; m.divSlots = null; return; }
+    m.arcSlots = {}; m.divSlots = {};
+    for (const L of Object.keys(m.slots)) { const n = m.slots[L] || 0; m.arcSlots[L] = Math.ceil(n / 2); m.divSlots[L] = Math.floor(n / 2); }   // odd extra → arcane
+  },
+  _slotAvail(m, ab, L) {
+    if (m.playerId !== 'celeb' || !m.arcSlots) return (((m.slots && m.slots[L]) || 0) > 0);
+    const a = m.arcSlots[L] || 0, d = m.divSlots[L] || 0, side = ab && ab.side;
+    if (side === 'arcane') return a > 0;
+    if (side === 'divine') return d > 0;
+    return (a + d) > 0;   // 'both' / untagged — either half
+  },
+  _spendSlot(m, ab, L) {
+    if (m.playerId !== 'celeb' || !m.arcSlots) { m.slots = m.slots || {}; m.slots[L] = Math.max(0, (m.slots[L] || 0) - 1); return; }
+    const side = ab && ab.side, a = m.arcSlots[L] || 0, d = m.divSlots[L] || 0;
+    if (side === 'arcane') m.arcSlots[L] = Math.max(0, a - 1);
+    else if (side === 'divine') m.divSlots[L] = Math.max(0, d - 1);
+    else if (d >= a && d > 0) m.divSlots[L] = d - 1;   // 'both' → spend the FULLER half to stay balanced
+    else if (a > 0) m.arcSlots[L] = a - 1;
+    else if (d > 0) m.divSlots[L] = d - 1;
+    m.slots = m.slots || {}; m.slots[L] = Math.max(0, (m.slots[L] || 0) - 1);   // keep the shared total in sync (UI / serialization)
+  },
   /** Wild Shape: toggle a druid form on/off. Re-casting the active form reverts;
    *  casting a different form swaps. Forms override the weapon (natural attacks),
    *  add a stat package to m.buffs, and may grant flight / DR / temp HP. */
@@ -496,6 +536,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._domainSetup(m);   // domains first — the uses loop below stocks their pools
     m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
     m.slots = slotsFor(m.cls, m.level || 1, m.castingMod);   // per-spell-level slots (base + casting-stat bonus + domain/school)
+    this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
     m.abilityUses = {};
     for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
@@ -578,7 +619,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const base = (ab && ab.slvl >= 1) ? ab.slvl : Math.floor((m.level || 1) / 2);
     // THEURGE dual-stat DCs: an ability tagged dcStat ('int' arcane / 'wis' divine)
     // keys off THAT ability mod; everything else uses the class casting stat.
-    const stat = (ab && ab.dcStat && m.mods && m.mods[ab.dcStat] != null) ? m.mods[ab.dcStat]
+    const stat = (ab && ab.dcStat === 'best' && m.mods) ? Math.max(m.mods.int || 0, m.mods.wis || 0)   // dual-list spell — his better discipline
+               : (ab && ab.dcStat && m.mods && m.mods[ab.dcStat] != null) ? m.mods[ab.dcStat]
                : (m.castingMod != null ? m.castingMod : CAST_MOD);
     return 10 + base + stat + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0);
   },
