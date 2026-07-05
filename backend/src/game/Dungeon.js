@@ -1589,6 +1589,30 @@ class Dungeon {
     // kept on for the damage, eased off against a target too well-armored to power
     // through. Done here so the swing that follows uses the right stance.
     this._botStance(m, foes);
+    // SPELL SYNTHESIS (Celeb the Theurge — Kobold Press): a limited number of
+    // times per room (1/2/3 at L5/11/17) he casts ONE arcane + ONE divine spell in
+    // a SINGLE turn. He lines the pair up by asking his own brain twice, once per
+    // school (m._synthSchool restricts usable() to that side); the pair lands at
+    // −4 to enemy saves / +4 CL vs SR (see _spellDC / _srBlocks reading
+    // m._synthActive). Two castings = two of his party buffs by nature of the
+    // buff-first brain, or a buff + a debuff. Only fires when BOTH schools have a
+    // worthwhile cast — otherwise he saves it for a normal single spell.
+    if (m.playerId === 'celeb' && (m.synthUses || 0) > 0) {
+      m._synthSchool = 'arcane'; const cA = this._botAbility(m); m._synthSchool = null;
+      if (cA) {
+        m._synthSchool = 'divine'; const cDp = this._botAbility(m); m._synthSchool = null;
+        if (cDp) {
+          m.synthUses--; m._synthActive = true;
+          this._note(`✨🌓 ${m.nickname} weaves the arcane and the divine as ONE — SPELL SYNTHESIS! (${m.synthUses} left this room)`, '/audio/spell_buff_invoke.mp3');
+          this._echoToTable('/audio/spell_buff_invoke.mp3');
+          this._useAbility(m, cA.slot, cA.payload);
+          m._synthSchool = 'divine'; const cD = this._botAbility(m); m._synthSchool = null;   // recompute after the arcane cast changed the board
+          if (cD) this._useAbility(m, cD.slot, cD.payload);
+          m._synthActive = false;
+          this._hasteBonus(m); return;
+        }
+      }
+    }
     // Then see if a class ability is the smart play this turn (heal, buff,
     // blast, spell). If so, use it; otherwise fall back to a basic attack.
     const choice = this._botAbility(m);
@@ -1726,6 +1750,7 @@ class Dungeon {
     const targets = awake.length ? awake : foes;          // don't wake sleepers
     const usable = (ab) => {
       if (!ab || lvl < (ab.minLevel || 1)) return false;
+      if (m._synthSchool && ab.slvl != null && ab.slvl >= 1 && ab.side && ab.side !== m._synthSchool && ab.side !== 'both') return false;   // Spell Synthesis is lining up one arcane + one divine — restrict this pick to the wanted school
       if (!this._charAllows(ab, m)) return false;   // char-gated forms (Rissa vs generic druids)
       if (!this._loadoutAllows(ab, m)) return false;   // PHASE C: bot only casts prepared/known spells
       if (ab.effect === 'form' && m.form && m.form.key === (ab.form && ab.form.key)) return false;   // already in this form

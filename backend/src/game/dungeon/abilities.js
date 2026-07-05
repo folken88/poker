@@ -537,6 +537,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
     m.slots = slotsFor(m.cls, m.level || 1, m.castingMod);   // per-spell-level slots (base + casting-stat bonus + domain/school)
     this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
+    if (m.playerId === 'celeb') { const L = m.level || 1; m.synthUses = L >= 17 ? 3 : L >= 11 ? 2 : L >= 5 ? 1 : 0; }   // SPELL SYNTHESIS (Kobold Press): usable 1/2/3 times per room at L5/11/17
     m.abilityUses = {};
     for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
@@ -622,7 +623,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const stat = (ab && ab.dcStat === 'best' && m.mods) ? Math.max(m.mods.int || 0, m.mods.wis || 0)   // dual-list spell — his better discipline
                : (ab && ab.dcStat && m.mods && m.mods[ab.dcStat] != null) ? m.mods[ab.dcStat]
                : (m.castingMod != null ? m.castingMod : CAST_MOD);
-    return 10 + base + stat + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0);
+    return 10 + base + stat + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0) + (m._synthActive ? 4 : 0);   // Spell Synthesis: −4 to targets' saves == +4 to the DC
   },
   // ── PF1 SPELL RESISTANCE ──────────────────────────────────────────────────
   // A creature with SR shrugs off SPELLS unless the caster wins a caster-level
@@ -635,7 +636,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _srBlocks(m, e, ab, quiet = false) {
     if (!e || !(e.sr > 0) || !ab || ab.slvl == null) return false;
     const pen = fighterFeats(m.cls, m.level, this._isRanged(m)).spellPen || 0;
-    const bonus = (m.level || 1) + pen;
+    const bonus = (m.level || 1) + pen + (m._synthActive ? 4 : 0);   // Spell Synthesis: +4 caster level vs SR
     const roll = dRoll(20), total = roll + bonus;
     if (total >= e.sr) return false;   // punched through (PF1: caster-level checks have NO auto 20/1)
     if (!quiet) { this._note(`🛡️ ${e.glyph || ''} ${e.name}'s SPELL RESISTANCE turns ${ab.name} aside! [d20 ${roll}+${bonus} = ${total} vs SR ${e.sr}]`); }

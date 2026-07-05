@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.22.0 2026-07-05  CELEB STAGE 2 — SPELL SYNTHESIS (Kobold Press): a limited
+//                     number of times per room (1/2/3 at L5/11/17) he casts ONE
+//                     arcane + ONE divine spell in a single turn. His AI lines up
+//                     the pair by consulting his own brain once per school, so he
+//                     favors party buffs (two of them) or a buff + a debuff. The
+//                     pair lands at −4 to enemy saves / +4 caster level vs SR.
 //  3.21.0 2026-07-04  FLANKING (Tobias): once a SECOND melee ally joins the same
 //                     foe, both flank it — +2 to hit, and Sneak Attack turns on
 //                     for rogue-likes (Kelda + Kai). The first to close gets
@@ -229,4 +235,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.21.0' };
+module.exports = { VERSION: '3.22.0' };
