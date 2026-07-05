@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.17.2 2026-07-04  GEARGHOST grounded: the haunted war-chassis is a HEAVY
+//                     mech, NOT a flyer — flight removed, reprofiled slow/tanky
+//                     (Large, 4-legged, HP 45→60, one 1d10+6 spectral slam,
+//                     Fort↑/Reflex↓) keeping its weird powers (DR 10/magic +
+//                     poltergeist kin-repair) plus a new glitch-wail (fear DC 15)
 //  3.17.1 2026-07-04  Zombie → GHOUL ANTIPALADIN (Antipaladin 13 risen as a
 //                     ghoul: paralysis, Touch of Corruption drain, dread aura,
 //                     channels negative for undead). CROP-SAVE FIX: editor now
@@ -174,4 +179,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.17.1' };
+module.exports = { VERSION: '3.17.2' };

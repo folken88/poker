@@ -148,7 +148,7 @@ const MON = {
   drone_stinger:     { name: 'Drone 2.5 Stinger', glyph: '🤖', cr: '3',   hp: 26,  ac: 18, toHit: 8,  dmgDie: 6,  dmgBonus: 2,  fort: 1,  reflex: 6,  attacks: 2, sneakDice: 2, gold: [26, 60], flying: true },   // darting fly-spy — burrowing blades find the gaps
   drone_repair:      { name: 'Drone 3.0 Repairs', glyph: '🔧', cr: '3',   hp: 30,  ac: 17, toHit: 6,  dmgDie: 6,  dmgBonus: 3,  fort: 2,  reflex: 2,  gold: [26, 60], healer: { dice: 2, uses: 3 } },   // field mechanic — welds battered squadmates back together mid-fight
   gearsman_pugilist: { name: 'Gearsman 3.6 Pugilist', glyph: '🥊', cr: '5', hp: 52, ac: 19, toHit: 10, dmgDie: 8, dmgBonus: 5,  fort: 5,  reflex: 6,  attacks: 3, evasion: true, gold: [42, 90], dr: { amount: 5, bypass: '—' }, atkSounds: MONK_SFX },   // Monk 5 boxing chassis — carbon-fiber flurry (the Terminator variant)
-  gearghost:         { name: 'Gearghost',         glyph: '👻', cr: '5',   hp: 45,  ac: 18, toHit: 9,  dmgDie: 6,  dmgBonus: 3,  fort: 2,  reflex: 7,  gold: [42, 95], flying: true, dr: { amount: 10, bypass: 'magic' }, healer: { dice: 2, uses: 2 } },   // haunted clockwork wisp — half construct, half ghost; mends its machine kin
+  gearghost:         { name: 'Gearghost',         glyph: '👻', cr: '5',   hp: 60,  ac: 19, toHit: 9,  dmgDie: 10, dmgBonus: 6,  fort: 6,  reflex: 2,  gold: [42, 95], dr: { amount: 10, bypass: 'magic' }, healer: { dice: 2, uses: 2 }, shout: { fear: true, dc: 15, sound: '/audio/spell_shock.mp3' } },   // haunted HEAVY mech — a possessed war-chassis, NOT a flyer: one crushing spectral slam (1d10+6), spectral plating (DR 10/magic), a glitch-wail that spooks heroes, and poltergeist welds that mend its machine kin
   gearsman_gunslinger:{ name: 'Gearsman 5.0 Gunslinger', glyph: '🔫', cr: '6', hp: 60, ac: 20, toHit: 12, dmgDie: 8, dmgBonus: 6, fort: 4, reflex: 9, attacks: 2, gold: [55, 115], atkSound: '/audio/rifle_longue_carabine.mp3' },   // ronin chassis — fanning an integrated revolver
   gearsman_sniper:   { name: 'Gearsman 5.5 Sniper', glyph: '🎯', cr: '7', hp: 68,  ac: 20, toHit: 13, dmgDie: 8,  dmgBonus: 6,  fort: 4,  reflex: 10, attacks: 2, sneakDice: 4, evasion: true, gold: [70, 150], atkSound: '/audio/rifle_dvl_silenced.mp3' },   // Rogue 3/Gunslinger 7 — silenced shots to the vitals
   gearsman_riot:     { name: 'Gearsman 3.0 Riot Suppressor', glyph: '🛡️', cr: '8', hp: 95, ac: 22, toHit: 15, dmgDie: 8, dmgBonus: 9, fort: 6, reflex: 4, attacks: 2, gold: [95, 190], dr: { amount: 5, bypass: '—' }, taunt: { dc: 16, sound: '/audio/spell_shock.mp3' } },   // crowd-control frame — a COMPLIANCE bark taunts AI heroes onto its shield
@@ -255,7 +255,7 @@ const MON_BODY = {
   // The machines: drones hover/roll (legs 0 — nothing to trip), tanks ride
   // treads or four legs, the big frames are Huge.
   drone_rhoomba: { size: 'T', legs: 0 }, drone_collector: { legs: 0 }, drone_stinger: { legs: 0 },
-  drone_repair: { legs: 0 }, gearghost: { size: 'T', legs: 0 },
+  drone_repair: { legs: 0 }, gearghost: { size: 'L', legs: 4 },
   gearsman_juggernaut: { size: 'H' }, mecha_railgun: { size: 'H', legs: 0 },
   mecha_repeater: { size: 'H', legs: 4 }, gearsman_scraper: { size: 'H' },
   mecha_warden: { size: 'H' }, overlord: { size: 'L' },
