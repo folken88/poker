@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.17.3 2026-07-04  CROP STATION zoom-out floor = "contain": scrolling out
+//                     now stops when the WHOLE image just fits the card (grey
+//                     letterbox) instead of shrinking to a tiny pic floating in
+//                     a void — the dark bars are intentional padding for art
+//                     whose shape doesn't match the tall card, not a load bug
 //  3.17.2 2026-07-04  GEARGHOST grounded: the haunted war-chassis is a HEAVY
 //                     mech, NOT a flyer — flight removed, reprofiled slow/tanky
 //                     (Large, 4-legged, HP 45→60, one 1d10+6 spectral slam,
@@ -179,4 +184,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.17.2' };
+module.exports = { VERSION: '3.17.3' };

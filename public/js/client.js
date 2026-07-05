@@ -5291,7 +5291,7 @@
     const btn = document.getElementById('cropArtBtn');
     if (!btn) return;
     const CW = 190, CH = 200, SCALE = 2;              // true card size + editor magnification
-    let items = [], cur = -1, img = null, cover = 1, zoom = 1, ox = 0, oy = 0, dirty = false;
+    let items = [], cur = -1, img = null, cover = 1, zoom = 1, minZoom = 1, ox = 0, oy = 0, dirty = false;
     let root = null, edArt = null, trueArt = null, sel = null, saveBtn = null, nameEls = [];
     const srcUrl = (it) => '/' + (it.kind === 'portraits' ? 'portraits' : 'tokens') + '/' + it.name + '.webp';
     const clampPan = () => {
@@ -5325,6 +5325,7 @@
       img = new Image();
       img.onload = () => {
         cover = Math.max(CW / img.naturalWidth, CH / img.naturalHeight);   // background-size: cover
+        minZoom = Math.min(CW / img.naturalWidth, CH / img.naturalHeight) / cover;   // zoom-OUT floor: stop when the WHOLE image just fits (contain) — never a tiny pic floating in grey
         zoom = 1; ox = (CW - img.naturalWidth * cover) / 2; oy = 0;        // start: cover, centered X, top Y (the game default)
         clampPan(); paint();
       };
@@ -5356,7 +5357,7 @@
           if (!/^✓ /.test(sel.options[cur].textContent)) sel.options[cur].textContent = '✓ ' + sel.options[cur].textContent;
           busts[srcUrl(it)] = Date.now();   // point the editor at the freshly-baked file
           const nw = new Image();
-          nw.onload = () => { img = nw; cover = Math.max(CW / img.naturalWidth, CH / img.naturalHeight); zoom = 1; ox = (CW - img.naturalWidth * cover) / 2; oy = 0; clampPan(); paint(); };   // reload the saved image IN PLACE so you SEE it stuck (no more auto-jump)
+          nw.onload = () => { img = nw; cover = Math.max(CW / img.naturalWidth, CH / img.naturalHeight); minZoom = Math.min(CW / img.naturalWidth, CH / img.naturalHeight) / cover; zoom = 1; ox = (CW - img.naturalWidth * cover) / 2; oy = 0; clampPan(); paint(); };   // reload the saved image IN PLACE so you SEE it stuck (no more auto-jump)
           nw.src = srcB(it);
           toast('🖼 ' + it.name + ' saved. ▶ for the next one.');
         })
@@ -5414,7 +5415,7 @@
         const r = ed.getBoundingClientRect();
         const px = (e.clientX - r.left) / SCALE, py = (e.clientY - r.top) / SCALE;   // cursor point in card coords
         const old = zoom;
-        zoom = Math.min(6, Math.max(0.25, zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));   // min 0.25 → can zoom OUT below cover for pre-tight art
+        zoom = Math.min(6, Math.max(minZoom, zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));   // floor = contain (whole image just fits); can still zoom OUT below cover for pre-tight art, but not into a void
         const f = (cover * zoom) / (cover * old);
         ox = px - (px - ox) * f; oy = py - (py - oy) * f;   // zoom about the cursor (tokenator-style)
         clampPan(); paint(); dirty = true;
