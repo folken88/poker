@@ -1158,7 +1158,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const raw = sv.saved ? dRollN(5, 6) : dRollN(ndice, 6);   // Fort partial → only 5d6 on a save
     const dmg = this._dmgE(e, raw, ab.dtype);
     const dust = e.hp <= 0;
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} ray hits ${e.name} — Fort ${sv.total} vs ${dc}: ${sv.saved ? `partial ${dmg}` : `${dmg} force`}${this._resistTag(e, ab.dtype)}.${dust ? ` ☠️ ${e.name} crumbles to DUST!` : ` (${Math.max(0, e.hp)}/${e.maxHp})`}`, sound);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} ray hits ${e.name} — Fort ${sv.total} vs ${dc}: ${sv.saved ? `partial ${dmg}` : `${dmg} force`}${this._resistTag(e, ab.dtype)}.${dust ? ` ☠️ ${e.name} crumbles to DUST!` : ''}`, sound);
     if (dust) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   },
@@ -2630,7 +2630,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._note(`🎭 ${m.nickname} feints ${e.name} flat-footed! [${bluff} vs ${sense}] — free strike!`);
     m.weapon = weaponOf(m.gear, m.weaponKey);
     const r = this._swingVsAC(m, this._enemyAC(e), e);
-    const tag = r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '';
+    const tag = r.sneakDice ? ` (+${r.sneakDmg} sneak)` : '';
     if (r.hit) { this._dmgE(e, r.damage); this._note(`🗡️ ${m.nickname} strikes ${e.name} for ${r.damage}${r.drTag || ''}.${tag}${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
     else this._note(`🗡️ the strike misses ${e.name}. ${this._atkStr(r)}`, r.sound);
     this._echoToTable(r.sound);
@@ -2774,7 +2774,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // Rogue Sneak Attack with a light blade (dagger/kukri/shortsword) → Riki.
       if (r.sneakDice && isSneakClass(m.cls) && ['dagger', 'kukri', 'shortsword'].includes(m.weaponKey) && i === 0) r.sound = '/audio/sneak_riki.mp3';
       if (i === 0) flurrySound = r.sound;
-      const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` 🗡️Sneak +${r.sneakDmg}(${r.sneakDice}d6)` : '');
+      const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` (+${r.sneakDmg} sneak)` : '');
       if (!multi) {
         if (r.fumble) this._note(`${m.nickname} fumbles the attack! ${this._atkStr(r)}`, r.sound);
         else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name} for ${r.damage}${r.drTag || ''}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`, r.sound); }

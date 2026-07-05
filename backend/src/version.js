@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.23.0 2026-07-05  CONSISTENT/SUCCINCT REPORTING (Josh) — pass 1: dropped HP
+//                     totals from every attack line (enemy→hero hits, damage
+//                     spells, spellstrikes, missiles, rays) — text AND TTS now
+//                     read "X hits Y for N", no "(45/80)"; the rogue Sneak rider
+//                     reads "(+21 sneak)" (base vs bonus clear, no die count);
+//                     TAUNT now reports grouped counts like every other
+//                     multi-target result. (More passes: turn prompt, terse
+//                     target list, segmented S, rage-desc trim, dominated foes.)
 //  3.22.0 2026-07-05  CELEB STAGE 2 — SPELL SYNTHESIS (Kobold Press): a limited
 //                     number of times per room (1/2/3 at L5/11/17) he casts ONE
 //                     arcane + ONE divine spell in a single turn. His AI lines up
@@ -235,4 +243,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.22.0' };
+module.exports = { VERSION: '3.23.0' };

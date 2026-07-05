@@ -235,7 +235,7 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
       }
       let drTag = ''; [dmg, drTag] = this._physDR(target, dmg);   // Stoneskin soaks physical blows
       target.hp -= dmg;
-      this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${dmg}.${sneakTag}${drTag} ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, r.sound);
+      this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${dmg}.${sneakTag}${drTag} ${this._atkStr(r)}`, r.sound);
       // Domain parity (Death — Bleeding Touch): a death-priest foe's first landed
       // blow each room opens a BLEED on the hero (1d6 at their turn start, until
       // any magical healing staunches it). Undead heroes have no blood to spill.
@@ -415,14 +415,15 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     const cfg = e.taunt || {};
     const dc = cfg.dc || 13;
     const snd = cfg.sound || null;
-    const parts = [];
+    let compelled = 0, total = 0;
     for (const m of this.livingParty()) {
+      total++;
       const sm = this._partySaveMod(m), sroll = dRoll(20), stot = sroll + sm;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
-      if (!saved) m.tauntedBy = e.uid;
-      parts.push(`${m.nickname}: ${saved ? 'unmoved' : `📢 must strike ${e.name}`} [${stot} vs ${dc}]`);
+      if (!saved) { m.tauntedBy = e.uid; compelled++; }
     }
-    this._note(`📢 ${e.glyph} ${e.name} roars a furious challenge — ${parts.join('; ')}!`, snd, { side: 'enemy' });
+    // Grouped COUNTS (Josh 2026-07-05) — consistent with every other multi-target result, no per-hero roll-call.
+    this._note(`📢 ${e.glyph} ${e.name} roars a furious challenge — ${compelled} compelled to strike it, ${total - compelled} shrug it off.`, snd, { side: 'enemy' });
     this._echoToTable(snd);
     this._broadcast();
   },
@@ -652,7 +653,7 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     else tag = ` [${cfg.saveLbl || 'Fort'} ${stot} vs ${cfg.dc}: fail]`;
     this._dmgToMember(target, dmg);
     const dust = cfg.dust && target.hp <= -10;
-    this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} ${target.nickname} for ${dmg} ${cfg.dtype || ''}${tag}!${target.hp <= 0 ? (dust ? ` ☠️ ${target.nickname} crumbles to DUST!` : ' ☠️') : ` (${Math.max(0, target.hp)}/${target.maxHp})`}`, cfg.sound, { side: 'enemy' });
+    this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} ${target.nickname} for ${dmg} ${cfg.dtype || ''}${tag}!${target.hp <= 0 ? (dust ? ` ☠️ ${target.nickname} crumbles to DUST!` : ' ☠️') : ''}`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
   },
   // Lich Hold Monster — a hero fails a Will save or is HELD (re-saves each turn,
@@ -674,7 +675,7 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     if (this._srBlocksHero(e, target, 'the missiles')) { this._echoToTable(); this._broadcast(); return; }
     const dmg = dRollN(n, 4) + n;
     this._dmgToMember(target, dmg);
-    this._note(`✨ ${e.glyph} ${e.name} looses ${n} Magic Missile${n > 1 ? 's' : ''} at ${target.nickname} — ${dmg} force, unerring.${target.hp <= 0 ? ' ☠️' : ` (${Math.max(0, target.hp)}/${target.maxHp})`}`, '/audio/spell_magicmissile.mp3', { side: 'enemy' });
+    this._note(`✨ ${e.glyph} ${e.name} looses ${n} Magic Missile${n > 1 ? 's' : ''} at ${target.nickname} — ${dmg} force, unerring.${target.hp <= 0 ? ' ☠️' : ''}`, '/audio/spell_magicmissile.mp3', { side: 'enemy' });
     this._echoToTable('/audio/spell_magicmissile.mp3'); this._broadcast();
   },
   // Vampire's Vampiric Touch spellstrike (it fights as a magus of its level): a
@@ -698,9 +699,9 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
       if (cfg.healsUndead) {
         const mend = dRollN(cfg.dice || 4, cfg.die || 8) + (cfg.bonus || 0);
         target.hp = Math.min(target.maxHp, target.hp + mend);
-        this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} strikes ${target.nickname} for ${phys}${drTag} — but the negative energy KNITS the undead for ${mend}! ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, cfg.sound || null, { side: 'enemy' });
+        this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} strikes ${target.nickname} for ${phys}${drTag} — but the negative energy KNITS the undead for ${mend}! ${this._atkStr(r)}`, cfg.sound || null, { side: 'enemy' });
       } else {
-        this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} strikes ${target.nickname} for ${phys}${drTag} — but the negative energy washes over the undead harmlessly. ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, cfg.sound || null, { side: 'enemy' });
+        this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} strikes ${target.nickname} for ${phys}${drTag} — but the negative energy washes over the undead harmlessly. ${this._atkStr(r)}`, cfg.sound || null, { side: 'enemy' });
       }
       this._echoToTable(cfg.sound || null); this._broadcast(); return;
     }
@@ -709,7 +710,7 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     this._dmgToMember(target, total);
     let lifeTag = '';
     if (cfg.lifesteal && e.hp > 0) { const healed = Math.min(bonus, e.maxHp - e.hp); if (healed > 0) { e.hp += healed; lifeTag = ` and drinks ${healed} life (${e.hp}/${e.maxHp})`; } }
-    this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} rips ${target.nickname} for ${phys}${drTag}+${bonus} = ${total}${lifeTag}! ${this._atkStr(r)} (${Math.max(0, target.hp)}/${target.maxHp} HP)`, snd, { side: 'enemy' });
+    this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} rips ${target.nickname} for ${phys}${drTag}+${bonus} = ${total}${lifeTag}! ${this._atkStr(r)}`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   },
   // Fire Skeleton suicide bomber: on its turn it rushes in and DETONATES — one
