@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.16.0 2026-07-04  ROSTER SURGERY: ghast→Ghoul Crusader (fallen Shining
+//                     Crusade cleric-ghoul), gargoyle→Mecha Gargoyle (Unity
+//                     construct, elec-vuln), medusa→3 classed medusa-kin
+//                     (archer/swashbuckler/sorceress, Shudderwood), Port Peril
+//                     Kingsguard (F12), Vampire Monk (Mnk17), NEW Hellknight
+//                     warband Freya(F15 +5 flaming katana)/Jason(Asmodean
+//                     cleric)/Jmal(hobgoblin rogue, 8d6 sneak)
 //  3.15.0 2026-07-04  CROP STATION: settings-menu panel — pick any card
 //                     image (enemy portraits + hero tokens), drag/scroll to
 //                     reframe inside a live dungeon-card preview (name, HP
@@ -156,4 +163,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.15.0' };
+module.exports = { VERSION: '3.16.0' };

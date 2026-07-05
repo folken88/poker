@@ -51,7 +51,7 @@ const MON = {
   zombie:            { name: 'Zombie',            glyph: '🧟', cr: '1/2', hp: 12,  ac: 12, toHit: 4,  dmgDie: 6,  dmgBonus: 4, fort: 0,  reflex: 0,  gold: [10, 26], dr: { amount: 5, bypass: 'S' } },   // PF1 zombie — DR 5/slashing (hack it apart; blunt & piercing barely dent it)
   ghoul:             { name: 'Ghoul',             glyph: '🧛', cr: '1',   hp: 13,  ac: 14, toHit: 3,  dmgDie: 6,  dmgBonus: 1, fort: 1,  reflex: 3,  gold: [14, 32], paralyze: true, paralyzeDC: 13 },
   cultist:           { name: 'Whispering Cultist',glyph: '🕯️', cr: '1',   hp: 14,  ac: 14, toHit: 3,  dmgDie: 8,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [16, 38], healer: { dice: 1, uses: 1 } },   // a lay priest of the Whispering Way — one dark mending
-  ghast:             { name: 'Ghast',             glyph: '🧟‍♂️', cr: '2', hp: 17,  ac: 17, toHit: 6,  dmgDie: 8,  dmgBonus: 3, fort: 2,  reflex: 5,  gold: [28, 60], paralyze: true, paralyzeDC: 15 },
+  ghoul_crusader:    { name: 'Ghoul Crusader',    glyph: '🧟‍♂️', cr: '9', hp: 80,  ac: 21, toHit: 12, dmgDie: 8,  dmgBonus: 6, fort: 8,  reflex: 6, attacks: 2, gold: [95, 190], type: 'undead', evil: true, paralyze: true, paralyzeDC: 16, healer: { dice: 3, uses: 3 }, caster: 'holdperson', spellDC: 17, shout: { fear: true, dc: 17, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['shieldoffaith', 'protfire'] },   // a fallen soldier of the Shining Crusade, risen as a ghoul and bound to dark gods — ghoul paralysis + evil cleric 8-12 (holds, dread-shouts, black mendings, pre-warded)
   // ── THE MONKS — named martial artists, each a class NPC (CR ≈ level − 1).
   //    Flurry of unarmed strikes (attacks scale with level), Evasion, Bruce-Lee
   //    kiai SFX. Puff runs with goblin warbands; the two kobold monks with kobold
@@ -80,7 +80,7 @@ const MON = {
   ettercap:          { name: 'Ettercap',          glyph: '🕸️', cr: '3',   hp: 30,  ac: 16, toHit: 5,  dmgDie: 8,  dmgBonus: 3,  fort: 5,  reflex: 5,  attacks: 2, gold: [24, 52] },
   dire_boar:         { name: 'Dire Boar',         glyph: '🐗', cr: '4',   hp: 51,  ac: 15, toHit: 12, dmgDie: 8,  dmgBonus: 12, fort: 9,  reflex: 5,  gold: [34, 72] },                                 // gore 1d8+12
   harpy:             { name: 'Harpy',             glyph: '🦅', cr: '4',   hp: 38,  ac: 15, toHit: 9,  dmgDie: 8,  dmgBonus: 1,  fort: 2,  reflex: 7,  attacks: 2, gold: [34, 72], flying: true },
-  gargoyle:          { name: 'Gargoyle',          glyph: '🪨', cr: '4',   hp: 42,  ac: 16, toHit: 9,  dmgDie: 6,  dmgBonus: 4,  fort: 5,  reflex: 6,  attacks: 2, gold: [36, 78], flying: true, dr: { amount: 10, bypass: 'magic' } },   // PF1 gargoyle — DR 10/magic (needs a +1 or signature weapon)
+  gargoyle:          { name: 'Mecha Gargoyle',    glyph: '🗿', cr: '6',   hp: 58,  ac: 19, toHit: 11, dmgDie: 6,  dmgBonus: 5,  fort: 6,  reflex: 6,  attacks: 2, gold: [55, 115], flying: true, type: 'construct', dr: { amount: 10, bypass: 'adamantine' }, atkSound: '/audio/spell_shock.mp3' },   // a stone gargoyle cybernetically rebuilt by Unity (Iron Gods) — construct: mind-immune, adamantine claws, elec-vulnerable like its robot kin
   minotaur:          { name: 'Minotaur',          glyph: '🐂', cr: '4',   hp: 45,  ac: 14, toHit: 9,  dmgDie: 6,  dmgCount: 3, dmgBonus: 6, fort: 6, reflex: 5, gold: [38, 80], atkSound: '/audio/enemy_yak.mp3' },   // greataxe 3d6+6 — angry bovine bellow
   basilisk:          { name: 'Basilisk',          glyph: '🐍', cr: '5',   hp: 52,  ac: 16, toHit: 9,  dmgDie: 8,  dmgBonus: 4,  fort: 7,  reflex: 4,  paralyze: true, paralyzeDC: 13, gold: [42, 90] },  // petrifying gaze → "turned to stone, lose a turn"
   winter_wolf:       { name: 'Winter Wolf',       glyph: '🐺', cr: '5',   hp: 57,  ac: 18, toHit: 11, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  gold: [44, 95], resist: { cold: 0, fire: 1.5 } },   // PF1: cold-immune, VULNERABLE to fire (×1.5)
@@ -90,7 +90,11 @@ const MON = {
   dire_bear:         { name: 'Dire Bear',         glyph: '🐻', cr: '7',   hp: 84,  ac: 17, toHit: 16, dmgDie: 8,  dmgBonus: 10, fort: 13, reflex: 9, attacks: 2, gold: [70, 150], art: '/dungeon/monsters/dire_bear.webp' },
   chimera:           { name: 'Chimera',           glyph: '🦁', cr: '7',   hp: 76,  ac: 19, toHit: 11, dmgDie: 8,  dmgBonus: 4,  fort: 10, reflex: 6, attacks: 2, gold: [75, 160], flying: true },
   hill_giant:        { name: 'Hill Giant',        glyph: '🪓', cr: '7',   hp: 85,  ac: 21, toHit: 16, dmgDie: 8,  dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 3, gold: [80, 165] },                   // greatclub 2d8+10
-  medusa:            { name: 'Medusa',            glyph: '🐍', cr: '7',   hp: 76,  ac: 15, toHit: 9,  dmgDie: 4,  dmgBonus: 2,  fort: 6,  reflex: 8,  attacks: 2, paralyze: true, paralyzeDC: 15, gold: [80, 165] },  // petrifying gaze
+  // ── THE MEDUSA-KIN of the Northern Shudderwood — classed serpent-women, each
+  //    keeping the petrifying gaze (paralyze) on top of her class. ──
+  medusa_archer:     { name: 'Medusa Archer',     glyph: '🐍', cr: '9',   hp: 78,  ac: 20, toHit: 14, dmgDie: 8,  dmgBonus: 5, fort: 6,  reflex: 11, attacks: 2, gold: [95, 190], paralyze: true, paralyzeDC: 16, atkSound: '/audio/bow_shot.mp3' },   // Ranger 9 — snapshots from the treeline; petrifying gaze
+  medusa_swashbuckler:{ name: 'Medusa Swashbuckler', glyph: '🐍', cr: '9', hp: 82,  ac: 21, toHit: 14, dmgDie: 6,  dmgBonus: 5, fort: 6,  reflex: 12, attacks: 3, evasion: true, gold: [95, 190], paralyze: true, paralyzeDC: 16 },   // Swashbuckler 9 — parry-riposte rapier; petrifying gaze
+  medusa_sorceress:  { name: 'Medusa Sorceress',  glyph: '🐍', cr: '9',   hp: 68,  ac: 17, toHit: 8,  dmgDie: 4,  dmgBonus: 1, fort: 5,  reflex: 8, gold: [95, 190], evil: true, arcane: true, paralyze: true, paralyzeDC: 16 },   // Sorcerer 9 — serpentfire arcana; petrifying gaze
   stone_giant:       { name: 'Stone Giant',       glyph: '🗿', cr: '8',   hp: 102, ac: 24, toHit: 17, dmgDie: 8,  dmgCount: 2, dmgBonus: 12, fort: 12, reflex: 5, gold: [95, 190] },                  // greatclub 2d8+12
   abyssal_horror:    { name: 'Abyssal Horror',    sr: 19, glyph: '🐙', cr: '8',   hp: 95,  ac: 19, toHit: 14, dmgDie: 8,  dmgBonus: 6,  fort: 9,  reflex: 6,  attacks: 2, gold: [95, 190] },                  // eldritch chaos beast
   brass_golem:       { name: 'The Golden Saurian', glyph: '🗿', cr: '9',  hp: 92,  ac: 24, toHit: 16, dmgDie: 10, dmgCount: 2, dmgBonus: 13, fort: 3, reflex: 3, attacks: 2, gold: [180, 320], dr: { amount: 10, bypass: '—' }, atkSound: '/audio/robot_gibberish.mp3', hype: '/audio/robot_gibberish.mp3' },   // 8-HD construct, two 2d10+9 slams; DR 10/—; chatters machine-gibberish as it swings (renamed from Brass Golem — Tobias 2026-07-04)
@@ -115,7 +119,7 @@ const MON = {
   vamp_priest:       { name: 'Vampire Priest',    sr: 24, glyph: '🧛', cr: '13',  hp: 130, ac: 25, toHit: 17, dmgDie: 8,  dmgBonus: 8,  fort: 11, reflex: 8,  attacks: 2, gold: [170, 320], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 19, sound: '/audio/enemy_lich_gaze.mp3' }, healer: { dice: 3, uses: 3 }, precast: ['shieldoffaith', 'protfire'], bleedTouch: true },   // C12 + vampire — profane litany; a true battle-cleric who mends the court; pre-warded as a boss (divine list); Death-domain Bleeding Touch
   vamp_assassin:     { name: 'Vampire Assassin',  sr: 25, glyph: '🧛', cr: '14',  hp: 140, ac: 27, toHit: 19, dmgDie: 6,  dmgBonus: 8,  fort: 8,  reflex: 13, attacks: 2, sneakDice: 7, evasion: true, gold: [190, 360], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // R13 + vampire
   vamp_nightguard:   { name: 'Vampire Nightguard',sr: 25, glyph: '🧛', cr: '14',  hp: 160, ac: 27, toHit: 21, dmgDie: 6,  dmgCount: 2, dmgBonus: 10, fort: 12, reflex: 9, attacks: 2, gold: [190, 360], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' } },   // F14 + vampire — polearm sweeps (2d6+10)
-  vamp_noble:        { name: 'Vampire Noble',     sr: 26, glyph: '🧛', cr: '15',  hp: 160, ac: 27, toHit: 20, dmgDie: 8,  dmgBonus: 9,  fort: 11, reflex: 11, attacks: 2, gold: [220, 420], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 21, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 5, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // Mag14 + vampire — Vampiric Touch spellstrikes
+  vamp_noble:        { name: 'Vampire Monk',      sr: 26, glyph: '🧛', cr: '17',  hp: 175, ac: 30, toHit: 21, dmgDie: 10, dmgBonus: 8,  fort: 13, reflex: 15, attacks: 4, evasion: true, gold: [260, 480], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 22, sound: '/audio/enemy_lich_gaze.mp3' }, atkSounds: MONK_SFX },   // Monk 17 + vampire — a blur of unarmed flurry (4 strikes), Evasion, dominating gaze
   vamp_techwitch:    { name: 'Vampire Tech Witch',sr: 23, glyph: '🧛', cr: '12',  hp: 110, ac: 22, toHit: 12, dmgDie: 6,  dmgBonus: 4,  fort: 8,  reflex: 8,  gold: [150, 300], type: 'undead', evil: true, dr: { amount: 10, bypass: 'magic' }, arcane: true },   // W11 + vampire — Technic League arcanist, full wizard casting
   // ── THE WHISPERING WAY — classed living cultists (wizards, clerics, rogues,
   //    magi of various levels; NPC CR = class level − 1). They herd the undead
@@ -166,7 +170,7 @@ const MON = {
   shackles_scallywag:{ name: 'Fever Sea Scallywag', glyph: '🏹', cr: '1',  hp: 14,  ac: 15, toHit: 4,  dmgDie: 8,  dmgBonus: 2,  fort: 2,  reflex: 4,  gold: [12, 26], atkSound: '/audio/bow_shot.mp3' },   // longboat archer
   shackles_marine:   { name: 'Chelish Marine',    glyph: '🔫', cr: '3',   hp: 28,  ac: 17, toHit: 7,  dmgDie: 12, dmgBonus: 3,  fort: 4,  reflex: 5,  gold: [26, 60], atkSound: '/audio/rifle_longue_carabine.mp3' },   // Gunslinger 5 — musket volley from the fighting top
   shackles_seacaster:{ name: 'Shackles Sea-Caster', glyph: '🌊', cr: '3', hp: 24,  ac: 15, toHit: 4,  dmgDie: 4,  dmgBonus: 1,  fort: 2,  reflex: 3,  gold: [26, 60], evil: true, arcane: true },   // S4 storm-blooded deck wizard
-  shackles_swashbuckler:{ name: 'Bloodcove Swashbuckler', glyph: '🤺', cr: '4', hp: 38, ac: 19, toHit: 9, dmgDie: 6, dmgBonus: 4, fort: 4, reflex: 7, attacks: 2, evasion: true, gold: [36, 78] },   // Swashbuckler 5 — parry-and-riposte scimitar
+  shackles_swashbuckler:{ name: 'Port Peril Kingsguard', glyph: '⚔️', cr: '11', hp: 105, ac: 24, toHit: 17, dmgDie: 8, dmgBonus: 9, fort: 9, reflex: 8, attacks: 3, gold: [110, 220] },   // Fighter 12 — the Hurricane King's elite guard; heavy blade, full iteratives (cavalier levels later)
   shackles_officer:  { name: 'Bronze Fleet Officer', glyph: '🏴‍☠️', cr: '5', hp: 48, ac: 19, toHit: 10, dmgDie: 6, dmgBonus: 5, fort: 5, reflex: 6, attacks: 2, gold: [42, 90] },   // slaver fleet mate — cutlass + pistol grip
   sahuagin_scout:    { name: 'Sahuagin Scout',    glyph: '🦈', cr: '3',   hp: 26,  ac: 17, toHit: 7,  dmgDie: 6,  dmgBonus: 2,  fort: 3,  reflex: 6,  attacks: 2, sneakDice: 2, evasion: true, gold: [26, 60] },   // tidal trickster — knife-work from the surf
   sahuagin_rager:    { name: 'Sahuagin Rager',    glyph: '🦈', cr: '5',   hp: 55,  ac: 17, toHit: 11, dmgDie: 8,  dmgBonus: 7,  fort: 8,  reflex: 4,  gold: [42, 90] },   // bloodrager — a frothing frenzy of trident and teeth
@@ -211,6 +215,11 @@ const MON = {
   // ── PALACE UNIQUES & CARRION CROWN CANON — bosses pulled from the Iron Gods
   //    world's Palace Uniques folder and the carrioncrown archive, at their
   //    in-story canonical levels (Tobias 2026-07-04). ──
+  // ── THE HELLKNIGHT WARBAND — Freya's cadre (Hell's Rebels flavor). They
+  //    ride together; developed further later. ──
+  freya:             { name: 'Freya',             glyph: '⚔️', cr: '14',  hp: 140, ac: 26, toHit: 20, dmgDie: 8, dmgCount: 1, dmgBonus: 12, fort: 12, reflex: 8, attacks: 3, gold: [300, 520], evil: true, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // Fighter 15 Hellknight — a +5 FLAMING-BURST katana (1d8+7 +1d6 fire folded → d8+12), full iteratives (cavalier/hellknight levels later)
+  jason:             { name: 'Jason',             glyph: '😈', cr: '13',  hp: 120, ac: 23, toHit: 13, dmgDie: 8, dmgBonus: 5, fort: 11, reflex: 8, gold: [280, 480], evil: true, healer: { dice: 3, uses: 3 }, caster: 'holdperson', spellDC: 18, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['shieldoffaith', 'protfire'], hellfire: { count: 3, dice: 6, die: 6, dc: 18, dtype: 'fire', verb: 'calls a PILLAR OF HELLFIRE down on the party', sound: '/audio/spell_hellfire.mp3' } },   // Tiefling Cleric 15 of Asmodeus — holds, dread litany, hellfire, battle-mendings, pre-warded
+  jmal:              { name: 'Jmal',              glyph: '🗡️', cr: '13',  hp: 115, ac: 24, toHit: 17, dmgDie: 6, dmgBonus: 6, fort: 8, reflex: 13, attacks: 3, sneakDice: 8, evasion: true, gold: [280, 480], evil: true, atkSound: '/audio/fight_riki.mp3' },   // Hobgoblin Rogue 15 — twin sawtooth sabers + deep sneak (8d6); Evasion
   black_sovereign:   { name: 'Kevoth-Kul, the Black Sovereign', glyph: '👑', cr: '16', hp: 210, ac: 19, toHit: 30, dmgDie: 6, dmgCount: 4, dmgBonus: 17, fort: 16, reflex: 7, attacks: 3, vicious: 6, gold: [400, 700], atkSound: '/audio/sword_eviscerate2_flaming.mp3', hype: '/audio/tool_sober_hype.mp3' },   // BOSS — Barbarian 17 swinging BURNING HATE, his +5 VICIOUS greatsword: 2d6+18 blade + 2d6 vicious per hit — and the blade bites HIM for 1d6 every hit too (CN — enthralled, not evil; smite finds no purchase)
   amalokla:          { name: 'Amalokla, the First Sovereign', sr: 28, glyph: '👻', cr: '17', hp: 225, ac: 28, toHit: 24, dmgDie: 8, dmgBonus: 8, fort: 14, reflex: 17, attacks: 2, flying: true, gold: [440, 760], evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 22, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 6, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // BOSS — the dybbuk who first ruled Numeria: PAIN TOUCH drains the living, dread presence, SR 28
   brogwort:          { name: 'Brogwort the Dim',  glyph: '🪨', cr: '17',  hp: 243, ac: 27, toHit: 27, dmgDie: 8,  dmgCount: 2, dmgBonus: 11, fort: 14, reflex: 13, attacks: 3, gold: [440, 760], atkSounds: ['/audio/wolf_bite_.mp3', '/audio/sword_smack_big.mp3'], hype: '/audio/backstreet_everybody_sexual.mp3' },   // BOSS — Huge athach (18 HD): bite + two slams a round, dim but VERY thorough
@@ -239,7 +248,7 @@ const MON_BODY = {
   ettercap: { size: 'M' }, harpy: { size: 'M' }, gargoyle: { size: 'M' }, minotaur: { size: 'L' },
   wood_golem: { size: 'L' }, bog_brute: { size: 'L' }, hill_giant: { size: 'L' }, stone_giant: { size: 'L' },
   brass_golem: { size: 'L' }, barbed_devil: { size: 'L' }, abyssal_horror: { size: 'L', legs: 0 },   // a roil of tentacles
-  medusa: { size: 'M' }, vampire: { size: 'M' }, lich: { size: 'M' },
+  medusa_archer: { size: 'M' }, medusa_swashbuckler: { size: 'M' }, medusa_sorceress: { size: 'M' }, vampire: { size: 'M' }, lich: { size: 'M' },
   // The vampire court / infernal court are classed humanoid shapes (Medium bipeds —
   // the default — so no entries needed); the dragons are Large quadrupeds.
   black_dragon: { size: 'L', legs: 4 }, void_dragon: { size: 'L', legs: 4 },
@@ -254,6 +263,7 @@ const MON_BODY = {
   charauka_warrior: { size: 'S' }, charauka_stepper: { size: 'S' }, charauka_mancer: { size: 'S' },
   ikualoa: { size: 'H' },
   brogwort: { size: 'H' },   // athach
+  jmal: { size: 'M' },
   rivozair: { size: 'H', legs: 4 },   // devil-bound blue dragon
 };
 for (const [k, b] of Object.entries(MON_BODY)) if (MON[k]) Object.assign(MON[k], b);
@@ -276,7 +286,7 @@ const MON_GANGS = {
   monk_redactor: ['devil'], monk_redactor2: ['devil'], monk_sailor: ['devil'],
   // the restless dead — vampires mix with every other undead; the Whispering
   // Way cultist herds them
-  skeleton: ['undead'], zombie: ['undead'], ghoul: ['undead'], ghast: ['undead'], shadow: ['undead'],
+  skeleton: ['undead'], zombie: ['undead'], ghoul: ['undead'], ghoul_crusader: ['undead'], shadow: ['undead'],
   wight: ['undead'], fire_skeleton: ['undead'], skeletal_champion: ['undead'], cultist: ['undead'],
   ww_initiate: ['undead'], ww_knife: ['undead'], ww_gravecaller: ['undead'], ww_bladebound: ['undead'],
   ww_necromancer: ['undead'], ww_slayer: ['undead'], ww_deathpriest: ['undead'], ww_deathblade: ['undead'],
@@ -290,9 +300,10 @@ const MON_GANGS = {
   blood_caimon: ['beast'], dire_bear: ['beast'],
   // aberrations & horrors — the weird monstrous things
   gray_ooze: ['horror'], gibbering_mouther: ['horror'], abyssal_horror: ['horror'], bog_brute: ['horror'],
-  minotaur: ['horror'], chimera: ['horror'], basilisk: ['horror'], medusa: ['horror'],
+  minotaur: ['horror'], chimera: ['horror'], basilisk: ['horror'],
+  medusa_archer: ['medusa'], medusa_swashbuckler: ['medusa'], medusa_sorceress: ['medusa'],
   ettercap: ['horror'], harpy: ['horror'], harpy_sorcerer: ['horror'],
-  gargoyle: ['horror', 'construct'],
+  gargoyle: ['construct', 'horror'],
   // the big folk — ogres also muscle for goblin warbands
   ogre: ['giant', 'goblinoid'], ettin: ['giant'], hill_giant: ['giant'], stone_giant: ['giant'],
   // constructs stand guard together (Zernibeth marches with the Technic League's machines)
@@ -321,6 +332,7 @@ const MON_GANGS = {
   // ex-PC bosses: Blackout stalks with the Numerian machines; Ragh muscles
   // with the big folk and the goblinoid warbands he bullies
   blackout: ['construct'], ragh: ['giant', 'goblinoid'],
+  freya: ['hellknight'], jason: ['hellknight', 'devil'], jmal: ['hellknight', 'goblinoid'],
   // Palace Uniques rule Numeria (machine minions); the CC canon lead the dead
   black_sovereign: ['construct'], amalokla: ['undead', 'construct'], brogwort: ['giant'],
   auren_vrood: ['undead'], vorkstag: ['undead'], tar_baphon: ['undead'],
@@ -337,13 +349,13 @@ const MON_ART = {
   // a fanged vampire lord, and a skeletal lich in his mitre.
   fire_skeleton: 'fire_skeleton', vampire: 'vampire', lich: 'lich',
   gray_ooze: 'ooze', skeletal_champion: 'skeletal_champion', shadow: 'shadow', wight: 'wight',
-  ghast: 'ghast', gibbering_mouther: 'gibbering_mouther', ogre: 'ogre', ettin: 'ettin',
+  ghoul_crusader: 'ghoul_crusader', gibbering_mouther: 'gibbering_mouther', ogre: 'ogre', ettin: 'ettin',
   brass_golem: 'brass_golem', barbed_devil: 'barbed_devil',
   // diversity pack (dire_bear sets its .webp art inline, so it's not listed here)
   dire_ape: 'dire_ape', ettercap: 'ettercap', dire_boar: 'dire_boar', harpy: 'harpy',
   gargoyle: 'gargoyle', minotaur: 'minotaur', basilisk: 'basilisk', winter_wolf: 'winter_wolf',
   wood_golem: 'wood_golem', bog_brute: 'swamp_horror', chimera: 'chimera', hill_giant: 'hill_giant',
-  medusa: 'medusa', stone_giant: 'stone_giant', abyssal_horror: 'abyssal_horror',
+  medusa_archer: 'medusa_archer', medusa_swashbuckler: 'medusa_swashbuckler', medusa_sorceress: 'medusa_sorceress', stone_giant: 'stone_giant', abyssal_horror: 'abyssal_horror',
   // The vampire court, Technic League & Thrune villains, the infernal court, and
   // dragons (Abrogail is a .png — her art is set inline on the MON entry).
   vampire_spawn: 'vampire_spawn', vamp_knight: 'vamp_knight', vamp_inquisitor: 'vamp_inquisitor',
@@ -379,6 +391,7 @@ const MON_ART = {
   sahuagin_prince: 'sahuagin_prince', charauka_warrior: 'charauka_warrior', charauka_stepper: 'charauka_stepper',
   charauka_mancer: 'charauka_mancer', ikualoa: 'ikualoa', captain_thrune: 'captain_thrune',
   blackout: 'blackout', ragh: 'ragh',
+  freya: 'freya', jason: 'jason', jmal: 'jmal',
   black_sovereign: 'black_sovereign', amalokla: 'amalokla', brogwort: 'brogwort',
   auren_vrood: 'auren_vrood', vorkstag: 'vorkstag', tar_baphon: 'tar_baphon',
   rivozair: 'rivozair',
@@ -397,10 +410,12 @@ const MON_TYPE = {
   monk_shaolin: 'humanoid', monk_sailor: 'humanoid', monk_greenbriar: 'humanoid', monk_redactor: 'humanoid',
   monk_redactor2: 'humanoid', monk_vakra: 'humanoid', monk_beastmode: 'humanoid', monk_puff: 'humanoid',
   monk_kobold: 'humanoid', monk_kobold_big: 'humanoid',
-  skeleton: 'undead', zombie: 'undead', ghoul: 'undead', ghast: 'undead', skeletal_champion: 'undead',
+  skeleton: 'undead', zombie: 'undead', ghoul: 'undead', ghoul_crusader: 'undead', skeletal_champion: 'undead',
   shadow: 'undead', fire_skeleton: 'undead', wight: 'undead', vampire: 'undead', lich: 'undead',
   ogre: 'giant', ettin: 'giant', hill_giant: 'giant', stone_giant: 'giant',
-  harpy: 'monstrous humanoid', gargoyle: 'monstrous humanoid', minotaur: 'monstrous humanoid', medusa: 'monstrous humanoid',
+  harpy: 'monstrous humanoid', minotaur: 'monstrous humanoid',
+  gargoyle: 'construct',
+  medusa_archer: 'monstrous humanoid', medusa_swashbuckler: 'monstrous humanoid', medusa_sorceress: 'monstrous humanoid',
   basilisk: 'magical beast', winter_wolf: 'magical beast', chimera: 'magical beast',
   ettercap: 'aberration', gibbering_mouther: 'aberration', bog_brute: 'aberration', abyssal_horror: 'aberration',
   wood_golem: 'construct', brass_golem: 'construct',
@@ -417,6 +432,7 @@ const MON_TYPE = {
   shackles_marine: 'humanoid', shackles_seacaster: 'humanoid', shackles_swashbuckler: 'humanoid',
   shackles_officer: 'humanoid', bentbeak_charney: 'humanoid', captain_maris: 'humanoid', captain_thrune: 'humanoid',
   blackout: 'humanoid', ragh: 'humanoid',
+  freya: 'humanoid', jason: 'outsider', jmal: 'humanoid',
   black_sovereign: 'humanoid', vorkstag: 'humanoid', auren_vrood: 'humanoid',
   amalokla: 'undead', tar_baphon: 'undead', brogwort: 'giant',
   charauka_warrior: 'humanoid', charauka_stepper: 'humanoid', charauka_mancer: 'humanoid',
@@ -441,7 +457,7 @@ for (const k of Object.keys(MON)) if (!MON[k].type) MON[k].type = 'humanoid';   
 // 1.5 = vulnerable (takes 50% more). Physical (B/S/P) and untyped damage are
 // never modified here. Most undead shrug off cold (PF1e) — a Fire Skeleton is
 // the exception (made of fire: immune to its own element, vulnerable to cold).
-const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'zombie', 'ghoul', 'ghast', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich', 'fungal_pirate', 'fungal_oracle', 'fungal_captain', 'amalokla', 'tar_baphon'];
+const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'zombie', 'ghoul', 'ghoul_crusader', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich', 'fungal_pirate', 'fungal_oracle', 'fungal_captain', 'amalokla', 'tar_baphon'];
 const RESIST_BY_KEY = {
   fire_skeleton: { fire: 0, cold: 1.5 },          // burning bones: fireproof, but cold shatters them
   wood_golem:    { fire: 1.5 },                    // dry timber: catches fire easily
@@ -464,6 +480,7 @@ for (const k of UNDEAD_KEYS) {                      // undead are immune to cold
   const r = RESIST_BY_KEY[k] || (RESIST_BY_KEY[k] = {});
   if (r.cold == null) r.cold = 0;
 }
+if (MON.gargoyle) (RESIST_BY_KEY.gargoyle = RESIST_BY_KEY.gargoyle || {}).electricity = 1.5;   // Mecha Gargoyle: Unity's cyber-construct shares the Iron Gods robot weakness
 for (const [k, r] of Object.entries(RESIST_BY_KEY)) if (MON[k]) MON[k].resist = r;
 
 // ── Alignment (drives Smite Evil & future alignment-keyed effects) ──────────
@@ -492,17 +509,19 @@ const ALIGN_BY_KEY = {
   fungal_pirate: 'NE', fungal_oracle: 'NE', fungal_captain: 'NE',
   ikualoa: 'N',
   blackout: 'NE', ragh: 'CE',
+  freya: 'LE', jason: 'LE', jmal: 'LE',
   black_sovereign: 'CN',   // enthralled, not evil — smite finds no purchase
   rivozair: 'LE',
   amalokla: 'NE', brogwort: 'CE', auren_vrood: 'NE', vorkstag: 'CE', tar_baphon: 'NE',
   // lawful evil
   kobold: 'LE', kobold_spearman: 'LE', kobold_shaman: 'LE', kobold_rogue: 'LE',
-  wight: 'LE', medusa: 'LE', barbed_devil: 'LE',
+  wight: 'LE', barbed_devil: 'LE',
+  medusa_archer: 'LE', medusa_swashbuckler: 'LE', medusa_sorceress: 'LE',
   // neutral evil
   goblin: 'NE', skeleton: 'NE', skeletal_champion: 'NE', zombie: 'NE', cultist: 'NE', ettercap: 'NE', winter_wolf: 'NE',
   goblin_barbarian: 'CE',
   // chaotic evil
-  ghoul: 'CE', ghast: 'CE', shadow: 'CE', ogre: 'CE', ettin: 'CE', minotaur: 'CE',
+  ghoul: 'CE', ghoul_crusader: 'CE', shadow: 'CE', ogre: 'CE', ettin: 'CE', minotaur: 'CE',
   hill_giant: 'CE', harpy: 'CE', gargoyle: 'CE', chimera: 'CE', abyssal_horror: 'CE',
   // monks — the Chelish agents are lawful EVIL (smite-able); the rest are the
   // disciplined LN martial artists.
@@ -537,9 +556,9 @@ const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 // manufactured weapon to knock away, so they CANNOT be DISARMED (Dungeon._abDisarm
 // also treats animals/vermin/oozes/magical beasts/aberrations as natural by TYPE).
 // Flag the monks (unarmed) and the named natural-attackers that aren't those types.
-const NATURAL_KEYS = ['zombie', 'ghoul', 'ghast', 'shadow', 'wight', 'skeletal_champion', 'gargoyle', 'harpy', 'medusa', 'gibbering_mouther', 'abyssal_horror', 'bog_brute', 'ettercap'];
+const NATURAL_KEYS = ['zombie', 'ghoul', 'ghoul_crusader', 'shadow', 'wight', 'skeletal_champion', 'harpy', 'gibbering_mouther', 'abyssal_horror', 'bog_brute', 'ettercap'];
 NATURAL_KEYS.push('charauka_warrior', 'bentbeak_charney', 'ikualoa',
   'amalokla', 'brogwort');   // bare knuckles, pain touch, athach limbs — nothing to disarm (the Black Sovereign now swings a SWORD — disarm away, if you dare)
-for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k) || ROBOT_KEYS.includes(k)) MON[k].natural = true;   // robots: integrated weaponry — nothing to disarm
+for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k) || ROBOT_KEYS.includes(k) || k === 'gargoyle') MON[k].natural = true;   // robots: integrated weaponry — nothing to disarm
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX, MONK_SFX };
