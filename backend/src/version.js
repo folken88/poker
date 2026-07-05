@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.19.0 2026-07-04  CELEB IS A THEURGE (Kobold Press 3pp) — Stage 1: dual
+//                     arcane+divine PREPARED caster on the true d6/½-BAB chassis
+//                     (glass cannon, no armor). His kit is the UNION of the real
+//                     cleric (divine, WIS DCs) + wizard (arcane, INT DCs) lists —
+//                     the widest spell selection in the game, buff/dispel-forward
+//                     (Tim's playstyle). Dual-stat DCs via per-spell dcStat. NO
+//                     channel, NO domains (he isn't a cleric). Spell Synthesis
+//                     (double-cast) lands in Stage 2.
 //  3.18.1 2026-07-04  ART FIX + POLICY: the v3.17.1 "remove token-* files"
 //                     also stripped 63 HERO-AVATAR tokens the picker uses —
 //                     un-archived; pruned 3 dead manifest entries (Clenchjaw/
@@ -198,4 +206,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.18.1' };
+module.exports = { VERSION: '3.19.0' };

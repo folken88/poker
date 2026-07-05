@@ -54,6 +54,8 @@ const CLASSES = {
   psychic:      { name: 'Psychic',      hd: 6,  bab: '1/2',  fort: 'poor', ref: 'poor', will: 'good' },
   spiritualist: { name: 'Spiritualist', hd: 8,  bab: '3/4',  fort: 'good', ref: 'poor', will: 'good' },
   vigilante:    { name: 'Vigilante',    hd: 8,  bab: '3/4',  fort: 'poor', ref: 'good', will: 'good' },
+  // ---- 3rd-party (Kobold Press, Open Design) ----
+  theurge:      { name: 'Theurge',      hd: 6,  bab: '1/2',  fort: 'poor', ref: 'poor', will: 'good' },   // dual arcane+divine PREPARED caster (Celeb of Nethys) — glass cannon, no armor
 };
 
 const DEFAULT_CLASS = 'fighter';
@@ -90,7 +92,7 @@ const PROFICIENCY = {
   sorcerer: { cats: _SIMPLE }, oracle: { cats: _SIMPLE }, shaman: { cats: _SIMPLE },
   alchemist: { cats: _SIMPLE }, summoner: { cats: _SIMPLE }, kineticist: { cats: _SIMPLE },
   occultist: { cats: _SIMPLE }, spiritualist: { cats: _SIMPLE }, witch: { cats: _SIMPLE },
-  arcanist: { cats: _SIMPLE }, psychic: { cats: _SIMPLE },
+  arcanist: { cats: _SIMPLE }, psychic: { cats: _SIMPLE }, theurge: { cats: _SIMPLE },
   // Restricted specific lists (NOT all simple).
   wizard: { cats: [], weapons: ['dagger', 'quarterstaff'] },
   druid:  { cats: [], weapons: ['dagger', 'quarterstaff', 'scimitar', 'longspear'] },
@@ -150,7 +152,7 @@ function saveFor(classKey, which, level) {
 // bump one stat; MAD classes alternate two). Named characters override these in
 // pf1data/characterProfiles.js (e.g. a finesse-weapon fighter leads with DEX).
 const CASTING_ABILITY = {
-  wizard: 'int', magus: 'int', arcanist: 'int', witch: 'int', alchemist: 'int', investigator: 'int', occultist: 'int',
+  wizard: 'int', magus: 'int', arcanist: 'int', witch: 'int', alchemist: 'int', investigator: 'int', occultist: 'int', theurge: 'int',   // theurge is dual-stat: INT arcane + WIS divine; INT is the allocator-primary, per-spell dcStat picks the right one at cast time
   sorcerer: 'cha', bard: 'cha', paladin: 'cha', antipaladin: 'cha', oracle: 'cha', summoner: 'cha', skald: 'cha', bloodrager: 'cha', mesmerist: 'cha', psychic: 'cha', medium: 'cha',
   cleric: 'wis', druid: 'wis', ranger: 'wis', inquisitor: 'wis', warpriest: 'wis', hunter: 'wis', shaman: 'wis', spiritualist: 'wis',
   // martials & non-casters → null (kineticist uses CON for its blasts):
@@ -175,6 +177,7 @@ const ABILITY_PRIORITY = {
   swashbuckler: ['dex', 'cha', 'con', 'wis'],  // finesse + panache (CHA)
   investigator: ['int', 'dex', 'con', 'wis'],  // studied combat (INT)
   gunslinger:   ['dex', 'wis', 'con', 'cha'],  // DEX shooting + WIS grit
+  theurge:      ['int', 'wis', 'con', 'dex'],  // dual caster — INT arcane (P1) + WIS divine (P2), both pumped (MAD)
 };
 const ASI_PATTERN = {
   fighter: ['str'], barbarian: ['str'], rogue: ['dex'], wizard: ['int'], sorcerer: ['cha'], druid: ['wis'],
@@ -183,6 +186,7 @@ const ASI_PATTERN = {
   cleric: ['wis', 'str'], magus: ['str', 'int'], inquisitor: ['wis', 'str'], oracle: ['cha', 'con'],
   swashbuckler: ['dex', 'cha'], investigator: ['int', 'dex'],   // two-stat (MAD) — keep the 17/14/14/12 spread
   gunslinger: ['dex'],    // SAD — pump DEX (18/14/12 spread); guns hit touch AC anyway
+  theurge: ['int', 'wis'],   // MAD dual caster — alternate INT (arcane) and WIS (divine)
 };
 
 /** The class's casting ability ('int'|'wis'|'cha'|'con') or null for non-casters. */

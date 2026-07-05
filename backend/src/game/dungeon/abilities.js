@@ -43,15 +43,25 @@ const DOMAIN_POWERS = {
   copycat:    { key: 'dom_trickery', name: 'Copycat', icon: '🎭', cost: 'room', effect: 'mirrorimage', target: 'self', uses: DOM_USES, sound: '/audio/spell_invisibility.mp3', desc: 'Domain (Trickery): conjure shimmering mirror-image decoys that soak incoming attacks (Copycat).' },
 };
 
-// Celeb (Cleric of NETHYS, god of magic — Tobias 2026-07-04): a cleric who
-// also wields ARCANE utility his brethren lack. Injected into his ability list
-// and castable set (see _abilitiesFor / _computeCastable), gated to him alone.
-const CELEB_ARCANE = [
-  { key: 'stoneskin',     name: 'Stoneskin',      icon: '🪨', cost: 'room', uses: 2, effect: 'buff', target: 'ally', buff: {}, dr: 10, slvl: 4, minLevel: 7, sticky: true, sound: '/audio/spell_buff_invoke.mp3', desc: 'Nethys arcana — an ally\'s skin turns to stone: DR 10 vs physical blows (this room).', char: 'celeb' },
-  { key: 'overlandflight', name: 'Overland Flight', icon: '🕊️', cost: 'run', uses: 1, effect: 'overlandflight', target: 'self', slvl: 5, minLevel: 9, freeAction: true, canHitFlyers: true, sound: '/audio/spell_invisibility.mp3', desc: 'Nethys arcana — soar for the REST OF THE DUNGEON; grounded foes can\'t reach you.', char: 'celeb' },
-  { key: 'dimensiondoor', name: 'Dimension Door', icon: '🌀', cost: 'room', uses: 1, effect: 'tpstrike', target: 'ally', slvl: 4, minLevel: 7, sound: '/audio/spell_buff_invoke.mp3', desc: 'Nethys arcana — fold space around a melee ally: untouchable until your next turn, next strike reaches ANY foe.', char: 'celeb' },
-  { key: 'teleport',      name: 'Teleport',       icon: '✨', cost: 'room', uses: 1, effect: 'tpstrike', target: 'ally', slvl: 5, minLevel: 9, sound: '/audio/spell_buff_invoke.mp3', desc: 'Nethys arcana — blink a melee ally across the battlefield: untouchable, next strike reaches ANY foe.', char: 'celeb' },
-];
+// Celeb the THEURGE (Kobold Press, Open Design — Tobias 2026-07-04): a dual
+// arcane+divine PREPARED caster with the WIDEST spell selection in the game. His
+// kit is the UNION of the real cleric (divine, WIS-based DCs) and wizard (arcane,
+// INT-based DCs) kits — shallow COPIES tagged with `dcStat` (which ability score
+// sets each save DC — see _spellDC) and `side` ('divine'/'arcane', so Spell
+// Synthesis can pair one of each). No channel, no domains — he isn't a cleric,
+// so those grant paths simply never fire for him. Built once and memoized, but it
+// reads kitFor() live so it tracks any future kit edit. Buff/dispel-forward by the
+// nature of the source kits (Tim played him to buff the party + peel enemy magic).
+// Metamagic auto-variants and martial feat-buffs are filtered out.
+const CELEB_SKIP = new Set(['deadlyaim', 'powerattack', 'magicmissile_quick', 'fireball_int', 'fireball_emp', 'scorch_emp', 'cone_max', 'disint_max']);
+let _celebKit = null;
+function celebKit() {
+  if (_celebKit) return _celebKit;
+  const seen = new Set();
+  const take = (abs, dcStat, side) => abs.filter(a => !CELEB_SKIP.has(a.key) && !seen.has(a.key) && seen.add(a.key)).map(a => ({ ...a, dcStat, side, char: 'celeb' }));
+  _celebKit = take(kitFor('cleric').abilities, 'wis', 'divine').concat(take(kitFor('wizard').abilities, 'int', 'arcane'));
+  return _celebKit;
+}
 
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
@@ -397,8 +407,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
             const d = DOMAINS[dk];
             if (d && d.spells) for (const sk of Object.values(d.spells)) m.castableKeys.add(sk);
           }
-          if (m.playerId === 'celeb') for (const a of CELEB_ARCANE) m.castableKeys.add(a.key);   // Celeb's arcane utility is always castable
         }
+        // THEURGE: Celeb has no per-day prep sheet in this engine — his whole
+        // curated dual list is always "prepared" (slots still gate uses/level).
+        if (m.playerId === 'celeb') for (const a of celebKit()) if (a.slvl != null && a.slvl >= 1) m.castableKeys.add(a.key);
       }
     } catch (_) { m.castableKeys = null; }
   },
@@ -456,9 +468,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // entries append AFTER the kit so slot indices (the action payload contract
   // with the client) stay stable within a room; picks only change at the door.
   _abilitiesFor(m) {
+    if (m.playerId === 'celeb') return celebKit();   // THEURGE: full arcane+divine union, no class kit / no domain powers
     const kit = kitFor(m.cls).abilities;
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
-    if (m.playerId === 'celeb') { const have = new Set(kit.map(a => a.key)); list = list.concat(CELEB_ARCANE.filter(a => !have.has(a.key))); }   // Nethys arcane spells his brethren lack
     return list;
   },
   // DOMAINS Phase B — re-read the picks (they may change between rooms), rebuild
@@ -564,7 +576,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // ability-DC shape instead: 10 + ½ level + casting mod.
   _spellDC(m, ab) {
     const base = (ab && ab.slvl >= 1) ? ab.slvl : Math.floor((m.level || 1) / 2);
-    return 10 + base + (m.castingMod != null ? m.castingMod : CAST_MOD) + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0);
+    // THEURGE dual-stat DCs: an ability tagged dcStat ('int' arcane / 'wis' divine)
+    // keys off THAT ability mod; everything else uses the class casting stat.
+    const stat = (ab && ab.dcStat && m.mods && m.mods[ab.dcStat] != null) ? m.mods[ab.dcStat]
+               : (m.castingMod != null ? m.castingMod : CAST_MOD);
+    return 10 + base + stat + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0);
   },
   // ── PF1 SPELL RESISTANCE ──────────────────────────────────────────────────
   // A creature with SR shrugs off SPELLS unless the caster wins a caster-level

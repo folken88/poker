@@ -91,7 +91,7 @@ function bonusSpells(spellLevel, mod) {
 }
 function spontaneousSlots(level) { return _tableSlots(SORC_SLOTS_BY_LEVEL, level); }
 // Slot table for any per-level slot caster (null = not a slot caster).
-const FULL_PREPARED   = new Set(['cleric', 'druid', 'wizard']);          // full 9-level prepared casters (share the cleric/druid/wizard progression)
+const FULL_PREPARED   = new Set(['cleric', 'druid', 'wizard', 'theurge']);          // full 9-level prepared casters (share the cleric/druid/wizard progression)
 const FOURTH_PREPARED = new Set(['paladin', 'ranger', 'antipaladin']);   // 4th-level prepared casters — no spells before L4
 function slotsFor(cls, level, castMod = 0) {
   let base;
@@ -111,7 +111,7 @@ function slotsFor(cls, level, castMod = 0) {
 }
 
 const POOL_CLASSES   = new Set([]);   // (sorcerer is spontaneous-per-level now)
-const CASTER_CLASSES = new Set(['wizard', 'sorcerer', 'cleric', 'druid', 'bard', 'inquisitor', 'magus', 'oracle']);   // oracle was missing → its spells rendered as flat buttons instead of the spellbook
+const CASTER_CLASSES = new Set(['wizard', 'sorcerer', 'cleric', 'druid', 'bard', 'inquisitor', 'magus', 'oracle', 'theurge']);   // oracle was missing → its spells rendered as flat buttons instead of the spellbook
 const isSpontaneous = (cls) => SPONTANEOUS_CLASSES.has(cls);
 
 // Spell-damage dice count from a level scale.
