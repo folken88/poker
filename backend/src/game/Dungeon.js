@@ -1317,6 +1317,17 @@ class Dungeon {
     if (r && r.conceal) return '— the foe is UNSEEN: 50% concealment foils it (True Seeing / blindsense pierces it).';
     return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`;
   }
+  // FLANK bookkeeping (Tobias 2026-07-04): record this MELEE hero on the foe and
+  // report whether an ally is already in melee with it → this attacker is flanking
+  // (the first to close is alone; everyone who joins that foe afterward flanks).
+  // Melee + hero only; tracked per-room on the foe object (fresh each room).
+  _flankRegister(attacker, target, weapon) {
+    if (!(attacker && attacker.playerId && weapon && !weapon.ranged && target)) return false;
+    target._meleeBy = target._meleeBy || new Set();
+    const flanking = [...target._meleeBy].some(id => id !== attacker.playerId);
+    target._meleeBy.add(attacker.playerId);
+    return flanking;
+  }
   _swingVsAC(attacker, ac, target, extraToHit = 0, offHand = false) {
     const weapon = attacker.weapon;
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
@@ -1363,7 +1374,13 @@ class Dungeon {
     // A target is denied its Dex vs an UNSEEN attacker too — Greater Invisibility
     // keeps a rogue striking from concealment, so every hit is a Sneak Attack.
     const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated || target.blinded > 0)) || !!attacker.greaterInvis;
-    const sneakOk = SNEAK_CLASSES.has(cls) && denied;
+    // FLANK (Tobias 2026-07-04): once TWO+ melee allies work the SAME foe, they
+    // flank it — +2 to hit, and Sneak Attack switches on for rogue-likes. The
+    // first to close gets nothing (moved up alone); every ally who joins the
+    // melee on that foe afterward is flanking. Tracked per-room on the foe.
+    const flanking = this._flankRegister(attacker, target, weapon);
+    const flankHit = flanking ? 2 : 0;   // PF1 flanking bonus (both flankers, once positioned)
+    const sneakOk = SNEAK_CLASSES.has(cls) && (denied || flanking);
     const sneakDice = sneakOk ? Math.min(SNEAK_DICE_CAP, Math.max(1, Math.ceil(lvl / 2))) : 0;
     // Sticky room buffs (Rage / Judgment / Bane / Inspire Courage / Prayer)
     // PLUS run-long buffs (Bless's +1 to-hit) that persist across rooms.
@@ -1402,7 +1419,7 @@ class Dungeon {
     // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
     // now carry high-level scaling — see the iterative loop in _playerAttack).
     const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon, { offHand }) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };   // off-hand swing → ½ ability mod to DAMAGE (PF1 two-weapon fighting)
-    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF;   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
+    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF;   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
     const roll = dRoll(20), total = roll + toHit;
     // Luck domain — GOOD FORTUNE: the next missed swing (fumble included) is
     // rerolled once, keep the better outcome. Consumed on the reroll.
@@ -1461,7 +1478,7 @@ class Dungeon {
     const impCrit = ff.impCrit || (weapon.impCritAt && lvl >= weapon.impCritAt) || (swashFin && lvl >= 5) || arcKeen;   // fighter / swashbuckler / magus arcane-pool keen / weapon-borne (Bastard's Blade at 9) — don't stack
     const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
     const critFocus = (ff.critFocus ? 4 : 0) + (ff.critMastery ? 4 : 0);   // Critical Focus +4, Critical Mastery +4 more (+8 confirm)
-    if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
+    if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
     // Precision (sneak / swashbuckler Precise Strike), smite, and bane dice ride on
     // top — NOT multiplied by a crit.
     let sneakDmg = 0;

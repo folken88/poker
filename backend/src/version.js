@@ -3,6 +3,10 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.21.0 2026-07-04  FLANKING (Tobias): once a SECOND melee ally joins the same
+//                     foe, both flank it — +2 to hit, and Sneak Attack turns on
+//                     for rogue-likes (Kelda + Kai). The first to close gets
+//                     nothing (moved up alone); tracked per-room on the foe.
 //  3.20.0 2026-07-04  SLAYER is a playable class (ACG, ranger+rogue) — Stage 1:
 //                     now human-selectable, DEX-finesse build, and Kai Ginn is a
 //                     Slayer. He already had the chassis (d10/full-BAB/good
@@ -225,4 +229,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.20.0' };
+module.exports = { VERSION: '3.21.0' };
