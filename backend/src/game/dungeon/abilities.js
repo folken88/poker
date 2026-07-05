@@ -75,6 +75,14 @@ function celebKit() {
   return _celebKit;
 }
 
+// SLAYER — Studied Target (ACG). A SWIFT-action mark (freeAction, no use limit):
+// the slayer reads a foe's guard, and every attack they make against that MARKED
+// foe gains +N insight to hit AND damage (N = 1 + 1 per 5 levels → +1/+2/+3/+4/+5
+// at 1/5/10/15/20). Re-study any turn to switch foes; it holds until then or the
+// room ends. Injected into the slayer kit (see _abilitiesFor); the bonus lands in
+// _swingVsAC (attacker.studiedId === target.uid → studiedN).
+const STUDIED_TARGET = { key: 'studiedtarget', name: 'Studied Target', icon: '🎯', cost: 'free', effect: 'studytarget', target: 'enemy', freeAction: true, desc: 'SWIFT: study a foe — +N to hit & damage against it (N = 1 + 1 per 5 levels). Re-study any turn to switch marks; lasts until then or the room ends.' };
+
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
 const MAGUS_SPELLSTRIKE_SFX = {
@@ -289,6 +297,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       save_debuff: () => this._abSaveDebuff(m, ab, payload),
       charm:       () => this._abCharm(m, ab, payload),
       dominate:    () => this._abDominate(m, ab, payload),
+      studytarget: () => this._abStudyTarget(m, ab, payload),
       masscharm:   () => this._abMassCharm(m, ab, payload),
       exhaust:     () => this._abExhaust(m, ab, payload),
       prismatic:   () => this._abPrismatic(m, ab, payload),
@@ -511,6 +520,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m.playerId === 'celeb') return celebKit();   // THEURGE: full arcane+divine union, no class kit / no domain powers
     const kit = kitFor(m.cls).abilities;
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
+    if (m.cls === 'slayer') list = list.concat(STUDIED_TARGET);   // SLAYER: swift Studied Target mark (ACG)
     return list;
   },
   // DOMAINS Phase B — re-read the picks (they may change between rooms), rebuild
@@ -538,6 +548,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.slots = slotsFor(m.cls, m.level || 1, m.castingMod);   // per-spell-level slots (base + casting-stat bonus + domain/school)
     this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
     if (m.playerId === 'celeb') { const L = m.level || 1; m.synthUses = L >= 17 ? 3 : L >= 11 ? 2 : L >= 5 ? 1 : 0; }   // SPELL SYNTHESIS (Kobold Press): usable 1/2/3 times per room at L5/11/17
+    if (m.cls === 'slayer') { m.studiedId = null; m.studiedN = 0; }   // SLAYER: Studied Target mark clears each room (fresh foes)
     m.abilityUses = {};
     for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
@@ -1802,6 +1813,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       e.charmed = false; e.taunted = null;   // domination supersedes lesser sway
       this._note(`${ab.icon} 💫 ${m.nickname} casts ${ab.name} — ${e.name}'s eyes glaze; it is DOMINATED and turns on its own! [Will ${sv.total} vs DC ${dc}]`, ab.sound);
     }
+    this._echoToTable(ab.sound);
+  },
+  // SLAYER — Studied Target: mark ONE foe. A swift action (no save, no SR — it's an
+  // Ex study of their guard), so the slayer still attacks this turn. Every attack
+  // against the marked foe gains +N to hit & damage (applied in _swingVsAC). Any
+  // foe, mindless or not — you're reading how it fights, not its thoughts.
+  _abStudyTarget(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.studiedId = e.uid;
+    m.studiedN = 1 + Math.floor((m.level || 1) / 5);
+    this._note(`${ab.icon} ${m.nickname} STUDIES ${e.name} — reading its guard for the kill: +${m.studiedN} to hit and damage against it.`, ab.sound);
     this._echoToTable(ab.sound);
   },
   // Charm Person — a living foe, Will save or CHARMED: it stops attacking the

@@ -1380,6 +1380,10 @@ class Dungeon {
     // melee on that foe afterward is flanking. Tracked per-room on the foe.
     const flanking = this._flankRegister(attacker, target, weapon);
     const flankHit = flanking ? 2 : 0;   // PF1 flanking bonus (both flankers, once positioned)
+    // SLAYER Studied Target: the foe this slayer has MARKED takes +N insight to hit
+    // AND damage from them (N scales with the slayer's level; set by _abStudyTarget).
+    const studied = !!(target && attacker.studiedId != null && attacker.studiedId === target.uid);
+    const studiedN = studied ? (attacker.studiedN || 0) : 0;
     const sneakOk = SNEAK_CLASSES.has(cls) && (denied || flanking);
     const sneakDice = sneakOk ? Math.min(SNEAK_DICE_CAP, Math.max(1, Math.ceil(lvl / 2))) : 0;
     // Sticky room buffs (Rage / Judgment / Bane / Inspire Courage / Prayer)
@@ -1419,7 +1423,7 @@ class Dungeon {
     // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
     // now carry high-level scaling — see the iterative loop in _playerAttack).
     const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon, { offHand }) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };   // off-hand swing → ½ ability mod to DAMAGE (PF1 two-weapon fighting)
-    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF;   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
+    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + studiedN + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF;   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
     const roll = dRoll(20), total = roll + toHit;
     // Luck domain — GOOD FORTUNE: the next missed swing (fumble included) is
     // rerolled once, keep the better outcome. Consumed on the reroll.
@@ -1478,7 +1482,7 @@ class Dungeon {
     const impCrit = ff.impCrit || (weapon.impCritAt && lvl >= weapon.impCritAt) || (swashFin && lvl >= 5) || arcKeen;   // fighter / swashbuckler / magus arcane-pool keen / weapon-borne (Bastard's Blade at 9) — don't stack
     const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
     const critFocus = (ff.critFocus ? 4 : 0) + (ff.critMastery ? 4 : 0);   // Critical Focus +4, Critical Mastery +4 more (+8 confirm)
-    if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
+    if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + studiedN + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
     // Precision (sneak / swashbuckler Precise Strike), smite, and bane dice ride on
     // top — NOT multiplied by a crit.
     let sneakDmg = 0;
@@ -1487,6 +1491,7 @@ class Dungeon {
     if (buff.bonusDice) dmg += dRollN(buff.bonusDice, 6);   // misc bonus dice
     if (baneOn) dmg += dRollN(BANE_DICE, 6);                // Inquisitor Bane — +2d6 vs the declared type
     if (smite) dmg += 2 * lvl;   // Smite Evil: +double level damage
+    if (studiedN) dmg += studiedN;   // Studied Target: +N insight damage vs the marked foe (un-multiplied)
     // DOMAIN riders — Strength Surge (+½ level dmg on this one swing; to-hit added
     // above, consumed at the top) and War's Battle Rage (+level dmg on ONE landed
     // hit — consumed here; a fully-missed action forfeits it, cleared in
@@ -1589,6 +1594,13 @@ class Dungeon {
     // kept on for the damage, eased off against a target too well-armored to power
     // through. Done here so the swing that follows uses the right stance.
     this._botStance(m, foes);
+    // SLAYER auto-STUDIES its prey (Studied Target is a swift/free action): mark the
+    // foe it's about to fight so its attacks land the +N insight bonus. Re-mark when
+    // the old mark is dead or gone.
+    if (m.cls === 'slayer' && (m.studiedId == null || !foes.some(e => e.uid === m.studiedId && e.hp > 0))) {
+      const prey = this._preferredFoe(m, foes);
+      if (prey) { m.studiedId = prey.uid; m.studiedN = 1 + Math.floor((m.level || 1) / 5); this._note(`🎯 ${m.nickname} studies ${prey.name} — marking it for the kill.`); }
+    }
     // SPELL SYNTHESIS (Celeb the Theurge — Kobold Press): a limited number of
     // times per room (1/2/3 at L5/11/17) he casts ONE arcane + ONE divine spell in
     // a SINGLE turn. He lines the pair up by asking his own brain twice, once per

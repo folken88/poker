@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.24.0 2026-07-05  SLAYER Studied Target (Stage 2, completes the class): a
+//                     SWIFT/free-action mark on ONE foe — every attack the slayer
+//                     makes against it gains +N insight to hit AND damage
+//                     (N = 1 + 1 per 5 levels → +1/+2/+3/+4/+5 at 1/5/10/15/20).
+//                     Re-study any turn to switch marks; clears each room. Bonus
+//                     mirrors Smite in _swingVsAC; the slayer bot auto-studies its
+//                     prey. Kai Ginn now marks his quarry.
 //  3.23.2 2026-07-05  Reporting pass 3 (Josh): cut the DR FLUFF — the once-
 //                     per-fight reveal is now terse "DR 10/magic" (was "…only an
 //                     enchanted weapon bites through / rely on spell damage"),
@@ -258,4 +265,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.23.2' };
+module.exports = { VERSION: '3.24.0' };
