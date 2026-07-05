@@ -3,11 +3,18 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
-//  3.17.3 2026-07-04  CROP STATION zoom-out floor = "contain": scrolling out
-//                     now stops when the WHOLE image just fits the card (grey
-//                     letterbox) instead of shrinking to a tiny pic floating in
-//                     a void — the dark bars are intentional padding for art
-//                     whose shape doesn't match the tall card, not a load bug
+//  3.18.0 2026-07-04  CROP STATION made NON-DESTRUCTIVE (after the earlier
+//                     display bug caused silent repeat-saves that baked 215
+//                     portraits down to 570×600): all 216 restored from their
+//                     .orig. Now the editor ALWAYS loads the pristine original
+//                     (new /api/croporig serves the .orig), Save bakes the crop
+//                     at the ORIGINAL's NATIVE resolution (no downsample, no
+//                     compounding), and the zoom floor is "fill" (no confusing
+//                     letterbox — the game card always covers). Re-crop anything
+//                     forever; the original is never touched.
+//  3.17.3 2026-07-04  CROP STATION zoom-out floor = "contain" (SUPERSEDED by
+//                     3.18.0's fill floor): scrolling out stopped at the whole
+//                     image fitting instead of shrinking into a void
 //  3.17.2 2026-07-04  GEARGHOST grounded: the haunted war-chassis is a HEAVY
 //                     mech, NOT a flyer — flight removed, reprofiled slow/tanky
 //                     (Large, 4-legged, HP 45→60, one 1d10+6 spectral slam,
@@ -184,4 +191,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.17.3' };
+module.exports = { VERSION: '3.18.0' };

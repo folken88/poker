@@ -137,6 +137,24 @@ app.get('/api/croplist', (_req, res) => {
     res.json(out);
   } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
 });
+// GET /api/croporig?kind=&name= -> streams the PRISTINE original (the .orig if a
+// crop was ever baked, else the current file) so the Crop Station always edits the
+// untouched source — re-cropping never compounds and you can always zoom back out.
+app.get('/api/croporig', (req, res) => {
+  try {
+    const fsx = require('fs');
+    const { kind, name } = req.query || {};
+    if (!CROP_DIRS[kind]) return res.status(400).end();
+    const base = String(name || '').replace(/\.webp$/i, '');
+    if (!/^[\w.-]+$/.test(base) || base.includes('..')) return res.status(400).end();
+    const dest = path.join(cropDir(kind), base + '.webp');
+    const file = fsx.existsSync(dest + '.orig') ? dest + '.orig' : dest;   // prefer the pristine original
+    if (!fsx.existsSync(file)) return res.status(404).end();
+    res.type('image/webp');
+    res.setHeader('Cache-Control', 'no-store');
+    fsx.createReadStream(file).pipe(res);
+  } catch (e) { res.status(500).end(); }
+});
 app.post('/api/cropsave', express.json({ limit: '12mb' }), (req, res) => {
   try {
     const fsx = require('fs');

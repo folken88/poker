@@ -5291,27 +5291,25 @@
     const btn = document.getElementById('cropArtBtn');
     if (!btn) return;
     const CW = 190, CH = 200, SCALE = 2;              // true card size + editor magnification
-    let items = [], cur = -1, img = null, cover = 1, zoom = 1, minZoom = 1, ox = 0, oy = 0, dirty = false;
+    let items = [], cur = -1, img = null, cover = 1, zoom = 1, ox = 0, oy = 0, dirty = false;
     let root = null, edArt = null, trueArt = null, sel = null, saveBtn = null, nameEls = [];
-    const srcUrl = (it) => '/' + (it.kind === 'portraits' ? 'portraits' : 'tokens') + '/' + it.name + '.webp';
+    // ALWAYS edit the pristine ORIGINAL — the server serves the untouched .orig
+    // (if a crop was ever baked) so re-cropping never compounds quality loss and
+    // you can always zoom back out to the whole source image.
+    const origUrl = (it) => '/api/croporig?kind=' + it.kind + '&name=' + encodeURIComponent(it.name);
     const clampPan = () => {
-      // When the art is BIGGER than the card, clamp so no gap shows. When it's
-      // SMALLER (zoomed out below cover — for the pre-tight art like Conchobar),
-      // CENTER it and let the grey card show through (matches the in-game look).
+      // Cover-only editor: at zoom >= 1 the image always fills the card, so clamp
+      // the pan so no gap ever shows — the in-game card always covers too, so a
+      // letterbox here would just be a lie about how the card actually looks.
       const bw = img.naturalWidth * cover * zoom, bh = img.naturalHeight * cover * zoom;
-      ox = bw >= CW ? Math.min(0, Math.max(CW - bw, ox)) : (CW - bw) / 2;
-      oy = bh >= CH ? Math.min(0, Math.max(CH - bh, oy)) : (CH - bh) / 2;
+      ox = Math.min(0, Math.max(CW - bw, ox));
+      oy = Math.min(0, Math.max(CH - bh, oy));
     };
-    // Per-image cache-buster — BUMPED on every save so both the editor AND the
-    // browser fetch the freshly-baked file (the old code busted only the math
-    // Image, not the background-image → saves looked like they didn't stick).
-    const busts = {};
-    const srcB = (it) => { const u = srcUrl(it); return u + '?t=' + (busts[u] || (busts[u] = Date.now())); };
     const paint = () => {
       if (!img) return;
       const bw = img.naturalWidth * cover * zoom, bh = img.naturalHeight * cover * zoom;
       for (const [el, k] of [[edArt, SCALE], [trueArt, 1]]) {
-        el.style.backgroundImage = 'url("' + srcB(items[cur]) + '")';
+        el.style.backgroundImage = 'url("' + origUrl(items[cur]) + '")';
         el.style.backgroundSize = (bw * k) + 'px ' + (bh * k) + 'px';
         el.style.backgroundPosition = (ox * k) + 'px ' + (oy * k) + 'px';
       }
@@ -5325,27 +5323,29 @@
       img = new Image();
       img.onload = () => {
         cover = Math.max(CW / img.naturalWidth, CH / img.naturalHeight);   // background-size: cover
-        minZoom = Math.min(CW / img.naturalWidth, CH / img.naturalHeight) / cover;   // zoom-OUT floor: stop when the WHOLE image just fits (contain) — never a tiny pic floating in grey
         zoom = 1; ox = (CW - img.naturalWidth * cover) / 2; oy = 0;        // start: cover, centered X, top Y (the game default)
         clampPan(); paint();
       };
       img.onerror = () => toast('Could not load ' + it.name, true);
-      img.src = srcB(it);
+      img.src = origUrl(it);
     };
     const save = () => {
       if (!img || cur < 0) return;
       const it = items[cur];
-      // Bake EXACTLY the visible card: grey letterbox (matches the #4a4a4a card)
-      // then the image at its on-card position/size, supersampled 3x. Correct
-      // for zoom-IN (fills) and zoom-OUT (centered with grey borders) alike.
-      const bw = img.naturalWidth * cover * zoom, bh = img.naturalHeight * cover * zoom;
-      const OS = 3;
+      // Bake the visible card window from the ORIGINAL at its NATIVE resolution —
+      // crop, never downsample. `img` is always the pristine .orig, so re-cropping
+      // never compounds. The server still keeps the .orig, so nothing is destroyed.
+      const scale = cover * zoom;                                  // original px -> card px
+      const srcX = Math.max(0, -ox / scale), srcY = Math.max(0, -oy / scale);
+      const srcW = CW / scale, srcH = CH / scale;                  // card window in ORIGINAL px (already card aspect)
+      const cap = 1000;                                            // bound the output long side
+      const os = Math.min(1, cap / Math.max(srcW, srcH));
+      const outW = Math.max(1, Math.round(srcW * os)), outH = Math.max(1, Math.round(srcH * os));
       const c = document.createElement('canvas');
-      c.width = CW * OS; c.height = CH * OS;
+      c.width = outW; c.height = outH;
       const g = c.getContext('2d');
       g.imageSmoothingQuality = 'high';
-      g.fillStyle = '#4a4a4a'; g.fillRect(0, 0, c.width, c.height);
-      g.drawImage(img, ox * OS, oy * OS, bw * OS, bh * OS);
+      g.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
       const dataUrl = c.toDataURL('image/webp', 0.92);
       saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
       fetch('/api/cropsave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: it.kind, name: it.name, dataUrl }) })
@@ -5353,13 +5353,10 @@
         .then(r => {
           saveBtn.disabled = false;
           if (!r.ok) { saveBtn.textContent = '💾 Save crop'; toast(r.error || 'Save failed', true); return; }
-          saveBtn.textContent = '✓ Saved';
+          saveBtn.textContent = '✓ Saved'; dirty = false;
           if (!/^✓ /.test(sel.options[cur].textContent)) sel.options[cur].textContent = '✓ ' + sel.options[cur].textContent;
-          busts[srcUrl(it)] = Date.now();   // point the editor at the freshly-baked file
-          const nw = new Image();
-          nw.onload = () => { img = nw; cover = Math.max(CW / img.naturalWidth, CH / img.naturalHeight); minZoom = Math.min(CW / img.naturalWidth, CH / img.naturalHeight) / cover; zoom = 1; ox = (CW - img.naturalWidth * cover) / 2; oy = 0; clampPan(); paint(); };   // reload the saved image IN PLACE so you SEE it stuck (no more auto-jump)
-          nw.src = srcB(it);
-          toast('🖼 ' + it.name + ' saved. ▶ for the next one.');
+          // Keep editing the ORIGINAL in place (no reload) — tweak and re-save freely.
+          toast('🖼 ' + it.name + ' framed at ' + outW + '×' + outH + '. Original kept — re-crop anytime. Refresh to see it in the dungeon.');
         })
         .catch(() => { saveBtn.disabled = false; saveBtn.textContent = '💾 Save crop'; toast('Save failed', true); });
     };
@@ -5388,7 +5385,7 @@
         '<div><div style="color:#888;font-size:.7rem;margin-bottom:4px">IN-GAME SIZE</div>' +
         '<div style="position:relative;width:' + CW + 'px;height:' + CH + 'px;border-radius:10px;overflow:hidden;border:1px solid rgba(217,176,106,.3);background:#4a4a4a">' +
         '<div id="cropTrueArt" style="position:absolute;inset:0;background-repeat:no-repeat"></div>' + cardChrome(1) + '</div>' +
-        '<div style="color:#666;font-size:.65rem;margin-top:6px;max-width:190px">Save overwrites the image (first save keeps a .orig on the server). Cropped cards need no framing nudges.</div></div></div></div>';
+        '<div style="color:#666;font-size:.65rem;margin-top:6px;max-width:190px">Editor always shows the untouched original. Save bakes this framing at full resolution and keeps the original on the server — re-crop any image anytime, nothing is lost. Scroll = zoom IN, drag = reframe.</div></div></div></div>';
       document.body.appendChild(root);
       sel = root.querySelector('#cropSel'); saveBtn = root.querySelector('#cropSave');
       edArt = root.querySelector('#cropEdArt'); trueArt = root.querySelector('#cropTrueArt');
@@ -5415,7 +5412,7 @@
         const r = ed.getBoundingClientRect();
         const px = (e.clientX - r.left) / SCALE, py = (e.clientY - r.top) / SCALE;   // cursor point in card coords
         const old = zoom;
-        zoom = Math.min(6, Math.max(minZoom, zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));   // floor = contain (whole image just fits); can still zoom OUT below cover for pre-tight art, but not into a void
+        zoom = Math.min(6, Math.max(1, zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));   // floor = cover (fill): zoom IN to crop tighter, pan to reframe. The game card always covers, so there's no zoom-out-to-letterbox
         const f = (cover * zoom) / (cover * old);
         ox = px - (px - ox) * f; oy = py - (py - oy) * f;   // zoom about the cursor (tokenator-style)
         clampPan(); paint(); dirty = true;
