@@ -933,8 +933,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   _loadoutModel(m) {
     const spont = isSpontaneous(m.cls);
-    const pool = loadouts.kitSpells(m.cls)
-      .filter(ab => this._charAllows(ab, m) && (m.level || 1) >= (ab.minLevel || 1))   // only spells THIS character can cast at their level
+    // THEURGE (Celeb): the loadout system has no 'theurge' KIT, so his pool is his
+    // injected dual kit (celebKit) rather than kitSpells(cls) — otherwise the
+    // Spellbook shows an empty list at every level.
+    const src = (m.playerId === 'celeb') ? celebKit().filter(ab => ab.slvl != null && ab.slvl >= 1) : loadouts.kitSpells(m.cls).filter(ab => this._charAllows(ab, m));
+    const pool = src
+      .filter(ab => (m.level || 1) >= (ab.minLevel || 1))   // only spells THIS character can cast at their level
       .map(ab => ({ key: ab.key, name: ab.name, icon: ab.icon || '✨', slvl: ab.slvl }));
     const caps = spont ? null : (slotsFor(m.cls, m.level || 1, m.castingMod) || {});
     return spont
@@ -948,7 +952,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // level's cap with strays. (View-only here; a toggle persists the clean map.)
   _loadoutRebucket(m, prep) {
     const bySlvl = {};
-    for (const s of loadouts.kitSpells(m.cls)) bySlvl[s.key] = String(s.slvl);
+    for (const s of (m.playerId === 'celeb' ? celebKit() : loadouts.kitSpells(m.cls))) if (s.slvl != null) bySlvl[s.key] = String(s.slvl);
     const caps = slotsFor(m.cls, m.level || 1, m.castingMod) || {};
     const out = {};
     for (const arr of Object.values(prep || {})) {

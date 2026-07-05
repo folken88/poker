@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.19.3 2026-07-04  Theurge spellbook fix: the loadout system has no 'theurge'
+//                     KIT, so Celeb's Spellbook pool read EMPTY at every level
+//                     (looked like "no level-1 spells"). _loadoutModel/_rebucket
+//                     now source his injected celebKit for the display; his
+//                     in-combat casting was already correct.
 //  3.19.2 2026-07-04  Theurge PREP SPLIT: Celeb's casts each spell level are now
 //                     HALF arcane / HALF divine (two pools). Spells on BOTH class
 //                     lists (Dispel Magic, Prot. Evil, Hold Person…) are 'both' —
@@ -214,4 +219,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.19.2' };
+module.exports = { VERSION: '3.19.3' };
