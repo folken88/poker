@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.17.1 2026-07-04  Zombie → GHOUL ANTIPALADIN (Antipaladin 13 risen as a
+//                     ghoul: paralysis, Touch of Corruption drain, dread aura,
+//                     channels negative for undead). CROP-SAVE FIX: editor now
+//                     cache-busts the background so saves stick + reflect;
+//                     zoom-out bakes grey letterbox. token-* art archived,
+//                     abrogail-thrune-ii removed.
 //  3.17.0 2026-07-04  TWO NEW AI HEROES: BINCH (Cleric of Besmara —
 //                     Trickery[new domain]+Liberation, older-woman voice) and
 //                     CELEB (Cleric of Nethys — wears NO armor, wields arcane
@@ -168,4 +174,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.17.0' };
+module.exports = { VERSION: '3.17.1' };

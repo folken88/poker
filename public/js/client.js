@@ -5302,11 +5302,16 @@
       ox = bw >= CW ? Math.min(0, Math.max(CW - bw, ox)) : (CW - bw) / 2;
       oy = bh >= CH ? Math.min(0, Math.max(CH - bh, oy)) : (CH - bh) / 2;
     };
+    // Per-image cache-buster — BUMPED on every save so both the editor AND the
+    // browser fetch the freshly-baked file (the old code busted only the math
+    // Image, not the background-image → saves looked like they didn't stick).
+    const busts = {};
+    const srcB = (it) => { const u = srcUrl(it); return u + '?t=' + (busts[u] || (busts[u] = Date.now())); };
     const paint = () => {
       if (!img) return;
       const bw = img.naturalWidth * cover * zoom, bh = img.naturalHeight * cover * zoom;
       for (const [el, k] of [[edArt, SCALE], [trueArt, 1]]) {
-        el.style.backgroundImage = 'url(' + srcUrl(items[cur]) + ')';
+        el.style.backgroundImage = 'url("' + srcB(items[cur]) + '")';
         el.style.backgroundSize = (bw * k) + 'px ' + (bh * k) + 'px';
         el.style.backgroundPosition = (ox * k) + 'px ' + (oy * k) + 'px';
       }
@@ -5324,18 +5329,23 @@
         clampPan(); paint();
       };
       img.onerror = () => toast('Could not load ' + it.name, true);
-      img.src = srcUrl(it) + '?t=' + Date.now();
+      img.src = srcB(it);
     };
     const save = () => {
       if (!img || cur < 0) return;
       const it = items[cur];
-      const s = cover * zoom;
+      // Bake EXACTLY the visible card: grey letterbox (matches the #4a4a4a card)
+      // then the image at its on-card position/size, supersampled 3x. Correct
+      // for zoom-IN (fills) and zoom-OUT (centered with grey borders) alike.
+      const bw = img.naturalWidth * cover * zoom, bh = img.naturalHeight * cover * zoom;
+      const OS = 3;
       const c = document.createElement('canvas');
-      const outScale = Math.min(3, 1 / s * 2);   // bake at up to ~2x card px, never upscale past source
-      c.width = Math.round(CW * Math.max(1, outScale)); c.height = Math.round(CH * Math.max(1, outScale));
+      c.width = CW * OS; c.height = CH * OS;
       const g = c.getContext('2d');
-      g.drawImage(img, -ox / s, -oy / s, CW / s, CH / s, 0, 0, c.width, c.height);
-      const dataUrl = c.toDataURL('image/webp', 0.9);
+      g.imageSmoothingQuality = 'high';
+      g.fillStyle = '#4a4a4a'; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, ox * OS, oy * OS, bw * OS, bh * OS);
+      const dataUrl = c.toDataURL('image/webp', 0.92);
       saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
       fetch('/api/cropsave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: it.kind, name: it.name, dataUrl }) })
         .then(r => r.json())
@@ -5343,9 +5353,12 @@
           saveBtn.disabled = false;
           if (!r.ok) { saveBtn.textContent = '💾 Save crop'; toast(r.error || 'Save failed', true); return; }
           saveBtn.textContent = '✓ Saved';
-          sel.options[cur].textContent = '✓ ' + sel.options[cur].textContent.replace(/^✓ /, '');
-          toast('🖼 ' + it.name + ' saved — live on the next render.');
-          setTimeout(() => load(cur + 1), 450);   // auto-advance to the next image
+          if (!/^✓ /.test(sel.options[cur].textContent)) sel.options[cur].textContent = '✓ ' + sel.options[cur].textContent;
+          busts[srcUrl(it)] = Date.now();   // point the editor at the freshly-baked file
+          const nw = new Image();
+          nw.onload = () => { img = nw; cover = Math.max(CW / img.naturalWidth, CH / img.naturalHeight); zoom = 1; ox = (CW - img.naturalWidth * cover) / 2; oy = 0; clampPan(); paint(); };   // reload the saved image IN PLACE so you SEE it stuck (no more auto-jump)
+          nw.src = srcB(it);
+          toast('🖼 ' + it.name + ' saved. ▶ for the next one.');
         })
         .catch(() => { saveBtn.disabled = false; saveBtn.textContent = '💾 Save crop'; toast('Save failed', true); });
     };
