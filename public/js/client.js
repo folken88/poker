@@ -2007,6 +2007,7 @@
         let s = `${i + 1}: ${en.name}, ${Math.max(0, en.hp | 0)} of ${en.maxHp | 0} HP`;
         if (en.flying) s += ', flying';
         if (en.boss) s += ', boss';
+        if (en.cr) s += `, CR ${en.cr}`;   // CR lives in the INSPECTOR (Josh 2026-07-05), not the quick target list
         if (en.drDesc) s += `, ${en.drDesc}`;   // e.g. "DR 15/bludgeoning — slashing glances off" (why hits run low)
         if (c.length) s += ', ' + c.join(', ');
         return s;
@@ -2204,7 +2205,7 @@
           // 'missile') keep snapping to the deadliest, as Josh prefers.
           if (ab.effect !== 'missile' && aliveE.length > 1) {
             _dunTarget = { kind: 'ability', slot, label: ab.name };
-            const list = aliveE.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}${x.cr ? `, CR ${x.cr}` : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
+            const list = aliveE.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
             sayU(`${ab.name} — select a target, deadliest first: ${list}.`);
             return;
           }
@@ -2619,7 +2620,7 @@
         const singleEnemyTarget = act.kind === 'attack' || (ab && ab.target === 'enemy');
         if (singleEnemyTarget && alive.length > 1) {
           _dunTarget = { kind: act.kind === 'attack' ? 'attack' : 'ability', slot: act.slot, label };
-          const list = alive.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}${x.cr ? `, CR ${x.cr}` : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
+          const list = alive.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
           window.BlindMode.speak(`${label} — select a target, deadliest first: ${list}.`, 'urgent');
           return;
         }

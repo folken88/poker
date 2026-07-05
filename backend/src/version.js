@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.23.1 2026-07-05  Reporting pass 2 (Josh, mostly client/live): blind TURN
+//                     PROMPT is now just "Your turn." (no HP/enemy/spell dump —
+//                     he uses H/E/?); the quick TARGET LIST is name + HP + flying
+//                     only, with CR moved into the E-inspector (enemyDesc). Plus:
+//                     the CR-16 devil-rogue '???' (unspeakable for TTS) is now
+//                     the "Nameless Horror". (Still open: segmented S, rage trim,
+//                     dominated-foe turns.)
 //  3.23.0 2026-07-05  CONSISTENT/SUCCINCT REPORTING (Josh) — pass 1: dropped HP
 //                     totals from every attack line (enemy→hero hits, damage
 //                     spells, spellstrikes, missiles, rays) — text AND TTS now
@@ -243,4 +250,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.23.0' };
+module.exports = { VERSION: '3.23.1' };

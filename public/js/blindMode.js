@@ -1362,8 +1362,12 @@
     // no matter which list you heard it in.
     const alive = (d.enemies || []).filter(e => e.alive).sort((a, b) => _crVal(b.cr) - _crVal(a.cr));
     if (!alive.length) return 'No enemies.';
-    if (alive.length === 1) return `Enemy: ${alive[0].name}, ${alive[0].hp} hit points${alive[0].sickened ? ', sickened' : ''}.`;
-    return `${alive.length} enemies, deadliest first. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${e.hp}${e.sickened ? ', sickened' : ''}`).join('. ') + '.';
+    // QUICK TARGET LIST (Josh 2026-07-05): name, HP, and flying ONLY. Flying is
+    // tactically essential (grounded melee can't reach a flyer). Everything else —
+    // CR, DR, debuffs — lives in the E-inspector, not read at you when you pick.
+    const fly = (e) => e.flying ? ', flying' : '';
+    if (alive.length === 1) return `Enemy: ${alive[0].name}, ${alive[0].hp} hit points${fly(alive[0])}.`;
+    return `${alive.length} enemies, deadliest first. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${e.hp}${fly(e)}`).join('. ') + '.';
   }
   // "Say attack, <ability 1>, <ability 2>, or bail." built from the player's kit.
   function _dunActionsHint(d) {
@@ -1436,7 +1440,7 @@
       _dun.turnKey = turnKey;
       if (st.status === 'combat' && st.turn && st.turn.kind === 'party' && st.turn.id === meId) {
         const me = (st.party||[]).find(m => m.playerId === meId) || {};
-        speak(`Your turn. ${me.hp} hit points. ${_dunEnemyPhrase(st)} ${_dunActionsHint(st)}`, 'urgent');
+        speak('Your turn.', 'urgent');   // Josh 2026-07-05: just prompt to act — no HP / enemy / spell-list dump. He uses H (own HP), E (enemies), ? (help for actions).
       } else if (st.status === 'exploring' && _dun.status === 'combat') {
         earcon('clear');   // audible "room cleared" cue so a blind player knows the end-of-room report is coming (Josh)
         // Only give the "open the next door / bail" prompt NOW if there's no loot to
