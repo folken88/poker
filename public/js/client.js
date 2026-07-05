@@ -634,6 +634,30 @@
       if (e.key === 'Escape' && topbarMenu.classList.contains('is-open')) closeMenu();
     });
 
+    // ── Abadar bank purse (#mePurse) — keyboard/VoiceOver access (Josh 2026-07-05).
+    // The debt + pay-down popover was revealed ONLY on :hover, so a blind player
+    // could focus the chips badge and hear the balance, then get STRANDED (the
+    // popover never opened, so he couldn't see or pay his debt). Wire it as a
+    // proper click / Enter disclosure — `.is-open` already reveals the popover
+    // (the same class the touch path uses); move focus into it on open.
+    const mePurse = $('#mePurse'), mePursePop = $('#mePursePop');
+    if (mePurse) {
+      mePurse.setAttribute('role', 'button');
+      mePurse.setAttribute('aria-haspopup', 'dialog');
+      mePurse.setAttribute('aria-expanded', 'false');
+      const setPurse = (o) => {
+        mePurse.classList.toggle('is-open', o);
+        mePurse.setAttribute('aria-expanded', o ? 'true' : 'false');
+        if (o && mePursePop) { const f = mePursePop.querySelector('button, a, [tabindex]'); if (f) f.focus(); }
+      };
+      mePurse.addEventListener('click', (e) => { e.stopPropagation(); setPurse(!mePurse.classList.contains('is-open')); });
+      mePurse.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPurse(!mePurse.classList.contains('is-open')); }
+        else if (e.key === 'Escape' && mePurse.classList.contains('is-open')) { setPurse(false); mePurse.focus(); }
+      });
+      document.addEventListener('click', (e) => { if (!mePurse.contains(e.target) && mePurse.classList.contains('is-open')) setPurse(false); });
+    }
+
     // ── Blind-mode toggle living inside this options menu — a tap-friendly
     //    equivalent of the backtick keyboard shortcut, so phone/tablet users
     //    (who have no backtick key) can engage spoken play-by-play. ──
