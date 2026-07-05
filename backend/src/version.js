@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.17.0 2026-07-04  TWO NEW AI HEROES: BINCH (Cleric of Besmara —
+//                     Trickery[new domain]+Liberation, older-woman voice) and
+//                     CELEB (Cleric of Nethys — wears NO armor, wields arcane
+//                     Stoneskin/Overland Flight/Dimension Door/Teleport his
+//                     brethren lack). NEW Trickery domain (Copycat power).
 //  3.16.0 2026-07-04  ROSTER SURGERY: ghast→Ghoul Crusader (fallen Shining
 //                     Crusade cleric-ghoul), gargoyle→Mecha Gargoyle (Unity
 //                     construct, elec-vuln), medusa→3 classed medusa-kin
@@ -163,4 +168,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.16.0' };
+module.exports = { VERSION: '3.17.0' };

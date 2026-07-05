@@ -40,7 +40,18 @@ const DOMAIN_POWERS = {
   reroll:     { key: 'dom_luck', name: 'Good Fortune', icon: '🍀', cost: 'room', effect: 'domfortune', target: 'self', uses: DOM_USES, sound: '/audio/spell_buff_invoke.mp3', desc: 'Domain (Luck): fortune favors you — your next MISSED attack is rerolled (keep the better).' },
   saveward:   { key: 'dom_protection', name: 'Resistant Touch', icon: '🛡️', cost: 'room', effect: 'domward', target: 'ally', uses: DOM_USES, sound: '/audio/spell_buff_invoke.mp3', desc: 'Domain (Protection): ward an ally (or yourself) — +2 on ALL saves for 3 rounds.' },
   bleed:      { key: 'dom_death', name: 'Bleeding Touch', icon: '💀', cost: 'room', effect: 'dombleed', target: 'self', uses: DOM_USES, sound: '/audio/spell_buff_invoke.mp3', desc: 'Domain (Death): your next hit opens a wound that BLEEDS 1d6 each round until the foe falls.' },
+  copycat:    { key: 'dom_trickery', name: 'Copycat', icon: '🎭', cost: 'room', effect: 'mirrorimage', target: 'self', uses: DOM_USES, sound: '/audio/spell_invisibility.mp3', desc: 'Domain (Trickery): conjure shimmering mirror-image decoys that soak incoming attacks (Copycat).' },
 };
+
+// Celeb (Cleric of NETHYS, god of magic — Tobias 2026-07-04): a cleric who
+// also wields ARCANE utility his brethren lack. Injected into his ability list
+// and castable set (see _abilitiesFor / _computeCastable), gated to him alone.
+const CELEB_ARCANE = [
+  { key: 'stoneskin',     name: 'Stoneskin',      icon: '🪨', cost: 'room', uses: 2, effect: 'buff', target: 'ally', buff: {}, dr: 10, slvl: 4, minLevel: 7, sticky: true, sound: '/audio/spell_buff_invoke.mp3', desc: 'Nethys arcana — an ally\'s skin turns to stone: DR 10 vs physical blows (this room).', char: 'celeb' },
+  { key: 'overlandflight', name: 'Overland Flight', icon: '🕊️', cost: 'run', uses: 1, effect: 'overlandflight', target: 'self', slvl: 5, minLevel: 9, freeAction: true, canHitFlyers: true, sound: '/audio/spell_invisibility.mp3', desc: 'Nethys arcana — soar for the REST OF THE DUNGEON; grounded foes can\'t reach you.', char: 'celeb' },
+  { key: 'dimensiondoor', name: 'Dimension Door', icon: '🌀', cost: 'room', uses: 1, effect: 'tpstrike', target: 'ally', slvl: 4, minLevel: 7, sound: '/audio/spell_buff_invoke.mp3', desc: 'Nethys arcana — fold space around a melee ally: untouchable until your next turn, next strike reaches ANY foe.', char: 'celeb' },
+  { key: 'teleport',      name: 'Teleport',       icon: '✨', cost: 'room', uses: 1, effect: 'tpstrike', target: 'ally', slvl: 5, minLevel: 9, sound: '/audio/spell_buff_invoke.mp3', desc: 'Nethys arcana — blink a melee ally across the battlefield: untouchable, next strike reaches ANY foe.', char: 'celeb' },
+];
 
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
@@ -386,6 +397,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
             const d = DOMAINS[dk];
             if (d && d.spells) for (const sk of Object.values(d.spells)) m.castableKeys.add(sk);
           }
+          if (m.playerId === 'celeb') for (const a of CELEB_ARCANE) m.castableKeys.add(a.key);   // Celeb's arcane utility is always castable
         }
       }
     } catch (_) { m.castableKeys = null; }
@@ -445,7 +457,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // with the client) stay stable within a room; picks only change at the door.
   _abilitiesFor(m) {
     const kit = kitFor(m.cls).abilities;
-    return (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
+    let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
+    if (m.playerId === 'celeb') { const have = new Set(kit.map(a => a.key)); list = list.concat(CELEB_ARCANE.filter(a => !have.has(a.key))); }   // Nethys arcane spells his brethren lack
+    return list;
   },
   // DOMAINS Phase B — re-read the picks (they may change between rooms), rebuild
   // the injected powers, stock the Liberation pool, set the passive auras.

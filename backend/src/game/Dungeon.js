@@ -1306,7 +1306,7 @@ class Dungeon {
   // for its treasure value). Centralizes the shield-AC exclusion in one place.
   _acOf(m) {
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
-    return acOf(m.gear, m.cls, { noShield: !!(w && (w.noShield || w.ranged)) });
+    return acOf(m.gear, m.cls, { noShield: !!(w && (w.noShield || w.ranged)), noArmor: (m.playerId === 'celeb') });   // Celeb of Nethys wears no armor
   }
   // (_heroACs moved to game/dungeon/serialize.js — Phase-2 seam 2)
   _atkStr(r) {

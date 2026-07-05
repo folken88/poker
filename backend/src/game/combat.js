@@ -130,7 +130,7 @@ function acOf(gear, cls, opts = {}) {
   // (base 6). A +N magic "Armor" item adds its enhancement on top (9+N / 6+N).
   // Arcane casters (wizard / sorcerer) wear NO armor at all — they get ONLY the +N
   // MAGIC bonus of an owned piece and rely on Mage Armor for the rest.
-  const arcaneNoArmor = (cls === 'wizard' || cls === 'sorcerer');
+  const arcaneNoArmor = (cls === 'wizard' || cls === 'sorcerer') || !!opts.noArmor;   // opts.noArmor: a cleric who forgoes armor (Celeb of Nethys)
   const armorBase = (cls === 'barbarian' || cls === 'oracle') ? 6 : 9;   // breastplate vs full plate
   const armorAC = arcaneNoArmor ? armor : (armorBase + armor);
   ac += armorAC; physical += armorAC;

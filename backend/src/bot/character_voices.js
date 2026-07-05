@@ -77,6 +77,8 @@ const CHARACTER_VOICES = {
 
   // Numerian / Iron Gods
   'Dinvaya':           'qSeXEcewz7tA0Q0qk9fH', // Victoria — Warm, Trustworthy, Relatable
+  'Binch':             'oWAxZDx7w5VEj9dCyTzz', // Grace — mature, gentle Southern American woman (older Besmara cleric)
+  'Celeb':             'pNInz6obpgDQGcFmaJgB', // Adam — deep, measured American male (Nethys scholar-cleric)
   'Casandalee':        'XrExE9yKIg1WjnnlVkGX', // Matilda — Knowledgable, Professional — calm AI
   'Nomkath':           'ErXwobaYiN019PkySvjV', // Antoni — young American male, well-rounded (catfolk_male rogue)
 

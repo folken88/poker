@@ -272,6 +272,8 @@ const BOT_ROSTER = [
   { name: 'Bujon, Storm of Cheliax', nickname: 'Bujon', avatar: '/tokens/bujon-storm-of-cheliax.webp', baseMode: 'risky',    intelligence: 'low', gender: 'he'     }, // Iku-Turso eel-form storm-sorcerer, Kill-Steal helm
   { name: 'Rodney Smith',         nickname: 'Danger', avatar: '/tokens/rodney-danger-smith.webp', baseMode: 'cautious', intelligence: 'average', gender: 'he' }, // Rodney "Danger" Smith — CP-USS ranger/archer from Courtaud, killed Auren Vrood at Feldgrau; works under Daramid; redneck; "Nick" voice
   { name: 'Olbryn',               avatar: '/tokens/olbryn.webp',                 baseMode: 'risky',    intelligence: 'high', gender: 'he'     }, // Josh's Drow storm-sorcerer (Iron Gods) — Staff of Lightning (+2 CL to electricity); wild-magic, selfish-but-loyal
+  { name: 'Binch',                avatar: '/tokens/binch.webp',                  baseMode: 'standard', intelligence: 'average', gender: 'she' }, // Cleric of Besmara — Trickery + Liberation; older woman
+  { name: 'Celeb',                avatar: '/tokens/celeb.webp',                  baseMode: 'standard', intelligence: 'high', gender: 'he'     }, // Cleric of NETHYS — arcane-dabbling, wears no armor
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
@@ -433,7 +435,7 @@ const BOT_CLASSES = {
   'Auren Vrood': 'wizard', 'Casandalee': 'oracle', 'Meyanda': 'cleric', 'Daramid': 'wizard',
   'Kovira': 'wizard', 'Tokala': 'barbarian', 'Mr. Brow': 'investigator', 'Tamsin': 'bard',
   'Concetta': 'swashbuckler', 'Farrah': 'sorcerer', 'Fera': 'rogue',
-  'Elfrip': 'oracle', 'Rodney Smith': 'ranger', 'Olbryn': 'sorcerer',   // Elfrip is a Flame-mystery oracle (fire blaster); Rodney "Danger" Smith is an archer; Olbryn is a Drow storm-sorcerer (lightning)
+  'Elfrip': 'oracle', 'Rodney Smith': 'ranger', 'Olbryn': 'sorcerer', 'Binch': 'cleric', 'Celeb': 'cleric',   // Elfrip is a Flame-mystery oracle (fire blaster); Rodney "Danger" Smith is an archer; Olbryn is a Drow storm-sorcerer (lightning)
   'Vesorianna': 'oracle', 'Farrus Richton': 'barbarian', 'Dinvaya': 'cleric', 'Storgrim Thunderbeard': 'fighter',
   'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'rogue', 'Kai Ginn': 'ranger', 'Lirienne': 'ranger',   // Crisp = deinonychus: no real class, but rogue is closest (pounce + sneak); keeps his 'bite' natural multi-attack (3 attacks, no iteratives) via BOT_WEAPONS + _attackOffsets
   'Rissa': 'druid', 'Taelys': 'gunslinger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'gunslinger',   // Taelys + Duristan: PF1 gunslingers (rifles)
@@ -459,7 +461,7 @@ const weaponForClass = (cls) => CLASS_WEAPON[cls] || 'dagger';
 const BOT_WEAPONS = {
   'Dismas': 'rovadra', 'Gaspar': 'curator', 'Elodie': 'rapier', 'Rodney Smith': 'longbow',
   'Vesorianna': 'ghosttouch', 'Farrus Richton': 'twoaxes', 'Dinvaya': 'warhammer', 'Storgrim Thunderbeard': 'battleaxe',
-  'Agu': 'rapier', 'Chef': 'battleaxe', 'Crisp': 'bite', 'Kai Ginn': 'bastardsblade', 'Lirienne': 'repeatingcrossbow',
+  'Agu': 'rapier', 'Chef': 'battleaxe', 'Crisp': 'bite', 'Kai Ginn': 'bastardsblade', 'Lirienne': 'repeatingcrossbow', 'Binch': 'scimitar', 'Celeb': 'quarterstaff',
   'Rissa': 'claws', 'Taelys': 'dvl', 'Ulfred': 'voidshard', 'Vaughan': 'radiance', 'Duristan Silvio': 'lapua',
   'Holden': 'rapier', 'Rhyarca': 'rapier', 'Concetta': 'rapier', 'Kovira': 'unarmed',   // Kovira (wizard) attacks with her Elemental Ray at-will
   'Tokala': 'chainsaw',   // 3d6 slashing two-hander, crits on 18
@@ -806,6 +808,8 @@ function getDomains(playerId, cls) {
   try { map = JSON.parse(p.domains || '{}') || {}; } catch { map = {}; }
   const saved = Array.isArray(map[klass]) ? map[klass].filter(k => domainsData.DOMAINS[k]) : [];
   if (saved.length) return saved.slice(0, max);
+  const charDef = domainsData.CHAR_DOMAINS && domainsData.CHAR_DOMAINS[playerId];   // per-character default (Binch → trickery+liberation)
+  if (charDef) return charDef.filter(k => domainsData.DOMAINS[k]).slice(0, max);
   return (domainsData.DEFAULTS[klass] || []).slice(0, max);
 }
 function setDomains(playerId, cls, picks) {
