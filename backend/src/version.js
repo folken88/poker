@@ -3,6 +3,9 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.19.1 2026-07-04  Theurge fix: the runtime cleric kit carries a `channel`
+//                     ability that leaked into Celeb's union — skip it (a
+//                     theurge does NOT channel energy).
 //  3.19.0 2026-07-04  CELEB IS A THEURGE (Kobold Press 3pp) — Stage 1: dual
 //                     arcane+divine PREPARED caster on the true d6/½-BAB chassis
 //                     (glass cannon, no armor). His kit is the UNION of the real
@@ -206,4 +209,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.19.0' };
+module.exports = { VERSION: '3.19.1' };

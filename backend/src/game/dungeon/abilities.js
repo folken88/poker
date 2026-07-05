@@ -53,7 +53,7 @@ const DOMAIN_POWERS = {
 // reads kitFor() live so it tracks any future kit edit. Buff/dispel-forward by the
 // nature of the source kits (Tim played him to buff the party + peel enemy magic).
 // Metamagic auto-variants and martial feat-buffs are filtered out.
-const CELEB_SKIP = new Set(['deadlyaim', 'powerattack', 'magicmissile_quick', 'fireball_int', 'fireball_emp', 'scorch_emp', 'cone_max', 'disint_max']);
+const CELEB_SKIP = new Set(['channel', 'deadlyaim', 'powerattack', 'magicmissile_quick', 'fireball_int', 'fireball_emp', 'scorch_emp', 'cone_max', 'disint_max']);   // no channel (he isn't a cleric); drop metamagic auto-variants + martial feat-buffs
 let _celebKit = null;
 function celebKit() {
   if (_celebKit) return _celebKit;
