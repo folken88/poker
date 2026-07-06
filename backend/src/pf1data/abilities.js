@@ -265,6 +265,19 @@ const SPELL = {
   // ── NECROMANCY (Draymus's specialty; char-gated to him in the wizard kit) ──
   chilltouch:      { key: 'chilltouch',      name: 'Chill Touch',         icon: '🖐️', effect: 'touch', target: 'enemy', die: 6, dice: 'halflevel', dcap: 5, dtype: 'negative', slvl: 1, sound: S.umbral, desc: 'A ghostly touch of the grave — ranged touch for ½level d6 negative energy (max 5d6); the chill of undeath. No effect on undead.' },
   enervation:      { key: 'enervation',      name: 'Enervation',          icon: '🩸', effect: 'touch', target: 'enemy', die: 4, dice: 'halflevel', dcap: 8, dtype: 'negative', slvl: 4, sound: S.umbral, desc: 'A black ray of soul-draining negative energy — ranged touch, ½level d4 (max 8d4); the grave saps the living. No effect on undead.' },
+  // ── SUMMON UNDEAD I–IX (Draymus) — the necromancer's Summon Monster line, but he
+  //    raises UNDEAD. Each summons a CR-appropriate undead that fights FOR the party
+  //    for ~rounds/level, does NOT block room-clear, and isn't targetable by the party.
+  //    (Phase 1: foes don't yet turn on the summons — no soak.) `summon` = {key,count}.
+  summonundead1: { key: 'summonundead1', name: 'Summon Undead I',    icon: '☠️', effect: 'summon', target: 'self', slvl: 1, summon: { key: 'skeleton',          count: 1 }, sound: S.umbral, desc: 'Tear a SKELETON from the grave — it fights for the party for a few rounds. (Doesn\'t block clearing the room; foes can\'t yet turn on it.)' },
+  summonundead2: { key: 'summonundead2', name: 'Summon Undead II',   icon: '☠️', effect: 'summon', target: 'self', slvl: 2, summon: { key: 'skeletal_champion', count: 1 }, sound: S.umbral, desc: 'Raise a SKELETAL CHAMPION (CR 2) to fight for the party for a few rounds.' },
+  summonundead3: { key: 'summonundead3', name: 'Summon Undead III',  icon: '☠️', effect: 'summon', target: 'self', slvl: 3, summon: { key: 'wight',             count: 1 }, sound: S.umbral, desc: 'Call up a WIGHT (CR 3) to fight for the party for a few rounds.' },
+  summonundead4: { key: 'summonundead4', name: 'Summon Undead IV',   icon: '☠️', effect: 'summon', target: 'self', slvl: 4, summon: { key: 'vampire_spawn',     count: 1 }, sound: S.umbral, desc: 'Bind a VAMPIRE SPAWN (CR 4) to fight for the party for a few rounds.' },
+  summonundead5: { key: 'summonundead5', name: 'Summon Undead V',    icon: '☠️', effect: 'summon', target: 'self', slvl: 5, summon: { key: 'fungal_pirate',     count: 1 }, sound: S.umbral, desc: 'Reanimate a FUNGAL DEAD (CR 5) to fight for the party for a few rounds.' },
+  summonundead6: { key: 'summonundead6', name: 'Summon Undead VI',   icon: '☠️', effect: 'summon', target: 'self', slvl: 6, summon: { key: 'skeletal_ogre',     count: 1 }, sound: S.umbral, desc: 'Raise a towering SKELETAL OGRE (CR 6) to fight for the party for a few rounds.' },
+  summonundead7: { key: 'summonundead7', name: 'Summon Undead VII',  icon: '☠️', effect: 'summon', target: 'self', slvl: 7, summon: { key: 'vampire',           count: 1 }, sound: S.umbral, desc: 'Bind a VAMPIRE (CR 8) to fight for the party for a few rounds.' },
+  summonundead8: { key: 'summonundead8', name: 'Summon Undead VIII', icon: '☠️', effect: 'summon', target: 'self', slvl: 8, summon: { key: 'ghoul_crusader',    count: 1 }, sound: S.umbral, desc: 'Call up a GHOUL CRUSADER (CR 9) to fight for the party for a few rounds.' },
+  summonundead9: { key: 'summonundead9', name: 'Summon Undead IX',   icon: '☠️', effect: 'summon', target: 'self', slvl: 9, summon: { key: 'vamp_warrior',      count: 1 }, sound: S.umbral, desc: 'Raise a VAMPIRE WARRIOR (CR 11) to fight for the party for a few rounds.' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
@@ -880,6 +893,17 @@ if (KITS.wizard && Array.isArray(KITS.wizard.abilities)) {
     { ...preparedSpell(SPELL.chilltouch, 1),  char: 'Draymus' },
     { ...preparedSpell(SPELL.enervation, 7),  char: 'Draymus' },
     { ...preparedSpell(SPELL.slayliving, 9),  char: 'Draymus' },
+    // SUMMON UNDEAD I–IX — at least one summon at every spell level (Tobias). The
+    // minLevel is the wizard character level that unlocks that spell level (2N−1).
+    { ...preparedSpell(SPELL.summonundead1, 1),  char: 'Draymus' },
+    { ...preparedSpell(SPELL.summonundead2, 3),  char: 'Draymus' },
+    { ...preparedSpell(SPELL.summonundead3, 5),  char: 'Draymus' },
+    { ...preparedSpell(SPELL.summonundead4, 7),  char: 'Draymus' },
+    { ...preparedSpell(SPELL.summonundead5, 9),  char: 'Draymus' },
+    { ...preparedSpell(SPELL.summonundead6, 11), char: 'Draymus' },
+    { ...preparedSpell(SPELL.summonundead7, 13), char: 'Draymus' },
+    { ...preparedSpell(SPELL.summonundead8, 15), char: 'Draymus' },
+    { ...preparedSpell(SPELL.summonundead9, 17), char: 'Draymus' },
   );
 }
 

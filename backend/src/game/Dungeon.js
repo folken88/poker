@@ -291,11 +291,12 @@ class Dungeon {
     // Bujon's blindsense) OR True Seeing — lets the party target foes shrouded in
     // darkness AND foes who've gone INVISIBLE (enemy casters can now vanish).
     const dv = this.party.some(p => !p.left && p.hp > 0 && (p.darkvision || p.blindsense > 0 || p.trueSeeing));
-    let list = this.enemies.filter(e => e.hp > 0 && (dv || (!(e.darkened > 0) && !e.invisible)));
+    // SUMMONED undead are the party's OWN allies — never a valid target for the party.
+    let list = this.enemies.filter(e => e.hp > 0 && !e.summoned && (dv || (!(e.darkened > 0) && !e.invisible)));
     // If invisibility/darkness hid EVERY foe, the party can still flail into the dark
     // (each swing eats the 50% concealment miss in _swingVsAC) — never leave them with
     // zero targets and a stuck room.
-    if (!list.length) list = this.enemies.filter(e => e.hp > 0);
+    if (!list.length) list = this.enemies.filter(e => e.hp > 0 && !e.summoned);
     return list;
   }
 
@@ -722,6 +723,36 @@ class Dungeon {
       gold: Math.round(rint(base.gold[0], base.gold[1]) * (1 + 0.25 * extra)),   // an advanced boss carries a fatter pouch
     };
   }
+  // SUMMON (Draymus's Summon Undead) — raise minion(s) that fight FOR the party.
+  // Each minion is a normal enemy stat block (via _makeEnemy) flagged `summoned`:
+  // it joins this.enemies + the turn order, attacks REAL foes on its turn (see the
+  // summoned block in _advanceToActor), is NOT targetable by the party, does NOT
+  // block room-clear, and crumbles after `rounds` (or at room end). Phase 1: foes
+  // do not yet target summons back (no soak) — that's a later pass.
+  _abSummon(m, ab, payload) {
+    const spec = ab.summon || {};
+    const pool = spec.pool || (spec.key ? [spec.key] : []);
+    const valid = pool.filter(k => MON[k]);
+    if (!valid.length) { this._note(`${ab.icon || '☠️'} ${m.nickname}'s ${ab.name} fizzles — the grave yields nothing.`); this._echoToTable(); return; }
+    const count = Math.max(1, spec.count || 1);
+    const rounds = spec.rounds || Math.max(3, Math.ceil((m.level || 1)));   // ~rounds/level (PF1 summon duration); crumbles after
+    const made = [];
+    for (let i = 0; i < count; i++) {
+      const key = valid[i % valid.length];
+      const e = this._makeEnemy(MON[key], false, 0);
+      e.name = MON[key].name;                 // no Elite/Boss prefix on a summon
+      e.summoned = true; e.summonedBy = m.playerId; e.summonExpiry = rounds;
+      e.flatFooted = false;                   // it rises ready to fight
+      e.gold = 0;                             // a summon drops no loot
+      e.align = 'NE'; e.evil = true;          // Draymus's raised dead
+      this.enemies.push(e);
+      this.turnOrder.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });   // acts from next slot onward
+      made.push(e);
+    }
+    const label = count > 1 ? `${count} undead` : `a ${MON[valid[0]].name}`;
+    this._note(`${ab.icon || '☠️'} ${m.nickname} tears open the grave — ${label} claws free to fight for the party! (${rounds} rounds)`, ab.sound);
+    this._echoToTable(ab.sound);
+  }
   // Build a room of foes. The per-enemy CR is geared to the weakest hero; the
   // NUMBER of foes scales with party SIZE — each hero past the first adds roughly
   // a full standard encounter's worth of monsters, so a packed party gets mobbed.
@@ -807,6 +838,24 @@ class Dungeon {
     if (t.kind === 'enemy') {
       const e = this.enemies.find(x => x.uid === t.id);
       if (!e || e.hp <= 0) return this._nextTurn();
+      // SUMMONED UNDEAD (Draymus's Summon Undead): an ally riding in the enemy
+      // array — it strikes a REAL foe each turn and crumbles when its time runs out
+      // (or at room end). Bypasses the enemy-condition logic below. (Phase 1: foes
+      // don't yet target summons back — no soak.)
+      if (e.summoned) {
+        const foes = this.livingEnemies().filter(x => !x.summoned && x.hp > 0);
+        if (foes.length) {
+          const prey = foes.slice().sort((a, b) => a.hp - b.hp)[0];   // finish the weakest first
+          const r = this._monsterSwing(e, this._enemyAC(prey));
+          if (r.hit) { this._dmgE(prey, r.damage); this._note(`☠️ ${e.name} (your undead) rends ${prey.name} for ${r.damage}!${prey.hp <= 0 ? ' ☠️ Slain!' : ''}`, null, { side: 'party' }); }
+          else this._note(`☠️ ${e.name} (your undead) claws at ${prey.name} — and misses.`, null, { side: 'party' });
+        } else {
+          this._note(`☠️ ${e.name} (your undead) stands ready — no foe in reach.`, null, { side: 'party' });
+        }
+        e.summonExpiry = (e.summonExpiry || 1) - 1;
+        if (e.summonExpiry <= 0) { e.hp = 0; this._note(`☠️ ${e.name} crumbles back to dust — the summoning ends.`, null, { side: 'party' }); }
+        this._broadcast(); return this._nextTurn();
+      }
       // Darkness (wizard/sorcerer): shrouded foes can't act (and can't be hit) for
       // 2 of their turns. Tick it down here; the shroud lifts at 0.
       if (e.darkened > 0) { e.darkened -= 1; this._note(`🌑 ${e.name} is lost in magical darkness — does nothing${e.darkened <= 0 ? ' (the shroud lifts!)' : ''}.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
@@ -1056,7 +1105,9 @@ class Dungeon {
   _endIfResolved() {
     if (this.status !== 'combat') return true;
     // Clear FIRST — clearing a room can drop a Cure potion that revives a downed ally.
-    if (this.livingEnemies().length === 0) { this._clearRoom(); return true; }
+    // SUMMONED undead (the party's own minions) don't count — the room is won when the
+    // real foes are down, even if a summon is still shambling around.
+    if (this.livingEnemies().every(e => e.summoned)) { this._clearRoom(); return true; }
     // Nobody left standing (all downed or dead) while foes remain → party wipe.
     if (!this._anyUp()) { this._wipe(); return true; }
     // NOTE: when no humans remain mid-fight we deliberately do NOT cash the AI out
@@ -2238,6 +2289,14 @@ class Dungeon {
       return null;   // → Bane/Judgement-boosted weapon attack
     }
     if (m.cls === 'wizard' || m.cls === 'sorcerer' || m.cls === 'oracle') {
+      // SUMMONER (Draymus): open the fight by raising undead if none of HIS minions
+      // is currently up — cast the highest-level summon he can. Guarded so he doesn't
+      // spam it every turn (one standing summon at a time). Only Draymus has summons
+      // (char-gated), so this is a no-op for every other caster.
+      const summonAb = avail.filter(a => a.effect === 'summon').sort((a, b) => (b.slvl || 0) - (a.slvl || 0))[0];
+      if (summonAb && targets.length && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {
+        return { slot: slot(summonAb), payload: {} };
+      }
       const SPELLISH = ['aoe', 'disintegrate', 'grease', 'sleep', 'slow', 'fascinate', 'bolt', 'missile', 'touch', 'rays', 'save_debuff'];
       const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
       const cand = [];

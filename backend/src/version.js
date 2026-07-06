@@ -3,6 +3,17 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.32.0 2026-07-06  SUMMONING SYSTEM (experiment) — Draymus's SUMMON UNDEAD I–IX: a
+//                     Summon Monster line that raises UNDEAD to fight for the party.
+//                     Summoned minions ride in the enemy array flagged ALLIED — they
+//                     take turns striking real foes, render in the PARTY ROW (green ☠️
+//                     card, not targetable by the party), don't block room-clear, and
+//                     crumble after ~rounds/level. New SKELETAL OGRE (CR 6) fills the
+//                     undead CR gap. Draymus prepares one summon at EVERY spell level;
+//                     bot-Draymus opens a fight by raising his strongest undead. Char-
+//                     gated signature spells are now always castable by their character.
+//                     PHASE 1: foes don't yet target the summons back (no soak) — next
+//                     pass. domtest +7.
 //  3.31.0 2026-07-06  DRAYMUS the NECROMANCER — a playable dhampir wizard AI-hero
 //                     (Agent of the Grave, author of the Mortiari Manifesto). New
 //                     DHAMPIR race (+2 Dex/+2 Cha/−2 Con, darkvision 60, negative
@@ -371,4 +382,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.31.0' };
+module.exports = { VERSION: '3.32.0' };

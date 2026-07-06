@@ -1349,6 +1349,7 @@
           const styles = [];
           if (shrouded) styles.push('opacity:.45');
           if (e.dominated && !dead) styles.push('outline:2px solid #a78bfa;box-shadow:0 0 14px 3px rgba(167,139,250,.75)');   // 💫 possessed glow
+          if (e.summoned && !dead) styles.push('outline:2px solid #6ee7a8;box-shadow:0 0 14px 3px rgba(110,231,168,.7)');   // ☠️ summoned-ally glow (green)
           if (shadows.length) styles.push(`box-shadow:${shadows.join(', ')}`);
           if (artBg) styles.push(portraitBg(artBg).replace(/^;/, ''));
           const aimChip = aimedBy.length
@@ -1358,9 +1359,9 @@
           const portrait = e.art
             ? `<div class="dmon__art" style="background-image:url('${escapeAttr(e.art)}')${e.artPos ? `;background-position:${escapeAttr(e.artPos)}` : ''}">${e.boss ? '<span class="dmon__crown" title="Boss">☠️</span>' : ''}</div>`
             : `<div class="dmon__glyph">${e.glyph || '❓'}${e.boss ? ' ☠️' : ''}</div>`;
-          return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''} ${isTurn ? 'is-turn' : ''} ${e.dominated && !dead ? 'is-dominated' : ''} ${artBg ? 'has-portrait' : ''}"${styles.length ? ` style="${styles.join(';')}"` : ''} data-enemy="${escapeAttr(e.uid)}" ${(dead || shrouded) ? 'disabled' : ''} title="${shrouded ? 'Shrouded in darkness — cannot be targeted' : (e.dominated && !dead ? 'DOMINATED — fighting for the party (Will re-save each of its turns)' : '')}">
+          return `<button type="button" class="dmon ${dead ? 'is-dead' : ''} ${sel ? 'is-sel' : ''} ${e.boss ? 'is-boss' : ''} ${isTurn ? 'is-turn' : ''} ${e.dominated && !dead ? 'is-dominated' : ''} ${e.summoned && !dead ? 'is-summoned' : ''} ${artBg ? 'has-portrait' : ''}"${styles.length ? ` style="${styles.join(';')}"` : ''} data-enemy="${escapeAttr(e.uid)}" ${(dead || shrouded || e.summoned) ? 'disabled' : ''} title="${shrouded ? 'Shrouded in darkness — cannot be targeted' : (e.summoned && !dead ? 'YOUR UNDEAD — a summoned ally fighting for you' + (e.summonExpiry ? ` (${e.summonExpiry} rounds left)` : '') : (e.dominated && !dead ? 'DOMINATED — fighting for the party (Will re-save each of its turns)' : ''))}">
             ${portrait}
-            <div class="dmon__name">${e.dominated && !dead ? '💫 ' : ''}${escapeText(e.name)}${e.flying ? ` <span class="dmon__fly" title="Flying — immune to prone (can't be tripped); holds the high ground: +1 to hit and +2 AC vs grounded heroes">🪽</span>` : ''}</div>
+            <div class="dmon__name">${e.summoned && !dead ? '☠️ ' : (e.dominated && !dead ? '💫 ' : '')}${escapeText(e.name)}${e.flying ? ` <span class="dmon__fly" title="Flying — immune to prone (can't be tripped); holds the high ground: +1 to hit and +2 AC vs grounded heroes">🪽</span>` : ''}</div>
             ${aimChip}
             ${condIcons(e.conditions)}${buffIcons(e.buffs)}
             <div class="dmon__hpbar" title="${dead ? 'Slain' : `${e.hp}/${e.maxHp} HP`}"><span style="width:${pct}%"></span></div>
@@ -1392,11 +1393,13 @@
     // party row renders below). Dead dominated foes fall back to the villain row
     // as corpse chips like everyone else.
     const _crossOld = _flipCapture(document, 'data-enemy');
-    const _domFoes = _enemiesSorted.filter(e => e.dominated && e.alive);
-    const _eneList = _enemiesSorted.filter(e => !(e.dominated && e.alive));
+    // A dominated foe OR a friendly SUMMONED undead leaves the villain row and renders among the heroes.
+    const _isAllyCard = (e) => (e.dominated || e.summoned) && e.alive;
+    const _domFoes = _enemiesSorted.filter(_isAllyCard);
+    const _eneList = _enemiesSorted.filter(e => !_isAllyCard(e));
     if (ene) {
       if (_eneSig && _eneSig !== _dunEneSig) {
-        ene.innerHTML = _buildEnemies([...(d.enemies || [])].filter(e => !(e.dominated && e.alive)));   // spawn order
+        ene.innerHTML = _buildEnemies([...(d.enemies || [])].filter(e => !_isAllyCard(e)));   // spawn order
         _eneCompact();
         requestAnimationFrame(() => {
           const _old = _flipCapture(ene, 'data-enemy');

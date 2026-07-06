@@ -196,6 +196,8 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         ac: e.ac, touchAC: (e.touchAC != null ? e.touchAC : Math.max(10, e.ac - 5)), ffAC: Math.max(10, e.ac - 2),
         flatFooted: !!e.flatFooted, prone: !!e.prone, fascinated: !!e.fascinated, asleep: !!e.asleep, charmed: !!e.charmed, darkened: (e.darkened > 0),
         dominated: (e.dominated > 0),   // Phase B: the client renders a dominated foe's card IN THE HERO ROW
+        summoned: !!e.summoned,         // a friendly SUMMONED undead (Draymus) — client renders it in the party row, not targetable
+        summonExpiry: e.summoned ? (e.summonExpiry || 0) : undefined,
         conditions: e.hp > 0 ? this._condList(e) : [],
         buffs: e.hp > 0 ? this._enemyBuffList(e) : [],
       })),

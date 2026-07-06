@@ -71,6 +71,7 @@ const MON = {
   shadow:            { name: 'Shadow',            glyph: '🌑', cr: '3',   hp: 19,  ac: 13, toHit: 4,  dmgDie: 6,  dmgBonus: 0, fort: 1,  reflex: 3,  gold: [30, 65] },
   fire_skeleton:     { name: 'Fire Skeleton',     glyph: '🔥', cr: '3',   hp: 22,  ac: 16, toHit: 5,  dmgDie: 6,  dmgBonus: 2, fort: 1,  reflex: 2,  gold: [24, 52], dr: { amount: 5, bypass: 'B' }, resist: { fire: 0, cold: 1.5 }, detonate: { count: 2, die: 6, sound: '/audio/enemy_fireskeleton_boom.mp3' } },   // skeleton: DR 5/bludgeoning, fire-immune, VULNERABLE to cold (×1.5); suicide bomber: on its TURN it rushes in and detonates — 1d6 fire/level to 1d2 heroes, destroying itself (kill it first to defuse)
   wight:             { name: 'Wight',             glyph: '👻', cr: '3',   hp: 26,  ac: 15, toHit: 4,  dmgDie: 4,  dmgBonus: 1, fort: 3,  reflex: 1,  gold: [34, 72] },
+  skeletal_ogre:     { name: 'Skeletal Ogre',     glyph: '💀', cr: '6',   hp: 60,  ac: 17, toHit: 11, dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 5,  reflex: 2,  attacks: 1, gold: [40, 90], dr: { amount: 5, bypass: 'B' } },   // a Large skeletal ogre — a bone-crushing 2d8 slam (DR 5/bludgeoning); fills the CR6 undead gap + a Summon Undead VI creature
   ogre:              { name: 'Ogre',              glyph: '👹', cr: '3',   hp: 30,  ac: 17, toHit: 8,  dmgDie: 8,  dmgCount: 2, dmgBonus: 7, fort: 6, reflex: 0, gold: [40, 90] },                                  // greatclub 2d8+7
   gray_ooze:         { name: 'Gray Ooze',         glyph: '🟢', cr: '4',   hp: 50,  ac: 6,  toHit: 5,  dmgDie: 6,  dmgBonus: 4, fort: 6,  reflex: 0,  gold: [38, 80] },
   gibbering_mouther: { name: 'Gibbering Mouther', glyph: '👄', cr: '5',   hp: 60,  ac: 19, toHit: 5,  dmgDie: 4,  dmgBonus: 0, fort: 8,  reflex: 6,  gold: [55, 120], attacks: 2 },                              // many small bites
@@ -272,7 +273,7 @@ const MON_BODY = {
   kobold_rogue: { size: 'S' }, goblin_rogue: { size: 'S' }, goblin_shaman: { size: 'S' }, goblin_barbarian: { size: 'S' },
   giant_spider: { size: 'M', legs: 8 }, shadow: { legs: 0 },                       // incorporeal — nothing to sweep
   gray_ooze: { legs: 0 }, gibbering_mouther: { legs: 0 },                          // amorphous
-  ogre: { size: 'L' }, ettin: { size: 'L' }, dire_ape: { size: 'L' },
+  ogre: { size: 'L' }, ettin: { size: 'L' }, dire_ape: { size: 'L' }, skeletal_ogre: { size: 'L' },
   dire_boar: { size: 'L', legs: 4 }, winter_wolf: { size: 'L', legs: 4 }, blood_caimon: { size: 'L', legs: 4 },
   dire_bear: { size: 'L', legs: 4 }, chimera: { size: 'L', legs: 4 }, basilisk: { size: 'M', legs: 8 },
   ettercap: { size: 'M' }, harpy: { size: 'M' }, gargoyle: { size: 'M' }, minotaur: { size: 'L' },
@@ -320,7 +321,7 @@ const MON_GANGS = {
   // the restless dead — vampires mix with every other undead; the Whispering
   // Way cultist herds them
   skeleton: ['undead'], zombie: ['undead'], ghoul: ['undead'], ghoul_crusader: ['undead'], shadow: ['undead'],
-  wight: ['undead'], fire_skeleton: ['undead'], skeletal_champion: ['undead'], cultist: ['undead'],
+  wight: ['undead'], fire_skeleton: ['undead'], skeletal_champion: ['undead'], skeletal_ogre: ['undead'], cultist: ['undead'],
   ww_initiate: ['undead'], ww_knife: ['undead'], ww_gravecaller: ['undead'], ww_bladebound: ['undead'],
   ww_necromancer: ['undead'], ww_slayer: ['undead'], ww_deathpriest: ['undead'], ww_deathblade: ['undead'],
   ww_archnecromancer: ['undead'],
@@ -389,7 +390,7 @@ const MON_ART = {
   giant_spider: 'spider', zombie: 'zombie', ghoul: 'ghoul', cultist: 'cultist',
   // Undead with fresh Foundry token art (were emoji-only): a burning skull,
   // a fanged vampire lord, and a skeletal lich in his mitre.
-  fire_skeleton: 'fire_skeleton', vampire: 'vampire', lich: 'lich',
+  fire_skeleton: 'fire_skeleton', vampire: 'vampire', lich: 'lich', skeletal_ogre: 'skeletal_ogre',
   gray_ooze: 'ooze', skeletal_champion: 'skeletal_champion', shadow: 'shadow', wight: 'wight',
   ghoul_crusader: 'ghoul_crusader', gibbering_mouther: 'gibbering_mouther', ogre: 'ogre', ettin: 'ettin',
   brass_golem: 'brass_golem', barbed_devil: 'barbed_devil',
@@ -460,7 +461,7 @@ const MON_TYPE = {
   monk_redactor2: 'humanoid', monk_vakra: 'humanoid', monk_beastmode: 'humanoid', monk_puff: 'humanoid',
   monk_kobold: 'humanoid', monk_kobold_big: 'humanoid',
   skeleton: 'undead', zombie: 'undead', ghoul: 'undead', ghoul_crusader: 'undead', skeletal_champion: 'undead',
-  shadow: 'undead', fire_skeleton: 'undead', wight: 'undead', vampire: 'undead', lich: 'undead',
+  shadow: 'undead', fire_skeleton: 'undead', wight: 'undead', vampire: 'undead', lich: 'undead', skeletal_ogre: 'undead',
   ogre: 'giant', ettin: 'giant', hill_giant: 'giant', stone_giant: 'giant',
   harpy: 'monstrous humanoid', minotaur: 'monstrous humanoid',
   gargoyle: 'construct',
@@ -512,7 +513,7 @@ for (const k of Object.keys(MON)) if (!MON[k].type) MON[k].type = 'humanoid';   
 // 1.5 = vulnerable (takes 50% more). Physical (B/S/P) and untyped damage are
 // never modified here. Most undead shrug off cold (PF1e) — a Fire Skeleton is
 // the exception (made of fire: immune to its own element, vulnerable to cold).
-const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'zombie', 'ghoul', 'ghoul_crusader', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich', 'fungal_pirate', 'fungal_oracle', 'fungal_captain', 'amalokla', 'tar_baphon'];
+const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'skeletal_ogre', 'zombie', 'ghoul', 'ghoul_crusader', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich', 'fungal_pirate', 'fungal_oracle', 'fungal_captain', 'amalokla', 'tar_baphon'];
 const RESIST_BY_KEY = {
   fire_skeleton: { fire: 0, cold: 1.5 },          // burning bones: fireproof, but cold shatters them
   wood_golem:    { fire: 1.5 },                    // dry timber: catches fire easily
@@ -580,7 +581,7 @@ const ALIGN_BY_KEY = {
   angel_healer: 'NG', angel_cavalier: 'LG', chad: 'LG',
   soirse: 'CE',   // succubus demon — the one EVIL fiend in this batch (Smite Evil bites her)
   // neutral evil
-  goblin: 'NE', skeleton: 'NE', skeletal_champion: 'NE', zombie: 'NE', cultist: 'NE', ettercap: 'NE', winter_wolf: 'NE',
+  goblin: 'NE', skeleton: 'NE', skeletal_champion: 'NE', skeletal_ogre: 'NE', zombie: 'NE', cultist: 'NE', ettercap: 'NE', winter_wolf: 'NE',
   goblin_barbarian: 'CE',
   // chaotic evil
   ghoul: 'CE', ghoul_crusader: 'CE', shadow: 'CE', ogre: 'CE', ettin: 'CE', minotaur: 'CE',
@@ -622,7 +623,7 @@ const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 // manufactured weapon to knock away, so they CANNOT be DISARMED (Dungeon._abDisarm
 // also treats animals/vermin/oozes/magical beasts/aberrations as natural by TYPE).
 // Flag the monks (unarmed) and the named natural-attackers that aren't those types.
-const NATURAL_KEYS = ['zombie', 'ghoul', 'ghoul_crusader', 'shadow', 'wight', 'skeletal_champion', 'harpy', 'gibbering_mouther', 'abyssal_horror', 'bog_brute', 'ettercap'];
+const NATURAL_KEYS = ['zombie', 'ghoul', 'ghoul_crusader', 'shadow', 'wight', 'skeletal_champion', 'skeletal_ogre', 'harpy', 'gibbering_mouther', 'abyssal_horror', 'bog_brute', 'ettercap'];
 NATURAL_KEYS.push('charauka_warrior', 'bentbeak_charney', 'ikualoa',
   'amalokla', 'brogwort',   // bare knuckles, pain touch, athach limbs — nothing to disarm (the Black Sovereign now swings a SWORD — disarm away, if you dare)
   'imp', 'accuser_devil', 'bone_devil', 'pit_fiend', 'hound_archon',   // devils/archon that fight with sting/bite/claws (erinyes=bow, horned=chain, the angels=weapons → those CAN be disarmed)

@@ -200,7 +200,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const pickedId = payload && (payload.allyUid || payload.targetUid);
       if (pickedId) {
         const ta = this.livingParty().find(a => a.playerId === pickedId);
-        const te = !ta && this.enemies.find(e => e.uid === payload.targetUid && e.hp > 0);
+        const te = !ta && this.enemies.find(e => e.uid === payload.targetUid && e.hp > 0 && !e.summoned);
         if (ta && !allyAfflicted(ta)) return { ok: false, error: `${ta.nickname} has no hostile magic on them to dispel` };
         if (te && !foeEnchanted(te)) return { ok: false, error: `${te.name} has no enchantment to strip` };
       } else if (!this.livingParty().some(allyAfflicted) && !this._targetableEnemies().some(foeEnchanted)) {
@@ -308,6 +308,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       save_debuff: () => this._abSaveDebuff(m, ab, payload),
       charm:       () => this._abCharm(m, ab, payload),
       dominate:    () => this._abDominate(m, ab, payload),
+      summon:      () => this._abSummon(m, ab, payload),
       studytarget: () => this._abStudyTarget(m, ab, payload),
       challenge: () => this._abChallenge(m, ab, payload),
       masscharm:   () => this._abMassCharm(m, ab, payload),
@@ -444,6 +445,14 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         // THEURGE: Celeb has no per-day prep sheet in this engine — his whole
         // curated dual list is always "prepared" (slots still gate uses/level).
         if (m.playerId === 'celeb') for (const a of celebKit()) if (a.slvl != null && a.slvl >= 1) m.castableKeys.add(a.key);
+        // CHAR-GATED signature spells (Draymus's necromancy & Summon Undead) are their
+        // character's DEFINING kit — always castable by them, not subject to the
+        // prepared-list default (the char gate is still enforced by _charAllows at
+        // cast). Mirrors the Celeb special-case above; a no-op for anyone with no
+        // char-tagged spells in their kit.
+        for (const a of (kitFor(m.cls).abilities || [])) {
+          if (a.char && a.slvl != null && this._charAllows(a, m)) m.castableKeys.add(a.key);
+        }
       }
     } catch (_) { m.castableKeys = null; }
   },
@@ -776,12 +785,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     return dmg;
   },
   _enemyTargets(payload, max) {
-    let chosen = ((payload && payload.targetUids) || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0 && !(e.darkened > 0))).filter(Boolean);
+    let chosen = ((payload && payload.targetUids) || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0 && !(e.darkened > 0) && !e.summoned)).filter(Boolean);
     if (!chosen.length) chosen = this._targetableEnemies();   // Darkness-shrouded foes can't be hit
     return max ? chosen.slice(0, max) : chosen;
   },
   _oneEnemy(payload) {
-    const t = this.enemies.find(x => x.uid === (payload && payload.targetUid) && x.hp > 0 && !(x.darkened > 0));
+    const t = this.enemies.find(x => x.uid === (payload && payload.targetUid) && x.hp > 0 && !(x.darkened > 0) && !x.summoned);   // never a friendly summon
     return t || this._targetableEnemies()[0] || null;
   },
   _saveVs(bonus, dc) { const r = dRoll(20); return { roll: r, total: r + bonus, saved: r === 20 ? true : r === 1 ? false : (r + bonus) >= dc }; },
