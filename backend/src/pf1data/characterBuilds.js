@@ -71,6 +71,12 @@ const BUILDS = {
   'Meyanda':                 { race: 'android' },
   'Vorkstag':                { race: 'skinwalker' },
   'Crisp':                   { race: 'animal' },     // deinonychus — natural attacks via 'bite' weapon
+
+  // ── Hell's Vengeance / Rebels PCs → playable AI-heroes (2026-07-05) ──
+  'Femmik Embersword':       { race: 'ifrit' },      // Dervish Dancer bard (DEX/CHA); Ifrit +2 Dex/+2 Cha/−2 Wis matches his real WIS 7
+  'Freya Kusanagi':          { race: 'half_elf', flex: 'str' },   // Samurai/Hellknight — STR 26 bruiser; floating +2 into STR
+  "J'Mal":                   { race: 'hobgoblin' },  // Red Mantis Assassin / Rogue — DEX finesse dual-saber + sneak
+  'Jason':                   { race: 'tiefling' },   // Divine Scion / Cleric of Asmodeus — WIS caster (tiefling darkvision + resist)
 };
 
 module.exports = { BUILDS };

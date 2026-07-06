@@ -215,11 +215,8 @@ const MON = {
   // ── PALACE UNIQUES & CARRION CROWN CANON — bosses pulled from the Iron Gods
   //    world's Palace Uniques folder and the carrioncrown archive, at their
   //    in-story canonical levels (Tobias 2026-07-04). ──
-  // ── THE HELLKNIGHT WARBAND — Freya's cadre (Hell's Rebels flavor). They
-  //    ride together; developed further later. ──
-  freya:             { name: 'Freya',             glyph: '⚔️', cr: '14',  hp: 140, ac: 26, toHit: 20, dmgDie: 8, dmgCount: 1, dmgBonus: 12, fort: 12, reflex: 8, attacks: 3, gold: [300, 520], evil: true, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // Fighter 15 Hellknight — a +5 FLAMING-BURST katana (1d8+7 +1d6 fire folded → d8+12), full iteratives (cavalier/hellknight levels later)
-  jason:             { name: 'Jason',             glyph: '😈', cr: '13',  hp: 120, ac: 23, toHit: 13, dmgDie: 8, dmgBonus: 5, fort: 11, reflex: 8, gold: [280, 480], evil: true, healer: { dice: 3, uses: 3 }, caster: 'holdperson', spellDC: 18, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['shieldoffaith', 'protfire'], hellfire: { count: 3, dice: 6, die: 6, dc: 18, dtype: 'fire', verb: 'calls a PILLAR OF HELLFIRE down on the party', sound: '/audio/spell_hellfire.mp3' } },   // Tiefling Cleric 15 of Asmodeus — holds, dread litany, hellfire, battle-mendings, pre-warded
-  jmal:              { name: 'Jmal',              glyph: '🗡️', cr: '13',  hp: 115, ac: 24, toHit: 17, dmgDie: 6, dmgBonus: 6, fort: 8, reflex: 13, attacks: 3, sneakDice: 8, evasion: true, gold: [280, 480], evil: true, atkSound: '/audio/fight_riki.mp3' },   // Hobgoblin Rogue 15 — twin sawtooth sabers + deep sneak (8d6); Evasion
+  // (Freya / Jason / Jmal removed as ENEMIES 2026-07-05 — they are the Hell's
+  //  Vengeance PCs and now ship as PLAYABLE AI-HEROES; see db.js BOT_ROSTER.)
   black_sovereign:   { name: 'Kevoth-Kul, the Black Sovereign', glyph: '👑', cr: '16', hp: 210, ac: 19, toHit: 30, dmgDie: 6, dmgCount: 4, dmgBonus: 17, fort: 16, reflex: 7, attacks: 3, vicious: 6, gold: [400, 700], atkSound: '/audio/sword_eviscerate2_flaming.mp3', hype: '/audio/tool_sober_hype.mp3' },   // BOSS — Barbarian 17 swinging BURNING HATE, his +5 VICIOUS greatsword: 2d6+18 blade + 2d6 vicious per hit — and the blade bites HIM for 1d6 every hit too (CN — enthralled, not evil; smite finds no purchase)
   amalokla:          { name: 'Amalokla, the First Sovereign', sr: 28, glyph: '👻', cr: '17', hp: 225, ac: 28, toHit: 24, dmgDie: 8, dmgBonus: 8, fort: 14, reflex: 17, attacks: 2, flying: true, gold: [440, 760], evil: true, dr: { amount: 10, bypass: 'magic' }, shout: { fear: true, dc: 22, sound: '/audio/enemy_lich_gaze.mp3' }, spellstrike: { dice: 6, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // BOSS — the dybbuk who first ruled Numeria: PAIN TOUCH drains the living, dread presence, SR 28
   brogwort:          { name: 'Brogwort the Dim',  glyph: '🪨', cr: '17',  hp: 243, ac: 27, toHit: 27, dmgDie: 8,  dmgCount: 2, dmgBonus: 11, fort: 14, reflex: 13, attacks: 3, gold: [440, 760], atkSounds: ['/audio/wolf_bite_.mp3', '/audio/sword_smack_big.mp3'], hype: '/audio/backstreet_everybody_sexual.mp3' },   // BOSS — Huge athach (18 HD): bite + two slams a round, dim but VERY thorough
@@ -263,7 +260,6 @@ const MON_BODY = {
   charauka_warrior: { size: 'S' }, charauka_stepper: { size: 'S' }, charauka_mancer: { size: 'S' },
   ikualoa: { size: 'H' },
   brogwort: { size: 'H' },   // athach
-  jmal: { size: 'M' },
   rivozair: { size: 'H', legs: 4 },   // devil-bound blue dragon
 };
 for (const [k, b] of Object.entries(MON_BODY)) if (MON[k]) Object.assign(MON[k], b);
@@ -332,7 +328,6 @@ const MON_GANGS = {
   // ex-PC bosses: Blackout stalks with the Numerian machines; Ragh muscles
   // with the big folk and the goblinoid warbands he bullies
   blackout: ['construct'], ragh: ['giant', 'goblinoid'],
-  freya: ['hellknight'], jason: ['hellknight', 'devil'], jmal: ['hellknight', 'goblinoid'],
   // Palace Uniques rule Numeria (machine minions); the CC canon lead the dead
   black_sovereign: ['construct'], amalokla: ['undead', 'construct'], brogwort: ['giant'],
   auren_vrood: ['undead'], vorkstag: ['undead'], tar_baphon: ['undead'],
@@ -391,7 +386,6 @@ const MON_ART = {
   sahuagin_prince: 'sahuagin_prince', charauka_warrior: 'charauka_warrior', charauka_stepper: 'charauka_stepper',
   charauka_mancer: 'charauka_mancer', ikualoa: 'ikualoa', captain_thrune: 'captain_thrune',
   blackout: 'blackout', ragh: 'ragh',
-  freya: 'freya', jason: 'jason', jmal: 'jmal',
   black_sovereign: 'black_sovereign', amalokla: 'amalokla', brogwort: 'brogwort',
   auren_vrood: 'auren_vrood', vorkstag: 'vorkstag', tar_baphon: 'tar_baphon',
   rivozair: 'rivozair',
@@ -432,7 +426,6 @@ const MON_TYPE = {
   shackles_marine: 'humanoid', shackles_seacaster: 'humanoid', shackles_swashbuckler: 'humanoid',
   shackles_officer: 'humanoid', bentbeak_charney: 'humanoid', captain_maris: 'humanoid', captain_thrune: 'humanoid',
   blackout: 'humanoid', ragh: 'humanoid',
-  freya: 'humanoid', jason: 'outsider', jmal: 'humanoid',
   black_sovereign: 'humanoid', vorkstag: 'humanoid', auren_vrood: 'humanoid',
   amalokla: 'undead', tar_baphon: 'undead', brogwort: 'giant',
   charauka_warrior: 'humanoid', charauka_stepper: 'humanoid', charauka_mancer: 'humanoid',
@@ -509,7 +502,6 @@ const ALIGN_BY_KEY = {
   fungal_pirate: 'NE', fungal_oracle: 'NE', fungal_captain: 'NE',
   ikualoa: 'N',
   blackout: 'NE', ragh: 'CE',
-  freya: 'LE', jason: 'LE', jmal: 'LE',
   black_sovereign: 'CN',   // enthralled, not evil — smite finds no purchase
   rivozair: 'LE',
   amalokla: 'NE', brogwort: 'CE', auren_vrood: 'NE', vorkstag: 'CE', tar_baphon: 'NE',

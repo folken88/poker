@@ -74,7 +74,7 @@ const DOMAIN_KEYS = Object.keys(DOMAINS);
 // Defaults when a player has never picked: the powers Tim/Josh already rely on.
 const DEFAULTS = { inquisitor: ['liberation'], cleric: ['healing', 'war'] };
 // Per-CHARACTER domain defaults (override the class default until they pick).
-const CHAR_DOMAINS = { binch: ['trickery', 'liberation'] };
+const CHAR_DOMAINS = { binch: ['trickery', 'liberation'], jason: ['trickery', 'war'] };   // Jason: Asmodean tyrant-priest — contracts/deception + Hell's iron order
 const maxDomainsFor = (cls) => cls === 'cleric' ? 2 : cls === 'inquisitor' ? 1 : 0;
 
 module.exports = { DOMAINS, DOMAIN_KEYS, DEFAULTS, CHAR_DOMAINS, maxDomainsFor };

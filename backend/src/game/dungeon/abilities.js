@@ -27,6 +27,12 @@ const { fighterFeats } = require('../../pf1data/feats');
 const loadouts = require('../../pf1data/loadouts');
 const banter = require('../../bot/banter');
 
+// BATTLE DANCE (Dawnflower Dervish) — a bard whose Inspire Courage does NOT aid
+// allies but affects ONLY himself, at DOUBLE value. Keyed by player_id. Femmik
+// Embersword is the Dervish; see _maintainBardSongs. (House style: same shape as
+// UNDEAD_HEROES / the finesse-weapon sets.)
+const BATTLE_DANCERS = new Set(['femmik embersword']);
+
 // ── DOMAIN granted powers (DOMAINS-DESIGN.md §2/§3.3) ───────────────────────
 // The ACTIVE powers, injected as synthetic room-cost abilities AFTER the class
 // kit (_abilitiesFor) so the existing slot-index pipeline (buttons, blind menu,
@@ -596,27 +602,39 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // a manual cast.
   _inspireBonus(lvl) { return 1 + Math.floor(((lvl || 1) + 1) / 6); },
   _maintainBardSongs() {
-    const bard = this.present().find(m => m.cls === 'bard' && !m.dead);
-    if (!bard) return;
+    const bards = this.present().filter(m => m.cls === 'bard' && !m.dead);
+    if (!bards.length) return;
     const ab = (kitFor('bard').abilities || []).find(a => a.key === 'inspire');
     if (!ab) return;
-    const insp = this._inspireBonus(bard.level);
-    let fresh = false;
-    for (const a of this.present()) {
-      if (a.dead) continue;
-      a.runBuffApplied = a.runBuffApplied || {};
-      if (a.runBuffApplied.inspire) continue;
-      a.runBuffApplied.inspire = true;
-      a.runBuffs = a.runBuffs || { toHit: 0, dmg: 0 };
-      a.runBuffs.toHit += insp;
-      a.runBuffs.dmg   += insp;
-      fresh = true;
+    // The guard `a.runBuffApplied.inspire` holds the NUMERIC bonus already folded
+    // in (was a boolean) — morale bonuses don't stack, so the HIGHEST wins and we
+    // only apply the delta. This lets a Battle Dancer's self-only double coexist
+    // with a normal bard's party aura on the same members without double-dipping.
+    let bestBonus = 0, bestBard = null, bestBD = false;
+    for (const bard of bards) {
+      const base = this._inspireBonus(bard.level);
+      const bd = BATTLE_DANCERS.has((bard.playerId || '').toLowerCase());
+      const bonus = bd ? base * 2 : base;                    // Battle Dance: doubled
+      const targets = bd ? [bard] : this.present();          // Battle Dance: self only
+      for (const a of targets) {
+        if (a.dead) continue;
+        a.runBuffApplied = a.runBuffApplied || {};
+        const prev = a.runBuffApplied.inspire || 0;
+        if (bonus <= prev) continue;                          // a stronger song already covers them
+        const delta = bonus - prev;
+        a.runBuffs = a.runBuffs || { toHit: 0, dmg: 0 };
+        a.runBuffs.toHit += delta;
+        a.runBuffs.dmg   += delta;
+        a.runBuffApplied.inspire = bonus;
+        if (bonus > bestBonus) { bestBonus = bonus; bestBard = bard; bestBD = bd; }
+      }
+      bard.runAbilityUses = bard.runAbilityUses || {};
+      bard.runAbilityUses.inspire = 0;   // the song is up — no manual cast needed (won't be re-picked)
     }
-    bard.runAbilityUses = bard.runAbilityUses || {};
-    bard.runAbilityUses.inspire = 0;   // the song is up — no manual cast needed (won't be re-picked)
-    if (fresh && !this._inspireAnnounced) {
+    if (bestBard && !this._inspireAnnounced) {
       this._inspireAnnounced = true;
-      this._note(`${ab.icon} ${bard.nickname} keeps ${ab.name} up — the whole party fights at +${insp} to hit and damage, all delve!`, ab.sound);
+      if (bestBD) this._note(`${ab.icon} ${bestBard.nickname} whirls into a Dawnflower Dervish's BATTLE DANCE — HE alone burns at +${bestBonus} to hit and damage, all delve!`, ab.sound);
+      else this._note(`${ab.icon} ${bestBard.nickname} keeps ${ab.name} up — the whole party fights at +${bestBonus} to hit and damage, all delve!`, ab.sound);
     }
   },
   // (_kitState moved to game/dungeon/serialize.js — Phase-2 seam 2)

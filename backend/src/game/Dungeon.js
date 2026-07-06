@@ -80,7 +80,7 @@ function ccd(o) { return !!o && (o.asleep || o.fascinated || o.charmed || (o.par
 // A "finessable" melee weapon (light, or a one-handed fencing blade) — what a
 // swashbuckler's Precise Strike, Weapon Focus/Specialization and Improved
 // Critical key off of.
-const FINESSE_KEYS = new Set(['rapier', 'scimitar', 'shortsword', 'dagger', 'kukri', 'cutlass', 'estoc', 'sword_cane', 'starknife', 'sap', 'radiance', 'curator', 'bastardsblade']);   // bastardsblade: Kai Ginn's DEX-ridden fauchard
+const FINESSE_KEYS = new Set(['rapier', 'scimitar', 'shortsword', 'dagger', 'kukri', 'cutlass', 'estoc', 'sword_cane', 'starknife', 'sap', 'radiance', 'curator', 'bastardsblade', 'lammas']);   // bastardsblade: Kai Ginn's DEX-ridden fauchard; lammas: Femmik's Dawnflower Dervish scimitar (Dervish Dance = DEX to hit & damage)
 function isFinesseWeapon(w) { return !!w && !w.ranged && (w.cat === 'light' || FINESSE_KEYS.has(w.key)); }
 function maxHpFor(cls, level) { return hdFor(cls) * Math.max(1, level || 1) + fighterFeats(cls, level).hp; }
 // (gatingLevel + the *_FEAT_AT tables moved to pf1data/feats.js — concept split 2026-07-04)

@@ -97,6 +97,14 @@ const CHARACTER_VOICES = {
   // API is a separate path — leaving null until we wire it up.
   'Crisp':             null,
 
+  // Hell's Vengeance / Rebels PCs → AI-heroes (2026-07-05). PLACEHOLDER picks from
+  // the existing library so they speak immediately — swap to purpose-picked 11labs
+  // voices on request (like Farrah/Bujon/etc. were refined).
+  'Femmik':            'GEDXnQvfyd3quuXsFgKU', // Felix — flamboyant (shared w/ Estovion/El Guapo): cocky Ifrit fire-dancer
+  'Freya':             'EXAVITQu4vr4xnSDxMaL', // Sarah — mature, confident, commanding: the half-elf field marshal
+  "J'Mal":             'CJnd8k7Q0w2Y1HegJ65F', // John 117 — stoic (shared w/ Vaughan): the quiet Red Mantis assassin
+  'Jason':             'UzI1NsMEV3ni5JRkRSls', // Alistair — cultured, articulate (shared w/ Tar Baphon): the Asmodean priest
+
   // Vorkstag: see voiceFor() — he uses the voice of whoever he's
   // impersonating (Seat.impersonatedNick). When the impersonated
   // target has no voice in this map (humans / unmapped bots), he

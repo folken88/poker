@@ -107,6 +107,23 @@ const CUSTOM_WEAPONS = {
   gnomehammer: { key: 'gnomehammer', name: 'Gnome Hooked Hammer', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'B', group: 'hammers', prof: 'exotic', custom: true, dual: true, noShield: true, atkSound: '/audio/weapon_warhammer.mp3' },
   // Tokala's CHAINSAW — a roaring 3d6 slashing two-hander that crits on an 18.
   chainsaw: { key: 'chainsaw', name: 'Chainsaw', cat: '2h', ranged: false, dmgCount: 3, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'axes', prof: 'exotic', custom: true, atkSound: '/audio/weapon_chainsaw.mp3' },
+  // ── THE HELL'S VENGEANCE / REBELS PCs — now playable AI-heroes (2026-07-05) ──
+  // Femmik's scimitar "Lammas Aeternum" (1d6, 18-20/×2). A Dawnflower Dervish
+  // wields the scimitar with GRACE — it's in Dungeon.js FINESSE_KEYS, so it rides
+  // his DEX (24) for to-hit AND damage. custom => always proficient (bards aren't
+  // normally proficient with scimitars; the Dervish Dance feat grants it).
+  lammas: { key: 'lammas', name: 'Lammas Aeternum', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
+  // Freya Kusanagi's katana "Balrog's Blessed Blade" — a FLAMING samurai's blade
+  // (1d8, 18-20/×2). She's a samurai, already proficient; custom => the blade is
+  // always hers. (Flaming report via atkSound; the +1d6 fire rider is a later polish.)
+  balrogblade: { key: 'balrogblade', name: "Balrog's Blessed Blade", cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
+  // J'Mal's "Angelbone Sawtooth Sabers" — TWIN sawtoothed sabres (Red Mantis
+  // signature), two-weapon fighting (2 swings/turn, one report; no shield),
+  // 1d8 18-20/×2. His Red Mantis Assassin / Rogue sneak dice ride the class.
+  sawtoothsabers: { key: 'sawtoothsabers', name: 'Angelbone Sawtooth Sabers', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'exotic', custom: true, dual: true, noShield: true, atkSound: '/audio/fight_riki.mp3' },
+  // Jason's "Force Pike" — an Asmodean priest's reach weapon (1d10, ×3). custom =>
+  // always proficient. reachFly lets him strike airborne foes from the back rank.
+  forcepike: { key: 'forcepike', name: 'Force Pike', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 3, type: 'P', group: 'spears', prof: 'martial', custom: true, reachFly: true },
   // The DRUID's Shillelagh — a club a druid empowers with nature's strength
   // (1d10, ×2, blunt). Simple/always-proficient; the druid's signature weapon.
   shillelagh: { key: 'shillelagh', name: 'Shillelagh', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 2, type: 'B', group: 'clubs', prof: 'simple', custom: true, atkSound: '/audio/weapon_blunt.mp3' },

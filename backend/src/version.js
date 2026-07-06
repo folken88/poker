@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.25.0 2026-07-05  HELL'S VENGEANCE/REBELS PCs → 4 PLAYABLE AI-HEROES (real
+//                     Foundry builds): Femmik Embersword (Ifrit Dawnflower Dervish
+//                     bard — new BATTLE DANCE: his Inspire Courage is self-only &
+//                     DOUBLED; DEX-finesse scimitar "Lammas Aeternum"), Freya
+//                     Kusanagi (half-elf Samurai/Hellknight, flaming katana),
+//                     J'Mal (hobgoblin Red Mantis Assassin/Rogue, twin sawtooth
+//                     sabers), Jason (tiefling Cleric of Asmodeus, reach force
+//                     pike, trickery/war domains). Added Ifrit + Hobgoblin races.
+//                     REMOVED the old freya/jason/jmal ENEMY stat blocks (they're
+//                     heroes now, not villains).
 //  3.24.0 2026-07-05  SLAYER Studied Target (Stage 2, completes the class): a
 //                     SWIFT/free-action mark on ONE foe — every attack the slayer
 //                     makes against it gains +N insight to hit AND damage
@@ -265,4 +275,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.24.0' };
+module.exports = { VERSION: '3.25.0' };

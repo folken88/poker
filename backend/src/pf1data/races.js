@@ -48,6 +48,10 @@ const RACES = {
   skinwalker: { name: 'Skinwalker', mods: { wis: 2, cha: -2 },     size: 'medium', speed: 30, vision: 'low-light',     saves: {},                     traits: ['+2 WIS, −2 CHA', 'Change shape (beast-form)', 'Low-light vision'] },
   leshy:    { name: 'Leshy',    mods: { con: 2, wis: 2, cha: -2 }, size: 'small',  speed: 20, vision: 'low-light',     saves: {},                     traits: ['+2 CON, +2 WIS, −2 CHA', 'Plant (immune to mind-affecting — Phase 2)', 'Small', 'Low-light vision'] },
   animal:   { name: 'Animal',                                       size: 'medium', speed: 40, vision: 'low-light',     saves: {},                     traits: ['No racial ability adjustments (not a humanoid race)', 'Natural attacks (via weapon)', 'Low-light vision', 'Scent'] },
+  // Ifrit — fire-touched Geniekin (Femmik). Fire resist 5; the −2 WIS shows in his headlong style.
+  ifrit:    { name: 'Ifrit',    mods: { dex: 2, cha: 2, wis: -2 }, size: 'medium', speed: 30, vision: 'darkvision60',  saves: {},                     traits: ['+2 DEX, +2 CHA, −2 WIS', 'Fire resistance 5', 'Darkvision 60'] },
+  // Hobgoblin — disciplined goblinoid soldiers (J'Mal). Tough and quick.
+  hobgoblin:{ name: 'Hobgoblin', mods: { dex: 2, con: 2 },          size: 'medium', speed: 30, vision: 'darkvision60',  saves: {},                     traits: ['+2 DEX, +2 CON', 'Darkvision 60'] },
 };
 
 const DEFAULT_RACE = 'none';   // unassigned → no racial mods (zero change until a race is chosen)

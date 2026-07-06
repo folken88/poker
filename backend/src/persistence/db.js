@@ -274,6 +274,13 @@ const BOT_ROSTER = [
   { name: 'Olbryn',               avatar: '/tokens/olbryn.webp',                 baseMode: 'risky',    intelligence: 'high', gender: 'he'     }, // Josh's Drow storm-sorcerer (Iron Gods) — Staff of Lightning (+2 CL to electricity); wild-magic, selfish-but-loyal
   { name: 'Binch',                avatar: '/tokens/binch.webp',                  baseMode: 'standard', intelligence: 'average', gender: 'she' }, // Cleric of Besmara — Trickery + Liberation; older woman
   { name: 'Celeb',                avatar: '/tokens/celeb.webp',                  baseMode: 'standard', intelligence: 'high', gender: 'he'     }, // Cleric of NETHYS — arcane-dabbling, wears no armor
+
+  // Round 8 — the Hell's Vengeance / Rebels PCs, imported as PLAYABLE AI-heroes
+  // (you play the villains in those APs). Real Foundry builds; see characterBuilds.
+  { name: 'Femmik Embersword',    nickname: 'Femmik', avatar: '/tokens/femmik.webp', baseMode: 'risky',    intelligence: 'high',    gender: 'he'  }, // Ifrit Dawnflower Dervish bard — self-buffs (Battle Dance), then DEX-scimitars faces off
+  { name: 'Freya Kusanagi',       nickname: 'Freya',  avatar: '/tokens/freya.webp',  baseMode: 'standard', intelligence: 'high',    gender: 'she' }, // Half-elf Samurai/Hellknight field marshal — STR 26, flaming katana
+  { name: "J'Mal",                avatar: '/tokens/jmal.webp',                   baseMode: 'risky',    intelligence: 'average', gender: 'he'  }, // Hobgoblin Red Mantis Assassin/Rogue — twin sawtooth sabers + sneak (Tim's character)
+  { name: 'Jason',                avatar: '/tokens/jason.webp',                  baseMode: 'cautious', intelligence: 'high',    gender: 'he'  }, // Tiefling Divine Scion/Cleric of Asmodeus — WIS caster, reach force pike
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
@@ -441,6 +448,8 @@ const BOT_CLASSES = {
   'Rissa': 'druid', 'Taelys': 'gunslinger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'gunslinger',   // Taelys + Duristan: PF1 gunslingers (rifles)
   'Holden': 'swashbuckler',
   'Ser Toche': 'rogue', 'El Guapo': 'swashbuckler', 'Gabriel': 'paladin',
+  // Hell's Vengeance / Rebels PCs → AI-heroes (real Foundry builds):
+  'Femmik Embersword': 'bard', 'Freya Kusanagi': 'samurai', "J'Mal": 'rogue', 'Jason': 'cleric',
 };
 // Sensible default base weapon per class so AI aren't all daggers in the dungeon.
 const CLASS_WEAPON = {
@@ -469,6 +478,8 @@ const BOT_WEAPONS = {
   'Nomkath': 'kukri', 'Kelda': 'dagger',   // rogues — dual-wield light blades (dagger / kukri)
   'Ser Toche': 'elvencurve',               // tengu rogue — elven curved blade (DEX two-hander)
   'Gabriel': 'redeemer',                   // Hell's Rebels paladin — green-glass greatsword Redeemer (Divine Bond makes it holy)
+  // Hell's Vengeance / Rebels PCs — signature weapons (see pf1data/staples.js):
+  'Femmik Embersword': 'lammas', 'Freya Kusanagi': 'balrogblade', "J'Mal": 'sawtoothsabers', 'Jason': 'forcepike',
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 
