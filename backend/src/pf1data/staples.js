@@ -145,6 +145,11 @@ const CUSTOM_WEAPONS = {
   // INTRINSICALLY SHOCK — the storm bow crackles: +1d6 electricity on every shot,
   // always on (on top of his magus Spellstrike). +N rides his gear.
   stormcaller: { key: 'stormcaller', name: 'Stormcaller', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'P', group: 'bows', prof: 'martial', custom: true, special: { shock: true }, atkSound: '/audio/bow_silent_hits.mp3' },
+  // Draymus's "Angelbone Scythe" — a necromancer's reaping blade (2d4, ×4 crit, the
+  // scythe's brutal multiplier). custom => always proficient. UNHOLY: he's a Neutral
+  // Evil dhampir, so +2d6 vs GOOD foes (bites the Heavenly Host). A caster's backup —
+  // he mostly casts — but thematic and it hits hard on a crit.
+  angelbonescythe: { key: 'angelbonescythe', name: 'Angelbone Scythe', cat: '2h', ranged: false, dmgCount: 2, dmgDie: 4, crit: 20, mult: 4, type: 'P/S', group: 'bladesHeavy', prof: 'martial', custom: true, special: { unholy: true }, atkSound: '/audio/spell_umbral_bolt.mp3' },
   // The DRUID's Shillelagh — a club a druid empowers with nature's strength
   // (1d10, ×2, blunt). Simple/always-proficient; the druid's signature weapon.
   shillelagh: { key: 'shillelagh', name: 'Shillelagh', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 2, type: 'B', group: 'clubs', prof: 'simple', custom: true, atkSound: '/audio/weapon_blunt.mp3' },

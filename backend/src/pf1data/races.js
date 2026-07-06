@@ -56,6 +56,12 @@ const RACES = {
   // wings, not a spell: it is INNATE and can never be dispelled (see raceFly + the
   // member build in Dungeon.js). `fly` = the innate fly speed in feet.
   strix:    { name: 'Strix',    mods: { dex: 2, cha: -2 },          size: 'medium', speed: 30, fly: 60, vision: 'darkvision60', saves: {},               traits: ['+2 DEX, −2 CHA', 'Winged — innate fly 60 ft (real wings; CANNOT be dispelled)', 'Nocturnal', 'Darkvision 60'] },
+  // Dhampir — the half-living dhampir (Draymus). A humanoid with the DHAMPIR subtype:
+  // negative energy heals it and positive energy harms it (like the undead), immune to
+  // disease & magical sleep, +2 vs disease/mind-affecting. Darkvision 60. NOTE: the
+  // negative-energy-healing quirk is described here but NOT yet mechanically applied to
+  // heroes (he heals normally in-game for now, so the party cleric can still keep him up).
+  dhampir:  { name: 'Dhampir',  mods: { dex: 2, cha: 2, con: -2 }, size: 'medium', speed: 30, vision: 'darkvision60',  saves: {},                     traits: ['+2 DEX, +2 CHA, −2 CON', 'Negative energy heals, positive harms (dhampir)', 'Immune to disease & magical sleep', '+2 vs disease & mind-affecting', 'Darkvision 60'] },
 };
 
 const DEFAULT_RACE = 'none';   // unassigned → no racial mods (zero change until a race is chosen)

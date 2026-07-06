@@ -262,6 +262,9 @@ const SPELL = {
   waveexhaustion:  { key: 'waveexhaustion',  name: 'Waves of Exhaustion', icon: '🌊', effect: 'exhaust', target: 'aoe', maxTargets: 6, slvl: 7, sound: '/audio/spell_umbral_bolt.mp3', desc: 'A wave of crushing fatigue — up to 6 LIVING foes are EXHAUSTED, NO save (one action a turn, −1 hit, −1 AC). Undead and constructs are untouched.' },
   prismaticspray:  { key: 'prismaticspray',  name: 'Prismatic Spray',     icon: '🌈', effect: 'prismatic', target: 'aoe', maxTargets: 6, die: 6, dice: 'level', dcap: 12, slvl: 7, sound: '/audio/spell_holysmite.mp3', desc: 'A fan of clashing rays — every foe struck takes a RANDOM element for level d6 (Reflex half, max 12d6), and a violet ray (1-in-8) UNMAKES the living outright on a failed Fortitude save.' },
   sunburst:        { key: 'sunburst',        name: 'Sunburst',            icon: '☀️', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 12, blindRider: true, slvl: 8, sound: '/audio/spell_searinglight.mp3', desc: 'A globe of blazing daylight — up to 6 foes take level d6 (max 12d6, Reflex half); a failed save also BLINDS for 3 rounds.' },
+  // ── NECROMANCY (Draymus's specialty; char-gated to him in the wizard kit) ──
+  chilltouch:      { key: 'chilltouch',      name: 'Chill Touch',         icon: '🖐️', effect: 'touch', target: 'enemy', die: 6, dice: 'halflevel', dcap: 5, dtype: 'negative', slvl: 1, sound: S.umbral, desc: 'A ghostly touch of the grave — ranged touch for ½level d6 negative energy (max 5d6); the chill of undeath. No effect on undead.' },
+  enervation:      { key: 'enervation',      name: 'Enervation',          icon: '🩸', effect: 'touch', target: 'enemy', die: 4, dice: 'halflevel', dcap: 8, dtype: 'negative', slvl: 4, sound: S.umbral, desc: 'A black ray of soul-draining negative energy — ranged touch, ½level d4 (max 8d4); the grave saps the living. No effect on undead.' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
@@ -450,6 +453,9 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { ...SPELL.scorchingray,  key: 'scorch_emp',    name: 'Empowered Scorching Ray', icon: '🔥', cost: 'room', uses: 1, minLevel: 13, slvl: 4, empowered: true, desc: 'Scorching Ray in a 4th-level slot — ×1.5 fire on every ray.' },
     { ...SPELL.coneofcold,    key: 'cone_max',      name: 'Maximized Cone of Cold', icon: '🥶', cost: 'room', uses: 1, minLevel: 17, slvl: 8, maximized: true,  desc: 'Cone of Cold in an 8th-level slot — every die maxed (Reflex half).' },
     { ...SPELL.disintegrate,  key: 'disint_max',    name: 'Maximized Disintegrate', icon: '☢️', cost: 'room', uses: 1, minLevel: 17, slvl: 9, maximized: true,  desc: 'Disintegrate in a 9th-level slot — every die maxed on a hit.' },
+    // (Draymus's char-gated NECROMANCY suite is injected AFTER the kits.generated.js
+    //  override — see the Draymus block near Olbryn's storm spec below, so it survives
+    //  regeneration.)
   ] },
   // SORCERER — spontaneous caster: knows FEWER spells, drawn from a shared
   // per-room cast pool (his limited casts/day = casts/room). A focused blaster's
@@ -859,6 +865,21 @@ if (KITS.sorcerer && Array.isArray(KITS.sorcerer.abilities)) {
   KITS.sorcerer.abilities.push(
     { ...spontaneousSpell(SPELL.shockinggrasp, 1), char: 'Olbryn' },
     { ...spontaneousSpell(SPELL.lightningbolt, 6), char: 'Olbryn' },
+  );
+}
+
+// Draymus's NECROMANCY specialization — injected AFTER the generated-kit override (so
+// it survives regeneration, like Olbryn's storm spec) and BEFORE the prepared→slot
+// conversion below (so these leveled spells spend a slot like the rest of his book).
+// char-gated to Draymus via Dungeon._charAllows: a deeper death arsenal than a generic
+// wizard — Chill Touch, Enervation, Slay Living, ON TOP of the wizard's own death spells
+// (darkness, cloudkill, finger of death, horrid wilting, wail of the banshee…).
+// TODO: migrate into kit_abilities (char='Draymus') when the DB is next regen'd.
+if (KITS.wizard && Array.isArray(KITS.wizard.abilities)) {
+  KITS.wizard.abilities.push(
+    { ...preparedSpell(SPELL.chilltouch, 1),  char: 'Draymus' },
+    { ...preparedSpell(SPELL.enervation, 7),  char: 'Draymus' },
+    { ...preparedSpell(SPELL.slayliving, 9),  char: 'Draymus' },
   );
 }
 

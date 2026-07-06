@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.31.0 2026-07-06  DRAYMUS the NECROMANCER — a playable dhampir wizard AI-hero
+//                     (Agent of the Grave, author of the Mortiari Manifesto). New
+//                     DHAMPIR race (+2 Dex/+2 Cha/−2 Con, darkvision 60, negative
+//                     energy heals). He wields the ANGELBONE SCYTHE (2d4 ×4, unholy —
+//                     bites the good). As a necromancer SPECIALIST he gets a char-gated
+//                     death arsenal a normal wizard lacks: CHILL TOUCH + ENERVATION
+//                     (new negative-energy touch spells) + SLAY LIVING, on top of the
+//                     wizard's own death spells (darkness, cloudkill, finger of death,
+//                     horrid wilting, wail of the banshee). FUTURE: a summoning system
+//                     so casters can raise fodder to the battlefield. domtest +7.
 //  3.30.0 2026-07-06  SIGNATURE WEAPON QUALITIES: named blades now carry their own
 //                     magic INTRINSICALLY — always on, no matter the wielder's class,
 //                     level or +N tier (the +N still rides the in-game gear). Gabriel's
@@ -361,4 +371,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.30.0' };
+module.exports = { VERSION: '3.31.0' };

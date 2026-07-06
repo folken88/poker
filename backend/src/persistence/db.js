@@ -283,6 +283,7 @@ const BOT_ROSTER = [
   { name: 'Jason',                avatar: '/tokens/jason.webp',                  baseMode: 'cautious', intelligence: 'high',    gender: 'he'  }, // Tiefling Divine Scion/Cleric of Asmodeus — WIS caster, reach force pike
   { name: 'Reese',                avatar: '/tokens/reese.webp?v=2',              baseMode: 'risky',    intelligence: 'average', gender: 'he'  }, // Strix Eldritch-Archer magus — ALWAYS flying (real wings), spellstrikes through his bow. ?v=2 cache-busts the token-art swap so browsers re-fetch (2026-07-06).
   { name: 'Savage',               avatar: '/tokens/savage.webp',                 baseMode: 'risky',    intelligence: 'low',     gender: 'he'  }, // Tiefling BLOODRAGER — greataxe, Bloodrage + Cleave, self-buffs; zoomer 'graham' brute
+  { name: 'Draymus',              avatar: '/tokens/draymus-necromancer.webp',    baseMode: 'cautious', intelligence: 'high',    gender: 'he'  }, // Dhampir NECROMANCER wizard (Agent of the Grave) — a deeper death arsenal than a normal wizard; scythe in hand
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
@@ -454,6 +455,7 @@ const BOT_CLASSES = {
   'Femmik Embersword': 'bard', 'Freya Kusanagi': 'cavalier', "J'Mal": 'rogue', 'Jason': 'cleric',
   'Reese': 'magus',   // Strix Eldritch-Archer magus — spellstrike through his bow (real build: Arcane Archer/Ranger/Wizard)
   'Savage': 'bloodrager',   // tiefling bloodrager — Bloodrage + Cleave + slow self-buffs
+  'Draymus': 'wizard',   // dhampir NECROMANCER — a wizard with a char-gated extra death arsenal (see abilities.js)
 };
 // Sensible default base weapon per class so AI aren't all daggers in the dungeon.
 const CLASS_WEAPON = {
@@ -486,6 +488,7 @@ const BOT_WEAPONS = {
   'Femmik Embersword': 'lammas', 'Freya Kusanagi': 'balrogblade', "J'Mal": 'sawtoothdragon', 'Jason': 'forcepike',   // J'Mal: saber + bashing Dragon Shield (2 swings + shield AC)
   'Reese': 'stormcaller',   // his arcane bow — spellstrike rides the shot
   'Savage': 'greataxe',   // 1d12 ×3 two-hander — cleaves through ranks
+  'Draymus': 'angelbonescythe',   // his signature death-scythe (2d4 ×4) — a caster's backup, but thematic
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 
