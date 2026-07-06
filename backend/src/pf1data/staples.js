@@ -53,27 +53,35 @@ const CUSTOM_WEAPONS = {
   // signature blade). impCritAt 9: Improved Critical folds in at level 9+
   // (threat 15-20). It's in FINESSE_KEYS (character.js + Dungeon.js): despite
   // being a STR polearm, this blade rides Kai's DEX 20 for attack AND damage.
-  bastardsblade: { key: 'bastardsblade', name: "Bastard's Blade", cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 18, mult: 2, type: 'S', group: 'polearms', prof: 'martial', custom: true, reachFly: true, impCritAt: 9 },
+  bastardsblade: { key: 'bastardsblade', name: "Bastard's Blade", cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 18, mult: 2, type: 'S', group: 'polearms', prof: 'martial', custom: true, special: { keen: true }, reachFly: true, impCritAt: 9 },
   // Dismas's holy dragon-rifle. A firearm (1d12, ×4 crit) — he smites with it.
-  rovadra: { key: 'rovadra', name: 'Rovadra', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 12, crit: 20, mult: 4, type: 'B', group: 'firearms', prof: 'exotic', custom: true, atkSound: '/audio/rovadra_dragonrifle.mp3' },   // Dismas's holy-gun report — the dragonrifle "delay" recording (single shot)
-  // Gaspar's bastard sword "Curator".
-  curator: { key: 'curator', name: 'Curator', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 19, mult: 2, type: 'S', group: 'heavyBlades', prof: 'exotic', custom: true },
+  // INTRINSICALLY a HOLY (a "little bit" — 1d6 vs evil) FLAMING BURST dragon-rifle:
+  // +1d6 fire each shot, +2d10 fire on its ×4 crit, +1d6 vs evil. Dismas's holy gun.
+  rovadra: { key: 'rovadra', name: 'Rovadra', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 12, crit: 20, mult: 4, type: 'B', group: 'firearms', prof: 'exotic', custom: true, special: { flamingBurst: true, holy: 1 }, atkSound: '/audio/rovadra_dragonrifle.mp3' },   // Dismas's holy-gun report — the dragonrifle "delay" recording (single shot)
+  // Gaspar's bastard sword "Curator" — KEEN (folds its 19-20 threat into 17-20).
+  curator: { key: 'curator', name: 'Curator', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 19, mult: 2, type: 'S', group: 'heavyBlades', prof: 'exotic', custom: true, special: { keen: true } },
   // Gabriel's greatsword "Redeemer" — a green-glass blade of legend, once a tool of
   // evil, reforged into a holy sword in a paladin's hands. INTRINSICALLY a FLAMING
   // BURST, HOLY blade (2d6, 19-20/×2): +1d6 fire every hit, extra fire on a crit, and
   // +2d6 vs EVIL — always on, even at +0. Its ENHANCEMENT (+N) rides Gabriel's gear
   // tier / Divine Bond on top.
   redeemer: { key: 'redeemer', name: 'Redeemer', cat: '2h', ranged: false, dmgCount: 2, dmgDie: 6, crit: 19, mult: 2, type: 'S', group: 'heavyBlades', prof: 'martial', custom: true, special: { flamingBurst: true, holy: true }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
-  // Danger's composite longbow (1d8, ×3) — single-shot bow report.
-  longbow: { key: 'longbow', name: 'Composite Longbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'P', group: 'bows', prof: 'martial', custom: true, atkSound: '/audio/bow_silent_hits.mp3' },   // Danger's longbow — near-silent loose, sound lands on the hit
-  // Vesorianna's spectral Ghost Touch — a chilling 2d6 melee strike.
-  ghosttouch: { key: 'ghosttouch', name: 'Ghost Touch', cat: '1h', ranged: false, dmgCount: 2, dmgDie: 6, crit: 20, mult: 2, type: 'B', group: 'natural', prof: 'simple', custom: true },
+  // Danger's ORCISH WARBOW — a massive hornbow (2d6, ×3). An exotic weapon, but Danger
+  // is TRAINED with it (custom => always proficient). Key stays 'longbow' so his persisted
+  // weapon row / gear history survive the rename.
+  longbow: { key: 'longbow', name: 'Orcish Warbow', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 6, crit: 20, mult: 3, type: 'P', group: 'bows', prof: 'exotic', custom: true, atkSound: '/audio/bow_silent_hits.mp3' },   // Danger's warbow — near-silent loose, sound lands on the hit
+  // Vesorianna's spectral Ghost Touch — a chilling 2d6 melee strike. FROST: +1d6 cold each hit.
+  ghosttouch: { key: 'ghosttouch', name: 'Ghost Touch', cat: '1h', ranged: false, dmgCount: 2, dmgDie: 6, crit: 20, mult: 2, type: 'B', group: 'natural', prof: 'simple', custom: true, special: { frost: true } },
   // Crisp the deinonychus — a natural full attack: bite + 2 raking talons (1d6
   // each), all at full BAB (see _attackOffsets naturalAttacks). No shield.
   bite: { key: 'bite', name: 'Talons & Bite', cat: 'light', ranged: false, dmgCount: 1, dmgDie: 6, crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 3, noShield: true },
   // Rissa's claws (natural, 1d6).
   claws: { key: 'claws', name: 'Claws', cat: 'light', ranged: false, dmgCount: 1, dmgDie: 6, crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true },
-  // Vaughan's named scimitar "Radiance" (1d6, 18–20/×2).
+  // Vaughan's named scimitar "Radiance" (1d6, 18–20/×2). A SENTIENT blade — voice
+  // "Tresdin", she has lived dozens of reincarnated lives beside Vaughan and critiques
+  // him often (banter is a future feature). No intrinsic element: she is not holy/flaming,
+  // but she is ALWAYS at least magic +1 and scales with BOTH Vaughan's gear tier AND his
+  // magus levels — the magus arcane-pool enhancement already handles that, so no `special`.
   radiance: { key: 'radiance', name: 'Radiance', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true },
   // Lirienne's repeating crossbow (1d8, 19–20).
   repeatingcrossbow: { key: 'repeatingcrossbow', name: 'Repeating Crossbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'exotic', custom: true, atkSound: '/audio/crossbow.mp3' },
@@ -98,17 +106,20 @@ const CUSTOM_WEAPONS = {
   dvl: { key: 'dvl', name: 'DVL-10 Sniper Rifle', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 8, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, boltAction: true, atkSound: '/audio/rifle_dvl_silenced.mp3' },
   // Ser Toche's elven curved blade — the classic PF1 DEX two-hander (1d10, 18–20):
   // finesse2h lets a DEX build drive it (to-hit AND damage, ×1.5 two-handed).
-  elvencurve: { key: 'elvencurve', name: 'Elven Curved Blade', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 18, mult: 2, type: 'S', group: 'heavyBlades', prof: 'exotic', custom: true, finesse2h: true },
+  elvencurve: { key: 'elvencurve', name: 'Elven Curved Blade', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 18, mult: 2, type: 'S', group: 'heavyBlades', prof: 'exotic', custom: true, special: { keen: true }, finesse2h: true },
   // Ulfred's named battleaxe "Voidshard" (1d8, ×3) — its own meaty axe report.
-  voidshard: { key: 'voidshard', name: 'Voidshard', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'S', group: 'axes', prof: 'martial', custom: true, atkSound: '/audio/voidshard.mp3' },
+  // FREEZING BURST: +1d6 cold each hit, +2d10 cold on its ×3 crit (frostBurst rider).
+  voidshard: { key: 'voidshard', name: 'Voidshard', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'S', group: 'axes', prof: 'martial', custom: true, special: { frostBurst: true }, atkSound: '/audio/voidshard.mp3' },
   // Farrus Richton's TWIN battleaxes — two-weapon fighting (2 swings/turn, one
   // report), and no shield (dual-wield → no shield AC).
-  twoaxes: { key: 'twoaxes', name: 'Twin Battleaxes', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'S', group: 'axes', prof: 'martial', custom: true, dual: true, noShield: true, atkSound: '/audio/weapon_double_axe.mp3' },
+  // UNHOLY: +2d6 vs good-aligned foes (Farrus is a devil-blooded villain PC).
+  twoaxes: { key: 'twoaxes', name: 'Twin Battleaxes', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'S', group: 'axes', prof: 'martial', custom: true, special: { unholy: true }, dual: true, noShield: true, atkSound: '/audio/weapon_double_axe.mp3' },
   // Lou Candlebean's GNOME HOOKED HAMMER — a DOUBLE weapon she two-weapon fights
   // with (2 swings/turn, one report; no shield). Hammer head: 1d8 B, ×3 crit.
   gnomehammer: { key: 'gnomehammer', name: 'Gnome Hooked Hammer', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'B', group: 'hammers', prof: 'exotic', custom: true, dual: true, noShield: true, atkSound: '/audio/weapon_warhammer.mp3' },
   // Tokala's CHAINSAW — a roaring 3d6 slashing two-hander that crits on an 18.
-  chainsaw: { key: 'chainsaw', name: 'Chainsaw', cat: '2h', ranged: false, dmgCount: 3, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'axes', prof: 'exotic', custom: true, atkSound: '/audio/weapon_chainsaw.mp3' },
+  // KEEN: those churning teeth widen its 18-20 threat to 15-20 (thematically perfect).
+  chainsaw: { key: 'chainsaw', name: 'Chainsaw', cat: '2h', ranged: false, dmgCount: 3, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'axes', prof: 'exotic', custom: true, special: { keen: true }, atkSound: '/audio/weapon_chainsaw.mp3' },
   // ── THE HELL'S VENGEANCE / REBELS PCs — now playable AI-heroes (2026-07-05) ──
   // Femmik's scimitar "Lammas Aeternum" (1d6, 18-20/×2). A Dawnflower Dervish
   // wields the scimitar with GRACE — it's in Dungeon.js FINESSE_KEYS, so it rides

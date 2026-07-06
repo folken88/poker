@@ -1454,7 +1454,7 @@ class Dungeon {
     // is always treated as wielding at least this grade): +1@1, +2@5, keen@6,
     // flaming@8, +3@9, flaming burst@11, +4@13, +5@17. The real weapon's enchant
     // wins if it's higher; keen/flaming layer on top.
-    let arcEnhDelta = 0, arcKeen = false, arcFlame = 0, arcFlameBurst = false, arcHoly = 0, arcUnholy = 0, arcShock = 0, arcFrost = 0;
+    let arcEnhDelta = 0, arcKeen = false, arcFlame = 0, arcFlameBurst = false, arcHoly = 0, arcUnholy = 0, arcShock = 0, arcFrost = 0, arcFrostBurst = false;
     if (cls === 'magus') {
       const arcEnh = lvl >= 17 ? 5 : lvl >= 13 ? 4 : lvl >= 9 ? 3 : lvl >= 5 ? 2 : 1;
       arcEnhDelta = Math.max(0, arcEnh - (weapon.dmgBonus || 0));   // only the part above the real enchant
@@ -1482,10 +1482,13 @@ class Dungeon {
       if (wsp.keen) arcKeen = true;
       if (wsp.flaming || wsp.flamingBurst) arcFlame = Math.max(arcFlame, 1);
       if (wsp.flamingBurst) arcFlameBurst = true;
-      if (wsp.holy) arcHoly = Math.max(arcHoly, 2);
-      if (wsp.unholy) arcUnholy = Math.max(arcUnholy, 2);
+      // holy/unholy accept a NUMBER of d6 (Rovadra is a "little bit holy" = 1d6);
+      // a bare `true` is the standard 2d6.
+      if (wsp.holy) arcHoly = Math.max(arcHoly, typeof wsp.holy === 'number' ? wsp.holy : 2);
+      if (wsp.unholy) arcUnholy = Math.max(arcUnholy, typeof wsp.unholy === 'number' ? wsp.unholy : 2);
       if (wsp.shock) arcShock = Math.max(arcShock, 1);
-      if (wsp.frost) arcFrost = Math.max(arcFrost, 1);
+      if (wsp.frost || wsp.frostBurst) arcFrost = Math.max(arcFrost, 1);
+      if (wsp.frostBurst) arcFrostBurst = true;   // FREEZING BURST: +1d6 cold, extra cold on a crit (Voidshard)
     }
     // Dimensional Blade — for 1 round the magus's strikes resolve as TOUCH attacks.
     if (attacker.touchStrike > 0 && target) ac = this._enemyAC(target, { touch: true, melee: true });   // Dimensional Blade = a MELEE touch → prone stays a −4 (melee) AC
@@ -1665,6 +1668,7 @@ class Dungeon {
     // ×1.5 to a robot). Weapon-borne only (Stormcaller's storm shot); no burst tier.
     if (arcShock) dmg += this._resisted(target, dRollN(arcShock, 6), 'electricity');
     if (arcFrost) dmg += this._resisted(target, dRollN(arcFrost, 6), 'cold');
+    if (crit && arcFrostBurst) dmg += this._resisted(target, dRollN(Math.max(1, (weapon.critMult || 2) - 1), 10), 'cold');   // freezing burst: extra cold dice on a confirmed crit (matches flaming burst, ×the crit multiplier)
     // Divine Bond HOLY (paladin) / Fiendish Boon UNHOLY (antipaladin): +2d6 of aligned
     // energy that only bites the opposed alignment — vs EVIL foes (holy) / GOOD foes
     // (unholy). Rides on top: not soaked by physical DR, not crit-multiplied.

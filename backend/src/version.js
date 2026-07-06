@@ -3,6 +3,24 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.1 2026-07-06  DANGER'S BOW is an ORCISH WARBOW: base damage 2d6 (was a 1d8 composite
+//                     longbow), ×3 crit. An exotic hornbow, but Danger is trained with it
+//                     (custom weapon → always proficient). Weapon key stays 'longbow' so his
+//                     saved weapon row survives the rename.
+//  3.37.0 2026-07-06  SIGNATURE-WEAPON QUALITIES, round 2 (Josh's roster question). Named
+//                     blades now carry the magic their owners describe, always on: ROVADRA
+//                     (Dismas's dragon-rifle) is a FLAMING BURST gun that's "a little bit
+//                     holy" — +1d6 fire/shot, +2d10 fire on its ×4 crit, +1d6 vs evil.
+//                     VOIDSHARD (Ulfred) is FREEZING BURST — +1d6 cold, +2d10 cold on a
+//                     crit. CHAINSAW (Tokala), CURATOR (Gaspar), BASTARD'S BLADE (Kai) and
+//                     the ELVEN CURVED BLADE (Toche) are KEEN. TWIN BATTLEAXES (Farrus) are
+//                     UNHOLY (bite the good). GHOST TOUCH (Vesorianna) is FROST. New rider
+//                     tiers: FROST BURST (extra cold on a crit) + GRADED holy/unholy (a
+//                     weapon can be "a little" holy — 1d6 — not just the full 2d6). RADIANCE
+//                     (Vaughan) stays element-free by design: she's a SENTIENT blade (voice
+//                     "Tresdin", reincarnated at his side) who is always ≥+1 and scales with
+//                     his magus levels + gear — the arcane pool already handles that. Her
+//                     banter is a future feature. domtest +6.
 //  3.36.0 2026-07-06  REESE archery feat-track + WHISPERING WAY undead summoning. A BOW
 //                     magus now climbs the RANGER archery ladder on top of his magus
 //                     metamagic core — Point Blank Shot, Rapid Shot, Bullseye (and
@@ -436,4 +454,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.36.0' };
+module.exports = { VERSION: '3.37.1' };
