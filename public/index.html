@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/table.css?v=20260704-crop2" />
+  <link rel="stylesheet" href="/css/table.css?v=20260706-resetbtn" />
 </head>
 <body data-screen="loading">
   <!-- ===== Loading screen ===== -->
@@ -105,6 +105,10 @@
                cosmetic fights — never poker. -->
           <select class="me-gender me-class"  id="meClass"  aria-label="Your class"></select>
           <select class="me-gender me-weapon" id="meWeapon" aria-label="Your weapon"></select>
+          <!-- Bust the current class back to Level 1 (keeps gear/gold/other classes).
+               A real <button> so VoiceOver's item chooser can find it (blind access). -->
+          <button type="button" class="me-gender me-reset" id="meResetLevel" aria-label="Reset your character to Level 1"
+                  title="Reset your current class back to Level 1 — keeps your gear, gold, and any other classes you've leveled">↺ Reset to Lv 1</button>
         </span>
         <!-- Chips badge doubles as the Abadar-bank hover trigger. The
              popover (#mePursePop) is hidden by default; the .me-purse

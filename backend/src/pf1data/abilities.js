@@ -551,16 +551,19 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
   //       +4@13, +5@17 (the player's real weapon enchant wins if it's higher).
   // (Per-magus Spell Strike SFX — Kate's "boudicca", Vaughan's anime sword, Toni's
   // axe — are wired in Dungeon.js via MAGUS_SPELLSTRIKE_SFX.)
-  magus: { atwill: ATTACK('⚔️'), note: 'Spell Strikes channel a touch spell through your weapon. Spellbook: one casting of each prepared spell per room.', abilities: [
-    // ── SPELL STRIKES (class feature; 1 use per 5 levels per room) ──
-    { key: 'spellstrike',    name: 'SS Shock',    icon: '⚡',  cost: 'room', uses: smiteUses, minLevel: 1,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 5,  dtype: 'electricity', sound: S.shock,     desc: 'Spell Strike — Shocking Grasp (1st): your weapon hit PLUS level d6 electricity (cap 5d6).' },
-    { key: 'frigidtouch',    name: 'SS Frigid',   icon: '🧊', cost: 'room', uses: smiteUses, minLevel: 4,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 4,            dtype: 'cold', debuff: 'sickened', sound: S.frostbite, desc: 'Spell Strike — Frigid Touch (2nd): your weapon hit +4d6 cold; the foe is staggered (sickened).' },
-    { key: 'vampirictouch',  name: 'SS Vamp',     icon: '🩸', cost: 'room', uses: smiteUses, minLevel: 7,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 'halflevel', dcap: 10, dtype: 'negative', lifesteal: true, sound: S.umbral, desc: 'Spell Strike — Vampiric Touch (3rd): your weapon hit +½level d6 negative energy (cap 10d6); you HEAL the energy damage dealt.' },
-    { key: 'intenseshock',   name: 'SS Max SG',   icon: '🌩️', cost: 'room', uses: smiteUses, minLevel: 7,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 10, dtype: 'electricity', sound: S.shock,     desc: 'Spell Strike — Intensified Shocking Grasp: your weapon hit PLUS level d6 electricity, cap raised to 10d6.' },
-    { key: 'forcefulstrike', name: 'SS Force',    icon: '💪', cost: 'room', uses: smiteUses, minLevel: 10, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'halflevel', dcap: 5,  dtype: 'force', bullRush: true, allyAOO: true, sound: S.shock, desc: 'Spell Strike — Forceful Strike (4th): your weapon hit +½level d6 force and a BULL RUSH — the foe is shoved, provoking a free attack from one of your melee allies.' },
-    { key: 'empvamp',        name: 'SS Emp Vamp', icon: '🩸', cost: 'room', uses: smiteUses, minLevel: 13, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'halflevel', dcap: 10, dtype: 'negative', lifesteal: true, empowered: true, sound: S.umbral, desc: 'Spell Strike — Empowered Vampiric Touch (5th): your weapon hit +½level d6 negative ×1.5 (cap 10d6); you HEAL the energy dealt.' },
-    { key: 'empshock',       name: 'SS Emp SG',   icon: '🌩️', cost: 'room', uses: smiteUses, minLevel: 13, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 15, dtype: 'electricity', empowered: true, sound: S.shock, desc: 'Spell Strike — Intensified Empowered Shocking Grasp (5th): your weapon hit + level d6 electricity ×1.5 (cap 15d6).' },
-    { key: 'maxshock',       name: 'SS Max!',     icon: '⚡', cost: 'room', uses: smiteUses, minLevel: 16, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 15, dtype: 'electricity', maximized: true, empowered: true, canCrit: true, sound: S.shock, desc: 'Spell Strike — Intensified Empowered Maximized Shocking Grasp (6th): your weapon hit + a NO-ROLL 15d6 (90) electricity that CAN CRIT.' },
+  magus: { atwill: ATTACK('⚔️'), note: 'Channel a touch spell through your weapon (Spell Strike) — or, with a bow, through the shot (Imbued Shot). One clean entry per spell; each unlocks with level and auto-scales with your metamagic feats.', abilities: [
+    // ── SPELL STRIKE / IMBUED SHOT (class feature; 1 use per 5 levels per room). ONE
+    //    entry per touch spell, named "Spell Strike: X" (melee) or "Imbued Shot: X"
+    //    (bow) in _abilitiesFor by weapon. NO metamagic clutter — the magus's Intensify/
+    //    Empower/Maximize feats auto-apply via _mmForCast, so a single Shocking Grasp
+    //    scales all the way up (Josh 2026-07-06: the old 8-shot "SS …" list was baffling).
+    //    They unlock slowly, like real spellstrike: Shocking Grasp → Frigid → Vampiric →
+    //    Forceful → Polar Ray. ──
+    { key: 'spellstrike',    name: 'Shocking Grasp',  icon: '⚡',  cost: 'room', uses: smiteUses, minLevel: 1,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 5,  dtype: 'electricity', sound: S.shock,     desc: 'Channel SHOCKING GRASP through the hit — +level d6 electricity (cap 5d6; your Intensify/Empower/Maximize feats push it higher automatically).' },
+    { key: 'frigidtouch',    name: 'Frigid Touch',    icon: '🧊', cost: 'room', uses: smiteUses, minLevel: 4,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 4,            dtype: 'cold', debuff: 'sickened', sound: S.frostbite, desc: 'Channel FRIGID TOUCH — +4d6 cold, and the foe is staggered (sickened).' },
+    { key: 'vampirictouch',  name: 'Vampiric Touch',  icon: '🩸', cost: 'room', uses: smiteUses, minLevel: 7,  effect: 'spellstrike', target: 'enemy', die: 6, dice: 'halflevel', dcap: 10, dtype: 'negative', lifesteal: true, sound: S.umbral, desc: 'Channel VAMPIRIC TOUCH — +½level d6 negative energy (cap 10d6); you HEAL the damage dealt.' },
+    { key: 'forcefulstrike', name: 'Forceful Strike', icon: '💪', cost: 'room', uses: smiteUses, minLevel: 10, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'halflevel', dcap: 5,  dtype: 'force', bullRush: true, allyAOO: true, sound: S.shock, desc: 'Channel FORCEFUL STRIKE — +½level d6 force and a BULL RUSH: the foe is shoved, provoking a free attack from one of your melee allies.' },
+    { key: 'polarstrike',    name: 'Polar Ray',       icon: '❄️', cost: 'room', uses: smiteUses, minLevel: 13, effect: 'spellstrike', target: 'enemy', die: 6, dice: 'level',     dcap: 15, dtype: 'cold', sound: S.frostbite, desc: 'Channel POLAR RAY — a lance of utter cold: +level d6 cold (cap 15d6).' },
     // ── SPELLBOOK (prepared; one casting of each per room) ──
     // 1st level (character level 1)
     preparedSpell(SPELL.bladelash,    1),
@@ -862,6 +865,7 @@ for (const kit of Object.values(KITS)) {
 // if the generated file is ever missing. To change a spell/kit: edit the DB →
 // regenerate kits.generated.js → commit it. (Don't hand-edit the block above.)
 const _bloodragerKit = KITS.bloodrager;   // capture the (img-processed) hand-coded kit before the override swaps KITS
+const _magusSpellstrikes = ((KITS.magus && KITS.magus.abilities) || []).filter(a => a.effect === 'spellstrike');   // v3.35.0: capture the CLEAN 5-strike list before the override (the generated kit still has the old 8)
 try {
   const _gen = require('./kits.generated');
   if (_gen && Object.keys(_gen).length) KITS = _gen;
@@ -871,6 +875,15 @@ try {
 // omits it — re-attach the hand-coded kit AFTER the override (same pattern as
 // Olbryn's storm spec below). TODO: migrate into kit_abilities on the next regen.
 if (_bloodragerKit && !KITS.bloodrager) KITS.bloodrager = _bloodragerKit;
+
+// MAGUS spellstrike rework (v3.35.0): the generated kit still carries the OLD 8-shot
+// "SS …" list. Swap in the clean hand-coded 5 (Shocking Grasp / Frigid / Vampiric /
+// Forceful / Polar Ray) — metamagic auto-applies via _mmForCast, and _abilitiesFor
+// names them "Imbued Shot: …" (bow) / "Spell Strike: …" (melee). Post-override so it
+// survives regeneration. TODO: migrate into kit_abilities on the next DB regen.
+if (KITS.magus && Array.isArray(KITS.magus.abilities) && _magusSpellstrikes.length) {
+  KITS.magus.abilities = KITS.magus.abilities.filter(a => a.effect !== 'spellstrike').concat(_magusSpellstrikes);
+}
 
 // Olbryn's STORM specialization — injected AFTER the generated-kit override so it
 // survives regeneration. Base sorcerers are fire/force themed; these char-tagged

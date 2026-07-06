@@ -3,6 +3,23 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.35.0 2026-07-06  REESE / MAGUS rework (Josh's confusing "SS …" list). Spell Strikes
+//                     are now ONE clean entry per spell that AUTO-SCALES with the magus's
+//                     metamagic feats — the 4 redundant metamagic variants (SS Max SG /
+//                     SS Emp SG / SS Max! / SS Emp Vamp) are gone (the feats already apply
+//                     via _mmForCast). Kept + clearly named: Shocking Grasp (L1) → Frigid
+//                     Touch (L4) → Vampiric Touch (L7) → Forceful Strike (L10) → POLAR RAY
+//                     (L13, new). Each is named by DELIVERY: a bow magus (Reese) fires an
+//                     "Imbued Shot: <spell>", a melee magus a "Spell Strike: <spell>". They
+//                     unlock slowly like real spellstrike, and the same touch spell works
+//                     for melee OR ranged (Eldritch-Archer house rule).
+//  3.34.2 2026-07-06  FLAILS are now STR-only 2H (join axes & hammers as brute weapons).
+//                     RESET-TO-LEVEL-1 button RESTORED: the "↺ Reset to Lv 1" control was
+//                     wired in the client + server but the BUTTON was missing from the
+//                     page (Josh & Toby couldn't find it). Added it beside your class /
+//                     weapon on the character bar — clear label, danger tint, and a real
+//                     <button> with an aria-label so VoiceOver's item chooser surfaces it.
+//                     Busts your current class back to L1 (keeps gear, gold, other classes).
 //  3.34.1 2026-07-06  FINESSE HOUSE RULE extended to 2H (Tobias): free Weapon Finesse +
 //                     Slashing/Fencing Grace now covers MOST two-handed weapons too —
 //                     greatsword, glaive, fauchard, quarterstaff, spears, polearms,
@@ -410,4 +427,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.34.1' };
+module.exports = { VERSION: '3.35.0' };

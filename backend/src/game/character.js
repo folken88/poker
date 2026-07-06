@@ -85,7 +85,7 @@ function deriveCharacter({ cls, level, baseScores, race, raceMods, featHp = 0, w
 // rule (Tobias: "2h hammer and axe should be strength based only"). Every OTHER 2h
 // weapon (blades, polearms, spears, staves) may finesse. A weapon can override with
 // `finesse2h:true` (force finesse) or `str2h:true` (force STR).
-const STR_ONLY_2H_GROUPS = new Set(['axes', 'hammers']);
+const STR_ONLY_2H_GROUPS = new Set(['axes', 'hammers', 'flails']);   // brute chop/smash/whirl weapons (Tobias: hammers, axes, and flails are STR)
 
 /** Resolve to-hit ability mod and damage bonus for a specific attack.
  *  opts.offHand → 0.5x STR/DEX (two-weapon off-hand); opts.cantrip → caster

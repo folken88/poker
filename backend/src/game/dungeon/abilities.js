@@ -544,6 +544,14 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
     if (m.cls === 'slayer') list = list.concat(STUDIED_TARGET);   // SLAYER: swift Studied Target mark (ACG)
     if (m.cls === 'cavalier') list = list.concat(CHALLENGE);      // CAVALIER: the Challenge oath (+level damage vs one foe)
+    // MAGUS: name each Spell Strike by its DELIVERY — a ranged magus (Reese's bow)
+    // fires it as an IMBUED SHOT; a melee magus channels it as a SPELL STRIKE. Copy
+    // the ability so we never mutate the shared kit. (Same mechanic either way — the
+    // touch spell rides the weapon/bow hit; see _abSpellstrike.)
+    if (m.cls === 'magus') {
+      const pfx = this._isRanged(m) ? 'Imbued Shot: ' : 'Spell Strike: ';
+      list = list.map(a => a.effect === 'spellstrike' ? { ...a, name: pfx + a.name } : a);
+    }
     return list;
   },
   // DOMAINS Phase B — re-read the picks (they may change between rooms), rebuild
