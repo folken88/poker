@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.28.4 2026-07-06  CELEB Mage Armor fix: _preDoorBuffs + run-ability stocking
+//                     used kitFor(m.cls), which for a Theurge is the fighter
+//                     DEFAULT_KIT (no Mage Armor) — so Celeb never auto-cast Mage
+//                     Armor and fell back to Shield of Faith. Both now use his real
+//                     ability list (celebKit). Also: new Reese token/portrait art.
 //  3.28.3 2026-07-06  BLIND ACCESS fix: the only dungeon entry ("Hit the Dungeon")
 //                     was buried in the opacity:0 role="dialog" bank popover, which
 //                     VoiceOver's item chooser can't surface — Josh couldn't find
@@ -321,4 +326,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.28.3' };
+module.exports = { VERSION: '3.28.4' };

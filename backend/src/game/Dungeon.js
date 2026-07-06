@@ -402,7 +402,11 @@ class Dungeon {
       left: false, dead: false,
     };
     this._computeCastable(m);   // PHASE C: which spells this character may actually cast (prepared/known loadout)
-    for (const ab of kitFor(cls).abilities) {
+    // Stock 'run'-cost abilities (Mage Armor, Bless) from the member's REAL ability
+    // list — celebKit() for the Theurge, not kitFor(cls) (fighter DEFAULT_KIT for
+    // 'theurge', which has no Mage Armor, so Celeb's Mage Armor never stocked → he
+    // fell back to Shield of Faith). Domain powers aren't set yet (fine; not run-cost).
+    for (const ab of this._abilitiesFor(m)) {
       if (ab.cost === 'run') m.runAbilityUses[ab.key] = (typeof ab.uses === 'function' ? ab.uses(level) : (ab.uses || 1));
     }
     this._setDerived(m);       // cache PF1 ability mods / CON-HP / iteratives FIRST — the reset below stocks Wis-scaled pools (domain powers) and stat-bonus slots from them
@@ -459,8 +463,12 @@ class Dungeon {
     try {
       for (const m of this.present()) {
         if (!m.isBot || m.dead || m.left || m.hp <= 0) continue;
-        const kit = kitFor(m.cls);
-        (kit.abilities || []).forEach((ab, slot) => {
+        // Use the member's ACTUAL ability list — celebKit() for the Theurge, base
+        // kit + domain powers for clerics, etc. NOT kitFor(m.cls): for Celeb that
+        // resolves to the fighter DEFAULT_KIT (no Mage Armor!), so he never
+        // auto-cast Mage Armor pre-door and fell back to Shield of Faith in combat.
+        // It also keeps the slot index in sync with _useAbility's _abilitiesFor(m).
+        this._abilitiesFor(m).forEach((ab, slot) => {
           if (!this._isRunLongBuff(ab) || (m.level || 1) < (ab.minLevel || 1)) return;
           if (ab.effect === 'magearmor' && m.mageArmor) return;
           if (ab.effect === 'overlandflight' && m.flying) return;
