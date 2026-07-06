@@ -106,6 +106,7 @@ const CHARACTER_VOICES = {
   'Jason':             '5mU8WBEmVJQ3n5J4fkzR', // Okole (user pick) — the Asmodean priest
   'Reese':             'GEDXnQvfyd3quuXsFgKU', // Felix (user pick) — the winged Strix archer
   'Savage':            'KLs0efvyfWnIfXc9u1Jk', // Sanjay (user pick, shared w/ Bujon/Olbryn) — the tiefling bloodrager brute
+  'Draymus':           'W7MNPyraMJMDLKLmVax4', // Dracula (user pick) — the dhampir necromancer's cold, aristocratic menace
 
   // Vorkstag: see voiceFor() — he uses the voice of whoever he's
   // impersonating (Seat.impersonatedNick). When the impersonated

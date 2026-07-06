@@ -3,6 +3,8 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.33.1 2026-07-06  Draymus's voice: DRACULA (11labs, user pick) — the dhampir
+//                     necromancer now speaks with a cold, aristocratic menace.
 //  3.33.0 2026-07-06  SUMMONING Phase 2 — the summons now SOAK: an enemy's melee can
 //                     swing at a summoned undead instead of a hero (mixed into its
 //                     random target pool; resolved as an enemy-vs-summon blow, the
@@ -391,4 +393,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.33.0' };
+module.exports = { VERSION: '3.33.1' };
