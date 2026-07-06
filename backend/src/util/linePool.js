@@ -44,6 +44,10 @@ const MIN = Math.max(1, parseInt(process.env.LINE_POOL_MIN || '3', 10));
 const MAX = Math.max(MIN, parseInt(process.env.LINE_POOL_MAX || '40', 10));
 
 const stats = { reuseHits: 0, fresh: 0, records: 0, evictions: 0 };
+// ANTI-REPEAT: the file of the LAST reused line per `char|kind`, so we never
+// replay the exact same bark twice in a row (a new character with a one-line
+// pool used to repeat itself — Reese "said the same thing 3× in a row").
+const _lastPick = new Map();
 
 // Names that make a line instance-SPECIFIC if they appear in it (it referenced a
 // particular tablemate). Set by banter.js via setNames(); a digit also marks
@@ -201,7 +205,15 @@ async function choose(char, kind, subject) {
     else if (loose.length)     { bucket = loose;   prob = REUSE_PROB_LOOSE; }
     else if (perfect.length)   { bucket = perfect; prob = REUSE_PROB_LOOSE; }   // a few perfect but under MIN → rare reuse
     if (!bucket || !bucket.length || Math.random() >= prob) { stats.fresh++; return null; }
-    const e = bucket[Math.floor(Math.random() * bucket.length)];
+    // ANTI-REPEAT: don't hand back the SAME line we returned last time for this
+    // (char,kind). If the only reusable line IS the last one (a one-line pool),
+    // reroll fresh instead of parroting it.
+    const key = char + '|' + kind;
+    const last = _lastPick.get(key);
+    if (last && bucket.length === 1 && bucket[0].file === last) { stats.fresh++; return null; }
+    const pickable = (last && bucket.length > 1) ? bucket.filter(x => x.file !== last) : bucket;
+    const e = pickable[Math.floor(Math.random() * pickable.length)];
+    _lastPick.set(key, e.file);
     const fp = path.join(_dir(char, kind), e.file);
     const buf = await fsp.readFile(fp);
     fsp.utimes(fp, new Date(), new Date()).catch(() => {});   // bump recency (LRU-ish)

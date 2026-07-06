@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.28.2 2026-07-05  BANTER anti-repeat: linePool.choose never replays the same
+//                     bark twice in a row for a (char,kind) — a one-line pool now
+//                     rerolls fresh instead of parroting (Reese said the same
+//                     line 3× in a row). Also de-tersed Reese's persona (his
+//                     "clipped, few words" prompt was collapsing the LLM output).
 //  3.28.1 2026-07-05  VOICES: Binch → Tresdin (was Grace). The Tresdin trio (Freya,
 //                     Sirona, Binch) now shares a SURLY/GRUMPY/FIRM delivery tuning
 //                     (steadier, less theatrical, a touch slow) + Binch reworked to
@@ -310,4 +315,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.28.1' };
+module.exports = { VERSION: '3.28.2' };
