@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.6 2026-07-06  VOICES (user picks): FEMMIK → "Henry - Charming Pro" (a smooth, cocky
+//                     charmer — fits the Ifrit fire-dancer; was Sean). CELEB → "Daniel"
+//                     (steady, authoritative BRITISH broadcaster, middle-aged male — suits the
+//                     Nethys scholar-cleric; was the American "Adam"). Both 11labs voice-id
+//                     swaps in bot/character_voices.js.
 //  3.37.5 2026-07-06  FEMMIK CARD ART FIX (Josh): his hero card showed the tiny round token
 //                     instead of his full portrait. The blue-coat portrait was already at
 //                     /portraits/femmik.webp, but the portraits MANIFEST listed only
@@ -488,4 +493,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.5' };
+module.exports = { VERSION: '3.37.6' };

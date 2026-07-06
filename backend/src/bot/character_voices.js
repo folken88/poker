@@ -78,7 +78,7 @@ const CHARACTER_VOICES = {
   // Numerian / Iron Gods
   'Dinvaya':           'qSeXEcewz7tA0Q0qk9fH', // Victoria — Warm, Trustworthy, Relatable
   'Binch':             'mmndVSeLErK7c5SRoKg5', // Tresdin (user pick) — surly, grumpy, firm Besmara priestess
-  'Celeb':             'pNInz6obpgDQGcFmaJgB', // Adam — deep, measured American male (Nethys scholar-cleric)
+  'Celeb':             'onwK4e9ZLuTAKqWW03F9', // Daniel — steady, authoritative BRITISH broadcaster, middle-aged male (Nethys scholar-cleric; user pick, was Adam)
   'Casandalee':        'XrExE9yKIg1WjnnlVkGX', // Matilda — Knowledgable, Professional — calm AI
   'Nomkath':           'ErXwobaYiN019PkySvjV', // Antoni — young American male, well-rounded (catfolk_male rogue)
 
@@ -100,7 +100,7 @@ const CHARACTER_VOICES = {
   // Hell's Vengeance / Rebels PCs → AI-heroes (2026-07-05). PLACEHOLDER picks from
   // the existing library so they speak immediately — swap to purpose-picked 11labs
   // voices on request (like Farrah/Bujon/etc. were refined).
-  'Femmik':            'Yj3XGMd9w2H4C0P0L28M', // Sean (user pick) — the cocky Ifrit fire-dancer
+  'Femmik':            'E95b3lkMWHDsKeHJaIcY', // Henry - Charming Pro (user pick) — smooth, cocky Ifrit fire-dancer (shared 11labs voice, works directly; was Sean)
   'Freya':             'mmndVSeLErK7c5SRoKg5', // Tresdin (user pick) — strong, aggressive female army-commander: the half-elf field marshal
   "J'Mal":             'zmw8ZGHS2l5ZG2v3AQ31', // Ultron (user pick) — the cold Red Mantis assassin
   'Jason':             '5mU8WBEmVJQ3n5J4fkzR', // Okole (user pick) — the Asmodean priest
