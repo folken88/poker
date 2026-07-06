@@ -59,9 +59,11 @@ const CUSTOM_WEAPONS = {
   // Gaspar's bastard sword "Curator".
   curator: { key: 'curator', name: 'Curator', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 19, mult: 2, type: 'S', group: 'heavyBlades', prof: 'exotic', custom: true },
   // Gabriel's greatsword "Redeemer" — a green-glass blade of legend, once a tool of
-  // evil, now a holy sword again in a paladin's hands. Mechanically just masterwork
-  // steel (2d6, 19-20/×2); its plus and HOLY come from Gabriel's Divine Bond.
-  redeemer: { key: 'redeemer', name: 'Redeemer', cat: '2h', ranged: false, dmgCount: 2, dmgDie: 6, crit: 19, mult: 2, type: 'S', group: 'heavyBlades', prof: 'martial', custom: true },
+  // evil, reforged into a holy sword in a paladin's hands. INTRINSICALLY a FLAMING
+  // BURST, HOLY blade (2d6, 19-20/×2): +1d6 fire every hit, extra fire on a crit, and
+  // +2d6 vs EVIL — always on, even at +0. Its ENHANCEMENT (+N) rides Gabriel's gear
+  // tier / Divine Bond on top.
+  redeemer: { key: 'redeemer', name: 'Redeemer', cat: '2h', ranged: false, dmgCount: 2, dmgDie: 6, crit: 19, mult: 2, type: 'S', group: 'heavyBlades', prof: 'martial', custom: true, special: { flamingBurst: true, holy: true }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
   // Danger's composite longbow (1d8, ×3) — single-shot bow report.
   longbow: { key: 'longbow', name: 'Composite Longbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'P', group: 'bows', prof: 'martial', custom: true, atkSound: '/audio/bow_silent_hits.mp3' },   // Danger's longbow — near-silent loose, sound lands on the hit
   // Vesorianna's spectral Ghost Touch — a chilling 2d6 melee strike.
@@ -112,22 +114,37 @@ const CUSTOM_WEAPONS = {
   // wields the scimitar with GRACE — it's in Dungeon.js FINESSE_KEYS, so it rides
   // his DEX (24) for to-hit AND damage. custom => always proficient (bards aren't
   // normally proficient with scimitars; the Dervish Dance feat grants it).
-  lammas: { key: 'lammas', name: 'Lammas Aeternum', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
+  // INTRINSICALLY KEEN — the Dawnflower Dervish's whirling blade threatens a crit on
+  // 15-20 (keen doubles its 18-20 range). Always on; +N rides his gear.
+  lammas: { key: 'lammas', name: 'Lammas Aeternum', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true, special: { keen: true }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
   // Freya Kusanagi's katana "Balrog's Blessed Blade" — a FLAMING samurai's blade
   // (1d8, 18-20/×2). She's a samurai, already proficient; custom => the blade is
-  // always hers. (Flaming report via atkSound; the +1d6 fire rider is a later polish.)
-  balrogblade: { key: 'balrogblade', name: "Balrog's Blessed Blade", cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
+  // always hers. INTRINSICALLY FLAMING: +1d6 fire on every hit, always on (even at
+  // +0); her +N rides her gear tier on top.
+  balrogblade: { key: 'balrogblade', name: "Balrog's Blessed Blade", cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true, special: { flaming: true }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
   // J'Mal's "Angelbone Sawtooth Sabers" — TWIN sawtoothed sabres (Red Mantis
   // signature), two-weapon fighting (2 swings/turn, one report; no shield),
   // 1d8 18-20/×2. His Red Mantis Assassin / Rogue sneak dice ride the class.
-  sawtoothsabers: { key: 'sawtoothsabers', name: 'Angelbone Sawtooth Sabers', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'exotic', custom: true, dual: true, noShield: true, atkSound: '/audio/fight_riki.mp3' },
+  // INTRINSICALLY KEEN — the sawtoothed Red Mantis blades threaten on 17-20 (keen
+  // doubles the 19-20 range), feeding the assassin's crit-hungry sneak attacks.
+  sawtoothsabers: { key: 'sawtoothsabers', name: 'Angelbone Sawtooth Sabers', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'exotic', custom: true, dual: true, noShield: true, special: { keen: true }, atkSound: '/audio/fight_riki.mp3' },
+  // J'Mal's SABER-AND-DRAGON-SHIELD build — an Angelbone Sawtooth Saber in the main
+  // hand and the DRAGON SHIELD in the off: a bashing heavy shield he attacks WITH.
+  // Two swings a round (saber + shield bash), and UNLIKE a normal dual-wielder he
+  // KEEPS his shield AC — `shieldAC: 2` (a masterwork heavy shield; +N rides his
+  // owned shield tier). Keen (17-20). 1d8 19-20/×2. NOT noShield → shield AC applies.
+  sawtoothdragon: { key: 'sawtoothdragon', name: 'Sawtooth Saber & Dragon Shield', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'exotic', custom: true, dual: true, shieldAC: 2, special: { keen: true }, atkSound: '/audio/fight_riki.mp3' },
   // Jason's "Force Pike" — an Asmodean priest's reach weapon (1d10, ×3). custom =>
   // always proficient. reachFly lets him strike airborne foes from the back rank.
-  forcepike: { key: 'forcepike', name: 'Force Pike', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 3, type: 'P', group: 'spears', prof: 'martial', custom: true, reachFly: true },
+  // INTRINSICALLY UNHOLY — Asmodeus's malice: +2d6 vs GOOD foes (bites the Heavenly
+  // Host hard). Always on; +N rides his gear.
+  forcepike: { key: 'forcepike', name: 'Force Pike', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 3, type: 'P', group: 'spears', prof: 'martial', custom: true, reachFly: true, special: { unholy: true } },
   // Reese's "Stormcaller" — an arcane composite longbow (1d8, ×3). As an ELDRITCH
   // ARCHER magus he casts touch spells THROUGH it: his magus Spellstrike rides this
   // bow (m.weapon), delivering the spell on a ranged shot. custom => always proficient.
-  stormcaller: { key: 'stormcaller', name: 'Stormcaller', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'P', group: 'bows', prof: 'martial', custom: true, atkSound: '/audio/bow_silent_hits.mp3' },
+  // INTRINSICALLY SHOCK — the storm bow crackles: +1d6 electricity on every shot,
+  // always on (on top of his magus Spellstrike). +N rides his gear.
+  stormcaller: { key: 'stormcaller', name: 'Stormcaller', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'P', group: 'bows', prof: 'martial', custom: true, special: { shock: true }, atkSound: '/audio/bow_silent_hits.mp3' },
   // The DRUID's Shillelagh — a club a druid empowers with nature's strength
   // (1d10, ×2, blunt). Simple/always-proficient; the druid's signature weapon.
   shillelagh: { key: 'shillelagh', name: 'Shillelagh', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 2, type: 'B', group: 'clubs', prof: 'simple', custom: true, atkSound: '/audio/weapon_blunt.mp3' },

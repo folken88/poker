@@ -10,7 +10,27 @@
 const db = require('../persistence/db');
 const { humanRebuyMessage } = require('../util/flavor');
 const { CLASSES, PROFICIENCY, NON_PROFICIENT_PENALTY } = require('../pf1data/classes');
-const { STAPLE_BY_KEY } = require('../pf1data/staples');
+const { STAPLE_BY_KEY, CUSTOM_WEAPONS } = require('../pf1data/staples');
+
+// Human-readable one-liners for a signature weapon's INTRINSIC magic — so the
+// character sheet can show what (say) Redeemer actually does, not a blank slot.
+const QUALITY_DESC = {
+  flamingBurst: 'flaming burst (+1d6 fire, extra on a crit)',
+  flaming: 'flaming (+1d6 fire)',
+  shock: 'shock (+1d6 electricity)',
+  frost: 'frost (+1d6 cold)',
+  holy: 'holy (+2d6 vs evil)',
+  unholy: 'unholy (+2d6 vs good)',
+  keen: 'keen (wider crit range)',
+};
+function signatureNote(w) {
+  const bits = [];
+  for (const k of Object.keys(QUALITY_DESC)) if (w.special && w.special[k]) bits.push(QUALITY_DESC[k]);
+  if (w.dual) bits.push('two attacks');
+  if (w.shieldAC) bits.push('bashing shield (+shield AC)');
+  if (w.reachFly) bits.push('reach');
+  return bits.join(' · ');
+}
 const { SELECTABLE_CLASSES } = require('../pf1data/abilities');
 const { XP_TO_LEVEL } = require('../pf1data/xp');   // ship thresholds so the client can label per-class levels
 
@@ -137,9 +157,15 @@ function registerLobbyHandlers(io, socket, { tables }) {
       .sort((a, b) => a.name.localeCompare(b.name));
     const weapons = Object.values(STAPLE_BY_KEY)
       .map(w => ({ key: w.key, name: w.name, dmg: `${w.dmgCount}d${w.dmgDie}`, prof: w.prof, type: w.type }));   // type S/P/B → shown in the picker (DR makes it matter)
+    // Signature/named weapons (Redeemer, Stormcaller…) aren't in the dropdown, so a
+    // character wielding one used to show a BLANK weapon (Josh 2026-07-06). Ship their
+    // display data + intrinsic-quality note so the sheet can show "★ Redeemer (flaming
+    // burst · holy)" instead of nothing.
+    const signatures = Object.values(CUSTOM_WEAPONS)
+      .map(w => ({ key: w.key, name: w.name, dmg: `${w.dmgCount}d${w.dmgDie}`, type: w.type, note: signatureNote(w) }));
     // Ship the proficiency map + penalty so the client can sort/colour the
     // weapon dropdown by the player's current class without a round-trip.
-    ack?.({ ok: true, classes, weapons, proficiency: PROFICIENCY, profPenalty: NON_PROFICIENT_PENALTY, xpToLevel: XP_TO_LEVEL });
+    ack?.({ ok: true, classes, weapons, signatures, proficiency: PROFICIENCY, profPenalty: NON_PROFICIENT_PENALTY, xpToLevel: XP_TO_LEVEL });
   });
 
   socket.on('lobby:setAvatar', ({ avatarId } = {}, ack) => {

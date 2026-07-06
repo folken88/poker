@@ -142,6 +142,11 @@ function acOf(gear, cls, opts = {}) {
   // and they can roll for drops); it just grants no AC. `opts.noShield` carries
   // that from the wielder's weapon.
   if (shield >= 1 && cls !== 'swashbuckler' && cls !== 'magus' && !arcaneNoArmor && !opts.noShield) { const v = 2 + shield; ac += v; physical += v; }
+  // A BASHING SHIELD weapon (J'Mal's Dragon Shield) grants its shield AC intrinsically
+  // — even while attacking with it, and even when no shield TIER is owned. `shieldBonus`
+  // is the full value (base + its own enhancement); it rides here instead of the gear
+  // path above (the caller passes noShield to suppress the double-count).
+  if (opts.shieldBonus) { ac += opts.shieldBonus; physical += opts.shieldBonus; }
   if (ring >= 1)   { ac += ring; }
   return { ac, physical };
 }

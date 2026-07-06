@@ -483,7 +483,7 @@ const BOT_WEAPONS = {
   'Ser Toche': 'elvencurve',               // tengu rogue — elven curved blade (DEX two-hander)
   'Gabriel': 'redeemer',                   // Hell's Rebels paladin — green-glass greatsword Redeemer (Divine Bond makes it holy)
   // Hell's Vengeance / Rebels PCs — signature weapons (see pf1data/staples.js):
-  'Femmik Embersword': 'lammas', 'Freya Kusanagi': 'balrogblade', "J'Mal": 'sawtoothsabers', 'Jason': 'forcepike',
+  'Femmik Embersword': 'lammas', 'Freya Kusanagi': 'balrogblade', "J'Mal": 'sawtoothdragon', 'Jason': 'forcepike',   // J'Mal: saber + bashing Dragon Shield (2 swings + shield AC)
   'Reese': 'stormcaller',   // his arcane bow — spellstrike rides the shot
   'Savage': 'greataxe',   // 1d12 ×3 two-hander — cleaves through ranks
 };

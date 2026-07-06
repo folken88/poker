@@ -3,6 +3,18 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.30.0 2026-07-06  SIGNATURE WEAPON QUALITIES: named blades now carry their own
+//                     magic INTRINSICALLY — always on, no matter the wielder's class,
+//                     level or +N tier (the +N still rides the in-game gear). Gabriel's
+//                     REDEEMER is flaming burst + holy; Freya's Balrog's Blade flaming;
+//                     Femmik's Lammas & J'Mal's Sabers keen; Jason's Force Pike unholy
+//                     (bites the Heavenly Host); Reese's Stormcaller shock. New weapon
+//                     riders: shock (+1d6 elec) & frost (+1d6 cold), routed through the
+//                     foe's resistances like flaming. J'MAL'S DRAGON SHIELD: a bashing
+//                     heavy shield he attacks WITH — two swings a round AND he keeps his
+//                     shield AC (+2, unlike a normal dual-wielder). CLIENT: a character's
+//                     signature weapon now shows on the sheet as "★ Redeemer (flaming
+//                     burst · holy)" instead of a blank slot (Josh's report). domtest +7.
 //  3.29.0 2026-07-06  CHARACTER BATCH (1 hero + 7 foes): SAVAGE — a playable
 //                     tiefling BLOODRAGER (greataxe; cleave + magic-fueled Rage +
 //                     a self Bloodline Surge; slow spell progression), voice Sanjay,
@@ -349,4 +361,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.29.0' };
+module.exports = { VERSION: '3.30.0' };

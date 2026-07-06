@@ -1334,7 +1334,13 @@ class Dungeon {
   // for its treasure value). Centralizes the shield-AC exclusion in one place.
   _acOf(m) {
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
-    return acOf(m.gear, m.cls, { noShield: !!(w && (w.noShield || w.ranged)), noArmor: (m.playerId === 'celeb') });   // Celeb of Nethys wears no armor
+    // A BASHING SHIELD (w.shieldAC — J'Mal's Dragon Shield) grants intrinsic shield AC:
+    // its base + its own enhancement (the owned shield tier, if any). We route it through
+    // opts.shieldBonus and suppress the normal gear-shield path so it isn't double-counted.
+    const wShield = (w && w.shieldAC) || 0;
+    const shieldBonus = wShield ? (wShield + (Number(m.gear && m.gear.shield) || 0)) : 0;
+    const noShield = !!(w && (w.noShield || w.ranged)) || wShield > 0;
+    return acOf(m.gear, m.cls, { noShield, shieldBonus, noArmor: (m.playerId === 'celeb') });   // Celeb of Nethys wears no armor
   }
   // (_heroACs moved to game/dungeon/serialize.js — Phase-2 seam 2)
   _atkStr(r) {
@@ -1369,7 +1375,7 @@ class Dungeon {
     // is always treated as wielding at least this grade): +1@1, +2@5, keen@6,
     // flaming@8, +3@9, flaming burst@11, +4@13, +5@17. The real weapon's enchant
     // wins if it's higher; keen/flaming layer on top.
-    let arcEnhDelta = 0, arcKeen = false, arcFlame = 0, arcFlameBurst = false, arcHoly = 0, arcUnholy = 0;
+    let arcEnhDelta = 0, arcKeen = false, arcFlame = 0, arcFlameBurst = false, arcHoly = 0, arcUnholy = 0, arcShock = 0, arcFrost = 0;
     if (cls === 'magus') {
       const arcEnh = lvl >= 17 ? 5 : lvl >= 13 ? 4 : lvl >= 9 ? 3 : lvl >= 5 ? 2 : 1;
       arcEnhDelta = Math.max(0, arcEnh - (weapon.dmgBonus || 0));   // only the part above the real enchant
@@ -1385,6 +1391,22 @@ class Dungeon {
       const bond = lvl >= 20 ? 6 : lvl >= 17 ? 5 : lvl >= 14 ? 4 : lvl >= 11 ? 3 : lvl >= 8 ? 2 : 1;
       arcEnhDelta = Math.max(0, bond - (weapon.dmgBonus || 0));
       if (lvl >= 8) { if (cls === 'paladin') arcHoly = 2; else arcUnholy = 2; }
+    }
+    // WEAPON-BORNE special abilities — a NAMED/signature weapon carries its own
+    // magic (flaming, holy, keen…) INTRINSICALLY: always on, regardless of the
+    // wielder's class, level, or +N tier (Gabriel's Redeemer burns even at +0).
+    // These layer onto any class rider (magus flaming / paladin holy) — take the
+    // stronger, never double-stack. Enhancement (+N to hit/damage) still rides the
+    // in-game gear tier; these are the flavour that's ALWAYS on the blade.
+    const wsp = weapon.special;
+    if (wsp) {
+      if (wsp.keen) arcKeen = true;
+      if (wsp.flaming || wsp.flamingBurst) arcFlame = Math.max(arcFlame, 1);
+      if (wsp.flamingBurst) arcFlameBurst = true;
+      if (wsp.holy) arcHoly = Math.max(arcHoly, 2);
+      if (wsp.unholy) arcUnholy = Math.max(arcUnholy, 2);
+      if (wsp.shock) arcShock = Math.max(arcShock, 1);
+      if (wsp.frost) arcFrost = Math.max(arcFrost, 1);
     }
     // Dimensional Blade — for 1 round the magus's strikes resolve as TOUCH attacks.
     if (attacker.touchStrike > 0 && target) ac = this._enemyAC(target, { touch: true, melee: true });   // Dimensional Blade = a MELEE touch → prone stays a −4 (melee) AC
@@ -1559,6 +1581,11 @@ class Dungeon {
     // a flaming blade does nothing extra to a devil and ×1.5 to a wood golem.
     if (arcFlame) dmg += this._resisted(target, dRollN(arcFlame, 6), 'fire');
     if (crit && arcFlameBurst) dmg += this._resisted(target, dRollN(Math.max(1, (weapon.critMult || 2) - 1), 10), 'fire');
+    // SHOCK (electricity) / FROST (cold) weapon riders — same as flaming, routed
+    // through the target's resistance (a shocking blade does nothing to an angel,
+    // ×1.5 to a robot). Weapon-borne only (Stormcaller's storm shot); no burst tier.
+    if (arcShock) dmg += this._resisted(target, dRollN(arcShock, 6), 'electricity');
+    if (arcFrost) dmg += this._resisted(target, dRollN(arcFrost, 6), 'cold');
     // Divine Bond HOLY (paladin) / Fiendish Boon UNHOLY (antipaladin): +2d6 of aligned
     // energy that only bites the opposed alignment — vs EVIL foes (holy) / GOOD foes
     // (unholy). Rides on top: not soaked by physical DR, not crit-multiplied.

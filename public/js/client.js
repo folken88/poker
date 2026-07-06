@@ -4916,6 +4916,17 @@
       `<option value="${w.key}"${bad ? ' class="weapon-nonprof" style="color:#cc5500"' : ''}>`
       + `${w.name} (${w.dmg}${TYPE_NAME[w.type] ? ' ' + TYPE_NAME[w.type] : ''})${bad ? ` — ${pen} non-prof` : ''}</option>`;
     let html = '';
+    // SIGNATURE weapon (Redeemer, Stormcaller…): not a dropdown staple, so if the
+    // character wields one, show it FIRST as a selected, labelled entry with its
+    // intrinsic qualities — no more blank slot (Josh 2026-07-06). It's always
+    // proficient (it's their iconic weapon).
+    const sig = value != null && !meta.weapons.some(w => w.key === value)
+      && (meta.signatures || []).find(s => s.key === value);
+    if (sig) {
+      const TN = { S: 'slashing', P: 'piercing', B: 'bludgeoning', 'P/S': 'pierce/slash' };
+      html += `<optgroup label="★ Signature weapon">`
+        + `<option value="${sig.key}">${sig.name} (${sig.dmg}${TN[sig.type] ? ' ' + TN[sig.type] : ''})${sig.note ? ' — ' + sig.note : ''}</option></optgroup>`;
+    }
     if (prof.length) html += `<optgroup label="✔ Proficient">${prof.map(w => opt(w, false)).join('')}</optgroup>`;
     if (non.length)  html += `<optgroup label="✘ Not proficient (${pen} to hit)">${non.map(w => opt(w, true)).join('')}</optgroup>`;
     wsel.innerHTML = html;
