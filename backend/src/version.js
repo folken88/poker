@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.26.0 2026-07-05  TWO VILLAIN FACTIONS imported from the Hell's worlds, each
+//                     its OWN gang (they never share a room). HELL'S LEGIONS
+//                     (gang 'devil', fills the low-mid CR gap): Imp (CR2), Accuser
+//                     (CR3), Erinyes (CR8 archer), Bone Devil (CR9), Horned Devil
+//                     (CR16 boss), Pit Fiend (CR20 boss). THE HEAVENLY HOST (new
+//                     gang 'celestial', GOOD-aligned so hero Smite Evil misses):
+//                     Hound Archon (CR4), Bralani Azata (CR6 ranged), Lillend
+//                     Azata (CR7 support/heal), Movanic Deva (CR10), Ghaele Azata
+//                     (CR13 boss), Astral Deva (CR14 boss). Real Foundry art.
 //  3.25.0 2026-07-05  HELL'S VENGEANCE/REBELS PCs → 4 PLAYABLE AI-HEROES (real
 //                     Foundry builds): Femmik Embersword (Ifrit Dawnflower Dervish
 //                     bard — new BATTLE DANCE: his Inspire Courage is self-only &
@@ -275,4 +284,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.25.0' };
+module.exports = { VERSION: '3.26.0' };

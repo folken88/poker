@@ -225,6 +225,27 @@ const MON = {
   tar_baphon:        { name: 'Tar-Baphon, the Whispering Tyrant', sr: 31, glyph: '💀', cr: '20', hp: 175, ac: 17, toHit: 12, dmgDie: 8, dmgBonus: 10, fort: 11, reflex: 12, gold: [800, 1500], evil: true, arcane: true, paralyze: true, paralyzeDC: 25, dr: { amount: 15, bypass: 'B' }, shout: { fear: true, dc: 25, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['magearmor', 'shield', 'stoneskin', 'protfire', 'fly'] },   // BOSS — Wizard 20 archlich, the Whispering Tyrant himself: the deepest thing in the dungeon (SR 31, DR 15/B, full arcane)
   // ── HARPY SORCERER — harpy stats + 9 sorcerer levels (full arcane barrage on the wing). ──
   harpy_sorcerer:    { name: 'Harpy Sorcerer',    glyph: '🦅', cr: '10',  hp: 95,  ac: 21, toHit: 13, dmgDie: 6,  dmgBonus: 4,  fort: 6,  reflex: 10, attacks: 2, flying: true, gold: [120, 240], evil: true, arcane: true, precast: ['magearmor', 'shield', 'stoneskin'] },   // pre-buffed as a boss (already on the wing)
+  // ── HELL'S LEGIONS — the infernal FACTION (gang 'devil'). Fills the low-mid
+  //    CR gap the existing devils (CR11-16) left open, up to the Pit Fiend
+  //    capstone. Canonical PF1 Bestiary stat blocks. Fire-immune, cold/acid-
+  //    resistant, SR + DR/magic. They NEVER share a room with the celestials. ──
+  imp:               { name: 'Imp',               glyph: '😈', cr: '2',   hp: 16,  ac: 17, toHit: 8,  dmgDie: 4,  dmgBonus: 0,  fort: 3,  reflex: 5, gold: [20, 50],  flying: true, sr: 13, evil: true, resist: { fire: 0, cold: 0.5, acid: 0.5 } },   // Tiny flying trickster — a stinger and a nasty attitude (fast healing, invisibility in lore)
+  accuser_devil:     { name: 'Accuser Devil',     glyph: '👁️', cr: '3',   hp: 30,  ac: 16, toHit: 6,  dmgDie: 4,  dmgBonus: 1,  fort: 5,  reflex: 5, gold: [30, 70],  flying: true, sr: 14, evil: true, resist: { fire: 0, cold: 0.5, acid: 0.5 } },   // Zebub — a flying spy-devil, filth-fever bite, watches from the dark
+  erinyes:           { name: 'Erinyes',           glyph: '🏹', cr: '8',   hp: 94,  ac: 24, toHit: 15, dmgDie: 8,  dmgBonus: 5,  fort: 11, reflex: 12, attacks: 2, flying: true, sr: 20, gold: [90, 190], evil: true, dr: { amount: 5, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 }, atkSound: '/audio/bow_silent_hits.mp3' },   // fallen-angel ARCHER devil — a flaming longbow on the wing (the faction's ranged specialist)
+  bone_devil:        { name: 'Bone Devil',        glyph: '💀', cr: '9',   hp: 105, ac: 25, toHit: 18, dmgDie: 4,  dmgCount: 3, dmgBonus: 9, fort: 12, reflex: 9, attacks: 2, flying: true, sr: 20, gold: [95, 190], evil: true, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 }, shout: { fear: true, dc: 18, sound: '/audio/enemy_lich_gaze.mp3' } },   // Osyluth — a skeletal horror on the wing: poison sting (3d4), claws, and an aura of fear
+  horned_devil:      { name: 'Horned Devil',      sr: 27, glyph: '👿', cr: '16',  hp: 217, ac: 35, toHit: 30, dmgDie: 6, dmgCount: 2, dmgBonus: 16, fort: 18, reflex: 17, attacks: 3, flying: true, gold: [380, 640], evil: true, dr: { amount: 15, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 }, shout: { fear: true, dc: 23, sound: '/audio/enemy_lich_gaze.mp3' } },   // BOSS — Cornugon: a stunning +1 spiked chain (2d6+16) on the wing, regeneration, an aura of dread
+  pit_fiend:         { name: 'Pit Fiend',         sr: 32, glyph: '👹', cr: '20',  hp: 350, ac: 38, toHit: 37, dmgDie: 6, dmgCount: 4, dmgBonus: 13, fort: 26, reflex: 19, attacks: 3, flying: true, gold: [800, 1500], evil: true, arcane: true, dr: { amount: 15, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 }, shout: { fear: true, dc: 25, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['magearmor', 'shield', 'stoneskin', 'fly'], hellfire: { count: 3, dice: 10, die: 6, dc: 25, dtype: 'fire', verb: 'calls a rain of METEORIC HELLFIRE down on the party', sound: '/audio/spell_hellfire.mp3' } },   // BOSS — the lord of Hell's armies: claws/bite/tail flurry, full arcane (meteor swarm), fear aura, SR 32 — a peer of Tar-Baphon at the bottom of the dungeon
+  // ── THE HEAVENLY HOST — the celestial FACTION (gang 'celestial'). The
+  //    righteous foes you fight AS the villains (Hell's Vengeance). GOOD-aligned
+  //    (hero Smite Evil finds no purchase), immune to electricity, resistant to
+  //    fire/cold/acid, SR. Their own gang — they NEVER share a room with devils
+  //    or the undead. Canonical PF1 Bestiary stat blocks. ──
+  hound_archon:      { name: 'Hound Archon',      glyph: '🐕', cr: '4',   hp: 39,  ac: 19, toHit: 8,  dmgDie: 8,  dmgBonus: 4,  fort: 6,  reflex: 5, attacks: 2, gold: [35, 75],  sr: 16, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 } },   // a dog-headed warden angel — bite + slams, an aura of menace, blinks across the room (teleport)
+  bralani_azata:     { name: 'Bralani Azata',     glyph: '🏹', cr: '6',   hp: 66,  ac: 20, toHit: 10, dmgDie: 8,  dmgBonus: 4,  fort: 9,  reflex: 9, attacks: 2, flying: true, gold: [60, 120], sr: 17, dr: { amount: 5, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, arcane: true },   // an elemental eladrin — a composite longbow and a whirlwind blast (lightning), CL6 spells: the host's ranged caster
+  lillend_azata:     { name: 'Lillend Azata',     glyph: '🎵', cr: '7',   hp: 84,  ac: 21, toHit: 13, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 11, attacks: 2, flying: true, gold: [70, 140], sr: 18, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, healer: { dice: 3, uses: 3 }, caster: 'holdperson', spellDC: 16 },   // a serpent-bodied muse-angel — bardic song, constricting tail, CL10 healing: the host's SUPPORT
+  movanic_deva:      { name: 'Movanic Deva',      glyph: '⚔️', cr: '10',  hp: 126, ac: 24, toHit: 19, dmgDie: 6, dmgCount: 2, dmgBonus: 10, fort: 14, reflex: 13, attacks: 2, flying: true, gold: [120, 240], sr: 21, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, healer: { dice: 3, uses: 3 }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // a frontline war-angel — a flaming greatsword (2d6+10) and druidic mending
+  ghaele_azata:      { name: 'Ghaele Azata',      sr: 25, glyph: '✨', cr: '13',  hp: 152, ac: 27, toHit: 23, dmgDie: 6, dmgCount: 2, dmgBonus: 14, fort: 14, reflex: 14, attacks: 2, flying: true, gold: [300, 520], dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, arcane: true, healer: { dice: 4, uses: 3 }, precast: ['magearmor', 'shield'] },   // BOSS — a knight-errant angel: a +2 greatsword OR searing light-rays, CL14 cleric spells, a blinding gaze
+  astral_deva:       { name: 'Astral Deva',       sr: 30, glyph: '😇', cr: '14',  hp: 172, ac: 29, toHit: 26, dmgDie: 8, dmgCount: 1, dmgBonus: 12, fort: 18, reflex: 16, attacks: 2, flying: true, gold: [340, 600], dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, shout: { fear: true, dc: 21, sound: '/audio/enemy_lich_gaze.mp3' } },   // BOSS — a heavenly avenger: a +3 disruption warhammer that STUNS, a stunning smash, an aura of righteous menace
 };
 // PF1 BODY PLANS — size category + leg count per monster (used by the trip rules:
 // +4 to trip defense per leg beyond two; you can't trip a foe more than ONE size
@@ -245,6 +266,10 @@ const MON_BODY = {
   ettercap: { size: 'M' }, harpy: { size: 'M' }, gargoyle: { size: 'M' }, minotaur: { size: 'L' },
   wood_golem: { size: 'L' }, bog_brute: { size: 'L' }, hill_giant: { size: 'L' }, stone_giant: { size: 'L' },
   brass_golem: { size: 'L' }, barbed_devil: { size: 'L' }, abyssal_horror: { size: 'L', legs: 0 },   // a roil of tentacles
+  // Hell's Legions + the Heavenly Host: imps/accusers are Tiny flyers; the bigger
+  // devils are Large; the Lillend is a Large legless serpent-angel.
+  imp: { size: 'T' }, accuser_devil: { size: 'T' }, bone_devil: { size: 'L' },
+  horned_devil: { size: 'L' }, pit_fiend: { size: 'L' }, lillend_azata: { size: 'L', legs: 0 },
   medusa_archer: { size: 'M' }, medusa_swashbuckler: { size: 'M' }, medusa_sorceress: { size: 'M' }, vampire: { size: 'M' }, lich: { size: 'M' },
   // The vampire court / infernal court are classed humanoid shapes (Medium bipeds —
   // the default — so no entries needed); the dragons are Large quadrupeds.
@@ -323,6 +348,13 @@ const MON_GANGS = {
   // the infernal court — devils and the Thrune villains who serve Hell
   barbed_devil: ['devil'], devil_swordsman: ['devil'], devil_samurai: ['devil'], devil_rogue: ['devil'],
   bomb_devil: ['devil'], barzillai: ['devil'], abrogail: ['devil'], rivozair: ['devil', 'dragon'],
+  // Hell's Legions join the infernal 'devil' gang (fill the low-mid CR tier).
+  imp: ['devil'], accuser_devil: ['devil'], erinyes: ['devil'], bone_devil: ['devil'],
+  horned_devil: ['devil'], pit_fiend: ['devil'],
+  // The Heavenly Host — their OWN gang 'celestial'. Angels ride only with angels:
+  // they never share a room with devils or the undead (one gang per room).
+  hound_archon: ['celestial'], bralani_azata: ['celestial'], lillend_azata: ['celestial'],
+  movanic_deva: ['celestial'], ghaele_azata: ['celestial'], astral_deva: ['celestial'],
   // dragons — kobold warrens famously serve them
   black_dragon: ['dragon', 'kobold'], void_dragon: ['dragon', 'kobold'],
   // ex-PC bosses: Blackout stalks with the Numerian machines; Ragh muscles
@@ -369,6 +401,12 @@ const MON_ART = {
   devil_swordsman: 'devil_swordsman', devil_samurai: 'devil_samurai', devil_rogue: 'devil_rogue',
   bomb_devil: 'bomb_devil', black_dragon: 'black_dragon', void_dragon: 'void_dragon',
   harpy_sorcerer: 'harpy_sorcerer',
+  // Hell's Legions + the Heavenly Host (real Foundry tokens from the cheliax /
+  // angelic character libraries).
+  imp: 'imp', accuser_devil: 'accuser_devil', erinyes: 'erinyes', bone_devil: 'bone_devil',
+  horned_devil: 'horned_devil', pit_fiend: 'pit_fiend',
+  hound_archon: 'hound_archon', bralani_azata: 'bralani_azata', lillend_azata: 'lillend_azata',
+  movanic_deva: 'movanic_deva', ghaele_azata: 'ghaele_azata', astral_deva: 'astral_deva',
   blood_caimon: 'blood_caimon',
   // The Numerian robots — tokens straight from the Iron Gods Foundry world.
   drone_rhoomba: 'drone_rhoomba', drone_collector: 'drone_collector', gearsman_mk1: 'gearsman_mk1',
@@ -439,6 +477,11 @@ const MON_TYPE = {
   // inquisitor was shredding dragons while Bane: Outsiders did nothing.
   barbed_devil: 'outsider', devil_swordsman: 'outsider', devil_samurai: 'outsider',
   devil_rogue: 'outsider', bomb_devil: 'outsider',
+  // Hell's Legions + the Heavenly Host are all OUTSIDERS (Bane: Outsiders bites them).
+  imp: 'outsider', accuser_devil: 'outsider', erinyes: 'outsider', bone_devil: 'outsider',
+  horned_devil: 'outsider', pit_fiend: 'outsider',
+  hound_archon: 'outsider', bralani_azata: 'outsider', lillend_azata: 'outsider',
+  movanic_deva: 'outsider', ghaele_azata: 'outsider', astral_deva: 'outsider',
   black_dragon: 'dragon', void_dragon: 'dragon', rivozair: 'dragon',
   harpy_sorcerer: 'monstrous humanoid',
 };
@@ -509,6 +552,11 @@ const ALIGN_BY_KEY = {
   kobold: 'LE', kobold_spearman: 'LE', kobold_shaman: 'LE', kobold_rogue: 'LE',
   wight: 'LE', barbed_devil: 'LE',
   medusa_archer: 'LE', medusa_swashbuckler: 'LE', medusa_sorceress: 'LE',
+  // Hell's Legions — lawful evil to the last devil.
+  imp: 'LE', accuser_devil: 'LE', erinyes: 'LE', bone_devil: 'LE', horned_devil: 'LE', pit_fiend: 'LE',
+  // The Heavenly Host — GOOD-aligned (hero Smite Evil finds no purchase on them).
+  hound_archon: 'LG', bralani_azata: 'CG', lillend_azata: 'CG',
+  movanic_deva: 'NG', ghaele_azata: 'CG', astral_deva: 'LG',
   // neutral evil
   goblin: 'NE', skeleton: 'NE', skeletal_champion: 'NE', zombie: 'NE', cultist: 'NE', ettercap: 'NE', winter_wolf: 'NE',
   goblin_barbarian: 'CE',
@@ -540,7 +588,9 @@ const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overl
   'blackout', 'ragh',   // ex-PC villains
   'black_sovereign', 'amalokla', 'brogwort',   // the Palace Uniques (Iron Gods)
   'auren_vrood', 'vorkstag', 'tar_baphon',   // Carrion Crown canon
-  'barzillai', 'rivozair']);   // the Thrune pair (Hell's Rebels) — boss-only, ALWAYS spawn together
+  'barzillai', 'rivozair',   // the Thrune pair (Hell's Rebels) — boss-only, ALWAYS spawn together
+  'horned_devil', 'pit_fiend',   // Hell's Legions bosses (Cornugon; the Pit Fiend is a peer of Tar-Baphon)
+  'ghaele_azata', 'astral_deva']);   // the Heavenly Host bosses (the knight-angel & the avenger)
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 
@@ -550,7 +600,8 @@ const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 // Flag the monks (unarmed) and the named natural-attackers that aren't those types.
 const NATURAL_KEYS = ['zombie', 'ghoul', 'ghoul_crusader', 'shadow', 'wight', 'skeletal_champion', 'harpy', 'gibbering_mouther', 'abyssal_horror', 'bog_brute', 'ettercap'];
 NATURAL_KEYS.push('charauka_warrior', 'bentbeak_charney', 'ikualoa',
-  'amalokla', 'brogwort');   // bare knuckles, pain touch, athach limbs — nothing to disarm (the Black Sovereign now swings a SWORD — disarm away, if you dare)
+  'amalokla', 'brogwort',   // bare knuckles, pain touch, athach limbs — nothing to disarm (the Black Sovereign now swings a SWORD — disarm away, if you dare)
+  'imp', 'accuser_devil', 'bone_devil', 'pit_fiend', 'hound_archon');   // devils/archon that fight with sting/bite/claws (erinyes=bow, horned=chain, the angels=weapons → those CAN be disarmed)
 for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k) || ROBOT_KEYS.includes(k) || k === 'gargoyle') MON[k].natural = true;   // robots: integrated weaponry — nothing to disarm
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX, MONK_SFX };
