@@ -311,6 +311,16 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { key: 'rage',   name: 'Rage',   icon: '😤', cost: 'free', freeAction: true, effect: 'buff', target: 'self', buff: { toHit: 2, dmg: 2, acPen: 2, save: 1 }, sticky: true, sound: S.rage, desc: 'Fly into a rage for the rest of the room (FREE action — still attack this turn): +2 to hit & damage and +1 Will, but −2 AC.' },
     { key: 'taunt',  name: 'Taunt',  icon: '📢', cost: 'room', uses: 1, effect: 'taunt', target: 'aoe', save: 'will', sound: '/audio/taunt_predator.mp3', desc: 'A furious challenge — EVERY enemy must make a Will save or be forced to attack YOU on its next turn (drawing fire off your allies). Once per room.' },
   ] },
+  // BLOODRAGER (ACG) — a raging arcane warrior: Rage + Cleave like a barbarian, and
+  // SLOW spontaneous self-buff spells (a bloodline surge). Full BAB, d10; his spells
+  // come late & few (PF1 bloodrager: 1st spell at L4), modeled here as a room-cost
+  // personal Bloodline Surge that unlocks at L4.
+  bloodrager: { atwill: ATTACK('⚔️'), abilities: [
+    { key: 'cleave', name: 'Cleave', icon: '🪓', cost: 'free', effect: 'cleave', target: 'enemy', acPen: 2, desc: 'Hit your target and a second foe (−2) — every foe you DROP grants another swing, chaining until you stop felling them — but you drop your guard (−2 AC) this turn.' },
+    { key: 'rage',   name: 'Bloodrage', icon: '🩸', cost: 'free', freeAction: true, effect: 'buff', target: 'self', buff: { toHit: 2, dmg: 2, acPen: 2, save: 1 }, sticky: true, sound: S.rage, desc: 'Fly into a BLOODRAGE for the rest of the room (FREE action — still attack this turn): +2 to hit & damage and +1 Will, but −2 AC.' },
+    { key: 'bloodlinesurge', name: 'Bloodline Surge', icon: '💥', cost: 'room', uses: 1, minLevel: 4, effect: 'buff', target: 'self', buff: { toHit: 1, dmg: 3, ac: 2 }, sticky: true, sound: S.invoke, desc: 'A bloodrager\'s slow-won magic surges into his own frame — +1 to hit, +3 damage, +2 AC for the rest of the room (self only; unlocks at level 4). Once per room.' },
+    { key: 'taunt',  name: 'Taunt',  icon: '📢', cost: 'room', uses: 1, effect: 'taunt', target: 'aoe', save: 'will', sound: '/audio/taunt_predator.mp3', desc: 'A furious challenge — EVERY enemy must make a Will save or be forced to attack YOU on its next turn. Once per room.' },
+  ] },
   ranger: { atwill: ATTACK('🏹'), abilities: [
     { key: 'rapidshot', name: 'Rapid Shot',    icon: '🏹', cost: 'free', effect: 'rapidshot', target: 'enemy', needsRepeating: true, sound: S.bowmulti, desc: 'Loose 2 shots this turn — each at −2 to hit. (Needs a weapon that can fire repeatedly — NOT a bolt-action sniper rifle.)' },
     { key: 'bullseye',  name: 'Bullseye Shot',  icon: '🎯', cost: 'free', effect: 'bullseye',  target: 'enemy', sound: S.bow,      desc: 'A carefully aimed shot at +4 to hit.' },
@@ -829,10 +839,16 @@ for (const kit of Object.values(KITS)) {
 // GENERATED file WINS — the hand-coded KITS above remains only as a fallback for
 // if the generated file is ever missing. To change a spell/kit: edit the DB →
 // regenerate kits.generated.js → commit it. (Don't hand-edit the block above.)
+const _bloodragerKit = KITS.bloodrager;   // capture the (img-processed) hand-coded kit before the override swaps KITS
 try {
   const _gen = require('./kits.generated');
   if (_gen && Object.keys(_gen).length) KITS = _gen;
 } catch (_) { /* no generated file — keep the hand-coded fallback */ }
+
+// BLOODRAGER isn't in the content DB yet (kit_abilities), so the generated file
+// omits it — re-attach the hand-coded kit AFTER the override (same pattern as
+// Olbryn's storm spec below). TODO: migrate into kit_abilities on the next regen.
+if (_bloodragerKit && !KITS.bloodrager) KITS.bloodrager = _bloodragerKit;
 
 // Olbryn's STORM specialization — injected AFTER the generated-kit override so it
 // survives regeneration. Base sorcerers are fire/force themed; these char-tagged
@@ -865,7 +881,7 @@ const DEFAULT_KIT = KITS.fighter;
 // Classes a human may pick in the dropdown. Ranger has a kit (Danger uses it)
 // but isn't offered — its bow isn't in the staple weapon list.
 // Every class with a real kit + feat tree is pickable (Josh asked where ranger was).
-const SELECTABLE_CLASSES = ['fighter', 'barbarian', 'ranger', 'rogue', 'paladin', 'antipaladin', 'cleric', 'wizard', 'sorcerer', 'magus', 'inquisitor', 'bard', 'druid', 'oracle', 'monk', 'swashbuckler', 'gunslinger', 'slayer', 'cavalier'];
+const SELECTABLE_CLASSES = ['fighter', 'barbarian', 'ranger', 'rogue', 'paladin', 'antipaladin', 'cleric', 'wizard', 'sorcerer', 'magus', 'inquisitor', 'bard', 'druid', 'oracle', 'monk', 'swashbuckler', 'gunslinger', 'slayer', 'cavalier', 'bloodrager'];
 function kitFor(classKey) { return KITS[classKey] || DEFAULT_KIT; }
 const isPoolClass = (cls) => POOL_CLASSES.has(cls);
 const isCaster    = (cls) => CASTER_CLASSES.has(cls);

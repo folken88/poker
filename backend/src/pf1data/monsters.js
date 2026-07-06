@@ -246,6 +246,18 @@ const MON = {
   movanic_deva:      { name: 'Movanic Deva',      glyph: '⚔️', cr: '10',  hp: 126, ac: 24, toHit: 19, dmgDie: 6, dmgCount: 2, dmgBonus: 10, fort: 14, reflex: 13, attacks: 2, flying: true, gold: [120, 240], sr: 21, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, healer: { dice: 3, uses: 3 }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // a frontline war-angel — a flaming greatsword (2d6+10) and druidic mending
   ghaele_azata:      { name: 'Ghaele Azata',      sr: 25, glyph: '✨', cr: '13',  hp: 152, ac: 27, toHit: 23, dmgDie: 6, dmgCount: 2, dmgBonus: 14, fort: 14, reflex: 14, attacks: 2, flying: true, gold: [300, 520], dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, arcane: true, healer: { dice: 4, uses: 3 }, precast: ['magearmor', 'shield'] },   // BOSS — a knight-errant angel: a +2 greatsword OR searing light-rays, CL14 cleric spells, a blinding gaze
   astral_deva:       { name: 'Astral Deva',       sr: 30, glyph: '😇', cr: '14',  hp: 172, ac: 29, toHit: 26, dmgDie: 8, dmgCount: 1, dmgBonus: 12, fort: 18, reflex: 16, attacks: 2, flying: true, gold: [340, 600], dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, shout: { fear: true, dc: 21, sound: '/audio/enemy_lich_gaze.mp3' } },   // BOSS — a heavenly avenger: a +3 disruption warhammer that STUNS, a stunning smash, an aura of righteous menace
+  // ── NEW celestial foes (2026-07-06) — Angel Bro, two aasimar gunslingers, an
+  //    angel field-healer, an angel cavalier-knight, and their paladin champion
+  //    CHAD. All ride the 'celestial' gang, GOOD-aligned, electricity-immune. ──
+  angel_bro:         { name: 'Erelim (Angel Bro)', glyph: '💪', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 8, dmgCount: 2, dmgBonus: 9,  fort: 11, reflex: 8,  attacks: 2, flying: true, gold: [90, 180],  sr: 19, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 } },   // a warrior-angel "bro" — twin holy longswords and a wall of muscle
+  aasimar_gunslinger:{ name: 'Aasimar Gunslinger', glyph: '🔫', cr: '10',  hp: 92,  ac: 21, toHit: 16, dmgDie: 8, dmgCount: 2, dmgBonus: 6,  fort: 9,  reflex: 13, attacks: 2, ranged: true, gold: [120, 240], sr: 20, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 } },   // dual golden PISTOLS — a grounded deadeye, two shots a round from across the room
+  aasimar_shotgunner:{ name: 'Aasimar Shotgunner', glyph: '💥', cr: '10',  hp: 92,  ac: 21, toHit: 15, dmgDie: 8, dmgCount: 1, dmgBonus: 6,  fort: 9,  reflex: 13, attacks: 1, ranged: true, gold: [120, 240], sr: 20, hellfire: { count: 1, dice: 4, die: 6, dc: 18, dtype: 'physical' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 } },   // a golden SHOTGUN — a scatter blast (4d6) that sprays the whole party (Reflex half)
+  angel_healer:      { name: 'Angelic Cleric',     glyph: '✚',  cr: '11',  hp: 105, ac: 24, toHit: 15, dmgDie: 8, dmgCount: 1, dmgBonus: 6,  fort: 13, reflex: 9,  attacks: 1, flying: true, gold: [140, 260], sr: 21, dr: { amount: 5, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, healer: { dice: 6, uses: 6 } },   // a lvl-12 cleric of the Healing domain — pours channels into her allies, greatsword only when cornered
+  angel_cavalier:    { name: 'Angelic Cavalier',   glyph: '🛡️', cr: '14',  hp: 165, ac: 27, toHit: 24, dmgDie: 6, dmgCount: 2, dmgBonus: 15, fort: 15, reflex: 11, attacks: 2, flying: true, gold: [340, 600], sr: 24, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // BOSS — a lvl-15 cavalier knight, a two-handed holy greatsword and a devastating charge
+  chad:              { name: 'Chad',               glyph: '🔨', cr: '17',  hp: 210, ac: 30, toHit: 28, dmgDie: 6, dmgCount: 3, dmgBonus: 18, fort: 20, reflex: 14, attacks: 2, gold: [500, 900], sr: 26, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, healer: { dice: 6, uses: 8 } },   // BOSS — a lvl-18 aasimar PALADIN wielding THE GOLDENROD (+5 holy 2H hammer, 3d6+18 blunt w/ the +1d6 divine folded in), lay-on-hands to spare
+  // ── NEW demon boss (2026-07-06) — SOIRSE, a succubus bard who charms & dominates.
+  //    A fiend, not an angel: rides the 'devil' gang (Hell's forces), CHAOTIC EVIL. ──
+  soirse:            { name: 'Soirse',             glyph: '💋', cr: '10',  hp: 125, ac: 23, toHit: 14, dmgDie: 6, dmgCount: 2, dmgBonus: 5,  fort: 9,  reflex: 12, attacks: 2, flying: true, gold: [200, 400], sr: 18, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5, poison: 0 }, arcane: true, caster: 'holdperson', spellDC: 20 },   // BOSS — a lvl-10 succubus bard: her Dominate/charm is modeled as Hold Person (DC 20), claws when she must
 };
 // PF1 BODY PLANS — size category + leg count per monster (used by the trip rules:
 // +4 to trip defense per leg beyond two; you can't trip a foe more than ONE size
@@ -355,6 +367,9 @@ const MON_GANGS = {
   // they never share a room with devils or the undead (one gang per room).
   hound_archon: ['celestial'], bralani_azata: ['celestial'], lillend_azata: ['celestial'],
   movanic_deva: ['celestial'], ghaele_azata: ['celestial'], astral_deva: ['celestial'],
+  angel_bro: ['celestial'], aasimar_gunslinger: ['celestial'], aasimar_shotgunner: ['celestial'],
+  angel_healer: ['celestial'], angel_cavalier: ['celestial'], chad: ['celestial'],
+  soirse: ['devil'],   // a succubus among Hell's forces (fiends ride together for gameplay)
   // dragons — kobold warrens famously serve them
   black_dragon: ['dragon', 'kobold'], void_dragon: ['dragon', 'kobold'],
   // ex-PC bosses: Blackout stalks with the Numerian machines; Ragh muscles
@@ -407,6 +422,8 @@ const MON_ART = {
   horned_devil: 'horned_devil', pit_fiend: 'pit_fiend',
   hound_archon: 'hound_archon', bralani_azata: 'bralani_azata', lillend_azata: 'lillend_azata',
   movanic_deva: 'movanic_deva', ghaele_azata: 'ghaele_azata', astral_deva: 'astral_deva',
+  angel_bro: 'angel_bro', aasimar_gunslinger: 'aasimar_gunslinger', aasimar_shotgunner: 'aasimar_shotgunner',
+  angel_healer: 'angel_healer', angel_cavalier: 'angel_cavalier', chad: 'chad', soirse: 'soirse',
   blood_caimon: 'blood_caimon',
   // The Numerian robots — tokens straight from the Iron Gods Foundry world.
   drone_rhoomba: 'drone_rhoomba', drone_collector: 'drone_collector', gearsman_mk1: 'gearsman_mk1',
@@ -482,6 +499,8 @@ const MON_TYPE = {
   horned_devil: 'outsider', pit_fiend: 'outsider',
   hound_archon: 'outsider', bralani_azata: 'outsider', lillend_azata: 'outsider',
   movanic_deva: 'outsider', ghaele_azata: 'outsider', astral_deva: 'outsider',
+  angel_bro: 'outsider', aasimar_gunslinger: 'outsider', aasimar_shotgunner: 'outsider',
+  angel_healer: 'outsider', angel_cavalier: 'outsider', chad: 'outsider', soirse: 'outsider',
   black_dragon: 'dragon', void_dragon: 'dragon', rivozair: 'dragon',
   harpy_sorcerer: 'monstrous humanoid',
 };
@@ -557,6 +576,9 @@ const ALIGN_BY_KEY = {
   // The Heavenly Host — GOOD-aligned (hero Smite Evil finds no purchase on them).
   hound_archon: 'LG', bralani_azata: 'CG', lillend_azata: 'CG',
   movanic_deva: 'NG', ghaele_azata: 'CG', astral_deva: 'LG',
+  angel_bro: 'LG', aasimar_gunslinger: 'NG', aasimar_shotgunner: 'NG',
+  angel_healer: 'NG', angel_cavalier: 'LG', chad: 'LG',
+  soirse: 'CE',   // succubus demon — the one EVIL fiend in this batch (Smite Evil bites her)
   // neutral evil
   goblin: 'NE', skeleton: 'NE', skeletal_champion: 'NE', zombie: 'NE', cultist: 'NE', ettercap: 'NE', winter_wolf: 'NE',
   goblin_barbarian: 'CE',
@@ -590,7 +612,9 @@ const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overl
   'auren_vrood', 'vorkstag', 'tar_baphon',   // Carrion Crown canon
   'barzillai', 'rivozair',   // the Thrune pair (Hell's Rebels) — boss-only, ALWAYS spawn together
   'horned_devil', 'pit_fiend',   // Hell's Legions bosses (Cornugon; the Pit Fiend is a peer of Tar-Baphon)
-  'ghaele_azata', 'astral_deva']);   // the Heavenly Host bosses (the knight-angel & the avenger)
+  'ghaele_azata', 'astral_deva',   // the Heavenly Host bosses (the knight-angel & the avenger)
+  'angel_cavalier', 'chad',   // NEW celestial bosses — the cavalier-knight & CHAD the paladin champion
+  'soirse']);   // NEW demon boss — the charming succubus bard
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 
@@ -601,7 +625,8 @@ const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
 const NATURAL_KEYS = ['zombie', 'ghoul', 'ghoul_crusader', 'shadow', 'wight', 'skeletal_champion', 'harpy', 'gibbering_mouther', 'abyssal_horror', 'bog_brute', 'ettercap'];
 NATURAL_KEYS.push('charauka_warrior', 'bentbeak_charney', 'ikualoa',
   'amalokla', 'brogwort',   // bare knuckles, pain touch, athach limbs — nothing to disarm (the Black Sovereign now swings a SWORD — disarm away, if you dare)
-  'imp', 'accuser_devil', 'bone_devil', 'pit_fiend', 'hound_archon');   // devils/archon that fight with sting/bite/claws (erinyes=bow, horned=chain, the angels=weapons → those CAN be disarmed)
+  'imp', 'accuser_devil', 'bone_devil', 'pit_fiend', 'hound_archon',   // devils/archon that fight with sting/bite/claws (erinyes=bow, horned=chain, the angels=weapons → those CAN be disarmed)
+  'soirse');   // the succubus rakes with claws — nothing to disarm (the gunslingers' guns & the angels' blades CAN be disarmed)
 for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k) || ROBOT_KEYS.includes(k) || k === 'gargoyle') MON[k].natural = true;   // robots: integrated weaponry — nothing to disarm
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX, MONK_SFX };

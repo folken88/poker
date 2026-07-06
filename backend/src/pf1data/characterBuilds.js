@@ -80,6 +80,7 @@ const BUILDS = {
   // Reese — Strix Eldritch-Archer magus. DEX-focused 25-pt build (his bow rides DEX,
   // not the magus template's default STR); INT for his spellstrike. Strix +2 Dex → 19.
   'Reese':                   { race: 'strix', scores: { str: 10, dex: 17, con: 14, int: 14, wis: 11, cha: 11 } },
+  'Savage':                  { race: 'tiefling' },   // tiefling bloodrager — STR brute (class template handles the STR primary)
 };
 
 module.exports = { BUILDS };

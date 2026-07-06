@@ -282,6 +282,7 @@ const BOT_ROSTER = [
   { name: "J'Mal",                avatar: '/tokens/jmal.webp',                   baseMode: 'risky',    intelligence: 'average', gender: 'he'  }, // Hobgoblin Red Mantis Assassin/Rogue — twin sawtooth sabers + sneak (Tim's character)
   { name: 'Jason',                avatar: '/tokens/jason.webp',                  baseMode: 'cautious', intelligence: 'high',    gender: 'he'  }, // Tiefling Divine Scion/Cleric of Asmodeus — WIS caster, reach force pike
   { name: 'Reese',                avatar: '/tokens/reese.webp?v=2',              baseMode: 'risky',    intelligence: 'average', gender: 'he'  }, // Strix Eldritch-Archer magus — ALWAYS flying (real wings), spellstrikes through his bow. ?v=2 cache-busts the token-art swap so browsers re-fetch (2026-07-06).
+  { name: 'Savage',               avatar: '/tokens/savage.webp',                 baseMode: 'risky',    intelligence: 'low',     gender: 'he'  }, // Tiefling BLOODRAGER — greataxe, Bloodrage + Cleave, self-buffs; zoomer 'graham' brute
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
@@ -452,6 +453,7 @@ const BOT_CLASSES = {
   // Hell's Vengeance / Rebels PCs → AI-heroes (real Foundry builds):
   'Femmik Embersword': 'bard', 'Freya Kusanagi': 'cavalier', "J'Mal": 'rogue', 'Jason': 'cleric',
   'Reese': 'magus',   // Strix Eldritch-Archer magus — spellstrike through his bow (real build: Arcane Archer/Ranger/Wizard)
+  'Savage': 'bloodrager',   // tiefling bloodrager — Bloodrage + Cleave + slow self-buffs
 };
 // Sensible default base weapon per class so AI aren't all daggers in the dungeon.
 const CLASS_WEAPON = {
@@ -483,6 +485,7 @@ const BOT_WEAPONS = {
   // Hell's Vengeance / Rebels PCs — signature weapons (see pf1data/staples.js):
   'Femmik Embersword': 'lammas', 'Freya Kusanagi': 'balrogblade', "J'Mal": 'sawtoothsabers', 'Jason': 'forcepike',
   'Reese': 'stormcaller',   // his arcane bow — spellstrike rides the shot
+  'Savage': 'greataxe',   // 1d12 ×3 two-hander — cleaves through ranks
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 

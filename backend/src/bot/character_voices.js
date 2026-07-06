@@ -105,6 +105,7 @@ const CHARACTER_VOICES = {
   "J'Mal":             'zmw8ZGHS2l5ZG2v3AQ31', // Ultron (user pick) — the cold Red Mantis assassin
   'Jason':             '5mU8WBEmVJQ3n5J4fkzR', // Okole (user pick) — the Asmodean priest
   'Reese':             'GEDXnQvfyd3quuXsFgKU', // Felix (user pick) — the winged Strix archer
+  'Savage':            'KLs0efvyfWnIfXc9u1Jk', // Sanjay (user pick, shared w/ Bujon/Olbryn) — the tiefling bloodrager brute
 
   // Vorkstag: see voiceFor() — he uses the voice of whoever he's
   // impersonating (Seat.impersonatedNick). When the impersonated

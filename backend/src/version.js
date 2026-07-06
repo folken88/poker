@@ -3,6 +3,19 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.29.0 2026-07-06  CHARACTER BATCH (1 hero + 7 foes): SAVAGE — a playable
+//                     tiefling BLOODRAGER (greataxe; cleave + magic-fueled Rage +
+//                     a self Bloodline Surge; slow spell progression), voice Sanjay,
+//                     zoomer-brute banter. Seven new enemies: the HEAVENLY HOST gains
+//                     Angel Bro (Erelim CR8), two aasimar gunslingers (twin PISTOLS
+//                     CR10 ranged; a SHOTGUN CR10 that scatters the whole party), an
+//                     angel field-CLERIC (CR11, big channel healing), an angel
+//                     CAVALIER knight (BOSS CR14), and CHAD — an aasimar PALADIN
+//                     champion (BOSS CR17) swinging THE GOLDENROD (+5 holy 2H hammer,
+//                     3d6+18). Plus SOIRSE — a succubus BARD boss (CR10, CE) whose
+//                     Dominate is modeled as Hold Person (DC 20). Movanic Deva art
+//                     refreshed. All wired into every MON map (gang/art/type/align/
+//                     boss/natural) + domtest coverage.
 //  3.28.6 2026-07-06  DEFLECTION bonuses modeled: Shield of Faith is now a deflection
 //                     bonus — it stacks with armor + Mage Armor but takes the HIGHER
 //                     vs a Ring of Protection (they don't stack), and the caster bot
@@ -336,4 +349,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.28.6' };
+module.exports = { VERSION: '3.29.0' };
