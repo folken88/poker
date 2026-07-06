@@ -476,8 +476,9 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     const [hookDmg, hookDR] = this._physDR(target, r.damage);   // Stoneskin soaks the bite
     this._dmgToMember(target, hookDmg);
     const _fom = (!target.dead && target.hp > -10) ? this._fomSpend(target, 'the dragging hook') : false;
+    const _yankedDown = !_fom && !target.dead && target.hp > -10 && target.flying;   // a thrown chain-hook can snag a FLYER and drag it out of the sky — that's how a GROUNDED mech grabs an airborne hero (Josh's "how did the non-flying scraper grapple my flying Olbryn?"). The grapple then keeps them grounded (see the `grounded` check in _enemyAct).
     if (!target.dead && target.hp > -10 && !_fom) { target.grappled = true; target.grappledBy = e.uid; target.grappledCL = this._enemyCL(e); target.grappleCMB = e.toHit || 0; }   // stamp CMB for the cast-while-grappled concentration DC
-    this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : ' and drags them into a GRAPPLE! (Grease it or struggle free — no spell to dispel)'} ${this._atkStr(r)}`, snd, { side: 'enemy' });
+    this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : `${_yankedDown ? ' — the chain SNATCHES them out of the air and drags them down' : ''} and drags them into a GRAPPLE! (Grease it or struggle free — no spell to dispel)`} ${this._atkStr(r)}`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   },
   // Crush a hero the devil is already grappling — automatic chain damage.

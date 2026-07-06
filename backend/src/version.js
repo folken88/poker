@@ -3,6 +3,21 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.2 2026-07-06  JOSH BUG BATCH. (1) INVISIBLE HEROES NO LONGER TURTLE: a normal-
+//                     invisible hero who isn't a sneak-attacker used to hide "for the right
+//                     moment" that never came — Femmik (bard) & Savage (bloodrager) sat
+//                     invisible & idle at 80-90% HP for whole rooms while the party got
+//                     mauled. Now, after any worthwhile hidden support action, they BREAK
+//                     COVER AND FIGHT; the opening blow catches the foe unseen (denies its
+//                     Dex — which also fixes a latent gap where sneak heroes weren't getting
+//                     that bonus from normal invisibility). (2) ENEMY NAME "+N" GONE: an
+//                     advanced foe read as "Elite Deathblade Monk +3" — the raw level count
+//                     is noise (Josh); now just "Elite …"/"Boss: …" (the levels still drive
+//                     the stats). (3) ADVANCED-CR FLOAT FIXED: a CR-1/3 creature made Elite
+//                     showed "CR 1.3333333333333335" in the inspector — now rounded ("1.33").
+//                     (4) FLYER-HOOK CLARITY: a grounded mech's chain-hook that yanks a flying
+//                     hero down now SAYS so ("the chain snatches them out of the air") — Josh
+//                     couldn't tell how a non-flying Scraper grappled his airborne Olbryn.
 //  3.37.1 2026-07-06  DANGER'S BOW is an ORCISH WARBOW: base damage 2d6 (was a 1d8 composite
 //                     longbow), ×3 crit. An exotic hornbow, but Danger is trained with it
 //                     (custom weapon → always proficient). Weapon key stays 'longbow' so his
@@ -454,4 +469,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.1' };
+module.exports = { VERSION: '3.37.2' };

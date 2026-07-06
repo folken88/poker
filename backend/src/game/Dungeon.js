@@ -662,9 +662,16 @@ class Dungeon {
     const preTouch = pre.includes('shieldoffaith') ? 3 : 0;   // deflection counts vs touch; armor/shield bonuses don't
     return {
       uid: `e${++_uidSeq}`,
-      name: boss ? `Boss: ${base.name}${extra ? ` +${extra}` : ''}` : (extra ? `Elite ${base.name} +${extra}` : base.name),
+      // NAME: "Elite"/"Boss:" tells the player it's tougher; the raw advancement count
+      // (the old " +3") is meaningless noise in combat lines and confusing over TTS
+      // (Josh: "reported as Deathblade Monk +3 — the +3 doesn't matter"). Dropped from the
+      // name; the level count still drives the stats via bossLevels below.
+      name: boss ? `Boss: ${base.name}` : (extra ? `Elite ${base.name}` : base.name),
       glyph: base.glyph, art: base.tokenPool ? pick(base.tokenPool) : (base.art || null), artPos: base.artPos || null, boss,
-      cr: half ? String((base.crNum || 0) + half) : (base.cr || null),   // advanced CR (boss OR elite) → bigger XP + loot rolls
+      // Advanced CR, ROUNDED for display: a CR-1/3 (or 1/4, 1/2) creature advanced to Elite
+      // used to stringify as "1.3333333333333335" and read that way in the inspector (Josh).
+      // Round to 2 places → "1.33"; crToNum still parses it for XP/loot (negligible delta).
+      cr: half ? String(Math.round(((base.crNum || 0) + half) * 100) / 100) : (base.cr || null),   // advanced CR (boss OR elite) → bigger XP + loot rolls
       bossLevels: extra,
       hype: base.hype || null,   // Maestro hype track (from the FVTT worlds) — plays when the boss room opens
       hp: Math.round(base.hp * (1 + 0.12 * extra)), maxHp: Math.round(base.hp * (1 + 0.12 * extra)),
@@ -1505,7 +1512,7 @@ class Dungeon {
     // defenses — flat-footed, prone, sickened, or paralyzed (PF1e). NOT crit-multiplied.
     // A target is denied its Dex vs an UNSEEN attacker too — Greater Invisibility
     // keeps a rogue striking from concealment, so every hit is a Sneak Attack.
-    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated || target.blinded > 0)) || !!attacker.greaterInvis;
+    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated || target.blinded > 0)) || !!attacker.greaterInvis || !!attacker._unseenStrike;   // _unseenStrike: the one blow struck while still invisible (before it breaks) catches the foe unseen — denies its Dex
     // FLANK (Tobias 2026-07-04): once TWO+ melee allies work the SAME foe, they
     // flank it — +2 to hit, and Sneak Attack switches on for rogue-likes. The
     // first to close gets nothing (moved up alone); every ally who joins the
@@ -1685,6 +1692,7 @@ class Dungeon {
   _allyAct(m) {
     const foes = this._targetableEnemies();   // can't target Darkness-shrouded foes
     if (!foes.length) return;
+    m._unseenStrike = false;   // reset the unseen-opening-strike flag each turn (set only when a hidden hero breaks cover to attack)
     // Taunted by a goblin barbarian → drop the clever play and just go hit it.
     if (m.tauntedBy && foes.some(e => e.uid === m.tauntedBy)) {
       const tgt = this._preferredFoe(m, foes);   // returns + consumes the taunter
@@ -1708,6 +1716,7 @@ class Dungeon {
           ? `🗡️ ${m.nickname} strikes from everywhere and nowhere — ${prey.name} can't see the blade coming!`
           : `🗡️ ${m.nickname} melts out of the shadows behind ${prey.name} — an unseen strike!`);
         this._botStance(m, foes);
+        m._unseenStrike = true;   // the opening blow lands before invisibility breaks — the prey is unseen (denied its Dex)
         this._basicAttack(m, prey.uid);
         this._hasteBonus(m);
         return;
@@ -1717,6 +1726,13 @@ class Dungeon {
       // doing nothing). Fall through to the normal turn below; every swing lands
       // against a foe denied its Dex (see the greaterInvis branch in _denied).
       if (!m.greaterInvis) {
+        // While hidden, FIRST prefer a support action that keeps the hero unseen AND
+        // helps (heal/buff an ally) — free value, no reason to drop the veil. But NEVER
+        // just turtle: if there's nothing useful to do hidden, BREAK COVER AND FIGHT.
+        // (Josh: Femmik the bard and Savage the bloodrager sat invisible & idle for whole
+        // rooms — at 80-90% HP — while the party got mauled. A hero with a weapon should
+        // stab a motherfucker, not hide in the corner "for the right moment" that never
+        // comes.) The breaking strike catches the foe unseen, so it denies its Dex.
         const c = this._botAbility(m);
         if (c) {
           const ab = this._abilitiesFor(m)[c.slot];
@@ -1726,9 +1742,9 @@ class Dungeon {
             if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }
           }
         }
-        this._note(`👻 ${m.nickname} stays hidden — attacking would break the invisibility — and holds for the right moment.`);
-        this._broadcast();
-        return;
+        this._note(`🗡️ ${m.nickname} bursts from hiding to strike!`);
+        m._unseenStrike = true;   // opening blow out of invisibility denies the target its Dex
+        // fall through to the normal turn below — the attack breaks Invisibility, as it should.
       }
     }
     // Set the Power Attack / Deadly Aim stance for this turn FIRST (free toggle):
