@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.28.6 2026-07-06  DEFLECTION bonuses modeled: Shield of Faith is now a deflection
+//                     bonus — it stacks with armor + Mage Armor but takes the HIGHER
+//                     vs a Ring of Protection (they don't stack), and the caster bot
+//                     no longer wastes a cast when it grants no AC increase (e.g.
+//                     Celeb, who has a +2 ring). Itemized in the AC tooltip.
 //  3.28.5 2026-07-06  Reese token cache-bust: the token art was swapped under the
 //                     same /tokens/reese.webp URL, so browsers kept the old cached
 //                     image (even on hard refresh). His avatar URL is now
@@ -331,4 +336,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.28.5' };
+module.exports = { VERSION: '3.28.6' };

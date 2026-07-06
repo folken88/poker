@@ -1320,6 +1320,11 @@ class Dungeon {
     // his defense — he adds BOTH his Dexterity AND his Wisdom modifier to AC (a monk-
     // like unarmored defense). Stacks with his auto-cast Mage Armor (+4) and Shield.
     if (m.playerId === 'celeb' && m.mods) b += (m.mods.dex || 0) + (m.mods.wis || 0);
+    // DEFLECTION (Shield of Faith) does NOT stack with a Ring of Protection (also
+    // deflection) — take the HIGHER. acOf() already adds the ring's deflection, so
+    // here we add only the EXCESS of the spell's deflection over the ring.
+    const ringDef = Number(m.gear && m.gear.ring) || 0;
+    b += Math.max(0, ((m.buffs && m.buffs.deflect) || 0) - ringDef);
     return b;
   }
   // A hero's three PF1 AC values (base, no situational mods) — for display + touch
@@ -2107,7 +2112,15 @@ class Dungeon {
       const recips = a.party ? this.livingParty()
                    : a.target === 'ally' ? [this._buffTarget(m, a)]
                    : [m];
-      return recips.length > 0 && recips.every(w => w && w[flag] && w[flag][a.key]);
+      if (!recips.length) return false;
+      // SHIELD OF FAITH (deflection): a WASTED cast if the recipient already has an
+      // equal-or-higher deflection bonus (a Ring of Protection, or another SoF) — it
+      // won't stack, granting NO AC increase. A caster knows this and skips it.
+      if (a.key === 'shieldoffaith') {
+        const def = (a.buff && a.buff.deflect) || 0;
+        return recips.every(w => !w || (w[flag] && w[flag][a.key]) || (Number(w.gear && w.gear.ring) || 0) >= def || ((w.buffs && w.buffs.deflect) || 0) >= def);
+      }
+      return recips.every(w => w && w[flag] && w[flag][a.key]);
     };
     // Protection from Fire — only worth a slot when fiery foes are on the field.
     const fireFoes = foes.some(e => e.detonate || e.hellfire || /fire|flame|magma|salamander|phoenix/i.test(e.name));

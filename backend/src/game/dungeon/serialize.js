@@ -243,6 +243,8 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (m.mageArmor) parts.push('+4 Mage Armor');
     const buffAC = (m.buffs && m.buffs.ac) || 0;
     if (buffAC) parts.push(`+${buffAC} spell buffs`);
+    const deflectExcess = Math.max(0, ((m.buffs && m.buffs.deflect) || 0) - ring);   // Shield of Faith deflection beyond the ring (they don't stack)
+    if (deflectExcess) parts.push(`+${deflectExcess} Shield of Faith (deflection)`);
     if (m.judgment === 'protection') parts.push(`+${Math.max(1, Math.floor((m.level || 1) / 3))} Judgement: Protection`);
     const featAC = fighterFeats(m.cls, m.level, this._isRanged(m)).ac;
     if (featAC) parts.push(`+${featAC} feats (Dodge)`);

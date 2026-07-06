@@ -486,7 +486,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abForm(m, ab) {
     const f = ab.form; if (!f) return;
     const sound = f.sound || pick(SND.flesh);
-    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 };
     if (m.form && m.form.key === f.key) {   // toggle OFF
       this._revertForm(m);
       this._note(`🔄 ${m.nickname} sheds ${f.label} and returns to their normal shape.`, sound);
@@ -2212,7 +2212,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const eligible = allies.filter(a => !has(a));
     const pool = eligible.length ? eligible : allies;
     const acScore = (a) => this._acOf(a).ac + this._acBonus(a) - this._acPenalty(a);
-    if (ab.key === 'shieldoffaith') return pool.slice().sort((a, b) => acScore(a) - acScore(b))[0] || m;   // lowest-AC ally WITHOUT it
+    if (ab.key === 'shieldoffaith') {   // lowest-AC ally who'd actually GAIN deflection (ring/existing SoF < the spell)
+      const def = (ab.buff && ab.buff.deflect) || 0;
+      const gains = (a) => (Number(a.gear && a.gear.ring) || 0) < def && ((a.buffs && a.buffs.deflect) || 0) < def;
+      const gainers = pool.filter(gains);
+      return (gainers.length ? gainers : pool).slice().sort((a, b) => acScore(a) - acScore(b))[0] || m;
+    }
     if (ab.key === 'bearsendurance') return pool.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0] || m;
     if (ab.key === 'catsgrace')      return pool.find(a => a.cls === 'ranger' || isSneakClass(a.cls)) || pool.find(a => MARTIAL.includes(a.cls)) || m;
     if (ab.key === 'bullsstrength')  return pool.find(a => MARTIAL.includes(a.cls) && a.playerId !== m.playerId) || pool.find(a => MARTIAL.includes(a.cls)) || m;
@@ -2226,7 +2231,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // same math. on=true applies, on=false backs out exactly what was put on.
   _applyDeadlyAim(m, on, { silent, sound } = {}) {
     m.buffApplied = m.buffApplied || {};
-    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 };
     if (!on) {
       if (!m.buffApplied.deadlyaim) return;
       m.buffApplied.deadlyaim = false; m.aimOn = false;
@@ -2242,7 +2247,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   _applyPowerAttack(m, on, { silent, sound } = {}) {
     m.buffApplied = m.buffApplied || {};
-    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 };
     if (!on) {   // back out exactly what we put on
       if (!m.buffApplied.powerattack) return;
       m.buffApplied.powerattack = false; m.paOn = false;
@@ -2268,7 +2273,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // the stance across rooms, exactly like paOn/aimOn.
   _applyFightDefensively(m, on, { silent, sound } = {}) {
     m.buffApplied = m.buffApplied || {};
-    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+    m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 };
     if (!on) {
       if (!m.buffApplied.fightdefensively) return;
       m.buffApplied.fightdefensively = false; m.fdOn = false;
@@ -2297,7 +2302,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (m.buffApplied.rage) return;   // already raging this room
       m.buffApplied.rage = true;
       const mod = lvl >= 20 ? 4 : lvl >= 11 ? 3 : 2;   // +8/+6/+4 Str & Con → +4/+3/+2 mod
-      m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+      m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 };
       m.buffs.toHit += mod;          // Strength to hit
       m.buffs.dmg   += mod + 1;      // Strength to damage (+1 for a two-hander)
       m.buffs.save  += mod;          // morale bonus to Will
@@ -2327,12 +2332,16 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         who.runBuffApplied[ab.key] = true;
         return;
       }
-      who.buffs = who.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0 };
+      who.buffs = who.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 };
       who.buffs.toHit += ab.gmw ? gmwMod : ((ab.buff && ab.buff.toHit) || 0);   // Greater Magic Weapon scales the enhancement with caster level
       who.buffs.dmg += ab.gmw ? gmwMod : ((ab.buff && ab.buff.dmg) || 0);
       who.buffs.bonusDice += (ab.buff && ab.buff.bonusDice) || 0;
       who.buffs.acPen += (ab.buff && ab.buff.acPen) || 0;   // rage handled above; here magus Shield etc.
-      who.buffs.ac += (ab.buff && ab.buff.ac) || 0;         // Shield / Cat's Grace: +AC (sticky)
+      who.buffs.ac += (ab.buff && ab.buff.ac) || 0;         // Shield / Cat's Grace: +AC armor/dodge bonus (sticky, stacks)
+      // DEFLECTION bonus (Shield of Faith): does NOT stack with itself OR a Ring of
+      // Protection — take the HIGHEST. The AC math (Dungeon._acBonus) adds only the
+      // excess of this over the ring's deflection.
+      who.buffs.deflect = Math.max(who.buffs.deflect || 0, (ab.buff && ab.buff.deflect) || 0);
       who.buffs.save += (ab.buff && ab.buff.save) || 0;
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
       if (ab.dr) who.dr = Math.max(who.dr || 0, ab.dr);   // Stoneskin — DR vs physical blows
