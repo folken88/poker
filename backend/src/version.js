@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.27.0 2026-07-05  DUNGEON QoL + class/hero pass: (1) new SETTINGS action
+//                     "Reset helpers to my level" — lowers AI helpers DOWN to the
+//                     invoking human's level (never up; gear & gold untouched).
+//                     (2) CAVALIER now fully selectable, with its CHALLENGE feature
+//                     (name a foe → +cavalier level bonus damage vs it this room);
+//                     Freya is now a Cavalier. (3) FIRE + LAW domains added; Jason
+//                     now runs Fire+Law (was Trickery+War). (4) New AI-hero REESE —
+//                     a Strix Eldritch-Archer MAGUS: INNATE undispellable flight
+//                     (real wings) + spellstrike through his bow "Stormcaller".
+//                     Added the Strix race. (Heroes already start L1 with no gear.)
 //  3.26.0 2026-07-05  TWO VILLAIN FACTIONS imported from the Hell's worlds, each
 //                     its OWN gang (they never share a room). HELL'S LEGIONS
 //                     (gang 'devil', fills the low-mid CR gap): Imp (CR2), Accuser
@@ -284,4 +294,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.26.0' };
+module.exports = { VERSION: '3.27.0' };

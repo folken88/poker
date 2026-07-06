@@ -124,6 +124,10 @@ const CUSTOM_WEAPONS = {
   // Jason's "Force Pike" — an Asmodean priest's reach weapon (1d10, ×3). custom =>
   // always proficient. reachFly lets him strike airborne foes from the back rank.
   forcepike: { key: 'forcepike', name: 'Force Pike', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 3, type: 'P', group: 'spears', prof: 'martial', custom: true, reachFly: true },
+  // Reese's "Stormcaller" — an arcane composite longbow (1d8, ×3). As an ELDRITCH
+  // ARCHER magus he casts touch spells THROUGH it: his magus Spellstrike rides this
+  // bow (m.weapon), delivering the spell on a ranged shot. custom => always proficient.
+  stormcaller: { key: 'stormcaller', name: 'Stormcaller', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'P', group: 'bows', prof: 'martial', custom: true, atkSound: '/audio/bow_silent_hits.mp3' },
   // The DRUID's Shillelagh — a club a druid empowers with nature's strength
   // (1d10, ×2, blunt). Simple/always-proficient; the druid's signature weapon.
   shillelagh: { key: 'shillelagh', name: 'Shillelagh', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 2, type: 'B', group: 'clubs', prof: 'simple', custom: true, atkSound: '/audio/weapon_blunt.mp3' },

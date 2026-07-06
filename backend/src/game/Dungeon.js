@@ -370,7 +370,13 @@ class Dungeon {
       isBot: !!isBot,
       undead: Dungeon.UNDEAD_HEROES.has((playerId || '').toLowerCase()),   // positive energy does nothing for them
       ghost: (playerId || '').toLowerCase() === 'vesorianna',               // always flying + incorporeal
-      flying: (playerId || '').toLowerCase() === 'vesorianna',
+      // A hero is airborne if they're a ghost OR their RACE has innate wings
+      // (Strix, raceFly > 0). Innate flight is a member property, NOT a buff — so
+      // dispel never grounds them (Reese's wings are real). canHitFlyers lets a
+      // winged hero also strike other airborne foes in melee.
+      flying: (playerId || '').toLowerCase() === 'vesorianna' || RACES.raceFly(race) > 0,
+      innateFly: RACES.raceFly(race) > 0,      // real wings — undispellable (guarded in the dispel path)
+      canHitFlyers: RACES.raceFly(race) > 0,
       race,                                    // PF1 race key (drives ability mods, vision, save bonuses)
       flexStat,                                // chosen ability for a flex race's floating +2 ('' = auto)
       vision: RACES.raceVision(race),          // 'normal' | 'low-light' | 'darkvision60' (read by blind mode; Phase-2 will negate darkness penalties)
@@ -1384,6 +1390,8 @@ class Dungeon {
     // AND damage from them (N scales with the slayer's level; set by _abStudyTarget).
     const studied = !!(target && attacker.studiedId != null && attacker.studiedId === target.uid);
     const studiedN = studied ? (attacker.studiedN || 0) : 0;
+    // CAVALIER Challenge: +level bonus DAMAGE (not to-hit) vs the challenged foe.
+    const challengeN = (target && attacker.challengedId != null && attacker.challengedId === target.uid) ? (attacker.challengeN || 0) : 0;
     const sneakOk = SNEAK_CLASSES.has(cls) && (denied || flanking);
     const sneakDice = sneakOk ? Math.min(SNEAK_DICE_CAP, Math.max(1, Math.ceil(lvl / 2))) : 0;
     // Sticky room buffs (Rage / Judgment / Bane / Inspire Courage / Prayer)
@@ -1492,6 +1500,7 @@ class Dungeon {
     if (baneOn) dmg += dRollN(BANE_DICE, 6);                // Inquisitor Bane — +2d6 vs the declared type
     if (smite) dmg += 2 * lvl;   // Smite Evil: +double level damage
     if (studiedN) dmg += studiedN;   // Studied Target: +N insight damage vs the marked foe (un-multiplied)
+    if (challengeN) dmg += challengeN;   // Cavalier Challenge: +level damage vs the challenged foe (un-multiplied)
     // DOMAIN riders — Strength Surge (+½ level dmg on this one swing; to-hit added
     // above, consumed at the top) and War's Battle Rage (+level dmg on ONE landed
     // hit — consumed here; a fully-missed action forfeits it, cleared in
@@ -1600,6 +1609,13 @@ class Dungeon {
     if (m.cls === 'slayer' && (m.studiedId == null || !foes.some(e => e.uid === m.studiedId && e.hp > 0))) {
       const prey = this._preferredFoe(m, foes);
       if (prey) { m.studiedId = prey.uid; m.studiedN = 1 + Math.floor((m.level || 1) / 5); this._note(`🎯 ${m.nickname} studies ${prey.name} — marking it for the kill.`); }
+    }
+    // CAVALIER auto-CHALLENGES its prey when it has a Challenge use left (room-cost,
+    // limited): swear the +level-damage oath on the foe it's about to fight, re-swear
+    // when the old quarry is dead and a use remains.
+    if (m.cls === 'cavalier' && (m.challengedId == null || !foes.some(e => e.uid === m.challengedId && e.hp > 0)) && ((m.abilityUses && m.abilityUses.challenge) || 0) > 0) {
+      const prey = this._preferredFoe(m, foes);
+      if (prey) { m.challengedId = prey.uid; m.challengeN = m.level || 1; m.abilityUses.challenge = Math.max(0, (m.abilityUses.challenge || 0) - 1); this._note(`⚔️ ${m.nickname} challenges ${prey.name} — sworn to cut it down (+${m.challengeN} damage against it).`); }
     }
     // SPELL SYNTHESIS (Celeb the Theurge — Kobold Press): a limited number of
     // times per room (1/2/3 at L5/11/17) he casts ONE arcane + ONE divine spell in
@@ -2537,12 +2553,42 @@ class Dungeon {
   }
 
   // ── Player actions (from dungeon:action) ─────────────────────────────────
+  // "Reset helpers to my level" (dungeon settings): lower every AI HELPER in the
+  // party DOWN to the invoking human's level — never up (a helper already at or
+  // below your level is untouched). Level is XP-derived, so we set their XP to the
+  // floor of your level and re-derive HP/abilities. GEAR AND GOLD ARE NOT TOUCHED
+  // (Tobias's rule) — only the level/XP changes. Humans are never affected.
+  resetHelpers(callerId) {
+    const caller = this.member(callerId);
+    if (!caller) return { ok: false, error: 'not in this run' };
+    const myLevel = caller.level || 1;
+    const floorXp = xpFloorForLevel(myLevel);
+    const lowered = [];
+    for (const b of this.party) {
+      if (!b.isBot || b.left) continue;
+      if ((b.level || 1) <= myLevel) continue;   // only bring DOWN, never up
+      db.setXp(b.playerId, floorXp);             // persist — gear/chips are left alone
+      b.xp = floorXp; b.level = myLevel;
+      const raceMods = RACES.raceModsFor(b.race, b.abilityScores, b.flexStat);
+      const _ranged = !!weaponOf(b.gear, b.weaponKey || 'dagger').ranged;
+      const featHp = (fighterFeats(b.cls, b.level, _ranged).hp) || 0;
+      b.maxHp = deriveCharacter({ cls: b.cls, level: b.level, baseScores: b.abilityScores, raceMods, featHp }).hp;
+      if (b.hp > b.maxHp) b.hp = b.maxHp;
+      this._resetAbilities(b);                   // re-stock slots/uses at the new level
+      lowered.push(b.nickname);
+    }
+    if (!lowered.length) { this._note(`⚖️ No helpers were above ${caller.nickname}'s level (${myLevel}) — nothing to reset.`); this._broadcast(); return { ok: true, lowered: [] }; }
+    this._note(`⚖️ ${caller.nickname} levels the field: ${lowered.join(', ')} brought DOWN to level ${myLevel} (their gear & gold are untouched).`);
+    this._broadcast();
+    return { ok: true, lowered };
+  }
   action(playerId, kind, payload = {}) {
     const m = this.member(playerId);
     if (!m || m.left) return { ok: false, error: 'not in this run' };
 
     // Bail, loot rolls, and loot management are allowed any time (not on-turn).
     if (kind === 'bail') return this.bail(playerId);
+    if (kind === 'resetHelpers') return this.resetHelpers(playerId);   // lower AI helpers DOWN to my level (gear/gold untouched)
     if (kind === 'lootroll') return this._lootDecide(playerId, !!payload.roll);
     if (kind === 'equip') { const r = this.equipLoot(playerId, payload.idx); this._broadcast(); return r; }
     if (kind === 'hock')  { const r = this.hockLoot(playerId, payload.idx); this._broadcast(); return r; }

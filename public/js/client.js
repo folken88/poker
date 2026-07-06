@@ -1715,6 +1715,7 @@
             B('door', '🚪 Open door', !combat && !rolling, !combat) +
             `<button class="btn btn--ghost" data-dact="spectate" title="Bank your gold and leave the fight — but keep watching from the sidelines">👁 Spectate</button>` +
             `<button class="btn btn--ghost" data-dact="leave" title="Bank your gold and go back to the poker table">↩ Leave dungeon</button>` +
+            `<button class="btn btn--ghost" data-dact="resetHelpers" title="Bring the AI helpers DOWN to your character level (helpers already at or below you are untouched). Their gear and gold are NOT changed.">⚖️ Reset helpers to my level</button>` +
             `<button class="btn btn--ghost" data-dact="cancel" title="End the whole run for everyone — all delvers bank their share and return upstairs">🛑 Cancel run</button>` +
           `</div>`;
       }
@@ -1856,6 +1857,7 @@
     else if (act === 'spectate') bailToSpectate();     // combatant → spectator (keeps watching)
     else if (act === 'leave')   returnFromDungeon();   // self bails + back to table
     else if (act === 'cancel')  cancelDungeon();       // force-end the whole run
+    else if (act === 'resetHelpers') dungeonAction('resetHelpers');   // lower AI helpers to my level (gear/gold untouched)
     // Clear the target pick only after a LIVE action — an off-turn click QUEUES,
     // and clearing then meant a replacement queue went out target-less (the spell
     // fired at the auto-pick, not the selected foe — Tobias, 2026-07-02).

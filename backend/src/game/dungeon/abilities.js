@@ -88,6 +88,11 @@ function celebKit() {
 // room ends. Injected into the slayer kit (see _abilitiesFor); the bonus lands in
 // _swingVsAC (attacker.studiedId === target.uid → studiedN).
 const STUDIED_TARGET = { key: 'studiedtarget', name: 'Studied Target', icon: '🎯', cost: 'free', effect: 'studytarget', target: 'enemy', freeAction: true, desc: 'SWIFT: study a foe — +N to hit & damage against it (N = 1 + 1 per 5 levels). Re-study any turn to switch marks; lasts until then or the room ends.' };
+// CAVALIER — Challenge: swear an oath against ONE foe; every strike against it deals
+// +your cavalier level in DAMAGE this room (applied in _swingVsAC via challengedId/
+// challengeN). A ROOM-cost ability (uses scale: 1 + 1 per 4 levels), so it's a
+// limited, focused kill-order (unlike the slayer's at-will Studied Target).
+const CHALLENGE = { key: 'challenge', name: 'Challenge', icon: '⚔️', cost: 'room', uses: (lvl) => 1 + Math.floor(((lvl || 1) - 1) / 4), effect: 'challenge', target: 'enemy', sound: '/audio/taunt_predator.mp3', desc: 'A cavalier\'s oath: name ONE foe your quarry — every strike you land on it this room deals +your level in bonus damage. Uses per room = 1 + 1 per 4 levels.' };
 
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
@@ -304,6 +309,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       charm:       () => this._abCharm(m, ab, payload),
       dominate:    () => this._abDominate(m, ab, payload),
       studytarget: () => this._abStudyTarget(m, ab, payload),
+      challenge: () => this._abChallenge(m, ab, payload),
       masscharm:   () => this._abMassCharm(m, ab, payload),
       exhaust:     () => this._abExhaust(m, ab, payload),
       prismatic:   () => this._abPrismatic(m, ab, payload),
@@ -514,7 +520,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m._formBuff && m.buffs) { m.buffs.toHit -= m._formBuff.toHit; m.buffs.dmg -= m._formBuff.dmg; m.buffs.ac -= m._formBuff.ac; }
     m._formBuff = null;
     if (m._formDr) { m.dr = 0; m._formDr = 0; }   // form DR drops (re-cast Iron Skin if you want DR back)
-    m.flying = false;                              // hawk-form flight ends
+    if (!m.innateFly) m.flying = false;            // hawk-form flight ends (but real WINGS stay — Strix)
     m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.weapon = null;
     m.form = null;
     // (any temp HP the form granted lingers until the room resets — same as Rage/Bear's Endurance)
@@ -527,6 +533,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const kit = kitFor(m.cls).abilities;
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
     if (m.cls === 'slayer') list = list.concat(STUDIED_TARGET);   // SLAYER: swift Studied Target mark (ACG)
+    if (m.cls === 'cavalier') list = list.concat(CHALLENGE);      // CAVALIER: the Challenge oath (+level damage vs one foe)
     return list;
   },
   // DOMAINS Phase B — re-read the picks (they may change between rooms), rebuild
@@ -555,6 +562,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
     if (m.playerId === 'celeb') { const L = m.level || 1; m.synthUses = L >= 17 ? 3 : L >= 11 ? 2 : L >= 5 ? 1 : 0; }   // SPELL SYNTHESIS (Kobold Press): usable 1/2/3 times per room at L5/11/17
     if (m.cls === 'slayer') { m.studiedId = null; m.studiedN = 0; }   // SLAYER: Studied Target mark clears each room (fresh foes)
+    if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; }   // CAVALIER: Challenge oath clears each room
     m.abilityUses = {};
     for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
@@ -578,7 +586,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
     m.queuedAction = null;   // pre-loaded actions never carry into a new room (stale targets)
@@ -1842,6 +1850,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.studiedId = e.uid;
     m.studiedN = 1 + Math.floor((m.level || 1) / 5);
     this._note(`${ab.icon} ${m.nickname} STUDIES ${e.name} — reading its guard for the kill: +${m.studiedN} to hit and damage against it.`, ab.sound);
+    this._echoToTable(ab.sound);
+  },
+  // CAVALIER — Challenge: swear an oath against ONE foe. Every strike the cavalier
+  // lands on it this room deals +cavalier level in bonus DAMAGE (applied in
+  // _swingVsAC via challengedId/challengeN). No save, no SR — it's a martial vow.
+  // The room-use is spent by the framework (_useAbility line ~354).
+  _abChallenge(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.challengedId = e.uid;
+    m.challengeN = m.level || 1;
+    this._note(`${ab.icon} ${m.nickname} issues a CAVALIER'S CHALLENGE against ${e.name} — sworn to cut it down: +${m.challengeN} damage on every blow against it this room.`, ab.sound);
     this._echoToTable(ab.sound);
   },
   // Charm Person — a living foe, Will save or CHARMED: it stops attacking the

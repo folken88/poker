@@ -77,6 +77,9 @@ const BUILDS = {
   'Freya Kusanagi':          { race: 'half_elf', flex: 'str' },   // Samurai/Hellknight — STR 26 bruiser; floating +2 into STR
   "J'Mal":                   { race: 'hobgoblin' },  // Red Mantis Assassin / Rogue — DEX finesse dual-saber + sneak
   'Jason':                   { race: 'tiefling' },   // Divine Scion / Cleric of Asmodeus — WIS caster (tiefling darkvision + resist)
+  // Reese — Strix Eldritch-Archer magus. DEX-focused 25-pt build (his bow rides DEX,
+  // not the magus template's default STR); INT for his spellstrike. Strix +2 Dex → 19.
+  'Reese':                   { race: 'strix', scores: { str: 10, dex: 17, con: 14, int: 14, wis: 11, cha: 11 } },
 };
 
 module.exports = { BUILDS };

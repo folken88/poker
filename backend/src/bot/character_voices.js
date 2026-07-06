@@ -104,6 +104,7 @@ const CHARACTER_VOICES = {
   'Freya':             'EXAVITQu4vr4xnSDxMaL', // Sarah — mature, confident, commanding: the half-elf field marshal
   "J'Mal":             'CJnd8k7Q0w2Y1HegJ65F', // John 117 — stoic (shared w/ Vaughan): the quiet Red Mantis assassin
   'Jason':             'UzI1NsMEV3ni5JRkRSls', // Alistair — cultured, articulate (shared w/ Tar Baphon): the Asmodean priest
+  'Reese':             'CJnd8k7Q0w2Y1HegJ65F', // John 117 — stoic (shared w/ Vaughan): the cold winged Strix archer
 
   // Vorkstag: see voiceFor() — he uses the voice of whoever he's
   // impersonating (Seat.impersonatedNick). When the impersonated

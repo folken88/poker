@@ -52,6 +52,10 @@ const RACES = {
   ifrit:    { name: 'Ifrit',    mods: { dex: 2, cha: 2, wis: -2 }, size: 'medium', speed: 30, vision: 'darkvision60',  saves: {},                     traits: ['+2 DEX, +2 CHA, −2 WIS', 'Fire resistance 5', 'Darkvision 60'] },
   // Hobgoblin — disciplined goblinoid soldiers (J'Mal). Tough and quick.
   hobgoblin:{ name: 'Hobgoblin', mods: { dex: 2, con: 2 },          size: 'medium', speed: 30, vision: 'darkvision60',  saves: {},                     traits: ['+2 DEX, +2 CON', 'Darkvision 60'] },
+  // Strix — winged nocturnal humanoids (Reese). Their flight is a PHYSICAL pair of
+  // wings, not a spell: it is INNATE and can never be dispelled (see raceFly + the
+  // member build in Dungeon.js). `fly` = the innate fly speed in feet.
+  strix:    { name: 'Strix',    mods: { dex: 2, cha: -2 },          size: 'medium', speed: 30, fly: 60, vision: 'darkvision60', saves: {},               traits: ['+2 DEX, −2 CHA', 'Winged — innate fly 60 ft (real wings; CANNOT be dispelled)', 'Nocturnal', 'Darkvision 60'] },
 };
 
 const DEFAULT_RACE = 'none';   // unassigned → no racial mods (zero change until a race is chosen)
@@ -94,6 +98,9 @@ function raceSaveBonus(k, tags) {
 }
 
 function raceBlindsense(k) { return raceFor(k).blindsense || 0; }
+/** Innate racial FLY speed in feet (Strix = 60). 0 = no innate flight. Real wings:
+ *  the member gets `flying` at build time and it is NEVER a dispellable buff. */
+function raceFly(k) { return raceFor(k).fly || 0; }
 /** Racial SPELL RESISTANCE at a given level (PF1 drow: SR 6 + class levels).
  *  0 = none. Hostile spells must win a caster-level check (d20+CL) vs this;
  *  friendly casts assume the PF1 "lower your SR voluntarily" standard action. */
@@ -106,5 +113,5 @@ function raceList()    { return Object.keys(RACES).map(k => ({ key: k, name: RAC
 
 module.exports = {
   RACES, DEFAULT_RACE, raceKey, raceFor, raceModsFor, raceSaveBonus,
-  raceVision, raceSize, raceName, raceTraits, raceList, raceBlindsense, raceSR,
+  raceVision, raceSize, raceName, raceTraits, raceList, raceBlindsense, raceSR, raceFly,
 };
