@@ -3,6 +3,8 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.27.2 2026-07-05  VOICES (user picks): Femmik=Sean, Freya=Tresdin, J'Mal=Ultron,
+//                     Jason=Okole, Reese=Felix. Also fixed Sirona → Tresdin (was Sarah).
 //  3.27.1 2026-07-05  FLIGHT vs CONTROL fix: a corporeal flyer that is HELD
 //                     (paralyzed / Hold Person) or GRAPPLED (Black Tentacles &c.)
 //                     is dropped/dragged down — grounded melee can now reach it
@@ -300,4 +302,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.27.1' };
+module.exports = { VERSION: '3.27.2' };

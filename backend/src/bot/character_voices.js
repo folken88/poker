@@ -61,7 +61,7 @@ const CHARACTER_VOICES = {
   'Ser Toche':         'poTX7WPM13yOc28z0sVi', // Shoreh Thing (shared with Daramid) — tengu rogue, rarely speaks
   'El Guapo':          'GEDXnQvfyd3quuXsFgKU', // Felix (shared with Estovion) — flamboyant swashbuckler gambler
   'Gabriel':           'UoOL4r5ZefvNkwdKzfLN', // Hank (shared with Mr. Brow) — warm, steady paladin
-  'Sirona':            'EXAVITQu4vr4xnSDxMaL', // Sarah — Mature, Reassuring, Confident (paladin barking orders)
+  'Sirona':            'mmndVSeLErK7c5SRoKg5', // Tresdin (user pick) — strong, aggressive female army-commander (paladin barking orders)
   'Gaspar':            'zmw8ZGHS2l5ZG2v3AQ31', // Ultron
   'Farrus Richton':    'P2tOmMO16sLs34Jodjvk', // Verner Hishog — Werner-Herzog-style older German-accented male; user confirmed German accent works
   'Lirienne':          'hpp4J3VqNfWAUOO0d1Us', // Bella - Professional, Bright, Warm
@@ -100,11 +100,11 @@ const CHARACTER_VOICES = {
   // Hell's Vengeance / Rebels PCs → AI-heroes (2026-07-05). PLACEHOLDER picks from
   // the existing library so they speak immediately — swap to purpose-picked 11labs
   // voices on request (like Farrah/Bujon/etc. were refined).
-  'Femmik':            'GEDXnQvfyd3quuXsFgKU', // Felix — flamboyant (shared w/ Estovion/El Guapo): cocky Ifrit fire-dancer
-  'Freya':             'EXAVITQu4vr4xnSDxMaL', // Sarah — mature, confident, commanding: the half-elf field marshal
-  "J'Mal":             'CJnd8k7Q0w2Y1HegJ65F', // John 117 — stoic (shared w/ Vaughan): the quiet Red Mantis assassin
-  'Jason':             'UzI1NsMEV3ni5JRkRSls', // Alistair — cultured, articulate (shared w/ Tar Baphon): the Asmodean priest
-  'Reese':             'CJnd8k7Q0w2Y1HegJ65F', // John 117 — stoic (shared w/ Vaughan): the cold winged Strix archer
+  'Femmik':            'Yj3XGMd9w2H4C0P0L28M', // Sean (user pick) — the cocky Ifrit fire-dancer
+  'Freya':             'mmndVSeLErK7c5SRoKg5', // Tresdin (user pick) — strong, aggressive female army-commander: the half-elf field marshal
+  "J'Mal":             'zmw8ZGHS2l5ZG2v3AQ31', // Ultron (user pick) — the cold Red Mantis assassin
+  'Jason':             '5mU8WBEmVJQ3n5J4fkzR', // Okole (user pick) — the Asmodean priest
+  'Reese':             'GEDXnQvfyd3quuXsFgKU', // Felix (user pick) — the winged Strix archer
 
   // Vorkstag: see voiceFor() — he uses the voice of whoever he's
   // impersonating (Seat.impersonatedNick). When the impersonated
