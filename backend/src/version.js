@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.28.1 2026-07-05  VOICES: Binch → Tresdin (was Grace). The Tresdin trio (Freya,
+//                     Sirona, Binch) now shares a SURLY/GRUMPY/FIRM delivery tuning
+//                     (steadier, less theatrical, a touch slow) + Binch reworked to
+//                     a cantankerous, easily-annoyed old Besmara sea-dog.
+//  3.28.0 2026-07-05  CELEB unarmored defense: he wears no armor but adds BOTH his
+//                     DEX and his WIS modifier to AC (monk-like, Nethys balance),
+//                     stacking with his auto-cast Mage Armor. (Mage Armor was
+//                     already a L1 arcane spell in his kit + auto-cast pre-fight.)
 //  3.27.2 2026-07-05  VOICES (user picks): Femmik=Sean, Freya=Tresdin, J'Mal=Ultron,
 //                     Jason=Okole, Reese=Felix. Also fixed Sirona → Tresdin (was Sarah).
 //  3.27.1 2026-07-05  FLIGHT vs CONTROL fix: a corporeal flyer that is HELD
@@ -302,4 +310,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.27.2' };
+module.exports = { VERSION: '3.28.1' };

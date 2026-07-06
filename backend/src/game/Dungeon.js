@@ -1308,6 +1308,10 @@ class Dungeon {
   _acBonus(m) {   // magus Shield (+4) + inquisitor Judgement: Protection + fighter Dodge (+1) + Haste (+1 dodge)
     let b = ((m.buffs && m.buffs.ac) || 0) + (m.mageArmor ? 4 : 0) + (m.judgment === 'protection' ? Math.max(1, Math.floor((m.level || 1) / 3)) : 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).ac + this._hasteMod(m) + (m._offDef ? 2 : 0) + (m._fdAc || 0);   // rogue Offensive Defense: +2 AC after a sneak hit; _fdAc: Fight Defensively dodge bonus
     if (fighterFeats(m.cls, m.level, this._isRanged(m)).twDef && this._isDualWielding(m)) b += 1;   // Two-Weapon Defense
+    // Celeb of Nethys wears NO armor but weaves the god's arcane-divine balance into
+    // his defense — he adds BOTH his Dexterity AND his Wisdom modifier to AC (a monk-
+    // like unarmored defense). Stacks with his auto-cast Mage Armor (+4) and Shield.
+    if (m.playerId === 'celeb' && m.mods) b += (m.mods.dex || 0) + (m.mods.wis || 0);
     return b;
   }
   // A hero's three PF1 AC values (base, no situational mods) — for display + touch

@@ -250,6 +250,11 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (m._fdAc) parts.push(`+${m._fdAc} Fighting Defensively (dodge)`);
     if (m._offDef) parts.push('+2 Offensive Defense');
     if (fighterFeats(m.cls, m.level, this._isRanged(m)).twDef && this._isDualWielding(m)) parts.push('+1 Two-Weapon Defense');
+    if (m.playerId === 'celeb' && m.mods) {   // Nethys unarmored defense: Dex + Wis to AC
+      const dx = m.mods.dex || 0, ws = m.mods.wis || 0;
+      if (dx) parts.push(`${dx >= 0 ? '+' : ''}${dx} Dex (Nethys, no armor)`);
+      if (ws) parts.push(`${ws >= 0 ? '+' : ''}${ws} Wis (Nethys, no armor)`);
+    }
     return {
       ac,
       touchAC: Math.max(10, ac - a.physical - (m.mageArmor ? 4 : 0)),

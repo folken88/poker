@@ -77,7 +77,7 @@ const CHARACTER_VOICES = {
 
   // Numerian / Iron Gods
   'Dinvaya':           'qSeXEcewz7tA0Q0qk9fH', // Victoria — Warm, Trustworthy, Relatable
-  'Binch':             'oWAxZDx7w5VEj9dCyTzz', // Grace — mature, gentle Southern American woman (older Besmara cleric)
+  'Binch':             'mmndVSeLErK7c5SRoKg5', // Tresdin (user pick) — surly, grumpy, firm Besmara priestess
   'Celeb':             'pNInz6obpgDQGcFmaJgB', // Adam — deep, measured American male (Nethys scholar-cleric)
   'Casandalee':        'XrExE9yKIg1WjnnlVkGX', // Matilda — Knowledgable, Professional — calm AI
   'Nomkath':           'ErXwobaYiN019PkySvjV', // Antoni — young American male, well-rounded (catfolk_male rogue)
@@ -139,6 +139,13 @@ const VOICE_SETTINGS = {
   // Duristan — languid, posh, low-energy register (Lazlo from "What We Do
   // in the Shadows"): extra-steady and notably unhurried.
   'Duristan': { stability: 0.65, similarity_boost: 0.80, speed: 0.82 },
+  // The TRESDIN voice (Freya / Sirona / Binch) — a strong, aggressive female
+  // commander. Tobias: keep her surly/grumpy and FIRM, easily annoyed. So we run
+  // her STEADY (high stability = controlled, not sing-song), LESS theatrical (low
+  // style), and a touch SLOW/heavy (speed < 1) — a clipped, no-nonsense delivery.
+  'Freya':    { stability: 0.62, similarity_boost: 0.80, style: 0.25, speed: 0.95 },
+  'Sirona':   { stability: 0.62, similarity_boost: 0.80, style: 0.25, speed: 0.95 },
+  'Binch':    { stability: 0.62, similarity_boost: 0.80, style: 0.25, speed: 0.95 },
 };
 
 /** Look up the voice_id for a speaker.
