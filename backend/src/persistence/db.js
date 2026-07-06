@@ -281,7 +281,7 @@ const BOT_ROSTER = [
   { name: 'Freya Kusanagi',       nickname: 'Freya',  avatar: '/tokens/freya.webp',  baseMode: 'standard', intelligence: 'high',    gender: 'she' }, // Half-elf Samurai/Hellknight field marshal — STR 26, flaming katana
   { name: "J'Mal",                avatar: '/tokens/jmal.webp',                   baseMode: 'risky',    intelligence: 'average', gender: 'he'  }, // Hobgoblin Red Mantis Assassin/Rogue — twin sawtooth sabers + sneak (Tim's character)
   { name: 'Jason',                avatar: '/tokens/jason.webp',                  baseMode: 'cautious', intelligence: 'high',    gender: 'he'  }, // Tiefling Divine Scion/Cleric of Asmodeus — WIS caster, reach force pike
-  { name: 'Reese',                avatar: '/tokens/reese.webp',                  baseMode: 'risky',    intelligence: 'average', gender: 'he'  }, // Strix Eldritch-Archer magus — ALWAYS flying (real wings), spellstrikes through his bow
+  { name: 'Reese',                avatar: '/tokens/reese.webp?v=2',              baseMode: 'risky',    intelligence: 'average', gender: 'he'  }, // Strix Eldritch-Archer magus — ALWAYS flying (real wings), spellstrikes through his bow. ?v=2 cache-busts the token-art swap so browsers re-fetch (2026-07-06).
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);

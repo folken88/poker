@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.28.5 2026-07-06  Reese token cache-bust: the token art was swapped under the
+//                     same /tokens/reese.webp URL, so browsers kept the old cached
+//                     image (even on hard refresh). His avatar URL is now
+//                     /tokens/reese.webp?v=2 so it re-fetches. (Server image was
+//                     always correct — a blue winged Strix archer.)
 //  3.28.4 2026-07-06  CELEB Mage Armor fix: _preDoorBuffs + run-ability stocking
 //                     used kitFor(m.cls), which for a Theurge is the fighter
 //                     DEFAULT_KIT (no Mage Armor) — so Celeb never auto-cast Mage
@@ -326,4 +331,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.28.4' };
+module.exports = { VERSION: '3.28.5' };
