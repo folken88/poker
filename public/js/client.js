@@ -2222,6 +2222,13 @@
       const blindActions = [{ kind: 'attack', label: kit.atwill?.name || 'Attack' }];
       (kit.abilities || []).forEach((ab, i) => {   // class FEATURES only (spells live in the spellbook)
         if (ab.slvl != null) return;
+        // LEVEL-LOCKED abilities don't eat numpad numbers (Josh: Reese at L4 had his
+        // not-yet-usable Imbued Shots — Vampiric Touch, Forceful Strike, Polar Ray —
+        // burying Rapid Shot & Bullseye Shot off the pad). Skipping them here surfaces
+        // the abilities he can actually use. They still show in the sighted bar (greyed
+        // 🔒) and the X progression view, so nothing is hidden — they just don't clutter
+        // the blind action numbers until unlocked. General win for every character.
+        if (ab.available === false) return;
         blindActions.push({ kind: 'ability', ab, slot: (ab.slot != null ? ab.slot : i), label: ab.name });
       });
       if (hasSpellbook) blindActions.push({ kind: 'spellbook', label: 'Spellbook' });

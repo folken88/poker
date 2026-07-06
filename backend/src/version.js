@@ -3,6 +3,19 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.5 2026-07-06  FEMMIK CARD ART FIX (Josh): his hero card showed the tiny round token
+//                     instead of his full portrait. The blue-coat portrait was already at
+//                     /portraits/femmik.webp, but the portraits MANIFEST listed only
+//                     "femmik-embersword" — so portraitFor("femmik") (his avatar base) missed
+//                     and fell back to the token. Added "femmik" to portraits/manifest.json;
+//                     his card now shows the Ifrit-in-the-blue-coat art. (Static manifest.)
+//  3.37.4 2026-07-06  REESE NUMPAD DECLUTTER (Josh): level-LOCKED abilities no longer eat blind
+//                     numpad numbers. Reese at L4 had his not-yet-usable Imbued Shots (Vampiric
+//                     Touch, Forceful Strike, Polar Ray) burying Rapid Shot & Bullseye Shot off
+//                     the pad. Now the blind action list only numbers what you can actually use;
+//                     locked abilities still show in the sighted bar (greyed 🔒) and the X
+//                     progression view, so nothing is hidden — they just don't clutter the pad
+//                     until unlocked. Helps every character, not just Reese. (Client-only.)
 //  3.37.3 2026-07-06  CHAIN-HOOK GRAB SFX (Josh): every metal chain-hook grapple — the Slorr's
 //                     barbed chain AND the Gearsman Scraper's rail-hook (plus any future chain
 //                     grappler) — now yanks its victim in with a "come here!" chain-rattle
@@ -475,4 +488,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.3' };
+module.exports = { VERSION: '3.37.5' };
