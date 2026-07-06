@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.34.1 2026-07-06  FINESSE HOUSE RULE extended to 2H (Tobias): free Weapon Finesse +
+//                     Slashing/Fencing Grace now covers MOST two-handed weapons too —
+//                     greatsword, glaive, fauchard, quarterstaff, spears, polearms,
+//                     estoc… swing off the BETTER of STR/DEX for hit & damage (×1.5
+//                     preserved). Only BRUTE 2H — the AXE and HAMMER weapon groups —
+//                     stay strength-only. (weapon.finesse2h/str2h override per-weapon.)
 //  3.34.0 2026-07-06  WEAPON REFINEMENTS + JASON'S FORCE PUSH (user picks). Freya's
 //                     Balrog's Blessed Blade upgraded to FLAMING BURST. Femmik's Lammas
 //                     and J'Mal's Sawtooth Sabers now ALSO carry CRITICAL FOCUS (+4 to
@@ -404,4 +410,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.34.0' };
+module.exports = { VERSION: '3.34.1' };

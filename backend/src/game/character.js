@@ -81,6 +81,12 @@ function deriveCharacter({ cls, level, baseScores, race, raceMods, featHp = 0, w
   return out;
 }
 
+// BRUTE two-handed weapon groups that stay pure STR even under the free-finesse house
+// rule (Tobias: "2h hammer and axe should be strength based only"). Every OTHER 2h
+// weapon (blades, polearms, spears, staves) may finesse. A weapon can override with
+// `finesse2h:true` (force finesse) or `str2h:true` (force STR).
+const STR_ONLY_2H_GROUPS = new Set(['axes', 'hammers']);
+
 /** Resolve to-hit ability mod and damage bonus for a specific attack.
  *  opts.offHand → 0.5x STR/DEX (two-weapon off-hand); opts.cantrip → caster
  *  at-will ray uses the casting stat for BOTH to-hit and damage. */
@@ -90,17 +96,20 @@ function attackProfile(derived, weapon, opts = {}) {
     return { attackStat: derived.castingAbility, toHitMod: derived.castingMod, dmgBonus: derived.castingMod, twoHanded: false, ranged: true, finesse: false, cantrip: true };
   }
   const wc = weaponClass(weapon);
-  // HOUSE RULE: every class has Weapon Finesse + Slashing/Fencing Grace for free, so
-  // any ONE-HANDED, light, or natural melee weapon may swing off the BETTER of STR or
-  // DEX — for BOTH to-hit and damage. We take the higher mod so this never nerfs a STR
-  // build, only lets a DEX (finesse) build hit & hurt with its weapon. Two-handed
-  // weapons stay pure STR (Grace is one-handed only, and a 2h STR build already enjoys
-  // ×1.5). Ranged stays DEX. (weaponClass.finesse is now moot for stat choice.)
+  // HOUSE RULE (Tobias 2026-07-06): every class has Weapon Finesse + Slashing/Fencing
+  // Grace for FREE, so almost any melee weapon may swing off the BETTER of STR or DEX
+  // — for BOTH to-hit and damage. We take the higher mod so this never nerfs a STR
+  // build, only lets a DEX build hit & hurt. This now extends to MOST two-handed
+  // weapons too (estoc, glaive, fauchard, quarterstaff, greatsword, spears, polearms…),
+  // which keep their ×1.5. The ONLY exceptions are BRUTE 2H weapons — heavy AXES and
+  // HAMMERS — where momentum, not finesse, does the work: those stay pure STR. (A
+  // per-weapon `finesse2h:true` forces finesse; `str2h:true` forces STR.) Ranged = DEX.
   const s = mods.str || 0, d = mods.dex || 0;
   let attackStat, m, dexMelee = false;
-  if (wc.ranged)         { attackStat = 'dex'; m = d; }
-  else if (wc.twoHanded && !(weapon && weapon.finesse2h)) { attackStat = 'str'; m = s; }
-  else                   { dexMelee = d >= s; attackStat = dexMelee ? 'dex' : 'str'; m = dexMelee ? d : s; }   // 1h/light — or a finesse2h blade (elven curved blade): better of STR/DEX, ×1.5 still applies below
+  const brute2h = wc.twoHanded && weapon && !weapon.finesse2h && (weapon.str2h || STR_ONLY_2H_GROUPS.has(weapon.group));
+  if (wc.ranged)   { attackStat = 'dex'; m = d; }
+  else if (brute2h) { attackStat = 'str'; m = s; }   // 2h axe/hammer — brute STR only
+  else             { dexMelee = d >= s; attackStat = dexMelee ? 'dex' : 'str'; m = dexMelee ? d : s; }   // 1h/light/natural OR a graceful 2h weapon: better of STR/DEX, ×1.5 still applies below for 2h
   let mult = wc.twoHanded ? 1.5 : 1.0;
   if (opts.offHand) mult = 0.5;            // off-hand swing of a two-weapon fighter
   // Ranged weapons here get the house-rule DEX-to-damage at x1 (no 1.5/0.5).
