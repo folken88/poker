@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.28.3 2026-07-06  BLIND ACCESS fix: the only dungeon entry ("Hit the Dungeon")
+//                     was buried in the opacity:0 role="dialog" bank popover, which
+//                     VoiceOver's item chooser can't surface — Josh couldn't find
+//                     any way in. Added always-present sr-only "Enter the Dungeon" /
+//                     "Spectate the Dungeon" buttons (client-static). Sighted button
+//                     unchanged. LESSON: never bury a mode's sole entry in a hidden dialog.
 //  3.28.2 2026-07-05  BANTER anti-repeat: linePool.choose never replays the same
 //                     bark twice in a row for a (char,kind) — a one-line pool now
 //                     rerolls fresh instead of parroting (Reese said the same
@@ -315,4 +321,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.28.2' };
+module.exports = { VERSION: '3.28.3' };
