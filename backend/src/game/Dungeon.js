@@ -323,6 +323,11 @@ class Dungeon {
   _canReach(m, e) {
     if (m && m._tpStrike > 0) return true;   // Dimension Door/Teleport: the next strike reaches ANY foe
     if (!e || !e.flying) return true;
+    // A CORPOREAL flyer that is HELD (paralyzed) or GRAPPLED has fallen / been dragged
+    // down out of the air — grounded melee CAN now reach it. Real wings (Reese) beat
+    // DISPEL, but not Hold Person or Black Tentacles. Incorporeal flyers (ghosts) still
+    // drift out of reach regardless.
+    if (!(e.incorporeal || e.ghost) && ((e.paralyzed > 0) || e.grappled)) return true;
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
     return !!(w.ranged || w.reachFly || (m.canHitFlyers && m.flying));
   }

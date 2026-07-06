@@ -149,9 +149,13 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     // in _attackOffsets. Specials above (casts/shouts/bombs/heals) are STANDARD
     // actions and already replace the attack; taunts/judgements stay free/swift.
     // FLYING heroes are out of reach of a GROUNDED foe; a flyer can hit them.
+    // BUT a corporeal flyer that is HELD (paralyzed) or GRAPPLED has been dropped /
+    // dragged down — a grounded foe can reach it again (Hold Person / Black Tentacles
+    // ground even a Strix; incorporeal ghosts still drift out of reach).
     let noReach = false;
     const seen = this._targetableParty();
-    const living = e.flying ? seen : seen.filter(m => !m.flying);
+    const grounded = (m) => !m.flying || (!(m.incorporeal || m.ghost) && ((m.paralyzed > 0) || m.grappled));
+    const living = e.flying ? seen : seen.filter(grounded);
     if (!living.length) { noReach = seen.length > 0; }
     else {
       // ONE target for the whole turn: taunter > helpless > last turn's target > random.

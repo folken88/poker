@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.27.1 2026-07-05  FLIGHT vs CONTROL fix: a corporeal flyer that is HELD
+//                     (paralyzed / Hold Person) or GRAPPLED (Black Tentacles &c.)
+//                     is dropped/dragged down — grounded melee can now reach it
+//                     (_canReach + the enemy target filter). Real wings (Reese)
+//                     still beat DISPEL, but not control. Incorporeal ghosts
+//                     (Vesorianna) still drift out of reach.
 //  3.27.0 2026-07-05  DUNGEON QoL + class/hero pass: (1) new SETTINGS action
 //                     "Reset helpers to my level" — lowers AI helpers DOWN to the
 //                     invoking human's level (never up; gear & gold untouched).
@@ -294,4 +300,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.27.0' };
+module.exports = { VERSION: '3.27.1' };
