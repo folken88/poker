@@ -156,15 +156,40 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     const seen = this._targetableParty();
     const grounded = (m) => !m.flying || (!(m.incorporeal || m.ghost) && ((m.paralyzed > 0) || m.grappled));
     const living = e.flying ? seen : seen.filter(grounded);
-    if (!living.length) { noReach = seen.length > 0; }
+    // SUMMONED undead fodder (Draymus) on the field — a foe can swing at them instead
+    // of a hero. This is HALF the point of raising them: they SOAK. Reachable like any
+    // other grounded body; mixed into the random target pool so summons draw the heat.
+    const fodder = this.livingEnemies().filter(x => x.summoned && x.hp > 0);
+    const reachFodder = e.flying ? fodder : fodder.filter(grounded);
+    if (!living.length && !reachFodder.length) { noReach = (seen.length + fodder.length) > 0; }
     else {
-      // ONE target for the whole turn: taunter > helpless > last turn's target > random.
+      // ONE target for the whole turn: taunter > helpless > last turn's target > random
+      // (random pool = reachable heroes + summoned fodder).
       let target = null;
       if (forced && forced.hp > 0 && !forced.left && (e.flying || !forced.flying)) target = forced;
       if (!target) {
         const helpless = living.filter(m => m.paralyzed > 0);
-        const prev = living.find(m => m.playerId === e._lastAtkTarget);
-        target = helpless.length ? (helpless.find(m => m.playerId === e._lastAtkTarget) || pick(helpless)) : (prev || pick(living));
+        const prev = living.find(m => m.playerId === e._lastAtkTarget) || reachFodder.find(s => s.uid === e._lastAtkTarget);
+        target = helpless.length ? (helpless.find(m => m.playerId === e._lastAtkTarget) || pick(helpless)) : (prev || pick([...living, ...reachFodder]));
+      }
+      const tgtId = target.playerId || target.uid;
+      // A SUMMON target: simple enemy-vs-summon blows (the fodder soaks) — no parry /
+      // maneuver / close-the-distance, just swings. Reuses the enemy-vs-enemy path
+      // (like a dominated foe attacking its kin): _monsterSwing vs the summon's AC,
+      // _dmgE for the damage. Then the turn is done.
+      if (target.summoned) {
+        this._enemyFightDefensively(e);
+        const swings = (e.slowed > 0) ? 1 : ((e._lastAtkTarget === tgtId) ? Math.max(1, e.attacks || 1) : 1);
+        for (let i = 0; i < swings; i++) {
+          if (target.hp <= 0) break;
+          const r = this._monsterSwing(e, this._enemyAC(target));
+          if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds); else if (r.hit && e.atkSound) r.sound = e.atkSound;
+          if (r.hit) { this._dmgE(target, r.damage); this._note(`${e.glyph} ${e.name} smashes your undead ${target.name} for ${r.damage}!${target.hp <= 0 ? ' ☠️ Destroyed!' : ''}`, r.sound, { side: 'enemy' }); }
+          else this._note(`${e.glyph} ${e.name} swings at your undead ${target.name} — and misses.`, r.sound, { side: 'enemy' });
+        }
+        e._lastAtkTarget = tgtId;
+        this._echoToTable();
+        return;
       }
       const fullAttack = e._lastAtkTarget === target.playerId && !stoodUp;   // stayed put → full routine (standing up ate the move)
       // PF1 SLOW = STAGGERED: a single move OR standard action each turn, never

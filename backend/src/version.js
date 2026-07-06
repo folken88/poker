@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.33.0 2026-07-06  SUMMONING Phase 2 — the summons now SOAK: an enemy's melee can
+//                     swing at a summoned undead instead of a hero (mixed into its
+//                     random target pool; resolved as an enemy-vs-summon blow, the
+//                     dominate-kin pattern). Drawing fire is half the point of raising
+//                     them. Plus PF1 SUMMON NUMBERS: each Summon Undead raises the PF1
+//                     count — 1 (I), 1d3 (II), then 1d4+1 (III–IX) — of a CR-appropriate
+//                     undead, with ONE kind picked at random from the choices at that CR
+//                     (no extra player step). So Summon Undead V = 1d4+1 CR-3 undead,
+//                     IX = 1d4+1 CR-8/9 undead, etc. domtest updated.
 //  3.32.0 2026-07-06  SUMMONING SYSTEM (experiment) — Draymus's SUMMON UNDEAD I–IX: a
 //                     Summon Monster line that raises UNDEAD to fight for the party.
 //                     Summoned minions ride in the enemy array flagged ALLIED — they
@@ -382,4 +391,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.32.0' };
+module.exports = { VERSION: '3.33.0' };

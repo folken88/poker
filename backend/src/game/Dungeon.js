@@ -734,11 +734,14 @@ class Dungeon {
     const pool = spec.pool || (spec.key ? [spec.key] : []);
     const valid = pool.filter(k => MON[k]);
     if (!valid.length) { this._note(`${ab.icon || '☠️'} ${m.nickname}'s ${ab.name} fizzles — the grave yields nothing.`); this._echoToTable(); return; }
-    const count = Math.max(1, spec.count || 1);
+    // PF1 Summon Monster: 1 creature, or 1d3 / 1d4+1 of a lower tier — all of the SAME
+    // KIND. Pick ONE kind at random from the choices at this CR (spec.pool), then roll
+    // the PF1 count ('1d4+1' / '1d3' / a number).
+    const key = pick(valid);
+    const rollN = (c) => { if (typeof c === 'number') return Math.max(1, c); const mm = /^(\d+)d(\d+)(?:\+(\d+))?$/.exec(String(c || '1')); return mm ? dRollN(+mm[1], +mm[2]) + (+mm[3] || 0) : 1; };
+    const count = Math.max(1, rollN(spec.count));
     const rounds = spec.rounds || Math.max(3, Math.ceil((m.level || 1)));   // ~rounds/level (PF1 summon duration); crumbles after
-    const made = [];
     for (let i = 0; i < count; i++) {
-      const key = valid[i % valid.length];
       const e = this._makeEnemy(MON[key], false, 0);
       e.name = MON[key].name;                 // no Elite/Boss prefix on a summon
       e.summoned = true; e.summonedBy = m.playerId; e.summonExpiry = rounds;
@@ -747,10 +750,10 @@ class Dungeon {
       e.align = 'NE'; e.evil = true;          // Draymus's raised dead
       this.enemies.push(e);
       this.turnOrder.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });   // acts from next slot onward
-      made.push(e);
     }
-    const label = count > 1 ? `${count} undead` : `a ${MON[valid[0]].name}`;
-    this._note(`${ab.icon || '☠️'} ${m.nickname} tears open the grave — ${label} claws free to fight for the party! (${rounds} rounds)`, ab.sound);
+    const nm = MON[key].name;
+    const label = count > 1 ? `${count} ${nm}${/s$/.test(nm) ? '' : 's'}` : `a ${nm}`;
+    this._note(`${ab.icon || '☠️'} ${m.nickname} tears open the grave — ${label} claw${count > 1 ? '' : 's'} free to fight for the party! (${rounds} rounds)`, ab.sound);
     this._echoToTable(ab.sound);
   }
   // Build a room of foes. The per-enemy CR is geared to the weakest hero; the
