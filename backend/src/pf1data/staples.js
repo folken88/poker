@@ -114,31 +114,37 @@ const CUSTOM_WEAPONS = {
   // wields the scimitar with GRACE — it's in Dungeon.js FINESSE_KEYS, so it rides
   // his DEX (24) for to-hit AND damage. custom => always proficient (bards aren't
   // normally proficient with scimitars; the Dervish Dance feat grants it).
-  // INTRINSICALLY KEEN — the Dawnflower Dervish's whirling blade threatens a crit on
-  // 15-20 (keen doubles its 18-20 range). Always on; +N rides his gear.
-  lammas: { key: 'lammas', name: 'Lammas Aeternum', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true, special: { keen: true }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
+  // INTRINSICALLY KEEN + CRITICAL FOCUS — the Dawnflower Dervish's whirling blade
+  // threatens a crit on 15-20 (keen doubles its 18-20 range) AND confirms crits at
+  // +4 (Critical Focus). Always on; +N rides his gear. (Finesse: rides his DEX for
+  // hit & damage via the 1h house rule.)
+  lammas: { key: 'lammas', name: 'Lammas Aeternum', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true, special: { keen: true }, critFocus: true, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
   // Freya Kusanagi's katana "Balrog's Blessed Blade" — a FLAMING samurai's blade
   // (1d8, 18-20/×2). She's a samurai, already proficient; custom => the blade is
-  // always hers. INTRINSICALLY FLAMING: +1d6 fire on every hit, always on (even at
-  // +0); her +N rides her gear tier on top.
-  balrogblade: { key: 'balrogblade', name: "Balrog's Blessed Blade", cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true, special: { flaming: true }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
+  // always hers. INTRINSICALLY FLAMING BURST: +1d6 fire on every hit AND extra fire
+  // dice on a crit (a balrog-forged blade; matches its oversized +1d8 fire source).
+  // Always on (even at +0); her +N rides her gear tier on top.
+  balrogblade: { key: 'balrogblade', name: "Balrog's Blessed Blade", cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true, special: { flamingBurst: true }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },
   // J'Mal's "Angelbone Sawtooth Sabers" — TWIN sawtoothed sabres (Red Mantis
   // signature), two-weapon fighting (2 swings/turn, one report; no shield),
   // 1d8 18-20/×2. His Red Mantis Assassin / Rogue sneak dice ride the class.
-  // INTRINSICALLY KEEN — the sawtoothed Red Mantis blades threaten on 17-20 (keen
-  // doubles the 19-20 range), feeding the assassin's crit-hungry sneak attacks.
-  sawtoothsabers: { key: 'sawtoothsabers', name: 'Angelbone Sawtooth Sabers', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'exotic', custom: true, dual: true, noShield: true, special: { keen: true }, atkSound: '/audio/fight_riki.mp3' },
+  // INTRINSICALLY KEEN + CRITICAL FOCUS — the sawtoothed Red Mantis blades threaten
+  // on 17-20 (keen doubles 19-20) AND confirm at +4 (Critical Focus), feeding the
+  // assassin's crit-hungry sneak attacks. (Both blades ride his DEX for hit & damage
+  // via the 1h house rule.)
+  sawtoothsabers: { key: 'sawtoothsabers', name: 'Angelbone Sawtooth Sabers', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'exotic', custom: true, dual: true, noShield: true, special: { keen: true }, critFocus: true, atkSound: '/audio/fight_riki.mp3' },
   // J'Mal's SABER-AND-DRAGON-SHIELD build — an Angelbone Sawtooth Saber in the main
   // hand and the DRAGON SHIELD in the off: a bashing heavy shield he attacks WITH.
   // Two swings a round (saber + shield bash), and UNLIKE a normal dual-wielder he
   // KEEPS his shield AC — `shieldAC: 2` (a masterwork heavy shield; +N rides his
   // owned shield tier). Keen (17-20). 1d8 19-20/×2. NOT noShield → shield AC applies.
-  sawtoothdragon: { key: 'sawtoothdragon', name: 'Sawtooth Saber & Dragon Shield', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'exotic', custom: true, dual: true, shieldAC: 2, special: { keen: true }, atkSound: '/audio/fight_riki.mp3' },
-  // Jason's "Force Pike" — an Asmodean priest's reach weapon (1d10, ×3). custom =>
-  // always proficient. reachFly lets him strike airborne foes from the back rank.
-  // INTRINSICALLY UNHOLY — Asmodeus's malice: +2d6 vs GOOD foes (bites the Heavenly
-  // Host hard). Always on; +N rides his gear.
-  forcepike: { key: 'forcepike', name: 'Force Pike', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 3, type: 'P', group: 'spears', prof: 'martial', custom: true, reachFly: true, special: { unholy: true } },
+  sawtoothdragon: { key: 'sawtoothdragon', name: 'Sawtooth Saber & Dragon Shield', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'exotic', custom: true, dual: true, shieldAC: 2, special: { keen: true }, critFocus: true, atkSound: '/audio/fight_riki.mp3' },
+  // Jason's "Force Pike" (modeled on Dota's Force Staff) — a reach weapon (1d10, ×3)
+  // that hits like a NORMAL magic weapon at his current gear tier. Its real trick is
+  // the FORCE PUSH ability (see Jason's char-gated 'forcepush'): shove a foe and every
+  // melee ally with their weapon out gets a FREE attack. reachFly lets him strike
+  // airborne foes from the back rank. custom => always proficient.
+  forcepike: { key: 'forcepike', name: 'Force Pike', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 3, type: 'P', group: 'spears', prof: 'martial', custom: true, reachFly: true },
   // Reese's "Stormcaller" — an arcane composite longbow (1d8, ×3). As an ELDRITCH
   // ARCHER magus he casts touch spells THROUGH it: his magus Spellstrike rides this
   // bow (m.weapon), delivering the spell on a ranged shot. custom => always proficient.

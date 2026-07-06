@@ -1418,6 +1418,7 @@ class Dungeon {
   }
   _swingVsAC(attacker, ac, target, extraToHit = 0, offHand = false) {
     const weapon = attacker.weapon;
+    if (weapon && !weapon.ranged) attacker._lastMeleeRound = this.round;   // "melee weapon is OUT" this round — drives Jason's Force Push (ally free attacks)
     const sick = attacker.sickened > 0 ? SICKENED_PENALTY : 0;
     const lvl = attacker.level || 1;
     const cls = attacker.cls || 'fighter';
@@ -1587,7 +1588,7 @@ class Dungeon {
     // L5 with a finesse blade). Critical Focus (fighter L9) adds +4 to confirm.
     const impCrit = ff.impCrit || (weapon.impCritAt && lvl >= weapon.impCritAt) || (swashFin && lvl >= 5) || arcKeen;   // fighter / swashbuckler / magus arcane-pool keen / weapon-borne (Bastard's Blade at 9) — don't stack
     const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
-    const critFocus = (ff.critFocus ? 4 : 0) + (ff.critMastery ? 4 : 0);   // Critical Focus +4, Critical Mastery +4 more (+8 confirm)
+    const critFocus = ((ff.critFocus || (weapon && weapon.critFocus)) ? 4 : 0) + (ff.critMastery ? 4 : 0);   // Critical Focus +4 (fighter feat OR weapon-borne — Lammas / Sawtooth Sabers), Critical Mastery +4 more (+8 confirm)
     if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + studiedN + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
     // Precision (sneak / swashbuckler Precise Strike), smite, and bane dice ride on
     // top — NOT multiplied by a crit.
@@ -2272,6 +2273,14 @@ class Dungeon {
     //    BEFORE opening fire. (SEVERE wounds already jumped the queue at the top;
     //    nobody hurt → pickHeal returns null and the offense below proceeds.)
     { const h = pickHeal(); if (h) return h; }
+    // 2b2) FORCE PUSH (Jason): if TWO+ melee allies have their weapons out (they
+    //      melee'd within the last round), shoving a foe to grant them all a free
+    //      attack beats one cleric swing. Char-gated to Jason (nobody else has it).
+    { const fpush = avail.find(a => a.effect === 'forcepush');
+      if (fpush && targets.length) {
+        const ready = this.livingParty().filter(a => a.playerId !== m.playerId && a.hp > 0 && !a.left && !this._isRanged(a) && (this.round - (a._lastMeleeRound == null ? -99 : a._lastMeleeRound)) <= 1);
+        if (ready.length >= 2) return { slot: slot(fpush), payload: { targetUid: (targets.find(e => e.boss) || targets[0]).uid } };
+      } }
     // 2c) Arcane controllers (wizard, sorcerer) play the battlefield: by default
     //     they pick the spell that AFFECTS THE MOST foes — a wide blast (Fireball,
     //     Lightning Bolt, Burning Hands) or a mass lockdown (Sleep, Grease). But

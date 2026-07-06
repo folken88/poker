@@ -910,6 +910,18 @@ if (KITS.wizard && Array.isArray(KITS.wizard.abilities)) {
   );
 }
 
+// Jason's FORCE PUSH — the Force Pike's Dota-Force-Staff trick, char-gated to Jason.
+// Injected after the generated-kit override (like Olbryn/Draymus) so it survives
+// regeneration. He forgoes his own strike to shove a foe and set up his melee allies
+// for free attacks. No slvl → not a spell slot; a room-limited class-feature-style
+// action (3×/room; tune `uses` to taste).
+if (KITS.cleric && Array.isArray(KITS.cleric.abilities)) {
+  KITS.cleric.abilities.push(
+    { key: 'forcepush', name: 'Force Push', icon: '🌬️', cost: 'room', uses: 3, effect: 'forcepush', target: 'enemy', sound: S.gust, char: 'Jason',
+      desc: 'Shove a foe with the Force Pike — every melee ally with their weapon OUT (they melee\'d within the last round) gets a FREE attack against it. You forgo your own strike. 3× per room.' },
+  );
+}
+
 // PF1 CAST LIMITS (prepared casters): a leveled spell spends a SLOT of its level
 // (budget from slotsFor), NOT a per-room "one of each". Convert the prepared casters'
 // leveled spells (cost:'room' WITH an slvl) to cost:'slot'; class FEATURES (Channel,

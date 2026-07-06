@@ -3,6 +3,17 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.34.0 2026-07-06  WEAPON REFINEMENTS + JASON'S FORCE PUSH (user picks). Freya's
+//                     Balrog's Blessed Blade upgraded to FLAMING BURST. Femmik's Lammas
+//                     and J'Mal's Sawtooth Sabers now ALSO carry CRITICAL FOCUS (+4 to
+//                     confirm crits) on top of keen (new weapon.critFocus prop; J'Mal's
+//                     blades already ride his DEX for hit & damage via the 1h house
+//                     rule). Jason's FORCE PIKE is no longer unholy — it's a plain magic
+//                     weapon PLUS a new FORCE PUSH ability (Dota Force-Staff style,
+//                     3×/room): shove a foe and EVERY melee ally with their weapon out
+//                     (melee'd within the last round) gets a FREE attack; Jason forgoes
+//                     his own strike. Bot-Jason force-pushes when 2+ melee allies are
+//                     ready. domtest +4.
 //  3.33.1 2026-07-06  Draymus's voice: DRACULA (11labs, user pick) — the dhampir
 //                     necromancer now speaks with a cold, aristocratic menace.
 //  3.33.0 2026-07-06  SUMMONING Phase 2 — the summons now SOAK: an enemy's melee can
@@ -393,4 +404,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.33.1' };
+module.exports = { VERSION: '3.34.0' };

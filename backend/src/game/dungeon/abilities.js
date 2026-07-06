@@ -309,6 +309,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       charm:       () => this._abCharm(m, ab, payload),
       dominate:    () => this._abDominate(m, ab, payload),
       summon:      () => this._abSummon(m, ab, payload),
+      forcepush:   () => this._abForcePush(m, ab, payload),
       studytarget: () => this._abStudyTarget(m, ab, payload),
       challenge: () => this._abChallenge(m, ab, payload),
       masscharm:   () => this._abMassCharm(m, ab, payload),
@@ -1847,6 +1848,25 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       e.dominatedBy = m.playerId; e.dominateDC = dc;
       e.charmed = false; e.taunted = null;   // domination supersedes lesser sway
       this._note(`${ab.icon} 💫 ${m.nickname} casts ${ab.name} — ${e.name}'s eyes glaze; it is DOMINATED and turns on its own! [Will ${sv.total} vs DC ${dc}]`, ab.sound);
+    }
+    this._echoToTable(ab.sound);
+  },
+  // FORCE PUSH (Jason's Force Pike, à la Dota's Force Staff): Jason forgoes his own
+  // strike to SHOVE a foe — every melee ally whose weapon is OUT (they melee'd within
+  // the last round) seizes the opening for ONE free attack against it. Reuses the
+  // magus Bull-Rush allyAOO pattern, but for ALL qualifying melee allies at once.
+  _abForcePush(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    this._note(`${ab.icon} 🌬️ ${m.nickname} FORCE-PUSHES ${e.name} with the Force Pike — into the party's reach!`, ab.sound);
+    const allies = this.livingParty().filter(a => a.playerId !== m.playerId && a.hp > 0 && !a.left
+      && !this._isRanged(a) && (this.round - (a._lastMeleeRound == null ? -99 : a._lastMeleeRound)) <= 1);
+    if (!allies.length) { this._note(`…but no melee ally has a weapon out to capitalize.`); this._echoToTable(ab.sound); return; }
+    for (const ally of allies) {
+      if (e.hp <= 0) break;
+      ally.weapon = weaponOf(ally.gear, ally.weaponKey);
+      const r = this._swingVsAC(ally, this._enemyAC(e), e);
+      if (r.hit) { this._dmgE(e, r.damage); this._note(`⚔️ ${ally.nickname} seizes the opening on ${e.name} — ${r.damage}${r.drTag || ''}!${e.hp <= 0 ? ' ☠️ Slain!' : ''}`, r.sound); if (e.hp <= 0) this._tryBanter(ally, 'down', { enemy: e.name }); }
+      else this._note(`⚔️ ${ally.nickname}'s free swing at ${e.name} misses. ${this._atkStr(r)}`, r.sound);
     }
     this._echoToTable(ab.sound);
   },
