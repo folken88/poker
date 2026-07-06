@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.3 2026-07-06  CHAIN-HOOK GRAB SFX (Josh): every metal chain-hook grapple — the Slorr's
+//                     barbed chain AND the Gearsman Scraper's rail-hook (plus any future chain
+//                     grappler) — now yanks its victim in with a "come here!" chain-rattle
+//                     (slorr_come_here_grapple_chain.mp3). The grab plays the chain; each foe's
+//                     own sound stays its CRUSH/constrict noise (the Scraper's live current, the
+//                     Slorr's grapple line). Great over the new flyer-yank line from 3.37.2.
 //  3.37.2 2026-07-06  JOSH BUG BATCH. (1) INVISIBLE HEROES NO LONGER TURTLE: a normal-
 //                     invisible hero who isn't a sneak-attacker used to hide "for the right
 //                     moment" that never came — Femmik (bard) & Savage (bloodrager) sat
@@ -469,4 +475,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.2' };
+module.exports = { VERSION: '3.37.3' };

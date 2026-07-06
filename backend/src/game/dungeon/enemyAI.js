@@ -19,6 +19,13 @@ const { weaponOf, SND, dRoll, dRollN, pick } = require('../combat');
 const { crToNum } = require('../../pf1data/monsters');
 const { babFor } = require('../../pf1data/classes');
 
+// The metal chain-hook GRAB (the yank that reels a hero — or a flyer — in). Josh's
+// pick: a Slorr "come here!" chain-rattle. Used for EVERY hook-grapple foe (the Slorr,
+// the Gearsman Scraper, and any future chain grappler). Each foe's own hook.sound stays
+// its CRUSH/constrict sound (the Scraper's live-current zap, the Slorr's grapple line);
+// a foe can override just the grab with hook.grabSound.
+const GRAB_CHAIN_SND = '/audio/slorr_come_here_grapple_chain.mp3';
+
 module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC }) => ({
   _monsterSwing(e, targetAC) {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
@@ -466,7 +473,7 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
   // / _abGrease). While grappled the hero takes −2 to hit and is easier to strike.
   _enemyHook(e, target) {
     const cfg = e.hook || {};
-    const snd = cfg.sound || null;
+    const snd = cfg.grabSound || GRAB_CHAIN_SND;   // the chain-hook GRAB always rattles out the "come here!" chain (Josh); cfg.sound is reserved for the constrict/crush
     const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - this._acPenalty(target);
     const r = this._monsterSwing(e, effAC);
     if (!r.hit) {
