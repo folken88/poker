@@ -1785,6 +1785,11 @@
     if (ev.target.closest('[data-enter-dungeon]')) enterDungeon();
     else if (ev.target.closest('[data-spectate-dungeon]')) spectateDungeon();
   });
+  // Screen-reader mirrors of the two dungeon actions (index.html #srEnterDungeon /
+  // #srSpectateDungeon) — always in the a11y tree, so a blind player can find the
+  // dungeon even though the sighted button is inside the hidden bank dialog.
+  $('#srEnterDungeon')?.addEventListener('click', enterDungeon);
+  $('#srSpectateDungeon')?.addEventListener('click', spectateDungeon);
   $('#dungeonLeaveBtn')?.addEventListener('click', returnFromDungeon);
   // × kick on an AI party member — dismiss them from the dungeon run.
   $('#dungeonParty')?.addEventListener('click', (ev) => {
