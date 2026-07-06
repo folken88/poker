@@ -549,8 +549,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // the ability so we never mutate the shared kit. (Same mechanic either way — the
     // touch spell rides the weapon/bow hit; see _abSpellstrike.)
     if (m.cls === 'magus') {
-      const pfx = this._isRanged(m) ? 'Imbued Shot: ' : 'Spell Strike: ';
+      const rng = this._isRanged(m);
+      const pfx = rng ? 'Imbued Shot: ' : 'Spell Strike: ';
       list = list.map(a => a.effect === 'spellstrike' ? { ...a, name: pfx + a.name } : a);
+      // A BOW magus (Reese) also gets the ranger's ARCHERY abilities — Rapid Shot +
+      // Bullseye Shot — to match his archery feat-track (see fighterFeats magus-ranged).
+      // Pulled from the ranger kit so they stay in sync; a melee magus skips them.
+      if (rng) list = list.concat(kitFor('ranger').abilities.filter(a => a.key === 'rapidshot' || a.key === 'bullseye'));
     }
     return list;
   },

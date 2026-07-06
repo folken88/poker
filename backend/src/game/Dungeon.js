@@ -700,6 +700,8 @@ class Dungeon {
       hellfireLeft: base.hellfire ? ((base.hellfire.uses || 2) + half) : 0,   // per-monster satchel size (the Bomb Devil packs 6)
       arcane: base.arcane || null,         // lich (wizard of its level): _lichCast adds bossLevels to its caster level
       arcaneLeft: base.arcane ? 3 + half : 0,
+      summon: base.summon || null,         // Whispering Way: raises undead reinforcements onto the ENEMY side (see _enemySummon)
+      summonLeft: base.summon ? ((base.summon.uses || 2) + half) : 0,
       // vampire (magus of its level): Vampiric Touch on its strike — boss = more dice
       spellstrike: base.spellstrike ? { ...base.spellstrike, dice: (base.spellstrike.dice || 4) + half } : null,
       // priestly foes mend their allies (see _enemyHeal) — boss priests heal harder, more often
@@ -757,6 +759,28 @@ class Dungeon {
     this._echoToTable(ab.sound);
   }
   // Build a room of foes. The per-enemy CR is geared to the weakest hero; the
+  // ENEMY-SIDE SUMMON (Whispering Way necromancers): raise undead reinforcements onto
+  // the ENEMY side — REAL foes (not allied `summoned`), built from MON like any spawn,
+  // joining this.enemies + the turn order. e.summon = { pool:[keys], count:'1d3'|N, sound };
+  // consumes e.summonLeft. (The enemy mirror of _abSummon.)
+  _enemySummon(e) {
+    e.summonLeft = Math.max(0, (e.summonLeft || 0) - 1);
+    const spec = e.summon || {};
+    const valid = (spec.pool || []).filter(k => MON[k]);
+    if (!valid.length) { this._broadcast(); return; }
+    const key = pick(valid);
+    const rollN = (c) => { if (typeof c === 'number') return Math.max(1, c); const mm = /^(\d+)d(\d+)(?:\+(\d+))?$/.exec(String(c || '1')); return mm ? dRollN(+mm[1], +mm[2]) + (+mm[3] || 0) : 1; };
+    const count = Math.max(1, rollN(spec.count));
+    for (let i = 0; i < count; i++) {
+      const ne = this._makeEnemy(MON[key], false, 0);
+      ne.flatFooted = false;   // clawed up ready to fight
+      this.enemies.push(ne);
+      this.turnOrder.push({ kind: 'enemy', id: ne.uid, init: dRoll(20) + 1 });
+    }
+    const nm = MON[key].name;
+    this._note(`${e.glyph} ${e.name} rasps a grave-rite — ${count > 1 ? `${count} ${nm}s` : `a ${nm}`} claw${count > 1 ? '' : 's'} up from the earth to fight!`, spec.sound || '/audio/spell_umbral_bolt.mp3', { side: 'enemy' });
+    this._broadcast();
+  }
   // NUMBER of foes scales with party SIZE — each hero past the first adds roughly
   // a full standard encounter's worth of monsters, so a packed party gets mobbed.
   _spawnRoom() {

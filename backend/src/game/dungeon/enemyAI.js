@@ -94,6 +94,11 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
           .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
         if (wounded) return this._enemyHeal(e, wounded);
       }
+      // WHISPERING WAY necromancers RAISE THE DEAD: summon undead reinforcements onto
+      // their OWN side (the enemy mirror of Draymus's Summon Undead — real foes, not
+      // allied summons). Front-loaded (rounds 1-2), then an occasional fresh wave, until
+      // the rite is spent — so the party feels the horde swell. See _enemySummon.
+      if (e.summon && e.summonLeft > 0 && (this.round <= 2 || dRoll(2) === 1)) return this._enemySummon(e);
       // Kobold shaman: cast Hold Person on an unheld target before resorting to melee.
       if (e.caster === 'holdperson' && e.castsLeft > 0) {
         // Smart caster: never Hold an UNDEAD hero — no mind to seize (same

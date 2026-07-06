@@ -286,7 +286,16 @@ function fighterFeats(cls, level, ranged) {
   if (cls === 'gunslinger')   return gunslingerFeats(L);
   if (cls === 'rogue')        return rogueFeats(L);
   if (cls === 'monk')         return monkFeats(L);
-  if (cls === 'magus')        return magusFeats(L);
+  if (cls === 'magus') {
+    const mf = magusFeats(L);
+    if (!ranged) return mf;
+    // A BOW magus (Reese — an Eldritch Archer who "always shoots") keeps his magus
+    // METAMAGIC core (Intensify/Empower/Maximize drive his Imbued Shots) but ALSO
+    // climbs the ranger ARCHERY ladder: Point Blank Shot, Rapid Shot, Bullseye,
+    // Manyshot. Ranger-style gating (half level, rounded up).
+    const rf = rangedFeats(Math.floor((L + 1) / 2), L);
+    return { ...mf, pbs: rf.pbs, rapidShot: rf.rapidShot, bullseye: rf.bullseye, manyshot: rf.manyshot };
+  }
   if (cls === 'cleric')       return clericFeats(L);
   if (cls === 'oracle')       return oracleFeats(L);
   if (cls === 'bard')         return bardFeats(L);

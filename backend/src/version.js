@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.36.0 2026-07-06  REESE archery feat-track + WHISPERING WAY undead summoning. A BOW
+//                     magus now climbs the RANGER archery ladder on top of his magus
+//                     metamagic core — Point Blank Shot, Rapid Shot, Bullseye (and
+//                     Manyshot up high) as passives, plus the RAPID SHOT + BULLSEYE SHOT
+//                     actions (Reese "always shoots"). A melee magus is unchanged. And the
+//                     WHISPERING WAY casters (Gravecaller, Necromancer, Death Priest,
+//                     Archnecromancer) now RAISE UNDEAD reinforcements onto their own side
+//                     — real foes, front-loaded then an occasional fresh wave — the enemy
+//                     mirror of Draymus's Summon Undead (_enemySummon). domtest +6.
 //  3.35.0 2026-07-06  REESE / MAGUS rework (Josh's confusing "SS …" list). Spell Strikes
 //                     are now ONE clean entry per spell that AUTO-SCALES with the magus's
 //                     metamagic feats — the 4 redundant metamagic variants (SS Max SG /
@@ -427,4 +436,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.35.0' };
+module.exports = { VERSION: '3.36.0' };
