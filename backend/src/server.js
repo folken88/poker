@@ -130,11 +130,18 @@ app.get('/api/croplist', (_req, res) => {
   try {
     const fsx = require('fs');
     const out = {};
+    const geom = {};   // saved crop FRAMING per image (from the `.webp.crop` sidecars) so the editor reopens where you left off
     for (const kind of Object.keys(CROP_DIRS)) {
       const d = cropDir(kind);
-      out[kind] = fsx.existsSync(d) ? fsx.readdirSync(d).filter(f => f.endsWith('.webp')).map(f => f.slice(0, -5)).sort() : [];
+      const names = fsx.existsSync(d) ? fsx.readdirSync(d).filter(f => f.endsWith('.webp')).map(f => f.slice(0, -5)).sort() : [];
+      out[kind] = names;
+      geom[kind] = {};
+      for (const n of names) {
+        const cf = path.join(d, n + '.webp.crop');
+        if (fsx.existsSync(cf)) { try { geom[kind][n] = JSON.parse(fsx.readFileSync(cf, 'utf8')); } catch (_) { /* ignore a corrupt sidecar */ } }
+      }
     }
-    res.json(out);
+    res.json({ ...out, geom });
   } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
 });
 // GET /api/croporig?kind=&name= -> streams the PRISTINE original (the .orig if a
@@ -158,7 +165,7 @@ app.get('/api/croporig', (req, res) => {
 app.post('/api/cropsave', express.json({ limit: '12mb' }), (req, res) => {
   try {
     const fsx = require('fs');
-    const { kind, name, dataUrl } = req.body || {};
+    const { kind, name, dataUrl, geom } = req.body || {};
     if (!CROP_DIRS[kind]) return res.status(400).json({ error: 'bad kind' });
     const base = String(name || '').replace(/\.webp$/i, '');
     if (!/^[\w.-]+$/.test(base) || base.includes('..')) return res.status(400).json({ error: 'bad name' });
@@ -170,6 +177,13 @@ app.post('/api/cropsave', express.json({ limit: '12mb' }), (req, res) => {
     if (!fsx.existsSync(dest)) return res.status(404).json({ error: 'no such image' });   // crop EDITS existing art only
     if (!fsx.existsSync(dest + '.orig')) fsx.copyFileSync(dest, dest + '.orig');           // first save keeps the original
     fsx.writeFileSync(dest, buf);
+    // Persist the crop FRAMING (normalized to the original) so the editor reopens on your
+    // last crop instead of the whole image (Tobias: "re-open it and it's uncropped again").
+    // Cosmetic only — the pixels above are already baked. A `.webp.crop` sidecar, read back
+    // by /api/croplist. It's excluded from the manifest/name list (doesn't end in .webp).
+    if (geom && typeof geom === 'object') {
+      try { fsx.writeFileSync(dest + '.crop', JSON.stringify({ nx: +geom.nx || 0, ny: +geom.ny || 0, nw: +geom.nw || 1, nh: +geom.nh || 1 })); } catch (_) { /* framing is best-effort */ }
+    }
     if (kind === 'portraits') {   // keep the pairing manifest true
       const d = cropDir('portraits');
       const names = fsx.readdirSync(d).filter(f => f.endsWith('.webp')).map(f => f.slice(0, -5)).sort();

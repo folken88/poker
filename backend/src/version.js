@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.8 2026-07-06  CROP STATION remembers your framing (Tobias: "I crop it, save, close,
+//                     reopen — and it's uncropped again"). The save ALWAYS worked (the crop was
+//                     baked into the card), but the EDITOR reset to the whole original every
+//                     time, so it LOOKED lost. Now Save also stores the crop framing (a
+//                     normalized `.webp.crop` sidecar) and reopening the editor RESTORES it —
+//                     you land on your last crop and can tweak from there. Cropped images get a
+//                     ✓ in the picker. Non-destructive as ever (the .orig is still the source).
 //  3.37.7 2026-07-06  NEW AI-HERO AZWRAITH + construct-repair fix. AZWRAITH: a Hell's Rebels
 //                     human FIGHTER built around a REACH FAUCHARD and TRIPPING. His whole game
 //                     is the fighter's Trip — sweep a foe prone (it LOSES its turn) and land a
@@ -505,4 +512,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.7' };
+module.exports = { VERSION: '3.37.8' };

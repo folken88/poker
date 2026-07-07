@@ -5376,7 +5376,16 @@
       img = new Image();
       img.onload = () => {
         cover = Math.max(CW / img.naturalWidth, CH / img.naturalHeight);   // background-size: cover
-        zoom = 1; ox = (CW - img.naturalWidth * cover) / 2; oy = 0;        // start: cover, centered X, top Y (the game default)
+        const g = it.geom;
+        if (g && g.nw > 0) {
+          // RESTORE the last saved framing so re-cropping starts where you left off
+          // (not a reset to the whole image). Reconstruct zoom/pan from the normalized window.
+          zoom = Math.min(6, Math.max(1, (CW / (g.nw * img.naturalWidth)) / cover));
+          const s = cover * zoom;
+          ox = -(g.nx * img.naturalWidth) * s; oy = -(g.ny * img.naturalHeight) * s;
+        } else {
+          zoom = 1; ox = (CW - img.naturalWidth * cover) / 2; oy = 0;        // no saved crop → cover, centered X, top Y (the game default)
+        }
         clampPan(); paint();
       };
       img.onerror = () => toast('Could not load ' + it.name, true);
@@ -5391,6 +5400,10 @@
       const scale = cover * zoom;                                  // original px -> card px
       const srcX = Math.max(0, -ox / scale), srcY = Math.max(0, -oy / scale);
       const srcW = CW / scale, srcH = CH / scale;                  // card window in ORIGINAL px (already card aspect)
+      // Remember the FRAMING (normalized to the original's size) so reopening the editor
+      // restores this crop instead of resetting to the whole image (Tobias: "re-open it and
+      // it's uncropped again"). Sent to the server as a sidecar; purely cosmetic.
+      const geom = { nx: srcX / img.naturalWidth, ny: srcY / img.naturalHeight, nw: srcW / img.naturalWidth, nh: srcH / img.naturalHeight };
       const cap = 1000;                                            // bound the output long side
       const os = Math.min(1, cap / Math.max(srcW, srcH));
       const outW = Math.max(1, Math.round(srcW * os)), outH = Math.max(1, Math.round(srcH * os));
@@ -5401,12 +5414,12 @@
       g.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
       const dataUrl = c.toDataURL('image/webp', 0.92);
       saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
-      fetch('/api/cropsave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: it.kind, name: it.name, dataUrl }) })
+      fetch('/api/cropsave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: it.kind, name: it.name, dataUrl, geom }) })
         .then(r => r.json())
         .then(r => {
           saveBtn.disabled = false;
           if (!r.ok) { saveBtn.textContent = '💾 Save crop'; toast(r.error || 'Save failed', true); return; }
-          saveBtn.textContent = '✓ Saved'; dirty = false;
+          saveBtn.textContent = '✓ Saved'; dirty = false; it.geom = geom;   // reopen restores this framing (this session AND, via the sidecar, future ones)
           if (!/^✓ /.test(sel.options[cur].textContent)) sel.options[cur].textContent = '✓ ' + sel.options[cur].textContent;
           // Keep editing the ORIGINAL in place (no reload) — tweak and re-save freely.
           toast('🖼 ' + it.name + ' framed at ' + outW + '×' + outH + '. Original kept — re-crop anytime. Refresh to see it in the dungeon.');
@@ -5446,7 +5459,7 @@
       const og = { portraits: '— ENEMY PORTRAITS —', tokens: '— HERO TOKENS —' };
       for (const kind of ['portraits', 'tokens']) {
         const grp = document.createElement('optgroup'); grp.label = og[kind];
-        items.forEach((it, i) => { if (it.kind === kind) { const o = document.createElement('option'); o.value = i; o.textContent = it.name; grp.appendChild(o); } });
+        items.forEach((it, i) => { if (it.kind === kind) { const o = document.createElement('option'); o.value = i; o.textContent = (it.geom ? '✓ ' : '') + it.name; grp.appendChild(o); } });   // ✓ = a saved crop framing exists (reopens on it)
         sel.appendChild(grp);
       }
       sel.addEventListener('change', () => load(Number(sel.value)));
@@ -5474,9 +5487,10 @@
     };
     btn.addEventListener('click', () => {
       fetch('/api/croplist').then(r => r.json()).then(d => {
+        const gm = d.geom || {};   // saved framings so the editor reopens on your last crop
         items = [
-          ...(d.portraits || []).map(n => ({ kind: 'portraits', name: n })),
-          ...(d.tokens || []).map(n => ({ kind: 'tokens', name: n })),
+          ...(d.portraits || []).map(n => ({ kind: 'portraits', name: n, geom: (gm.portraits && gm.portraits[n]) || null })),
+          ...(d.tokens || []).map(n => ({ kind: 'tokens', name: n, geom: (gm.tokens && gm.tokens[n]) || null })),
         ];
         if (!items.length) { toast('No images found (is the crop endpoint deployed?)', true); return; }
         if (root) root.remove();
