@@ -284,6 +284,7 @@ const BOT_ROSTER = [
   { name: 'Reese',                avatar: '/tokens/reese.webp?v=2',              baseMode: 'risky',    intelligence: 'average', gender: 'he'  }, // Strix Eldritch-Archer magus — ALWAYS flying (real wings), spellstrikes through his bow. ?v=2 cache-busts the token-art swap so browsers re-fetch (2026-07-06).
   { name: 'Savage',               avatar: '/tokens/savage.webp',                 baseMode: 'risky',    intelligence: 'low',     gender: 'he'  }, // Tiefling BLOODRAGER — greataxe, Bloodrage + Cleave, self-buffs; zoomer 'graham' brute
   { name: 'Draymus',              avatar: '/tokens/draymus-necromancer.webp',    baseMode: 'cautious', intelligence: 'high',    gender: 'he'  }, // Dhampir NECROMANCER wizard (Agent of the Grave) — a deeper death arsenal than a normal wizard; scythe in hand
+  { name: 'Azwraith',             avatar: '/tokens/azwraith.webp',               baseMode: 'risky',    intelligence: 'high',    gender: 'he'  }, // Hell's Rebels human FIGHTER — reach fauchard; trips foes (prone + lost turn + a FREE attack), Cleave + Improved Crit
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
@@ -456,6 +457,7 @@ const BOT_CLASSES = {
   'Reese': 'magus',   // Strix Eldritch-Archer magus — spellstrike through his bow (real build: Arcane Archer/Ranger/Wizard)
   'Savage': 'bloodrager',   // tiefling bloodrager — Bloodrage + Cleave + slow self-buffs
   'Draymus': 'wizard',   // dhampir NECROMANCER — a wizard with a char-gated extra death arsenal (see abilities.js)
+  'Azwraith': 'fighter',   // Hell's Rebels human fighter — reach fauchard + Trip (bot auto-trips; see _allyAct); early Cleave, Improved Crit at L8
 };
 // Sensible default base weapon per class so AI aren't all daggers in the dungeon.
 const CLASS_WEAPON = {
@@ -489,6 +491,7 @@ const BOT_WEAPONS = {
   'Reese': 'stormcaller',   // his arcane bow — spellstrike rides the shot
   'Savage': 'greataxe',   // 1d12 ×3 two-hander — cleaves through ranks
   'Draymus': 'angelbonescythe',   // his signature death-scythe (2d4 ×4) — a caster's backup, but thematic
+  'Azwraith': 'fauchard',   // reach polearm (1d10, 18-20) — trip-fighter's tool
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 

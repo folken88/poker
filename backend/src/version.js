@@ -3,6 +3,18 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.7 2026-07-06  NEW AI-HERO AZWRAITH + construct-repair fix. AZWRAITH: a Hell's Rebels
+//                     human FIGHTER built around a REACH FAUCHARD and TRIPPING. His whole game
+//                     is the fighter's Trip — sweep a foe prone (it LOSES its turn) and land a
+//                     FREE attack; that free strike is the engine's stand-in for his Combat-
+//                     Reflexes reach AoO (this gridless engine has no literal opportunity
+//                     attacks). Bot-Azwraith auto-trips the biggest still-standing, trippable
+//                     foe each turn, then cleaves (Cleave early, from L4) and confirms crits
+//                     with Improved Critical (L8, PF1-correct). Voice: Sean (the id Femmik just
+//                     vacated). Art: the full-plate glaive-master portrait. CONSTRUCTS REPAIR
+//                     ONLY CONSTRUCTS (Tobias): a Gearghost/repair-drone's drills & welders can
+//                     no longer "mend" an organic ally, living OR dead — the healer target
+//                     filter now gates construct repair to machine allies. domtest +6.
 //  3.37.6 2026-07-06  VOICES (user picks): FEMMIK → "Henry - Charming Pro" (a smooth, cocky
 //                     charmer — fits the Ifrit fire-dancer; was Sean). CELEB → "Daniel"
 //                     (steady, authoritative BRITISH broadcaster, middle-aged male — suits the
@@ -493,4 +505,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.6' };
+module.exports = { VERSION: '3.37.7' };

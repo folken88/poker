@@ -136,7 +136,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (at && at.effect === 'bolt') return this._abBolt(m, this._activeCantrip(m, targetUid, at), targetUid);
     // Barbarians, and fighters with Improved Cleave (level 9+), carve through —
     // every foe their swing FELLS grants another swing (chains on kills only).
-    if (m.cls === 'barbarian' || fighterFeats(m.cls, m.level, this._isRanged(m)).impCleave) {
+    // AZWRAITH takes Cleave EARLY (Tobias's spec: "cleave and improved cleave at pretty
+    // early points") — he carves from level 4, ahead of the standard fighter ladder.
+    if (m.cls === 'barbarian' || fighterFeats(m.cls, m.level, this._isRanged(m)).impCleave || (m.playerId === 'azwraith' && (m.level || 1) >= 4)) {
       const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
       // Cleave is a MELEE sweep — vs an airborne target fall through to the
       // normal attack path (which draws the backup crossbow); no carving at the sky.

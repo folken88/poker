@@ -82,6 +82,7 @@ const BUILDS = {
   'Reese':                   { race: 'strix', scores: { str: 10, dex: 17, con: 14, int: 14, wis: 11, cha: 11 } },
   'Savage':                  { race: 'tiefling' },   // tiefling bloodrager — STR brute (class template handles the STR primary)
   'Draymus':                 { race: 'dhampir' },    // dhampir necromancer — INT caster (wizard template makes INT primary)
+  'Azwraith':                { race: 'human' },       // human FIGHTER — STR bruiser (class template makes STR primary); reach fauchard trip-lord
 };
 
 module.exports = { BUILDS };

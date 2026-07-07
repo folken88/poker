@@ -54,6 +54,11 @@ const CUSTOM_WEAPONS = {
   // (threat 15-20). It's in FINESSE_KEYS (character.js + Dungeon.js): despite
   // being a STR polearm, this blade rides Kai's DEX 20 for attack AND damage.
   bastardsblade: { key: 'bastardsblade', name: "Bastard's Blade", cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 18, mult: 2, type: 'S', group: 'polearms', prof: 'martial', custom: true, special: { keen: true }, reachFly: true, impCritAt: 9 },
+  // Azwraith's FAUCHARD — a reach polearm (1d10, 18-20/×2). The tool of a trip-fighter:
+  // reach threatens a wide arc, and his Trip sweeps foes off their feet (prone + lost turn
+  // + a FREE attack — his reach/AoO game). NO built-in keen — his Improved Critical
+  // (fighter, L8 per PF1) does the widening. reachFly: the long haft plucks a low flyer down.
+  fauchard: { key: 'fauchard', name: 'Fauchard', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 18, mult: 2, type: 'S', group: 'polearms', prof: 'martial', custom: true, reachFly: true },
   // Dismas's holy dragon-rifle. A firearm (1d12, ×4 crit) — he smites with it.
   // INTRINSICALLY a HOLY (a "little bit" — 1d6 vs evil) FLAMING BURST dragon-rifle:
   // +1d6 fire each shot, +2d10 fire on its ×4 crit, +1d6 vs evil. Dismas's holy gun.

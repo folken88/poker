@@ -64,7 +64,9 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     if (e.charmed) {
       e.taunted = null;
       if (e.healer && e.healsLeft > 0) {
-        const wounded = this.livingEnemies().filter(x => x !== e && x.hp > 0 && x.hp <= x.maxHp * 0.5)
+        // A CONSTRUCT's repair works ONLY on machines — it can't mend organic allies
+        // (living OR dead). See the canMend note in the main healer branch below.
+        const wounded = this.livingEnemies().filter(x => x !== e && x.hp > 0 && x.hp <= x.maxHp * 0.5 && (e.type !== 'construct' || x.type === 'construct'))
           .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
         if (wounded) return this._enemyHeal(e, wounded);
       }
@@ -97,7 +99,11 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
           const courtHurt = this.livingEnemies().filter(x => x.hp > 0 && x.type === 'undead' && x.hp <= x.maxHp * 0.5);
           if (courtHurt.length >= 2) return this._enemyChannelNeg(e, courtHurt);
         }
-        const wounded = this.livingEnemies().filter(x => x.hp > 0 && x.hp <= x.maxHp * 0.5)
+        // A CONSTRUCT's repair works ONLY on machines — its drills & welders can't mend
+        // ORGANIC allies, living OR dead (a Gearghost can't "repair" a humanoid or an
+        // undead). A living/undead priest-healer can still mend anyone on its own side.
+        const canMend = (x) => e.type !== 'construct' || x.type === 'construct';
+        const wounded = this.livingEnemies().filter(x => x.hp > 0 && x.hp <= x.maxHp * 0.5 && canMend(x))
           .sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
         if (wounded) return this._enemyHeal(e, wounded);
       }

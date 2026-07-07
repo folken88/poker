@@ -1751,6 +1751,19 @@ class Dungeon {
     // kept on for the damage, eased off against a target too well-armored to power
     // through. Done here so the swing that follows uses the right stance.
     this._botStance(m, foes);
+    // AZWRAITH the TRIP-FIGHTER: his reach fauchard sweeps a standing foe off its feet —
+    // prone, it LOSES its turn, and he lands a FREE attack. That's his whole game (reach +
+    // trip + the free strike that models his Combat-Reflexes AoO). He topples the biggest
+    // still-standing, trippable, reachable threat; already-prone foes he just hits (prone =
+    // easy). If nothing's trippable, fall through to a normal swing (which cleaves from L4).
+    if (m.playerId === 'azwraith') {
+      const tripSlot = this._abilitiesFor(m).findIndex(ab => ab.effect === 'trip');
+      if (tripSlot >= 0) {
+        const prey = foes.filter(e => e.hp > 0 && !e.prone && !e.loseTurn && this._canReach(m, e) && !this._tripBlocked(e))
+                         .sort((a, b) => b.hp - a.hp)[0];
+        if (prey) { const r = this._useAbility(m, tripSlot, { targetUid: prey.uid }); if (r && r.ok) { this._hasteBonus(m); return; } }
+      }
+    }
     // SLAYER auto-STUDIES its prey (Studied Target is a swift/free action): mark the
     // foe it's about to fight so its attacks land the +N insight bonus. Re-mark when
     // the old mark is dead or gone.
