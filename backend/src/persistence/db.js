@@ -285,6 +285,7 @@ const BOT_ROSTER = [
   { name: 'Savage',               avatar: '/tokens/savage.webp',                 baseMode: 'risky',    intelligence: 'low',     gender: 'he'  }, // Tiefling BLOODRAGER — greataxe, Bloodrage + Cleave, self-buffs; zoomer 'graham' brute
   { name: 'Draymus',              avatar: '/tokens/draymus-necromancer.webp',    baseMode: 'cautious', intelligence: 'high',    gender: 'he'  }, // Dhampir NECROMANCER wizard (Agent of the Grave) — a deeper death arsenal than a normal wizard; scythe in hand
   { name: 'Azwraith',             avatar: '/tokens/azwraith.webp',               baseMode: 'risky',    intelligence: 'high',    gender: 'he'  }, // Hell's Rebels human FIGHTER — reach fauchard; trips foes (prone + lost turn + a FREE attack), Cleave + Improved Crit
+  { name: 'Lord Gweyir',          avatar: '/tokens/lord-gweyir.webp',            baseMode: 'risky',    intelligence: 'high',    gender: 'he'  }, // Elf CAVALIER of the Order of the FLAME (Josh's former PC) — DEX estoc duelist; a kill on his challenged foe rolls into a GLORIOUS CHALLENGE (compounding +dmg/−AC)
 ];
 
 const DEFAULT_STACK = parseInt(process.env.DEFAULT_STACK || '5000', 10);
@@ -458,6 +459,7 @@ const BOT_CLASSES = {
   'Savage': 'bloodrager',   // tiefling bloodrager — Bloodrage + Cleave + slow self-buffs
   'Draymus': 'wizard',   // dhampir NECROMANCER — a wizard with a char-gated extra death arsenal (see abilities.js)
   'Azwraith': 'fighter',   // Hell's Rebels human fighter — reach fauchard + Trip (bot auto-trips; see _allyAct); early Cleave, Improved Crit at L8
+  'Lord Gweyir': 'cavalier',   // elf DEX cavalier — Order of the Flame (glorious challenge: see _allyAct auto-challenge)
 };
 // Sensible default base weapon per class so AI aren't all daggers in the dungeon.
 const CLASS_WEAPON = {
@@ -492,6 +494,7 @@ const BOT_WEAPONS = {
   'Savage': 'greataxe',   // 1d12 ×3 two-hander — cleaves through ranks
   'Draymus': 'angelbonescythe',   // his signature death-scythe (2d4 ×4) — a caster's backup, but thematic
   'Azwraith': 'fauchard',   // reach polearm (1d10, 18-20) — trip-fighter's tool
+  'Lord Gweyir': 'estoc',   // DEX thrusting blade (2d4, 18-20) — finesse2h rides his Dexterity
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);
 

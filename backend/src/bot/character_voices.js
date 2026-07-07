@@ -102,6 +102,7 @@ const CHARACTER_VOICES = {
   // voices on request (like Farrah/Bujon/etc. were refined).
   'Femmik':            'E95b3lkMWHDsKeHJaIcY', // Henry - Charming Pro (user pick) — smooth, cocky Ifrit fire-dancer (shared 11labs voice, works directly; was Sean)
   'Azwraith':          'Yj3XGMd9w2H4C0P0L28M', // Sean (user pick) — the grim reach-fighter trip-lord (the voice Femmik vacated)
+  'Lord Gweyir':       'gqOAQpRt9Y3Tlj9zcSFS', // Conor — young, eloquent, well-spoken BRITISH male = smarmy elf duelist (shared 11labs voice, works directly)
   'Freya':             'mmndVSeLErK7c5SRoKg5', // Tresdin (user pick) — strong, aggressive female army-commander: the half-elf field marshal
   "J'Mal":             'zmw8ZGHS2l5ZG2v3AQ31', // Ultron (user pick) — the cold Red Mantis assassin
   'Jason':             '5mU8WBEmVJQ3n5J4fkzR', // Okole (user pick) — the Asmodean priest

@@ -59,6 +59,9 @@ const CUSTOM_WEAPONS = {
   // + a FREE attack — his reach/AoO game). NO built-in keen — his Improved Critical
   // (fighter, L8 per PF1) does the widening. reachFly: the long haft plucks a low flyer down.
   fauchard: { key: 'fauchard', name: 'Fauchard', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 18, mult: 2, type: 'S', group: 'polearms', prof: 'martial', custom: true, reachFly: true },
+  // Lord Gweyir's ESTOC — a stiff two-handed thrusting blade (2d4, 18-20/×2, piercing).
+  // finesse2h rides his DEX for hit AND damage (the elf duelist's foil). custom => proficient.
+  estoc: { key: 'estoc', name: 'Estoc', cat: '2h', ranged: false, dmgCount: 2, dmgDie: 4, crit: 18, mult: 2, type: 'P', group: 'bladesHeavy', prof: 'martial', custom: true, finesse2h: true },
   // Dismas's holy dragon-rifle. A firearm (1d12, ×4 crit) — he smites with it.
   // INTRINSICALLY a HOLY (a "little bit" — 1d6 vs evil) FLAMING BURST dragon-rifle:
   // +1d6 fire each shot, +2d10 fire on its ×4 crit, +1d6 vs evil. Dismas's holy gun.

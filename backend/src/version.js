@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.16 2026-07-06 NEW AI-HERO LORD GWEYIR — an elf CAVALIER of the ORDER OF THE FLAME (a
+//                     former Josh PC). A DEX duelist: his ESTOC (2d4, 18-20 thrusting blade)
+//                     rides his Dexterity (finesse2h). His order brings the GLORIOUS CHALLENGE
+//                     to the HERO side (the mechanic the sahuagin prince debuted): when his
+//                     challenged foe FALLS, he immediately roars a fresh challenge at the next —
+//                     FREE, and each consecutive glorious challenge this room stacks +2 damage
+//                     AND −2 AC (he duels ever more recklessly). A kill streak makes him a
+//                     glass-cannon terror; it all resets between rooms. Voice: Conor (young,
+//                     smarmy, well-spoken British). Art: the elf sword-knight. domtest +5.
 //  3.37.15 2026-07-06 SAHUAGIN PRINCE gets ORDER OF THE FLAME — a GLORIOUS CHALLENGE mechanic.
 //                     The sea-devils' crowned cavalier (already in the 'sahuagin' pack) now
 //                     goes berserk on a kill-streak: every hero it DROPS lets it roar a fresh
@@ -559,4 +568,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.15' };
+module.exports = { VERSION: '3.37.16' };

@@ -83,6 +83,9 @@ const BUILDS = {
   'Savage':                  { race: 'tiefling' },   // tiefling bloodrager — STR brute (class template handles the STR primary)
   'Draymus':                 { race: 'dhampir' },    // dhampir necromancer — INT caster (wizard template makes INT primary)
   'Azwraith':                { race: 'human' },       // human FIGHTER — STR bruiser (class template makes STR primary); reach fauchard trip-lord
+  // Lord Gweyir — elf DEX cavalier duelist. Explicit scores so DEX (not the cavalier
+  // template's default STR) is his attack stat; his finesse estoc rides Dex 18 (16 + elf +2).
+  'Lord Gweyir':             { race: 'elf', scores: { str: 12, dex: 16, con: 12, int: 13, wis: 10, cha: 14 } },
 };
 
 module.exports = { BUILDS };

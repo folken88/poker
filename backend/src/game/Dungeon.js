@@ -1395,7 +1395,7 @@ class Dungeon {
   _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.slowed > 0 && tags && tags.includes('reflex') ? 1 : 0) + (m._domWardRounds > 0 ? 2 : 0); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged; Slow drags Reflex −1 — PF1; Resistant Touch (Protection domain) +2 while warded)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
-  _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0); }
+  _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0) + (m.gloriousAC || 0); }   // gloriousAC: Order of the Flame recklessness (−2 per consecutive glorious challenge this room)
   // Is this hero fighting with two weapons (a double/dual weapon, or a rogue's
   // paired daggers)? Drives Two-Weapon Defense and the TWF attack sequence.
   _isDualWielding(m) {
@@ -1778,12 +1778,27 @@ class Dungeon {
       const prey = this._preferredFoe(m, foes);
       if (prey) { m.studiedId = prey.uid; m.studiedN = 1 + Math.floor((m.level || 1) / 5); this._note(`🎯 ${m.nickname} studies ${prey.name} — marking it for the kill.`); }
     }
-    // CAVALIER auto-CHALLENGES its prey when it has a Challenge use left (room-cost,
-    // limited): swear the +level-damage oath on the foe it's about to fight, re-swear
-    // when the old quarry is dead and a use remains.
-    if (m.cls === 'cavalier' && (m.challengedId == null || !foes.some(e => e.uid === m.challengedId && e.hp > 0)) && ((m.abilityUses && m.abilityUses.challenge) || 0) > 0) {
-      const prey = this._preferredFoe(m, foes);
-      if (prey) { m.challengedId = prey.uid; m.challengeN = m.level || 1; m.abilityUses.challenge = Math.max(0, (m.abilityUses.challenge || 0) - 1); this._note(`⚔️ ${m.nickname} challenges ${prey.name} — sworn to cut it down (+${m.challengeN} damage against it).`); }
+    // CAVALIER auto-CHALLENGES its prey. A NORMAL challenge is room-limited (costs a use) and
+    // grants +level damage vs the foe. Lord Gweyir's ORDER OF THE FLAME adds a GLORIOUS
+    // CHALLENGE: when his current quarry FALLS, he roars a fresh (FREE) challenge at the next
+    // foe, and each CONSECUTIVE glorious challenge this room stacks +2 damage AND −2 AC (he
+    // fights ever more recklessly). Compounds into a terror on a kill streak; resets per room.
+    if (m.cls === 'cavalier') {
+      const flameCav = (m.playerId || '').toLowerCase() === 'lord gweyir';   // Order of the Flame
+      const challengeGone = m.challengedId != null && !foes.some(e => e.uid === m.challengedId && e.hp > 0);
+      if (flameCav && challengeGone) {
+        const prey = this._preferredFoe(m, foes);
+        if (prey) {
+          m.gloriousN = (m.gloriousN || 0) + 1;
+          m.challengedId = prey.uid;
+          m.challengeN = (m.level || 1) + 2 * m.gloriousN;   // base challenge + morale bonus (2× consecutive glorious challenges)
+          m.gloriousAC = 2 * m.gloriousN;                    // recklessness: −2 AC per glorious challenge (see _acPenalty)
+          this._note(`🔥 ${m.nickname} bellows a GLORIOUS CHALLENGE at ${prey.name} — the Order of the Flame's fury swells! (+${2 * m.gloriousN} damage, −${2 * m.gloriousN} AC — free, and it keeps stacking as he kills.)`);
+        }
+      } else if ((m.challengedId == null || challengeGone) && ((m.abilityUses && m.abilityUses.challenge) || 0) > 0) {
+        const prey = this._preferredFoe(m, foes);
+        if (prey) { m.challengedId = prey.uid; m.challengeN = m.level || 1; m.abilityUses.challenge = Math.max(0, (m.abilityUses.challenge || 0) - 1); this._note(`⚔️ ${m.nickname} challenges ${prey.name} — sworn to cut it down (+${m.challengeN} damage against it).`); }
+      }
     }
     // SPELL SYNTHESIS (Celeb the Theurge — Kobold Press): a limited number of
     // times per room (1/2/3 at L5/11/17) he casts ONE arcane + ONE divine spell in

@@ -587,7 +587,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
     if (m.playerId === 'celeb') { const L = m.level || 1; m.synthUses = L >= 17 ? 3 : L >= 11 ? 2 : L >= 5 ? 1 : 0; }   // SPELL SYNTHESIS (Kobold Press): usable 1/2/3 times per room at L5/11/17
     if (m.cls === 'slayer') { m.studiedId = null; m.studiedN = 0; }   // SLAYER: Studied Target mark clears each room (fresh foes)
-    if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; }   // CAVALIER: Challenge oath clears each room
+    if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; m.gloriousN = 0; m.gloriousAC = 0; }   // CAVALIER: Challenge oath (and Order of the Flame's glorious-challenge stack) clear each room
     m.abilityUses = {};
     for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
