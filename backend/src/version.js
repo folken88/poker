@@ -3,6 +3,18 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.11 2026-07-06 ART: the FIRE SKELETON now wears real burning-skeleton art
+//                     (undead_burning_skeleton.webp) instead of the old placeholder. Also
+//                     removed the ORPHANED "field-marshal-freya-kusanagi" enemy portrait —
+//                     Freya's been a HERO (not an enemy) since 2026-07-05, so that art was dead
+//                     and was cluttering the Crop Station. (Static art + portraits manifest.)
+//  3.37.10 2026-07-06 CROP STATION: RELAXED the zoom/pan constraints (Tobias: "conchobar/crisp
+//                     start so zoomed in I can't center the face — relax these fucking
+//                     constraints"). You can now zoom OUT past "cover" (down to ~60% below the
+//                     whole-image-fits point) and pan freely INSIDE the card, so a tight face
+//                     shrinks and centers with margins. The bake was reworked to draw the image
+//                     by its dest rect, so a zoomed-out crop bakes with clean transparent
+//                     margins (the card backdrop) instead of stretching. Zoom-in unchanged.
 //  3.37.9 2026-07-06  CROP STATION: "Save crop" now AUTO-ADVANCES to the next image (Tobias),
 //                     so you can crop straight down the roster without reaching for the ▶.
 //                     Wraps back to the first after the last.
@@ -515,4 +527,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.9' };
+module.exports = { VERSION: '3.37.11' };
