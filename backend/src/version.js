@@ -3,6 +3,9 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.9 2026-07-06  CROP STATION: "Save crop" now AUTO-ADVANCES to the next image (Tobias),
+//                     so you can crop straight down the roster without reaching for the ▶.
+//                     Wraps back to the first after the last.
 //  3.37.8 2026-07-06  CROP STATION remembers your framing (Tobias: "I crop it, save, close,
 //                     reopen — and it's uncropped again"). The save ALWAYS worked (the crop was
 //                     baked into the card), but the EDITOR reset to the whole original every
@@ -512,4 +515,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.8' };
+module.exports = { VERSION: '3.37.9' };

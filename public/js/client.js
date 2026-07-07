@@ -5419,10 +5419,10 @@
         .then(r => {
           saveBtn.disabled = false;
           if (!r.ok) { saveBtn.textContent = '💾 Save crop'; toast(r.error || 'Save failed', true); return; }
-          saveBtn.textContent = '✓ Saved'; dirty = false; it.geom = geom;   // reopen restores this framing (this session AND, via the sidecar, future ones)
+          dirty = false; it.geom = geom;   // reopen restores this framing (this session AND, via the sidecar, future ones)
           if (!/^✓ /.test(sel.options[cur].textContent)) sel.options[cur].textContent = '✓ ' + sel.options[cur].textContent;
-          // Keep editing the ORIGINAL in place (no reload) — tweak and re-save freely.
           toast('🖼 ' + it.name + ' framed at ' + outW + '×' + outH + '. Original kept — re-crop anytime. Refresh to see it in the dungeon.');
+          load(cur + 1);   // auto-advance to the NEXT image (Tobias) — crop straight down the roster; wraps to the first after the last
         })
         .catch(() => { saveBtn.disabled = false; saveBtn.textContent = '💾 Save crop'; toast('Save failed', true); });
     };
