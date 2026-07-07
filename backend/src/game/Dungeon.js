@@ -740,9 +740,16 @@ class Dungeon {
   // do not yet target summons back (no soak) — that's a later pass.
   _abSummon(m, ab, payload) {
     const spec = ab.summon || {};
+    // Flavored per summon KIND: UNDEAD claw up from the grave (Draymus); DEVILS are called
+    // up from Hell by an infernal pact (Jason, Cleric of Asmodeus). Default = undead.
+    const FL = {
+      undead: { fizzle: 'the grave yields nothing',            raise: 'tears open the grave',    join: (n) => `claw${n > 1 ? '' : 's'} free to fight for the party`,                align: 'NE' },
+      devil:  { fizzle: 'the infernal contract goes unanswered', raise: 'seals an INFERNAL PACT', join: (n) => `answer${n > 1 ? '' : 's'} the call, marching up from Hell to serve the party`, align: 'LE' },
+    };
+    const fl = FL[spec.flavor] || FL.undead;
     const pool = spec.pool || (spec.key ? [spec.key] : []);
     const valid = pool.filter(k => MON[k]);
-    if (!valid.length) { this._note(`${ab.icon || '☠️'} ${m.nickname}'s ${ab.name} fizzles — the grave yields nothing.`); this._echoToTable(); return; }
+    if (!valid.length) { this._note(`${ab.icon || '☠️'} ${m.nickname}'s ${ab.name} fizzles — ${fl.fizzle}.`); this._echoToTable(); return; }
     // PF1 Summon Monster: 1 creature, or 1d3 / 1d4+1 of a lower tier — all of the SAME
     // KIND. Pick ONE kind at random from the choices at this CR (spec.pool), then roll
     // the PF1 count ('1d4+1' / '1d3' / a number).
@@ -756,13 +763,13 @@ class Dungeon {
       e.summoned = true; e.summonedBy = m.playerId; e.summonExpiry = rounds;
       e.flatFooted = false;                   // it rises ready to fight
       e.gold = 0;                             // a summon drops no loot
-      e.align = 'NE'; e.evil = true;          // Draymus's raised dead
+      e.align = fl.align; e.evil = true;      // summoned fiend/undead fights on the party's side but is still evil
       this.enemies.push(e);
       this.turnOrder.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });   // acts from next slot onward
     }
     const nm = MON[key].name;
     const label = count > 1 ? `${count} ${nm}${/s$/.test(nm) ? '' : 's'}` : `a ${nm}`;
-    this._note(`${ab.icon || '☠️'} ${m.nickname} tears open the grave — ${label} claw${count > 1 ? '' : 's'} free to fight for the party! (${rounds} rounds)`, ab.sound);
+    this._note(`${ab.icon || '☠️'} ${m.nickname} ${fl.raise} — ${label} ${fl.join(count)}! (${rounds} rounds)`, ab.sound);
     this._echoToTable(ab.sound);
   }
   // Build a room of foes. The per-enemy CR is geared to the weakest hero; the
@@ -2357,15 +2364,18 @@ class Dungeon {
       if (hold && dangerous && !(dangerous.paralyzed > 0) && this._spellWorksOn(hold, dangerous)) return { slot: slot(hold), payload: { targetUid: dangerous.uid } };
       return null;   // → Bane/Judgement-boosted weapon attack
     }
-    if (m.cls === 'wizard' || m.cls === 'sorcerer' || m.cls === 'oracle') {
-      // SUMMONER (Draymus): open the fight by raising undead if none of HIS minions
-      // is currently up — cast the highest-level summon he can. Guarded so he doesn't
-      // spam it every turn (one standing summon at a time). Only Draymus has summons
-      // (char-gated), so this is a no-op for every other caster.
+    // SUMMONER OPENER (generic — Draymus's UNDEAD, Jason's DEVILS): if this caster has a
+    // summon ability and NONE of its minions is currently up, call the biggest one. Runs
+    // for ANY class (the CLERIC summons too, not just the arcane casters below); char-gated,
+    // so it's a no-op for anyone without summons. One standing summon at a time; heals/buffs
+    // above still take priority (this is reached after them).
+    {
       const summonAb = avail.filter(a => a.effect === 'summon').sort((a, b) => (b.slvl || 0) - (a.slvl || 0))[0];
       if (summonAb && targets.length && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {
         return { slot: slot(summonAb), payload: {} };
       }
+    }
+    if (m.cls === 'wizard' || m.cls === 'sorcerer' || m.cls === 'oracle') {
       const SPELLISH = ['aoe', 'disintegrate', 'grease', 'sleep', 'slow', 'fascinate', 'bolt', 'missile', 'touch', 'rays', 'save_debuff'];
       const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
       const cand = [];

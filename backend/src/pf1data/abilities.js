@@ -281,6 +281,16 @@ const SPELL = {
   summonundead7: { key: 'summonundead7', name: 'Summon Undead VII',  icon: '☠️', effect: 'summon', target: 'self', slvl: 7, summon: { pool: ['fungal_pirate', 'skeletal_ogre'], count: '1d4+1' }, sound: S.umbral, desc: 'Raise 1d4+1 CR-5/6 undead (fungal dead / skeletal ogre) to fight for the party for a few rounds.' },
   summonundead8: { key: 'summonundead8', name: 'Summon Undead VIII', icon: '☠️', effect: 'summon', target: 'self', slvl: 8, summon: { pool: ['fungal_oracle'], count: '1d4+1' },        sound: S.umbral, desc: 'Raise 1d4+1 FUNGAL ORACLES (CR 7) to fight for the party for a few rounds.' },
   summonundead9: { key: 'summonundead9', name: 'Summon Undead IX',   icon: '☠️', effect: 'summon', target: 'self', slvl: 9, summon: { pool: ['vampire', 'ghoul_crusader'], count: '1d4+1' }, sound: S.umbral, desc: 'Raise 1d4+1 CR-8/9 undead (vampires / ghoul crusaders) — an army of the dead — to fight for the party for a few rounds.' },
+  // SUMMON DEVIL I–VII — Jason's Asmodean pact (flavor:'devil' → called up from Hell, LE).
+  // Built on the same summon engine as Summon Undead; the devils bring their own SR / DR /
+  // flight / resistances (from _makeEnemy) — tough allies that SOAK and fight for the party.
+  summondevil1: { key: 'summondevil1', name: 'Summon Devil I',    icon: '😈', effect: 'summon', target: 'self', slvl: 3, summon: { flavor: 'devil', pool: ['imp'],                          count: '1d3' },   sound: S.invoke, desc: 'Seal an infernal pact — 1d3 IMPS (CR 2) march up from Hell to fight for the party for a few rounds. (They soak hits; foes CAN turn on them.)' },
+  summondevil2: { key: 'summondevil2', name: 'Summon Devil II',   icon: '😈', effect: 'summon', target: 'self', slvl: 4, summon: { flavor: 'devil', pool: ['imp', 'accuser_devil'],         count: '1d4+1' }, sound: S.invoke, desc: 'Call up 1d4+1 lesser devils (imps / accusers, CR 2–3) to fight for the party for a few rounds.' },
+  summondevil3: { key: 'summondevil3', name: 'Summon Devil III',  icon: '😈', effect: 'summon', target: 'self', slvl: 5, summon: { flavor: 'devil', pool: ['accuser_devil'],                count: '1d4+1' }, sound: S.invoke, desc: 'Call up 1d4+1 ACCUSER DEVILS (CR 3) — spying, hexing fiends — to fight for the party for a few rounds.' },
+  summondevil4: { key: 'summondevil4', name: 'Summon Devil IV',   icon: '😈', effect: 'summon', target: 'self', slvl: 6, summon: { flavor: 'devil', pool: ['erinyes'],                      count: 1 },       sound: S.invoke, desc: 'Call up an ERINYES (CR 8) — a fallen-angel archer — to fight for the party for a few rounds.' },
+  summondevil5: { key: 'summondevil5', name: 'Summon Devil V',    icon: '😈', effect: 'summon', target: 'self', slvl: 7, summon: { flavor: 'devil', pool: ['bone_devil'],                    count: 1 },       sound: S.invoke, desc: 'Call up a BONE DEVIL (CR 9) — a skeletal osyluth — to fight for the party for a few rounds.' },
+  summondevil6: { key: 'summondevil6', name: 'Summon Devil VI',   icon: '😈', effect: 'summon', target: 'self', slvl: 8, summon: { flavor: 'devil', pool: ['barbed_devil', 'bomb_devil'],    count: '1d3' },   sound: S.invoke, desc: 'Call up 1d3 greater devils (barbed / bomb devils, CR 11) to fight for the party for a few rounds.' },
+  summondevil7: { key: 'summondevil7', name: 'Summon Devil VII',  icon: '😈', effect: 'summon', target: 'self', slvl: 9, summon: { flavor: 'devil', pool: ['horned_devil'],                  count: 1 },       sound: S.invoke, desc: 'Seal the ultimate pact — a HORNED DEVIL (CR 16), a cornugon champion of Hell, marches up to fight for the party for a few rounds.' },
 };
 // Mage Armor — a free-action, run-long +4 armor AC (cast once per dungeon). Shared
 // by wizard + sorcerer. Its own 'magearmor' effect (see Dungeon._abMageArmor).
@@ -932,6 +942,18 @@ if (KITS.cleric && Array.isArray(KITS.cleric.abilities)) {
   KITS.cleric.abilities.push(
     { key: 'forcepush', name: 'Force Push', icon: '🌬️', cost: 'room', uses: 3, effect: 'forcepush', target: 'enemy', sound: S.gust, char: 'Jason',
       desc: 'Shove a foe with the Force Pike — every melee ally with their weapon OUT (they melee\'d within the last round) gets a FREE attack against it. You forgo your own strike. 3× per room.' },
+    // JASON'S SUMMON DEVIL line (Cleric of Asmodeus) — the infernal mirror of Draymus's
+    // Summon Undead. Char-gated; leveled spells, so the prepared→slot conversion below turns
+    // them into proper cleric-slot casts. minLevel = 2N−1 (the char level a cleric first casts
+    // that spell level). Bot-Jason opens a fight by calling up his biggest devil (see the
+    // generic summoner check in Dungeon._botAbility).
+    { ...preparedSpell(SPELL.summondevil1, 5),  char: 'Jason' },
+    { ...preparedSpell(SPELL.summondevil2, 7),  char: 'Jason' },
+    { ...preparedSpell(SPELL.summondevil3, 9),  char: 'Jason' },
+    { ...preparedSpell(SPELL.summondevil4, 11), char: 'Jason' },
+    { ...preparedSpell(SPELL.summondevil5, 13), char: 'Jason' },
+    { ...preparedSpell(SPELL.summondevil6, 15), char: 'Jason' },
+    { ...preparedSpell(SPELL.summondevil7, 17), char: 'Jason' },
   );
 }
 

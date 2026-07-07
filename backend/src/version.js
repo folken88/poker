@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.14 2026-07-06 JASON'S SUMMON DEVIL line (Cleric of Asmodeus) — the infernal mirror of
+//                     Draymus's Summon Undead. Seven char-gated cleric spells (Summon Devil
+//                     I–VII, spell levels 3–9): 1d3 IMPS → accusers → an ERINYES archer → a
+//                     BONE DEVIL → 1d3 barbed/bomb devils → a HORNED DEVIL (CR16) capstone.
+//                     They're called up from Hell (LE), soak hits, and fight for the party,
+//                     bringing their own SR/DR/flight. The summon engine is now flavor-aware
+//                     (undead claw from the grave; devils march up from Hell) and the bot
+//                     summoner-opener is generic, so bot-Jason calls up his biggest devil.
+//                     domtest +3.
 //  3.37.13 2026-07-06 REESE NUMPAD, Josh's layout: bow functions on TOP, Imbued Shots in a
 //                     SUBMENU. The blind pad is now 1 = bow attack, 2 = Deadly Aim, 3 = Rapid
 //                     Shot, 4 = Bullseye Shot (just like a ranger), then 5 = IMBUED SHOTS — a
@@ -542,4 +551,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.13' };
+module.exports = { VERSION: '3.37.14' };
