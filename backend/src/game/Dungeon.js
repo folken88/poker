@@ -256,6 +256,25 @@ class Dungeon {
     }).catch(() => {});
   }
 
+  // ── ORDER OF THE FLAME cavalier deeds (beyond Glorious Challenge) ──
+  // A Flame cavalier is identified the same way Glorious Challenge is char-gated — keep this in
+  // sync with GLORIOUS_CHALLENGE's char field when more Flame heroes join. FOOLHARDY RUSH (L2) is
+  // a passive (+4 initiative & never flat-footed — see openDoor + _rollInitiative); DAUNTING
+  // SUCCESS (L8) fires below off a confirmed crit; BLAZE OF GLORY (L15) is a room-cost buff button.
+  _isFlameCavalier(m) {
+    if (!m || m.cls !== 'cavalier') return false;
+    return (m.trueNick || m.nickname || m.playerId || '').toLowerCase() === 'lord gweyir';
+  }
+  // DAUNTING SUCCESS (L8): a confirmed crit from a Flame cavalier DEMORALIZES every living foe
+  // (−2 to hit/damage/saves — the `prayed` penalty) for the rest of the room. Once per room.
+  _dauntingSuccess(m) {
+    if (!this._isFlameCavalier(m) || (m.level || 1) < 8 || m._dauntedRoom) return;
+    m._dauntedRoom = true;
+    let n = 0;
+    for (const e of this.livingEnemies()) { e.prayed = Math.max(e.prayed || 0, 2); n++; }
+    if (n) { const s = '/audio/draugr_shout03_burning.mp3'; this._note(`😱 ${m.nickname}'s GLORIOUS critical DAUNTS the room — ${n} foe${n > 1 ? 's' : ''} quail (−2 to hit, damage & saves)! (Daunting Success)`, s); this._echoToTable(s); }
+  }
+
   roomName() { return `dungeon:${this.id}`; }
   _note(text, sound, meta = {}) {
     if (this._silentSfx) sound = null;   // pre-door buff pass: log the line, mute the SFX (no wall of sounds at once)
@@ -566,7 +585,7 @@ class Dungeon {
     this.depth += 1;
     this._spawnRoom();
     this.blackTentacles = null;   // the tentacle field doesn't carry between rooms
-    for (const m of this.present()) { this._computeCastable(m); this._resetAbilities(m); m.flatFooted = !fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy; }  // re-read the spell LOADOUT (Spellbook picker edits land at the door) + refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy: never caught flat-footed)
+    for (const m of this.present()) { this._computeCastable(m); this._resetAbilities(m); m.flatFooted = !(fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy || (this._isFlameCavalier(m) && (m.level || 1) >= 2)); }  // re-read the spell LOADOUT (Spellbook picker edits land at the door) + refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy — and Order of the Flame's FOOLHARDY RUSH at L2 — are never caught flat-footed)
     if (Math.random() < 0.05) { try { this._reskinVorkstag(); } catch (_) {} }   // skinwalker drifts to a new face between rooms (rare)
     this._maintainBardSongs();   // Inspire Courage is a passive aura — always up, no action spent
     this.status = 'combat';
@@ -823,7 +842,7 @@ class Dungeon {
   _rollInitiative() {
     const order = [];
     // Characters add ½ their level (rounded down) to initiative, on top of the base +2.
-    for (const m of this.alivePresent()) order.push({ kind: 'party', id: m.playerId, init: dRoll(20) + 2 + Math.floor((m.level || 1) / 2) + fighterFeats(m.cls, m.level, this._isRanged(m)).init });   // + fighter Improved Initiative
+    for (const m of this.alivePresent()) order.push({ kind: 'party', id: m.playerId, init: dRoll(20) + 2 + Math.floor((m.level || 1) / 2) + fighterFeats(m.cls, m.level, this._isRanged(m)).init + (this._isFlameCavalier(m) && (m.level || 1) >= 2 ? 4 : 0) });   // + fighter Improved Initiative + Order of the Flame FOOLHARDY RUSH (L2: moves during initiative → +4)
     for (const e of this.livingEnemies()) order.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });
     order.sort((a, b) => b.init - a.init);
     this.turnOrder = order;

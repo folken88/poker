@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.25 2026-07-07 ORDER OF THE FLAME — the other three order deeds (beyond Glorious Challenge),
+//                     for Lord Gweyir. FOOLHARDY RUSH (L2): he charges in ready — +4 initiative and
+//                     never caught flat-footed at a room's start. DAUNTING SUCCESS (L8): a confirmed
+//                     CRIT daunts the whole room — every foe −2 to hit/damage/saves (the Prayer
+//                     penalty) for the rest of the room, once per room. BLAZE OF GLORY (L15): a
+//                     once-per-room glory surge, +4 to ALL his attacks for the room. Adapted from the
+//                     3pp order (movement/charge parts don't apply on the abstract grid). Char-gated
+//                     like Glorious Challenge; enemy Order-of-the-Flame parity (sahuagin prince) is a
+//                     follow-up. domtest +7.
 //  3.37.24 2026-07-07 THEURGE is now human-selectable + RADIANCE at the poker table. (1) The
 //                     THEURGE (Celeb's dual arcane+divine prepared caster) is added to the class
 //                     dropdown — its kit (the cleric+wizard spell union, side/dcStat-tagged) was
@@ -634,4 +643,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.24' };
+module.exports = { VERSION: '3.37.25' };

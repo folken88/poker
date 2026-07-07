@@ -98,6 +98,12 @@ const CHALLENGE = { key: 'challenge', name: 'Challenge', icon: '⚔️', cost: '
 // applies his CURRENT glory stack (+2×N damage / −2×N AC), then attacks; a KILL grows the stack
 // for next turn. Chain kills (fodder is fair game!) to pump it, then unleash on a real threat.
 const GLORIOUS_CHALLENGE = { key: 'gloriouschallenge', name: 'Glorious Challenge', icon: '🔥', cost: 'free', effect: 'gloriouschallenge', target: 'enemy', sound: '/audio/draugr_shout03_burning.mp3', char: 'Lord Gweyir', desc: 'ORDER OF THE FLAME: SELECT a foe, then Glorious Challenge to challenge it AND strike at once. Deals +2 damage / takes −2 AC per KILL you\'ve strung together this room (it compounds). Drop the foe and the bonus grows for next turn. Free & unlimited — pick off the weak to build the Flame, then loose it on the mighty.' };
+// ORDER OF THE FLAME order ability — BLAZE OF GLORY (L15). PF1: a standard action for Cha-mod
+// rounds granting +4 to attack (among movement perks that don't apply on the abstract grid);
+// modeled here as a once-per-room self-buff of +4 to hit for the rest of the room. Char-gated +
+// minLevel 15 like the other Flame deeds. (Foolhardy Rush L2 & Daunting Success L8 are passives
+// wired in Dungeon.js: _isFlameCavalier / openDoor / _rollInitiative / _dauntingSuccess.)
+const BLAZE_OF_GLORY = { key: 'blazeofglory', name: 'Blaze of Glory', icon: '☄️', cost: 'room', uses: 1, minLevel: 15, effect: 'buff', target: 'self', buff: { toHit: 4 }, sticky: true, char: 'Lord Gweyir', sound: '/audio/draugr_shout03_burning.mp3', desc: 'ORDER OF THE FLAME (L15): blaze up in a final surge of glory — +4 to ALL your attacks for the rest of the room. Once per room.' };
 
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
@@ -551,7 +557,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const kit = kitFor(m.cls).abilities;
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
     if (m.cls === 'slayer') list = list.concat(STUDIED_TARGET);   // SLAYER: swift Studied Target mark (ACG)
-    if (m.cls === 'cavalier') list = list.concat(CHALLENGE, GLORIOUS_CHALLENGE);   // CAVALIER: the Challenge oath (+level damage vs one foe); GLORIOUS_CHALLENGE is char-gated (Lord Gweyir / Order of the Flame) via _charAllows
+    if (m.cls === 'cavalier') list = list.concat(CHALLENGE, GLORIOUS_CHALLENGE, BLAZE_OF_GLORY);   // CAVALIER: the Challenge oath (+level damage vs one foe); GLORIOUS_CHALLENGE + BLAZE_OF_GLORY (L15) are char-gated (Lord Gweyir / Order of the Flame) via _charAllows
     // MAGUS: name each Spell Strike by its DELIVERY — a ranged magus (Reese's bow)
     // fires it as an IMBUED SHOT; a melee magus channels it as a SPELL STRIKE. Copy
     // the ability so we never mutate the shared kit. (Same mechanic either way — the
@@ -593,7 +599,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
     if (m.cls === 'theurge') { const L = m.level || 1; m.synthUses = L >= 17 ? 3 : L >= 11 ? 2 : L >= 5 ? 1 : 0; }   // SPELL SYNTHESIS (Kobold Press): usable 1/2/3 times per room at L5/11/17
     if (m.cls === 'slayer') { m.studiedId = null; m.studiedN = 0; }   // SLAYER: Studied Target mark clears each room (fresh foes)
-    if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; m.gloriousN = 0; m.gloriousAC = 0; }   // CAVALIER: Challenge oath (and Order of the Flame's glorious-challenge stack) clear each room
+    if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; m.gloriousN = 0; m.gloriousAC = 0; m._dauntedRoom = false; }   // CAVALIER: Challenge oath (and Order of the Flame's glorious-challenge stack + once-per-room Daunting Success) clear each room
     m.abilityUses = {};
     for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
@@ -2929,6 +2935,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       }
       if (r.hit) {
         landed = true;
+        if (r.crit) this._dauntingSuccess(m);   // Order of the Flame (L8): a confirmed crit daunts the room
         // Rogue Offensive Defense (feat tree n8): landing a sneak attack grants +2 AC
         // until they next act — the strike leaves the foe off-balance.
         if (r.sneakDice && fighterFeats(m.cls, m.level, this._isRanged(m)).offDef && !m._offDef) { m._offDef = true; this._note(`🤸 ${m.nickname}'s strike leaves them covered — +2 AC until their next move (Offensive Defense).`); }
