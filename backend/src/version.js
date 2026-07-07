@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.22 2026-07-07 REFACTOR (no behavior change): the HERO-BOT BRAIN — the AI-ally decision
+//                     system (_allyAct, the 584-line _botAbility, _botStance, _preferredFoe,
+//                     _sneakPrey, _forcedFoe, _drBlocksWeapon) — is extracted VERBATIM from
+//                     Dungeon.js into game/dungeon/heroAI.js, the exact mirror of enemyAI.js
+//                     (the villain brain). Dungeon.js 2923→2094 (down from 2997 at the start of
+//                     this pass; the engine core is now constructor/rooms/turn-loop/action-router
+//                     /party). Line ratchet re-tightened 3000→2300. domtest +2.
 //  3.37.21 2026-07-07 REFACTOR (no behavior change): the SUMMONING system (_abSummon allied
 //                     summons + _enemySummon reinforcements) is extracted VERBATIM from
 //                     Dungeon.js into a new game/dungeon/summons.js mixin — the same factory-
@@ -606,4 +613,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.21' };
+module.exports = { VERSION: '3.37.22' };
