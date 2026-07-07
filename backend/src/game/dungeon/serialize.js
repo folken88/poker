@@ -292,6 +292,12 @@ module.exports = ({ fighterFeats, titleCase }) => ({
       ? [['intensify', 'Intensify', '+1'], ['empower', 'Empower', '+2'], ['maximize', 'Maximize', '+3'], ['quicken', 'Quicken', '+4']]
           .filter(([k]) => ff[k]).map(([key, name, adj]) => ({ key, name, adj, on: !!mmActive[key] }))
       : [];
+    // Capture the ability list ONCE. _abilitiesFor rebuilds FRESH objects each call
+    // (the magus renames its spellstrikes into new {...a} objects), so computing the
+    // slot with a SECOND call's indexOf(ab) MISSES those objects → slot -1 → "no such
+    // ability" the moment you fire an Imbued Shot (Josh: "shocking grasp/frigid touch
+    // are there but say no such attack exists"). One array = stable, correct indices.
+    const abs = this._abilitiesFor(m);
     return {
       // The at-will button wears the CHOSEN cantrip's face — a caster who has
       // cycled to Acid Splash or Jolt sees that name, not a stale "Ray of Frost".
@@ -307,7 +313,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
       // Per-spell-level slots for spontaneous casters: { 1: {remaining,max}, … }.
       slots: maxSlots ? Object.fromEntries(Object.keys(maxSlots).map(L => [L, { remaining: (m.slots && m.slots[L]) || 0, max: maxSlots[L] }])) : null,
-      abilities: this._abilitiesFor(m).filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m) && _showStance(ab)).map(ab => {
+      abilities: abs.filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m) && _showStance(ab)).map(ab => {
         // Slot spells re-level by the active metamagic; the UI shows the effective
         // level, draws the right slot count, and greys out if there's no slot there
         // (or it pushes past 9th).
@@ -332,7 +338,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         const modePick = ab.effect === 'heal' && ab.heal === 'party';
         return {
         key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
-        slot: this._abilitiesFor(m).indexOf(ab),   // stable index into kit+domain abilities (the action payload `slot`) — survives the char filter
+        slot: abs.indexOf(ab),   // stable index into kit+domain abilities (the action payload `slot`) — SAME array as above so magus spellstrikes resolve (were -1)
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null,
         available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction) && !(ab.cost === 'slot' && (slvlEff > 9 || !(maxSlots && maxSlots[slvlEff]))), desc: ab.desc || '',

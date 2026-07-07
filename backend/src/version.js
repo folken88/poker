@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.12 2026-07-06 BUGFIX — REESE'S IMBUED SHOTS FIRE AGAIN (Josh: "shocking grasp / frigid
+//                     touch are there but say no such attack exists"). The magus renames its
+//                     spellstrikes into FRESH objects on every _abilitiesFor call, so _kitState
+//                     computed each shot's action `slot` with a SECOND call's indexOf(ab) — which
+//                     couldn't find those objects and handed back slot -1. Firing slot -1 hit
+//                     "no such ability". Now the ability list is captured ONCE and indexOf runs
+//                     against it, so every Imbued Shot resolves to its real slot and casts.
+//                     (Reese-only bug — only the magus re-maps its abilities.) domtest +2.
 //  3.37.11 2026-07-06 ART: the FIRE SKELETON now wears real burning-skeleton art
 //                     (undead_burning_skeleton.webp) instead of the old placeholder. Also
 //                     removed the ORPHANED "field-marshal-freya-kusanagi" enemy portrait —
@@ -527,4 +535,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.11' };
+module.exports = { VERSION: '3.37.12' };
