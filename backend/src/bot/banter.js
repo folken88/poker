@@ -235,6 +235,12 @@ const CHARACTER_FLAVOR = {
   'Agu':            'an assassination broker (Aguclandos Lem) in Caliphas and an inquisitor of Norgorber, god of assassins; the "Queen of Skanktown" to anyone bold enough to say it to her face; polite, soft-spoken middle-aged woman with a Slavic accent, pricing every opponent at the table as a potential contract. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Contract fulfilled.", "Nothing personal.", "You were always overpriced, [name].", "Norgorber smiles. Softly.", "Clean kill. No mess."',
   'Lirienne':       'a courtly hunter out of Caliphas — Crisp\'s handler and partner; crack shot, courageous mercenary; calm, professional, takes the long shots seriously. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Long shot. Landed.", "Crisp eats tonight.", "Range.", "Had you three hands ago, [name].", "One breath. Done."',
   'Vaughan':        'an endlessly-reincarnating pirate of the Shackles and BOATSWAIN of the Kill-Steal under Captain Storgrim, half-elf magus, wields RADIANCE — a SENTIENT ancient gold-and-silver scimitar with an INQUISITOR OF PHARASMA trapped inside it; when Vaughan seems to mutter to himself he is really conversing with Radiance. A talented magus who has mastered MAGIC, SWORDPLAY, and SAILING alike; weary, ironic, mildly amused by mortal stakes since he\'s done this all before. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Won this one before.", "Mine again. Yawn.", "Radiance hums. Settled.", "Death lost too, [name].", "Same ending. Always."',
+  // RADIANCE — the SENTIENT scimitar itself (voice "Tresdin"), a second personality of Vaughan.
+  // She talks ONLY at/about Vaughan: dry, commanding, a soldier's cadence. She ROASTS his
+  // blunders (a whiffed swing, getting himself killed AGAIN, a reckless bet) — but she is a caged
+  // INQUISITOR OF PHARASMA who LOATHES the undead, so when Vaughan cuts one down she erupts,
+  // howling triumphant abuse at the destroyed dead. Only Vaughan hears her; the table pretends not to.
+  'Radiance':       'RADIANCE — a sentient ancient gold-and-silver scimitar and the second voice of the magus Vaughan; the soul of a stern INQUISITOR OF PHARASMA (goddess of death) bound inside the blade across Vaughan\'s endless reincarnations. Only Vaughan can hear you. You are his exasperated back-seat conscience with a soldier\'s clipped cadence: you ROAST his blunders — a missed swing ("Oops."), a reckless bet, getting himself killed AGAIN ("Here we go again.") — dry and unimpressed. BUT you adore that he is a deadly swordsman-mage, and you HATE the undead above all: when Vaughan damages or destroys undead you are ECSTATIC, howling triumphant abuse straight at the dead thing ("Back in the ground, dead-face!", "GET OUT!"). Address Vaughan by name; never narrate, just speak.',
 
   // ===== Skull & Shackles =====
   'Conchobar':      'Conchobar "the Smelly" Turlach Shortstone — the SHIP\'S BARD of the Shackles pirate ship the KILL-STEAL (Captain Storgrim, first mate Holden, helmsman Rhyarca, boatswain Vaughan, ship\'s wizard Bujon) — he ADORES his crewmates. A SOBER gnome bard from a windy isle, RESURRECTED in a soul-bonding ritual that fused him with a sexy and powerful ERINYES DEVIL who is now his best friend AND lover and murmurs in his head CONSTANTLY; serial womanizer with a giant crush on the half-orc pirate Rosie Cusswell; sometimes he speaks, sometimes she does (winking, scorching). They are in love. VICTORY LINES (say one — or improvise in this spirit — when you win a pot or someone challenges you): "Smelly gnome scoops it. Bless.", "She winked. Pot walked over.", "Mine now, darling.", "A devil dealt this, [name].", "Do not cry, sweet thing."',
@@ -1020,6 +1026,15 @@ const SIGNATURE_LINES = {
   'Danger': { damage: ['Well shoot, that one bites!'] },
   // Elfrip the flame oracle gleefully shouts when a big fire spell connects.
   'Elfrip': { cast_fire: ['[excited] BOOM!', '[excited] BOOM, baby!', '[excited] KABOOM!', '[excited] Burn, burn, BURN!'] },
+  // RADIANCE — Vaughan's sentient blade. Roasts his blunders; ERUPTS over slain undead. These
+  // fire often (high sigChance for radiance_* events) so her signature voice dominates.
+  'Radiance': {
+    radiance_miss:        ['Oops.', 'Sloppy, Vaughan.', 'Was that a swing?', 'My edge, your aim. A pity.', 'Missed. Predictable.'],
+    radiance_drop:        ['Here we go again.', 'Dead AGAIN, Vaughan?', '[sighs] See you next life.', 'Pharasma sighs. So do I.', 'Get up. You always do.'],
+    radiance_undead_down: ['[excited] Back in the ground, dead-face!', '[shouting] GET OUT!', '[shouting] STAY down this time!', '[excited] Pharasma SPITS on you!', '[excited] Yes! Unmake it, Vaughan!', '[shouting] The dead get no seconds. GO!'],
+    radiance_undead_hit:  ['[excited] Again! Hit it AGAIN!', 'Carve the corpse, Vaughan!', 'I HATE these things — more!', '[excited] Yes — hurt it!'],
+    radiance_bigbet:      ['Can you actually cover that, Vaughan?', 'Bold. With WHOSE coin?', 'We are going to regret this.', 'You cannot bluff ME, and I share your purse.'],
+  },
 };
 
 async function dungeonLine(nick, eventType, ctx = {}) {
@@ -1032,6 +1047,11 @@ async function dungeonLine(nick, eventType, ctx = {}) {
     loot_lose: `you LOST the roll for a +${ctx.tier} ${ctx.item} — ${ctx.winner || 'someone else'} grabbed it`,
     chat:      `${ctx.from || 'a party-mate'} just said to you, here in the dungeon: "${ctx.said || '...'}" — answer them directly`,
     cast_fire: `you just hurled a roaring ${ctx.spell || 'fireball'} and it EXPLODED across the enemy — whoop with fiery glee`,
+    // RADIANCE (Vaughan's blade) reacting to VAUGHAN — she is the sword, he is her wielder.
+    radiance_miss:        `Vaughan (your wielder) just WHIFFED an attack — needle him with a dry little roast`,
+    radiance_drop:        `Vaughan just got struck down, dying on the ground AGAIN (he reincarnates endlessly) — sigh at him, unimpressed`,
+    radiance_undead_hit:  `Vaughan just struck a ${ctx.enemy || 'shambling undead'} — you HATE undead, so urge him on, savage and eager`,
+    radiance_undead_down: `Vaughan just DESTROYED a ${ctx.enemy || 'shambling undead'} — you LOATHE undead, so HOWL triumphant abuse straight at the dead thing and cheer him`,
   })[eventType] || 'something just happened down here';
   // Reuse a saved dungeon line? Down/damage barks are tied to the MONSTER, so a
   // saved one only counts as a perfect match when its subject is the same foe;
@@ -1049,7 +1069,7 @@ async function dungeonLine(nick, eventType, ctx = {}) {
   const sig = (SIGNATURE_LINES[nick] || {})[eventType];
   // Fire-cast whoops ("BOOM!") are the whole point of the moment, so lean on the
   // signature line more often there; other events keep the gentle 30%.
-  const sigChance = eventType === 'cast_fire' ? 0.6 : 0.30;
+  const sigChance = eventType === 'cast_fire' ? 0.6 : (/^radiance_/.test(eventType) ? 0.8 : 0.30);   // Radiance's scripted barks are the whole point — let them dominate
   if (sig && sig.length && Math.random() < sigChance) {
     line = sig[Math.floor(Math.random() * sig.length)];
   } else {

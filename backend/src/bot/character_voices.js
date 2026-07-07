@@ -49,6 +49,7 @@ const CHARACTER_VOICES = {
   'Danger':            '0exky5u6rYq7ksXZEN5G', // Nick — Rodney "Danger" Smith, redneck CP-USS ranger
   'Kate':              '5tQ5OiKpM78sVuxrgC4W', // Phoebe
   'Vaughan':           'CJnd8k7Q0w2Y1HegJ65F', // John 117
+  'Radiance':          'mmndVSeLErK7c5SRoKg5', // Tresdin voice — Vaughan's SENTIENT scimitar (the Inquisitor-of-Pharasma soul in the blade); a second "voice" of Vaughan, heard by the table on his miss/drop/undead-kill
   // FARRAH ─ Mimi (Vnqlgu3fdiFwisAye1qH, Swedish, young, "cute").
   // Probed clean (HTTP 200, ~14kB) so it works straight through the
   // current model. NOT British — but the original Mimi2 (English

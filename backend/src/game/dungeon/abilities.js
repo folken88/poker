@@ -1144,6 +1144,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const dmg = this._dmgE(target, raw, ab.dtype);
       this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${target.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(target, ab.dtype)}.${this._afterEnemyHit(target)}`, snd);
       if (target.hp <= 0) this._tryBanter(m, 'down', { enemy: target.name });
+      if (target.hp <= 0 && target.type === 'undead') this._radianceQuip(m, 'radiance_undead_down', { enemy: target.name });   // Vaughan's magus-craft unmakes the dead → Radiance erupts
     }
     this._echoToTable(sound);
   },
@@ -1161,6 +1162,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const dmg = this._dmgE(e, raw, ab.dtype);
     this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}.${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+    if (e.hp <= 0 && e.type === 'undead') this._radianceQuip(m, 'radiance_undead_down', { enemy: e.name });   // undead unmade by Vaughan's bolt → Radiance erupts
     this._echoToTable(sound);
   },
   // Area damage with a save for half — Burning Hands / Holy Smite / Lightning
@@ -2898,6 +2900,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const multi = swings > 1;
     const groups = [];   // consecutive same-target swings → one segment each
     let flurrySound = null;
+    let landed = false;   // did ANY swing connect this action? (Radiance roasts a total whiff)
     for (let i = 0; i < swings; i++) {
       // Resolve swings ONE AT A TIME: if the target has dropped, the next swing
       // redirects to another foe (PF1 — you don't pre-commit a full attack) —
@@ -2924,12 +2927,14 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         else g.bits.push('miss');
       }
       if (r.hit) {
+        landed = true;
         // Rogue Offensive Defense (feat tree n8): landing a sneak attack grants +2 AC
         // until they next act — the strike leaves the foe off-balance.
         if (r.sneakDice && fighterFeats(m.cls, m.level, this._isRanged(m)).offDef && !m._offDef) { m._offDef = true; this._note(`🤸 ${m.nickname}'s strike leaves them covered — +2 AC until their next move (Offensive Defense).`); }
         // Promethean tentacles GRAB on a hit — the foe is grappled & helpless until it breaks free.
         if (m.weapon.grapple && tgt.hp > 0 && !tgt.grappled) { tgt.grappled = true; tgt.grappledBy = m.playerId; tgt.grappleRounds = 2; this._note(`🐙 ${tgt.name} is SEIZED in ${m.nickname}'s tentacles — grappled and helpless!`); }
         if (tgt.hp <= 0) this._tryBanter(m, 'down', { enemy: tgt.name });
+        if (tgt.hp <= 0 && tgt.type === 'undead') this._radianceQuip(m, 'radiance_undead_down', { enemy: tgt.name });   // Radiance HATES undead — she erupts
       }
       this._echoToTable(r.sound);
     }
@@ -2937,6 +2942,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const txt = groups.map(g => `${g.tgt.name}: ${g.bits.join(', ')}${g.tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`).join('; ');
       this._note(`⚔️ ${m.nickname} attacks — ${txt}`, flurrySound);
     }
+    if (!landed && !quiet) this._radianceQuip(m, 'radiance_miss');   // the whole attack whiffed → Radiance: "Oops."
     m._domStrike = 0; m._domSmite = 0;   // Strength Surge / Battle Rage last ONE attack action — spent now, hit or miss
     m.weapon = _realWeapon;   // drop any backup crossbow — restore the real weapon for later reads (e.g. next turn's target pick)
   },

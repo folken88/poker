@@ -233,6 +233,28 @@ class Dungeon {
       this._broadcast();
     }).catch(() => {});
   }
+  // RADIANCE — Vaughan's SENTIENT scimitar speaks. Mechanically a SECOND voice of Vaughan
+  // (fires on HIS events), but shown + voiced as "Radiance" in the Tresdin voice; in-fiction
+  // only Vaughan hears her (the table plays along). Gated to whoever wields the blade (Vaughan)
+  // and ONE line per combat round, so she punctuates — a dry roast on a whiff / a death, a
+  // gleeful howl when he unmakes undead. Fired from the miss / drop / undead-kill hooks.
+  _radianceQuip(m, eventType, ctx = {}) {
+    if (!m || m.weaponKey !== 'radiance') return;   // she rides Vaughan's blade only
+    if (this.status === 'combat') {
+      if (this.round === this._radRound) return;     // one Radiance line per round
+      this._radRound = this.round;
+      if (Math.random() > 0.55) return;
+    } else if (Math.random() > 0.5) return;
+    Promise.resolve(banter.dungeonLine('Radiance', eventType, { ...ctx, voiceNick: 'Radiance' })).then(res => {
+      if (!res || !res.line) return;
+      this._note(`💬 Radiance: ${res.line}`, null, { kind: 'banter', voiced: !!res.audio });
+      if (this.io && res.audio) {
+        this.io.to(this.roomName()).emit('dungeon:say', { nick: 'Radiance', audio: res.audio, audioMime: res.audioMime });
+        if (this.tableId) this.io.to(`table:${this.tableId}`).emit('dungeon:voiceecho', { audio: res.audio, audioMime: res.audioMime });
+      }
+      this._broadcast();
+    }).catch(() => {});
+  }
 
   roomName() { return `dungeon:${this.id}`; }
   _note(text, sound, meta = {}) {
@@ -1758,6 +1780,7 @@ class Dungeon {
       m.downed = true; m.queuedAction = null;   // dying wipes the pre-load
       this._note(`🩸 ${m.nickname} collapses at ${m.hp} HP — DOWN and dying! (slain at −10; a Cure potion can still save them)`);
       this._log('downed', { who: m.playerId, hp: m.hp, depth: this.depth });
+      this._radianceQuip(m, 'radiance_drop');   // "Here we go again." — Radiance sighs at Vaughan's umpteenth death
     } else {
       this._note(`🩸 ${m.nickname} is battered while down — ${m.hp} HP (slain at −10).`);
     }

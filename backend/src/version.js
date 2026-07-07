@@ -3,6 +3,17 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.23 2026-07-07 RADIANCE SPEAKS — Vaughan's SENTIENT scimitar (voice "Tresdin") is now a
+//                     second personality of Vaughan: on his events she pipes up in her own voice,
+//                     shown as "💬 Radiance:" and heard by the table (in-fiction only Vaughan hears
+//                     her; everyone plays along). She ROASTS his blunders — a whiffed attack →
+//                     "Oops."; getting dropped → "Here we go again." (his endless reincarnation) —
+//                     but she's a caged INQUISITOR OF PHARASMA who HATES undead, so when Vaughan
+//                     cuts one down she ERUPTS: "Back in the ground, dead-face!", "GET OUT!". Wired
+//                     as _radianceQuip (gated to the radiance-wielder, one line/round) off the
+//                     miss / drop / undead-kill hooks (melee + magus bolts). Poker big-bet quip
+//                     ("Can you cover that, Vaughan?") is staged in her line pool for a follow-up.
+//                     domtest +6.
 //  3.37.22 2026-07-07 REFACTOR (no behavior change): the HERO-BOT BRAIN — the AI-ally decision
 //                     system (_allyAct, the 584-line _botAbility, _botStance, _preferredFoe,
 //                     _sneakPrey, _forcedFoe, _drBlocksWeapon) — is extracted VERBATIM from
@@ -613,4 +624,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.22' };
+module.exports = { VERSION: '3.37.23' };
