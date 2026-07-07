@@ -760,7 +760,7 @@ class Dungeon {
     for (let i = 0; i < count; i++) {
       const e = this._makeEnemy(MON[key], false, 0);
       e.name = MON[key].name;                 // no Elite/Boss prefix on a summon
-      e.summoned = true; e.summonedBy = m.playerId; e.summonExpiry = rounds;
+      e.summoned = true; e.summonedBy = m.playerId; e.summonExpiry = rounds; e.summonFlavor = spec.flavor || 'undead';
       e.flatFooted = false;                   // it rises ready to fight
       e.gold = 0;                             // a summon drops no loot
       e.align = fl.align; e.evil = true;      // summoned fiend/undead fights on the party's side but is still evil
@@ -884,17 +884,22 @@ class Dungeon {
       // (or at room end). Bypasses the enemy-condition logic below. (Phase 1: foes
       // don't yet target summons back — no soak.)
       if (e.summoned) {
+        // Flavor the log by summon KIND: undead claw & crumble to dust; devils rend &
+        // are banished back to Hell. (Jason's devil summons were wrongly logged as "undead".)
+        const isDevil = e.summonFlavor === 'devil';
+        const glyph = isDevil ? '😈' : '☠️';
+        const kind = isDevil ? 'your devil' : 'your undead';
         const foes = this.livingEnemies().filter(x => !x.summoned && x.hp > 0);
         if (foes.length) {
           const prey = foes.slice().sort((a, b) => a.hp - b.hp)[0];   // finish the weakest first
           const r = this._monsterSwing(e, this._enemyAC(prey));
-          if (r.hit) { this._dmgE(prey, r.damage); this._note(`☠️ ${e.name} (your undead) rends ${prey.name} for ${r.damage}!${prey.hp <= 0 ? ' ☠️ Slain!' : ''}`, null, { side: 'party' }); }
-          else this._note(`☠️ ${e.name} (your undead) claws at ${prey.name} — and misses.`, null, { side: 'party' });
+          if (r.hit) { this._dmgE(prey, r.damage); this._note(`${glyph} ${e.name} (${kind}) rends ${prey.name} for ${r.damage}!${prey.hp <= 0 ? ` ${glyph} Slain!` : ''}`, null, { side: 'party' }); }
+          else this._note(`${glyph} ${e.name} (${kind}) ${isDevil ? 'lashes' : 'claws'} at ${prey.name} — and misses.`, null, { side: 'party' });
         } else {
-          this._note(`☠️ ${e.name} (your undead) stands ready — no foe in reach.`, null, { side: 'party' });
+          this._note(`${glyph} ${e.name} (${kind}) stands ready — no foe in reach.`, null, { side: 'party' });
         }
         e.summonExpiry = (e.summonExpiry || 1) - 1;
-        if (e.summonExpiry <= 0) { e.hp = 0; this._note(`☠️ ${e.name} crumbles back to dust — the summoning ends.`, null, { side: 'party' }); }
+        if (e.summonExpiry <= 0) { e.hp = 0; this._note(`${glyph} ${e.name} ${isDevil ? 'is banished back to Hell — the pact expires' : 'crumbles back to dust — the summoning ends'}.`, null, { side: 'party' }); }
         this._broadcast(); return this._nextTurn();
       }
       // Darkness (wizard/sorcerer): shrouded foes can't act (and can't be hit) for

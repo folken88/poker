@@ -895,6 +895,23 @@ if (KITS.magus && Array.isArray(KITS.magus.abilities) && _magusSpellstrikes.leng
   KITS.magus.abilities = KITS.magus.abilities.filter(a => a.effect !== 'spellstrike').concat(_magusSpellstrikes);
 }
 
+// ── SWASHBUCKLER + ROGUE round-to-round options (Tobias: "too few choices") ──
+// Injected AFTER the generated-kit override (so it survives regeneration, like the magus/
+// Olbryn re-attachments above). The two finesse skirmishers each had ONE active button
+// (swashbuckler=Disarm, rogue=Feint). Both now also get FEINT (bluff a foe flat-footed → a
+// free strike; the swashbuckler's Precise Strike / the rogue's Sneak Attack then lands on a
+// Dex-denied target) and FIGHT DEFENSIVELY (a free −4-to-hit / +2-AC footwork toggle). Reuses
+// existing effect handlers (feint, buff/fightdefensively) — no new mechanics. Skips anything a
+// class already owns (rogue keeps its Feint). TODO: migrate into kit_abilities on the next regen.
+const _FEINT_MV = { key: 'feint', name: 'Feint', icon: '🎭', cost: 'free', effect: 'feint', target: 'enemy', desc: 'Bluff a foe FLAT-FOOTED (an opposed check) — on a success it loses its Dex to AC and your next strike lands for FREE. A duelist opens a gap; a rogue turns it into a Sneak Attack.' };
+for (const _ck of ['swashbuckler', 'rogue']) {
+  const _k = KITS[_ck]; if (!_k || !Array.isArray(_k.abilities)) continue;
+  const _have = new Set(_k.abilities.map(a => a.key));
+  for (const _mv of [_FEINT_MV, _FIGHT_DEF]) {
+    if (!_have.has(_mv.key)) _k.abilities.push({ ..._mv });
+  }
+}
+
 // Olbryn's STORM specialization — injected AFTER the generated-kit override so it
 // survives regeneration. Base sorcerers are fire/force themed; these char-tagged
 // lightning spells (only Olbryn sees them, gated by Dungeon._charAllows) make him the

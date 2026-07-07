@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.19 2026-07-07 MORE TURN CHOICES FOR THE FINESSE MELEE + summon-flavor fix. The
+//                     SWASHBUCKLER and ROGUE each had only one active button; both now get
+//                     FEINT (bluff a foe flat-footed → a free strike — the swashbuckler's Precise
+//                     Strike / the rogue's Sneak Attack then lands on a Dex-denied target) and
+//                     FIGHT DEFENSIVELY (a free −4-to-hit / +2-AC footwork toggle). Rogue keeps its
+//                     own Feint. SUMMONS confirmed: they DO take a turn every round and strike the
+//                     weakest foe (Draymus's undead, Jason's devils) — and Jason's devils are no
+//                     longer mislabeled "your undead"; they now rend as "your devil" (😈) and are
+//                     "banished back to Hell" when the pact expires. domtest +.
 //  3.37.18 2026-07-07 DRAYMUS ART: the dhampir necromancer wears his real portrait now
 //                     (dhampir_draymus_mortiar_necromancer2.webp) instead of a tiny token — and,
 //                     like Femmik before him, he was MISSING from the portraits manifest, so his
@@ -582,4 +591,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.18' };
+module.exports = { VERSION: '3.37.19' };
