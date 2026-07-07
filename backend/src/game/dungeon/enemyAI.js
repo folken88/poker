@@ -36,7 +36,10 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
     if (!hit) return { hit: false, roll, toHit, total, ac: targetAC, sound: pick(SND.whiffSword) };
-    let dmg = e.dmgBonus - sick - pray;
+    // GLORIOUS CHALLENGE (Order of the Flame): +2 melee damage per CONSECUTIVE glorious
+    // challenge this room — a kill-streak morale bonus that compounds (see _enemyMelee).
+    const glory = e.gloriousChallenge ? 2 * (e.gloriousN || 0) : 0;
+    let dmg = e.dmgBonus - sick - pray + glory;
     for (let i = 0; i < (e.dmgCount || 1); i++) dmg += dRoll(e.dmgDie);   // e.g. golem slam = 2d10+9
     return { hit: true, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
   },
@@ -300,6 +303,15 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
         e.hp -= recoil;
         if (e.hp <= 0) { e.hp = 0; this._note(`🩸 The VICIOUS blade drinks ${recoil} from its wielder — ☠️ ${e.glyph} ${e.name} is consumed by his own weapon's hunger!`, null, { side: 'enemy' }); }
         else this._note(`🩸 The VICIOUS blade drinks ${recoil} from its own wielder (${e.hp}/${e.maxHp}).`, null, { side: 'enemy' });
+      }
+      // GLORIOUS CHALLENGE (Order of the Flame — the sahuagin prince): dropping a hero lets
+      // the cavalier roar a fresh challenge over the body, stoking its frenzy. Each consecutive
+      // kill this room stacks +2 melee damage AND −2 AC (it fights ever more recklessly — see
+      // _monsterSwing / _enemyAC). Resets between rooms (the enemy is rebuilt fresh). Insane by
+      // design: a prince left to carve through the party becomes a runaway threat.
+      if (target.hp <= 0 && e.gloriousChallenge) {
+        e.gloriousN = (e.gloriousN || 0) + 1;
+        this._note(`🔥 ${e.glyph} ${e.name} bellows a GLORIOUS CHALLENGE over ${target.nickname} — its bloodlust swells! (Order of the Flame: +${2 * e.gloriousN} damage, −${2 * e.gloriousN} AC — cut it down FAST.)`, null, { side: 'enemy' });
       }
       if (target.hp <= -10) { this._memberDown(target); this._echoToTable(r.sound); return; }   // dead at −10
       if (target.hp <= 0)   { this._downMember(target); this._echoToTable(r.sound); return; }    // 0..−9 = down/dying

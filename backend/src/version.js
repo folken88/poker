@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.15 2026-07-06 SAHUAGIN PRINCE gets ORDER OF THE FLAME — a GLORIOUS CHALLENGE mechanic.
+//                     The sea-devils' crowned cavalier (already in the 'sahuagin' pack) now
+//                     goes berserk on a kill-streak: every hero it DROPS lets it roar a fresh
+//                     glorious challenge, stacking +2 melee damage AND −2 AC per consecutive
+//                     kill THIS ROOM (compounding — a prince left to carve the party becomes a
+//                     runaway threat, but ever easier to hit). Resets between rooms. Generic
+//                     `gloriousChallenge` flag on the MON — ready to reuse for a future PLAYER
+//                     cavalier of this order. domtest +3.
 //  3.37.14 2026-07-06 JASON'S SUMMON DEVIL line (Cleric of Asmodeus) — the infernal mirror of
 //                     Draymus's Summon Undead. Seven char-gated cleric spells (Summon Devil
 //                     I–VII, spell levels 3–9): 1d3 IMPS → accusers → an ERINYES archer → a
@@ -551,4 +559,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.14' };
+module.exports = { VERSION: '3.37.15' };

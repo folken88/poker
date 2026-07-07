@@ -846,7 +846,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // magus's MELEE touch, which passes {melee:true}. Sickened grants NO AC penalty in
     // PF1 (the old −2 here was really nauseated, now its own flag). Stunned = −2 AC.
     const rangedAtk = !!(opts.ranged || (opts.touch && !opts.melee));
-    return base - (e.stunned > 0 ? 2 : 0) + (e.prone ? (rangedAtk ? 4 : -4) : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) + (e.flying ? HIGH_GROUND_AC : 0) + (e.fdOn ? 2 : 0);   // Fight Defensively: +2 dodge AC
+    // GLORIOUS CHALLENGE (Order of the Flame): a cavalier on a kill-streak fights ever more
+    // recklessly — −2 AC per consecutive glorious challenge this room (stacks; see _enemyMelee).
+    const glory = e.gloriousChallenge ? 2 * (e.gloriousN || 0) : 0;
+    return base - glory - (e.stunned > 0 ? 2 : 0) + (e.prone ? (rangedAtk ? 4 : -4) : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) + (e.flying ? HIGH_GROUND_AC : 0) + (e.fdOn ? 2 : 0);   // Fight Defensively: +2 dodge AC
   },
   // Energy-resistance multiplier for a damage type (see RESIST_BY_KEY): 0 immune,
   // 0.5 resistant, 1.5 vulnerable, 1 (default) unchanged. Physical/untyped (no
