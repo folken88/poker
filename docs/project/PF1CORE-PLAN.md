@@ -40,8 +40,10 @@ sockets, gold/loot economy, the character DB, banter, watchers/deploy glue.
 ## How the current work flows into this
 - `pf1data/` + `character.js` + `combat.js` are **de facto pf1core already** —
   treat them as such NOW: no `db`/socket/poker imports may creep in.
-- The Phase-2 mixins (loot, serialize, enemyAI, abilities) are **app-layer**
-  organization — correct and unaffected. But as seams 3–4 extract, any PURE
+- The dungeon mixins (loot, serialize, enemyAI, abilities, and the 2026-07-07
+  heroAI + summons seams) are **app-layer** organization — correct and
+  unaffected (turn loops, bot decision-making, summon spawning and narration all
+  stay app-side). But as seams 3–4 extract, any PURE
   rules helper they carry (SR check math, DC formulas, save math, dispel
   eligibility) should be pulled toward combat.js/pf1data rather than buried in
   a mixin, so the later physical move is file renames, not surgery.

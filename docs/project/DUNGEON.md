@@ -1,9 +1,12 @@
 # Dungeon (game/Dungeon.js + game/dungeon/* mixins)
 
-Since the Phase-2 split (2026-07-04) the engine is one class spread over five
-files: `Dungeon.js` (core: rooms, turn loop, action router, hero-bot AI) plus
-`game/dungeon/{abilities,enemyAI,serialize,loot}.js` grafted onto the
-prototype via `Object.assign` factories at the bottom of Dungeon.js. `this`
+Since the Phase-2 split (2026-07-04, extended by the summons + heroAI seams on
+2026-07-07) the engine is one class spread over seven files: `Dungeon.js` (core:
+constructor, rooms, turn loop, action router, party/exits, `_swingVsAC`/`_makeEnemy`)
+plus `game/dungeon/{abilities,enemyAI,heroAI,summons,serialize,loot}.js` grafted
+onto the prototype via `Object.assign` factories at the bottom of Dungeon.js. The
+hero-bot AI (`_allyAct`/`_botAbility`/…) now lives in `heroAI.js` (the mirror of
+`enemyAI.js`); the summon builders (`_abSummon`/`_enemySummon`) in `summons.js`. `this`
 semantics are identical — mixins cross-call freely. A mixin that needs a
 Dungeon module-scope const receives it as a FACTORY PARAM (never reach for a
 global you weren't handed — see CLAUDE.md mandate 9, the BUFF_META lesson).
@@ -156,7 +159,7 @@ it as a dimmed cover BACKGROUND (client `portraitFor`/`has-portrait`); the small
 token is hidden when a portrait exists, kept when it doesn't. Transparent PNGs
 sit on a dark-grey card fill.
 
-## Ally caster AI (`_botAbility` doctrine)
+## Ally caster AI (`_botAbility` doctrine — in `game/dungeon/heroAI.js`)
 
 Decision order for bot casters, per turn:
 

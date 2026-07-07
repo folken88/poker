@@ -275,7 +275,7 @@ slots** (`_tableSlots` adds +1 to spell levels 1–4 for the 18 stat).
 - **Enemy specials**: shaman Hold Person, Skeletal Champion stun-shout, Lich/
   Vampire fear-gaze, Fire Skeleton death-explosion.
 
-### Bot ability AI (`Dungeon._botAbility`)
+### Bot ability AI (`Dungeon._botAbility` — in `game/dungeon/heroAI.js`)
 Priority: revive fallen → dispel/heal the hurt → declare a judgement / **Bane** →
 Smite → **Detect Evil** (when neutral foes are present) → raise buffs (once) →
 group-blast → spell/maneuver at the weakest foe → basic attack.

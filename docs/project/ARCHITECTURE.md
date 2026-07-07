@@ -30,9 +30,11 @@ poker/                          # /mnt/fast/apps/stacks/poker (PROD, IS the git 
 | `sockets/dungeon.js` | `dungeon:enter/action/leave/cancel`, recruit (fee = 50g + 10g×level), recruitRandom, reconnect grace |
 | `game/Table.js` | poker table: seats, hand loop, bot auto-invest in gear (comfort band 5k–50k), Loot Lord check, hand logging + Meyanda hand lines, chatter |
 | `game/Hand.js` | Hold'em hand state machine, pots/side-pots (`pot.buildSidePots`) |
-| `game/Dungeon.js` | the crawler CORE (~2.6k lines): constructor, rooms/spawns, turn loop, action router, hero-bot AI, party/exits, leveling — see DUNGEON.md. The rest lives in the `game/dungeon/` mixins below (Phase-2 split, 2026-07-04) |
-| `game/dungeon/abilities.js` | HERO ability system mixin (~2.7k lines): `_useAtwill` (Melee/Ranged), `_useAbility` + every `_ab*` handler, pickers (loadout/domains/progression), spell DC/SR/dice math |
+| `game/Dungeon.js` | the crawler CORE (~2.1k lines): constructor, rooms/spawns, turn loop (`_advanceToActor`), action router, party/exits, leveling, `_swingVsAC`/`_makeEnemy` resolution — see DUNGEON.md. The rest lives in the `game/dungeon/` mixins below (Phase-2 split 2026-07-04; summons + heroAI seams 2026-07-07) |
+| `game/dungeon/abilities.js` | HERO ability system mixin (~2.9k lines): `_useAtwill` (Melee/Ranged), `_useAbility` + every `_ab*` handler, pickers (loadout/domains/progression), spell DC/SR/dice math |
 | `game/dungeon/enemyAI.js` | the VILLAIN BRAIN mixin: `_monsterSwing`/`_enemyAct`, maneuvers, caster brains, heal/channel/taunt/hook, `_detonate` (28 methods) |
+| `game/dungeon/heroAI.js` | the HERO-BOT BRAIN mixin (mirror of enemyAI.js): `_allyAct`, `_botAbility` (ability-choice tree), `_botStance`, `_preferredFoe`/`_sneakPrey`/`_forcedFoe`, `_drBlocksWeapon` — factory `({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })` (heroAI seam 2026-07-07) |
+| `game/dungeon/summons.js` | the SUMMONING mixin: `_abSummon` (allied summons — Draymus undead / Jason devils) + `_enemySummon` (enemy reinforcements); slot into the turn order on the summoner's initiative (summon seam 2026-07-07) |
 | `game/dungeon/serialize.js` | view-model mixin: `publicState`, cond/buff icon lists (`BUFF_META` lives HERE), `_kitState`, `_heroACs`, `_xpInfo` |
 | `game/dungeon/loot.js` | loot-roll mixin (R/P d20, hock pool) |
 | `pf1core/index.js` | THE one door to the pure PF1 rules engine — 13 concept namespaces; the future PGM app imports rules ONLY through it (see PF1CORE-PLAN.md) |
