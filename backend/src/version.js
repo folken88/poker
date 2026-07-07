@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.20 2026-07-07 SUMMON FIXES (Tobias). (1) NO MORE FRIENDLY FIRE: a Cleave / Great Cleave
+//                     chain can no longer sweep into your OWN summoned allies, and neither can
+//                     a Haste bonus swing, a spiritual weapon's re-acquire, or any attack that
+//                     falls back to "the first foe" — every hero attack path now skips summoned
+//                     allies (they already couldn't be clicked as a target; now the auto-target
+//                     paths agree). (2) SUMMONS ACT IMMEDIATELY: per PF1 a summoned creature
+//                     takes its turn the moment it appears, on the SUMMONER'S initiative — the
+//                     minions now slot into the turn order right after the caster (this round and
+//                     every round after) instead of being tacked onto the end. Applies to both
+//                     Draymus/Jason's allied summons and enemy necromancer reinforcements. domtest +.
 //  3.37.19 2026-07-07 MORE TURN CHOICES FOR THE FINESSE MELEE + summon-flavor fix. The
 //                     SWASHBUCKLER and ROGUE each had only one active button; both now get
 //                     FEINT (bluff a foe flat-footed → a free strike — the swashbuckler's Precise
@@ -591,4 +601,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.19' };
+module.exports = { VERSION: '3.37.20' };

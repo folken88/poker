@@ -143,7 +143,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // AZWRAITH takes Cleave EARLY (Tobias's spec: "cleave and improved cleave at pretty
     // early points") — he carves from level 4, ahead of the standard fighter ladder.
     if (m.cls === 'barbarian' || fighterFeats(m.cls, m.level, this._isRanged(m)).impCleave || (m.playerId === 'azwraith' && (m.level || 1) >= 4)) {
-      const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
+      const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this._targetableEnemies()[0];   // fall back to a REAL foe, never a summoned ally
       // Cleave is a MELEE sweep — vs an airborne target fall through to the
       // normal attack path (which draws the backup crossbow); no carving at the sky.
       if (e && !this._canReach(m, e)) return this._playerAttack(m, targetUid);
@@ -950,7 +950,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     at = at || kitFor(m.cls).atwill;
     const choices = this._cantripChoices(m, at);
     if (m.isBot) {
-      const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
+      const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this._targetableEnemies()[0];   // fall back to a REAL foe, never a summoned ally
       if (e) {
         let best = choices[0], bestMult = -1;
         for (const c of choices) { const mult = this._resistMult(e, c.dtype); if (mult > bestMult) { bestMult = mult; best = c; } }
@@ -1130,7 +1130,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const sound = ab.sound || pick(SND.lightning);
     let target = e0, played = false;
     for (const off of offs) {
-      if (!target || target.hp <= 0) target = this.livingEnemies()[0];
+      if (!target || target.hp <= 0) target = this._targetableEnemies()[0];   // a real foe, not a summoned ally
       if (!target) break;
       const touchAC = this._enemyAC(target, { touch: true });
       const base = babFor(m.cls || 'fighter', m.level || 1) + cm + off;
@@ -1717,7 +1717,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (!(m.hasted > 0) || m.hp <= 0 || m.left || m.dead) return;
     if (m._justHasted) { m._justHasted = false; return; }   // cast Haste this turn → bonus starts next turn
     m.hasted -= 1;   // spend one of the hasted turns
-    const foes = this.livingEnemies();
+    const foes = this._targetableEnemies();   // the bonus swing hits a REAL foe, never a summoned ally
     if (!foes.length) return;
     const tgt = (forced && foes.includes(forced)) ? forced : (this._preferredFoe(m, foes) || foes[0]);
     this._note(`💨 ${m.nickname} blurs with Haste — an extra strike!`);
@@ -2644,7 +2644,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // rather than mopping up the weakest. Falls back to the deadliest grounded foe
   // when nothing's flying.
   _spiritTarget() {
-    const foes = this.livingEnemies();
+    const foes = this._targetableEnemies();   // never re-acquire onto a summoned ally
     if (!foes.length) return null;
     const flyers = foes.filter(e => e.flying);
     const pool = flyers.length ? flyers : foes;
@@ -2686,7 +2686,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   // A random living foe not already struck this sweep (chain cleaves jump around).
   _randomLivingFoe(exclude) {
-    const pool = this.livingEnemies().filter(x => !exclude.has(x.uid));
+    const pool = this.livingEnemies().filter(x => !exclude.has(x.uid) && !x.summoned);   // never chain onto a summoned ally
     return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
   },
   // Play ONE report for the whole cleave sweep — a chain shouldn't machine-gun a
@@ -2716,7 +2716,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // target is airborne, redirect to a grounded foe; if EVERYTHING flies, hand
     // the turn to the normal attack (its backup crossbow can at least shoot).
     if (!this._canReach(m, firstTarget)) {
-      const grounded = this.livingEnemies().filter(x => this._canReach(m, x));
+      const grounded = this.livingEnemies().filter(x => !x.summoned && this._canReach(m, x));
       if (!grounded.length) return this._playerAttack(m, firstTarget.uid);
       firstTarget = pick(grounded);
     }
@@ -2750,7 +2750,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (!keepGoing) break;
       // 2nd + chain targets are RANDOM — but only foes the blade can REACH
       // (a Great Cleave never chains up into a flyer).
-      const pool = this.livingEnemies().filter(x => !struck.has(x.uid) && this._canReach(m, x));
+      const pool = this.livingEnemies().filter(x => !x.summoned && !struck.has(x.uid) && this._canReach(m, x));   // chains sweep foes only, never summoned allies
       target = pool.length ? pick(pool) : null;
     }
     if (bits.length) this._note(`🪓 ${m.nickname} cleaves — ${bits.join(', ')}.${kills >= 3 ? ` ${kills} foes felled in one furious sweep!` : ''}`, null);

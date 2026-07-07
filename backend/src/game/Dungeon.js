@@ -757,6 +757,9 @@ class Dungeon {
     const rollN = (c) => { if (typeof c === 'number') return Math.max(1, c); const mm = /^(\d+)d(\d+)(?:\+(\d+))?$/.exec(String(c || '1')); return mm ? dRollN(+mm[1], +mm[2]) + (+mm[3] || 0) : 1; };
     const count = Math.max(1, rollN(spec.count));
     const rounds = spec.rounds || Math.max(3, Math.ceil((m.level || 1)));   // ~rounds/level (PF1 summon duration); crumbles after
+    const cur = this.turnOrder[this.turnIdx];                          // the summoner's slot — they're acting right now (raw entry carries .init)
+    const casterInit = (cur && cur.init != null) ? cur.init : (dRoll(20) + 1);
+    const newTurns = [];
     for (let i = 0; i < count; i++) {
       const e = this._makeEnemy(MON[key], false, 0);
       e.name = MON[key].name;                 // no Elite/Boss prefix on a summon
@@ -765,8 +768,11 @@ class Dungeon {
       e.gold = 0;                             // a summon drops no loot
       e.align = fl.align; e.evil = true;      // summoned fiend/undead fights on the party's side but is still evil
       this.enemies.push(e);
-      this.turnOrder.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });   // acts from next slot onward
+      newTurns.push({ kind: 'enemy', id: e.uid, init: casterInit });   // shares the caster's initiative
     }
+    // PF1: a summon acts the moment it appears, on the SUMMONER'S initiative — splice it right after the caster's slot (this round + every round after), not at the end.
+    const at = ((this.turnIdx != null ? this.turnIdx : this.turnOrder.length - 1)) + 1;
+    this.turnOrder.splice(at, 0, ...newTurns);
     const nm = MON[key].name;
     const label = count > 1 ? `${count} ${nm}${/s$/.test(nm) ? '' : 's'}` : `a ${nm}`;
     this._note(`${ab.icon || '☠️'} ${m.nickname} ${fl.raise} — ${label} ${fl.join(count)}! (${rounds} rounds)`, ab.sound);
@@ -785,12 +791,18 @@ class Dungeon {
     const key = pick(valid);
     const rollN = (c) => { if (typeof c === 'number') return Math.max(1, c); const mm = /^(\d+)d(\d+)(?:\+(\d+))?$/.exec(String(c || '1')); return mm ? dRollN(+mm[1], +mm[2]) + (+mm[3] || 0) : 1; };
     const count = Math.max(1, rollN(spec.count));
+    const curE = this.turnOrder[this.turnIdx];                         // the enemy summoner's slot (acting now; raw entry carries .init)
+    const casterInitE = (curE && curE.init != null) ? curE.init : (dRoll(20) + 1);
+    const newTurnsE = [];
     for (let i = 0; i < count; i++) {
       const ne = this._makeEnemy(MON[key], false, 0);
       ne.flatFooted = false;   // clawed up ready to fight
       this.enemies.push(ne);
-      this.turnOrder.push({ kind: 'enemy', id: ne.uid, init: dRoll(20) + 1 });
+      newTurnsE.push({ kind: 'enemy', id: ne.uid, init: casterInitE });
     }
+    // PF1: reinforcements act on the summoner's initiative — splice in right after the caster (join THIS round), not at the tail.
+    const atE = ((this.turnIdx != null ? this.turnIdx : this.turnOrder.length - 1)) + 1;
+    this.turnOrder.splice(atE, 0, ...newTurnsE);
     const nm = MON[key].name;
     this._note(`${e.glyph} ${e.name} rasps a grave-rite — ${count > 1 ? `${count} ${nm}s` : `a ${nm}`} claw${count > 1 ? '' : 's'} up from the earth to fight!`, spec.sound || '/audio/spell_umbral_bolt.mp3', { side: 'enemy' });
     this._broadcast();
