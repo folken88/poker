@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.26 2026-07-07 CRITICAL HOTFIX — party dungeon runs were CRASHING players back to the poker
+//                     table (Josh, all day: "as soon as I open the door it kicks me back... I can
+//                     solo run but not with a team"). The v3.37.22 heroAI.js extraction left a bare
+//                     `Dungeon.BLASTER_OPENERS` in _botAbility; `Dungeon` isn't in scope inside the
+//                     mixin, so EVERY bot turn threw "ReferenceError: Dungeon is not defined" → an
+//                     uncaught exception killed the run. Solo worked (no bots → _botAbility never
+//                     ran). Fixed: reach the class static via this.constructor.BLASTER_OPENERS.
+//                     domtest + a live bot-turn smoke check now guard against it.
 //  3.37.25 2026-07-07 ORDER OF THE FLAME — the other three order deeds (beyond Glorious Challenge),
 //                     for Lord Gweyir. FOOLHARDY RUSH (L2): he charges in ready — +4 initiative and
 //                     never caught flat-footed at a room's start. DAUNTING SUCCESS (L8): a confirmed
@@ -643,4 +651,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.25' };
+module.exports = { VERSION: '3.37.26' };

@@ -357,7 +357,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     //     initiative (round 1) against foes of his level or weaker, he usually
     //     just opens with his biggest blast, hoping to end the fight before
     //     anyone needs buffing or healing. (A dying ally still trumps glory.)
-    if (this.round === 1 && Dungeon.BLASTER_OPENERS.has((m.playerId || '').toLowerCase())
+    if (this.round === 1 && this.constructor.BLASTER_OPENERS.has((m.playerId || '').toLowerCase())   // Dungeon static — reach it via this.constructor (the mixin has no `Dungeon` in scope; was a ReferenceError that crashed every bot turn → party runs booted to the poker table)
         && !anyDowned && topCR <= lvl && Math.random() < 0.65) {
       const b = bestBlast();
       if (b) return b;
