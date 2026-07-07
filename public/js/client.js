@@ -5344,19 +5344,20 @@
     const btn = document.getElementById('cropArtBtn');
     if (!btn) return;
     const CW = 190, CH = 200, SCALE = 2;              // true card size + editor magnification
-    let items = [], cur = -1, img = null, cover = 1, zoom = 1, ox = 0, oy = 0, dirty = false;
+    let items = [], cur = -1, img = null, cover = 1, zoom = 1, minZoom = 0.3, ox = 0, oy = 0, dirty = false;
     let root = null, edArt = null, trueArt = null, sel = null, saveBtn = null, nameEls = [];
     // ALWAYS edit the pristine ORIGINAL — the server serves the untouched .orig
     // (if a crop was ever baked) so re-cropping never compounds quality loss and
     // you can always zoom back out to the whole source image.
     const origUrl = (it) => '/api/croporig?kind=' + it.kind + '&name=' + encodeURIComponent(it.name);
     const clampPan = () => {
-      // Cover-only editor: at zoom >= 1 the image always fills the card, so clamp
-      // the pan so no gap ever shows — the in-game card always covers too, so a
-      // letterbox here would just be a lie about how the card actually looks.
+      // When the image is LARGER than the card (zoomed in past cover) clamp so no gap
+      // shows — it fills. When SMALLER (zoomed OUT to reframe — Tobias needs room to
+      // shrink a tight face and CENTER it) let it sit anywhere INSIDE the card; margins
+      // are fine and bake correctly. The allowed range flips sign gracefully at cover.
       const bw = img.naturalWidth * cover * zoom, bh = img.naturalHeight * cover * zoom;
-      ox = Math.min(0, Math.max(CW - bw, ox));
-      oy = Math.min(0, Math.max(CH - bh, oy));
+      ox = Math.min(Math.max(0, CW - bw), Math.max(Math.min(0, CW - bw), ox));
+      oy = Math.min(Math.max(0, CH - bh), Math.max(Math.min(0, CH - bh), oy));
     };
     const paint = () => {
       if (!img) return;
@@ -5376,11 +5377,15 @@
       img = new Image();
       img.onload = () => {
         cover = Math.max(CW / img.naturalWidth, CH / img.naturalHeight);   // background-size: cover
+        // Zoom FLOOR: you can now pull WAY back — below "cover", down to ~60% past the
+        // whole-image-fits point — so a tight face can be shrunk and CENTERED with breathing
+        // room (Tobias: "starts so zoomed in I can't center his face — relax these constraints").
+        const containZoom = Math.min(CW / img.naturalWidth, CH / img.naturalHeight) / cover;   // <=1: the image just fits inside the card
+        minZoom = Math.max(0.05, containZoom * 0.6);
         const g = it.geom;
         if (g && g.nw > 0) {
-          // RESTORE the last saved framing so re-cropping starts where you left off
-          // (not a reset to the whole image). Reconstruct zoom/pan from the normalized window.
-          zoom = Math.min(6, Math.max(1, (CW / (g.nw * img.naturalWidth)) / cover));
+          // RESTORE the last saved framing so re-cropping starts where you left off.
+          zoom = Math.min(6, Math.max(minZoom, (CW / (g.nw * img.naturalWidth)) / cover));
           const s = cover * zoom;
           ox = -(g.nx * img.naturalWidth) * s; oy = -(g.ny * img.naturalHeight) * s;
         } else {
@@ -5398,12 +5403,11 @@
       // crop, never downsample. `img` is always the pristine .orig, so re-cropping
       // never compounds. The server still keeps the .orig, so nothing is destroyed.
       const scale = cover * zoom;                                  // original px -> card px
-      const srcX = Math.max(0, -ox / scale), srcY = Math.max(0, -oy / scale);
-      const srcW = CW / scale, srcH = CH / scale;                  // card window in ORIGINAL px (already card aspect)
-      // Remember the FRAMING (normalized to the original's size) so reopening the editor
-      // restores this crop instead of resetting to the whole image (Tobias: "re-open it and
-      // it's uncropped again"). Sent to the server as a sidecar; purely cosmetic.
-      const geom = { nx: srcX / img.naturalWidth, ny: srcY / img.naturalHeight, nw: srcW / img.naturalWidth, nh: srcH / img.naturalHeight };
+      const winX = -ox / scale, winY = -oy / scale;                // card window's top-left in ORIGINAL px (goes NEGATIVE when zoomed out past the image edge)
+      const srcW = CW / scale, srcH = CH / scale;                  // card window in ORIGINAL px (always card aspect)
+      // Remember the FRAMING (normalized to the original) so reopening restores it (Tobias).
+      // winX/winY can be negative and nw/nh can exceed 1 when zoomed OUT — that's fine.
+      const geom = { nx: winX / img.naturalWidth, ny: winY / img.naturalHeight, nw: srcW / img.naturalWidth, nh: srcH / img.naturalHeight };
       const cap = 1000;                                            // bound the output long side
       const os = Math.min(1, cap / Math.max(srcW, srcH));
       const outW = Math.max(1, Math.round(srcW * os)), outH = Math.max(1, Math.round(srcH * os));
@@ -5411,7 +5415,11 @@
       c.width = outW; c.height = outH;
       const g = c.getContext('2d');
       g.imageSmoothingQuality = 'high';
-      g.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+      // Draw the WHOLE image into the card window by its DEST rect (not a clamped SOURCE
+      // rect). This bakes zoom-OUT correctly: the image lands scaled + positioned with
+      // transparent MARGINS around it (which read as the card's backdrop) instead of being
+      // stretched. Zoom-IN is unchanged — the image overflows the canvas and is clipped.
+      g.drawImage(img, -winX * os, -winY * os, img.naturalWidth * os, img.naturalHeight * os);
       const dataUrl = c.toDataURL('image/webp', 0.92);
       saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
       fetch('/api/cropsave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: it.kind, name: it.name, dataUrl, geom }) })
@@ -5451,7 +5459,7 @@
         '<div><div style="color:#888;font-size:.7rem;margin-bottom:4px">IN-GAME SIZE</div>' +
         '<div style="position:relative;width:' + CW + 'px;height:' + CH + 'px;border-radius:10px;overflow:hidden;border:1px solid rgba(217,176,106,.3);background:#4a4a4a">' +
         '<div id="cropTrueArt" style="position:absolute;inset:0;background-repeat:no-repeat"></div>' + cardChrome(1) + '</div>' +
-        '<div style="color:#666;font-size:.65rem;margin-top:6px;max-width:190px">Editor always shows the untouched original. Save bakes this framing at full resolution and keeps the original on the server — re-crop any image anytime, nothing is lost. Scroll = zoom IN, drag = reframe.</div></div></div></div>';
+        '<div style="color:#666;font-size:.65rem;margin-top:6px;max-width:190px">Editor always shows the untouched original. Save bakes this framing at full resolution and keeps the original on the server — re-crop any image anytime, nothing is lost. Scroll = zoom in OR out (pull back to center a tight face), drag = reframe.</div></div></div></div>';
       document.body.appendChild(root);
       sel = root.querySelector('#cropSel'); saveBtn = root.querySelector('#cropSave');
       edArt = root.querySelector('#cropEdArt'); trueArt = root.querySelector('#cropTrueArt');
@@ -5478,7 +5486,7 @@
         const r = ed.getBoundingClientRect();
         const px = (e.clientX - r.left) / SCALE, py = (e.clientY - r.top) / SCALE;   // cursor point in card coords
         const old = zoom;
-        zoom = Math.min(6, Math.max(1, zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));   // floor = cover (fill): zoom IN to crop tighter, pan to reframe. The game card always covers, so there's no zoom-out-to-letterbox
+        zoom = Math.min(6, Math.max(minZoom, zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));   // zoom IN to crop tighter, or OUT below cover to shrink a tight subject and center it with margins
         const f = (cover * zoom) / (cover * old);
         ox = px - (px - ox) * f; oy = py - (py - oy) * f;   // zoom about the cursor (tokenator-style)
         clampPan(); paint(); dirty = true;
