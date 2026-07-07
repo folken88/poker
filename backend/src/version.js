@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.13 2026-07-06 REESE NUMPAD, Josh's layout: bow functions on TOP, Imbued Shots in a
+//                     SUBMENU. The blind pad is now 1 = bow attack, 2 = Deadly Aim, 3 = Rapid
+//                     Shot, 4 = Bullseye Shot (just like a ranger), then 5 = IMBUED SHOTS — a
+//                     submenu that lists only the shots he can use (Shocking Grasp, Frigid
+//                     Touch, …); press a number to fire, Escape to back out. New shots slot in
+//                     as he levels, so the top of the pad never gets crammed. (Blind client
+//                     only; sighted buttons unchanged. Only reorders for a magus.)
 //  3.37.12 2026-07-06 BUGFIX — REESE'S IMBUED SHOTS FIRE AGAIN (Josh: "shocking grasp / frigid
 //                     touch are there but say no such attack exists"). The magus renames its
 //                     spellstrikes into FRESH objects on every _abilitiesFor call, so _kitState
@@ -535,4 +542,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.12' };
+module.exports = { VERSION: '3.37.13' };

@@ -842,6 +842,7 @@
   let _dunQueuedAttack = null; // blind dungeon: enemy uid chosen (Return in E-mode) to attack when your turn comes
   let _dunPrevMyTurn = false;  // edge-detect the start of the blind player's dungeon turn
   let _dunSbMode = false;      // blind dungeon: spellbook open (numbers pick a spell LEVEL, Tab cycles spells)
+  let _dunImbuedMode = false;  // blind dungeon: magus Imbued Shots submenu open (numbers fire a shot) — Josh's Reese layout
   let _dunMmMenu = null;       // blind dungeon: metamagic toggle menu open ([{key,name,adj,on}] or null) — numbers toggle
   let _sbpOpen = false;        // caster "🧠 Prepare ▾" spell-LOADOUT picker popover open/closed (sighted)
   let _sbpModel = null;        // fetched loadout model { spont, pool, caps, prepared|known } — shared by sighted panel + blind S menu
@@ -2219,18 +2220,31 @@
       // Spellbook order is ALPHABETICAL within each level (Josh: "no discernible
       // order... alphabetical just makes sense") — numbering follows this sort.
       const sbAt = (L) => spells.filter(s => s.slvl === L).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+      // The AVAILABLE magus Imbued Shots (spellstrikes) — pulled OUT of the top-level pad
+      // into their own submenu (Josh: "give me my main bow function on top, then submenus
+      // for the complex shit. I don't know how many imbued shots there'll be, so cramming
+      // them on top is a bad idea"). Locked ones don't appear until unlocked.
+      const imbued = (kit.abilities || []).filter(a => a.effect === 'spellstrike' && a.available !== false)
+        .map(a => ({ ab: a, slot: (a.slot != null ? a.slot : 0), label: a.name }));
       const blindActions = [{ kind: 'attack', label: kit.atwill?.name || 'Attack' }];
-      (kit.abilities || []).forEach((ab, i) => {   // class FEATURES only (spells live in the spellbook)
+      const feats = [];
+      (kit.abilities || []).forEach((ab, i) => {   // class FEATURES only (spells → spellbook, imbued shots → their submenu)
         if (ab.slvl != null) return;
-        // LEVEL-LOCKED abilities don't eat numpad numbers (Josh: Reese at L4 had his
-        // not-yet-usable Imbued Shots — Vampiric Touch, Forceful Strike, Polar Ray —
-        // burying Rapid Shot & Bullseye Shot off the pad). Skipping them here surfaces
-        // the abilities he can actually use. They still show in the sighted bar (greyed
-        // 🔒) and the X progression view, so nothing is hidden — they just don't clutter
-        // the blind action numbers until unlocked. General win for every character.
+        if (ab.effect === 'spellstrike') return;   // Imbued Shots live in their own submenu (below)
+        // LEVEL-LOCKED abilities don't eat numpad numbers (they still show in the sighted
+        // bar greyed 🔒 and in the X progression). General win for every character.
         if (ab.available === false) return;
-        blindActions.push({ kind: 'ability', ab, slot: (ab.slot != null ? ab.slot : i), label: ab.name });
+        feats.push({ kind: 'ability', ab, slot: (ab.slot != null ? ab.slot : i), label: ab.name });
       });
+      // BOW-FIRST ordering (Josh's Reese layout): Deadly Aim, then Rapid Shot, then Bullseye
+      // Shot, then anything else — but ONLY when the hero has Imbued Shots (a magus), so no
+      // other class's feature numbering shifts. Sort is stable, so unranked feats keep order.
+      if (imbued.length) {
+        const RANK = { deadlyaim: 0, powerattack: 0, piranhastrike: 0, rapidshot: 1, bullseye: 2 };
+        feats.sort((a, b) => (RANK[a.ab.key] ?? 9) - (RANK[b.ab.key] ?? 9));
+      }
+      feats.forEach(f => blindActions.push(f));
+      if (imbued.length) blindActions.push({ kind: 'imbued', label: 'Imbued Shots' });   // magus submenu — numpad opens it, then a number fires a shot
       if (hasSpellbook) blindActions.push({ kind: 'spellbook', label: 'Spellbook' });
       // Fire a spell with sensible auto-targeting: single-enemy spells hit your
       // locked target (or the deadliest foe); AoE hits everything; self/ally let
@@ -2359,6 +2373,27 @@
             || (sp.target === 'enemy' && sp.effect !== 'missile' && aliveE.length > 1);
           if (!willPrompt) sayU(`Casting ${sp.name}.`);
           castSpell(sp);
+          return;
+        }
+        // Any other key falls through to the normal handlers below.
+      }
+      // ----- Imbued Shots sub-mode (magus — Josh's Reese layout) ----------------
+      //   A flat, single-level submenu: numbers 1..N fire the unlocked Imbued Shots
+      //   (Shocking Grasp, Frigid Touch, …); Escape (or 0) backs out. castSpell handles
+      //   the target prompt just like a spell. Only the shots you can USE are listed, so
+      //   the numbering is short and stable — new ones slot in as Reese levels.
+      if (_dunImbuedMode) {
+        if (e.key === 'Escape' || k === '0') { e.preventDefault(); _dunImbuedMode = false; sayU('Imbued shots closed.'); return; }
+        if (/^[1-9]$/.test(k)) {
+          e.preventDefault();
+          const n = parseInt(k, 10);
+          const sh = imbued[n - 1];
+          if (!sh) { sayU(`No imbued shot ${n}.`); return; }
+          if (!myTurn) { sayU('Not your turn.'); return; }
+          _dunImbuedMode = false;
+          const willPrompt = sh.ab.target === 'enemy' && sh.ab.effect !== 'missile' && aliveE.length > 1;
+          if (!willPrompt) sayU(`Firing ${sh.ab.name}.`);
+          castSpell(sh.ab);
           return;
         }
         // Any other key falls through to the normal handlers below.
@@ -2622,6 +2657,12 @@
           _dunSbMode = true; _dunSbLevel = null; _dunSbIdx = -1; _spellbookOpen = true;
           if (document.body.dataset.screen === 'dungeon') renderDungeon();
           sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level, then press a spell's number to cast it. Escape to close.`);
+          return;
+        }
+        if (act.kind === 'imbued') {   // magus Imbued Shots submenu (Josh's Reese layout)
+          if (!imbued.length) { sayU('No imbued shots available yet.'); return; }
+          _dunImbuedMode = true;
+          sayU('Imbued shots: ' + imbued.map((s, i) => `${i + 1} ${s.ab.name}`).join(', ') + '. Press a number to fire, Escape to close.');
           return;
         }
         if (!myTurn) { window.BlindMode.speak('Not your turn.', 'ambient'); return; }   // AMBIENT — never cut off the end-of-room report (Josh)
