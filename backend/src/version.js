@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.21 2026-07-07 REFACTOR (no behavior change): the SUMMONING system (_abSummon allied
+//                     summons + _enemySummon reinforcements) is extracted VERBATIM from
+//                     Dungeon.js into a new game/dungeon/summons.js mixin — the same factory-
+//                     mixin pattern as loot/serialize/enemyAI/abilities. Dungeon.js 2997→2923.
+//                     First of two seams this pass (heroAI.js next). domtest +2.
 //  3.37.20 2026-07-07 SUMMON FIXES (Tobias). (1) NO MORE FRIENDLY FIRE: a Cleave / Great Cleave
 //                     chain can no longer sweep into your OWN summoned allies, and neither can
 //                     a Haste bonus swing, a spiritual weapon's re-acquire, or any attack that
@@ -601,4 +606,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.20' };
+module.exports = { VERSION: '3.37.21' };
