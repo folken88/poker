@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.24 2026-07-07 THEURGE is now human-selectable + RADIANCE at the poker table. (1) The
+//                     THEURGE (Celeb's dual arcane+divine prepared caster) is added to the class
+//                     dropdown — its kit (the cleric+wizard spell union, side/dcStat-tagged) was
+//                     hard-gated to playerId 'celeb'; generalized to ANY cls==='theurge' (dropped
+//                     the char:'celeb' tag, celebKit→theurgeKit, all the celeb slot/synthesis gates
+//                     → cls gates), so a human theurge gets the full dual spellbook + Spell Synthesis.
+//                     Cavalier was already selectable (rides the fighter kit + Challenge). (2) RADIANCE
+//                     now needles Vaughan's BIG BETS at the poker table — "Can you actually cover
+//                     that, Vaughan?" (her canned line + Tresdin voice via banter.radianceQuip),
+//                     completing her miss/drop/undead/big-bet set. domtest +6.
 //  3.37.23 2026-07-07 RADIANCE SPEAKS — Vaughan's SENTIENT scimitar (voice "Tresdin") is now a
 //                     second personality of Vaughan: on his events she pipes up in her own voice,
 //                     shown as "💬 Radiance:" and heard by the table (in-fiction only Vaughan hears
@@ -624,4 +634,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.23' };
+module.exports = { VERSION: '3.37.24' };

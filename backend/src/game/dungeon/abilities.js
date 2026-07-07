@@ -49,22 +49,23 @@ const DOMAIN_POWERS = {
   copycat:    { key: 'dom_trickery', name: 'Copycat', icon: '🎭', cost: 'room', effect: 'mirrorimage', target: 'self', uses: DOM_USES, sound: '/audio/spell_invisibility.mp3', desc: 'Domain (Trickery): conjure shimmering mirror-image decoys that soak incoming attacks (Copycat).' },
 };
 
-// Celeb the THEURGE (Kobold Press, Open Design — Tobias 2026-07-04): a dual
-// arcane+divine PREPARED caster with the WIDEST spell selection in the game. His
+// THE THEURGE KIT (Kobold Press, Open Design — Tobias 2026-07-04): a dual
+// arcane+divine PREPARED caster with the WIDEST spell selection in the game. The
 // kit is the UNION of the real cleric (divine, WIS-based DCs) and wizard (arcane,
 // INT-based DCs) kits — shallow COPIES tagged with `dcStat` (which ability score
 // sets each save DC — see _spellDC) and `side` ('divine'/'arcane', so Spell
-// Synthesis can pair one of each). No channel, no domains — he isn't a cleric,
-// so those grant paths simply never fire for him. Built once and memoized, but it
-// reads kitFor() live so it tracks any future kit edit. Buff/dispel-forward by the
-// nature of the source kits (Tim played him to buff the party + peel enemy magic).
+// Synthesis can pair one of each). No channel, no domains — a theurge isn't a
+// cleric, so those grant paths never fire. Built once and memoized, but it reads
+// kitFor() live so it tracks any future kit edit. Buff/dispel-forward by the nature
+// of the source kits. Used by ANY cls==='theurge' (Celeb is the archetype; humans
+// may now pick theurge) — NOT char-gated, so it works for every theurge.
 // Metamagic auto-variants and martial feat-buffs are filtered out.
-const CELEB_SKIP = new Set(['channel', 'deadlyaim', 'powerattack', 'magicmissile_quick', 'fireball_int', 'fireball_emp', 'scorch_emp', 'cone_max', 'disint_max']);   // no channel (he isn't a cleric); drop metamagic auto-variants + martial feat-buffs
-let _celebKit = null;
-function celebKit() {
-  if (_celebKit) return _celebKit;
-  const cleric = kitFor('cleric').abilities.filter(a => !CELEB_SKIP.has(a.key));
-  const wizard = kitFor('wizard').abilities.filter(a => !CELEB_SKIP.has(a.key));
+const THEURGE_SKIP = new Set(['channel', 'deadlyaim', 'powerattack', 'magicmissile_quick', 'fireball_int', 'fireball_emp', 'scorch_emp', 'cone_max', 'disint_max']);   // no channel (he isn't a cleric); drop metamagic auto-variants + martial feat-buffs
+let _theurgeKit = null;
+function theurgeKit() {
+  if (_theurgeKit) return _theurgeKit;
+  const cleric = kitFor('cleric').abilities.filter(a => !THEURGE_SKIP.has(a.key));
+  const wizard = kitFor('wizard').abilities.filter(a => !THEURGE_SKIP.has(a.key));
   const cKeys = new Set(cleric.map(a => a.key)), wKeys = new Set(wizard.map(a => a.key));
   const seen = new Set(), out = [];
   const add = (a, dfltSide) => {
@@ -73,12 +74,12 @@ function celebKit() {
     // Person…) is 'both' — it fills whichever HALF of his prepared casts he needs,
     // and its save DC rides his BETTER casting stat ("counts however he needs it").
     const both = cKeys.has(a.key) && wKeys.has(a.key);
-    out.push({ ...a, side: both ? 'both' : dfltSide, dcStat: both ? 'best' : (dfltSide === 'arcane' ? 'int' : 'wis'), char: 'celeb' });
+    out.push({ ...a, side: both ? 'both' : dfltSide, dcStat: both ? 'best' : (dfltSide === 'arcane' ? 'int' : 'wis') });   // no char gate — any theurge (Celeb or a human) may cast these
   };
   for (const a of cleric) add(a, 'divine');
   for (const a of wizard) add(a, 'arcane');
-  _celebKit = out;
-  return _celebKit;
+  _theurgeKit = out;
+  return _theurgeKit;
 }
 
 // SLAYER — Studied Target (ACG). A SWIFT-action mark (freeAction, no use limit):
@@ -167,7 +168,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // Dropping a Wild Shape form you're already in is FREE (no use spent, always allowed).
     const formOff = ab.effect === 'form' && ab.form && m.form && m.form.key === ab.form.key;
     if (ab.cost === 'pool' && (m.spellPool || 0) <= 0) return { ok: false, error: 'out of spell casts this room' };
-    if (ab.cost === 'slot' && !this._slotAvail(m, ab, ab.slvl)) return { ok: false, error: (m.playerId === 'celeb' && ab.side && ab.side !== 'both') ? `no ${ab.side} level-${ab.slvl || '?'} casts left this room` : `no level-${ab.slvl || '?'} spell slots left this room` };
+    if (ab.cost === 'slot' && !this._slotAvail(m, ab, ab.slvl)) return { ok: false, error: (m.cls === 'theurge' && ab.side && ab.side !== 'both') ? `no ${ab.side} level-${ab.slvl || '?'} casts left this room` : `no level-${ab.slvl || '?'} spell slots left this room` };
     if (ab.cost === 'room' && !formOff && ((m.abilityUses && m.abilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is spent for this room` };
     if (ab.cost === 'run'  && ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) <= 0) return { ok: false, error: `${ab.name} is already cast for this dungeon` };
     // Don't waste Sleep/Fascinate on a foe that's already asleep OR fascinated —
@@ -452,7 +453,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         }
         // THEURGE: Celeb has no per-day prep sheet in this engine — his whole
         // curated dual list is always "prepared" (slots still gate uses/level).
-        if (m.playerId === 'celeb') for (const a of celebKit()) if (a.slvl != null && a.slvl >= 1) m.castableKeys.add(a.key);
+        if (m.cls === 'theurge') for (const a of theurgeKit()) if (a.slvl != null && a.slvl >= 1) m.castableKeys.add(a.key);
         // CHAR-GATED signature spells (Draymus's necromancy & Summon Undead) are their
         // character's DEFINING kit — always castable by them, not subject to the
         // prepared-list default (the char gate is still enforced by _charAllows at
@@ -476,19 +477,19 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // else uses the single shared pool (m.slots) — these helpers are transparent for
   // them, so non-theurge behaviour is byte-identical to before.
   _splitTheurgeSlots(m) {
-    if (m.playerId !== 'celeb' || !m.slots) { m.arcSlots = null; m.divSlots = null; return; }
+    if (m.cls !== 'theurge' || !m.slots) { m.arcSlots = null; m.divSlots = null; return; }
     m.arcSlots = {}; m.divSlots = {};
     for (const L of Object.keys(m.slots)) { const n = m.slots[L] || 0; m.arcSlots[L] = Math.ceil(n / 2); m.divSlots[L] = Math.floor(n / 2); }   // odd extra → arcane
   },
   _slotAvail(m, ab, L) {
-    if (m.playerId !== 'celeb' || !m.arcSlots) return (((m.slots && m.slots[L]) || 0) > 0);
+    if (m.cls !== 'theurge' || !m.arcSlots) return (((m.slots && m.slots[L]) || 0) > 0);
     const a = m.arcSlots[L] || 0, d = m.divSlots[L] || 0, side = ab && ab.side;
     if (side === 'arcane') return a > 0;
     if (side === 'divine') return d > 0;
     return (a + d) > 0;   // 'both' / untagged — either half
   },
   _spendSlot(m, ab, L) {
-    if (m.playerId !== 'celeb' || !m.arcSlots) { m.slots = m.slots || {}; m.slots[L] = Math.max(0, (m.slots[L] || 0) - 1); return; }
+    if (m.cls !== 'theurge' || !m.arcSlots) { m.slots = m.slots || {}; m.slots[L] = Math.max(0, (m.slots[L] || 0) - 1); return; }
     const side = ab && ab.side, a = m.arcSlots[L] || 0, d = m.divSlots[L] || 0;
     if (side === 'arcane') m.arcSlots[L] = Math.max(0, a - 1);
     else if (side === 'divine') m.divSlots[L] = Math.max(0, d - 1);
@@ -546,7 +547,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // entries append AFTER the kit so slot indices (the action payload contract
   // with the client) stay stable within a room; picks only change at the door.
   _abilitiesFor(m) {
-    if (m.playerId === 'celeb') return celebKit();   // THEURGE: full arcane+divine union, no class kit / no domain powers
+    if (m.cls === 'theurge') return theurgeKit();   // THEURGE: full arcane+divine union, no class kit / no domain powers
     const kit = kitFor(m.cls).abilities;
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
     if (m.cls === 'slayer') list = list.concat(STUDIED_TARGET);   // SLAYER: swift Studied Target mark (ACG)
@@ -590,7 +591,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
     m.slots = slotsFor(m.cls, m.level || 1, m.castingMod);   // per-spell-level slots (base + casting-stat bonus + domain/school)
     this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
-    if (m.playerId === 'celeb') { const L = m.level || 1; m.synthUses = L >= 17 ? 3 : L >= 11 ? 2 : L >= 5 ? 1 : 0; }   // SPELL SYNTHESIS (Kobold Press): usable 1/2/3 times per room at L5/11/17
+    if (m.cls === 'theurge') { const L = m.level || 1; m.synthUses = L >= 17 ? 3 : L >= 11 ? 2 : L >= 5 ? 1 : 0; }   // SPELL SYNTHESIS (Kobold Press): usable 1/2/3 times per room at L5/11/17
     if (m.cls === 'slayer') { m.studiedId = null; m.studiedN = 0; }   // SLAYER: Studied Target mark clears each room (fresh foes)
     if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; m.gloriousN = 0; m.gloriousAC = 0; }   // CAVALIER: Challenge oath (and Order of the Flame's glorious-challenge stack) clear each room
     m.abilityUses = {};
@@ -1005,9 +1006,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _loadoutModel(m) {
     const spont = isSpontaneous(m.cls);
     // THEURGE (Celeb): the loadout system has no 'theurge' KIT, so his pool is his
-    // injected dual kit (celebKit) rather than kitSpells(cls) — otherwise the
+    // injected dual kit (theurgeKit) rather than kitSpells(cls) — otherwise the
     // Spellbook shows an empty list at every level.
-    const src = (m.playerId === 'celeb') ? celebKit().filter(ab => ab.slvl != null && ab.slvl >= 1) : loadouts.kitSpells(m.cls).filter(ab => this._charAllows(ab, m));
+    const src = (m.cls === 'theurge') ? theurgeKit().filter(ab => ab.slvl != null && ab.slvl >= 1) : loadouts.kitSpells(m.cls).filter(ab => this._charAllows(ab, m));
     const pool = src
       .filter(ab => (m.level || 1) >= (ab.minLevel || 1))   // only spells THIS character can cast at their level
       .map(ab => ({ key: ab.key, name: ab.name, icon: ab.icon || '✨', slvl: ab.slvl }));
@@ -1023,7 +1024,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // level's cap with strays. (View-only here; a toggle persists the clean map.)
   _loadoutRebucket(m, prep) {
     const bySlvl = {};
-    for (const s of (m.playerId === 'celeb' ? celebKit() : loadouts.kitSpells(m.cls))) if (s.slvl != null) bySlvl[s.key] = String(s.slvl);
+    for (const s of (m.cls === 'theurge' ? theurgeKit() : loadouts.kitSpells(m.cls))) if (s.slvl != null) bySlvl[s.key] = String(s.slvl);
     const caps = slotsFor(m.cls, m.level || 1, m.castingMod) || {};
     const out = {};
     for (const arr of Object.values(prep || {})) {

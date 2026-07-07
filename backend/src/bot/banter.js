@@ -1137,4 +1137,20 @@ function _refreshLineNames(table) {
   } catch (_) { /* keep whatever name set we had */ }
 }
 
-module.exports = { maybeSpeak, detectAddressedBot, dungeonLine, CHARACTER_FLAVOR };
+// RADIANCE at the POKER TABLE — her quip about Vaughan's play (e.g. a big bet). Canned line
+// (her scripted voice is the whole point) + Tresdin synth; no LLM, no dungeon framing. Returns
+// { line, audio, audioMime } or null. Table.js speaks it via table.chat('banter', …) when
+// Vaughan shoves big. wantVoice gates the 11labs call (skip it if nobody's listening).
+async function radianceQuip(eventType, wantVoice = true) {
+  const sig = (SIGNATURE_LINES.Radiance || {})[eventType];
+  if (!sig || !sig.length) return null;
+  const line = stripAudioTags(sig[Math.floor(Math.random() * sig.length)]);
+  let audio = null;
+  if (wantVoice && elevenlabs.ENABLED) {
+    const voiceId = voiceFor('Radiance');
+    if (voiceId) { try { audio = await elevenlabs.synthesize(speakable(line), voiceId, settingsFor('Radiance')); } catch (_) {} }
+  }
+  return { line, audio, audioMime: 'audio/mpeg' };
+}
+
+module.exports = { maybeSpeak, detectAddressedBot, dungeonLine, radianceQuip, CHARACTER_FLAVOR };

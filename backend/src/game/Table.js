@@ -809,6 +809,14 @@ class Table {
               ? `${nick} just put in a big raise — real pressure on the table.`
               : `${nick} just made a big call to stay in a serious pot.`;
           banter.maybeSpeak(this, { kind: action, description: desc, actorIds: [playerId], prob: 0.2 });
+          // RADIANCE — Vaughan's sentient blade needles his big bet ("Can you actually cover
+          // that, Vaughan?"). She's not a seat, so she rides her own quip path (canned line +
+          // Tresdin voice), shown as "💬 Radiance:" like any table banter. Only when VAUGHAN shoves.
+          if (nick === 'Vaughan' && Math.random() < 0.5) {
+            banter.radianceQuip('radiance_bigbet', this.anyVoiceListener()).then(res => {
+              if (res && res.line) this.chat('banter', `💬 Radiance: ${res.line}`, res.audio ? { audio: res.audio, audioMime: res.audioMime } : null);
+            }).catch(() => {});
+          }
         } else if (action === 'check' || (action === 'call' && committed <= this.bigBlind * 2)) {
           // SOCIAL table talk — a quiet opening check or small/routine call is a fine
           // moment for light banter ABOUT THE PERSON: a greeting or needle, NOT the bet.
