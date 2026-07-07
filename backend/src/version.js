@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.18 2026-07-07 DRAYMUS ART: the dhampir necromancer wears his real portrait now
+//                     (dhampir_draymus_mortiar_necromancer2.webp) instead of a tiny token — and,
+//                     like Femmik before him, he was MISSING from the portraits manifest, so his
+//                     card never resolved the full art. Swapped the portrait + token and added
+//                     "draymus-necromancer" to the manifest. (Static art.)
 //  3.37.17 2026-07-06 GLORIOUS CHALLENGE is now a BUTTON (Tobias). Select a foe → Glorious
 //                     Challenge → Lord Gweyir CHALLENGES it AND strikes at once (you hear the
 //                     burning battle-shout, then his estoc). Drop the foe and the stack GROWS
@@ -577,4 +582,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.17' };
+module.exports = { VERSION: '3.37.18' };
