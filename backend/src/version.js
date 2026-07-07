@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.17 2026-07-06 GLORIOUS CHALLENGE is now a BUTTON (Tobias). Select a foe → Glorious
+//                     Challenge → Lord Gweyir CHALLENGES it AND strikes at once (you hear the
+//                     burning battle-shout, then his estoc). Drop the foe and the stack GROWS
+//                     for next turn (+2 dmg / −2 AC per consecutive KILL this room). It's FREE &
+//                     unlimited, and FODDER counts — pick off the weak to pump the Flame a few
+//                     times, then loose the accumulated bonus on a real threat. Bot-Gweyir does
+//                     exactly that (targets the weakest foe to keep the streak rolling). Both the
+//                     hero button and the sahuagin prince now roar draugr_shout03_burning.mp3 on a
+//                     glorious challenge. domtest +2.
 //  3.37.16 2026-07-06 NEW AI-HERO LORD GWEYIR — an elf CAVALIER of the ORDER OF THE FLAME (a
 //                     former Josh PC). A DEX duelist: his ESTOC (2d4, 18-20 thrusting blade)
 //                     rides his Dexterity (finesse2h). His order brings the GLORIOUS CHALLENGE
@@ -568,4 +577,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.16' };
+module.exports = { VERSION: '3.37.17' };

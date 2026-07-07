@@ -311,7 +311,7 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
       // design: a prince left to carve through the party becomes a runaway threat.
       if (target.hp <= 0 && e.gloriousChallenge) {
         e.gloriousN = (e.gloriousN || 0) + 1;
-        this._note(`🔥 ${e.glyph} ${e.name} bellows a GLORIOUS CHALLENGE over ${target.nickname} — its bloodlust swells! (Order of the Flame: +${2 * e.gloriousN} damage, −${2 * e.gloriousN} AC — cut it down FAST.)`, null, { side: 'enemy' });
+        this._note(`🔥 ${e.glyph} ${e.name} bellows a GLORIOUS CHALLENGE over ${target.nickname} — its bloodlust swells! (Order of the Flame: +${2 * e.gloriousN} damage, −${2 * e.gloriousN} AC — cut it down FAST.)`, '/audio/draugr_shout03_burning.mp3', { side: 'enemy' });
       }
       if (target.hp <= -10) { this._memberDown(target); this._echoToTable(r.sound); return; }   // dead at −10
       if (target.hp <= 0)   { this._downMember(target); this._echoToTable(r.sound); return; }    // 0..−9 = down/dying

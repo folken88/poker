@@ -1771,6 +1771,17 @@ class Dungeon {
         if (prey) { const r = this._useAbility(m, tripSlot, { targetUid: prey.uid }); if (r && r.ok) { this._hasteBonus(m); return; } }
       }
     }
+    // LORD GWEYIR (Order of the Flame): every turn he GLORIOUS-CHALLENGES + strikes in one motion.
+    // He picks the WEAKEST living foe — fast kills keep the streak rolling, so he pumps the stack on
+    // fodder before it lands, monstrously, on a real threat. Each kill compounds his +damage/−AC.
+    if ((m.playerId || '').toLowerCase() === 'lord gweyir') {
+      const gcSlot = this._abilitiesFor(m).findIndex(ab => ab.effect === 'gloriouschallenge');
+      if (gcSlot >= 0) {
+        const prey = foes.filter(e => e.hp > 0 && this._canReach(m, e)).sort((a, b) => a.hp - b.hp)[0]   // weakest reachable first (build the streak)
+                  || foes.filter(e => e.hp > 0).sort((a, b) => a.hp - b.hp)[0];
+        if (prey) { const r = this._useAbility(m, gcSlot, { targetUid: prey.uid }); if (r && r.ok) { this._hasteBonus(m); return; } }
+      }
+    }
     // SLAYER auto-STUDIES its prey (Studied Target is a swift/free action): mark the
     // foe it's about to fight so its attacks land the +N insight bonus. Re-mark when
     // the old mark is dead or gone.
@@ -1778,27 +1789,13 @@ class Dungeon {
       const prey = this._preferredFoe(m, foes);
       if (prey) { m.studiedId = prey.uid; m.studiedN = 1 + Math.floor((m.level || 1) / 5); this._note(`🎯 ${m.nickname} studies ${prey.name} — marking it for the kill.`); }
     }
-    // CAVALIER auto-CHALLENGES its prey. A NORMAL challenge is room-limited (costs a use) and
-    // grants +level damage vs the foe. Lord Gweyir's ORDER OF THE FLAME adds a GLORIOUS
-    // CHALLENGE: when his current quarry FALLS, he roars a fresh (FREE) challenge at the next
-    // foe, and each CONSECUTIVE glorious challenge this room stacks +2 damage AND −2 AC (he
-    // fights ever more recklessly). Compounds into a terror on a kill streak; resets per room.
-    if (m.cls === 'cavalier') {
-      const flameCav = (m.playerId || '').toLowerCase() === 'lord gweyir';   // Order of the Flame
-      const challengeGone = m.challengedId != null && !foes.some(e => e.uid === m.challengedId && e.hp > 0);
-      if (flameCav && challengeGone) {
-        const prey = this._preferredFoe(m, foes);
-        if (prey) {
-          m.gloriousN = (m.gloriousN || 0) + 1;
-          m.challengedId = prey.uid;
-          m.challengeN = (m.level || 1) + 2 * m.gloriousN;   // base challenge + morale bonus (2× consecutive glorious challenges)
-          m.gloriousAC = 2 * m.gloriousN;                    // recklessness: −2 AC per glorious challenge (see _acPenalty)
-          this._note(`🔥 ${m.nickname} bellows a GLORIOUS CHALLENGE at ${prey.name} — the Order of the Flame's fury swells! (+${2 * m.gloriousN} damage, −${2 * m.gloriousN} AC — free, and it keeps stacking as he kills.)`);
-        }
-      } else if ((m.challengedId == null || challengeGone) && ((m.abilityUses && m.abilityUses.challenge) || 0) > 0) {
-        const prey = this._preferredFoe(m, foes);
-        if (prey) { m.challengedId = prey.uid; m.challengeN = m.level || 1; m.abilityUses.challenge = Math.max(0, (m.abilityUses.challenge || 0) - 1); this._note(`⚔️ ${m.nickname} challenges ${prey.name} — sworn to cut it down (+${m.challengeN} damage against it).`); }
-      }
+    // CAVALIER auto-CHALLENGES its prey when it has a Challenge use left (room-cost, limited):
+    // swear the +level-damage oath on the foe it's about to fight, re-swear when the old quarry
+    // is dead and a use remains. (Order of the Flame's Gweyir uses his GLORIOUS CHALLENGE
+    // ability instead — handled up in the flame-cavalier hook, which returns before this.)
+    if (m.cls === 'cavalier' && (m.challengedId == null || !foes.some(e => e.uid === m.challengedId && e.hp > 0)) && ((m.abilityUses && m.abilityUses.challenge) || 0) > 0) {
+      const prey = this._preferredFoe(m, foes);
+      if (prey) { m.challengedId = prey.uid; m.challengeN = m.level || 1; m.abilityUses.challenge = Math.max(0, (m.abilityUses.challenge || 0) - 1); this._note(`⚔️ ${m.nickname} challenges ${prey.name} — sworn to cut it down (+${m.challengeN} damage against it).`); }
     }
     // SPELL SYNTHESIS (Celeb the Theurge — Kobold Press): a limited number of
     // times per room (1/2/3 at L5/11/17) he casts ONE arcane + ONE divine spell in

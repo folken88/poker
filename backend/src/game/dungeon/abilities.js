@@ -93,6 +93,10 @@ const STUDIED_TARGET = { key: 'studiedtarget', name: 'Studied Target', icon: '�
 // challengeN). A ROOM-cost ability (uses scale: 1 + 1 per 4 levels), so it's a
 // limited, focused kill-order (unlike the slayer's at-will Studied Target).
 const CHALLENGE = { key: 'challenge', name: 'Challenge', icon: '⚔️', cost: 'room', uses: (lvl) => 1 + Math.floor(((lvl || 1) - 1) / 4), effect: 'challenge', target: 'enemy', sound: '/audio/taunt_predator.mp3', desc: 'A cavalier\'s oath: name ONE foe your quarry — every strike you land on it this room deals +your level in bonus damage. Uses per room = 1 + 1 per 4 levels.' };
+// ORDER OF THE FLAME (Lord Gweyir) — a FREE, unlimited challenge-and-strike in one. Char-gated;
+// applies his CURRENT glory stack (+2×N damage / −2×N AC), then attacks; a KILL grows the stack
+// for next turn. Chain kills (fodder is fair game!) to pump it, then unleash on a real threat.
+const GLORIOUS_CHALLENGE = { key: 'gloriouschallenge', name: 'Glorious Challenge', icon: '🔥', cost: 'free', effect: 'gloriouschallenge', target: 'enemy', sound: '/audio/draugr_shout03_burning.mp3', char: 'Lord Gweyir', desc: 'ORDER OF THE FLAME: SELECT a foe, then Glorious Challenge to challenge it AND strike at once. Deals +2 damage / takes −2 AC per KILL you\'ve strung together this room (it compounds). Drop the foe and the bonus grows for next turn. Free & unlimited — pick off the weak to build the Flame, then loose it on the mighty.' };
 
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
@@ -314,6 +318,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       forcepush:   () => this._abForcePush(m, ab, payload),
       studytarget: () => this._abStudyTarget(m, ab, payload),
       challenge: () => this._abChallenge(m, ab, payload),
+      gloriouschallenge: () => this._abGloriousChallenge(m, ab, payload),
       masscharm:   () => this._abMassCharm(m, ab, payload),
       exhaust:     () => this._abExhaust(m, ab, payload),
       prismatic:   () => this._abPrismatic(m, ab, payload),
@@ -545,7 +550,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const kit = kitFor(m.cls).abilities;
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
     if (m.cls === 'slayer') list = list.concat(STUDIED_TARGET);   // SLAYER: swift Studied Target mark (ACG)
-    if (m.cls === 'cavalier') list = list.concat(CHALLENGE);      // CAVALIER: the Challenge oath (+level damage vs one foe)
+    if (m.cls === 'cavalier') list = list.concat(CHALLENGE, GLORIOUS_CHALLENGE);   // CAVALIER: the Challenge oath (+level damage vs one foe); GLORIOUS_CHALLENGE is char-gated (Lord Gweyir / Order of the Flame) via _charAllows
     // MAGUS: name each Spell Strike by its DELIVERY — a ranged magus (Reese's bow)
     // fires it as an IMBUED SHOT; a melee magus channels it as a SPELL STRIKE. Copy
     // the ability so we never mutate the shared kit. (Same mechanic either way — the
@@ -1909,6 +1914,23 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.challengeN = m.level || 1;
     this._note(`${ab.icon} ${m.nickname} issues a CAVALIER'S CHALLENGE against ${e.name} — sworn to cut it down: +${m.challengeN} damage on every blow against it this room.`, ab.sound);
     this._echoToTable(ab.sound);
+  },
+  // GLORIOUS CHALLENGE (Order of the Flame — Lord Gweyir): ONE action that challenges a foe AND
+  // strikes it at once. Applies his CURRENT glory stack (+2×N damage via challengeN, −2×N AC via
+  // gloriousAC), roars the burning shout, then attacks; if the blow FELLS the quarry, the stack
+  // grows by one for next turn. FREE and unlimited — chain kills (fodder counts!) to pump it, then
+  // loose the accumulated bonus on a real threat. Works identically for a human (the button) and
+  // the bot (which targets the weakest foe to keep the streak rolling — see _allyAct).
+  _abGloriousChallenge(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    m.challengedId = e.uid;
+    m.challengeN = (m.level || 1) + 2 * (m.gloriousN || 0);   // base challenge + current glory (morale damage)
+    m.gloriousAC = 2 * (m.gloriousN || 0);                    // recklessness: −AC while the Flame burns (see _acPenalty)
+    const stacked = (m.gloriousN || 0) > 0;
+    this._note(`🔥 ${m.nickname} bellows a GLORIOUS CHALLENGE at ${e.name}${stacked ? ` — the Flame ROARS (+${2 * m.gloriousN} damage, −${2 * m.gloriousN} AC)!` : ' — the Order of the Flame awakens!'}`, ab.sound);
+    this._echoToTable(ab.sound);
+    this._basicAttack(m, e.uid);   // ...and strike immediately (plays his estoc's attack sound after the shout)
+    if (e.hp <= 0) { m.gloriousN = (m.gloriousN || 0) + 1; this._note(`🔥 ${m.nickname} stands triumphant over ${e.name} — GLORIOUS! The Flame swells to ${m.gloriousN}. (Unleash it again next turn.)`); }
   },
   // Charm Person — a living foe, Will save or CHARMED: it stops attacking the
   // party (only tends its own side) until a hero's blow snaps it out. Mindless
