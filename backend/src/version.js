@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.28 2026-07-08 REBOOT NOTES (Tobias): on startup the server now posts the CURRENT VERSION plus a
+//                     one-line summary of what changed into the poker table chat — automatically, from
+//                     the new HEADLINE field in version.js (no DEPLOY_NOTE env needed; DEPLOY_NOTE still
+//                     overrides for a custom multi-line note). So every reboot tells the table what just
+//                     shipped. Bump HEADLINE with each version.
 //  3.37.27 2026-07-08 BLIND-MODE fix (Josh): the S key ("silence the line now reading") was nuking a
 //                     whole SLEW of reports at once instead of one at a time — e.g. at a dungeon's
 //                     end, skipping the combat line ALSO killed the trailing XP + gold summary. Cause:
@@ -659,4 +664,9 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.27' };
+// HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
+// posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
+// each version bump; keep it player-facing and short (Tobias 2026-07-08).
+const VERSION = '3.37.28';
+const HEADLINE = 'The game now announces itself: on every reboot it drops the version and a one-line note about what just changed into table chat.';
+module.exports = { VERSION, HEADLINE };

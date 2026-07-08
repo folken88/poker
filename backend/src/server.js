@@ -23,7 +23,7 @@ const _json4k = express.json({ limit: '4kb' });
 app.use((req, res, next) => (req.path === '/api/cropsave' ? next() : _json4k(req, res, next)));   // cropsave carries an IMAGE — its route mounts its own 12mb parser (the 4kb gate would 413 it first)
 app.set('trust proxy', true);
 
-const { VERSION } = require('./version');   // ONE app semver — see src/version.js (bump per the living-docs mandate)
+const { VERSION, HEADLINE } = require('./version');   // ONE app semver + a one-line "what changed" HEADLINE (posted to table chat on reboot) — see src/version.js
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, version: VERSION, defaultStack: db.DEFAULT_STACK });
 });
@@ -277,22 +277,21 @@ server.listen(PORT, '0.0.0.0', () => {
   // Meyanda, the family Discord herald — a silent no-op unless data/.meyanda.env
   // enables her (so the testbed stays dark and her failures stay her own).
   try { require('./discord/meyanda').start(); } catch (e) { console.error('[meyanda]', e.message); }
-  // If this deploy carried a feature note (DEPLOY_NOTE env, set on the
-  // `docker compose up`), drop a short "what changed" line into the table
-  // chat. It lands in the chat log, so whoever is connected or joins after
-  // the restart sees it.
-  const note = (process.env.DEPLOY_NOTE || '').trim();
+  // REBOOT NOTE (Tobias 2026-07-08): every restart drops the current VERSION plus a
+  // succinct "what changed" line into the table chat, so whoever is connected or joins
+  // after the restart sees what just shipped. The default text is the HEADLINE kept in
+  // version.js (bumped each release); an optional DEPLOY_NOTE env overrides it with a
+  // custom multi-line note (split on newlines or " | "). Either way the VERSION heads
+  // the first line.
+  const note = (process.env.DEPLOY_NOTE || '').trim() || (HEADLINE || '').trim();
   if (note) {
-    // Post the COMPLETE notes — split into readable lines (on newlines or " | ")
-    // so a multi-point update isn't cut off. First line is headed "🔧 Update:",
-    // the rest are bulleted. Each line is capped only as a sanity bound.
     const lines = note.split(/\s*\n\s*|\s*\|\s*/).map(s => s.trim()).filter(Boolean);
     for (const t of tables.values()) {
       lines.forEach((ln, i) => {
-        try { t.chat('info', `${i === 0 ? '🔧 Update:' : '   •'} ${ln.slice(0, 300)}`); } catch (_) {}
+        try { t.chat('info', i === 0 ? `🔧 v${VERSION} — ${ln.slice(0, 300)}` : `   • ${ln.slice(0, 300)}`); } catch (_) {}
       });
     }
-    console.log(`[poker] deploy note posted (${lines.length} line${lines.length === 1 ? '' : 's'})`);
+    console.log(`[poker] reboot note posted v${VERSION} (${lines.length} line${lines.length === 1 ? '' : 's'})`);
   }
 });
 
