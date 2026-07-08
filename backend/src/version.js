@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.29 2026-07-08 ORDER OF THE FLAME ENEMY PARITY (sahuagin prince), part 1. The prince now shares
+//                     two of Lord Gweyir's order deeds: FOOLHARDY RUSH — it moves during initiative,
+//                     so it acts FIRST (+4 init); and DAUNTING SUCCESS — a confirmed CRIT from the
+//                     prince DAUNTS the whole party, sickening every (non-undead) hero −2 to hit,
+//                     damage & saves for a few rounds, once per room. Reuses the hero `sickened`
+//                     debuff (temporary, ticks down). The self-buff (enemy Blaze of Glory) is held for
+//                     Tobias's balance sign-off. domtest +4.
 //  3.37.28 2026-07-08 REBOOT NOTES (Tobias): on startup the server now posts the CURRENT VERSION plus a
 //                     one-line summary of what changed into the poker table chat — automatically, from
 //                     the new HEADLINE field in version.js (no DEPLOY_NOTE env needed; DEPLOY_NOTE still
@@ -667,6 +674,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.28';
-const HEADLINE = 'The game now announces itself: on every reboot it drops the version and a one-line note about what just changed into table chat.';
+const VERSION = '3.37.29';
+const HEADLINE = 'The sahuagin prince fights dirtier — Order of the Flame’s Foolhardy Rush (it acts first) and Daunting Success (its crits shake the whole party) now hit the enemy side too.';
 module.exports = { VERSION, HEADLINE };

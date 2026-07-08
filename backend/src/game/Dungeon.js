@@ -843,7 +843,7 @@ class Dungeon {
     const order = [];
     // Characters add ½ their level (rounded down) to initiative, on top of the base +2.
     for (const m of this.alivePresent()) order.push({ kind: 'party', id: m.playerId, init: dRoll(20) + 2 + Math.floor((m.level || 1) / 2) + fighterFeats(m.cls, m.level, this._isRanged(m)).init + (this._isFlameCavalier(m) && (m.level || 1) >= 2 ? 4 : 0) });   // + fighter Improved Initiative + Order of the Flame FOOLHARDY RUSH (L2: moves during initiative → +4)
-    for (const e of this.livingEnemies()) order.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 });
+    for (const e of this.livingEnemies()) order.push({ kind: 'enemy', id: e.uid, init: dRoll(20) + 1 + (e.gloriousChallenge ? 4 : 0) });   // Order of the Flame FOOLHARDY RUSH (enemy parity): the sahuagin prince moves during initiative → +4
     order.sort((a, b) => b.init - a.init);
     this.turnOrder = order;
     this.turnIdx = 0;
@@ -2130,7 +2130,7 @@ class Dungeon {
 Object.assign(Dungeon.prototype, require('./dungeon/loot'));
 Object.assign(Dungeon.prototype, require('./dungeon/summons'));   // _abSummon / _enemySummon (summon seam)
 Object.assign(Dungeon.prototype, require('./dungeon/serialize')({ fighterFeats, titleCase }));
-Object.assign(Dungeon.prototype, require('./dungeon/enemyAI')({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC }));
+Object.assign(Dungeon.prototype, require('./dungeon/enemyAI')({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC }));
 Object.assign(Dungeon.prototype, require('./dungeon/heroAI')({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd }));   // hero-bot brain (heroAI seam)
 Object.assign(Dungeon.prototype, require('./dungeon/abilities')({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BLIND_ROUNDS, HIGH_GROUND_AC, EFFECT_CL_FLOOR, mindImmune, fightsNatural, isSneakClass, titleCase, ccd, stepDamage }));
 

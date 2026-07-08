@@ -26,7 +26,7 @@ const { babFor } = require('../../pf1data/classes');
 // a foe can override just the grab with hook.grabSound.
 const GRAB_CHAIN_SND = '/audio/slorr_come_here_grapple_chain.mp3';
 
-module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC }) => ({
+module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC }) => ({
   _monsterSwing(e, targetAC) {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
@@ -286,6 +286,16 @@ module.exports = ({ SICKENED_PENALTY, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC 
       let drTag = ''; [dmg, drTag] = this._physDR(target, dmg);   // Stoneskin soaks physical blows
       target.hp -= dmg;
       this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${dmg}.${sneakTag}${drTag} ${this._atkStr(r)}`, r.sound);
+      // DAUNTING SUCCESS (Order of the Flame — enemy parity, mirror of Lord Gweyir's L8 deed): a
+      // CONFIRMED CRIT from the prince daunts the whole party — every (non-undead) hero is SICKENED
+      // (−2 to hit, damage & saves) for a few rounds. Once per room; sickened ticks down, so it's a
+      // temporary shaken, not a room-long lock. Undead heroes are fearless (immune).
+      if (r.crit && e.gloriousChallenge && !e._dauntedRoom) {
+        e._dauntedRoom = true;
+        let n = 0;
+        for (const m of this.livingParty()) { if (!m.undead) { m.sickened = Math.max(m.sickened || 0, SICKENED_ROUNDS); n++; } }
+        if (n) this._note(`😱 ${e.glyph} ${e.name}'s GLORIOUS critical DAUNTS the party — ${n} hero${n > 1 ? 's' : ''} shaken (−2 to hit, damage & saves)! (Daunting Success)`, '/audio/draugr_shout03_burning.mp3', { side: 'enemy' });
+      }
       // Domain parity (Death — Bleeding Touch): a death-priest foe's first landed
       // blow each room opens a BLEED on the hero (1d6 at their turn start, until
       // any magical healing staunches it). Undead heroes have no blood to spill.
