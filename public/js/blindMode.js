@@ -1112,8 +1112,13 @@
     // as before: silence everything.
     const spool = state.spool || [];
     const cur = state.curSection || (spool[0] && spool[0].section) || null;
-    const keep = cur ? spool.filter(r => r.section && r.section !== cur) : [];
-    blog('stopSpeaking', cur ? `(skip section ${cur} — ${keep.length} lines resume)` : '(all)');
+    // FIX (Josh 2026-07-08 — "S kills a whole slew, not one strand at a time"): when skipping a
+    // TAGGED section, keep every OTHER line INCLUDING untagged ones (was `r.section &&`, which
+    // silently nuked untagged lines like the end-of-room XP/gold summary that trailed the combat
+    // line). When the current line is UNTAGGED (no section), skip only IT and keep the rest of the
+    // spool — so S steps ONE report at a time instead of silencing the whole tail.
+    const keep = cur ? spool.filter(r => r.section !== cur) : spool.slice();
+    blog('stopSpeaking', cur ? `(skip section ${cur} — ${keep.length} lines resume)` : `(skip one line — ${keep.length} resume)`);
     try { TTS.cancel(); } catch (_) {}
     state.queue.length = 0;
     state.speaking = false;

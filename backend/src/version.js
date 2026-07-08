@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.27 2026-07-08 BLIND-MODE fix (Josh): the S key ("silence the line now reading") was nuking a
+//                     whole SLEW of reports at once instead of one at a time — e.g. at a dungeon's
+//                     end, skipping the combat line ALSO killed the trailing XP + gold summary. Cause:
+//                     stopSpeaking kept only lines with a DIFFERENT tagged section (`r.section &&
+//                     r.section !== cur`), so every UNTAGGED line got dropped, and an untagged current
+//                     line silenced everything. Now: skipping a tagged section keeps every other line
+//                     INCLUDING untagged ones; an untagged current line skips only itself. S steps one
+//                     report/section at a time, reliably. (Client-only — hard refresh to pick it up.)
 //  3.37.26 2026-07-07 CRITICAL HOTFIX — party dungeon runs were CRASHING players back to the poker
 //                     table (Josh, all day: "as soon as I open the door it kicks me back... I can
 //                     solo run but not with a team"). The v3.37.22 heroAI.js extraction left a bare
@@ -651,4 +659,4 @@
 //                     Waves of Exhaustion/Banishment/Greater Heroism/Mass
 //                     Suggestion/inq Greater Dispel) · Domains Phase A data
 //  3.0.x  ≤2026-07-03 the informal "v3" era (see git history)
-module.exports = { VERSION: '3.37.26' };
+module.exports = { VERSION: '3.37.27' };
