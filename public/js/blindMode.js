@@ -1434,9 +1434,20 @@
           for (const e of show) said(_stripGlyphs(e.text), e.phase || 'combat');
           if (enemyTally) said(`Plus ${enemyTally} more enemy action${enemyTally > 1 ? 's' : ''} — press E to inspect the foes.`, 'combat');
         } else {
-          const toSay = live.length > 8 ? live.slice(-8) : live;
-          if (toSay.length < live.length) said(`Skipping ${live.length - toSay.length} earlier lines.`, toSay[0] && toSay[0].phase);
+          // COLLAPSE CC "idle" NO-OP enemy lines into ONE count (Josh 2026-07-09): a
+          // Fascinate/Sleep on 3 foes made the narrator read out every entranced foe BY
+          // NAME every round ("Goblin A stands fascinated — does nothing", ×3, each turn).
+          // He wants it like a channel/AoE report: how MANY stand idle, not WHO. Matches
+          // any pure no-op skip — fascinated / asleep / held / paralyzed / nauseated /
+          // off-balance losing its turn. (A dominated foe SAVAGING an ally is a real
+          // action, has no "does nothing", and is still spoken in full.)
+          const isIdleNoop = (e) => e.side === 'enemy' && /does nothing|loses its turn|struggles in vain/i.test(String(e.text || ''));
+          const active = live.filter(e => !isIdleNoop(e));
+          const idleN = live.length - active.length;
+          const toSay = active.length > 8 ? active.slice(-8) : active;
+          if (toSay.length < active.length) said(`Skipping ${active.length - toSay.length} earlier lines.`, toSay[0] && toSay[0].phase);
           for (const e of toSay) said(_stripGlyphs(e.text), e.phase || (st.status === 'combat' ? 'combat' : null));
+          if (idleN) said(`${idleN} foe${idleN === 1 ? '' : 's'} stand idle — entranced or held — and do nothing.`, 'combat');
         }
       }
     }

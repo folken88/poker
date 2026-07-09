@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.34 2026-07-09 BLIND-NARRATION fix (Josh): a Fascinate/Sleep on a few foes made the narrator
+//                     read out EVERY entranced foe BY NAME, EVERY round ("Goblin A stands fascinated —
+//                     does nothing", ×3, each turn) — he wanted it like a channel/AoE report: how MANY
+//                     stand idle, not WHO. In small/medium rooms the narrator now COLLAPSES the pure
+//                     no-op CC skips (fascinated / asleep / held / paralyzed / nauseated / off-balance
+//                     losing a turn) into a single "N foes stand idle — entranced or held — and do
+//                     nothing" line per round; a dominated foe SAVAGING an ally is a real action and is
+//                     still spoken in full. Big rooms already tallied enemy actions. (Blind client only —
+//                     hard refresh. No balance change; sighted log unchanged.)
 //  3.37.33 2026-07-08 TON BOKIRI — Azwraith's demon-infused legendary spear (Josh's "Ton Bokiri"). His
 //                     fauchard is now the cursed blade that constantly hisses "KUROSE": (1) RAGE ON A
 //                     KILL — the moment Azwraith drops a foe, the spear floods him with a barbarian
@@ -704,6 +713,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.33';
-const HEADLINE = 'Azwraith now wields Ton Bokiri, his demon-infused spear: it hisses "KUROSE," floods him with a barbarian rage whenever he kills, and — when the last foe drops — makes him fight a Will save or turn on his own allies (his Iron Will feats are the leash).';
+const VERSION = '3.37.34';
+const HEADLINE = 'Blind-narration fix: Fascinate/Sleep no longer reads out every entranced foe by name each round — the narrator now just says how many stand idle (hard refresh to pick it up).';
 module.exports = { VERSION, HEADLINE };
