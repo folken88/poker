@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.37 2026-07-09 NEW BOSS — MASTER UKE, the katana master (from the Foundry roster). A gestalt
+//                     Paladin/Unchained-Monk/Samurai (CR 16) who wields HANZO STEEL, his +5 keen mithral
+//                     katana: a blinding 4-strike flurry of blade and fist (d8+13), Evasion (shrugs off
+//                     AoE), and Lay on Hands to mend himself mid-duel. He is LAWFUL GOOD — a righteous
+//                     foe, so hero Smite Evil finds no purchase (he rides with the Heavenly Host as a
+//                     mortal champion) — and a monk-master's integrated blade/hand can't be disarmed.
+//                     Real Foundry portrait + token art. domtest +4.
 //  3.37.36 2026-07-09 SIGNATURE WEAPONS, batch 3b (two more Foundry blades). EL GUAPO now fights with his
 //                     MITHRAL SCIMITAR (mithral + magic, no elemental rider — his pistol backup is
 //                     unchanged, keyed to him); and DURISTAN's rarely-drawn DARK SILVER SCIMITAR is now
@@ -728,6 +735,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.36';
-const HEADLINE = 'Two more named blades from the old campaigns: El Guapo now duels with his Mithral Scimitar, and Duristan\'s Dark Silver Scimitar is a pickable signature weapon.';
+const VERSION = '3.37.37';
+const HEADLINE = 'New boss: MASTER UKE, a katana master (paladin/monk/samurai) who wields Hanzo Steel — a blinding flurry of blade and fist, Evasion, and self-healing. Lawful Good, so Smite Evil finds no purchase. Bring your best.';
 module.exports = { VERSION, HEADLINE };
