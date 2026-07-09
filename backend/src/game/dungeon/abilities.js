@@ -2421,6 +2421,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // excess of this over the ring's deflection.
       who.buffs.deflect = Math.max(who.buffs.deflect || 0, (ab.buff && ab.buff.deflect) || 0);
       who.buffs.save += (ab.buff && ab.buff.save) || 0;
+      who.buffs.dexMod = (who.buffs.dexMod || 0) + ((ab.buff && ab.buff.dexMod) || 0);   // Cat's Grace: +Dex modifier — feeds the reach-weapon AoO count (Combat Reflexes)
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
       if (ab.dr) who.dr = Math.max(who.dr || 0, ab.dr);   // Stoneskin — DR vs physical blows
       if (ab.protectFire) who.protectFire = Math.min(120, 12 * (m.level || 1));   // PF1 Protection from Energy: an absorption pool — 12 per caster level, max 120

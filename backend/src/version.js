@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.31 2026-07-08 REACH WEAPONS THREATEN — attacks of opportunity (Tobias). A hero wielding a REACH
+//                     melee weapon (polearm / Azwraith's fauchard / Kai Ginn's bastard's blade) now
+//                     lands a FREE strike when a foe MOVES to engage — charging in, or switching its
+//                     melee target. Combat Reflexes gives 1 + Dex-mod AoO per round (min 1), refreshed
+//                     at the hero's turn; Cat's Grace bumps the count (+1). A reach AoO can drop a
+//                     charger before its own blow lands. Wired: _provokeReachAoO (enemyAI) off the
+//                     move-detect in _enemyMelee; the per-round budget (m._aooLeft) in _advanceToActor;
+//                     a dexMod buff field feeds Cat's Grace into the count. domtest +5.
 //  3.37.30 2026-07-08 JOSH FIXES BATCH. (1) POKER: the A key no longer shoves you ALL-IN — Josh kept
 //                     accidentally jamming it while moving fast; all-in stays reachable via the raise
 //                     menu (R→4) or T. (2) BLIND-MODE: Fascinate now reports a COUNT ("3 foes stand
@@ -681,6 +689,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.30';
-const HEADLINE = 'Fixes: the A key no longer shoves you all-in by accident (use the raise menu), Fascinate reads a count instead of every foe, and Celeb’s Spell Synthesis is strictly one arcane + one divine.';
+const VERSION = '3.37.31';
+const HEADLINE = 'Reach weapons now threaten: Azwraith and Kai Ginn land a free Attack of Opportunity when a foe charges in or switches targets — 1 + Dex-mod times per round (Combat Reflexes).';
 module.exports = { VERSION, HEADLINE };

@@ -1067,6 +1067,12 @@ class Dungeon {
     if (m.judgment === 'healing' && m.hp > 0 && m.hp < m.maxHp) {   // Judgement: Healing regen each turn — applies SILENTLY (routine per-turn regen; Josh: don't narrate every tick)
       const h = Math.max(1, Math.floor((m.level || 1) / 3)); m.hp = Math.min(m.maxHp, m.hp + h);
     }
+    // REACH ATTACK-OF-OPPORTUNITY budget (Combat Reflexes). A hero wielding a REACH melee weapon
+    // (polearm / fauchard / Kai's bastard's blade) threatens foes as they MOVE, and gets
+    // 1 + Dex-mod free strikes per round (min 1) when enemies charge in or switch melee targets
+    // (see _provokeReachAoO in _enemyMelee). Refreshed at the START of this hero's turn (PF1).
+    // Cat's Grace (+dexMod) bumps the count. Non-reach or ranged weapon → no AoO.
+    { const rw = weaponOf(m.gear, m.weaponKey); m._aooLeft = (rw && rw.reachFly && !rw.ranged) ? Math.max(1, 1 + ((m.mods && m.mods.dex) || 0) + ((m.buffs && m.buffs.dexMod) || 0)) : 0; }
     if (m.isBot && this._fleeing) {
       // The party is in RETREAT (a human fled with no human left to lead) — the
       // hireling grabs its share and flees too, on its own turn (Josh: "if the

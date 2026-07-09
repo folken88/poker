@@ -248,8 +248,34 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     }
     if (noReach) this._note(`${e.glyph} ${e.name} claws at the air — its prey is on the wing, out of reach!`, null, { side: 'enemy' });
   },
+  // REACH ATTACK OF OPPORTUNITY (Tobias 2026-07-08): a foe that MOVES to engage — charging in or
+  // switching to a new melee target — provokes a free strike from every reach-weapon hero
+  // (polearm / fauchard / Kai's bastard's blade) who still has an AoO this round. Combat Reflexes
+  // gives 1 + Dex-mod AoO per round (refreshed at the hero's turn in _advanceToActor; Cat's Grace
+  // bumps it). A reach AoO can DROP the charger before its own blow lands.
+  _provokeReachAoO(enemy) {
+    if (!enemy || enemy.hp <= 0) return;
+    for (const m of this.livingParty()) {
+      if ((m._aooLeft || 0) <= 0) continue;
+      const w = weaponOf(m.gear, m.weaponKey);
+      if (!w || !w.reachFly || w.ranged) continue;   // reach MELEE weapon only
+      m._aooLeft -= 1; m.weapon = w;
+      const r = this._swingVsAC(m, this._enemyAC(enemy), enemy);
+      if (r.hit) {
+        this._dmgE(enemy, r.damage);
+        this._note(`⚑ ${m.nickname}'s reach weapon catches ${enemy.name} on the move — ATTACK OF OPPORTUNITY for ${r.damage}${r.drTag || ''}!${this._afterEnemyHit(enemy)}`, r.sound);
+        this._echoToTable(r.sound);
+        if (enemy.hp <= 0) { this._tryBanter(m, 'down', { enemy: enemy.name }); return; }
+      } else {
+        this._note(`⚑ ${m.nickname}'s reach Attack of Opportunity at ${enemy.name} whiffs. ${this._atkStr(r)}`, r.sound);
+        this._echoToTable(r.sound);
+      }
+    }
+  },
   // One enemy swing at a chosen target (handles the paralysis rider + signature sound).
   _enemyMelee(e, target) {
+    // A foe that MOVES to engage provokes: reach heroes get an AoO before it strikes (see above).
+    if (target && e._lastMeleeTargetId !== target.playerId) { e._lastMeleeTargetId = target.playerId; this._provokeReachAoO(e); if (e.hp <= 0) return; }
     e.invisible = false;   // striking in melee breaks Invisibility (same rule as heroes)
     // _acOf strips shield AC for dual-wielders AND ranged-weapon wielders.
     const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - (target.stunned > 0 ? 2 : 0) - (target.slowed > 0 ? 1 : 0) - this._acPenalty(target);   // helpless / stunned / slowed / rage / reckless / cleave: easier to hit (enemy melee vs prone = −4)
