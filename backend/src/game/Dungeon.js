@@ -1235,8 +1235,32 @@ class Dungeon {
     });
     return bestIdx;
   }
+  // TON BOKIRI FRENZY — as the last foe falls, if Azwraith (the demon-spear wielder) is still
+  // RAGING, the blade won't let go: he makes a Will save (DC 10 + ½ level) or the demon turns him
+  // on a random ally, re-rolling each "round" until he passes, no ally still stands, or he's alone.
+  // His Iron Will (the fighter save bonus, folded into _partySaveMod) is the leash. Resolves in a
+  // burst as the room settles. (Allies can't yet subdue him mid-frenzy — a future turn-by-turn pass.)
+  _tonbokiriFrenzyBurst() {
+    const az = this.livingParty().find(m => m.weaponKey === 'tonbokiri' && m.buffApplied && m.buffApplied.rage);
+    if (!az) return;
+    const dc = 10 + Math.floor((az.level || 1) / 2);
+    let guard = 0;
+    while (guard++ < 20) {
+      const roll = dRoll(20), save = roll + this._partySaveMod(az, ['will', 'enchantment', 'fear']);
+      if (save >= dc) { this._note(`🗡️ Ton Bokiri howls "KUROSE!" — but ${az.nickname} MASTERS the demon's hunger and lowers the spear. [Will ${save} vs DC ${dc}]`); break; }
+      const allies = this.livingParty().filter(m => m.playerId !== az.playerId && m.hp > 0);
+      if (!allies.length) { this._note(`🗡️ Ton Bokiri screams "KUROSE!" — but no ally still stands. Alone, ${az.nickname} finally comes back to himself.`); break; }
+      const victim = pick(allies);
+      az.weapon = weaponOf(az.gear, az.weaponKey);
+      const r = this._swingVsAC(az, this._acOf(victim).ac + this._acBonus(victim) - this._acPenalty(victim), victim);
+      if (r.hit) { this._note(`🩸 "KUROSE!" — lost to Ton Bokiri, ${az.nickname} drives the spear into ${victim.nickname} for ${r.damage}${r.drTag || ''}! [failed Will ${save} vs DC ${dc}]`, r.sound); this._dmgToMember(victim, r.damage); if (victim.hp <= 0) this._note(`☠️ ${victim.nickname} is cut down by a friend's cursed blade!`); }
+      else this._note(`🩸 "KUROSE!" — ${az.nickname} lunges at ${victim.nickname}, who barely twists clear. [failed Will ${save} vs DC ${dc}]`, r.sound);
+    }
+    this._broadcast();
+  }
   _clearRoom() {
     clearTimeout(this._turnTimer); clearTimeout(this._stepTimer);
+    this._tonbokiriFrenzyBurst();   // the demon spear's last hunger, before the room settles
     this.status = 'exploring';
     const gold = this.enemies.reduce((s, e) => s + (e.gold || 0), 0);
     this.runGold += gold;

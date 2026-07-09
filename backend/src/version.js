@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.33 2026-07-08 TON BOKIRI — Azwraith's demon-infused legendary spear (Josh's "Ton Bokiri"). His
+//                     fauchard is now the cursed blade that constantly hisses "KUROSE": (1) RAGE ON A
+//                     KILL — the moment Azwraith drops a foe, the spear floods him with a barbarian
+//                     RAGE (it drinks the death). (2) THE DEMON WON'T LET GO — when the LAST foe falls
+//                     while he's still raging, he must make a WILL save (DC 10 + ½ level) or the demon
+//                     turns him on a RANDOM ally; he re-rolls the save each round until he MASTERS it,
+//                     no ally still stands, or he's alone. This is WHY he spends feats on Iron Will &
+//                     Improved Iron Will — those save bonuses (folded into _partySaveMod) are the leash.
+//                     Weapon also rides its reach (10' AoO) + unholy + keen. domtest +7.
 //  3.37.32 2026-07-08 BUFF COUNT BADGES (Tobias): buff chips can now show a tiny corner NUMBER. Order
 //                     of the Flame cavaliers (Lord Gweyir, the sahuagin prince) show their current
 //                     GLORIOUS CHALLENGE stack level, and MIRROR IMAGE shows the number of decoys
@@ -695,6 +704,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.32';
-const HEADLINE = 'Buff badges: Order of the Flame cavaliers now show their Glorious Challenge stack as a little number, and Mirror Image shows how many decoys are left.';
+const VERSION = '3.37.33';
+const HEADLINE = 'Azwraith now wields Ton Bokiri, his demon-infused spear: it hisses "KUROSE," floods him with a barbarian rage whenever he kills, and — when the last foe drops — makes him fight a Will save or turn on his own allies (his Iron Will feats are the leash).';
 module.exports = { VERSION, HEADLINE };

@@ -493,7 +493,7 @@ const BOT_WEAPONS = {
   'Reese': 'stormcaller',   // his arcane bow — spellstrike rides the shot
   'Savage': 'greataxe',   // 1d12 ×3 two-hander — cleaves through ranks
   'Draymus': 'angelbonescythe',   // his signature death-scythe (2d4 ×4) — a caster's backup, but thematic
-  'Azwraith': 'fauchard',   // reach polearm (1d10, 18-20) — trip-fighter's tool
+  'Azwraith': 'tonbokiri',   // his demon-infused legendary fauchard "Ton Bokiri" (reach + unholy + keen; rage-on-kill + Will-save-or-turn-on-allies frenzy)
   'Lord Gweyir': 'estoc',   // DEX thrusting blade (2d4, 18-20) — finesse2h rides his Dexterity
 };
 const weaponForBot = (name, cls) => BOT_WEAPONS[name] || weaponForClass(cls);

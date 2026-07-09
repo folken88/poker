@@ -2944,6 +2944,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         if (m.weapon.grapple && tgt.hp > 0 && !tgt.grappled) { tgt.grappled = true; tgt.grappledBy = m.playerId; tgt.grappleRounds = 2; this._note(`🐙 ${tgt.name} is SEIZED in ${m.nickname}'s tentacles — grappled and helpless!`); }
         if (tgt.hp <= 0) this._tryBanter(m, 'down', { enemy: tgt.name });
         if (tgt.hp <= 0 && tgt.type === 'undead') this._radianceQuip(m, 'radiance_undead_down', { enemy: tgt.name });   // Radiance HATES undead — she erupts
+        // TON BOKIRI: the demon spear drinks a kill and floods its wielder with a barbarian rage.
+        if (tgt.hp <= 0 && m.weaponKey === 'tonbokiri' && !(m.buffApplied && m.buffApplied.rage)) { this._abBuff(m, { key: 'rage', effect: 'buff', target: 'self' }); this._note(`🗡️ Ton Bokiri drinks the kill — "KUROSE!" — flooding ${m.nickname} with a DEMONIC RAGE.`); }
       }
       this._echoToTable(r.sound);
     }
