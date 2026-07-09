@@ -487,6 +487,7 @@ const BOT_WEAPONS = {
   'Lou Candlebean': 'gnomehammer',   // fighter dual-wielder — gnome hooked hammer (2 swings + TWF feats)
   'Nomkath': 'kukri', 'Kelda': 'dagger',   // rogues — dual-wield light blades (dagger / kukri)
   'Ser Toche': 'elvencurve',               // tengu rogue — elven curved blade (DEX two-hander)
+  'El Guapo': 'mithralscimitar',           // his Foundry blade — mithral + magic (pistol backup rides his playerId)
   'Gabriel': 'redeemer',                   // Hell's Rebels paladin — green-glass greatsword Redeemer (Divine Bond makes it holy)
   // Hell's Vengeance / Rebels PCs — signature weapons (see pf1data/staples.js):
   'Femmik Embersword': 'lammas', 'Freya Kusanagi': 'balrogblade', "J'Mal": 'sawtoothdragon', 'Jason': 'forcepike',   // J'Mal: saber + bashing Dragon Shield (2 swings + shield AC)

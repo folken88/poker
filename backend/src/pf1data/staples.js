@@ -118,6 +118,12 @@ const CUSTOM_WEAPONS = {
   // attack: firearms hit TOUCH AC, full iteratives apply (ranged always full-attacks).
   // Drawn via the backup-ranged path when his rapier can't reach (see _backupRangedKey).
   guapopistol: { key: 'guapopistol', name: 'Pistol', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 20, mult: 4, type: 'B', group: 'firearms', prof: 'martial', custom: true, atkSound: '/audio/tarkov_pistol_rsh12_empty_reload2.mp3' },
+  // El Guapo's MITHRAL SCIMITAR (from his Foundry build; was a Mithril Scimitar +2).
+  // A scimitar (1d6, 18-20/×2, S). Just MITHRAL + MAGIC — no elemental rider (Tobias:
+  // "that's all it is"). custom => always magic + proficient; as a 1h light-riding blade
+  // it uses the better of STR/DEX (the swashbuckler's Dexterity). His pistol backup is
+  // keyed to his playerId (_backupRangedKey), so it's unaffected by this main-weapon swap.
+  mithralscimitar: { key: 'mithralscimitar', name: 'Mithral Scimitar', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true },
   // Gaspar's PAIRED PISTOLS — his backup ranged option: dual-wielded firearms (two
   // shots + TWF, touch AC, full iteratives) that ride Bane/Judgement and every other
   // buff like any weapon. He LIKES them — see the 60/40 mixed-field pick in _playerAttack.
@@ -126,6 +132,11 @@ const CUSTOM_WEAPONS = {
   // Single-shot: no Rapid Shot. (Key stays 'lapua' so his persisted weapon row and
   // gear history survive the rename.) Report: cyberpunk sniper crack from Foundry.
   lapua: { key: 'lapua', name: 'Longue Carabine', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 10, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, boltAction: true, atkSound: '/audio/rifle_longue_carabine.mp3' },
+  // Duristan's DARK SILVER SCIMITAR — a rarely-drawn melee sidearm (from his Foundry
+  // build). A scimitar (1d6, 18-20/×2, S), just dark-silver + magic, no elemental rider.
+  // Bot-Duristan stays on his rifle (Longue Carabine); this is here so a human pilot can
+  // choose it from the ★ signature list. custom => always magic + proficient.
+  darksilverscimitar: { key: 'darksilverscimitar', name: 'Dark Silver Scimitar', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true },
   // Taelys's DVL-10 bolt-action sniper rifle (2d8, ×4) — silenced single shot,
   // so no Rapid Shot (she relies on Bullseye Shot + Deadly Aim instead).
   dvl: { key: 'dvl', name: 'DVL-10 Sniper Rifle', cat: 'ranged', ranged: true, dmgCount: 2, dmgDie: 8, crit: 20, mult: 4, type: 'P', group: 'firearms', prof: 'exotic', custom: true, boltAction: true, atkSound: '/audio/rifle_dvl_silenced.mp3' },

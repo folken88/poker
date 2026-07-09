@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.36 2026-07-09 SIGNATURE WEAPONS, batch 3b (two more Foundry blades). EL GUAPO now fights with his
+//                     MITHRAL SCIMITAR (mithral + magic, no elemental rider — his pistol backup is
+//                     unchanged, keyed to him); and DURISTAN's rarely-drawn DARK SILVER SCIMITAR is now
+//                     a pickable ★ signature blade (bot-Duristan still snipes with the Longue Carabine).
+//                     domtest +4.
 //  3.37.35 2026-07-09 SIGNATURE WEAPONS, batch 3 (drawn from the Foundry builds). Four heroes trade
 //                     their generic gear for the named blade they actually carried: CELEB now wields
 //                     the KAGERO SANSETSUKON (a three-section staff — always magic, no elemental rider);
@@ -723,6 +728,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.35';
-const HEADLINE = 'Four heroes get their real named weapons from the old campaigns: Celeb wields the Kagero Sansetsukon, Elodie the keen Raison d\'Acier, Lou swings HAMMERTIME, and Lirienne looses Light of the Dawn — a holy crossbow that sears the wicked.';
+const VERSION = '3.37.36';
+const HEADLINE = 'Two more named blades from the old campaigns: El Guapo now duels with his Mithral Scimitar, and Duristan\'s Dark Silver Scimitar is a pickable signature weapon.';
 module.exports = { VERSION, HEADLINE };
