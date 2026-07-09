@@ -478,9 +478,9 @@ const weaponForClass = (cls) => CLASS_WEAPON[cls] || 'dagger';
 // Named NPC signature weapons (override the class default). Dismas's holy
 // dragon-rifle Rovadra, Gaspar's bastard sword Curator, Elodie's rapier.
 const BOT_WEAPONS = {
-  'Dismas': 'rovadra', 'Gaspar': 'curator', 'Elodie': 'rapier', 'Rodney Smith': 'longbow',
+  'Dismas': 'rovadra', 'Gaspar': 'curator', 'Elodie': 'raisondacier', 'Rodney Smith': 'longbow',   // Elodie's named keen rapier (Foundry: Raison d'Acier)
   'Vesorianna': 'ghosttouch', 'Farrus Richton': 'twoaxes', 'Dinvaya': 'warhammer', 'Storgrim Thunderbeard': 'battleaxe',
-  'Agu': 'rapier', 'Chef': 'battleaxe', 'Crisp': 'bite', 'Kai Ginn': 'bastardsblade', 'Lirienne': 'repeatingcrossbow', 'Binch': 'scimitar', 'Celeb': 'quarterstaff',
+  'Agu': 'rapier', 'Chef': 'battleaxe', 'Crisp': 'bite', 'Kai Ginn': 'bastardsblade', 'Lirienne': 'repeatingcrossbow', 'Binch': 'scimitar', 'Celeb': 'kagerosansetsukon',   // his named 3-section staff (Foundry: Kagero Sansetsukon)
   'Rissa': 'claws', 'Taelys': 'dvl', 'Ulfred': 'voidshard', 'Vaughan': 'radiance', 'Duristan Silvio': 'lapua',
   'Holden': 'rapier', 'Rhyarca': 'rapier', 'Concetta': 'rapier', 'Kovira': 'unarmed',   // Kovira (wizard) attacks with her Elemental Ray at-will
   'Tokala': 'chainsaw',   // 3d6 slashing two-hander, crits on 18

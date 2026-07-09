@@ -65,6 +65,15 @@ const CUSTOM_WEAPONS = {
   // the demon turns him on his own allies — see _tonbokiriRage / _tonbokiriFrenzyBurst. Iron Will
   // is the only leash on it (why Azwraith took Iron Will + Improved Iron Will).
   tonbokiri: { key: 'tonbokiri', name: 'Ton Bokiri', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 18, mult: 2, type: 'S', group: 'polearms', prof: 'martial', custom: true, reachFly: true, special: { unholy: 2, keen: true } },
+  // Celeb's named three-section staff "Kagero Sansetsukon" (from his Foundry build,
+  // Hell's Rebels — 'kagero' = shimmering heat-haze). PF1 sansetsukon: 1d10 B, 19-20/×2,
+  // flails group. No elemental rider (Tobias's call) — a scholar-monk's caster staff that
+  // is simply always magic (custom => always magic + always proficient). His +N rides gear.
+  kagerosansetsukon: { key: 'kagerosansetsukon', name: 'Kagero Sansetsukon', cat: '2h', ranged: false, dmgCount: 1, dmgDie: 10, crit: 19, mult: 2, type: 'B', group: 'flails', prof: 'exotic', custom: true, atkSound: '/audio/weapon_blunt.mp3' },
+  // Elodie's named rapier "Raison d'Acier" ("Reason of Steel"; from her Foundry build).
+  // A duelist's blade — KEEN (widens its 18-20 threat to 15-20). 1d6 P, bladesLight. As a
+  // 1h light blade it rides the better of STR/DEX (finesse house rule) for the bard-duelist.
+  raisondacier: { key: 'raisondacier', name: "Raison d'Acier", cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'P', group: 'bladesLight', prof: 'martial', custom: true, special: { keen: true } },
   // Lord Gweyir's ESTOC — a stiff two-handed thrusting blade (2d4, 18-20/×2, piercing).
   // finesse2h rides his DEX for hit AND damage (the elf duelist's foil). custom => proficient.
   estoc: { key: 'estoc', name: 'Estoc', cat: '2h', ranged: false, dmgCount: 2, dmgDie: 4, crit: 18, mult: 2, type: 'P', group: 'bladesHeavy', prof: 'martial', custom: true, finesse2h: true },
@@ -97,8 +106,10 @@ const CUSTOM_WEAPONS = {
   // but she is ALWAYS at least magic +1 and scales with BOTH Vaughan's gear tier AND his
   // magus levels — the magus arcane-pool enhancement already handles that, so no `special`.
   radiance: { key: 'radiance', name: 'Radiance', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'bladesHeavy', prof: 'martial', custom: true },
-  // Lirienne's repeating crossbow (1d8, 19–20).
-  repeatingcrossbow: { key: 'repeatingcrossbow', name: 'Repeating Crossbow', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'exotic', custom: true, atkSound: '/audio/crossbow.mp3' },
+  // Lirienne's named repeating crossbow "Light of the Dawn" (1d8, 19–20). From her
+  // Foundry build (Justice Gorls). HOLY: dawn-light bolts sear the wicked — +2d6 vs
+  // EVIL foes (and bite undead). Key stays 'repeatingcrossbow' so her saved row survives.
+  repeatingcrossbow: { key: 'repeatingcrossbow', name: 'Light of the Dawn', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8, crit: 19, mult: 2, type: 'P', group: 'crossbows', prof: 'exotic', custom: true, special: { holy: true }, atkSound: '/audio/crossbow.mp3' },
   // Universal BACKUP weapon — every melee character carries a light crossbow to shoot
   // airborne foes they can't reach in melee (last resort; see _playerAttack). Masterwork
   // (no enchant), so always weaker than their real weapon. 1d8, 19-20/x2. custom => always proficient.
@@ -128,9 +139,11 @@ const CUSTOM_WEAPONS = {
   // report), and no shield (dual-wield → no shield AC).
   // UNHOLY: +2d6 vs good-aligned foes (Farrus is a devil-blooded villain PC).
   twoaxes: { key: 'twoaxes', name: 'Twin Battleaxes', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'S', group: 'axes', prof: 'martial', custom: true, special: { unholy: true }, dual: true, noShield: true, atkSound: '/audio/weapon_double_axe.mp3' },
-  // Lou Candlebean's GNOME HOOKED HAMMER — a DOUBLE weapon she two-weapon fights
-  // with (2 swings/turn, one report; no shield). Hammer head: 1d8 B, ×3 crit.
-  gnomehammer: { key: 'gnomehammer', name: 'Gnome Hooked Hammer', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'B', group: 'hammers', prof: 'exotic', custom: true, dual: true, noShield: true, atkSound: '/audio/weapon_warhammer.mp3' },
+  // Lou Candlebean's named gnome hooked hammer "HAMMERTIME" (from her Foundry build,
+  // Justice Gorls) — a DOUBLE weapon she two-weapon fights with (2 swings/turn, one
+  // report; no shield). Hammer head: 1d8 B, ×3 crit. No elemental rider (Tobias's call);
+  // custom => always magic + always proficient. Key stays 'gnomehammer' (her saved row).
+  gnomehammer: { key: 'gnomehammer', name: 'HAMMERTIME', cat: '1h', ranged: false, dmgCount: 1, dmgDie: 8, crit: 20, mult: 3, type: 'B', group: 'hammers', prof: 'exotic', custom: true, dual: true, noShield: true, atkSound: '/audio/weapon_warhammer.mp3' },
   // Tokala's CHAINSAW — a roaring 3d6 slashing two-hander that crits on an 18.
   // KEEN: those churning teeth widen its 18-20 threat to 15-20 (thematically perfect).
   chainsaw: { key: 'chainsaw', name: 'Chainsaw', cat: '2h', ranged: false, dmgCount: 3, dmgDie: 6, crit: 18, mult: 2, type: 'S', group: 'axes', prof: 'exotic', custom: true, special: { keen: true }, atkSound: '/audio/weapon_chainsaw.mp3' },

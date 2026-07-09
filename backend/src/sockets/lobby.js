@@ -19,13 +19,16 @@ const QUALITY_DESC = {
   flaming: 'flaming (+1d6 fire)',
   shock: 'shock (+1d6 electricity)',
   frost: 'frost (+1d6 cold)',
+  frostBurst: 'freezing burst (+1d6 cold, extra on a crit)',
   holy: 'holy (+2d6 vs evil)',
   unholy: 'unholy (+2d6 vs good)',
   keen: 'keen (wider crit range)',
+  critFocus: 'critical focus (+4 to confirm crits)',
 };
 function signatureNote(w) {
   const bits = [];
   for (const k of Object.keys(QUALITY_DESC)) if (w.special && w.special[k]) bits.push(QUALITY_DESC[k]);
+  if (w.critFocus) bits.push(QUALITY_DESC.critFocus);   // top-level prop, not under .special
   if (w.dual) bits.push('two attacks');
   if (w.shieldAC) bits.push('bashing shield (+shield AC)');
   if (w.reachFly) bits.push('reach');
