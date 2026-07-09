@@ -2110,7 +2110,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} begins ${ab.name}, but those foes are immune or already entranced.`); return; }
     for (const e of chosen) e.fascinated = true;
     const sound = ab.sound || pick(SND.flesh);
-    this._note(`${ab.icon} ${m.nickname} performs ${ab.name} — ${chosen.map(e => e.name).join(', ')} stand fascinated (until struck).`, sound);
+    this._note(`${ab.icon} ${m.nickname} performs ${ab.name} — ${chosen.length} foe${chosen.length === 1 ? '' : 's'} stand${chosen.length === 1 ? 's' : ''} fascinated (until struck).`, sound);   // COUNT, not a per-foe roll call (Josh 2026-07-08 — same as channel/AoE reports)
     this._echoToTable(sound);
   },
   // Heal: 'party' (channel) heals all living allies; 'channel' (lay on hands)

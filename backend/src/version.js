@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.30 2026-07-08 JOSH FIXES BATCH. (1) POKER: the A key no longer shoves you ALL-IN — Josh kept
+//                     accidentally jamming it while moving fast; all-in stays reachable via the raise
+//                     menu (R→4) or T. (2) BLIND-MODE: Fascinate now reports a COUNT ("3 foes stand
+//                     fascinated") instead of reading out every foe by name, matching the channel/AoE
+//                     fail-save style. (3) SPELL SYNTHESIS (Celeb / theurge): the paired cast is now
+//                     strictly ONE arcane + ONE divine leveled spell — cantrips/non-spells can no
+//                     longer sneak in and let both picks be the same type.
 //  3.37.29 2026-07-08 ORDER OF THE FLAME ENEMY PARITY (sahuagin prince), part 1. The prince now shares
 //                     two of Lord Gweyir's order deeds: FOOLHARDY RUSH — it moves during initiative,
 //                     so it acts FIRST (+4 init); and DAUNTING SUCCESS — a confirmed CRIT from the
@@ -674,6 +681,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.29';
-const HEADLINE = 'The sahuagin prince fights dirtier — Order of the Flame’s Foolhardy Rush (it acts first) and Daunting Success (its crits shake the whole party) now hit the enemy side too.';
+const VERSION = '3.37.30';
+const HEADLINE = 'Fixes: the A key no longer shoves you all-in by accident (use the raise menu), Fascinate reads a count instead of every foe, and Celeb’s Spell Synthesis is strictly one arcane + one divine.';
 module.exports = { VERSION, HEADLINE };

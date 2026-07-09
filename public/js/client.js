@@ -5705,14 +5705,14 @@
             return;
           }
         }
-        const BET_KEYS = ['KeyF', 'KeyK', 'KeyR', 'KeyT', 'KeyA', 'KeyV'];
+        const BET_KEYS = ['KeyF', 'KeyK', 'KeyR', 'KeyT', 'KeyV'];   // A (all-in) UNMAPPED per Josh 2026-07-08 — accidental one-key shoves; all-in is now via R→4 (raise menu) or T (pot, which caps at all-in)
         // HELP MODE describes the bet keys even when it's NOT your turn (Josh:
         // F/K/R reported nothing in help because the act-block below is turn-gated).
         // Static descriptions — no live hand math, so they're safe off-turn.
         if (_blindHelp && BET_KEYS.includes(e.code)) {
           e.preventDefault();
           const H = {
-            KeyF: 'F: Fold.', KeyK: 'K: Check, or call the current bet.', KeyA: 'A: All in.',
+            KeyF: 'F: Fold.', KeyK: 'K: Check, or call the current bet.',
             KeyR: 'R: open the raise menu — then 1 minimum, 2 half pot, 3 pot, 4 all in.',
             KeyT: 'T: Raise to the pot.', KeyV: 'V: Raise a custom amount.',
           };
@@ -5730,7 +5730,7 @@
           const send = (action, amount) => socket.emit('table:action', amount != null ? { action, amount } : { action }, (r) => { if (!r?.ok) say(r?.error || 'Action rejected.'); });
           if (e.code === 'KeyF') { if (_blindHelp) return say('F: Fold.'); say('Fold.'); send('fold'); return; }
           if (e.code === 'KeyK') { const lbl = toCall === 0 ? 'Check' : `Call ${Math.min(toCall, stack).toLocaleString()}`; if (_blindHelp) return say(`K: ${lbl}.`); say(`${lbl}.`); send(toCall === 0 ? 'check' : 'call'); return; }
-          if (e.code === 'KeyA') { if (_blindHelp) return say(`A: All in, ${cap.toLocaleString()}.`); say(`All in, ${cap.toLocaleString()}.`); send('allin'); return; }
+          // A-key all-in intentionally removed (Josh: too easy to shove by accident when moving fast). All-in stays reachable via R→4 or T.
           if (e.code === 'KeyR') {
             // R opens the RAISE MENU (Josh's design): standardized bets on 1-4.
             if (_blindHelp) return say('R: open the raise menu — then 1 minimum, 2 half pot, 3 pot, 4 all in.');

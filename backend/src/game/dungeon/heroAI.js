@@ -288,7 +288,11 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     const targets = awake.length ? awake : foes;          // don't wake sleepers
     const usable = (ab) => {
       if (!ab || lvl < (ab.minLevel || 1)) return false;
-      if (m._synthSchool && ab.slvl != null && ab.slvl >= 1 && ab.side && ab.side !== m._synthSchool && ab.side !== 'both') return false;   // Spell Synthesis is lining up one arcane + one divine — restrict this pick to the wanted school
+      // Spell Synthesis pairs ONE arcane + ONE divine LEVELED spell (Tobias 2026-07-08: "must use 1
+      // arcane and 1 divine, they cannot both be one type"). While a school is being lined up, the
+      // pick MUST be a leveled spell whose side is that school (or a dual-list 'both' spell) — this
+      // rejects cantrips / non-spell abilities that carry no side, so the pair can never be same-type.
+      if (m._synthSchool && (!(ab.slvl >= 1) || (ab.side !== m._synthSchool && ab.side !== 'both'))) return false;
       if (!this._charAllows(ab, m)) return false;   // char-gated forms (Rissa vs generic druids)
       if (!this._loadoutAllows(ab, m)) return false;   // PHASE C: bot only casts prepared/known spells
       if (ab.effect === 'form' && m.form && m.form.key === (ab.form && ab.form.key)) return false;   // already in this form
