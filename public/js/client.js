@@ -1269,8 +1269,12 @@
   // the top-left of a hero token — green ring marks a boon (vs the red debuff ring).
   function buffIcons(list) {
     if (!list || !list.length) return '';
+    // A chip with a `n` count (Mirror Image decoys, Glorious Challenge stack) shows a tiny
+    // corner badge; others render as a bare icon. The icon keeps its native title tooltip.
     return `<div class="dbuff">` + list.map(c =>
-      `<img class="dbuff__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(statusTitle(c))}" loading="lazy" />`
+      c.n != null
+        ? `<span class="dbuff__w"><img class="dbuff__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(statusTitle(c))}" loading="lazy" /><span class="dbuff__n">${escapeAttr(String(c.n))}</span></span>`
+        : `<img class="dbuff__i" src="${escapeAttr(c.icon)}" alt="${escapeAttr(c.label)}" title="${escapeAttr(statusTitle(c))}" loading="lazy" />`
     ).join('') + `</div>`;
   }
   // Live-tick the dungeon auto-skip countdown badges (set by renderDungeon) so

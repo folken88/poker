@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.32 2026-07-08 BUFF COUNT BADGES (Tobias): buff chips can now show a tiny corner NUMBER. Order
+//                     of the Flame cavaliers (Lord Gweyir, the sahuagin prince) show their current
+//                     GLORIOUS CHALLENGE stack level, and MIRROR IMAGE shows the number of decoys
+//                     remaining. Serialize adds an `n` to those chips; the client renders it as a
+//                     badge (heroes AND enemies — the enemy mirror-image count now shows too). The
+//                     count is also in each chip's tooltip/desc, so the blind narrator reads it.
 //  3.37.31 2026-07-08 REACH WEAPONS THREATEN — attacks of opportunity (Tobias). A hero wielding a REACH
 //                     melee weapon (polearm / Azwraith's fauchard / Kai Ginn's bastard's blade) now
 //                     lands a FREE strike when a foe MOVES to engage — charging in, or switching its
@@ -689,6 +695,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.31';
-const HEADLINE = 'Reach weapons now threaten: Azwraith and Kai Ginn land a free Attack of Opportunity when a foe charges in or switches targets — 1 + Dex-mod times per round (Combat Reflexes).';
+const VERSION = '3.37.32';
+const HEADLINE = 'Buff badges: Order of the Flame cavaliers now show their Glorious Challenge stack as a little number, and Mirror Image shows how many decoys are left.';
 module.exports = { VERSION, HEADLINE };

@@ -103,7 +103,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
   // their own flags.
   _buffList(m) {
     const I = '/dungeon/buffs/', c = [], pushed = new Set();
-    const push = (k, label, desc, icon) => { if (pushed.has(k)) return; pushed.add(k); c.push({ key: k, label, desc, icon: icon || `${I}${k}.webp` }); };
+    const push = (k, label, desc, icon, n) => { if (pushed.has(k)) return; pushed.add(k); c.push({ key: k, label, desc, icon: icon || `${I}${k}.webp`, ...(n != null ? { n } : {}) }); };   // n = a tiny count badge on the chip (mirror-image decoys, glorious-challenge stack)
     // Every applied spell/feat buff carries its own icon via BUFF_META — walk the
     // recorded keys so any buff (new ones included) lights up automatically.
     // Only TRUTHY entries are active: a toggled-OFF Power Attack / Deadly Aim
@@ -121,7 +121,8 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (m.hasted > 0)   push('haste', 'Haste', `an extra attack each turn (${m.hasted} left)`);
     if (m.invisible)    push('invisible', 'Invisible', 'unseen — until you attack');
     if (m.flying)       push('fly', 'Flying', 'airborne — grounded foes cannot reach you');
-    if (m.images > 0)   push('mirrorimage', 'Mirror Image', `${m.images} decoy${m.images > 1 ? 's' : ''} soaking incoming attacks`, '/dungeon/buffs/fly.webp');   // no mirrorimage.webp exists — reuse the shimmer icon (matches BUFF_META)
+    if (m.images > 0)   push('mirrorimage', 'Mirror Image', `${m.images} decoy${m.images > 1 ? 's' : ''} soaking incoming attacks`, '/dungeon/buffs/fly.webp', m.images);   // no mirrorimage.webp exists — reuse the shimmer icon (matches BUFF_META); n = remaining decoys badge
+    if (m.gloriousN > 0) push('glorious', 'Glorious Challenge', `Order of the Flame — the Flame stack: +${2 * m.gloriousN} damage / −${2 * m.gloriousN} AC on your NEXT Glorious Challenge (grows +1 per kill this room)`, '/dungeon/buffs/protevil.webp', m.gloriousN);   // n = current stack level
     if (m.untargetable) push('blur', 'Blurred', 'untargetable until your next turn (Bladed Dash)', '/dungeon/buffs/fly.webp');
     if (m.touchStrike > 0) push('dimblade', 'Dimensional Blade', 'your strikes hit on TOUCH this round', '/dungeon/buffs/magearmor.webp');
     if (m.protectFire > 0) push('protectfire', 'Fire Ward', `absorbs the next ${m.protectFire} fire damage (Protection from Fire)`);
