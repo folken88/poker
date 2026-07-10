@@ -561,6 +561,20 @@
   if (audioMenuPop) {
     audioMenuPop.addEventListener('click', (e) => e.stopPropagation());
   }
+  // Topbar popover coordination (Josh 2026-07-10 — a "royal pain" for VoiceOver):
+  // the audio menu, table menu and bank purse are independent disclosures that EACH
+  // stopPropagation() their own toggle click. That blocked the OTHERS' document-level
+  // outside-click-close handlers — so opening the table menu while the audio menu was
+  // open left the audio menu STUCK OPEN, overlapping the topbar and eating clicks
+  // ("once expanded it never collapses; the table menu won't open; buttons disappear").
+  // Now opening any one popover first CLOSES the other two — only one is ever open —
+  // and every close resets BOTH `.is-open` AND `aria-expanded` (VoiceOver was hearing
+  // "expanded" forever because aria-expanded lingered on the button after the class cleared).
+  const closeTopbarPopovers = (except) => {
+    if (except !== 'audio') { const a = $('#audioMenu'), b = $('#muteBtn'); if (a) a.classList.remove('is-open'); if (b) b.setAttribute('aria-expanded', 'false'); }
+    if (except !== 'table') { const t = $('#topbarMenu'), tt = $('#topbarMenuToggle'); if (t) t.classList.remove('is-open'); if (tt) tt.setAttribute('aria-expanded', 'false'); }
+    if (except !== 'bank')  { const p = $('#mePurse'); if (p) { p.classList.remove('is-open'); p.setAttribute('aria-expanded', 'false'); } }
+  };
   // Touch / keyboard: tap anywhere on the wrapper (including the
   // speaker icon) to reveal the menu. Outside click closes it.
   const audioMenu = $('#audioMenu');
@@ -570,6 +584,7 @@
     // aria-expanded, opening MOVES FOCUS into the panel (so a SR user is
     // "inside" the dropdown), and Escape closes it + returns focus to the button.
     const setAudioOpen = (open) => {
+      if (open) closeTopbarPopovers('audio');   // close the table menu / bank first — only one popover open at a time
       audioMenu.classList.toggle('is-open', open);
       if (audioBtn) audioBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
       if (open) { const f = audioMenuPop && audioMenuPop.querySelector('input, a, button, select'); if (f) f.focus(); }
@@ -615,6 +630,7 @@
     topbarMenuToggle.addEventListener('click', (e) => {
       e.stopPropagation();
       const open = !topbarMenu.classList.contains('is-open');
+      if (open) closeTopbarPopovers('table');   // close the audio menu / bank first (they no longer block each other)
       topbarMenu.classList.toggle('is-open', open);
       topbarMenuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
@@ -646,6 +662,7 @@
       mePurse.setAttribute('aria-haspopup', 'dialog');
       mePurse.setAttribute('aria-expanded', 'false');
       const setPurse = (o) => {
+        if (o) closeTopbarPopovers('bank');   // close the audio / table menus first
         mePurse.classList.toggle('is-open', o);
         mePurse.setAttribute('aria-expanded', o ? 'true' : 'false');
         if (o && mePursePop) { const f = mePursePop.querySelector('button, a, [tabindex]'); if (f) f.focus(); }
@@ -691,7 +708,7 @@
     const am = $('#audioMenu'); if (!am) return;
     if (!_audioHome) _audioHome = am.parentNode;   // its table-topbar home (captured before any move)
     const slot = name === 'dungeon' ? $('#dungeonAudioSlot') : _audioHome;
-    if (slot && am.parentNode !== slot) { slot.appendChild(am); am.classList.remove('is-open'); }
+    if (slot && am.parentNode !== slot) { slot.appendChild(am); am.classList.remove('is-open'); const mb = $('#muteBtn'); if (mb) mb.setAttribute('aria-expanded', 'false'); }   // reset aria too — else VoiceOver hears "expanded" forever after a screen change (Josh)
   }
   function setScreen(name) {
     document.body.dataset.screen = name;

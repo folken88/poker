@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.38 2026-07-10 AUDIO-MENU a11y fix (Josh — "a royal pain"). The 🔊 audio menu could get STUCK OPEN
+//                     for a VoiceOver user and then break the rest of the topbar: he'd open it to lower a
+//                     volume, then couldn't open the Table menu to sit out — "buttons disappear or don't
+//                     work." Two causes: (1) the audio menu, Table menu and bank purse each
+//                     stopPropagation()'d their own toggle click, which BLOCKED the others' outside-click-
+//                     close — so opening one left the others stuck open, overlapping the topbar. Now
+//                     opening any one popover first CLOSES the other two (only one open at a time). (2) On
+//                     a poker↔dungeon screen change the menu cleared its `.is-open` class but NOT
+//                     `aria-expanded`, so VoiceOver kept announcing it as "expanded" forever — now both
+//                     reset together. (Client-only — hard refresh.)
 //  3.37.37 2026-07-09 NEW BOSS — MASTER UKE, the katana master (from the Foundry roster). A gestalt
 //                     Paladin/Unchained-Monk/Samurai (CR 16) who wields HANZO STEEL, his +5 keen mithral
 //                     katana: a blinding 4-strike flurry of blade and fist (d8+13), Evasion (shrugs off
@@ -735,6 +745,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.37';
-const HEADLINE = 'New boss: MASTER UKE, a katana master (paladin/monk/samurai) who wields Hanzo Steel — a blinding flurry of blade and fist, Evasion, and self-healing. Lawful Good, so Smite Evil finds no purchase. Bring your best.';
+const VERSION = '3.37.38';
+const HEADLINE = 'Accessibility fix (Josh): the audio menu could get stuck open and jam the rest of the topbar — now only one topbar menu is open at a time, and it always collapses cleanly. Hard refresh to pick it up.';
 module.exports = { VERSION, HEADLINE };
