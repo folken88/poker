@@ -1367,13 +1367,16 @@
     // no matter which list you heard it in.
     const alive = (d.enemies || []).filter(e => e.alive).sort((a, b) => _crVal(b.cr) - _crVal(a.cr));
     if (!alive.length) return 'No enemies.';
-    // QUICK TARGET LIST (Josh 2026-07-05): name, HP, and flying ONLY. Flying is
-    // tactically essential (grounded melee can't reach a flyer). Everything else —
-    // CR, DR, debuffs — lives in the E-inspector, not read at you when you pick.
+    // QUICK TARGET LIST (Josh 2026-07-11, revised): name, HP as a PERCENT, flying only
+    // if flying, and any DEBUFFS the party has landed (prone / grappled / held / sickened
+    // …) — the snapshot he needs to PICK a target fast ("Elite Vampire, 80%, prone").
+    // Percent reads quicker than "105 of 160 HP", and the debuffs tell him who's easy to
+    // pile on. Full HP / CR / DR still live in the E-inspector (he opens it for deep info).
     const fly = (e) => e.flying ? ', flying' : '';
-    const hp = (e) => `${Math.max(0, e.hp | 0)} of ${e.maxHp | 0} HP`;
-    if (alive.length === 1) return `Enemy: ${alive[0].name}, ${hp(alive[0])}${fly(alive[0])}.`;
-    return `${alive.length} enemies, deadliest first. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${hp(e)}${fly(e)}`).join('. ') + '.';
+    const hp = (e) => `${Math.round(100 * Math.max(0, e.hp | 0) / (e.maxHp || 1))}%`;
+    const debs = (e) => { const ds = (e.conditions || []).map(c => c.label).filter(Boolean); return ds.length ? ', ' + ds.join(', ') : ''; };
+    if (alive.length === 1) return `Enemy: ${alive[0].name}, ${hp(alive[0])}${fly(alive[0])}${debs(alive[0])}.`;
+    return `${alive.length} enemies, deadliest first. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${hp(e)}${fly(e)}${debs(e)}`).join('. ') + '.';
   }
   // "Say attack, <ability 1>, <ability 2>, or bail." built from the player's kit.
   function _dunActionsHint(d) {

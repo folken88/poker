@@ -2747,7 +2747,7 @@
       // while moving fast). Cancel-run now lives ONLY in the Escape session menu.
       if (e.key === '.') {
         e.preventDefault();
-        if (_blindHelp) window.BlindMode.speak('Period: unmapped. Cancel the run from the Escape menu.', 'urgent');
+        if (_blindHelp) window.BlindMode.speak('Period: unassigned.', 'urgent');   // (Josh: no need to re-explain where cancel-run went)
         return;
       }
       // Esc → session controls. If a dropdown/overlay is open, let the global Esc
@@ -2805,9 +2805,12 @@
       // Q/W fired abilities (all Josh's 6/11 report). Unassigned letters answer in
       // help mode ("S: not assigned") and otherwise point at the real keys.
       if (/^[a-z]$/.test(k)) {
+        if (k === 's') return;   // S is the GLOBAL stop/silence key — its own handler owns it (describes it in help mode, silences otherwise). Don't bucket it as "not assigned" (Josh 2026-07-11).
         e.preventDefault();
-        if (_blindHelp) sayU(`${k.toUpperCase()}: not assigned. Actions are on the number keys. 0 opens the door, L reads your buffs, B reads the party’s buffs, Escape opens the session menu (bail, leave, cancel).`);
-        else if (['q', 'w', 'a', 'o'].includes(k)) sayU('Not assigned in blind mode. Actions are on the number keys — press question mark for help.');
+        // Terse (Josh 2026-07-11): a stray key just needs "not mapped," not the whole
+        // where-the-actions-live spiel every time.
+        if (_blindHelp) sayU(`${k.toUpperCase()}: not mapped.`);
+        else if (['q', 'w', 'a', 'o'].includes(k)) sayU('Not mapped.');
         return;
       }
       // Return outside the sub-modes has no job (it confirms in the spellbook,
@@ -5653,8 +5656,15 @@
       // as [ / ] for speed, so he can balance the narration against Discord / game audio.
       if (e.code === 'Minus' || e.code === 'NumpadSubtract') { e.preventDefault(); window.BlindMode.nudgeVolume?.(-0.1); return; }
       if (e.code === 'Equal' || e.code === 'NumpadAdd')      { e.preventDefault(); window.BlindMode.nudgeVolume?.(+0.1); return; }
-      // S — stop talking now (works on every screen).
-      if (e.code === 'KeyS') { e.preventDefault(); window.BlindMode.stopSpeaking?.(); return; }
+      // S — stop/silence the current report (works on every screen). In help mode it
+      // DESCRIBES itself instead of firing, so Josh can learn it (it used to fall through
+      // and report "not assigned" in the dungeon, or just make the noise at poker).
+      if (e.code === 'KeyS') {
+        e.preventDefault();
+        if (_blindHelp) { window.BlindMode.speak('S: stop or silence the current report. Press it again to skip to the next one.', 'urgent'); return; }
+        window.BlindMode.stopSpeaking?.();
+        return;
+      }
       // ----- Explore hotkeys (poker table only) -----
       // C / B / P read your cards / the board / the pot. Number keys 1–9 read a
       // seat: the occupant's name, or (if empty) arm it and say "Sit N" so

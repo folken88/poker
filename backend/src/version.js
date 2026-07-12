@@ -3,6 +3,19 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.39 2026-07-11 JOSH BATCH — enemy SOUND consistency + blind key-message cleanup + enemy HP%.
+//                     (1) ENEMY RANGED SFX: archers & gunslingers were clanging like SWORDS — a missed
+//                     shot fell back to a sword-whiff, and some (aasimar gun/shotgunner, bralani) had no
+//                     shot sound at all. Now every ranged foe is flagged `ranged` (RANGED_KEYS) with a
+//                     real bow/gun `atkSound` that fires on a HIT OR a MISS (a missed arrow/bullet no
+//                     longer clangs). Bonus: a flagged archer "doesn't wrestle" (skips grapple/trip).
+//                     (2) BLIND KEY MESSAGES trimmed (Josh): a stray unmapped key now just says "not
+//                     mapped" (no where-the-actions-live spiel); "." says only "Period: unassigned"; and
+//                     the S key no longer misreports as "not assigned" in the dungeon — it's owned by its
+//                     stop/silence handler, which DESCRIBES itself in help mode instead of firing.
+//                     (3) ENEMY HOT-LIST now reads HP as a PERCENT + any debuffs ("Elite Vampire, 80%,
+//                     prone"), flying only if flying — quicker to scan than "105 of 160 HP"; full HP stays
+//                     in the E-inspector. domtest +4. (Static client + backend monsters/enemyAI.)
 //  3.37.38 2026-07-10 AUDIO-MENU a11y fix (Josh — "a royal pain"). The 🔊 audio menu could get STUCK OPEN
 //                     for a VoiceOver user and then break the rest of the topbar: he'd open it to lower a
 //                     volume, then couldn't open the Table menu to sit out — "buttons disappear or don't
@@ -745,6 +758,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.38';
-const HEADLINE = 'Accessibility fix (Josh): the audio menu could get stuck open and jam the rest of the topbar — now only one topbar menu is open at a time, and it always collapses cleanly. Hard refresh to pick it up.';
+const VERSION = '3.37.39';
+const HEADLINE = 'Josh batch: enemy archers & gunslingers now sound like bows and guns (not swords) even on a miss; the blind key hints are terser; and the enemy target list reads HP as a percent plus any debuffs (\"Elite Vampire, 80%, prone\"). Hard refresh.';
 module.exports = { VERSION, HEADLINE };

@@ -204,7 +204,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         for (let i = 0; i < swings; i++) {
           if (target.hp <= 0) break;
           const r = this._monsterSwing(e, this._enemyAC(target));
-          if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds); else if (r.hit && e.atkSound) r.sound = e.atkSound;
+          if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds); else if (e.atkSound && (r.hit || e.ranged)) r.sound = e.atkSound;   // ranged foes fire their bow/gun sound on a MISS too (a missed shot isn't a sword clang — Josh)
           if (r.hit) { this._dmgE(target, r.damage); this._note(`${e.glyph} ${e.name} smashes your undead ${target.name} for ${r.damage}!${target.hp <= 0 ? ' ☠️ Destroyed!' : ''}`, r.sound, { side: 'enemy' }); }
           else this._note(`${e.glyph} ${e.name} swings at your undead ${target.name} — and misses.`, r.sound, { side: 'enemy' });
         }
@@ -281,7 +281,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - (target.stunned > 0 ? 2 : 0) - (target.slowed > 0 ? 1 : 0) - this._acPenalty(target);   // helpless / stunned / slowed / rage / reckless / cleave: easier to hit (enemy melee vs prone = −4)
     const r = this._monsterSwing(e, effAC);
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);   // monk's randomized "bruce" kiai (hit or miss)
-    else if (r.hit && e.atkSound) r.sound = e.atkSound;                    // rogue's "riki" stab (hit only)
+    else if (e.atkSound && (r.hit || e.ranged)) r.sound = e.atkSound;      // melee atkSound = the connecting blow (hit only, e.g. rogue "riki" stab); a RANGED foe fires its bow/gun sound on a MISS too (Josh: a missed shot shouldn't clang like a sword)
     if (r.hit) {
       // Swashbuckler PARRY — the first melee attack against them each round can be
       // turned aside (parry roll vs the foe's attack total). On success: NO damage
