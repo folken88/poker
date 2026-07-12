@@ -1135,7 +1135,7 @@
    *  too fast). Re-speaks the last EVENT-priority line (`state.lastEventText`) — combat
    *  results, level-ups, and end-of-room lines are all events; transient 'urgent' prompts
    *  like "Your turn" don't overwrite it, so this brings back the last real report. Bound
-   *  to the ' (quote) key in client.js and the "repeat" voice command. */
+   *  to the A key in client.js (moved from ' per Josh 2026-07-12) and the "repeat" voice command. */
   function repeatLast() {
     if (!state.on) return;
     if (state.lastEventText) speak(state.lastEventText, 'urgent');

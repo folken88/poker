@@ -142,12 +142,19 @@ module.exports = ({ fighterFeats, titleCase }) => ({
   // that's been hasted or pumped with combat buffs. Debuffs ride _condList.
   _enemyBuffList(e) {
     const I = '/dungeon/buffs/', c = [];
+    // OBSERVABILITY (Tobias 2026-07-12): the player only KNOWS a buff is on a foe if it's
+    // visible/audible in combat. `hidden: true` keeps the entry in the array (the blind
+    // Dispel picker + dispel logic still see it — you cast Dispel on a foe and it strips
+    // whatever's there) but DROPS it from the visible chips / read-out. VISIBLE (shown):
+    // Mirror Image (obvious decoys), Flying, Invisible (you know you can't see it), Hasted
+    // (it's plainly acting faster). HIDDEN: pure stat/ward boons — Bull's Strength, Mage
+    // Armor, Shield of Faith, Fire Ward, Stoneskin — you can't see those.
     if (e.hasted > 0) c.push({ key: 'haste', label: 'Hasted', desc: 'an extra attack each turn', icon: `${I}haste.webp` });
-    if (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)) c.push({ key: 'buffed', label: 'Strengthened', desc: 'combat buffs active (+hit / +damage / +AC)', icon: `${I}bullsstrength.webp` });
-    // Pre-cast wards (boss casters walk in pre-buffed) — these are DISPELLABLE, so
-    // they MUST appear here or the blind Dispel picker won't offer the foe (Josh:
-    // "cannot target a foe"). Mirrors the server's foeEnchanted check.
-    if (e.precast && e.precast.length) c.push({ key: 'warded', label: 'Warded', desc: `pre-cast wards (${e.precast.join(', ')}) — dispellable`, icon: `${I}magearmor.webp` });
+    if (e.buffs && ((e.buffs.toHit || 0) > 0 || (e.buffs.dmg || 0) > 0 || (e.buffs.ac || 0) > 0)) c.push({ key: 'buffed', label: 'Strengthened', desc: 'combat buffs active (+hit / +damage / +AC)', icon: `${I}bullsstrength.webp`, hidden: true });
+    // Pre-cast wards (boss casters walk in pre-buffed) — DISPELLABLE, so they MUST stay in
+    // the list or the blind Dispel picker won't offer the foe (Josh: "cannot target a
+    // foe"). But hidden: true — a player can't see Mage Armor / Shield of Faith / Fire Ward.
+    if (e.precast && e.precast.length) c.push({ key: 'warded', label: 'Warded', desc: `pre-cast wards (${e.precast.join(', ')}) — dispellable`, icon: `${I}magearmor.webp`, hidden: true });
     // Mid-combat self-buffs (enemy casters) — all DISPELLABLE, so they show as
     // strip-able boons + the Dispel picker offers the foe.
     if (e.invisible)  c.push({ key: 'invisible',   label: 'Invisible',    desc: 'unseen — your hits suffer 50% concealment (True Seeing / blindsense pierce it); dispellable', icon: `${I}invisible.webp` });

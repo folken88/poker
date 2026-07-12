@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.42 2026-07-12 JOSH/TOBIAS BATCH — enemy-info honesty + blind polish. (1) OBSERVABILITY (Tobias):
+//                     an enemy's INVISIBLE buffs (Bull's Strength, Mage Armor, Shield of Faith, Fire
+//                     Ward — "Strengthened"/"Warded") are no longer shown or read out — you only learn a
+//                     buff if it's verifiably visible (Mirror Image, Flying, Invisible, Hasted stay). The
+//                     buffs remain in the data so the Dispel picker still works. (2) TARGET-PICKER now
+//                     matches the hot-list: name + HP PERCENT + any debuff your party landed (was HP
+//                     totals) — flying only if flying. (3) FLYING FOES DON'T WRESTLE (Josh): a swooping
+//                     flyer STRIKES or casts — no trip / grapple / bull-rush from the air (angel clerics
+//                     were grappling). (4) REPEAT KEY moved from ' to the A key (Josh: easier to reach).
+//                     domtest +3. (Static client + backend serialize/enemyAI.)
 //  3.37.41 2026-07-11 COMBAT BATCH (Tobias todo). (1) ENEMY BLAZE OF GLORY — the Sahuagin Prince now has
 //                     the 3rd Order-of-the-Flame deed: the instant it's BLOODIED (≤ half HP) it flares
 //                     up ONCE per room, +4 to ALL its attacks for the rest of the room (mirrors Lord
@@ -777,6 +787,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.41';
-const HEADLINE = 'Combat batch: the Sahuagin Prince now BLAZES (+4 to all attacks once it is bloodied), rogues & swashbucklers make foes BLEED on a precision hit, and a new Sahuagin Reefstalker archer joins the sea-devils.';
+const VERSION = '3.37.42';
+const HEADLINE = 'Enemy info is now honest: you only see a foe\'s buff if it\'s visible (mirror image, flying) — hidden stat wards no longer show. Target list reads HP percent + debuffs, flying foes stop wrestling, and the repeat key moved to A.';
 module.exports = { VERSION, HEADLINE };

@@ -1285,6 +1285,7 @@
   // A strip of active BUFF icons (rage / shield / bless / smite / judgement…) at
   // the top-left of a hero token — green ring marks a boon (vs the red debuff ring).
   function buffIcons(list) {
+    list = (list || []).filter(c => !c.hidden);   // OBSERVABILITY (Tobias 2026-07-12): drop buffs a player can't verifiably see (Bull's Strength / Mage Armor / Shield of Faith / Fire Ward) — they stay in the data for the dispel picker, just aren't shown/read.
     if (!list || !list.length) return '';
     // A chip with a `n` count (Mirror Image decoys, Glorious Challenge stack) shows a tiny
     // corner badge; others render as a bare icon. The icon keeps its native title tooltip.
@@ -2723,7 +2724,14 @@
         const singleEnemyTarget = act.kind === 'attack' || (ab && ab.target === 'enemy');
         if (singleEnemyTarget && alive.length > 1) {
           _dunTarget = { kind: act.kind === 'attack' ? 'attack' : 'ability', slot: act.slot, label };
-          const list = alive.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
+          // Same terse format as the hot-list (Josh 2026-07-12): HP as a PERCENT, flying
+          // only if flying, and any DEBUFF the party has landed — NOT HP totals or enemy
+          // buffs (deep detail lives in the E-inspector; this is a snap-decision pick).
+          const list = alive.slice(0, 9).map((x, i) => {
+            const pct = Math.round(100 * Math.max(0, x.hp | 0) / (x.maxHp || 1));
+            const debs = (x.conditions || []).map(c => c.label).filter(Boolean);
+            return `${i + 1}, ${x.name}, ${pct}%${x.flying ? ', flying' : ''}${debs.length ? ', ' + debs.join(', ') : ''}`;
+          }).join('; ');
           window.BlindMode.speak(`${label} — select a target, deadliest first: ${list}.`, 'urgent');
           return;
         }
@@ -2805,12 +2813,12 @@
       // Q/W fired abilities (all Josh's 6/11 report). Unassigned letters answer in
       // help mode ("S: not assigned") and otherwise point at the real keys.
       if (/^[a-z]$/.test(k)) {
-        if (k === 's') return;   // S is the GLOBAL stop/silence key — its own handler owns it (describes it in help mode, silences otherwise). Don't bucket it as "not assigned" (Josh 2026-07-11).
+        if (k === 's' || k === 'a') return;   // S (stop/silence) and A (repeat) are GLOBAL keys — their own handlers own them (describe in help mode, act otherwise). Don't bucket them as "not assigned" (Josh 2026-07-11/12).
         e.preventDefault();
         // Terse (Josh 2026-07-11): a stray key just needs "not mapped," not the whole
         // where-the-actions-live spiel every time.
         if (_blindHelp) sayU(`${k.toUpperCase()}: not mapped.`);
-        else if (['q', 'w', 'a', 'o'].includes(k)) sayU('Not mapped.');
+        else if (['q', 'w', 'o'].includes(k)) sayU('Not mapped.');
         return;
       }
       // Return outside the sub-modes has no job (it confirms in the spellbook,
@@ -5665,12 +5673,14 @@
         window.BlindMode.stopSpeaking?.();
         return;
       }
-      // ' (quote) — REPEAT the last report (Josh 2026-07-09): re-hear the last thing
-      // said — a level-up, a foe's action, a line you moved past too fast. Works on
-      // every screen; describes itself in help mode.
-      if (e.code === 'Quote') {
+      // A — REPEAT the last report (Josh 2026-07-12: moved here from the apostrophe, which
+      // was awkward to reach). Re-hear the last thing said — a level-up, a foe's action, a
+      // line you moved past too fast. Works on every screen; describes itself in help mode.
+      // (A is free: it was unmapped from all-in at the poker table, and excluded from the
+      // dungeon "not mapped" letters so it routes here.)
+      if (e.code === 'KeyA') {
         e.preventDefault();
-        if (_blindHelp) { window.BlindMode.speak('Quote, the apostrophe key: repeat the last report — re-hear the last thing said, like a level-up you moved past.', 'urgent'); return; }
+        if (_blindHelp) { window.BlindMode.speak('A: repeat the last report — re-hear the last thing said, like a level-up you moved past.', 'urgent'); return; }
         window.BlindMode.repeatLast?.();
         return;
       }
