@@ -31,7 +31,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
-    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0);   // Fight Defensively: −4 to attacks
+    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0);   // Fight Defensively: −4 to attacks; Order of the Flame BLAZE OF GLORY: +4 for the room
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
@@ -277,6 +277,13 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // A foe that MOVES to engage provokes: reach heroes get an AoO before it strikes (see above).
     if (target && e._lastMeleeTargetId !== target.playerId) { e._lastMeleeTargetId = target.playerId; this._provokeReachAoO(e); if (e.hp <= 0) return; }
     e.invisible = false;   // striking in melee breaks Invisibility (same rule as heroes)
+    // ORDER OF THE FLAME — BLAZE OF GLORY (enemy parity, the sahuagin prince): the moment
+    // it's BLOODIED (≤ half HP) it flares up ONCE per room, +4 to ALL its attacks for the
+    // rest of the room (mirrors Lord Gweyir's hero deed). Fresh enemy each room → no reset.
+    if (e.blazeOfGlory && !e._blazedRoom && e.hp > 0 && e.hp <= (e.maxHp || e.hp) / 2) {
+      e._blazedRoom = true; e._blazeBonus = 4;
+      this._note(`☄️ ${e.glyph} ${e.name} BLAZES in a final surge of glory — +4 to ALL its attacks for the rest of the room!`, '/audio/draugr_shout03_burning.mp3', { side: 'enemy' });
+    }
     // _acOf strips shield AC for dual-wielders AND ranged-weapon wielders.
     const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - (target.stunned > 0 ? 2 : 0) - (target.slowed > 0 ? 1 : 0) - this._acPenalty(target);   // helpless / stunned / slowed / rage / reckless / cleave: easier to hit (enemy melee vs prone = −4)
     const r = this._monsterSwing(e, effAC);

@@ -1674,6 +1674,15 @@ class Dungeon {
       if (bloodless) this._note(`💀 ${attacker.nickname}'s Bleeding Touch finds no blood in ${target.name} — no wound to open.`);
       else { target._bleeding = true; this._note(`🩸 ${target.name} is BLEEDING (Death domain) — 1d6 each round until it falls!`); }
     }
+    // PRECISION BLEED (Tobias 2026-07-11): a rogue's SNEAK ATTACK or a swashbuckler's
+    // PRECISE STRIKE opens a bleeding wound — the foe bleeds 1d6 at the top of each of its
+    // turns until it drops (same tick as the Death domain's Bleeding Touch). FIRST precision
+    // hit per foe only (doesn't stack); bloodless foes (undead / constructs / oozes…) can't bleed.
+    if ((sneakDmg > 0 || preciseDmg > 0) && target && target.hp > 0 && !target._bleeding) {
+      const bloodless = target.type === 'undead' || target.type === 'construct'
+        || /golem|skelet|zombie|ooze|elemental|wraith|ghost|shadow|specter|spectre/i.test(target.name || '');
+      if (!bloodless) { target._bleeding = true; this._note(`🩸 ${attacker.nickname}'s precise strike opens a wound — ${target.name} BLEEDS 1d6 each round until it falls.`); }
+    }
     // PHYSICAL DR: the foe soaks the weapon's physical damage (dice + static + crit +
     // precision/sneak/bane/smite) unless this weapon's TYPE (S/P/B) or its magic
     // bypasses the foe's DR. A clean hit is ≥1 before DR; DR can soak it to 0 (a sword

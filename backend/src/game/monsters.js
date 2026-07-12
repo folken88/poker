@@ -175,9 +175,10 @@ const MON = {
   shackles_swashbuckler:{ name: 'Port Peril Kingsguard', glyph: '⚔️', cr: '11', hp: 105, ac: 24, toHit: 17, dmgDie: 8, dmgBonus: 9, fort: 9, reflex: 8, attacks: 3, gold: [110, 220] },   // Fighter 12 — the Hurricane King's elite guard; heavy blade, full iteratives (cavalier levels later)
   shackles_officer:  { name: 'Bronze Fleet Officer', glyph: '🏴‍☠️', cr: '5', hp: 48, ac: 19, toHit: 10, dmgDie: 6, dmgBonus: 5, fort: 5, reflex: 6, attacks: 2, gold: [42, 90] },   // slaver fleet mate — cutlass + pistol grip
   sahuagin_scout:    { name: 'Sahuagin Scout',    glyph: '🦈', cr: '3',   hp: 26,  ac: 17, toHit: 7,  dmgDie: 6,  dmgBonus: 2,  fort: 3,  reflex: 6,  attacks: 2, sneakDice: 2, evasion: true, gold: [26, 60] },   // tidal trickster — knife-work from the surf
+  sahuagin_ranger:   { name: 'Sahuagin Reefstalker', glyph: '🦈', cr: '5', hp: 48, ac: 18, toHit: 10, dmgDie: 8, dmgBonus: 4, fort: 6, reflex: 8, attacks: 2, ranged: true, gold: [42, 90], atkSound: '/audio/bow_shot.mp3' },   // Ranger 6 — a coral-bow sniper looses barbed arrows from the reef, two shots a round (see RANGED_KEYS)
   sahuagin_rager:    { name: 'Sahuagin Rager',    glyph: '🦈', cr: '5',   hp: 55,  ac: 17, toHit: 11, dmgDie: 8,  dmgBonus: 7,  fort: 8,  reflex: 4,  gold: [42, 90] },   // bloodrager — a frothing frenzy of trident and teeth
   sahuagin_shaman:   { name: 'Sahuagin Shaman',   glyph: '🦈', cr: '5',   hp: 45,  ac: 17, toHit: 8,  dmgDie: 6,  dmgBonus: 3,  fort: 5,  reflex: 4,  gold: [42, 95], healer: { dice: 2, uses: 2 }, caster: 'holdperson', spellDC: 16 },   // deep-god witchery: holds a hero rigid, mends the raiders
-  sahuagin_prince:   { name: 'Sahuagin Prince',   glyph: '👑', cr: '7',   hp: 76,  ac: 21, toHit: 13, dmgDie: 8,  dmgBonus: 7,  fort: 8,  reflex: 6,  attacks: 2, gold: [70, 150], gloriousChallenge: true },   // Cavalier 7, big blade — ORDER OF THE FLAME: every hero it DROPS fuels a GLORIOUS CHALLENGE (+2 dmg / −2 AC per consecutive kill this room, compounding). Kill it fast.
+  sahuagin_prince:   { name: 'Sahuagin Prince',   glyph: '👑', cr: '7',   hp: 76,  ac: 21, toHit: 13, dmgDie: 8,  dmgBonus: 7,  fort: 8,  reflex: 6,  attacks: 2, gold: [70, 150], gloriousChallenge: true, blazeOfGlory: true },   // Cavalier 7, big blade — ORDER OF THE FLAME: every hero it DROPS fuels a GLORIOUS CHALLENGE (+2 dmg / −2 AC per consecutive kill this room, compounding). Kill it fast.
   charauka_warrior:  { name: 'Charau-Ka Warrior', glyph: '🐒', cr: '5',   hp: 50,  ac: 19, toHit: 10, dmgDie: 6,  dmgBonus: 4,  fort: 5,  reflex: 7,  attacks: 3, evasion: true, gold: [42, 90] },   // Brawler 6 ape-man — a shrieking flurry of fists and thrown stones
   charauka_stepper:  { name: 'Charau-Ka Stepper', glyph: '🐒', cr: '6',   hp: 55,  ac: 20, toHit: 11, dmgDie: 6,  dmgBonus: 4,  fort: 4,  reflex: 9,  attacks: 2, sneakDice: 4, evasion: true, gold: [55, 115], atkSound: '/audio/fight_riki.mp3' },   // Rogue 7 — drops from the canopy onto your back
   charauka_mancer:   { name: 'Charau-Ka Mancer',  glyph: '🐒', cr: '7',   hp: 60,  ac: 18, toHit: 8,  dmgDie: 4,  dmgBonus: 1,  fort: 5,  reflex: 6,  gold: [70, 150], evil: true, arcane: true },   // Witch 8 — jungle hexes and Angazhan's fire
@@ -356,7 +357,7 @@ const MON_GANGS = {
   shackles_marine: ['pirate'], shackles_seacaster: ['pirate'], shackles_swashbuckler: ['pirate'],
   shackles_officer: ['pirate'], bentbeak_charney: ['pirate'], captain_maris: ['pirate'],
   fungal_pirate: ['pirate', 'undead'], fungal_oracle: ['pirate', 'undead'], fungal_captain: ['pirate', 'undead'],
-  sahuagin_scout: ['sahuagin'], sahuagin_rager: ['sahuagin'], sahuagin_shaman: ['sahuagin'], sahuagin_prince: ['sahuagin'],
+  sahuagin_scout: ['sahuagin'], sahuagin_ranger: ['sahuagin'], sahuagin_rager: ['sahuagin'], sahuagin_shaman: ['sahuagin'], sahuagin_prince: ['sahuagin'],
   charauka_warrior: ['charauka'], charauka_stepper: ['charauka'], charauka_mancer: ['charauka'],
   ikualoa: ['charauka'], captain_thrune: ['pirate', 'devil'],
   // the infernal court — devils and the Thrune villains who serve Hell
@@ -441,7 +442,7 @@ const MON_ART = {
   shackles_marine: 'shackles_marine', shackles_seacaster: 'shackles_seacaster', shackles_swashbuckler: 'shackles_swashbuckler',
   shackles_officer: 'shackles_officer', bentbeak_charney: 'bentbeak_charney', captain_maris: 'captain_maris',
   fungal_pirate: 'fungal_pirate', fungal_oracle: 'fungal_oracle', fungal_captain: 'fungal_captain',
-  sahuagin_scout: 'sahuagin_scout', sahuagin_rager: 'sahuagin_rager', sahuagin_shaman: 'sahuagin_shaman',
+  sahuagin_scout: 'sahuagin_scout', sahuagin_ranger: 'sahuagin_ranger', sahuagin_rager: 'sahuagin_rager', sahuagin_shaman: 'sahuagin_shaman',
   sahuagin_prince: 'sahuagin_prince', charauka_warrior: 'charauka_warrior', charauka_stepper: 'charauka_stepper',
   charauka_mancer: 'charauka_mancer', ikualoa: 'ikualoa', captain_thrune: 'captain_thrune',
   blackout: 'blackout', ragh: 'ragh',
@@ -488,7 +489,7 @@ const MON_TYPE = {
   black_sovereign: 'humanoid', vorkstag: 'humanoid', auren_vrood: 'humanoid',
   amalokla: 'undead', tar_baphon: 'undead', brogwort: 'giant',
   charauka_warrior: 'humanoid', charauka_stepper: 'humanoid', charauka_mancer: 'humanoid',
-  sahuagin_scout: 'monstrous humanoid', sahuagin_rager: 'monstrous humanoid',
+  sahuagin_scout: 'monstrous humanoid', sahuagin_ranger: 'monstrous humanoid', sahuagin_rager: 'monstrous humanoid',
   sahuagin_shaman: 'monstrous humanoid', sahuagin_prince: 'monstrous humanoid',
   fungal_pirate: 'undead', fungal_oracle: 'undead', fungal_captain: 'undead',
   ikualoa: 'animal',
@@ -564,7 +565,7 @@ const ALIGN_BY_KEY = {
   shackles_officer: 'CE', bentbeak_charney: 'CE', captain_maris: 'CE', shackles_seacaster: 'CE',
   charauka_warrior: 'CE', charauka_stepper: 'CE', charauka_mancer: 'CE',
   shackles_marine: 'LE', captain_thrune: 'LE',
-  sahuagin_scout: 'LE', sahuagin_rager: 'LE', sahuagin_shaman: 'LE', sahuagin_prince: 'LE',
+  sahuagin_scout: 'LE', sahuagin_ranger: 'LE', sahuagin_rager: 'LE', sahuagin_shaman: 'LE', sahuagin_prince: 'LE',
   fungal_pirate: 'NE', fungal_oracle: 'NE', fungal_captain: 'NE',
   ikualoa: 'N',
   blackout: 'NE', ragh: 'CE',
@@ -644,7 +645,7 @@ for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.incl
 // gunners here so their sound stays consistent.
 const RANGED_KEYS = ['medusa_archer', 'erinyes', 'bralani_azata', 'shackles_scallywag', 'shackles_marine',
   'gearsman_gunslinger', 'gearsman_sniper', 'mecha_railgun', 'mecha_repeater', 'mecha_warden',
-  'blackout', 'aasimar_gunslinger', 'aasimar_shotgunner'];
+  'blackout', 'aasimar_gunslinger', 'aasimar_shotgunner', 'sahuagin_ranger'];
 for (const k of RANGED_KEYS) if (MON[k]) MON[k].ranged = true;
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX, MONK_SFX };
