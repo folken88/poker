@@ -1758,7 +1758,7 @@
       const lastCards = _lastDun.map(id => list.find(b => b.playerId === id)).filter(Boolean);
       const lastFee = lastCards.reduce((s, b) => s + (b.fee || 0), 0);
       const lastBtn = lastCards.length
-        ? `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-last" data-recruit-last ${full ? 'disabled' : ''} title="Recruit the same crew as last run — ${escapeAttr(lastCards.map(b => `${b.nickname} (${b.cls})`).join(', '))} — ${lastFee}g total">↻ Last party (${lastCards.length}) · ${lastFee}g</button>`
+        ? `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-last" data-recruit-last ${full ? 'disabled' : ''} aria-label="Recruit last party: ${escapeAttr(lastCards.map(b => `${b.nickname} the ${b.cls}`).join(', '))}. ${lastFee} gold total." title="Recruit the same crew as last run — ${escapeAttr(lastCards.map(b => `${b.nickname} (${b.cls})`).join(', '))} — ${lastFee}g total">↻ Last party (${lastCards.length}) · ${lastFee}g</button>`
         : '';
       if (d.status === 'over' || !list.length || _spectating) { recruit.innerHTML = ''; _recruitOpen = false; }
       else recruit.innerHTML =
@@ -5663,6 +5663,15 @@
         e.preventDefault();
         if (_blindHelp) { window.BlindMode.speak('S: stop or silence the current report. Press it again to skip to the next one.', 'urgent'); return; }
         window.BlindMode.stopSpeaking?.();
+        return;
+      }
+      // ' (quote) — REPEAT the last report (Josh 2026-07-09): re-hear the last thing
+      // said — a level-up, a foe's action, a line you moved past too fast. Works on
+      // every screen; describes itself in help mode.
+      if (e.code === 'Quote') {
+        e.preventDefault();
+        if (_blindHelp) { window.BlindMode.speak('Quote, the apostrophe key: repeat the last report — re-hear the last thing said, like a level-up you moved past.', 'urgent'); return; }
+        window.BlindMode.repeatLast?.();
         return;
       }
       // ----- Explore hotkeys (poker table only) -----

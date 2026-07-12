@@ -897,7 +897,7 @@
     if (/^(sit|sit down|take a seat|sit me down)$/.test(raw)) { sit(); return; }
 
     // Read-only queries
-    if (/^repeat$/.test(raw)) { if (state.lastEventText) speak(state.lastEventText, 'urgent'); return; }
+    if (/^repeat$/.test(raw)) { repeatLast(); return; }
     if (/what.?s the pot|^pot$/i.test(raw)) { announcePot(); return; }
     if (/what.?s my (stack|cash)|^stack$|^cash$/i.test(raw)) { announceStack(); return; }
     if (/what.?s the board|^board$/i.test(raw)) { announceBoard(); return; }
@@ -1130,6 +1130,16 @@
     }
     earcon('close');
     for (const r of keep) _engineSpeak(r.text, r.prio, r.section);   // the REST of the report reads on
+  }
+  /** Repeat the last report (Josh 2026-07-09: re-hear a level-up or line you moved past
+   *  too fast). Re-speaks the last EVENT-priority line (`state.lastEventText`) — combat
+   *  results, level-ups, and end-of-room lines are all events; transient 'urgent' prompts
+   *  like "Your turn" don't overwrite it, so this brings back the last real report. Bound
+   *  to the ' (quote) key in client.js and the "repeat" voice command. */
+  function repeatLast() {
+    if (!state.on) return;
+    if (state.lastEventText) speak(state.lastEventText, 'urgent');
+    else speak('Nothing to repeat yet.', 'urgent');
   }
   function announceActor() {
     const st = state.deps?.state?.table;
@@ -1575,6 +1585,8 @@
     announceStack, announceMyBet,
     // Stop/silence the current announcement (the S key).
     stopSpeaking,
+    // Repeat the last report (the ' quote key + the "repeat" voice command).
+    repeatLast,
     // Configurable push-to-talk binding
     getPttCode, isRebinding, beginRebind, consumeRebind, pttLabel,
     // Reading-speed control (bound to [ and ] in client.js) + diagnostics.

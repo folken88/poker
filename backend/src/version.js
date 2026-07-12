@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.40 2026-07-11 TWO BLIND QoL adds (Josh's standing asks). (1) REPEAT KEY: the ' (quote/apostrophe)
+//                     key now re-speaks the LAST report — a level-up, a foe's action, any line you moved
+//                     past too fast (it replays the last event line; transient "your turn" prompts don't
+//                     count, so you get the real report back). Works on every screen; the "repeat" voice
+//                     command routes through the same thing. (2) RECRUIT-LAST BUTTON now names the crew:
+//                     the "↻ Last party" button gained an aria-label so VoiceOver reads "Recruit last
+//                     party: Femmik the bard, Azwraith the fighter… — 550 gold total" instead of just
+//                     the count — so a blind player knows WHO the remembered crew is before recruiting
+//                     (someone else may have swapped it). (Client-only — hard refresh.)
 //  3.37.39 2026-07-11 JOSH BATCH — enemy SOUND consistency + blind key-message cleanup + enemy HP%.
 //                     (1) ENEMY RANGED SFX: archers & gunslingers were clanging like SWORDS — a missed
 //                     shot fell back to a sword-whiff, and some (aasimar gun/shotgunner, bralani) had no
@@ -758,6 +767,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.39';
-const HEADLINE = 'Josh batch: enemy archers & gunslingers now sound like bows and guns (not swords) even on a miss; the blind key hints are terser; and the enemy target list reads HP as a percent plus any debuffs (\"Elite Vampire, 80%, prone\"). Hard refresh.';
+const VERSION = '3.37.40';
+const HEADLINE = 'Two blind-play adds: the apostrophe key repeats the last report (re-hear a level-up you moved past), and the "Last party" recruit button now reads out WHO the crew is. Hard refresh.';
 module.exports = { VERSION, HEADLINE };
