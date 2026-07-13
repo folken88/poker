@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.43 2026-07-13 GUN-ANGEL SFX audit + F=read-foes (Josh). (1) The AASIMAR SHOTGUNNER's scatter
+//                     blast was SILENT — it attacks through the "hellfire" AoE path, whose sound field
+//                     was empty (the ONE hellfire config missing a sound). Now it BOOMS a real Tarkov
+//                     shotgun (mp153) with a "spray of holy buckshot" line. (2) The AASIMAR GUNSLINGER's
+//                     sound was a Tarkov RELOAD clip (rsh-12 empty reload), not a gunshot — so it clicked,
+//                     never banged. Now it fires an actual revolver shot. So four gun-angels no longer
+//                     blaze away in silence. (3) NEW BLIND KEY F = READ THE FOES: re-reads the quick
+//                     enemy hot-list (name, HP %, debuffs) on demand — the same snapshot as the turn
+//                     prompt — so you can re-hear who to target without opening the full E-inspector.
+//                     domtest +3 (incl. an audit guard: every hellfire/AoE config must carry a sound).
 //  3.37.42 2026-07-12 JOSH/TOBIAS BATCH — enemy-info honesty + blind polish. (1) OBSERVABILITY (Tobias):
 //                     an enemy's INVISIBLE buffs (Bull's Strength, Mage Armor, Shield of Faith, Fire
 //                     Ward — "Strengthened"/"Warded") are no longer shown or read out — you only learn a
@@ -787,6 +797,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.42';
-const HEADLINE = 'Enemy info is now honest: you only see a foe\'s buff if it\'s visible (mirror image, flying) — hidden stat wards no longer show. Target list reads HP percent + debuffs, flying foes stop wrestling, and the repeat key moved to A.';
+const VERSION = '3.37.43';
+const HEADLINE = 'The gun-angels finally make noise: the Aasimar Shotgunner booms a real shotgun and the Gunslinger cracks off actual revolver shots (were silent / a reload click). Plus a new F key re-reads the enemy list on demand.';
 module.exports = { VERSION, HEADLINE };

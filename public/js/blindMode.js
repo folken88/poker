@@ -1141,6 +1141,14 @@
     if (state.lastEventText) speak(state.lastEventText, 'urgent');
     else speak('Nothing to repeat yet.', 'urgent');
   }
+  /** Read the FOE hot-list on demand (Josh 2026-07-13, F key): the quick enemy snapshot
+   *  (name, HP %, flying, party-landed debuffs) — the SAME as the turn prompt — so a blind
+   *  player can re-hear who to target without opening the full E-inspector. `d` is the
+   *  current dungeon state (client passes state.dungeon). */
+  function readEnemies(d) {
+    if (!state.on) return;
+    speak(d ? _dunEnemyPhrase(d) : 'No enemies.', 'urgent');
+  }
   function announceActor() {
     const st = state.deps?.state?.table;
     const a = currentActorId(st);
@@ -1585,8 +1593,10 @@
     announceStack, announceMyBet,
     // Stop/silence the current announcement (the S key).
     stopSpeaking,
-    // Repeat the last report (the ' quote key + the "repeat" voice command).
+    // Repeat the last report (the A key + the "repeat" voice command).
     repeatLast,
+    // Read the foe hot-list on demand (the F key).
+    readEnemies,
     // Configurable push-to-talk binding
     getPttCode, isRebinding, beginRebind, consumeRebind, pttLabel,
     // Reading-speed control (bound to [ and ] in client.js) + diagnostics.

@@ -2523,6 +2523,16 @@
         // Swallow anything else so you can't accidentally attack while deciding.
         e.preventDefault(); return;
       }
+      // F = read the FOES again (Josh 2026-07-13): the quick enemy hot-list (name, HP
+      // percent, flying, party-landed debuffs) on demand — the SAME snapshot as the turn
+      // prompt — so he can re-hear who to target when he's "lost in the woods," without
+      // opening the full E-inspector. Same source as the turn prompt (_dunEnemyPhrase).
+      if (k === 'f') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('F: read the foes again — the quick enemy list (name, HP percent, and any debuff your party landed) for a fast target pick.'); return; }
+        window.BlindMode.readEnemies?.(d);
+        return;
+      }
       // E = toggle "inspect enemies" browse mode.
       if (k === 'e') {
         e.preventDefault();
