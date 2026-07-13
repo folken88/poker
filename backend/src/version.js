@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.44 2026-07-13 THE ILLNEAS DEFENDERS get their real names (Tobias, from the FVTT world). The two
+//                     gun-angels aren't generic "aasimars" — they're named celestials from the hells-
+//                     vengeance angel band: the pistol gunslinger is AUGUST (his golden pistols "Hark the
+//                     Herald Angel Kills"), the shotgunner is NASH (a gun-magus with the golden holy
+//                     shotgun "Holy Night"), and CHAD the paladin boss is really CHADRIEL (with The
+//                     Goldenrod). Display-name + flavor only; stat keys unchanged. (Bianca the
+//                     swashbuckler + Jophiel the oracle are in the band too, not yet built as foes.)
 //  3.37.43 2026-07-13 GUN-ANGEL SFX audit + F=read-foes (Josh). (1) The AASIMAR SHOTGUNNER's scatter
 //                     blast was SILENT — it attacks through the "hellfire" AoE path, whose sound field
 //                     was empty (the ONE hellfire config missing a sound). Now it BOOMS a real Tarkov
@@ -797,6 +804,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.43';
-const HEADLINE = 'The gun-angels finally make noise: the Aasimar Shotgunner booms a real shotgun and the Gunslinger cracks off actual revolver shots (were silent / a reload click). Plus a new F key re-reads the enemy list on demand.';
+const VERSION = '3.37.44';
+const HEADLINE = 'The gun-angels have names now: meet AUGUST the pistol gunslinger and NASH the shotgun-magus of the Illneas Defenders — and "Chad" the paladin is really CHADRIEL. Straight from the Foundry world.';
 module.exports = { VERSION, HEADLINE };
