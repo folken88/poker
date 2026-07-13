@@ -3,6 +3,17 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.47 2026-07-13 CRITICAL FIX — the bestiary was being edited in an ORPHAN file. The app loads
+//                     `pf1data/monsters.js`, but every monster change since ~v3.37.37 had been deployed
+//                     to `game/monsters.js` (a stale duplicate NOTHING imports; domtest read it too, so
+//                     it passed blind). So NONE of it was actually live: Master Uke, the Sahuagin
+//                     Reefstalker, the Illneas renames (August/Nash/Chadriel), the gun-angel SFX
+//                     (RANGED_KEYS + atkSounds — why Josh STILL heard silence), the enemy Blaze of Glory
+//                     flag, Chen, the Fist of Iomedae, and the whole Glorious Reclamation pack. FIX:
+//                     `game/monsters.js` promoted to the canonical `pf1data/monsters.js` (verified a
+//                     superset — 0 keys lost, 12 gained), the orphan deleted, and domtest repointed to
+//                     the real path. ALL of the above is now genuinely in the game. (Weapons/mechanics
+//                     were in the correct files all along and were already live.)
 //  3.37.46 2026-07-13 THE GLORIOUS RECLAMATION — the FULL PACK (its own gang). Iomedae's good-aligned
 //                     crusade now marches as its own faction (all smite-exempt): the three SWORD KNIGHTS
 //                     (a rank — several per room: the 4th an inquisitor-ARCHER, the 5th a battle-cleric,
@@ -821,6 +832,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.46';
-const HEADLINE = 'The Glorious Reclamation marches in FULL — a whole new good-aligned faction: Sword Knights (archer/cleric/paladin), the Inheritor\'s Holy Gun, Silvermane the lioness, Warpriest Graxus, the archer Sevestra, and PARNONERYX — a fire-breathing gold dragon.';
+const VERSION = '3.37.47';
+const HEADLINE = 'Bugfix that unlocks a lot: new foes were landing in the wrong file and never loaded — now live for real. Master Uke, the Glorious Reclamation (Chen, the Fist of Iomedae, Parnoneryx the gold dragon), the Sahuagin Reefstalker, the named gun-angels, and the gun/shotgun sounds.';
 module.exports = { VERSION, HEADLINE };

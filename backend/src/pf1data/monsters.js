@@ -64,6 +64,7 @@ const MON = {
   monk_redactor:     { name: 'Chelish Redactor',  glyph: '🥋', cr: '9',   hp: 85,  ac: 22, toHit: 14, dmgDie: 10, dmgBonus: 7,  fort: 9,  reflex: 12, will: 11, gold: [95, 190], attacks: 4, evasion: true, evil: true, atkSounds: MONK_SFX },   // L10 chelish operative — destroys/guards forbidden lore
   monk_vakra:        { name: 'Vakra',             glyph: '🥋', cr: '10',  hp: 95,  ac: 23, toHit: 15, dmgDie: 10, dmgBonus: 7,  fort: 9,  reflex: 12, will: 11, gold: [110, 220], attacks: 4, evasion: true, atkSounds: MONK_SFX },                // L11 half-orc monk
   monk_beastmode:    { name: 'Beastmode',         glyph: '🥋', cr: '14',  hp: 140, ac: 26, toHit: 19, dmgDie: 6,  dmgCount: 2, dmgBonus: 10, fort: 13, reflex: 14, will: 12, gold: [180, 360], attacks: 4, evasion: true, atkSounds: MONK_SFX },  // L15 orc monk — a flurry of 2d6+10 fists; very dangerous
+  master_uke:        { name: 'Master Uke',        glyph: '🗡️', cr: '16',  hp: 176, ac: 30, toHit: 24, dmgDie: 8,  dmgBonus: 13, fort: 16, reflex: 18, will: 15, attacks: 4, evasion: true, gold: [360, 640], healer: { dice: 3, uses: 2 }, atkSounds: MONK_SFX },  // BOSS — a gestalt Paladin/Unchained-Monk/Samurai MASTER wielding HANZO STEEL (his +5 keen mithral katana): a blinding flurry of blade and fist (4 strikes, d8+13, Improved Crit folded in), Evasion, and Lay on Hands to mend himself mid-duel. LAWFUL GOOD — a righteous foe, so hero Smite Evil finds no purchase.
   monk_puff:         { name: 'Puff',              glyph: '🥋', cr: '2',   hp: 20,  ac: 16, toHit: 4,  dmgDie: 6,  dmgBonus: 2,  fort: 4,  reflex: 6,  will: 5,  gold: [12, 28],  attacks: 2, evasion: true, atkSounds: MONK_SFX },                 // goblin monk (goblin packs)
   monk_kobold:       { name: 'Kobold Monk',       glyph: '🥋', cr: '1',   hp: 12,  ac: 16, toHit: 3,  dmgDie: 4,  dmgBonus: 1,  fort: 3,  reflex: 5,  will: 4,  gold: [8, 20],   attacks: 2, evasion: true, atkSounds: MONK_SFX },                 // kobold monk (kobold packs)
   monk_kobold_big:   { name: 'Kobold Adept',      glyph: '🥋', cr: '3',   hp: 26,  ac: 17, toHit: 6,  dmgDie: 6,  dmgBonus: 2,  fort: 4,  reflex: 6,  will: 5,  gold: [16, 38],  attacks: 2, evasion: true, atkSounds: MONK_SFX },                 // bigger kobold monk
@@ -174,9 +175,10 @@ const MON = {
   shackles_swashbuckler:{ name: 'Port Peril Kingsguard', glyph: '⚔️', cr: '11', hp: 105, ac: 24, toHit: 17, dmgDie: 8, dmgBonus: 9, fort: 9, reflex: 8, attacks: 3, gold: [110, 220] },   // Fighter 12 — the Hurricane King's elite guard; heavy blade, full iteratives (cavalier levels later)
   shackles_officer:  { name: 'Bronze Fleet Officer', glyph: '🏴‍☠️', cr: '5', hp: 48, ac: 19, toHit: 10, dmgDie: 6, dmgBonus: 5, fort: 5, reflex: 6, attacks: 2, gold: [42, 90] },   // slaver fleet mate — cutlass + pistol grip
   sahuagin_scout:    { name: 'Sahuagin Scout',    glyph: '🦈', cr: '3',   hp: 26,  ac: 17, toHit: 7,  dmgDie: 6,  dmgBonus: 2,  fort: 3,  reflex: 6,  attacks: 2, sneakDice: 2, evasion: true, gold: [26, 60] },   // tidal trickster — knife-work from the surf
+  sahuagin_ranger:   { name: 'Sahuagin Reefstalker', glyph: '🦈', cr: '5', hp: 48, ac: 18, toHit: 10, dmgDie: 8, dmgBonus: 4, fort: 6, reflex: 8, attacks: 2, ranged: true, gold: [42, 90], atkSound: '/audio/bow_shot.mp3' },   // Ranger 6 — a coral-bow sniper looses barbed arrows from the reef, two shots a round (see RANGED_KEYS)
   sahuagin_rager:    { name: 'Sahuagin Rager',    glyph: '🦈', cr: '5',   hp: 55,  ac: 17, toHit: 11, dmgDie: 8,  dmgBonus: 7,  fort: 8,  reflex: 4,  gold: [42, 90] },   // bloodrager — a frothing frenzy of trident and teeth
   sahuagin_shaman:   { name: 'Sahuagin Shaman',   glyph: '🦈', cr: '5',   hp: 45,  ac: 17, toHit: 8,  dmgDie: 6,  dmgBonus: 3,  fort: 5,  reflex: 4,  gold: [42, 95], healer: { dice: 2, uses: 2 }, caster: 'holdperson', spellDC: 16 },   // deep-god witchery: holds a hero rigid, mends the raiders
-  sahuagin_prince:   { name: 'Sahuagin Prince',   glyph: '👑', cr: '7',   hp: 76,  ac: 21, toHit: 13, dmgDie: 8,  dmgBonus: 7,  fort: 8,  reflex: 6,  attacks: 2, gold: [70, 150], gloriousChallenge: true },   // Cavalier 7, big blade — ORDER OF THE FLAME: every hero it DROPS fuels a GLORIOUS CHALLENGE (+2 dmg / −2 AC per consecutive kill this room, compounding). Kill it fast.
+  sahuagin_prince:   { name: 'Sahuagin Prince',   glyph: '👑', cr: '7',   hp: 76,  ac: 21, toHit: 13, dmgDie: 8,  dmgBonus: 7,  fort: 8,  reflex: 6,  attacks: 2, gold: [70, 150], gloriousChallenge: true, blazeOfGlory: true },   // Cavalier 7, big blade — ORDER OF THE FLAME: every hero it DROPS fuels a GLORIOUS CHALLENGE (+2 dmg / −2 AC per consecutive kill this room, compounding). Kill it fast.
   charauka_warrior:  { name: 'Charau-Ka Warrior', glyph: '🐒', cr: '5',   hp: 50,  ac: 19, toHit: 10, dmgDie: 6,  dmgBonus: 4,  fort: 5,  reflex: 7,  attacks: 3, evasion: true, gold: [42, 90] },   // Brawler 6 ape-man — a shrieking flurry of fists and thrown stones
   charauka_stepper:  { name: 'Charau-Ka Stepper', glyph: '🐒', cr: '6',   hp: 55,  ac: 20, toHit: 11, dmgDie: 6,  dmgBonus: 4,  fort: 4,  reflex: 9,  attacks: 2, sneakDice: 4, evasion: true, gold: [55, 115], atkSound: '/audio/fight_riki.mp3' },   // Rogue 7 — drops from the canopy onto your back
   charauka_mancer:   { name: 'Charau-Ka Mancer',  glyph: '🐒', cr: '7',   hp: 60,  ac: 18, toHit: 8,  dmgDie: 4,  dmgBonus: 1,  fort: 5,  reflex: 6,  gold: [70, 150], evil: true, arcane: true },   // Witch 8 — jungle hexes and Angazhan's fire
@@ -242,7 +244,7 @@ const MON = {
   //    fire/cold/acid, SR. Their own gang — they NEVER share a room with devils
   //    or the undead. Canonical PF1 Bestiary stat blocks. ──
   hound_archon:      { name: 'Hound Archon',      glyph: '🐕', cr: '4',   hp: 39,  ac: 19, toHit: 8,  dmgDie: 8,  dmgBonus: 4,  fort: 6,  reflex: 5, attacks: 2, gold: [35, 75],  sr: 16, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 } },   // a dog-headed warden angel — bite + slams, an aura of menace, blinks across the room (teleport)
-  bralani_azata:     { name: 'Bralani Azata',     glyph: '🏹', cr: '6',   hp: 66,  ac: 20, toHit: 10, dmgDie: 8,  dmgBonus: 4,  fort: 9,  reflex: 9, attacks: 2, flying: true, gold: [60, 120], sr: 17, dr: { amount: 5, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, arcane: true },   // an elemental eladrin — a composite longbow and a whirlwind blast (lightning), CL6 spells: the host's ranged caster
+  bralani_azata:     { name: 'Bralani Azata',     glyph: '🏹', cr: '6',   hp: 66,  ac: 20, toHit: 10, dmgDie: 8,  dmgBonus: 4,  fort: 9,  reflex: 9, attacks: 2, flying: true, gold: [60, 120], sr: 17, dr: { amount: 5, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, arcane: true, atkSound: '/audio/bow_shot.mp3' },   // an elemental eladrin — a composite longbow and a whirlwind blast (lightning), CL6 spells: the host's ranged caster
   lillend_azata:     { name: 'Lillend Azata',     glyph: '🎵', cr: '7',   hp: 84,  ac: 21, toHit: 13, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 11, attacks: 2, flying: true, gold: [70, 140], sr: 18, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, healer: { dice: 3, uses: 3 }, caster: 'holdperson', spellDC: 16 },   // a serpent-bodied muse-angel — bardic song, constricting tail, CL10 healing: the host's SUPPORT
   movanic_deva:      { name: 'Movanic Deva',      glyph: '⚔️', cr: '10',  hp: 126, ac: 24, toHit: 19, dmgDie: 6, dmgCount: 2, dmgBonus: 10, fort: 14, reflex: 13, attacks: 2, flying: true, gold: [120, 240], sr: 21, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, healer: { dice: 3, uses: 3 }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // a frontline war-angel — a flaming greatsword (2d6+10) and druidic mending
   ghaele_azata:      { name: 'Ghaele Azata',      sr: 25, glyph: '✨', cr: '13',  hp: 152, ac: 27, toHit: 23, dmgDie: 6, dmgCount: 2, dmgBonus: 14, fort: 14, reflex: 14, attacks: 2, flying: true, gold: [300, 520], dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, arcane: true, healer: { dice: 4, uses: 3 }, precast: ['magearmor', 'shield'] },   // BOSS — a knight-errant angel: a +2 greatsword OR searing light-rays, CL14 cleric spells, a blinding gaze
@@ -251,14 +253,31 @@ const MON = {
   //    angel field-healer, an angel cavalier-knight, and their paladin champion
   //    CHAD. All ride the 'celestial' gang, GOOD-aligned, electricity-immune. ──
   angel_bro:         { name: 'Erelim (Angel Bro)', glyph: '💪', cr: '8',   hp: 95,  ac: 22, toHit: 14, dmgDie: 8, dmgCount: 2, dmgBonus: 9,  fort: 11, reflex: 8,  attacks: 2, flying: true, gold: [90, 180],  sr: 19, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 } },   // a warrior-angel "bro" — twin holy longswords and a wall of muscle
-  aasimar_gunslinger:{ name: 'Aasimar Gunslinger', glyph: '🔫', cr: '10',  hp: 92,  ac: 21, toHit: 16, dmgDie: 8, dmgCount: 2, dmgBonus: 6,  fort: 9,  reflex: 13, attacks: 2, ranged: true, gold: [120, 240], sr: 20, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 } },   // dual golden PISTOLS — a grounded deadeye, two shots a round from across the room
-  aasimar_shotgunner:{ name: 'Aasimar Shotgunner', glyph: '💥', cr: '10',  hp: 92,  ac: 21, toHit: 15, dmgDie: 8, dmgCount: 1, dmgBonus: 6,  fort: 9,  reflex: 13, attacks: 1, ranged: true, gold: [120, 240], sr: 20, hellfire: { count: 1, dice: 4, die: 6, dc: 18, dtype: 'physical' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 } },   // a golden SHOTGUN — a scatter blast (4d6) that sprays the whole party (Reflex half)
+  aasimar_gunslinger:{ name: 'August', glyph: '🔫', cr: '10',  hp: 92,  ac: 21, toHit: 16, dmgDie: 8, dmgCount: 2, dmgBonus: 6,  fort: 9,  reflex: 13, attacks: 2, ranged: true, gold: [120, 240], sr: 20, atkSound: '/audio/tarkov_revolver_357_shot.mp3', resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 } },   // AUGUST of the Illneas Defenders (hellsvengeance) — a celestial GUNSLINGER dual-wielding his golden pistols "Hark the Herald Angel Kills," two shots a round
+  aasimar_shotgunner:{ name: 'Nash', glyph: '💥', cr: '10',  hp: 92,  ac: 21, toHit: 15, dmgDie: 8, dmgCount: 1, dmgBonus: 6,  fort: 9,  reflex: 13, attacks: 1, ranged: true, gold: [120, 240], sr: 20, hellfire: { count: 1, dice: 4, die: 6, dc: 18, dtype: 'physical', verb: 'unloads a SPRAY of holy buckshot from HOLY NIGHT across the party', sound: '/audio/tarkov_mp153_shotgun.mp3' }, atkSound: '/audio/tarkov_mp153_shotgun.mp3', resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 } },   // NASH of the Illneas Defenders (hellsvengeance) — a celestial gun-MAGUS who scatters the party with his golden holy shotgun "Holy Night"
   angel_healer:      { name: 'Angelic Cleric',     glyph: '✚',  cr: '11',  hp: 105, ac: 24, toHit: 15, dmgDie: 8, dmgCount: 1, dmgBonus: 6,  fort: 13, reflex: 9,  attacks: 1, flying: true, gold: [140, 260], sr: 21, dr: { amount: 5, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, healer: { dice: 6, uses: 6 } },   // a lvl-12 cleric of the Healing domain — pours channels into her allies, greatsword only when cornered
   angel_cavalier:    { name: 'Angelic Cavalier',   glyph: '🛡️', cr: '14',  hp: 165, ac: 27, toHit: 24, dmgDie: 6, dmgCount: 2, dmgBonus: 15, fort: 15, reflex: 11, attacks: 2, flying: true, gold: [340, 600], sr: 24, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // BOSS — a lvl-15 cavalier knight, a two-handed holy greatsword and a devastating charge
-  chad:              { name: 'Chad',               glyph: '🔨', cr: '17',  hp: 210, ac: 30, toHit: 28, dmgDie: 6, dmgCount: 3, dmgBonus: 18, fort: 20, reflex: 14, attacks: 2, gold: [500, 900], sr: 26, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, healer: { dice: 6, uses: 8 } },   // BOSS — a lvl-18 aasimar PALADIN wielding THE GOLDENROD (+5 holy 2H hammer, 3d6+18 blunt w/ the +1d6 divine folded in), lay-on-hands to spare
+  chad:              { name: 'Chadriel',           glyph: '🔨', cr: '17',  hp: 210, ac: 30, toHit: 28, dmgDie: 6, dmgCount: 3, dmgBonus: 18, fort: 20, reflex: 14, attacks: 2, gold: [500, 900], sr: 26, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5 }, healer: { dice: 6, uses: 8 } },   // BOSS — CHADRIEL, paladin champion of the Illneas Defenders (hellsvengeance): a lvl-18 aasimar PALADIN wielding THE GOLDENROD (+5 holy 2H hammer, 3d6+18 blunt w/ the +1d6 divine folded in), lay-on-hands to spare
   // ── NEW demon boss (2026-07-06) — SOIRSE, a succubus bard who charms & dominates.
   //    A fiend, not an angel: rides the 'devil' gang (Hell's forces), CHAOTIC EVIL. ──
   soirse:            { name: 'Soirse',             glyph: '💋', cr: '10',  hp: 125, ac: 23, toHit: 14, dmgDie: 6, dmgCount: 2, dmgBonus: 5,  fort: 9,  reflex: 12, attacks: 2, flying: true, gold: [200, 400], sr: 18, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5, poison: 0 }, arcane: true, caster: 'holdperson', spellDC: 20 },   // BOSS — a lvl-10 succubus bard: her Dominate/charm is modeled as Hold Person (DC 20), claws when she must
+  // ── THE GLORIOUS RECLAMATION (Iomedae's good-aligned crusade, hellsvengeance) — mortal/
+  //    giant champions riding with the celestial gang. GOOD-aligned (Smite Evil finds no
+  //    purchase). Chen + the Fist are the two Tobias called out; the rest of the pack
+  //    (Sword Knights, Silvermane, Parnoneryx the dragon…) is a future expansion. ──
+  chen:              { name: 'Chen',               glyph: '🐾', cr: '13',  hp: 118, ac: 22, toHit: 9,  dmgDie: 6, dmgBonus: 2, fort: 11, reflex: 13, will: 13, attacks: 1, gold: [300, 560], arcane: true, spellDC: 22, summon: { pool: ['dire_bear', 'dire_boar', 'blood_caimon', 'dire_ape', 'winter_wolf'], count: '1d2', uses: 3, summonNote: '{name} traces a summoning sigil — {list} answer the call and CHARGE onto the field!', sound: '/audio/enemy_yak.mp3' } },   // BOSS — half-elf CONJURER 14 of the Glorious Reclamation: she calls GREAT BEASTS (dire bears/boars/apes, blood caimans) to fight for her and blasts with arcane fire. NG — Smite finds no purchase.
+  fist_of_iomedae:   { name: 'Fist of Iomedae',    glyph: '👊', cr: '16',  hp: 230, ac: 29, toHit: 27, dmgDie: 10, dmgCount: 2, dmgBonus: 18, fort: 18, reflex: 17, will: 18, attacks: 4, evasion: true, gold: [420, 760], healer: { dice: 3, uses: 2 }, hellfire: { count: 3, dice: 6, die: 6, dc: 24, dtype: 'physical', verb: 'STOMPS the earth — a shockwave hammers the whole party', sound: '/audio/weapon_blunt.mp3' }, atkSounds: MONK_SFX },   // BOSS — a CLOUD GIANT champion (Monk 12/Paladin 3, STR 38): a flurry of house-sized fists (2d10+18 ×4) + a ground-shaking STOMP, Evasion, Lay on Hands. LN — Smite finds no purchase.
+  // ── THE GLORIOUS RECLAMATION — the rank-and-file order + its champions (gang 'reclamation').
+  //    All good-aligned (Smite finds no purchase). The three SWORD KNIGHTS are a knightly RANK —
+  //    several per room. Bosses: Graxus, Parnoneryx (a gold dragon), Sevestra, + Chen & the Fist above. ──
+  sword_knight_4th:  { name: '4th Sword Knight',   glyph: '🏹', cr: '10',  hp: 95,  ac: 20, toHit: 13, dmgDie: 8,  dmgBonus: 5,  fort: 12, reflex: 11, will: 16, attacks: 2, ranged: true, gold: [95, 190],  caster: 'holdperson', spellDC: 17, atkSound: '/audio/bow_shot.mp3' },   // Inquisitor 11 — a guided-longbow archer of the order; judgements + Hold Person
+  sword_knight_5th:  { name: '5th Sword Knight',   glyph: '⚔️', cr: '9',   hp: 85,  ac: 21, toHit: 11, dmgDie: 8,  dmgBonus: 4,  fort: 14, reflex: 10, will: 20, attacks: 2, gold: [85, 170],  healer: { dice: 3, uses: 3 }, caster: 'holdperson', spellDC: 18 },   // Cleric 10 — battle-priest: Hold Person + big heals (auto-warded)
+  sword_knight_6th:  { name: '6th Sword Knight',   glyph: '🗡️', cr: '8',   hp: 80,  ac: 21, toHit: 12, dmgDie: 6,  dmgCount: 2, dmgBonus: 8,  fort: 10, reflex: 9,  will: 11, attacks: 2, gold: [80, 160],  healer: { dice: 2, uses: 2 }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // Paladin 9 — a greatsword "Edging Justice" (2d6+8), Smite + Lay on Hands
+  holy_gun:          { name: "Inheritor's Holy Gun", glyph: '🔫', cr: '9', hp: 78, ac: 20, toHit: 12, dmgDie: 10, dmgBonus: 5, fort: 12, reflex: 10, will: 7, attacks: 2, ranged: true, gold: [90, 180], healer: { dice: 2, uses: 1 }, atkSound: '/audio/rifle_longue_carabine.mp3' },   // Gunslinger 5 / Paladin 4 — a holy MUSKET "Godsteel," two shots + a lay-on-hands
+  silvermane:        { name: 'Silvermane',         glyph: '🦁', cr: '5',   hp: 62,  ac: 16, toHit: 10, dmgDie: 6,  dmgCount: 2, dmgBonus: 6,  fort: 9,  reflex: 8,  will: 3,  attacks: 3, gold: [44, 95],   atkSound: '/audio/enemy_yak.mp3' },   // a LIONESS animal companion of the Reclamation — a pounce of claw/claw/bite
+  graxus:            { name: 'Knight Commander Graxus Phand', glyph: '🔨', cr: '14', hp: 185, ac: 27, toHit: 22, dmgDie: 8, dmgCount: 2, dmgBonus: 14, fort: 20, reflex: 12, will: 21, attacks: 3, gold: [340, 620], healer: { dice: 5, uses: 6 }, caster: 'holdperson', spellDC: 20 },   // BOSS — Warpriest 15 (STR 24): sacred-weapon smashes (2d8+14), Blessing of War, big channels (auto-warded)
+  parnoneryx:        { name: 'Parnoneryx',         glyph: '🐉', cr: '15',  hp: 340, ac: 32, toHit: 30, dmgDie: 8, dmgCount: 2, dmgBonus: 16, fort: 22, reflex: 11, will: 20, attacks: 3, flying: true, gold: [400, 720], arcane: true, sr: 26, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 }, healer: { dice: 4, uses: 3 }, hellfire: { count: 3, dice: 12, die: 8, dc: 24, dtype: 'fire', verb: 'exhales a ROARING GOUT of DRAGONFIRE over the party', sound: '/audio/spell_hellfire.mp3' }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // BOSS — a GOLD DRAGON (18 HD, LG): bite/claw/wing (2d8+16) + a fire-breath, full arcane/divine, fire-immune, on the wing
+  sevestra:          { name: 'Sevestra Hanail',    glyph: '🏹', cr: '15',  hp: 178, ac: 26, toHit: 24, dmgDie: 8,  dmgBonus: 10, fort: 16, reflex: 14, will: 15, attacks: 3, ranged: true, gold: [380, 700], healer: { dice: 3, uses: 2 }, atkSound: '/audio/bow_silent_hits.mp3' },   // BOSS — Paladin 5 / Cavalier 12: her holy bow "Heavenly Arc," a rain of blessed arrows + Lay on Hands
 };
 // PF1 BODY PLANS — size category + leg count per monster (used by the trip rules:
 // +4 to trip defense per leg beyond two; you can't trip a foe more than ONE size
@@ -355,7 +374,7 @@ const MON_GANGS = {
   shackles_marine: ['pirate'], shackles_seacaster: ['pirate'], shackles_swashbuckler: ['pirate'],
   shackles_officer: ['pirate'], bentbeak_charney: ['pirate'], captain_maris: ['pirate'],
   fungal_pirate: ['pirate', 'undead'], fungal_oracle: ['pirate', 'undead'], fungal_captain: ['pirate', 'undead'],
-  sahuagin_scout: ['sahuagin'], sahuagin_rager: ['sahuagin'], sahuagin_shaman: ['sahuagin'], sahuagin_prince: ['sahuagin'],
+  sahuagin_scout: ['sahuagin'], sahuagin_ranger: ['sahuagin'], sahuagin_rager: ['sahuagin'], sahuagin_shaman: ['sahuagin'], sahuagin_prince: ['sahuagin'],
   charauka_warrior: ['charauka'], charauka_stepper: ['charauka'], charauka_mancer: ['charauka'],
   ikualoa: ['charauka'], captain_thrune: ['pirate', 'devil'],
   // the infernal court — devils and the Thrune villains who serve Hell
@@ -370,6 +389,12 @@ const MON_GANGS = {
   movanic_deva: ['celestial'], ghaele_azata: ['celestial'], astral_deva: ['celestial'],
   angel_bro: ['celestial'], aasimar_gunslinger: ['celestial'], aasimar_shotgunner: ['celestial'],
   angel_healer: ['celestial'], angel_cavalier: ['celestial'], chad: ['celestial'],
+  master_uke: ['celestial'],   // a mortal LG champion of good — rides with the Heavenly Host (smite-exempt)
+  // THE GLORIOUS RECLAMATION — its own good-aligned gang (Iomedae's crusade rides together, not with the raw Heavenly Host).
+  chen: ['reclamation'], fist_of_iomedae: ['reclamation'],
+  sword_knight_4th: ['reclamation'], sword_knight_5th: ['reclamation'], sword_knight_6th: ['reclamation'],
+  holy_gun: ['reclamation'], silvermane: ['reclamation'], graxus: ['reclamation'],
+  parnoneryx: ['reclamation'], sevestra: ['reclamation'],
   soirse: ['devil'],   // a succubus among Hell's forces (fiends ride together for gameplay)
   // dragons — kobold warrens famously serve them
   black_dragon: ['dragon', 'kobold'], void_dragon: ['dragon', 'kobold'],
@@ -425,6 +450,9 @@ const MON_ART = {
   movanic_deva: 'movanic_deva', ghaele_azata: 'ghaele_azata', astral_deva: 'astral_deva',
   angel_bro: 'angel_bro', aasimar_gunslinger: 'aasimar_gunslinger', aasimar_shotgunner: 'aasimar_shotgunner',
   angel_healer: 'angel_healer', angel_cavalier: 'angel_cavalier', chad: 'chad', soirse: 'soirse',
+  master_uke: 'master_uke', chen: 'chen', fist_of_iomedae: 'fist_of_iomedae',
+  sword_knight_4th: 'sword_knight_4th', sword_knight_5th: 'sword_knight_5th', sword_knight_6th: 'sword_knight_6th',
+  holy_gun: 'holy_gun', silvermane: 'silvermane', graxus: 'graxus', parnoneryx: 'parnoneryx', sevestra: 'sevestra',
   blood_caimon: 'blood_caimon',
   // The Numerian robots — tokens straight from the Iron Gods Foundry world.
   drone_rhoomba: 'drone_rhoomba', drone_collector: 'drone_collector', gearsman_mk1: 'gearsman_mk1',
@@ -438,7 +466,7 @@ const MON_ART = {
   shackles_marine: 'shackles_marine', shackles_seacaster: 'shackles_seacaster', shackles_swashbuckler: 'shackles_swashbuckler',
   shackles_officer: 'shackles_officer', bentbeak_charney: 'bentbeak_charney', captain_maris: 'captain_maris',
   fungal_pirate: 'fungal_pirate', fungal_oracle: 'fungal_oracle', fungal_captain: 'fungal_captain',
-  sahuagin_scout: 'sahuagin_scout', sahuagin_rager: 'sahuagin_rager', sahuagin_shaman: 'sahuagin_shaman',
+  sahuagin_scout: 'sahuagin_scout', sahuagin_ranger: 'sahuagin_ranger', sahuagin_rager: 'sahuagin_rager', sahuagin_shaman: 'sahuagin_shaman',
   sahuagin_prince: 'sahuagin_prince', charauka_warrior: 'charauka_warrior', charauka_stepper: 'charauka_stepper',
   charauka_mancer: 'charauka_mancer', ikualoa: 'ikualoa', captain_thrune: 'captain_thrune',
   blackout: 'blackout', ragh: 'ragh',
@@ -485,7 +513,7 @@ const MON_TYPE = {
   black_sovereign: 'humanoid', vorkstag: 'humanoid', auren_vrood: 'humanoid',
   amalokla: 'undead', tar_baphon: 'undead', brogwort: 'giant',
   charauka_warrior: 'humanoid', charauka_stepper: 'humanoid', charauka_mancer: 'humanoid',
-  sahuagin_scout: 'monstrous humanoid', sahuagin_rager: 'monstrous humanoid',
+  sahuagin_scout: 'monstrous humanoid', sahuagin_ranger: 'monstrous humanoid', sahuagin_rager: 'monstrous humanoid',
   sahuagin_shaman: 'monstrous humanoid', sahuagin_prince: 'monstrous humanoid',
   fungal_pirate: 'undead', fungal_oracle: 'undead', fungal_captain: 'undead',
   ikualoa: 'animal',
@@ -502,7 +530,8 @@ const MON_TYPE = {
   movanic_deva: 'outsider', ghaele_azata: 'outsider', astral_deva: 'outsider',
   angel_bro: 'outsider', aasimar_gunslinger: 'outsider', aasimar_shotgunner: 'outsider',
   angel_healer: 'outsider', angel_cavalier: 'outsider', chad: 'outsider', soirse: 'outsider',
-  black_dragon: 'dragon', void_dragon: 'dragon', rivozair: 'dragon',
+  black_dragon: 'dragon', void_dragon: 'dragon', rivozair: 'dragon', parnoneryx: 'dragon',
+  silvermane: 'animal',   // a lioness — animal type (auto-natural, mind-affecting no-ops on her)
   harpy_sorcerer: 'monstrous humanoid',
 };
 for (const [k, t] of Object.entries(MON_TYPE)) if (MON[k]) MON[k].type = t;
@@ -561,7 +590,7 @@ const ALIGN_BY_KEY = {
   shackles_officer: 'CE', bentbeak_charney: 'CE', captain_maris: 'CE', shackles_seacaster: 'CE',
   charauka_warrior: 'CE', charauka_stepper: 'CE', charauka_mancer: 'CE',
   shackles_marine: 'LE', captain_thrune: 'LE',
-  sahuagin_scout: 'LE', sahuagin_rager: 'LE', sahuagin_shaman: 'LE', sahuagin_prince: 'LE',
+  sahuagin_scout: 'LE', sahuagin_ranger: 'LE', sahuagin_rager: 'LE', sahuagin_shaman: 'LE', sahuagin_prince: 'LE',
   fungal_pirate: 'NE', fungal_oracle: 'NE', fungal_captain: 'NE',
   ikualoa: 'N',
   blackout: 'NE', ragh: 'CE',
@@ -579,6 +608,10 @@ const ALIGN_BY_KEY = {
   movanic_deva: 'NG', ghaele_azata: 'CG', astral_deva: 'LG',
   angel_bro: 'LG', aasimar_gunslinger: 'NG', aasimar_shotgunner: 'NG',
   angel_healer: 'NG', angel_cavalier: 'LG', chad: 'LG',
+  master_uke: 'LG',   // the master is Lawful Good — Smite Evil finds no purchase
+  chen: 'NG', fist_of_iomedae: 'LN',   // Glorious Reclamation — good/neutral, not evil → Smite finds no purchase
+  sword_knight_4th: 'N', sword_knight_5th: 'NG', sword_knight_6th: 'LG', holy_gun: 'LG',
+  silvermane: 'N', graxus: 'LG', parnoneryx: 'LG', sevestra: 'LG',   // all non-evil → Smite finds no purchase
   soirse: 'CE',   // succubus demon — the one EVIL fiend in this batch (Smite Evil bites her)
   // neutral evil
   goblin: 'NE', skeleton: 'NE', skeletal_champion: 'NE', skeletal_ogre: 'NE', zombie: 'NE', cultist: 'NE', ettercap: 'NE', winter_wolf: 'NE',
@@ -615,6 +648,8 @@ const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overl
   'horned_devil', 'pit_fiend',   // Hell's Legions bosses (Cornugon; the Pit Fiend is a peer of Tar-Baphon)
   'ghaele_azata', 'astral_deva',   // the Heavenly Host bosses (the knight-angel & the avenger)
   'angel_cavalier', 'chad',   // NEW celestial bosses — the cavalier-knight & CHAD the paladin champion
+  'master_uke',   // the katana MASTER (gestalt paladin/monk/samurai) — a righteous LG boss
+  'chen', 'fist_of_iomedae', 'graxus', 'parnoneryx', 'sevestra',   // Glorious Reclamation bosses (summoner, cloud-giant, warpriest commander, GOLD DRAGON, archer-cavalier)
   'soirse']);   // NEW demon boss — the charming succubus bard
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
@@ -627,7 +662,21 @@ const NATURAL_KEYS = ['zombie', 'ghoul', 'ghoul_crusader', 'shadow', 'wight', 's
 NATURAL_KEYS.push('charauka_warrior', 'bentbeak_charney', 'ikualoa',
   'amalokla', 'brogwort',   // bare knuckles, pain touch, athach limbs — nothing to disarm (the Black Sovereign now swings a SWORD — disarm away, if you dare)
   'imp', 'accuser_devil', 'bone_devil', 'pit_fiend', 'hound_archon',   // devils/archon that fight with sting/bite/claws (erinyes=bow, horned=chain, the angels=weapons → those CAN be disarmed)
-  'soirse');   // the succubus rakes with claws — nothing to disarm (the gunslingers' guns & the angels' blades CAN be disarmed)
+  'soirse',   // the succubus rakes with claws — nothing to disarm (the gunslingers' guns & the angels' blades CAN be disarmed)
+  'master_uke',   // a monk-master who flows between Hanzo Steel and open hand — an integrated arsenal, nothing to reliably disarm
+  'fist_of_iomedae');   // a cloud-giant MONK — bare fists & a stomp, nothing to disarm
 for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k) || ROBOT_KEYS.includes(k) || k === 'gargoyle') MON[k].natural = true;   // robots: integrated weaponry — nothing to disarm
+
+// ── RANGED attackers — bows & guns (Josh 2026-07-11: enemy shot SFX were inconsistent).
+// Flagging `ranged` does two things: (1) the foe fires its bow/gun `atkSound` on a MISS
+// too (enemyAI) — a missed shot no longer clangs like a sword whiff; (2) "an archer
+// doesn't wrestle" (enemyAI _pickManeuver) — a ranged foe just shoots, never grapples.
+// Every key here MUST carry a bow/gun atkSound (or atkSounds) above. Add new archers/
+// gunners here so their sound stays consistent.
+const RANGED_KEYS = ['medusa_archer', 'erinyes', 'bralani_azata', 'shackles_scallywag', 'shackles_marine',
+  'gearsman_gunslinger', 'gearsman_sniper', 'mecha_railgun', 'mecha_repeater', 'mecha_warden',
+  'blackout', 'aasimar_gunslinger', 'aasimar_shotgunner', 'sahuagin_ranger',
+  'sword_knight_4th', 'holy_gun', 'sevestra'];   // Glorious Reclamation ranged: the inquisitor-archer, the holy MUSKET, Sevestra's holy bow
+for (const k of RANGED_KEYS) if (MON[k]) MON[k].ranged = true;
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX, MONK_SFX };
