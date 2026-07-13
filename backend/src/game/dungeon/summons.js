@@ -88,8 +88,13 @@ module.exports = {
     // PF1: reinforcements act on the summoner's initiative — splice in right after the caster (join THIS round), not at the tail.
     const atE = ((this.turnIdx != null ? this.turnIdx : this.turnOrder.length - 1)) + 1;
     this.turnOrder.splice(atE, 0, ...newTurnsE);
-    const nm = MON[key].name;
-    this._note(`${e.glyph} ${e.name} rasps a grave-rite — ${count > 1 ? `${count} ${nm}s` : `a ${nm}`} claw${count > 1 ? '' : 's'} up from the earth to fight!`, spec.sound || '/audio/spell_umbral_bolt.mp3', { side: 'enemy' });
+    const nm = MON[key].name, many = count > 1, list = many ? `${count} ${nm}s` : `a ${nm}`;
+    // Flavor-aware (2026-07-13): a MON.summon may carry a `summonNote` template ({name},{list})
+    // so a BEAST-summoner (Chen) reads "calls a bear," not the undead "grave-rite" default.
+    const line = spec.summonNote
+      ? spec.summonNote.replace('{name}', e.name).replace('{list}', list)
+      : `${e.name} rasps a grave-rite — ${list} claw${many ? '' : 's'} up from the earth to fight!`;
+    this._note(`${e.glyph} ${line}`, spec.sound || '/audio/spell_umbral_bolt.mp3', { side: 'enemy' });
     this._broadcast();
   },
 };

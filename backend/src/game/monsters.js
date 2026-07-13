@@ -261,6 +261,12 @@ const MON = {
   // ── NEW demon boss (2026-07-06) — SOIRSE, a succubus bard who charms & dominates.
   //    A fiend, not an angel: rides the 'devil' gang (Hell's forces), CHAOTIC EVIL. ──
   soirse:            { name: 'Soirse',             glyph: '💋', cr: '10',  hp: 125, ac: 23, toHit: 14, dmgDie: 6, dmgCount: 2, dmgBonus: 5,  fort: 9,  reflex: 12, attacks: 2, flying: true, gold: [200, 400], sr: 18, dr: { amount: 10, bypass: 'magic' }, resist: { electricity: 0, fire: 0.5, cold: 0.5, acid: 0.5, poison: 0 }, arcane: true, caster: 'holdperson', spellDC: 20 },   // BOSS — a lvl-10 succubus bard: her Dominate/charm is modeled as Hold Person (DC 20), claws when she must
+  // ── THE GLORIOUS RECLAMATION (Iomedae's good-aligned crusade, hellsvengeance) — mortal/
+  //    giant champions riding with the celestial gang. GOOD-aligned (Smite Evil finds no
+  //    purchase). Chen + the Fist are the two Tobias called out; the rest of the pack
+  //    (Sword Knights, Silvermane, Parnoneryx the dragon…) is a future expansion. ──
+  chen:              { name: 'Chen',               glyph: '🐾', cr: '13',  hp: 118, ac: 22, toHit: 9,  dmgDie: 6, dmgBonus: 2, fort: 11, reflex: 13, will: 13, attacks: 1, gold: [300, 560], arcane: true, spellDC: 22, summon: { pool: ['dire_bear', 'dire_boar', 'blood_caimon', 'dire_ape', 'winter_wolf'], count: '1d2', uses: 3, summonNote: '{name} traces a summoning sigil — {list} answer the call and CHARGE onto the field!', sound: '/audio/enemy_yak.mp3' } },   // BOSS — half-elf CONJURER 14 of the Glorious Reclamation: she calls GREAT BEASTS (dire bears/boars/apes, blood caimans) to fight for her and blasts with arcane fire. NG — Smite finds no purchase.
+  fist_of_iomedae:   { name: 'Fist of Iomedae',    glyph: '👊', cr: '16',  hp: 230, ac: 29, toHit: 27, dmgDie: 10, dmgCount: 2, dmgBonus: 18, fort: 18, reflex: 17, will: 18, attacks: 4, evasion: true, gold: [420, 760], healer: { dice: 3, uses: 2 }, hellfire: { count: 3, dice: 6, die: 6, dc: 24, dtype: 'physical', verb: 'STOMPS the earth — a shockwave hammers the whole party', sound: '/audio/weapon_blunt.mp3' }, atkSounds: MONK_SFX },   // BOSS — a CLOUD GIANT champion (Monk 12/Paladin 3, STR 38): a flurry of house-sized fists (2d10+18 ×4) + a ground-shaking STOMP, Evasion, Lay on Hands. LN — Smite finds no purchase.
 };
 // PF1 BODY PLANS — size category + leg count per monster (used by the trip rules:
 // +4 to trip defense per leg beyond two; you can't trip a foe more than ONE size
@@ -373,6 +379,7 @@ const MON_GANGS = {
   angel_bro: ['celestial'], aasimar_gunslinger: ['celestial'], aasimar_shotgunner: ['celestial'],
   angel_healer: ['celestial'], angel_cavalier: ['celestial'], chad: ['celestial'],
   master_uke: ['celestial'],   // a mortal LG champion of good — rides with the Heavenly Host (smite-exempt)
+  chen: ['celestial'], fist_of_iomedae: ['celestial'],   // Glorious Reclamation champions ride with the celestial faction (good-aligned)
   soirse: ['devil'],   // a succubus among Hell's forces (fiends ride together for gameplay)
   // dragons — kobold warrens famously serve them
   black_dragon: ['dragon', 'kobold'], void_dragon: ['dragon', 'kobold'],
@@ -428,7 +435,7 @@ const MON_ART = {
   movanic_deva: 'movanic_deva', ghaele_azata: 'ghaele_azata', astral_deva: 'astral_deva',
   angel_bro: 'angel_bro', aasimar_gunslinger: 'aasimar_gunslinger', aasimar_shotgunner: 'aasimar_shotgunner',
   angel_healer: 'angel_healer', angel_cavalier: 'angel_cavalier', chad: 'chad', soirse: 'soirse',
-  master_uke: 'master_uke',
+  master_uke: 'master_uke', chen: 'chen', fist_of_iomedae: 'fist_of_iomedae',
   blood_caimon: 'blood_caimon',
   // The Numerian robots — tokens straight from the Iron Gods Foundry world.
   drone_rhoomba: 'drone_rhoomba', drone_collector: 'drone_collector', gearsman_mk1: 'gearsman_mk1',
@@ -584,6 +591,7 @@ const ALIGN_BY_KEY = {
   angel_bro: 'LG', aasimar_gunslinger: 'NG', aasimar_shotgunner: 'NG',
   angel_healer: 'NG', angel_cavalier: 'LG', chad: 'LG',
   master_uke: 'LG',   // the master is Lawful Good — Smite Evil finds no purchase
+  chen: 'NG', fist_of_iomedae: 'LN',   // Glorious Reclamation — good/neutral, not evil → Smite finds no purchase
   soirse: 'CE',   // succubus demon — the one EVIL fiend in this batch (Smite Evil bites her)
   // neutral evil
   goblin: 'NE', skeleton: 'NE', skeletal_champion: 'NE', skeletal_ogre: 'NE', zombie: 'NE', cultist: 'NE', ettercap: 'NE', winter_wolf: 'NE',
@@ -621,6 +629,7 @@ const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overl
   'ghaele_azata', 'astral_deva',   // the Heavenly Host bosses (the knight-angel & the avenger)
   'angel_cavalier', 'chad',   // NEW celestial bosses — the cavalier-knight & CHAD the paladin champion
   'master_uke',   // the katana MASTER (gestalt paladin/monk/samurai) — a righteous LG boss
+  'chen', 'fist_of_iomedae',   // Glorious Reclamation bosses — the beast-summoner & the cloud-giant Fist
   'soirse']);   // NEW demon boss — the charming succubus bard
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
@@ -634,7 +643,8 @@ NATURAL_KEYS.push('charauka_warrior', 'bentbeak_charney', 'ikualoa',
   'amalokla', 'brogwort',   // bare knuckles, pain touch, athach limbs — nothing to disarm (the Black Sovereign now swings a SWORD — disarm away, if you dare)
   'imp', 'accuser_devil', 'bone_devil', 'pit_fiend', 'hound_archon',   // devils/archon that fight with sting/bite/claws (erinyes=bow, horned=chain, the angels=weapons → those CAN be disarmed)
   'soirse',   // the succubus rakes with claws — nothing to disarm (the gunslingers' guns & the angels' blades CAN be disarmed)
-  'master_uke');   // a monk-master who flows between Hanzo Steel and open hand — an integrated arsenal, nothing to reliably disarm
+  'master_uke',   // a monk-master who flows between Hanzo Steel and open hand — an integrated arsenal, nothing to reliably disarm
+  'fist_of_iomedae');   // a cloud-giant MONK — bare fists & a stomp, nothing to disarm
 for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.includes(k) || ROBOT_KEYS.includes(k) || k === 'gargoyle') MON[k].natural = true;   // robots: integrated weaponry — nothing to disarm
 
 // ── RANGED attackers — bows & guns (Josh 2026-07-11: enemy shot SFX were inconsistent).

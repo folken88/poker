@@ -3,6 +3,15 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.45 2026-07-13 THE GLORIOUS RECLAMATION arrives — two new celestial-faction BOSSES from the
+//                     hellsvengeance world (Iomedae's good-aligned crusade; both smite-exempt). CHEN, a
+//                     half-elf CONJURER (CR13), calls GREAT BEASTS to the field — dire bears, boars, apes,
+//                     blood caimans burst in to fight for her — and blasts with arcane fire. THE FIST OF
+//                     IOMEDAE, a CLOUD GIANT monk-paladin (CR16, STR 38), rains a flurry of house-sized
+//                     fists (2d10+18 ×4) and a ground-shaking STOMP, with Evasion + Lay on Hands. Both
+//                     ride the celestial gang. Also: the enemy summon narration is now FLAVOR-AWARE (a
+//                     beast-summoner reads "answer the call and charge," not the undead "claw up from the
+//                     grave"). Real Foundry art. domtest +4.
 //  3.37.44 2026-07-13 THE ILLNEAS DEFENDERS get their real names (Tobias, from the FVTT world). The two
 //                     gun-angels aren't generic "aasimars" — they're named celestials from the hells-
 //                     vengeance angel band: the pistol gunslinger is AUGUST (his golden pistols "Hark the
@@ -804,6 +813,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.44';
-const HEADLINE = 'The gun-angels have names now: meet AUGUST the pistol gunslinger and NASH the shotgun-magus of the Illneas Defenders — and "Chad" the paladin is really CHADRIEL. Straight from the Foundry world.';
+const VERSION = '3.37.45';
+const HEADLINE = 'The Glorious Reclamation marches in: CHEN the conjurer summons great beasts (dire bears, boars, apes) to swarm you, and the FIST OF IOMEDAE — a STR-38 cloud-giant monk — flurries house-sized fists and stomps the whole party. Two new celestial bosses.';
 module.exports = { VERSION, HEADLINE };
