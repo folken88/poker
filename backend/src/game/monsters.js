@@ -267,6 +267,17 @@ const MON = {
   //    (Sword Knights, Silvermane, Parnoneryx the dragon…) is a future expansion. ──
   chen:              { name: 'Chen',               glyph: '🐾', cr: '13',  hp: 118, ac: 22, toHit: 9,  dmgDie: 6, dmgBonus: 2, fort: 11, reflex: 13, will: 13, attacks: 1, gold: [300, 560], arcane: true, spellDC: 22, summon: { pool: ['dire_bear', 'dire_boar', 'blood_caimon', 'dire_ape', 'winter_wolf'], count: '1d2', uses: 3, summonNote: '{name} traces a summoning sigil — {list} answer the call and CHARGE onto the field!', sound: '/audio/enemy_yak.mp3' } },   // BOSS — half-elf CONJURER 14 of the Glorious Reclamation: she calls GREAT BEASTS (dire bears/boars/apes, blood caimans) to fight for her and blasts with arcane fire. NG — Smite finds no purchase.
   fist_of_iomedae:   { name: 'Fist of Iomedae',    glyph: '👊', cr: '16',  hp: 230, ac: 29, toHit: 27, dmgDie: 10, dmgCount: 2, dmgBonus: 18, fort: 18, reflex: 17, will: 18, attacks: 4, evasion: true, gold: [420, 760], healer: { dice: 3, uses: 2 }, hellfire: { count: 3, dice: 6, die: 6, dc: 24, dtype: 'physical', verb: 'STOMPS the earth — a shockwave hammers the whole party', sound: '/audio/weapon_blunt.mp3' }, atkSounds: MONK_SFX },   // BOSS — a CLOUD GIANT champion (Monk 12/Paladin 3, STR 38): a flurry of house-sized fists (2d10+18 ×4) + a ground-shaking STOMP, Evasion, Lay on Hands. LN — Smite finds no purchase.
+  // ── THE GLORIOUS RECLAMATION — the rank-and-file order + its champions (gang 'reclamation').
+  //    All good-aligned (Smite finds no purchase). The three SWORD KNIGHTS are a knightly RANK —
+  //    several per room. Bosses: Graxus, Parnoneryx (a gold dragon), Sevestra, + Chen & the Fist above. ──
+  sword_knight_4th:  { name: '4th Sword Knight',   glyph: '🏹', cr: '10',  hp: 95,  ac: 20, toHit: 13, dmgDie: 8,  dmgBonus: 5,  fort: 12, reflex: 11, will: 16, attacks: 2, ranged: true, gold: [95, 190],  caster: 'holdperson', spellDC: 17, atkSound: '/audio/bow_shot.mp3' },   // Inquisitor 11 — a guided-longbow archer of the order; judgements + Hold Person
+  sword_knight_5th:  { name: '5th Sword Knight',   glyph: '⚔️', cr: '9',   hp: 85,  ac: 21, toHit: 11, dmgDie: 8,  dmgBonus: 4,  fort: 14, reflex: 10, will: 20, attacks: 2, gold: [85, 170],  healer: { dice: 3, uses: 3 }, caster: 'holdperson', spellDC: 18 },   // Cleric 10 — battle-priest: Hold Person + big heals (auto-warded)
+  sword_knight_6th:  { name: '6th Sword Knight',   glyph: '🗡️', cr: '8',   hp: 80,  ac: 21, toHit: 12, dmgDie: 6,  dmgCount: 2, dmgBonus: 8,  fort: 10, reflex: 9,  will: 11, attacks: 2, gold: [80, 160],  healer: { dice: 2, uses: 2 }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // Paladin 9 — a greatsword "Edging Justice" (2d6+8), Smite + Lay on Hands
+  holy_gun:          { name: "Inheritor's Holy Gun", glyph: '🔫', cr: '9', hp: 78, ac: 20, toHit: 12, dmgDie: 10, dmgBonus: 5, fort: 12, reflex: 10, will: 7, attacks: 2, ranged: true, gold: [90, 180], healer: { dice: 2, uses: 1 }, atkSound: '/audio/rifle_longue_carabine.mp3' },   // Gunslinger 5 / Paladin 4 — a holy MUSKET "Godsteel," two shots + a lay-on-hands
+  silvermane:        { name: 'Silvermane',         glyph: '🦁', cr: '5',   hp: 62,  ac: 16, toHit: 10, dmgDie: 6,  dmgCount: 2, dmgBonus: 6,  fort: 9,  reflex: 8,  will: 3,  attacks: 3, gold: [44, 95],   atkSound: '/audio/enemy_yak.mp3' },   // a LIONESS animal companion of the Reclamation — a pounce of claw/claw/bite
+  graxus:            { name: 'Knight Commander Graxus Phand', glyph: '🔨', cr: '14', hp: 185, ac: 27, toHit: 22, dmgDie: 8, dmgCount: 2, dmgBonus: 14, fort: 20, reflex: 12, will: 21, attacks: 3, gold: [340, 620], healer: { dice: 5, uses: 6 }, caster: 'holdperson', spellDC: 20 },   // BOSS — Warpriest 15 (STR 24): sacred-weapon smashes (2d8+14), Blessing of War, big channels (auto-warded)
+  parnoneryx:        { name: 'Parnoneryx',         glyph: '🐉', cr: '15',  hp: 340, ac: 32, toHit: 30, dmgDie: 8, dmgCount: 2, dmgBonus: 16, fort: 22, reflex: 11, will: 20, attacks: 3, flying: true, gold: [400, 720], arcane: true, sr: 26, dr: { amount: 10, bypass: 'magic' }, resist: { fire: 0, cold: 0.5, acid: 0.5 }, healer: { dice: 4, uses: 3 }, hellfire: { count: 3, dice: 12, die: 8, dc: 24, dtype: 'fire', verb: 'exhales a ROARING GOUT of DRAGONFIRE over the party', sound: '/audio/spell_hellfire.mp3' }, atkSound: '/audio/sword_eviscerate2_flaming.mp3' },   // BOSS — a GOLD DRAGON (18 HD, LG): bite/claw/wing (2d8+16) + a fire-breath, full arcane/divine, fire-immune, on the wing
+  sevestra:          { name: 'Sevestra Hanail',    glyph: '🏹', cr: '15',  hp: 178, ac: 26, toHit: 24, dmgDie: 8,  dmgBonus: 10, fort: 16, reflex: 14, will: 15, attacks: 3, ranged: true, gold: [380, 700], healer: { dice: 3, uses: 2 }, atkSound: '/audio/bow_silent_hits.mp3' },   // BOSS — Paladin 5 / Cavalier 12: her holy bow "Heavenly Arc," a rain of blessed arrows + Lay on Hands
 };
 // PF1 BODY PLANS — size category + leg count per monster (used by the trip rules:
 // +4 to trip defense per leg beyond two; you can't trip a foe more than ONE size
@@ -379,7 +390,11 @@ const MON_GANGS = {
   angel_bro: ['celestial'], aasimar_gunslinger: ['celestial'], aasimar_shotgunner: ['celestial'],
   angel_healer: ['celestial'], angel_cavalier: ['celestial'], chad: ['celestial'],
   master_uke: ['celestial'],   // a mortal LG champion of good — rides with the Heavenly Host (smite-exempt)
-  chen: ['celestial'], fist_of_iomedae: ['celestial'],   // Glorious Reclamation champions ride with the celestial faction (good-aligned)
+  // THE GLORIOUS RECLAMATION — its own good-aligned gang (Iomedae's crusade rides together, not with the raw Heavenly Host).
+  chen: ['reclamation'], fist_of_iomedae: ['reclamation'],
+  sword_knight_4th: ['reclamation'], sword_knight_5th: ['reclamation'], sword_knight_6th: ['reclamation'],
+  holy_gun: ['reclamation'], silvermane: ['reclamation'], graxus: ['reclamation'],
+  parnoneryx: ['reclamation'], sevestra: ['reclamation'],
   soirse: ['devil'],   // a succubus among Hell's forces (fiends ride together for gameplay)
   // dragons — kobold warrens famously serve them
   black_dragon: ['dragon', 'kobold'], void_dragon: ['dragon', 'kobold'],
@@ -436,6 +451,8 @@ const MON_ART = {
   angel_bro: 'angel_bro', aasimar_gunslinger: 'aasimar_gunslinger', aasimar_shotgunner: 'aasimar_shotgunner',
   angel_healer: 'angel_healer', angel_cavalier: 'angel_cavalier', chad: 'chad', soirse: 'soirse',
   master_uke: 'master_uke', chen: 'chen', fist_of_iomedae: 'fist_of_iomedae',
+  sword_knight_4th: 'sword_knight_4th', sword_knight_5th: 'sword_knight_5th', sword_knight_6th: 'sword_knight_6th',
+  holy_gun: 'holy_gun', silvermane: 'silvermane', graxus: 'graxus', parnoneryx: 'parnoneryx', sevestra: 'sevestra',
   blood_caimon: 'blood_caimon',
   // The Numerian robots — tokens straight from the Iron Gods Foundry world.
   drone_rhoomba: 'drone_rhoomba', drone_collector: 'drone_collector', gearsman_mk1: 'gearsman_mk1',
@@ -513,7 +530,8 @@ const MON_TYPE = {
   movanic_deva: 'outsider', ghaele_azata: 'outsider', astral_deva: 'outsider',
   angel_bro: 'outsider', aasimar_gunslinger: 'outsider', aasimar_shotgunner: 'outsider',
   angel_healer: 'outsider', angel_cavalier: 'outsider', chad: 'outsider', soirse: 'outsider',
-  black_dragon: 'dragon', void_dragon: 'dragon', rivozair: 'dragon',
+  black_dragon: 'dragon', void_dragon: 'dragon', rivozair: 'dragon', parnoneryx: 'dragon',
+  silvermane: 'animal',   // a lioness — animal type (auto-natural, mind-affecting no-ops on her)
   harpy_sorcerer: 'monstrous humanoid',
 };
 for (const [k, t] of Object.entries(MON_TYPE)) if (MON[k]) MON[k].type = t;
@@ -592,6 +610,8 @@ const ALIGN_BY_KEY = {
   angel_healer: 'NG', angel_cavalier: 'LG', chad: 'LG',
   master_uke: 'LG',   // the master is Lawful Good — Smite Evil finds no purchase
   chen: 'NG', fist_of_iomedae: 'LN',   // Glorious Reclamation — good/neutral, not evil → Smite finds no purchase
+  sword_knight_4th: 'N', sword_knight_5th: 'NG', sword_knight_6th: 'LG', holy_gun: 'LG',
+  silvermane: 'N', graxus: 'LG', parnoneryx: 'LG', sevestra: 'LG',   // all non-evil → Smite finds no purchase
   soirse: 'CE',   // succubus demon — the one EVIL fiend in this batch (Smite Evil bites her)
   // neutral evil
   goblin: 'NE', skeleton: 'NE', skeletal_champion: 'NE', skeletal_ogre: 'NE', zombie: 'NE', cultist: 'NE', ettercap: 'NE', winter_wolf: 'NE',
@@ -629,7 +649,7 @@ const BOSS_KEYS = new Set(['brass_golem', 'barbed_devil', 'mecha_warden', 'overl
   'ghaele_azata', 'astral_deva',   // the Heavenly Host bosses (the knight-angel & the avenger)
   'angel_cavalier', 'chad',   // NEW celestial bosses — the cavalier-knight & CHAD the paladin champion
   'master_uke',   // the katana MASTER (gestalt paladin/monk/samurai) — a righteous LG boss
-  'chen', 'fist_of_iomedae',   // Glorious Reclamation bosses — the beast-summoner & the cloud-giant Fist
+  'chen', 'fist_of_iomedae', 'graxus', 'parnoneryx', 'sevestra',   // Glorious Reclamation bosses (summoner, cloud-giant, warpriest commander, GOLD DRAGON, archer-cavalier)
   'soirse']);   // NEW demon boss — the charming succubus bard
 for (const k of Object.keys(MON)) MON[k].crNum = crToNum(MON[k].cr);
 const SPAWNABLE = Object.keys(MON).filter(k => !BOSS_KEYS.has(k));
@@ -655,7 +675,8 @@ for (const k of Object.keys(MON)) if (k.startsWith('monk_') || NATURAL_KEYS.incl
 // gunners here so their sound stays consistent.
 const RANGED_KEYS = ['medusa_archer', 'erinyes', 'bralani_azata', 'shackles_scallywag', 'shackles_marine',
   'gearsman_gunslinger', 'gearsman_sniper', 'mecha_railgun', 'mecha_repeater', 'mecha_warden',
-  'blackout', 'aasimar_gunslinger', 'aasimar_shotgunner', 'sahuagin_ranger'];
+  'blackout', 'aasimar_gunslinger', 'aasimar_shotgunner', 'sahuagin_ranger',
+  'sword_knight_4th', 'holy_gun', 'sevestra'];   // Glorious Reclamation ranged: the inquisitor-archer, the holy MUSKET, Sevestra's holy bow
 for (const k of RANGED_KEYS) if (MON[k]) MON[k].ranged = true;
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX, MONK_SFX };

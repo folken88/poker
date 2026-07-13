@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.46 2026-07-13 THE GLORIOUS RECLAMATION — the FULL PACK (its own gang). Iomedae's good-aligned
+//                     crusade now marches as its own faction (all smite-exempt): the three SWORD KNIGHTS
+//                     (a rank — several per room: the 4th an inquisitor-ARCHER, the 5th a battle-cleric,
+//                     the 6th a greatsword paladin), the INHERITOR'S HOLY GUN (a holy MUSKET), SILVERMANE
+//                     (a lioness), and the champions KNIGHT COMMANDER GRAXUS PHAND (warpriest boss),
+//                     SEVESTRA HANAIL (an archer paladin-cavalier boss), and PARNONERYX — a fire-breathing
+//                     GOLD DRAGON (CR15 boss). They ride with Chen + the Fist of Iomedae (moved from the
+//                     Heavenly Host into their own 'reclamation' gang). Real Foundry art all round. domtest +6.
 //  3.37.45 2026-07-13 THE GLORIOUS RECLAMATION arrives — two new celestial-faction BOSSES from the
 //                     hellsvengeance world (Iomedae's good-aligned crusade; both smite-exempt). CHEN, a
 //                     half-elf CONJURER (CR13), calls GREAT BEASTS to the field — dire bears, boars, apes,
@@ -813,6 +821,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.45';
-const HEADLINE = 'The Glorious Reclamation marches in: CHEN the conjurer summons great beasts (dire bears, boars, apes) to swarm you, and the FIST OF IOMEDAE — a STR-38 cloud-giant monk — flurries house-sized fists and stomps the whole party. Two new celestial bosses.';
+const VERSION = '3.37.46';
+const HEADLINE = 'The Glorious Reclamation marches in FULL — a whole new good-aligned faction: Sword Knights (archer/cleric/paladin), the Inheritor\'s Holy Gun, Silvermane the lioness, Warpriest Graxus, the archer Sevestra, and PARNONERYX — a fire-breathing gold dragon.';
 module.exports = { VERSION, HEADLINE };
