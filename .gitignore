@@ -8,26 +8,6 @@ backend/logs/
 .DS_Store
 Thumbs.db
 
-# Character tokens are copied locally from Cassbot's Obsidian vault +
-# Foundry character art library via scripts/import-vault-tokens.js.
-# We keep the manifest committed (so the wiring is documented) but
-# don't redistribute the source art on GitHub. Re-run the import
-# script to regenerate them locally.
-public/assets/characters/*.webp
-public/assets/characters/*.png
-public/assets/characters/*.jpg
-public/assets/characters/*.jpeg
-!public/assets/characters/manifest.json
-
-# Player-avatar gallery imported from FVTT via scripts/import-token-gallery.js
-# (token_* files modified within last 90 days). Same rationale — manifest
-# committed, binaries gitignored.
-public/tokens/*.webp
-public/tokens/*.png
-public/tokens/*.jpg
-public/tokens/*.jpeg
-!public/tokens/manifest.json
-
 # Runtime data — bot TTS line-pools, dungeon journals, conversation logs.
 # These churn constantly during play and were bloating every commit (a one-line
 # code change once shipped with 266 KB of mp3 noise). The DB was already
