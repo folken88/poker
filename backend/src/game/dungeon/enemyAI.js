@@ -289,6 +289,10 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const r = this._monsterSwing(e, effAC);
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);   // monk's randomized "bruce" kiai (hit or miss)
     else if (e.atkSound && (r.hit || e.ranged)) r.sound = e.atkSound;      // melee atkSound = the connecting blow (hit only, e.g. rogue "riki" stab); a RANGED foe fires its bow/gun sound on a MISS too (Josh: a missed shot shouldn't clang like a sword)
+    // RANGED foes SHOOT — a bow/gun verb so a blind player hears it's an arrow/bullet, not
+    // a sword (Josh: "erinyes aren't archers — it isn't saying they're shooting bows"). Works
+    // for bows AND firearms; the atkSound already differentiates the two.
+    const _rHit = e.ranged ? 'shoots' : 'hits';
     if (r.hit) {
       // Swashbuckler PARRY — the first melee attack against them each round can be
       // turned aside (parry roll vs the foe's attack total). On success: NO damage
@@ -318,7 +322,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       }
       let drTag = ''; [dmg, drTag] = this._physDR(target, dmg);   // Stoneskin soaks physical blows
       target.hp -= dmg;
-      this._note(`${e.glyph} ${e.name} hits ${target.nickname} for ${dmg}.${sneakTag}${drTag} ${this._atkStr(r)}`, r.sound);
+      this._note(`${e.glyph} ${e.name} ${_rHit} ${target.nickname} for ${dmg}.${sneakTag}${drTag} ${this._atkStr(r)}`, r.sound);
       // DAUNTING SUCCESS (Order of the Flame — enemy parity, mirror of Lord Gweyir's L8 deed): a
       // CONFIRMED CRIT from the prince daunts the whole party — every (non-undead) hero is SICKENED
       // (−2 to hit, damage & saves) for a few rounds. Once per room; sickened ticks down, so it's a
@@ -368,7 +372,9 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       }
       if (target.hp > 0 && target.isBot) this._tryBanter(target, 'damage', { enemy: e.name, dmg: r.damage });
     } else {
-      this._note(`${e.glyph} ${e.name} misses ${target.nickname}. ${this._atkStr(r)}`, r.sound);
+      this._note(e.ranged
+        ? `${e.glyph} ${e.name}'s shot flies wide of ${target.nickname}. ${this._atkStr(r)}`
+        : `${e.glyph} ${e.name} misses ${target.nickname}. ${this._atkStr(r)}`, r.sound);
     }
     this._echoToTable(r.sound);
   },
@@ -463,14 +469,17 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const dc = e.spellDC || 13;
     const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
-    const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
+    // TRIMMED (Josh 2026-07-13): several angel casters (Sword Knights, Graxus…) each cast
+    // Hold Person in a round — the full [Will d20 …vs DC] bracket ×4 was overwhelming over
+    // TTS. Keep the OUTCOME (held / breaks free); the roll math is dropped. The DC still
+    // reads once so the player knows what they're up against.
     if (!saved) {
       // HELD: multiple rounds, but the hero re-saves each of their turns (and the
       // attempt costs the turn either way) — see heldDC handling in _advanceToActor.
       target.paralyzed = Math.max(target.paralyzed || 0, 3); target.heldDC = dc; target.paralyzedCL = this._enemyCL(e);
-      this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname} — HELD! ${roll} (re-save each turn to break free)`, null, { side: 'enemy' });
+      this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person (DC ${dc}) on ${target.nickname} — HELD! (re-save each turn to break free)`, null, { side: 'enemy' });
     } else {
-      this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname}, who breaks free. ${roll}`, null, { side: 'enemy' });
+      this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person (DC ${dc}) on ${target.nickname}, who breaks free.`, null, { side: 'enemy' });
     }
     this._broadcast();
   },

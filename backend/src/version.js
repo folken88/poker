@@ -3,6 +3,11 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.48 2026-07-13 JOSH FIXES — (1) ERINYES (and every ranged foe) now SHOOT: enemy archers/gunners
+//                     read "shoots / shot flies wide" instead of "hits / misses", and the Erinyes finally
+//                     twangs an AUDIBLE bow (was a silent sound file — "aint making bow noises"). (2) HOLD
+//                     PERSON spam trimmed: several angel casters (Sword Knights, Graxus) each cast it in a
+//                     round; dropped the verbose [Will d20…vs DC] roll bracket, keeping the outcome + DC.
 //  3.37.47 2026-07-13 CRITICAL FIX — the bestiary was being edited in an ORPHAN file. The app loads
 //                     `pf1data/monsters.js`, but every monster change since ~v3.37.37 had been deployed
 //                     to `game/monsters.js` (a stale duplicate NOTHING imports; domtest read it too, so
@@ -832,6 +837,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.47';
-const HEADLINE = 'Bugfix that unlocks a lot: new foes were landing in the wrong file and never loaded — now live for real. Master Uke, the Glorious Reclamation (Chen, the Fist of Iomedae, Parnoneryx the gold dragon), the Sahuagin Reefstalker, the named gun-angels, and the gun/shotgun sounds.';
+const VERSION = '3.37.48';
+const HEADLINE = 'Archers now SHOOT — Erinyes and every ranged foe read "shoots / shot flies wide" and twang an audible bow. Plus: the angel Hold Person readout is trimmed so a room full of Sword Knights stops flooding the log.';
 module.exports = { VERSION, HEADLINE };
