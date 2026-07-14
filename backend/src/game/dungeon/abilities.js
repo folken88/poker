@@ -307,6 +307,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       bane:        () => this._abBane(m, ab, payload),
       cleanse:     () => this._abCleanse(m, ab, payload),
       aoe:         () => this._abAoe(m, ab, payload),
+      invispurge:  () => this._abInvisPurge(m, ab),
       disintegrate: () => this._abDisintegrate(m, ab, payload),
       bolt:        () => this._abBolt(m, ab, payload.targetUid),
       missile:     () => this._abMissile(m, ab, payload),
@@ -630,7 +631,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.infernalHeal = 0;   // Infernal Healing fast-healing ends between rooms
     // Magus per-room effects clear: mirror images, displacement, fire shield,
     // elemental body, true seeing, touch strikes, blur, blindness, melee-flight.
-    m.images = 0; m.displaced = false; m.fireShield = null; m.elemBody = false; m.trueSeeing = false;
+    m.images = 0; m.displaced = false; m.fireShield = null; m.elemBody = false; m.trueSeeing = false; m.seeInvis = false;
     m.touchStrike = 0; m.untargetable = false; m.blinded = 0; m.canHitFlyers = false;
     if (m.overlandFlight) { m.flying = true; m.canHitFlyers = true; }   // Overland Flight is RUN-long — re-assert flight + airborne reach
     if (m.ghost) { m.flying = true; m.canHitFlyers = true; }            // Vesorianna never lands — a ghost drifts over every room
@@ -1379,6 +1380,23 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // per-foe outcome lives on each enemy's condition chips. 1-2 keep detail.
     const detail = targets.length <= 2 ? parts.join('; ') : `${failN} BLINDED, ${saveN} resist [Will DC ${dc}]`;
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${targets.length} foe${targets.length === 1 ? '' : 's'} — ${detail}.`, sound);
+    this._echoToTable(sound);
+  },
+  // Invisibility Purge (cleric/inquisitor 3rd): a burst of revealing light. Every invisible
+  // foe is dragged into view AND barred from vanishing again this room (enemyAI checks
+  // e._invisPurged before casting Invisibility). Does NOT touch mirror image / displacement
+  // — those are illusions, not concealment (that's True Seeing's job).
+  _abInvisPurge(m, ab) {
+    const sound = ab.sound || pick(SND.flesh);
+    const revealed = [];
+    for (const e of this.livingEnemies()) {
+      e._invisPurged = true;
+      if (e.invisible) { e.invisible = false; revealed.push(e.name); }
+    }
+    const tag = revealed.length
+      ? `${revealed.length} hidden foe${revealed.length === 1 ? '' : 's'} dragged into the light (${revealed.join(', ')}) — and none can vanish again this room`
+      : `nothing is hidden right now — but no foe can turn invisible for the rest of the room`;
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${tag}.`, sound);
     this._echoToTable(sound);
   },
   // Mirror Image — shimmering decoys soak incoming attacks (1d4 + 1 per 3 levels, max 8).
@@ -2432,6 +2450,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (ab.fireShield) who.fireShield = { die: 6, bonus: who.level || 1 };   // Fire Shield — retaliate on melee hit
       if (ab.elemBody) who.elemBody = true;         // Elemental Body — crit + CC immunity
       if (ab.trueSeeing) who.trueSeeing = true;     // True Seeing — pierce darkness/illusion/invisibility
+      if (ab.seeInvis) who.seeInvis = true;         // See Invisibility — find/strike the INVISIBLE (but NOT mirror image / displacement)
     };
     if (ab.party) {
       for (const a of this.livingParty()) apply(a);

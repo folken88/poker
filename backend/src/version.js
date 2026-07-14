@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.50 2026-07-14 SEEING THE UNSEEN — casters get real counters to enemy invisibility. NEW SEE
+//                     INVISIBILITY (2nd-level: wizard/sorcerer/magus/inquisitor ~L3-4, bard L7) — a self
+//                     buff that lets you find, target and STRIKE invisible foes with no concealment miss
+//                     (does NOT pierce mirror image / displacement — that's still True Seeing). NEW
+//                     INVISIBILITY PURGE (3rd-level cleric L5 / inquisitor L7) — a party-wide reveal that
+//                     drags every invisible enemy into view AND bars them from vanishing again the room.
+//                     (True Seeing already existed at L16; this fills the gap below it.)
 //  3.37.49 2026-07-13 ERINYES TRUE SEEING — the fallen-angel archers now see the unseen (canon): they
 //                     TARGET invisible heroes and are never fooled by Mirror Image or Displacement /
 //                     Blur (their arrows find the real body through the illusions). They still can't
@@ -841,6 +848,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.49';
-const HEADLINE = 'Erinyes devils now have TRUE SEEING — those fallen-angel archers pick invisible heroes right out of the air and shoot through Mirror Image and Displacement. Going unseen won\'t save you from them.';
+const VERSION = '3.37.50';
+const HEADLINE = 'Casters can finally SEE THE UNSEEN — new See Invisibility (a mid-level buff to find & strike invisible foes) and Invisibility Purge (a party-wide reveal that drags every hidden enemy into the light and keeps them there). No more waiting until L16 True Seeing.';
 module.exports = { VERSION, HEADLINE };

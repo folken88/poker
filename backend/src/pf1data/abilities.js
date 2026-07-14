@@ -234,6 +234,8 @@ const SPELL = {
   chainlightning:{ key: 'chainlightning',name: 'Chain Lightning', icon: '⚡', effect: 'aoe', target: 'aoe', maxTargets: 10, randBase: 4, randDie: 6, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'electricity', slvl: 6, sound: null, desc: 'A bolt forks from foe to foe — 4 + 1d6 enemies (5–10), Reflex for half (level d6, cap 15d6).' },   // no fixed sound → rotates through the SND.lightning playlist like Lightning Bolt (Tobias 2026-07-03; the Hetfield one-off stays on Storm of Vengeance)
   dispelmagicgreater: { key: 'dispelmagicgreater', name: 'Dispel Magic, Greater', icon: '🌀', effect: 'cleanse', greater: true, target: 'ally', slvl: 6, sound: S.dispel, desc: 'A sweeping unweaving — end ALL hostile SPELL effects on an ally (hold, slow, magical blindness), or tear every buff off a foe. Physical conditions stay (PF1).' },
   trueseeing:    { key: 'trueseeing',    name: 'True Seeing',     icon: '👁️', effect: 'buff', target: 'self', trueSeeing: true, sticky: true, slvl: 6, sound: S.invoke, desc: 'Your eyes pierce all deception — see through darkness, ignore illusions, and strike the invisible. Lasts the room.' },
+  seeinvisibility: { key: 'seeinvisibility', name: 'See Invisibility', icon: '🔎', effect: 'buff', target: 'self', seeInvis: true, sticky: true, slvl: 2, sound: S.invoke, desc: 'Your eyes catch the unseen — you can find, target and strike INVISIBLE foes with no concealment miss. (It does NOT pierce mirror images or a displaced blur — that needs True Seeing.) Lasts the room.' },
+  invisibilitypurge: { key: 'invisibilitypurge', name: 'Invisibility Purge', icon: '🔦', effect: 'invispurge', target: 'self', slvl: 3, sound: S.dispel, desc: 'A blaze of revealing light — every INVISIBLE enemy is dragged into view for the whole party, and none can vanish again this room. (Does not touch mirror image or displacement.)' },
   // ── HIGH ARCANE (7th–9th) — without these, a sorcerer past L13 had the SLOTS
   //    but no spells to put in them (Josh: "L15, never got my 7th-level spells").
   delayedfireball: { key: 'delayedfireball', name: 'Delayed Blast Fireball', icon: '🔥', effect: 'aoe', target: 'aoe', maxTargets: 8, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'fire', slvl: 7, sounds: FIREBALL_SFX, desc: 'A roiling fireball engulfs up to 8 foes — 1d6 fire per caster level (max 20d6), Reflex for half.' },
@@ -395,6 +397,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { key: 'searinglight', name: 'Searing Light',        icon: '🔆', cost: 'room', uses: 1, slvl: 3, minLevel: 5, effect: 'touch', target: 'enemy', die: 8, dice: 'halflevel', dcap: 5, searing: true, dtype: 'holy', sound: S.searing, desc: 'A ray of divine light — ranged touch. 1d8 per 2 levels (max 5d8); UNDEAD take 1d6 per level (max 10d6), and light-vulnerable undead (vampires) 1d8 per level (max 10d8); a construct/object takes only 1d6 per 2 levels (max 5d6). (PF1)' },
     { key: 'cureserious',  name: 'Cure Serious Wounds',  icon: '💚', cost: 'room', uses: 1, slvl: 3, minLevel: 5, effect: 'heal', heal: 'single', healDice: 3, healCap: 15, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 3d8 + caster level (max +15). Once per room.' },
     { key: 'dispelmagic',  name: 'Dispel Magic',         icon: '🌀', cost: 'room', uses: 1, slvl: 3, minLevel: 5, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'End hostile SPELL effects on an ally (hold, slow, magical blindness) — or strip a buff off a foe. Physical grapple/stun/sickness are beyond it (PF1).' },
+    preparedSpell(SPELL.invisibilitypurge, 5),   // 3rd-level prayer — reveal every invisible foe for the party + lock out re-vanishing
     { ...SPELL.greatermagicweapon, cost: 'room', uses: 1, minLevel: 5 },   // craft priests' team buff: party weapons +1/4 levels (max +5)
     // ── 4th-level prayers ──
     { key: 'curecritical', name: 'Cure Critical Wounds', icon: '💚', cost: 'room', uses: 1, slvl: 4, minLevel: 7, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20). Once per room.' },
@@ -429,6 +432,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     preparedSpell(SPELL.darkness,      3),
     preparedSpell(SPELL.invisibility,  3),
     preparedSpell(SPELL.glitterdust,   3),
+    preparedSpell(SPELL.seeinvisibility, 3),
     preparedSpell(SPELL.aciddart,      3),
     preparedSpell(SPELL.scorchingray,  3),
     preparedSpell(SPELL.holdperson,    5),   // arcane Hold Person is a 3RD-level spell (divine casters get it at 2nd) — 3rd-level slots arrive at wizard 5
@@ -497,6 +501,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     spontaneousSpell(SPELL.aciddart,     4),
     spontaneousSpell(SPELL.gustofwind,   4),
     spontaneousSpell(SPELL.glitterdust,  4),
+    spontaneousSpell(SPELL.seeinvisibility, 4),
     spontaneousSpell(SPELL.scorchingray, 4),
     spontaneousSpell(SPELL.catsgrace,    4),
     spontaneousSpell(SPELL.dispelmagic,  6),
@@ -584,6 +589,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     preparedSpell(SPELL.bladeddash,   4),
     preparedSpell(SPELL.glitterdust,  4),
     preparedSpell(SPELL.mirrorimage,  4),
+    preparedSpell(SPELL.seeinvisibility, 4),
     preparedSpell(SPELL.scorchingray, 4),
     // 3rd level (character level 7)
     preparedSpell(SPELL.displacement, 7),
@@ -632,6 +638,8 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { key: 'dispelmagic',   name: 'Dispel Magic',         icon: '🌀', cost: 'slot', slvl: 3, minLevel: 7, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'End hostile SPELL effects on an ally (hold, slow, magical blindness) — or strip a buff off a foe. Physical grapple/stun/sickness are beyond it (PF1).' },
     { key: 'prayer',        name: 'Prayer',               icon: '📿', cost: 'slot', slvl: 3, minLevel: 7, effect: 'buff', target: 'self', party: true, buff: { toHit: 1, dmg: 1, save: 1 }, enemyPenalty: 1, sticky: true, sound: S.prayer, desc: 'ALL allies +1 to hit, damage & saves; ALL enemies −1, for the rest of the room.' },
     { key: 'searinglight',  name: 'Searing Light',        icon: '🔆', cost: 'slot', slvl: 3, minLevel: 7, effect: 'touch', target: 'enemy', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.searing, desc: 'A ray of divine light — ranged touch for ½level d8 (extra vs undead).' },
+    spontaneousSpell(SPELL.seeinvisibility, 4),    // 2nd level — the inquisitor's early counter to invisible foes
+    spontaneousSpell(SPELL.invisibilitypurge, 7),  // 3rd level — reveal the whole room + lock out re-vanishing
     // 4th level (slots from L10)
     { key: 'curecritical',  name: 'Cure Critical Wounds', icon: '💚', cost: 'slot', slvl: 4, minLevel: 10, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20).' },
     { key: 'holysmite',     name: 'Holy Smite',           icon: '🌟', cost: 'slot', slvl: 4, minLevel: 10, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
@@ -672,6 +680,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { key: 'goodhope',  name: 'Good Hope',       icon: '🌟', cost: 'slot', slvl: 3, minLevel: 7, effect: 'buff', target: 'self', party: true, buff: { toHit: 2, dmg: 2, save: 2 }, sticky: true, sound: S.bardsong, desc: 'Fill the party with hope — all allies get +2 to hit, damage, and saves for the rest of the room.' },
     { key: 'heroism',   name: 'Heroism',         icon: '🦸', cost: 'slot', slvl: 3, minLevel: 7, effect: 'buff', target: 'ally', buff: { toHit: 2, save: 2 }, sticky: true, sound: S.invoke, desc: 'One ally becomes heroic — +2 to hit and +2 to saves for the rest of the room.' },
     { key: 'dispelmagic', name: 'Dispel Magic',  icon: '🌀', cost: 'slot', slvl: 3, minLevel: 7, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'End hostile SPELL effects on an ally (hold, slow, magical blindness) — or strip a buff off a foe. Physical grapple/stun/sickness are beyond it (PF1).' },
+    { ...SPELL.seeinvisibility, cost: 'slot', minLevel: 7 },   // bard 3rd — find & strike invisible foes (no mirror-image pierce)
     spontaneousSpell(SPELL.dominateperson, 13),   // Dominate Phase A (2026-07-03): bard 5th, turns a foe against its own
     spontaneousSpell(SPELL.heroismgreater, 13),   // wave-2 expansion (2026-07-03)
     spontaneousSpell(SPELL.masssuggestion, 16),
