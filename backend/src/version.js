@@ -3,6 +3,12 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.51 2026-07-14 See Invisibility / Invisibility Purge WIRED INTO THE KITS — v3.37.50 added the
+//                     spells + mechanics, but the class lists it edited were the hand-coded FALLBACK;
+//                     the live kits come from the content-DB-generated file (which overrides it). Added
+//                     a post-override injection (same pattern as the magus/rogue/Olbryn re-attachments)
+//                     so the two spells are actually castable now. Idempotent — no-ops once the DB regen
+//                     carries them. (DB migration TODO noted in abilities.js.)
 //  3.37.50 2026-07-14 SEEING THE UNSEEN — casters get real counters to enemy invisibility. NEW SEE
 //                     INVISIBILITY (2nd-level: wizard/sorcerer/magus/inquisitor ~L3-4, bard L7) — a self
 //                     buff that lets you find, target and STRIKE invisible foes with no concealment miss
@@ -848,6 +854,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.50';
+const VERSION = '3.37.51';
 const HEADLINE = 'Casters can finally SEE THE UNSEEN — new See Invisibility (a mid-level buff to find & strike invisible foes) and Invisibility Purge (a party-wide reveal that drags every hidden enemy into the light and keeps them there). No more waiting until L16 True Seeing.';
 module.exports = { VERSION, HEADLINE };

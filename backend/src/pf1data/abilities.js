@@ -921,6 +921,27 @@ for (const _ck of ['swashbuckler', 'rogue']) {
   }
 }
 
+// ── SEE INVISIBILITY + INVISIBILITY PURGE (2026-07-14) ─────────────────────────────
+// Counters to enemy invisibility (Josh/Tobias). They ARE in the SPELL registry + the
+// hand-coded fallback above, but the content DB doesn't carry them yet — so inject AFTER
+// the generated-kit override, exactly like the magus/rogue/Olbryn re-attachments. The
+// guard makes it IDEMPOTENT: it skips a class that already has the spell, so it silently
+// no-ops the moment the DB regen picks them up. See Invisibility (2nd) beats the invisible
+// concealment miss but NOT mirror image; Invisibility Purge (3rd) reveals the whole room.
+// TODO: migrate into kit_abilities on the next DB regen, then delete this block.
+const _injectKitSpell = (cls, entry) => {
+  const _k = KITS[cls];
+  if (!_k || !Array.isArray(_k.abilities) || _k.abilities.some(a => a.key === entry.key)) return;
+  _k.abilities.push(entry);
+};
+_injectKitSpell('wizard',     preparedSpell(SPELL.seeinvisibility, 3));
+_injectKitSpell('magus',      preparedSpell(SPELL.seeinvisibility, 4));
+_injectKitSpell('sorcerer',   spontaneousSpell(SPELL.seeinvisibility, 4));
+_injectKitSpell('inquisitor', spontaneousSpell(SPELL.seeinvisibility, 4));
+_injectKitSpell('bard',       spontaneousSpell(SPELL.seeinvisibility, 7));
+_injectKitSpell('cleric',     preparedSpell(SPELL.invisibilitypurge, 5));
+_injectKitSpell('inquisitor', spontaneousSpell(SPELL.invisibilitypurge, 7));
+
 // Olbryn's STORM specialization — injected AFTER the generated-kit override so it
 // survives regeneration. Base sorcerers are fire/force themed; these char-tagged
 // lightning spells (only Olbryn sees them, gated by Dungeon._charAllows) make him the
