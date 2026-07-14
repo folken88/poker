@@ -296,9 +296,10 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     // and which are active. Slot spells re-level by the active toggles below.
     const ff = fighterFeats(m.cls, m.level, this._isRanged(m));
     const mmActive = this._spontMM(m) || {};
+    const mmAll = [['intensify', 'Intensify', '+1'], ['empower', 'Empower', '+2'], ['maximize', 'Maximize', '+3'], ['quicken', 'Quicken', '+4']]
+      .filter(([k]) => ff[k]);
     const mmFeats = isSpontaneous(m.cls)
-      ? [['intensify', 'Intensify', '+1'], ['empower', 'Empower', '+2'], ['maximize', 'Maximize', '+3'], ['quicken', 'Quicken', '+4']]
-          .filter(([k]) => ff[k]).map(([key, name, adj]) => ({ key, name, adj, on: !!mmActive[key] }))
+      ? mmAll.map(([key, name, adj]) => ({ key, name, adj, on: !!mmActive[key] }))
       : [];
     // Capture the ability list ONCE. _abilitiesFor rebuilds FRESH objects each call
     // (the magus renames its spellstrikes into new {...a} objects), so computing the
@@ -317,7 +318,15 @@ module.exports = ({ fighterFeats, titleCase }) => ({
       caster: isCaster(m.cls),
       domainsMax: maxDomainsFor(m.cls) || 0,   // cleric 2 / inquisitor 1 / else 0 — shows the Domain picker (Phase C)
       spellNote: kit.note || null,
-      metamagic: mmFeats.length ? mmFeats : null,    // null → no buttons (prepared casters bake metamagic into spell entries)
+      metamagic: mmFeats.length ? mmFeats : null,    // null → no toggle buttons (prepared casters bake metamagic into spell entries)
+      // The metamagic feats this caster actually OWNS, whatever their casting style. A
+      // PREPARED caster (wizard) gets no toggles — its metamagic is pre-baked into dedicated
+      // spell entries (Intensified/Empowered Fireball, Maximized Cone of Cold, Quickened Magic
+      // Missile) — but it absolutely still HAS the feats, and the UI must be able to say so.
+      // (Josh: Estovion, a level-17 WIZARD, was told "you have no metamagic feats.")
+      // Empty array = genuinely none.
+      metamagicOwned: mmAll.map(([, name]) => name),
+      metamagicBaked: !isSpontaneous(m.cls) && mmAll.length > 0,   // has the feats, but they live in the spell list
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
       // Per-spell-level slots for spontaneous casters: { 1: {remaining,max}, … }.
       slots: maxSlots ? Object.fromEntries(Object.keys(maxSlots).map(L => [L, { remaining: (m.slots && m.slots[L]) || 0, max: maxSlots[L] }])) : null,

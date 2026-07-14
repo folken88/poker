@@ -2224,8 +2224,18 @@
       }
       if (k === 'g') {
         e.preventDefault();
-        if (_blindHelp) { sayU('G: metamagic. If you have metamagic feats, press G then a number to toggle one on or off before you cast.'); return; }
-        if (!_mm.length) { sayU('You have no metamagic feats.'); return; }
+        if (_blindHelp) { sayU('G: metamagic. If you have metamagic feats, press G then a number to toggle one on or off before you cast. A prepared caster has no toggles — G tells you which metamagic is baked into your spells.'); return; }
+        if (!_mm.length) {
+          // A PREPARED caster (wizard) owns metamagic feats but has NO toggles — they're
+          // pre-baked into dedicated spell entries. Saying "you have no metamagic feats"
+          // was simply FALSE (Josh: Estovion, a level-17 wizard). Report what he owns.
+          const _owned = kit.metamagicOwned || [];
+          if (kit.metamagicBaked && _owned.length) {
+            sayU(`You have ${_owned.join(', ')}. As a prepared caster there is nothing to toggle — your metamagic is already built into your spell list, as the Intensified, Empowered, Maximized and Quickened versions of your spells. Open your spellbook and cast those directly.`);
+            return;
+          }
+          sayU('You have no metamagic feats.'); return;
+        }
         if (_dunMmMenu) { _dunMmMenu = null; sayU('Metamagic menu closed.'); return; }
         _dunMmMenu = _mm.map(x => ({ ...x }));
         sayU('Metamagic: ' + _dunMmMenu.map((x, i) => `${i + 1} ${x.name} ${x.on ? 'on' : 'off'}`).join(', ') + '. Press a number to toggle, Escape to close.');
@@ -5617,6 +5627,18 @@
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
       return el.isContentEditable === true;
     };
+    // Is focus on something a Space press is meant to ACTIVATE? Push-to-talk must keep
+    // its hands off those, or a screen-reader user can never click anything (see the
+    // PTT branch below). Broader than isTypingTarget: buttons, links, ARIA widgets.
+    const isActionableTarget = (el) => {
+      if (!el || el === document.body) return false;
+      const tag = (el.tagName || '').toUpperCase();
+      if (tag === 'BUTTON' || tag === 'A' || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'SUMMARY') return true;
+      if (el.isContentEditable === true) return true;
+      const role = (el.getAttribute?.('role') || '').toLowerCase();
+      return ['button', 'link', 'checkbox', 'radio', 'menuitem', 'menuitemcheckbox', 'tab', 'option', 'switch'].includes(role);
+    };
+    let _pttActive = false;   // did WE capture this PTT press? (keyup only stops what we started)
     const pttCode = () => window.BlindMode.getPttCode?.() || 'Space';
     document.addEventListener('keydown', (e) => {
       // PTT rebind capture takes priority: the very next key (other than
@@ -5651,8 +5673,15 @@
       if (!window.BlindMode.isOn() || isTypingTarget(e.target)) return;
       // Push-to-talk (configurable key; default Space). Checked before H
       // so a player who rebinds PTT to H still gets the mic, not a re-read.
-      if (e.code === pttCode()) {
+      // BUT never steal the key from a screen reader or a focused control: VoiceOver
+      // ACTIVATES with VO+Space (Ctrl+Option+Space), and a bare Space on a focused
+      // button/link must click it. We used to preventDefault() every Space, so a
+      // VoiceOver user couldn't press anything (Josh: "anytime I hit spacebar it wants
+      // to capture sound — it doesn't activate anything"). Only grab a BARE press on a
+      // non-actionable target. _pttActive tracks it so keyup can't swallow one we let through.
+      if (e.code === pttCode() && !e.ctrlKey && !e.altKey && !e.metaKey && !isActionableTarget(document.activeElement)) {
         e.preventDefault();
+        _pttActive = true;
         const chip = $('#blindModeChip');
         if (chip) chip.classList.add('is-listening');
         window.BlindMode.startListening();
@@ -5820,7 +5849,10 @@
     });
     document.addEventListener('keyup', (e) => {
       if (!window.BlindMode.isOn() || isTypingTarget(e.target)) return;
-      if (e.code === pttCode()) {
+      // Only release a push-to-talk we actually CAPTURED — a Space we deliberately let
+      // through (VoiceOver activation, a focused button) must not be swallowed here.
+      if (e.code === pttCode() && _pttActive) {
+        _pttActive = false;
         e.preventDefault();
         const chip = $('#blindModeChip');
         if (chip) chip.classList.remove('is-listening');

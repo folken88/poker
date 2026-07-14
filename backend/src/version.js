@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.52 2026-07-14 ACCESSIBILITY FIXES (Josh, VoiceOver) — (1) SPACEBAR no longer steals VoiceOver's
+//                     activation: push-to-talk used to preventDefault() EVERY space, so VO+Space (how a
+//                     VoiceOver user clicks) and Space on a focused button did nothing but "capture
+//                     sound". PTT now only grabs a BARE space on a non-actionable target, and keyup only
+//                     releases a press we actually captured. (2) METAMAGIC readout: a PREPARED caster
+//                     (Estovion, L17 WIZARD) was told "you have no metamagic feats" — flat wrong. He has
+//                     all four; a prepared caster just has no TOGGLES (they're baked into the Intensified/
+//                     Empowered/Maximized/Quickened spell entries). G now names what he owns and says so.
 //  3.37.51 2026-07-14 See Invisibility / Invisibility Purge WIRED INTO THE KITS — v3.37.50 added the
 //                     spells + mechanics, but the class lists it edited were the hand-coded FALLBACK;
 //                     the live kits come from the content-DB-generated file (which overrides it). Added
@@ -854,6 +862,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.51';
-const HEADLINE = 'Casters can finally SEE THE UNSEEN — new See Invisibility (a mid-level buff to find & strike invisible foes) and Invisibility Purge (a party-wide reveal that drags every hidden enemy into the light and keeps them there). No more waiting until L16 True Seeing.';
+const VERSION = '3.37.52';
+const HEADLINE = 'Accessibility: the spacebar no longer swallows VoiceOver — you can actually click things again. And a prepared caster is no longer told they have "no metamagic feats" when they have all four (a wizard\'s metamagic is baked into their spells, not toggles).';
 module.exports = { VERSION, HEADLINE };
