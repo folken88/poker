@@ -3,6 +3,10 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.49 2026-07-13 ERINYES TRUE SEEING — the fallen-angel archers now see the unseen (canon): they
+//                     TARGET invisible heroes and are never fooled by Mirror Image or Displacement /
+//                     Blur (their arrows find the real body through the illusions). They still can't
+//                     touch a truly incorporeal ghost. Generic `trueSeeing` flag for future true-seers.
 //  3.37.48 2026-07-13 JOSH FIXES — (1) ERINYES (and every ranged foe) now SHOOT: enemy archers/gunners
 //                     read "shoots / shot flies wide" instead of "hits / misses", and the Erinyes finally
 //                     twangs an AUDIBLE bow (was a silent sound file — "aint making bow noises"). (2) HOLD
@@ -837,6 +841,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.48';
-const HEADLINE = 'Archers now SHOOT — Erinyes and every ranged foe read "shoots / shot flies wide" and twang an audible bow. Plus: the angel Hold Person readout is trimmed so a room full of Sword Knights stops flooding the log.';
+const VERSION = '3.37.49';
+const HEADLINE = 'Erinyes devils now have TRUE SEEING — those fallen-angel archers pick invisible heroes right out of the air and shoot through Mirror Image and Displacement. Going unseen won\'t save you from them.';
 module.exports = { VERSION, HEADLINE };

@@ -317,7 +317,7 @@ class Dungeon {
   livingParty() { return this.alivePresent(); }
   // Heroes the enemy can actually target — invisible ones are unseen (until they
   // attack). If EVERY living hero is invisible, fall back so combat can resolve.
-  _targetableParty() { const live = this.alivePresent(); const seen = live.filter(m => !m.invisible && !m.untargetable && !m.blinkedBy); return seen.length ? seen : live; }   // blinkedBy: teleported — untouchable until the caster's next turn
+  _targetableParty(seer) { const live = this.alivePresent(); const sees = !!(seer && seer.trueSeeing); const seen = live.filter(m => (sees || !m.invisible) && !m.untargetable && !m.blinkedBy); return seen.length ? seen : live; }   // blinkedBy: teleported — untouchable until the caster's next turn. A TRUE-SEEING foe (Erinyes) also sees the INVISIBLE.
   livingEnemies() { return this.enemies.filter(e => e.hp > 0); }
   // Foes a hero can actually hit — excludes those shrouded in DARKNESS (can't be
   // attacked for 2 rounds). They're still "alive" (room stays active until it lifts).
@@ -765,6 +765,7 @@ class Dungeon {
       size: base.size || 'M',               // PF1 size category (S/M/L/H…) — trip & flavor (see MON_BODY)
       legs: (base.legs != null ? base.legs : 2),   // leg count — 0 = untrippable; >2 = +4 trip defense per extra leg
       flying: !!base.flying || pre.includes('fly'),   // airborne: immune to prone + "high ground" vs grounded foes (a pre-cast Fly can be DISPELLED — the boss crashes)
+      trueSeeing: !!base.trueSeeing,   // Erinyes devils: pierce ILLUSIONS — target invisible heroes + never fooled by mirror image / displacement (see _targetableParty + _evadeIncoming)
       evasion: !!base.evasion,             // rogues/monks: a made Reflex save vs an area effect = NO damage
       natural: !!base.natural,             // fights with natural weapons / unarmed (claws, bite, slams) → cannot be DISARMED
       detonate: base.detonate || null,     // fire skeleton: rushes in and blows itself up on its turn
@@ -1771,12 +1772,20 @@ class Dungeon {
   // hero get soaked by a decoy or slip through their blurred form? Returns true
   // (and logs) when the attack is fully negated.
   _evadeIncoming(target, attacker) {
-    if (target.images > 0) {
+    // TRUE SEEING (Erinyes devils, canon): pierces ILLUSIONS — never fooled by a mirror
+    // image or a displaced/blurred form. (It still can't touch a truly INCORPOREAL ghost
+    // below — that's physical, not an illusion.) One reveal line per room per foe.
+    const pierces = !!(attacker && attacker.trueSeeing);
+    if (pierces && (target.images > 0 || target.displaced) && attacker._sawThrough !== this.round) {
+      attacker._sawThrough = this.round;
+      this._note(`👁️ ${attacker.name}'s TRUE SEEING picks the real ${target.nickname} out of the illusions.`, null, { side: 'enemy' });
+    }
+    if (!pierces && target.images > 0) {
       target.images -= 1;
       this._note(`🪞 the blow strikes a mirror image of ${target.nickname} — it pops! (${target.images} left)`, null);
       return true;
     }
-    if (target.displaced && dRoll(2) === 1) {
+    if (!pierces && target.displaced && dRoll(2) === 1) {
       this._note(`🌫️ ${target.nickname} is displaced — the attack passes through empty air!`, null);
       return true;
     }

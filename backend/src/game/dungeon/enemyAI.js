@@ -174,7 +174,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // dragged down — a grounded foe can reach it again (Hold Person / Black Tentacles
     // ground even a Strix; incorporeal ghosts still drift out of reach).
     let noReach = false;
-    const seen = this._targetableParty();
+    const seen = this._targetableParty(e);   // a TRUE-SEEING foe (Erinyes) also sees INVISIBLE heroes as valid targets
     const grounded = (m) => !m.flying || (!(m.incorporeal || m.ghost) && ((m.paralyzed > 0) || m.grappled));
     const living = e.flying ? seen : seen.filter(grounded);
     // SUMMONED undead fodder (Draymus) on the field — a foe can swing at them instead
