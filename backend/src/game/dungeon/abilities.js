@@ -356,6 +356,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const _tn = this._oneEnemy(payload);
       if (_tn && _tn.type === 'undead') return { ok: false, error: `${ab.name} would only HEAL ${_tn.name} — negative energy mends the undead. Pick a living target.` };
     }
+    // An INVISIBILITY PURGE still burning in this room reveals EVERYTHING and does NOT
+    // discriminate (Tobias) — a hero can no more hide in it than a foe can. Refuse the cast
+    // (and keep the action), same pattern as the negative-energy refusal above. Must live
+    // HERE, before the dispatch: the effect handlers' return values are discarded.
+    if (ab.effect === 'invisible' && this.invisPurged) {
+      return { ok: false, error: `The Invisibility Purge still blazes here — nothing can hide in it, friend or foe. ${ab.name} would be snuffed the instant you cast it.` };
+    }
     // PF1 SPELL RESISTANCE — single-target hostile spells test the target's SR
     // BEFORE their handler runs (_abAoe tests per target inside). A blocked
     // cast still spends the slot and the action below, per PF1.
@@ -1382,21 +1389,30 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${targets.length} foe${targets.length === 1 ? '' : 's'} — ${detail}.`, sound);
     this._echoToTable(sound);
   },
-  // Invisibility Purge (cleric/inquisitor 3rd): a burst of revealing light. Every invisible
-  // foe is dragged into view AND barred from vanishing again this room (enemyAI checks
-  // e._invisPurged before casting Invisibility). Does NOT touch mirror image / displacement
-  // — those are illusions, not concealment (that's True Seeing's job).
+  // Invisibility Purge (cleric/inquisitor 3rd): a blaze of revealing light that DOES NOT
+  // DISCRIMINATE (Tobias). It's an emanation, not a targeted dispel — EVERY invisible
+  // creature in the room is dragged into view, YOUR OWN ALLIES INCLUDED, and while it burns
+  // NOTHING on either side can turn invisible again this room. So purging while your rogue
+  // is set up for a Sneak Attack burns him too — that's the cost, and it's the point.
+  // (It does NOT touch mirror image / displacement — those are illusions, not concealment;
+  // that's True Seeing's job.) `this.invisPurged` is the room flag: _abInvisible refuses
+  // for heroes, and enemyAI checks it before an enemy vanishes. Reset at room start.
   _abInvisPurge(m, ab) {
     const sound = ab.sound || pick(SND.flesh);
-    const revealed = [];
+    this.invisPurged = true;
+    const foes = [], allies = [];
     for (const e of this.livingEnemies()) {
       e._invisPurged = true;
-      if (e.invisible) { e.invisible = false; revealed.push(e.name); }
+      if (e.invisible) { e.invisible = false; foes.push(e.name); }
     }
-    const tag = revealed.length
-      ? `${revealed.length} hidden foe${revealed.length === 1 ? '' : 's'} dragged into the light (${revealed.join(', ')}) — and none can vanish again this room`
-      : `nothing is hidden right now — but no foe can turn invisible for the rest of the room`;
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${tag}.`, sound);
+    for (const a of this.livingParty()) {
+      if (a.invisible || a.greaterInvis) { a.invisible = false; a.greaterInvis = false; allies.push(a.nickname); }
+    }
+    const parts = [];
+    if (foes.length)   parts.push(`${foes.length} hidden foe${foes.length === 1 ? '' : 's'} dragged into the light (${foes.join(', ')})`);
+    if (allies.length) parts.push(`but it spares NO ONE — ${allies.join(' & ')} ${allies.length === 1 ? 'is' : 'are'} stripped of invisibility too`);
+    const tag = parts.length ? parts.join(', ') : 'nothing was hidden';
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${tag}. Nothing on EITHER side can vanish for the rest of the room.`, sound);
     this._echoToTable(sound);
   },
   // Mirror Image — shimmering decoys soak incoming attacks (1d4 + 1 per 3 levels, max 8).

@@ -681,7 +681,9 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       this._note(`🪽 ${e.glyph} ${e.name} rises into the air on wings of magic — grounded foes can't reach it!`, '/audio/spell_buff_invoke.mp3', { side: 'enemy' });
       this._echoToTable('/audio/spell_buff_invoke.mp3'); this._broadcast(); return;
     }
-    if (cl >= 3 && !e.invisible && !e._invisPurged && hurt && dRoll(3) === 1) {   // Invisibility Purge bars it from vanishing this room
+    // this.invisPurged is the ROOM flag (so a foe SUMMONED after the purge can't vanish
+    // either); e._invisPurged is the per-foe belt-and-braces. Neither side can hide.
+    if (cl >= 3 && !e.invisible && !e._invisPurged && !this.invisPurged && hurt && dRoll(3) === 1) {
       e.invisible = true;
       this._note(`👻 ${e.glyph} ${e.name} winks out of sight — you'll need See Invisibility, True Seeing or blindsense to strike it!`, '/audio/spell_buff_invoke.mp3', { side: 'enemy' });
       this._echoToTable('/audio/spell_buff_invoke.mp3'); this._broadcast(); return;

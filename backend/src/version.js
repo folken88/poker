@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.53 2026-07-14 INVISIBILITY PURGE DOES NOT DISCRIMINATE (Tobias) — it's an emanation, not a
+//                     targeted dispel. It now strips invisibility from EVERY creature in the room,
+//                     YOUR OWN ALLIES INCLUDED (Greater Invisibility too), and while it burns NOTHING on
+//                     either side can vanish: a hero's Invisibility/Vanish is refused outright, and no
+//                     foe (even one summoned after) can turn invisible. Purge while your rogue lies in
+//                     wait and you burn him too — that's the cost, and it's the point. Room-scoped
+//                     (this.invisPurged, cleared at the next door); AI-heroes no longer waste a turn
+//                     casting invisibility into it.
 //  3.37.52 2026-07-14 ACCESSIBILITY FIXES (Josh, VoiceOver) — (1) SPACEBAR no longer steals VoiceOver's
 //                     activation: push-to-talk used to preventDefault() EVERY space, so VO+Space (how a
 //                     VoiceOver user clicks) and Space on a focused button did nothing but "capture
@@ -862,6 +870,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.52';
-const HEADLINE = 'Accessibility: the spacebar no longer swallows VoiceOver — you can actually click things again. And a prepared caster is no longer told they have "no metamagic feats" when they have all four (a wizard\'s metamagic is baked into their spells, not toggles).';
+const VERSION = '3.37.53';
+const HEADLINE = 'Invisibility Purge no longer plays favourites — it is a blaze of light, not a targeted dispel. It rips EVERY invisible creature into view, your own rogue included, and nothing on either side can vanish for the rest of the room. Cast it knowing what it costs you.';
 module.exports = { VERSION, HEADLINE };

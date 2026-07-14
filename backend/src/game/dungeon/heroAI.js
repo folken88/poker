@@ -642,7 +642,9 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (buffCands.length) return { slot: slot(buffCands[0]), payload: {} };
     // Invisibility — shields the most-hurt ally (it lands on the lowest-HP ally in
     // _abInvisible). Cast when an ally is badly hurt and nobody's hidden yet.
-    const invis = avail.find(a => a.effect === 'invisible');
+    // …but NOT into an Invisibility Purge — it doesn't discriminate, so the cast would be
+    // refused and the bot would burn its turn for nothing.
+    const invis = this.invisPurged ? null : avail.find(a => a.effect === 'invisible');
     if (invis && !this.livingParty().some(p => p.invisible)) {
       const hurt = allies.slice().sort((a, b) => a.hp - b.hp)[0];
       if (hurt && hurt.hp < hurt.maxHp * 0.5) return { slot: slot(invis), payload: {} };
