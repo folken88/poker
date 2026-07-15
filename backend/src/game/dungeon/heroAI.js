@@ -685,12 +685,14 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     //    BEFORE opening fire. (SEVERE wounds already jumped the queue at the top;
     //    nobody hurt → pickHeal returns null and the offense below proceeds.)
     { const h = pickHeal(); if (h) return h; }
-    // 2b2) FORCE PUSH (Jason): if TWO+ melee allies have their weapons out (they
-    //      melee'd within the last round), shoving a foe to grant them all a free
-    //      attack beats one cleric swing. Char-gated to Jason (nobody else has it).
+    // 2b2) FORCE PUSH (Jason): if TWO+ melee allies can act, shoving a foe into the
+    //      party to grant them ALL a free attack beats one cleric swing — Jason's a team
+    //      enabler. Match _abForcePush's rule exactly (a melee fighter never sheathes
+    //      mid-fight; the old "melee'd within the last round" gate made Jason skip the
+    //      push when Freya/J'Mal plainly could strike — Josh 2026-07-15). Char-gated to Jason.
     { const fpush = avail.find(a => a.effect === 'forcepush');
       if (fpush && targets.length) {
-        const ready = this.livingParty().filter(a => a.playerId !== m.playerId && a.hp > 0 && !a.left && !this._isRanged(a) && (this.round - (a._lastMeleeRound == null ? -99 : a._lastMeleeRound)) <= 1);
+        const ready = this.livingParty().filter(a => a.playerId !== m.playerId && a.hp > 0 && !a.left && !this._isRanged(a) && !(a.paralyzed > 0) && !(a.stunned > 0) && !a.asleep);
         if (ready.length >= 2) return { slot: slot(fpush), payload: { targetUid: (targets.find(e => e.boss) || targets[0]).uid } };
       } }
     // 2c) Arcane controllers (wizard, sorcerer) play the battlefield: by default

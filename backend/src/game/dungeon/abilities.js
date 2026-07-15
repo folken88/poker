@@ -1924,9 +1924,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abForcePush(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     this._note(`${ab.icon} 🌬️ ${m.nickname} FORCE-PUSHES ${e.name} with the Force Pike — into the party's reach!`, ab.sound);
+    // EVERY melee ally who can act seizes the opening — that's the whole point of the shove
+    // (Jason is a TEAM enabler). The old gate required the ally to have swung within the last
+    // round (a "weapon out" proxy via _lastMeleeRound), which whiffed constantly — Freya with a
+    // greatsword and J'Mal dual-wielding daggers were told they "had no weapon out" (Josh
+    // 2026-07-15). A melee fighter never sheathes mid-fight; only being truly incapacitated
+    // (held/stunned/asleep) stops them. Ranged allies get no MELEE attack of opportunity.
     const allies = this.livingParty().filter(a => a.playerId !== m.playerId && a.hp > 0 && !a.left
-      && !this._isRanged(a) && (this.round - (a._lastMeleeRound == null ? -99 : a._lastMeleeRound)) <= 1);
-    if (!allies.length) { this._note(`…but no melee ally has a weapon out to capitalize.`); this._echoToTable(ab.sound); return; }
+      && !this._isRanged(a) && !(a.paralyzed > 0) && !(a.stunned > 0) && !a.asleep);
+    if (!allies.length) { this._note(`…but no melee ally is in a state to capitalize.`); this._echoToTable(ab.sound); return; }
     for (const ally of allies) {
       if (e.hp <= 0) break;
       ally.weapon = weaponOf(ally.gear, ally.weaponKey);

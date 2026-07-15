@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.54 2026-07-15 JASON'S FORCE PUSH now actually feeds the team (Josh) — shoving a foe into the
+//                     party grants EVERY melee ally who can act a free swing, as intended. It was gated
+//                     on the ally having melee'd within the last round (a "weapon out" proxy) which
+//                     whiffed constantly: Freya with a greatsword and J'Mal dual-wielding daggers were
+//                     told they "had no weapon out." A melee fighter never sheathes mid-fight — now only
+//                     being held / stunned / asleep stops them. Fixed on BOTH the human cast and the AI
+//                     decision (Jason's bot no longer skips the push when allies plainly could strike).
 //  3.37.53 2026-07-14 INVISIBILITY PURGE DOES NOT DISCRIMINATE (Tobias) — it's an emanation, not a
 //                     targeted dispel. It now strips invisibility from EVERY creature in the room,
 //                     YOUR OWN ALLIES INCLUDED (Greater Invisibility too), and while it burns NOTHING on
@@ -870,6 +877,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.53';
-const HEADLINE = 'Invisibility Purge no longer plays favourites — it is a blaze of light, not a targeted dispel. It rips EVERY invisible creature into view, your own rogue included, and nothing on either side can vanish for the rest of the room. Cast it knowing what it costs you.';
+const VERSION = '3.37.54';
+const HEADLINE = "Jason's Force Pike finally works as a team move — shove a foe into the party and every melee ally who can act tears into it. No more Freya and J'Mal standing there 'with no weapon out' while the shove goes to waste.";
 module.exports = { VERSION, HEADLINE };
