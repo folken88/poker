@@ -3,6 +3,10 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.57 2026-07-16 New death cry (Tobias) — a hero dropping past −10 now CYCLES its death sound from a
+//                     small pool (the old hero_death.mp3 + the new ack.mp3), so the SLAIN moment isn't
+//                     the same clip every time. The log line and the table echo pick the SAME clip so
+//                     you don't hear two overlapping cries.
 //  3.37.56 2026-07-16 TAB-AWAY NO LONGER EATS YOUR RUN (Josh) — backgrounding the tab throttles it into
 //                     a socket ping-timeout, which counts as a disconnect; the dungeon's reconnect grace
 //                     was only 3 minutes, so a blind tester writing detailed notes in another app blew
@@ -891,6 +895,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.56';
-const HEADLINE = "Tabbing away no longer eats your dungeon run — the game now holds your place for 15 minutes if you background the tab (say, to jot notes), and drops you right back into the same run when you return. Your party keeps fighting on autopilot while you're gone.";
+const VERSION = '3.37.57';
+const HEADLINE = "A fresh death cry joins the rotation — a fallen hero's SLAIN moment now varies instead of playing the same clip every time.";
 module.exports = { VERSION, HEADLINE };

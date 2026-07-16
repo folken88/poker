@@ -1865,8 +1865,11 @@ class Dungeon {
     m.dead = true; m.downed = false; m.queuedAction = null;   // death wipes the pre-load
     m._deathPending = true;   // the level-loss penalty is DEFERRED — a Breath of Life
                               // (in combat) or Resurrection (end of room) can undo it.
-    this._note(`☠️ ${m.nickname} drops past −10 — SLAIN. They lie fallen, awaiting a Breath of Life or a rescue at the end of the room.`, '/audio/hero_death.mp3');
-    this._echoToTable('/audio/hero_death.mp3');
+    // Death cry CYCLES from a small pool (Tobias) — pick ONE so the log line and the
+    // table echo play the same clip, not two overlapping cries.
+    const deathSnd = pick(['/audio/hero_death.mp3', '/audio/ack.mp3']);
+    this._note(`☠️ ${m.nickname} drops past −10 — SLAIN. They lie fallen, awaiting a Breath of Life or a rescue at the end of the room.`, deathSnd);
+    this._echoToTable(deathSnd);
     this._log('death', { who: m.playerId, hp: m.hp, depthReached: this.depth });
     // The fallen hero STAYS in the run as a corpse (their turn is skipped) so a cleric
     // or oracle can still revive them, and so the player can keep spectating. The death
