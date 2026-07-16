@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.62 2026-07-16 THE LOOT-BANK SHOP STOPS EJECTING YOU (Josh: "after I buy a piece of equipment,
+//                     it jumps me out of there... I have to click on my loot, move away, and click it
+//                     again before it shows up") — (1) a VoiceOver activation doesn't set DOM focus, so
+//                     the post-buy rebuild found nothing focused inside the doll and restored NOTHING;
+//                     the buy/sell handlers now pass the acted-on slot EXPLICITLY and focus is pinned
+//                     back onto it (falling back to Close, then the dialog, if the button vanished —
+//                     maxed tier / hocked away). (2) The bank toggle now checks the element's ACTUAL
+//                     visibility, not just the open flag, killing the click-away-click-again dance.
 //  3.37.61 2026-07-16 PREPARE-SPELLS MENU BROWSES (Josh: "being able to tab through and see what the
 //                     possibilities are would be helpful... right now you have to listen and memorize
 //                     the entire list") — inside a spell level of the K menu, TAB now steps through the
@@ -924,6 +932,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.61';
-const HEADLINE = "The prepare-spells menu finally browses — inside a spell level, Tab steps through the spells one at a time and Enter toggles, so a prepared caster can build a loadout without memorizing a long readout. Every spell is reachable, not just the first nine.";
+const VERSION = '3.37.62';
+const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

@@ -4200,7 +4200,7 @@
   // Re-render the open doll when chips/gear change — PRESERVING which control was
   // focused, so a keyboard/SR user isn't kicked out when the table state updates.
   let _bankDirty = false;   // a rebuild was skipped while the user was inside the bank
-  function renderSidebarBank(force = false) {
+  function renderSidebarBank(force = false, focusKey = null) {
     if (!_bankDollOpen) return;
     const el = $('#bankDoll'); if (!el) return;
     const a = document.activeElement;
@@ -4213,8 +4213,13 @@
     // around"). Defer; the rebuild happens when focus leaves, or immediately after
     // the user's OWN buy/sell (force=true), with focus restored to the same button.
     if (focusedInside && !force) { _bankDirty = true; return; }
-    let key = null;
-    if (focusedInside) {
+    // focusKey: the buy/sell handlers pass the slot they just acted on EXPLICITLY.
+    // A VoiceOver activation often leaves document.activeElement on <body> (VO clicks
+    // through its own cursor, not DOM focus), so the old focused-element sniffing found
+    // nothing, the rebuild restored no focus, and the VO cursor was stranded on dead
+    // nodes — "after I buy it jumps me out of there" (Josh 2026-07-15).
+    let key = focusKey;
+    if (!key && focusedInside) {
       key = a.dataset.buySlot ? 'buy:' + a.dataset.buySlot
           : a.dataset.sellSlot ? 'sell:' + a.dataset.sellSlot
           : a.hasAttribute('data-bank-close') ? 'close' : null;
@@ -4225,7 +4230,11 @@
       const sel = key === 'close' ? '[data-bank-close]'
                 : key.startsWith('buy:') ? `[data-buy-slot="${key.slice(4)}"]`
                 : `[data-sell-slot="${key.slice(5)}"]`;
-      const next = el.querySelector(sel); if (next) { try { next.focus(); } catch (_) {} }
+      // The acted-on button can legitimately VANISH (bought to max tier → no next buy;
+      // hocked → nothing to sell). Fall back to the close button, then the dialog
+      // itself, so real DOM focus stays INSIDE the doll and the SR cursor follows.
+      const next = el.querySelector(sel) || el.querySelector('[data-bank-close]') || el;
+      try { el.tabIndex = -1; next.focus(); } catch (_) {}
     }
   }
   // When focus leaves the bank, apply any rebuild we deferred while browsing it.
@@ -4237,8 +4246,17 @@
   });
   function renderBank() { /* legacy no-op — gear bank also lives in the action panel */ }
 
-  $('#sidebarBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankDollOpen ? closeBankDoll() : openBankDoll($('#sidebarBankToggle')); });
-  $('#dungeonBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankDollOpen ? closeBankDoll() : openBankDoll($('#dungeonBankToggle')); });
+  // Toggle on the element's ACTUAL visibility, not just the flag — if the flag ever
+  // desyncs from the DOM (a re-render, an SR-driven oddity), the flag-only toggle made
+  // the first click "close" an already-hidden doll, forcing a second click to open it
+  // (Josh's "click it, move away, click it again before it shows up" dance).
+  const _bankToggle = (opener) => {
+    const el = $('#bankDoll');
+    const reallyOpen = _bankDollOpen && el && !el.hidden;
+    reallyOpen ? closeBankDoll() : openBankDoll(opener);
+  };
+  $('#sidebarBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankToggle($('#sidebarBankToggle')); });
+  $('#dungeonBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankToggle($('#dungeonBankToggle')); });
   $('#bankDoll')?.addEventListener('click', (e) => { if (e.target.closest('[data-bank-close]')) closeBankDoll(); });
   // Keep keyboard focus INSIDE the open bank dialog (Tab wraps), and let Escape
   // close it from anywhere within. So a SR/keyboard user is "contained" in the
@@ -4939,7 +4957,7 @@
       socket.emit('lobby:buyGear', { slot, tier }, (resp) => {
         if (!resp?.ok) { toast(resp?.error || 'Could not buy', true); window.BlindMode?.speak?.(resp?.error || 'Could not buy.', 'urgent'); return; }
         window.BlindMode?.speak?.(`Bought plus ${tier} ${GEAR_META[slot]?.label || slot}.`, 'urgent');
-        renderSidebarBank(true);   // user's own action — rebuild now, focus restored to this button
+        renderSidebarBank(true, 'buy:' + slot);   // user's own action — rebuild now, focus PINNED to this slot (VoiceOver activations don't set DOM focus)
       });
       return;
     }
@@ -4952,7 +4970,7 @@
         if (!resp?.ok) { toast(resp?.error || 'Could not sell', true); window.BlindMode?.speak?.(resp?.error || 'Could not sell.', 'urgent'); return; }
         toast(`Hocked your ${GEAR_META[slot].label} for ${formatChips(resp.refund)} gp`);
         window.BlindMode?.speak?.(`Hocked your ${GEAR_META[slot].label} for ${formatChips(resp.refund)} gold.`, 'urgent');
-        renderSidebarBank(true);   // user's own action — rebuild now, focus restored
+        renderSidebarBank(true, 'sell:' + slot);   // user's own action — rebuild now, focus pinned (falls back to close/dialog if the sell button vanished)
       });
       return;
     }
