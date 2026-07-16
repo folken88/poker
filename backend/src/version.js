@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.59 2026-07-16 URGENT SPEECH PREEMPTS, NO LONGER DESTROYS (Josh: "ceasing to speak rather than
+//                     announce a loot roll" + speech "getting caught and cutting off" elsewhere) — any
+//                     'urgent' TTS cue (your-turn, refusals, key readouts) used to cancel the engine AND
+//                     wipe the queued-line spool, silently eating every not-yet-spoken report line: the
+//                     loot drop, XP, level-ups. Now the urgent cue captures the unstarted lines first,
+//                     speaks, then RE-QUEUES them — the report resumes where it left off. Only the line
+//                     actually mid-sentence is lost (that's what an interruption is).
 //  3.37.58 2026-07-16 THE DOMAIN MENU DEAD-END (Josh) — the blind V menu only accepted numbers 1-8, but
 //                     the catalog has grown to 11 domains and Jason's auto-picked Fire and Law sit at
 //                     #10 and #11: literally unreachable, so he couldn't DROP them, and with both slots
@@ -903,6 +910,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.58';
-const HEADLINE = "The blind domain menu can finally reach ALL 11 domains — Tab steps through the whole list and Enter toggles, so a cleric can actually swap Fire or Law out instead of being stuck. Domain changes still land at the next room.";
+const VERSION = '3.37.59';
+const HEADLINE = "The narrator stops eating its own reports — an urgent cue (your turn, a refusal) now interrupts politely and then RESUMES the queued report, so loot drops, XP and level-ups always get announced instead of vanishing mid-sentence.";
 module.exports = { VERSION, HEADLINE };

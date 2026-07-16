@@ -321,10 +321,21 @@
     // once. We do NOT stop the playing character clip — it ducks and keeps going.
     if (p === PRIO.ambient && (TTS.speaking || TTS.pending)) return;
     if (p === PRIO.urgent) {
+      // PREEMPT, don't DESTROY (Josh 2026-07-15: "it is CEASING to speak rather than
+      // announce a loot roll" — and speech "getting caught and cutting off" elsewhere).
+      // An urgent cue used to cancel the engine AND wipe the spool, so every queued-but-
+      // unspoken report line (the loot drop, XP, level-ups…) was silently eaten. Now we
+      // capture the unstarted lines FIRST, cancel, speak the urgent cue, then re-queue
+      // the captured lines — the report resumes right where it left off. Only the line
+      // that was mid-sentence is lost (it was interrupted; that's what urgent means).
+      const resume = (state.spool || []).slice();   // spool = queued lines the engine hasn't STARTED (onstart drops them)
       try { TTS.cancel(); } catch (_) {}
       state.shadow.length = 0;   // engine queue is gone — drop everything shadowed
-      if (state.spool) state.spool.length = 0;   // the section spool mirrors the engine queue
+      if (state.spool) state.spool.length = 0;   // rebuilt below as the resume lines re-enter
       state.curSection = null;
+      _engineSpeak(text, prio, section);
+      for (const r of resume) _engineSpeak(r.text, r.prio, r.section);
+      return;
     }
     _engineSpeak(text, prio, section);
   }
