@@ -3,6 +3,14 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.58 2026-07-16 THE DOMAIN MENU DEAD-END (Josh) — the blind V menu only accepted numbers 1-8, but
+//                     the catalog has grown to 11 domains and Jason's auto-picked Fire and Law sit at
+//                     #10 and #11: literally unreachable, so he couldn't DROP them, and with both slots
+//                     full every other pick refused with "drop one first." Hard-stuck. Now: numbers 1-9
+//                     toggle directly, TAB steps through the whole list (Shift-Tab back) speaking each
+//                     domain + picked state, and ENTER toggles the one you're on. The intro also says
+//                     plainly that changes land NEXT ROOM and the pad keeps this room's domains until
+//                     then (his "picker says Fire but the pad shows other domain spells" confusion).
 //  3.37.57 2026-07-16 New death cry (Tobias) — a hero dropping past −10 now CYCLES its death sound from a
 //                     small pool (the old hero_death.mp3 + the new ack.mp3), so the SLAIN moment isn't
 //                     the same clip every time. The log line and the table echo pick the SAME clip so
@@ -895,6 +903,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.57';
-const HEADLINE = "A fresh death cry joins the rotation — a fallen hero's SLAIN moment now varies instead of playing the same clip every time.";
+const VERSION = '3.37.58';
+const HEADLINE = "The blind domain menu can finally reach ALL 11 domains — Tab steps through the whole list and Enter toggles, so a cleric can actually swap Fire or Law out instead of being stuck. Domain changes still land at the next room.";
 module.exports = { VERSION, HEADLINE };

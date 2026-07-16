@@ -866,7 +866,8 @@
   let _dunSbp = null;          // blind dungeon: prepare-spells menu open — { lvl: null|number } (S opens; number picks a level, then toggles; 0 back; Escape closes)
   let _dmpOpen = false;        // "⛪ Domains ▾" DOMAIN picker popover open/closed (sighted, Domains Phase C)
   let _dmpModel = null;        // fetched domain model { max, picks, domains } — shared by the sighted panel + blind V menu
-  let _dunDmp = false;         // blind dungeon: domain menu open (V opens; a number toggles a domain; Escape closes)
+  let _dunDmp = false;         // blind dungeon: domain menu open (V opens; 1-9 toggles, Tab cycles + Enter toggles, Escape closes)
+  let _dunDmpIdx = -1;         // Tab cursor within the domain menu (the catalog outgrew the number row — 11 domains)
   let _dunProg = null;         // blind dungeon: class-progression reference open — the fetched { level, cls, next } (X opens; 1-9 speak later levels; Escape closes)
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
   let _dunDispelPick = null;   // blind dungeon: Dispel Magic awaiting a target — {slot,label,targets:[{kind:'ally'|'foe',id,name}]} (numbers pick, Return = smart auto)
@@ -2146,37 +2147,61 @@
         return;
       }
       // ----- Domain menu — V (Domains Phase C) -------------------------------
-      // V opens and speaks the 8 domains numbered, with your current picks; a
-      // NUMBER toggles a domain in/out (the server enforces the cleric-2 /
-      // inquisitor-1 cap and speaks the refusal); Escape closes. Changes save
-      // instantly and land at the NEXT ROOM. (V audited free across global +
-      // poker + dungeon handlers — the S-key lesson.)
+      // V opens and speaks EVERY domain numbered, with your current picks. Numbers
+      // 1-9 toggle directly; TAB steps through the WHOLE list (Shift-Tab back) and
+      // ENTER toggles the one you're on. The catalog outgrew the number row — 11
+      // domains, and Jason's auto-picked Fire and Law sat at #10 and #11, literally
+      // UNREACHABLE: with both slots full every other pick refused with "drop one
+      // first" and Josh was hard-stuck (2026-07-15). The server enforces the
+      // cleric-2 / inquisitor-1 cap and speaks the refusal; Escape closes. Changes
+      // land at the NEXT ROOM (the pad shows this room's ACTIVE domains until then).
       const _dmpSpeak = () => {
         const mdl = _dmpModel; if (!mdl) { sayU('Still loading your domains.'); return; }
         const list = (mdl.domains || []).map((d, i) => `${i + 1} ${d.name}${d.picked ? ', picked' : ''}`).join('; ');
-        sayU(`Domains — choose ${mdl.max}, ${(mdl.picks || []).length} picked: ${list}. Press a number to toggle, Escape to close. Takes effect next room.`);
+        sayU(`Domains — choose ${mdl.max}, ${(mdl.picks || []).length} picked: ${list}. Numbers 1 through 9 toggle; Tab steps through them all, Enter toggles the one you are on; Escape closes. Changes take effect next room — your number pad keeps this room's domains until then.`);
+      };
+      const _dmpToggle = (d) => {
+        dmpickSend({ toggle: d.key }, (m2) => {
+          const now = (m2.picks || []).includes(d.key);
+          sayU(`${d.name} ${now ? 'picked' : 'dropped'}. ${(m2.picks || []).length} of ${m2.max} picked. Takes effect next room.`);
+        });
       };
       if (_dunDmp) {
-        if (e.key === 'Escape') { e.preventDefault(); _dunDmp = false; sayU('Domain menu closed.'); return; }
-        if (/^[1-8]$/.test(k)) {
+        if (e.key === 'Escape') { e.preventDefault(); _dunDmp = false; _dunDmpIdx = -1; sayU('Domain menu closed.'); return; }
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const mdl = _dmpModel;
+          if (!mdl || !(mdl.domains || []).length) { sayU('Still loading your domains.'); return; }
+          const n = mdl.domains.length;
+          _dunDmpIdx = ((_dunDmpIdx + (e.shiftKey ? -1 : 1)) % n + n) % n;
+          const d = mdl.domains[_dunDmpIdx];
+          sayU(`${_dunDmpIdx + 1}, ${d.name}${d.picked ? ', picked' : ''}. Enter to ${d.picked ? 'drop' : 'pick'}.`);
+          return;
+        }
+        if (e.key === 'Enter' && _dunDmpIdx >= 0) {
+          e.preventDefault();
+          const mdl = _dmpModel;
+          const d = mdl && (mdl.domains || [])[_dunDmpIdx];
+          if (!d) { sayU('Still loading your domains.'); return; }
+          _dmpToggle(d);
+          return;
+        }
+        if (/^[1-9]$/.test(k)) {
           e.preventDefault();
           const mdl = _dmpModel;
           if (!mdl) { sayU('Still loading your domains.'); return; }
           const d = (mdl.domains || [])[parseInt(k, 10) - 1];
           if (!d) { sayU(`No domain ${k}.`); return; }
-          dmpickSend({ toggle: d.key }, (m2) => {
-            const now = (m2.picks || []).includes(d.key);
-            sayU(`${d.name} ${now ? 'picked' : 'dropped'}. ${(m2.picks || []).length} of ${m2.max} picked. Takes effect next room.`);
-          });
+          _dmpToggle(d);
           return;
         }
       }
       if (k === 'v') {
         e.preventDefault();
-        if (_blindHelp) { sayU('V: domains. Clerics choose two domains, inquisitors one — granted powers, and domain spells for clerics. Press V, then a number to toggle a domain. Changes land at the next room.'); return; }
+        if (_blindHelp) { sayU('V: domains. Clerics choose two domains, inquisitors one. Press V, then a number 1 through 9 toggles a domain; Tab steps through the full list and Enter toggles the one you are on. Changes land at the next room.'); return; }
         if (!kit.domainsMax) { sayU('Your class has no domains.'); return; }
-        if (_dunDmp) { _dunDmp = false; sayU('Domain menu closed.'); return; }
-        _dunDmp = true;
+        if (_dunDmp) { _dunDmp = false; _dunDmpIdx = -1; sayU('Domain menu closed.'); return; }
+        _dunDmp = true; _dunDmpIdx = -1;
         if (_dmpModel) _dmpSpeak();
         else { sayU('Opening your domains.'); dmpickSend({}, () => { if (_dunDmp) _dmpSpeak(); }); }
         return;
