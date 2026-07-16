@@ -272,7 +272,14 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
   // auto-attack) for a grace window; come back in time and dungeon:enter cancels
   // the pending bail — you're simply back, same depth, same share. Only when the
   // window expires do we bail them (banking their gold, exactly as before).
-  const DC_BAIL_GRACE_MS = 3 * 60_000;
+  //
+  // 15 MIN, not 3 (Josh 2026-07-15): backgrounding the tab (throttled → socket ping
+  // timeout) counts as a disconnect, and Josh — blind, writing detailed test notes in
+  // another app — routinely spent more than 3 minutes away, so the grace lapsed and his
+  // run was bailed ("tab away to write notes and it cancels my run"). The party keeps
+  // fighting via the AFK auto-attack meanwhile, so a longer hold costs nothing; if he
+  // truly never returns, he still banks his gold at expiry.
+  const DC_BAIL_GRACE_MS = 15 * 60_000;
   socket.on('disconnect', () => {
     const me = meOf();
     if (!me) return;

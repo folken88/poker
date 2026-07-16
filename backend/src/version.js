@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.56 2026-07-16 TAB-AWAY NO LONGER EATS YOUR RUN (Josh) — backgrounding the tab throttles it into
+//                     a socket ping-timeout, which counts as a disconnect; the dungeon's reconnect grace
+//                     was only 3 minutes, so a blind tester writing detailed notes in another app blew
+//                     past it and got bailed back to the poker table. Grace is now 15 minutes. The party
+//                     keeps fighting via the AFK auto-attack while you're away, and you slot right back
+//                     into the same run at the same depth when you return. (The reconnect path itself was
+//                     already correct — this just stops the timer from firing while you take notes.)
 //  3.37.55 2026-07-16 FLY IS A TOUCH SPELL — cast it on ALLIES, not just yourself (Josh: Fly is range
 //                     touch). A wizard/sorcerer/Draymus can now send Freya or J'Mal aloft to engage the
 //                     flying angels that used to kite the whole party from 30 ft with no answer. The
@@ -884,6 +891,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.55';
-const HEADLINE = "Fly is a touch spell now — cast it on an ally, not just yourself. Send Freya or J'Mal up after the flying angels that used to shoot you from 30 feet with no answer. The flown ally can actually reach airborne foes, and AI casters will fly a melee ally when flyers are kiting the party.";
+const VERSION = '3.37.56';
+const HEADLINE = "Tabbing away no longer eats your dungeon run — the game now holds your place for 15 minutes if you background the tab (say, to jot notes), and drops you right back into the same run when you return. Your party keeps fighting on autopilot while you're gone.";
 module.exports = { VERSION, HEADLINE };
