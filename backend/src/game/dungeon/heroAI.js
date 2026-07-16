@@ -366,6 +366,21 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       const b = bestBlast();
       if (b) return b;
     }
+    // 0e) SUMMONER OPENER (generic — Draymus's UNDEAD, Jason's DEVILS): if this caster has
+    //     a summon ability and NONE of its minions is currently up, call the biggest one
+    //     NOW — extra bodies soak hits and swing every round, so they're worth the most
+    //     when summoned EARLY. This used to sit at the very bottom of the tree, after
+    //     heals/buffs/haste/force-push and the whole offense cascade, so a cleric like
+    //     Jason literally never reached it (Josh: "he hardly ever did shit other than holy
+    //     smite and force pike — he had Summon Devil 2"). Revives (0) and the severe-heal
+    //     jump still outrank it; a no-op for anyone without summons. Re-fires when the
+    //     minions drop, limited by the ability's own uses.
+    {
+      const summonAb = avail.filter(a => a.effect === 'summon').sort((a, b) => (b.slvl || 0) - (a.slvl || 0))[0];
+      if (summonAb && targets.length && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {
+        return { slot: slot(summonAb), payload: {} };
+      }
+    }
     // ── MAGUS DOCTRINE ── the team's boss-killer. A buff or two to open, then it
     //    SPELLSTRIKES the beefiest / most dangerous foe with its biggest crit-fishing
     //    strike (the bigger the target, the better) — it KNOWS it's the party's best
@@ -724,17 +739,11 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       if (hold && dangerous && !(dangerous.paralyzed > 0) && this._spellWorksOn(hold, dangerous)) return { slot: slot(hold), payload: { targetUid: dangerous.uid } };
       return null;   // → Bane/Judgement-boosted weapon attack
     }
-    // SUMMONER OPENER (generic — Draymus's UNDEAD, Jason's DEVILS): if this caster has a
-    // summon ability and NONE of its minions is currently up, call the biggest one. Runs
-    // for ANY class (the CLERIC summons too, not just the arcane casters below); char-gated,
-    // so it's a no-op for anyone without summons. One standing summon at a time; heals/buffs
-    // above still take priority (this is reached after them).
-    {
-      const summonAb = avail.filter(a => a.effect === 'summon').sort((a, b) => (b.slvl || 0) - (a.slvl || 0))[0];
-      if (summonAb && targets.length && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {
-        return { slot: slot(summonAb), payload: {} };
-      }
-    }
+    // (The SUMMONER OPENER used to sit here — dead last, after heals/buffs/haste/force-push
+    //  and the whole offense cascade, so a cleric like Jason NEVER reached it: something
+    //  earlier always consumed the turn ("he hardly ever did shit other than holy smite and
+    //  force pike... he had Summon Devil 2" — Josh 2026-07-15). Moved up to 0e, with the
+    //  round-1 openers, where a summon actually earns its keep.)
     if (m.cls === 'wizard' || m.cls === 'sorcerer' || m.cls === 'oracle') {
       const SPELLISH = ['aoe', 'disintegrate', 'grease', 'sleep', 'slow', 'fascinate', 'bolt', 'missile', 'touch', 'rays', 'save_debuff'];
       const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);

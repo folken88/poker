@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.60 2026-07-16 JASON SUMMONS HIS DEVILS (Josh: "played so many rounds with Jason on AI and he
+//                     hardly ever did shit other than holy smite and force pike — he had Summon Devil
+//                     2") — the AI's summoner opener sat DEAD LAST in the decision tree, after heals/
+//                     buffs/haste/force-push and the whole offense cascade, so a cleric never reached
+//                     it. Moved to the round-1 openers (0e): a caster with a summon and no minion up
+//                     calls the biggest one NOW, when extra bodies are worth the most. Draymus raises
+//                     his undead promptly for the same reason. Revives + severe heals still outrank it.
 //  3.37.59 2026-07-16 URGENT SPEECH PREEMPTS, NO LONGER DESTROYS (Josh: "ceasing to speak rather than
 //                     announce a loot roll" + speech "getting caught and cutting off" elsewhere) — any
 //                     'urgent' TTS cue (your-turn, refusals, key readouts) used to cancel the engine AND
@@ -910,6 +917,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.59';
-const HEADLINE = "The narrator stops eating its own reports — an urgent cue (your turn, a refusal) now interrupts politely and then RESUMES the queued report, so loot drops, XP and level-ups always get announced instead of vanishing mid-sentence.";
+const VERSION = '3.37.60';
+const HEADLINE = "AI Jason finally acts like Jason — he opens by SUMMONING HIS DEVILS instead of never getting around to it, and Draymus raises his undead promptly for the same reason. Summoners summon first; the bodies are worth the most on round one.";
 module.exports = { VERSION, HEADLINE };
