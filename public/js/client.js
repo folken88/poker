@@ -848,6 +848,7 @@
   let _dungeonSoundSeen = 0;   // highest dungeon-log id whose sound we've played
   let _iFellInDungeon = false;  // my hero is dead-but-present (spectating, awaiting revive)
   let _recruitOpen = false;    // dungeon "Recruit AI ▾" dropdown open/closed
+  let _recruitFocus = null;    // VO focus pin: {kind:'card',id,idx} or {kind:'bar'} — set by a recruit click, consumed by the next panel rebuild (v3.37.63, same fix as the loot bank)
   let _spellbookOpen = false;  // caster "📖 Spellbook ▾" dropdown open/closed
   let _blindHelp = false;      // blind "learn mode" (?): keys are SPOKEN, not fired
   let _raiseMenu = null;       // blind poker: R opened the raise menu — {minTo, halfTo, potTo, cap}; numbers 1-4 pick a bet
@@ -1762,7 +1763,7 @@
       const lastBtn = lastCards.length
         ? `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-last" data-recruit-last ${full ? 'disabled' : ''} aria-label="Recruit last party: ${escapeAttr(lastCards.map(b => `${b.nickname} the ${b.cls}`).join(', '))}. ${lastFee} gold total." title="Recruit the same crew as last run — ${escapeAttr(lastCards.map(b => `${b.nickname} (${b.cls})`).join(', '))} — ${lastFee}g total">↻ Last party (${lastCards.length}) · ${lastFee}g</button>`
         : '';
-      if (d.status === 'over' || !list.length || _spectating) { recruit.innerHTML = ''; _recruitOpen = false; }
+      if (d.status === 'over' || !list.length || _spectating) { recruit.innerHTML = ''; _recruitOpen = false; _recruitFocus = null; }
       else recruit.innerHTML =
         `<button type="button" class="btn btn--ghost btn--sm dungeon__recruit-toggle" data-recruit-toggle aria-expanded="${_recruitOpen}">🤝 Recruit AI ▾ <span class="dungeon__recruit-count">${list.length}</span></button>` +
         lastBtn +
@@ -1777,6 +1778,27 @@
             </button>`).join('') +
           `</div>` +
         `</div>`;
+      // VO focus pinning (same fix as the loot bank, v3.37.62): the innerHTML rebuild
+      // above destroys the node the VoiceOver cursor was parked on, so a recruit click
+      // dumped Josh out of the window entirely — item-chooser re-navigation after every
+      // single hire. If this rebuild was triggered by his own click (a state push lands
+      // within ~100ms of it), pin real DOM focus back onto the equivalent control:
+      // the same card if still hireable, the card in the same grid spot otherwise (the
+      // next candidate), then the 🤝 toggle, then the panel itself.
+      if (_recruitFocus && recruit.innerHTML !== '') {
+        const want = _recruitFocus; _recruitFocus = null;
+        let pin = null;
+        if (want.kind === 'card') {
+          try { pin = recruit.querySelector(`[data-recruit="${CSS.escape(want.id)}"]:not([disabled])`); } catch (_) {}
+          if (!pin) {
+            const cards = [...recruit.querySelectorAll('[data-recruit]:not([disabled])')];
+            pin = cards[Math.min(want.idx, cards.length - 1)] || null;
+          }
+        }
+        if (!pin) pin = recruit.querySelector('[data-recruit-toggle]');
+        if (!pin) { recruit.tabIndex = -1; pin = recruit; }
+        try { pin.focus(); } catch (_) {}
+      }
     }
 
     // Two independent panes: party (hero + run/loot/chat) on the left, monsters
@@ -1966,6 +1988,7 @@
       return;
     }
     if (ev.target.closest('[data-recruit-random]')) {
+      _recruitFocus = { kind: 'bar' };   // rebuild incoming — land VO back on the 🤝 toggle
       socket.emit('dungeon:recruitRandom', null, (resp) => {
         if (!resp?.ok) { toast(resp?.error || 'Could not hire helpers', true); return; }
         toast(`🎲 Hired ${resp.hired} random ${resp.hired === 1 ? 'helper' : 'helpers'} (50g each).`);
@@ -1977,6 +2000,10 @@
       if (!ids.length) { toast('No remembered party yet — finish a run with allies first.', true); return; }
       // Hire one at a time (chained acks) so each fee debits before the next check.
       const hire = (i, ok) => {
+        // Re-arm the VO pin on EVERY step — each hire's state push rebuilds the panel,
+        // including the push that lands after the terminal call. The Last-party button
+        // itself disappears once they're hired, so 'bar' → the 🤝 toggle.
+        _recruitFocus = { kind: 'bar' };
         if (i >= ids.length) { toast(ok ? `↻ Recruited ${ok} of ${ids.length} from your last party.` : 'Could not recruit your last party.', !ok); return; }
         socket.emit('dungeon:recruit', { botId: ids[i] }, (resp) => hire(i + 1, ok + (resp && resp.ok ? 1 : 0)));
       };
@@ -1984,6 +2011,11 @@
       return;
     }
     const b = ev.target.closest('[data-recruit]'); if (!b) return;
+    // Remember WHICH card was clicked and where it sat in the grid — the hired ally
+    // vanishes from the recruitable list, so the rebuild pins focus to the card that
+    // slid into that spot (the natural "next candidate" when hiring several in a row).
+    const _cards = [...$('#dungeonRecruit').querySelectorAll('[data-recruit]')];
+    _recruitFocus = { kind: 'card', id: b.dataset.recruit, idx: Math.max(0, _cards.indexOf(b)) };
     socket.emit('dungeon:recruit', { botId: b.dataset.recruit }, (resp) => {
       if (resp && resp.ok === false) toast(resp.error || 'Could not recruit', true);
     });

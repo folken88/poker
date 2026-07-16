@@ -3,6 +3,20 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.63 2026-07-16 FLY ON ALLIES, FOR REAL THIS TIME + RECRUIT PANEL KEEPS VO FOCUS (Josh, playing
+//                     Draymus: "I just cast fly. It gave me no option to apply it to anyone else but
+//                     myself") — (1) v3.37.55 fixed SPELL.fly to target:'ally', but the GENERATED kits
+//                     bake their own copies of every entry and those still said target:'self' — the
+//                     same override trap as See Invisibility (v3.37.51). A post-override pass now
+//                     normalizes every kit-borne Fly to target:'ally' + canHitFlyers; this also
+//                     un-blocks the AI fly-an-ally branch, which filtered on target:'ally' and could
+//                     never fire. (2) The recruit panel is rebuilt on every state push, destroying the
+//                     node the VoiceOver cursor sat on — every hire dumped Josh out of the window
+//                     ("I have to open item chooser and find the recruit section" each time). Recruit
+//                     clicks now pin DOM focus back onto the equivalent control after the rebuild:
+//                     same card, else the card that slid into its grid spot, else the 🤝 toggle
+//                     (the loot-bank fix pattern, v3.37.62). Also: Force Push desc no longer cites
+//                     the removed weapon-out rule.
 //  3.37.62 2026-07-16 THE LOOT-BANK SHOP STOPS EJECTING YOU (Josh: "after I buy a piece of equipment,
 //                     it jumps me out of there... I have to click on my loot, move away, and click it
 //                     again before it shows up") — (1) a VoiceOver activation doesn't set DOM focus, so
@@ -932,6 +946,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.62';
+const VERSION = '3.37.63';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

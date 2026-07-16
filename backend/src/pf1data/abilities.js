@@ -942,6 +942,26 @@ _injectKitSpell('bard',       spontaneousSpell(SPELL.seeinvisibility, 7));
 _injectKitSpell('cleric',     preparedSpell(SPELL.invisibilitypurge, 5));
 _injectKitSpell('inquisitor', spontaneousSpell(SPELL.invisibilitypurge, 7));
 
+// ── FLY IS A TOUCH SPELL — kit-copy normalization (2026-07-16) ─────────────────────
+// v3.37.55 fixed SPELL.fly to target:'ally' (castable on allies, canHitFlyers), but the
+// generated kits bake their OWN copies of every entry, and those still said
+// target:'self' — so the fix never reached actual play. Same override trap as See
+// Invisibility (v3.37.51). Josh, playing Draymus: "It gave me no option to apply it to
+// anyone else but myself." Normalize every kit-borne Fly in place, keeping each kit's
+// own cost/uses/minLevel; this also un-blocks the AI fly-an-ally branch, which looks
+// for target:'ally' and could never fire. Idempotent: a regen'd DB entry that already
+// says 'ally' passes through unchanged.
+// TODO: fix the entries in kit_abilities on the next DB regen, then delete this block.
+for (const _k of Object.values(KITS)) {
+  if (!_k || !Array.isArray(_k.abilities)) continue;
+  for (const _a of _k.abilities) {
+    if (_a.key !== 'fly') continue;
+    _a.target = 'ally';
+    _a.canHitFlyers = true;
+    _a.desc = SPELL.fly.desc;
+  }
+}
+
 // Olbryn's STORM specialization — injected AFTER the generated-kit override so it
 // survives regeneration. Base sorcerers are fire/force themed; these char-tagged
 // lightning spells (only Olbryn sees them, gated by Dungeon._charAllows) make him the
@@ -988,7 +1008,7 @@ if (KITS.wizard && Array.isArray(KITS.wizard.abilities)) {
 if (KITS.cleric && Array.isArray(KITS.cleric.abilities)) {
   KITS.cleric.abilities.push(
     { key: 'forcepush', name: 'Force Push', icon: '🌬️', cost: 'room', uses: 3, effect: 'forcepush', target: 'enemy', sound: S.gust, char: 'Jason',
-      desc: 'Shove a foe with the Force Pike — every melee ally with their weapon OUT (they melee\'d within the last round) gets a FREE attack against it. You forgo your own strike. 3× per room.' },
+      desc: 'Shove a foe with the Force Pike — every melee ally who can act (not held, stunned, or asleep) gets a FREE attack against it. You forgo your own strike. 3× per room.' },
     // JASON'S SUMMON DEVIL line (Cleric of Asmodeus) — the infernal mirror of Draymus's
     // Summon Undead. Char-gated; leveled spells, so the prepared→slot conversion below turns
     // them into proper cleric-slot casts. minLevel = 2N−1 (the char level a cleric first casts
