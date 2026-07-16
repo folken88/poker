@@ -2105,11 +2105,47 @@
       const _sbpSpeakLevel = (L) => {
         const mdl = _sbpModel; if (!mdl) return;
         const at = _sbpAt(mdl, L);
-        sayU(`Level ${L}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + '. Press a number to toggle, 0 to go back, Escape to close.');
+        sayU(`Level ${L}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + '. Number toggles; Tab steps through one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
+      };
+      // One toggle path for BOTH the number keys and Tab+Enter (Josh 2026-07-16: "being
+      // able to tab through and see what the possibilities are would be helpful... right
+      // now you have to listen and memorize the entire list, and if you don't, you're
+      // fucked"). Feedback carries the slot count — his "how many prepared in this level".
+      const _sbpToggle = (sp, L) => {
+        sbpickSend({ toggle: sp.key }, (m2) => {
+          const on = m2.spont ? (m2.known || []).includes(sp.key) : (((m2.prepared || {})[L]) || []).includes(sp.key);
+          const at = _sbpAt(m2, L);
+          const cnt = at.filter(s => m2.spont ? (m2.known || []).includes(s.key) : (((m2.prepared || {})[L]) || []).includes(s.key)).length;
+          const cap = m2.spont ? null : (((m2.caps || {})[L]) | 0);
+          sayU(`${sp.name} ${on ? (m2.spont ? 'known' : 'prepared') : 'removed'}. ${cnt}${cap != null ? ` of ${cap}` : ''} at level ${L}. Takes effect at the next door.`);
+        });
       };
       if (_dunSbp) {
         if (e.key === 'Escape') { e.preventDefault(); _dunSbp = null; sayU('Prepare menu closed.'); return; }
-        if (k === '0') { e.preventDefault(); _dunSbp.lvl = null; _sbpSpeakLevels(); return; }
+        if (k === '0') { e.preventDefault(); _dunSbp.lvl = null; _dunSbp.idx = -1; _sbpSpeakLevels(); return; }
+        // TAB browses the current level's spells ONE at a time (Shift-Tab back), so
+        // nothing has to be memorized and spells past #9 are reachable; ENTER toggles
+        // the one under the cursor. Same browse pattern as the V domain menu.
+        if (e.key === 'Tab' && _dunSbp.lvl != null) {
+          e.preventDefault();
+          const mdl = _sbpModel;
+          const at = mdl ? _sbpAt(mdl, _dunSbp.lvl) : [];
+          if (!at.length) { sayU('Still loading your spell list.'); return; }
+          const n = at.length;
+          _dunSbp.idx = (((_dunSbp.idx == null ? -1 : _dunSbp.idx) + (e.shiftKey ? -1 : 1)) % n + n) % n;
+          const sp = at[_dunSbp.idx];
+          const picked = _sbpPicked(mdl, sp);
+          sayU(`${_dunSbp.idx + 1}, ${sp.name}, ${picked ? (mdl.spont ? 'known' : 'prepared') : 'available'}. Enter to ${picked ? 'remove' : (mdl.spont ? 'learn' : 'prepare')}.`);
+          return;
+        }
+        if (e.key === 'Enter' && _dunSbp.lvl != null && _dunSbp.idx != null && _dunSbp.idx >= 0) {
+          e.preventDefault();
+          const mdl = _sbpModel;
+          const sp = mdl && _sbpAt(mdl, _dunSbp.lvl)[_dunSbp.idx];
+          if (!sp) { sayU('Still loading your spell list.'); return; }
+          _sbpToggle(sp, _dunSbp.lvl);
+          return;
+        }
         if (/^[1-9]$/.test(k)) {
           e.preventDefault();
           const mdl = _sbpModel;
@@ -2117,19 +2153,13 @@
           if (_dunSbp.lvl == null) {
             const L = parseInt(k, 10);
             if (!(mdl.pool || []).some(s => s.slvl === L)) { sayU(`No level ${L} spells.`); return; }
-            _dunSbp.lvl = L; _sbpSpeakLevel(L);
+            _dunSbp.lvl = L; _dunSbp.idx = -1; _sbpSpeakLevel(L);
             return;
           }
           const L = _dunSbp.lvl;
           const sp = _sbpAt(mdl, L)[parseInt(k, 10) - 1];
-          if (!sp) { sayU(`No spell ${k} at level ${L}.`); return; }
-          sbpickSend({ toggle: sp.key }, (m2) => {
-            const on = m2.spont ? (m2.known || []).includes(sp.key) : (((m2.prepared || {})[L]) || []).includes(sp.key);
-            const at = _sbpAt(m2, L);
-            const cnt = at.filter(s => m2.spont ? (m2.known || []).includes(s.key) : (((m2.prepared || {})[L]) || []).includes(s.key)).length;
-            const cap = m2.spont ? null : (((m2.caps || {})[L]) | 0);
-            sayU(`${sp.name} ${on ? (m2.spont ? 'known' : 'prepared') : 'removed'}. ${cnt}${cap != null ? ` of ${cap}` : ''} at level ${L}. Takes effect at the next door.`);
-          });
+          if (!sp) { sayU(`No spell ${k} at level ${L}. Tab steps through them all.`); return; }
+          _sbpToggle(sp, L);
           return;
         }
       }
@@ -2138,10 +2168,10 @@
       // un-prepared spells instead (2026-07-03). K is free in the dungeon.
       if (k === 'k') {
         e.preventDefault();
-        if (_blindHelp) { sayU('K: prepare spells, your spell kit. Press a level number, then a number to toggle a spell in or out of your loadout. Changes land at the next door.'); return; }
+        if (_blindHelp) { sayU('K: prepare spells, your spell kit. Press a level number, then a number toggles a spell — or Tab steps through the level one spell at a time and Enter toggles the one you are on. Changes land at the next door.'); return; }
         if (!kit.caster) { sayU('Your class has no spells to prepare.'); return; }
         if (_dunSbp) { _dunSbp = null; sayU('Prepare menu closed.'); return; }
-        _dunSbp = { lvl: null };
+        _dunSbp = { lvl: null, idx: -1 };
         if (_sbpModel) _sbpSpeakLevels();
         else { sayU('Opening your spell loadout.'); sbpickSend({}, () => { if (_dunSbp && _dunSbp.lvl == null) _sbpSpeakLevels(); }); }
         return;

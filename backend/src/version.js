@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.61 2026-07-16 PREPARE-SPELLS MENU BROWSES (Josh: "being able to tab through and see what the
+//                     possibilities are would be helpful... right now you have to listen and memorize
+//                     the entire list") — inside a spell level of the K menu, TAB now steps through the
+//                     spells ONE at a time (Shift-Tab back) speaking "N, name, prepared/available", and
+//                     ENTER toggles the one under the cursor. Numbers 1-9 still jump-toggle; spells past
+//                     #9 are finally reachable. Same browse pattern as the V domain menu; toggle feedback
+//                     still carries the per-level slot count ("3 of 4 at level 2").
 //  3.37.60 2026-07-16 JASON SUMMONS HIS DEVILS (Josh: "played so many rounds with Jason on AI and he
 //                     hardly ever did shit other than holy smite and force pike — he had Summon Devil
 //                     2") — the AI's summoner opener sat DEAD LAST in the decision tree, after heals/
@@ -917,6 +924,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.60';
-const HEADLINE = "AI Jason finally acts like Jason — he opens by SUMMONING HIS DEVILS instead of never getting around to it, and Draymus raises his undead promptly for the same reason. Summoners summon first; the bodies are worth the most on round one.";
+const VERSION = '3.37.61';
+const HEADLINE = "The prepare-spells menu finally browses — inside a spell level, Tab steps through the spells one at a time and Enter toggles, so a prepared caster can build a loadout without memorizing a long readout. Every spell is reachable, not just the first nine.";
 module.exports = { VERSION, HEADLINE };
