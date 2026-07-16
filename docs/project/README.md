@@ -8,6 +8,16 @@ personalities, 11labs voices, an LLM banter system, blind-accessibility support
 **This folder is the orientation pack for any coding AI (Claude Code, Cursor,
 Codex) working on the project.** Read AI-NOTES.md first if you're an AI.
 
+## Credits
+
+- **Tobias Merriman** — creator & designer: the game, the art, the house rules, and the
+  Pathfinder campaigns every character walked out of.
+- **Josh Morrison** — co-designer & quality assurance tester. The play-by-ear layer —
+  spoken menus, stable hotkeys, honest combat reports, the whole blind-accessibility
+  model — was designed with and proven by him, one report at a time.
+- **Claude Code (Anthropic)** — engineering.
+
+
 ## Documents in this folder
 
 | File | What it covers |

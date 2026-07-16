@@ -4,6 +4,15 @@ Multiplayer Texas Hold'em for me and friends. Hosted at <https://poker.folkengam
 
 One persistent table. Whoever shows up sits down. A roster of named **AI bots** (43 of them, each with a personality + intelligence tier + optional 11labs voice) fills empty seats and plays. Bots wear the faces of PCs and villains from my long-running Pathfinder campaigns — tokens are copied permanently into the project so the poker game has no runtime dependency on FoundryVTT. When the LLM banter system is enabled, each bot speaks in their own voice using ElevenLabs synthesis (or stored sound clips for non-speech characters — Crisp's velociraptor chirps, Elfrip's burps).
 
+## Credits
+
+- **Tobias Merriman** — creator & designer: the game, the art, the house rules, and the
+  Pathfinder campaigns every character walked out of.
+- **Josh Morrison** — co-designer & quality assurance tester. The play-by-ear layer —
+  spoken menus, stable hotkeys, honest combat reports, the whole blind-accessibility
+  model — was designed with and proven by him, one report at a time.
+- **Claude Code (Anthropic)** — engineering.
+
 ## Stack
 
 - **Backend**: Node 20 + Express + Socket.IO + better-sqlite3 + pokersolver
