@@ -681,6 +681,16 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // 2b6) Overland Flight — rise above grounded foes (defensive), once, if not flying.
     const overland = avail.find(a => a.effect === 'overlandflight');
     if (overland && !m.flying) return { slot: slot(overland), payload: {} };
+    // 2b6b) FLY AN ALLY into the fight (Josh 2026-07-16): Fly is a touch spell, so a caster
+    //       (Draymus, a wizard) should send a grounded MELEE ally aloft when flying foes are
+    //       kiting the party out of reach — otherwise the angels just shoot from 30 ft and the
+    //       whole line can't answer. Pick a martial ally who isn't already airborne and can't
+    //       otherwise reach a flyer; the flown ally gains canHitFlyers, so they close in.
+    const flyBuff = avail.find(a => a.effect === 'buff' && a.fly && a.target === 'ally');
+    if (flyBuff && targets.some(e => e.flying)) {
+      const grounder = allies.find(a => a.playerId !== m.playerId && a.hp > 0 && !a.left && !a.flying && !this._isRanged(a));
+      if (grounder) return { slot: slot(flyBuff), payload: { targetUid: grounder.playerId } };
+    }
     // 3) MILD wounds — control is down and the buffs are up; patch the party up
     //    BEFORE opening fire. (SEVERE wounds already jumped the queue at the top;
     //    nobody hurt → pickHeal returns null and the offense below proceeds.)

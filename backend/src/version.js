@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.55 2026-07-16 FLY IS A TOUCH SPELL — cast it on ALLIES, not just yourself (Josh: Fly is range
+//                     touch). A wizard/sorcerer/Draymus can now send Freya or J'Mal aloft to engage the
+//                     flying angels that used to kite the whole party from 30 ft with no answer. The
+//                     flown ally also gains airborne reach (canHitFlyers), so they actually close in —
+//                     Fly used to only make the CASTER fly and didn't grant reach. AI casters now
+//                     proactively fly a grounded melee ally when flyers threaten. (Overland Flight stays
+//                     self-only — it's Personal range, RAW.)
 //  3.37.54 2026-07-15 JASON'S FORCE PUSH now actually feeds the team (Josh) — shoving a foe into the
 //                     party grants EVERY melee ally who can act a free swing, as intended. It was gated
 //                     on the ally having melee'd within the last round (a "weapon out" proxy) which
@@ -877,6 +884,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.54';
-const HEADLINE = "Jason's Force Pike finally works as a team move — shove a foe into the party and every melee ally who can act tears into it. No more Freya and J'Mal standing there 'with no weapon out' while the shove goes to waste.";
+const VERSION = '3.37.55';
+const HEADLINE = "Fly is a touch spell now — cast it on an ally, not just yourself. Send Freya or J'Mal up after the flying angels that used to shoot you from 30 feet with no answer. The flown ally can actually reach airborne foes, and AI casters will fly a melee ally when flyers are kiting the party.";
 module.exports = { VERSION, HEADLINE };
