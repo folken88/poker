@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.66 2026-07-16 THE LOAN BUTTON IS FINDABLE (Josh: blind player can't find the loan button —
+//                     it's mislabelled) — two holes: (1) the purse badge (#mePurse) had NO aria-label,
+//                     so its accessible name was just the raw chip count; item-chooser searches for
+//                     "money"/"bank"/"loan" found NOTHING even though the help text says "open your
+//                     money menu". The badge now carries "Money menu — N gp on hand. Opens the Bank
+//                     of Abadar…" (balance kept in the name). (2) The 🏛️ Loan button lives inside the
+//                     hidden #mePursePop dialog, which VoiceOver's item chooser cannot surface — the
+//                     EXACT lesson from the dungeon-entry fix (2026-07-06). Added the same fix: an
+//                     always-present sr-only "Loan from the Bank of Abadar" mirror → doRebuy().
+//                     Sighted Loan button also gets a clean aria-label.
 //  3.37.65 2026-07-16 THE HOLY GUN FINALLY FIRES — ranged flag never reached the live enemy (Josh:
 //                     "fought an entire battle with an enemy named something something holy gun.
 //                     Never heard a gunshot the entire battle") — v3.37.48 taught enemyAI to read
@@ -967,6 +977,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.65';
+const VERSION = '3.37.66';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

@@ -1839,6 +1839,11 @@
   // dungeon even though the sighted button is inside the hidden bank dialog.
   $('#srEnterDungeon')?.addEventListener('click', enterDungeon);
   $('#srSpectateDungeon')?.addEventListener('click', spectateDungeon);
+  // Same lesson, same fix for the LOAN (v3.37.66, Josh: couldn't find the loan
+  // button): the sighted 🏛️ Loan button also lives inside the hidden bank dialog,
+  // so the item chooser never surfaced it. Always-present SR mirror → doRebuy()
+  // (the same confirm-then-borrow flow the sighted button uses).
+  $('#srLoanAbadar')?.addEventListener('click', () => doRebuy());
   $('#dungeonLeaveBtn')?.addEventListener('click', returnFromDungeon);
   // × kick on an AI party member — dismiss them from the dungeon run.
   $('#dungeonParty')?.addEventListener('click', (ev) => {
@@ -3344,6 +3349,13 @@
     // Sync the PF1e class + weapon dropdowns (populated from lobby:pf1meta).
     syncClassWeapon(p);
     $('#meChips').textContent = '💰 ' + formatChips(p.chips) + ' gp';
+    // Name the purse badge for screen readers (v3.37.66, Josh): with no label its
+    // accessible name was just the raw chip count, so the item chooser found nothing
+    // for "money", "bank", or "loan" — the help text says "open your money menu" but
+    // no control carried that name. Keep the balance in the label so focusing the
+    // badge still reads his gold.
+    $('#mePurse')?.setAttribute('aria-label',
+      `Money menu — ${formatChips(p.chips)} gp on hand. Opens the Bank of Abadar: loans, debt, and the dungeon.`);
     $('#meAvatar').innerHTML = renderAvatar(p.avatar_id);
     // Chat input becomes available once a character is chosen.
     const chatInput = $('#chatInput');
@@ -3375,7 +3387,7 @@
       const chips = Number(p.chips || 0);
       // Re-buy now lives in the money dropdown (moved out of the ≡ menu): it's
       // a money action, so it belongs with the bank. It's a LOAN added to debt.
-      const rebuyRow = `<div class="purse__actions"><button type="button" class="purse__btn purse__btn--rebuy" data-rebuy title="Borrow a fresh ${formatChips(state.defaultStack)} gp stack from the Bank of Abadar — a loan added to your debt, paid down with winnings">🏛️ Loan from Abadar · ${formatChips(state.defaultStack)} gp</button></div>`;
+      const rebuyRow = `<div class="purse__actions"><button type="button" class="purse__btn purse__btn--rebuy" data-rebuy aria-label="Loan ${formatChips(state.defaultStack)} gp from the Bank of Abadar — added to your debt" title="Borrow a fresh ${formatChips(state.defaultStack)} gp stack from the Bank of Abadar — a loan added to your debt, paid down with winnings">🏛️ Loan from Abadar · ${formatChips(state.defaultStack)} gp</button></div>`;
       // 🏋️ "Hit the Dungeon" lives tucked inside the money dropdown (a play on
       // "hit the gym"). Clicking it leaves your seat and descends.
       const dungeonRow = `<div class="purse__actions"><button type="button" class="purse__btn purse__btn--dungeon" data-enter-dungeon title="Leave the table and descend into the dungeon to fight monsters for gold">🏋️ Hit the Dungeon</button></div>`;

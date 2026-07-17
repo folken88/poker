@@ -127,6 +127,11 @@
              never bury the sole entry to a game mode inside a hidden dialog popover. -->
         <button type="button" class="sr-only" id="srEnterDungeon">Enter the Dungeon</button>
         <button type="button" class="sr-only" id="srSpectateDungeon">Spectate the Dungeon</button>
+        <!-- Same lesson, same fix (v3.37.66): the Loan button lives inside the hidden
+             #mePursePop dialog, so the item chooser couldn't find it either — and the
+             purse badge itself carried no name, so searching "loan"/"bank"/"money"
+             found NOTHING. SR-only mirror + a real aria-label on the badge (client.js). -->
+        <button type="button" class="sr-only" id="srLoanAbadar">Loan from the Bank of Abadar</button>
 
         <span class="blind-chip" id="blindModeChip" hidden role="status" aria-live="polite" title="Blind support active. Backtick to toggle. Hold Space for push-to-talk.">👂 Blind</span>
         <!-- Audio settings: button toggles card SFX mute on click; hover
@@ -519,8 +524,8 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
   <script src="/js/cards.js?v=20260602-abadar"></script>
-  <script src="/js/blindMode.js?v=33764"></script>
-  <script src="/js/client.js?v=33764"></script>
+  <script src="/js/blindMode.js?v=33766"></script>
+  <script src="/js/client.js?v=33766"></script>
   <script>/* Point the Test-server link at whichever host serves this page (LAN IP, domain, Tailscale…), test backend lives on :32096. */(function(){var a=document.getElementById('testServerLink');if(a)a.href=location.protocol+'//'+location.hostname+':32096';})();</script>
 </body>
 </html>
