@@ -176,7 +176,10 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     let noReach = false;
     const seen = this._targetableParty(e);   // a TRUE-SEEING foe (Erinyes) also sees INVISIBLE heroes as valid targets
     const grounded = (m) => !m.flying || (!(m.incorporeal || m.ghost) && ((m.paralyzed > 0) || m.grappled));
-    const living = e.flying ? seen : seen.filter(grounded);
+    // A RANGED foe (archer/gunner) shoots flyers just like a flying foe reaches them —
+    // mirrors the heroes' _canReach (w.ranged counts). Before v3.37.65 a grounded
+    // erinyes/Holy Gun "clawed at the air" under an airborne party.
+    const living = (e.flying || e.ranged) ? seen : seen.filter(grounded);
     // SUMMONED undead fodder (Draymus) on the field — a foe can swing at them instead
     // of a hero. This is HALF the point of raising them: they SOAK. Reachable like any
     // other grounded body; mixed into the random target pool so summons draw the heat.

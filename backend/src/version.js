@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.65 2026-07-16 THE HOLY GUN FINALLY FIRES — ranged flag never reached the live enemy (Josh:
+//                     "fought an entire battle with an enemy named something something holy gun.
+//                     Never heard a gunshot the entire battle") — v3.37.48 taught enemyAI to read
+//                     e.ranged ("shoots" narration, bow/gun SFX on a MISS too, archers don't
+//                     wrestle) but _makeEnemy NEVER COPIED the flag off the base entry, so the whole
+//                     feature shipped dead: misses were silent (a losing gunner = a silent battle),
+//                     foes said "hits" not "shoots", and archers still wrestled. One line: `ranged:
+//                     !!base.ranged`. BONUS: a grounded archer/gunner now REACHES flying heroes
+//                     (e.flying || e.ranged) instead of "clawing at the air" — mirrors the heroes'
+//                     _canReach. domtest 82 pins all of it.
 //  3.37.64 2026-07-16 TARGET LISTS SKIP ALLY SUMMONS (Josh: Jason's summoned devil listed FIRST when
 //                     picking targets — the server refuses the attack, but browsing past your own
 //                     devil wastes his time every fight) — ally summons ride in d.enemies (flagged
@@ -957,6 +967,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.64';
+const VERSION = '3.37.65';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

@@ -732,6 +732,12 @@ class Dungeon {
       flatFooted: true, prone: false, fascinated: false, asleep: false, loseTurn: false,
       paralyze: !!base.paralyze, paralyzeDC: (base.paralyzeDC || PARALYZE_DC) + half, sickened: 0,
       attacks: base.attacks || 1,
+      // ARCHER/GUNNER flag (v3.37.65): v3.37.48 taught enemyAI to read e.ranged
+      // ("shoots" narration, bow/gun SFX on a MISS too, archers don't wrestle) — but
+      // this copy was never added, so the flag stayed on the BASE entry and the whole
+      // feature was dead. Josh reported the symptom twice: erinyes "aint making bow
+      // noises" (7/13) and the Holy Gun "never heard a gunshot the entire battle" (7/16).
+      ranged: !!base.ranged,
       atkSound: base.atkSound || null,
       atkSounds: base.atkSounds || null,
       caster: base.caster || null,
