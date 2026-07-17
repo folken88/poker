@@ -2354,6 +2354,11 @@
       // them on top is a bad idea"). Locked ones don't appear until unlocked.
       const imbued = (kit.abilities || []).filter(a => a.effect === 'spellstrike' && a.available !== false)
         .map(a => ({ ab: a, slot: (a.slot != null ? a.slot : 0), label: a.name }));
+      // Spoken name inside the Imbued Shots menu — drop the redundant "Imbued Shot"
+      // wrapper so it reads "Shocking Grasp" not "Imbued Shot Shocking Grasp" (Josh
+      // 2026-07-17: he's already in the imbued menu, the prefix is dead weight). A
+      // no-op for names that don't carry the prefix.
+      const imbuedName = (ab) => String((ab && ab.name) || '').replace(/^\s*imbued\s*shot\s*[:\-–(]*\s*/i, '').replace(/\s*\)\s*$/, '').trim() || (ab && ab.name) || '';
       const blindActions = [{ kind: 'attack', label: kit.atwill?.name || 'Attack' }];
       const feats = [];
       (kit.abilities || []).forEach((ab, i) => {   // class FEATURES only (spells → spellbook, imbued shots → their submenu)
@@ -2388,7 +2393,11 @@
           // 'missile') keep snapping to the deadliest, as Josh prefers.
           if (ab.effect !== 'missile' && aliveE.length > 1) {
             _dunTarget = { kind: 'ability', slot, label: ab.name };
-            const list = aliveE.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}, ${Math.max(0, x.hp | 0)} HP`).join('; ');
+            // Percentages, not raw HP (Josh 2026-07-17: this ability/imbued-shot target
+            // prompt read "160 HP" while the F quick-list reads percentages — the SAME
+            // foes should sound the same everywhere). aliveE is already the targetable
+            // set (no summons / no shrouded, deadliest-first), matching the F list.
+            const list = aliveE.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}, ${Math.round(100 * Math.max(0, x.hp | 0) / (x.maxHp || 1))}%`).join('; ');
             sayU(`${ab.name} — select a target, deadliest first: ${list}.`);
             return;
           }
@@ -2520,7 +2529,7 @@
           if (!myTurn) { sayU('Not your turn.'); return; }
           _dunImbuedMode = false;
           const willPrompt = sh.ab.target === 'enemy' && sh.ab.effect !== 'missile' && aliveE.length > 1;
-          if (!willPrompt) sayU(`Firing ${sh.ab.name}.`);
+          if (!willPrompt) sayU(`Firing ${imbuedName(sh.ab)}.`);
           castSpell(sh.ab);
           return;
         }
@@ -2800,7 +2809,7 @@
         if (act.kind === 'imbued') {   // magus Imbued Shots submenu (Josh's Reese layout)
           if (!imbued.length) { sayU('No imbued shots available yet.'); return; }
           _dunImbuedMode = true;
-          sayU('Imbued shots: ' + imbued.map((s, i) => `${i + 1} ${s.ab.name}`).join(', ') + '. Press a number to fire, Escape to close.');
+          sayU('Imbued shots: ' + imbued.map((s, i) => `${i + 1} ${imbuedName(s.ab)}`).join(', ') + '. Press a number to fire, Escape to close.');
           return;
         }
         if (!myTurn) { window.BlindMode.speak('Not your turn.', 'ambient'); return; }   // AMBIENT — never cut off the end-of-room report (Josh)

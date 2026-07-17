@@ -321,20 +321,27 @@
     // once. We do NOT stop the playing character clip — it ducks and keeps going.
     if (p === PRIO.ambient && (TTS.speaking || TTS.pending)) return;
     if (p === PRIO.urgent) {
-      // PREEMPT, don't DESTROY (Josh 2026-07-15: "it is CEASING to speak rather than
-      // announce a loot roll" — and speech "getting caught and cutting off" elsewhere).
-      // An urgent cue used to cancel the engine AND wipe the spool, so every queued-but-
-      // unspoken report line (the loot drop, XP, level-ups…) was silently eaten. Now we
-      // capture the unstarted lines FIRST, cancel, speak the urgent cue, then re-queue
-      // the captured lines — the report resumes right where it left off. Only the line
-      // that was mid-sentence is lost (it was interrupted; that's what urgent means).
-      const resume = (state.spool || []).slice();   // spool = queued lines the engine hasn't STARTED (onstart drops them)
+      // CLEAN INTERRUPT — cancel and clear, then speak ONE line. Do NOT re-queue.
+      // (Josh 2026-07-17: "voice reporting is bonkers out of order... I'm for sure never
+      // hearing whether my shot hits or misses... reports loop back around.")
+      // 'urgent' is a USER-initiated cue — a menu keypress ("Firing Shocking Grasp"), an
+      // on-demand read (F foes, A repeat), a card read. It SHOULD interrupt the backlog.
+      // The bug was never the interrupt; it was the RE-QUEUE that v3.37.59 added: after
+      // cancelling, it re-spoke the captured spool AFTER the urgent line. Chrome's
+      // cancel()-then-respeak reorders those lines and drops the one mid-sentence, and a
+      // second keypress before they drained re-queued them AGAIN — so the combat report
+      // reshuffled and looped every time he touched a key. Since sayU() (every blind menu
+      // response) is 'urgent', the whole fight churned. Fix: keep the cancel+clear, KILL
+      // the re-queue. The backlog is intentionally dropped — he pressed a key, he wants
+      // THIS line now, not the old stream resurrected behind it (same as pressing S then
+      // reading). Nothing is ever re-spoken, so order can't scramble and lines can't loop.
+      // Automatic dungeon cues (combat results, the turn cue, loot) are 'event' — they
+      // ride the native FIFO queue and are never touched by this path.
       try { TTS.cancel(); } catch (_) {}
-      state.shadow.length = 0;   // engine queue is gone — drop everything shadowed
-      if (state.spool) state.spool.length = 0;   // rebuilt below as the resume lines re-enter
+      state.shadow.length = 0;
+      if (state.spool) state.spool.length = 0;
       state.curSection = null;
       _engineSpeak(text, prio, section);
-      for (const r of resume) _engineSpeak(r.text, r.prio, r.section);
       return;
     }
     _engineSpeak(text, prio, section);

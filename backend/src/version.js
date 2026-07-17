@@ -3,6 +3,21 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.67 2026-07-17 VOICE REPORTS STOP SCRAMBLING (Josh: "voice reporting is bonkers out of order...
+//                     I'm for sure never hearing whether my shot hits or misses... reports loop back
+//                     around") — a regression from v3.37.59. Every blind menu keypress speaks via
+//                     sayU = 'urgent', and v3.37.59 made 'urgent' cancel the engine AND re-queue the
+//                     captured backlog AFTER the spoken line. Chrome's cancel()-then-respeak reorders
+//                     those lines, drops the one mid-sentence (his hit/miss result), and a second
+//                     keypress before they drained re-queued them AGAIN — so the combat report
+//                     reshuffled and looped every time he touched a key. Fix: 'urgent' stays a clean
+//                     INTERRUPT (cancel + clear, speak one line) but NO LONGER re-queues — the backlog
+//                     is dropped, nothing is re-spoken, order can't scramble. Automatic dungeon cues
+//                     (combat results, the turn prompt, loot) are 'event' → native FIFO, untouched.
+//                     ALSO: (a) the ability/imbued-shot target prompt now reads HP as a PERCENT like
+//                     the F quick-list (was raw "160 HP"); (b) the Imbued Shots menu drops the
+//                     redundant "Imbued Shot" prefix — "Shocking Grasp", not "Imbued Shot Shocking
+//                     Grasp" (he's already in the imbued menu).
 //  3.37.66 2026-07-16 THE LOAN BUTTON IS FINDABLE (Josh: blind player can't find the loan button —
 //                     it's mislabelled) — two holes: (1) the purse badge (#mePurse) had NO aria-label,
 //                     so its accessible name was just the raw chip count; item-chooser searches for
@@ -977,6 +992,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.66';
+const VERSION = '3.37.67';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };
