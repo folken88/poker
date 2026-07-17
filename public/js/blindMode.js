@@ -1394,8 +1394,14 @@
     // DEADLIEST FIRST — the SAME order (and therefore the SAME numbers) as the
     // attack target picker and the E-inspector, so "2" always means the same foe
     // no matter which list you heard it in.
-    const alive = (d.enemies || []).filter(e => e.alive).sort((a, b) => _crVal(b.cr) - _crVal(a.cr));
-    if (!alive.length) return 'No enemies.';
+    // TARGETABLE foes only (v3.37.64, Josh): ally summons ride in d.enemies (flagged
+    // `summoned`) and a big devil sorts first by CR — the quick list led with his OWN
+    // devil. Shrouded (darkness) foes are equally untargetable; counted in a tail line
+    // instead so he still knows they're in the room.
+    const alive = (d.enemies || []).filter(e => e.alive && !e.summoned && !e.darkened).sort((a, b) => _crVal(b.cr) - _crVal(a.cr));
+    const darkN = (d.enemies || []).filter(e => e.alive && !e.summoned && e.darkened).length;
+    const darkTail = darkN ? ` Plus ${darkN} shrouded in darkness — untargetable.` : '';
+    if (!alive.length) return darkN ? `No targetable enemies.${darkTail}` : 'No enemies.';
     // QUICK TARGET LIST (Josh 2026-07-11, revised): name, HP as a PERCENT, flying only
     // if flying, and any DEBUFFS the party has landed (prone / grappled / held / sickened
     // …) — the snapshot he needs to PICK a target fast ("Elite Vampire, 80%, prone").
@@ -1404,8 +1410,8 @@
     const fly = (e) => e.flying ? ', flying' : '';
     const hp = (e) => `${Math.round(100 * Math.max(0, e.hp | 0) / (e.maxHp || 1))}%`;
     const debs = (e) => { const ds = (e.conditions || []).map(c => c.label).filter(Boolean); return ds.length ? ', ' + ds.join(', ') : ''; };
-    if (alive.length === 1) return `Enemy: ${alive[0].name}, ${hp(alive[0])}${fly(alive[0])}${debs(alive[0])}.`;
-    return `${alive.length} enemies, deadliest first. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${hp(e)}${fly(e)}${debs(e)}`).join('. ') + '.';
+    if (alive.length === 1) return `Enemy: ${alive[0].name}, ${hp(alive[0])}${fly(alive[0])}${debs(alive[0])}.${darkTail}`;
+    return `${alive.length} enemies, deadliest first. ` + alive.map((e, i) => `${i + 1}: ${e.name}, ${hp(e)}${fly(e)}${debs(e)}`).join('. ') + '.' + darkTail;
   }
   // "Say attack, <ability 1>, <ability 2>, or bail." built from the player's kit.
   function _dunActionsHint(d) {
@@ -1433,7 +1439,7 @@
     if (st.depth !== _dun.depth) {
       _dun.depth = st.depth;
       if (st.depth === 0) speak('You enter the dungeon. Say open to descend, or bail to leave.', 'event');
-      else { const ne = (st.enemies || []).filter(e => e.alive).length; speak(`Room ${st.depth}. ${ne} ${ne === 1 ? 'enemy' : 'enemies'}. Press E to inspect them.`, 'event'); }
+      else { const ne = (st.enemies || []).filter(e => e.alive && !e.summoned).length; speak(`Room ${st.depth}. ${ne} ${ne === 1 ? 'enemy' : 'enemies'}. Press E to inspect them.`, 'event'); }
     }
     // New combat-log lines (results) — speak EVERY fresh line, oldest first,
     // stripped of emoji. (The old `.slice(-2)` kept only the newest two, so a
@@ -1453,7 +1459,7 @@
         // big room, speak EVERY party/ally line + anything that happened to HIM in full,
         // and collapse the rest of the enemy actions into a single tally. (Small rooms
         // and non-big fights keep the full play-by-play — the flavor he likes.)
-        const enemyCount = (st.enemies || []).filter(e => e.alive).length;
+        const enemyCount = (st.enemies || []).filter(e => e.alive && !e.summoned).length;   // ally summons don't make a room "big"
         const meM = (st.party || []).find(m => m.playerId === meId) || {};
         const myNick = String(meM.trueNick || meM.nickname || '').toLowerCase();
         const live = fresh.filter(e => !e.voiced);
@@ -1533,7 +1539,11 @@
     const d = state.deps?.state?.dungeon;
     const socket = state.deps?.socket;
     if (!d || !socket) return false;
-    const alive = (d.enemies || []).filter(e => e.alive);
+    // Same TARGETABLE filter AND the same deadliest-first sort (and therefore the same
+    // numbers) as _dunEnemyPhrase and the E-inspector — "attack two" must mean the same
+    // foe everywhere (v3.37.64; this list was never sorted before, so a spoken "attack
+    // two" could silently hit a different foe than the "2" he'd just heard).
+    const alive = (d.enemies || []).filter(e => e.alive && !e.summoned && !e.darkened).sort((a, b) => _crVal(b.cr) - _crVal(a.cr));
     const emit = (kind, payload) => socket.emit('dungeon:action', { kind, ...(payload || {}) }, () => {});
     const meId = state.deps?.state?.me?.player_id;
 

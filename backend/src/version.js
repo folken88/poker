@@ -3,6 +3,17 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.64 2026-07-16 TARGET LISTS SKIP ALLY SUMMONS (Josh: Jason's summoned devil listed FIRST when
+//                     picking targets — the server refuses the attack, but browsing past your own
+//                     devil wastes his time every fight) — ally summons ride in d.enemies (flagged
+//                     `summoned`) and a big devil sorts first by CR, so every blind target surface
+//                     led with it. Now the E-inspector, F quick-list, number jumps, ability target
+//                     prompts, AOE targetUids and VOICE commands all filter to TARGETABLE foes
+//                     (alive, not summoned, not darkness-shrouded; shrouded get a "plus N shrouded —
+//                     untargetable" tail instead). Room/enemy counts stop counting your own summons.
+//                     BONUS latent bug: the voice-command list was never CR-sorted, so a spoken
+//                     "attack two" could hit a different foe than the "2" he'd just heard — now the
+//                     same deadliest-first order everywhere.
 //  3.37.63 2026-07-16 FLY ON ALLIES, FOR REAL THIS TIME + RECRUIT PANEL KEEPS VO FOCUS (Josh, playing
 //                     Draymus: "I just cast fly. It gave me no option to apply it to anyone else but
 //                     myself") — (1) v3.37.55 fixed SPELL.fly to target:'ally', but the GENERATED kits
@@ -946,6 +957,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.63';
+const VERSION = '3.37.64';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

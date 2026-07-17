@@ -2091,7 +2091,11 @@
       // so "enemy 1" is always the most dangerous. Handles fractional CRs ("1/3").
       const crNum = (cr) => { const s = String(cr ?? ''); if (s.includes('/')) { const p = s.split('/'); const a = parseFloat(p[0]), b = parseFloat(p[1]); return b ? a / b : 0; } const n = parseFloat(s); return Number.isFinite(n) ? n : 0; };
       const byCr = (a, b) => crNum(b.cr) - crNum(a.cr);
-      const aliveE = (d.enemies || []).filter(x => x.alive).sort(byCr);
+      // TARGETABLE foes only (v3.37.64, Josh): ally SUMMONS live in d.enemies (flagged
+      // `summoned`) and a big devil sorts FIRST by CR — so the blind target picker led
+      // with Jason's own devil, which the server then refuses to attack. Pure time-waste.
+      // Darkness-shrouded foes are equally untargetable (the sighted grid disables both).
+      const aliveE = (d.enemies || []).filter(x => x.alive && !x.summoned && !x.darkened).sort(byCr);
       const enemyDesc = (en, i) => {
         const c = (en.conditions || []).map(x => String(x.label || '').toLowerCase()).filter(Boolean);
         let s = `${i + 1}: ${en.name}, ${Math.max(0, en.hp | 0)} of ${en.maxHp | 0} HP`;
