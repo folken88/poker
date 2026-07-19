@@ -3,6 +3,20 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.68 2026-07-19 "MY TURN BUT I CAN'T ACT" + A SPOKEN BUILD NUMBER (Josh: "the bell said my turn,
+//                     D said no debuffs, yet I could not act and the battle kept going — we got
+//                     railed"). Two parts: (1) STALE SUBMENU SWALLOWED HIS ACTION KEY. A blind
+//                     sub-menu left half-open from a prior turn (ally pick, dispel pick, channel mode,
+//                     spellbook, imbued shots) is checked BEFORE the normal action keys, so a stale
+//                     one silently ate the first action key of the next turn and the turn passed with
+//                     no action. The turn-boundary reset cleared only _dunTarget; now it clears ALL
+//                     six, so every turn starts with a clean input state. (2) SPOKEN BUILD NUMBER:
+//                     blind mode now says the build on toggle-on ("Blind support on. Build 3.37.68.")
+//                     and answers the "version" voice command — so a stale open tab (which keeps
+//                     running old code after a deploy until a hard refresh) can be caught instead of
+//                     mistaken for a live bug. NOTE: much of the 7/19 report (reports out of order,
+//                     swashbuckler grappling flying Reese) traces to running pre-3.37.67 code on a
+//                     tab that was never refreshed — the ordering fix is live; this makes it verifiable.
 //  3.37.67 2026-07-17 VOICE REPORTS STOP SCRAMBLING (Josh: "voice reporting is bonkers out of order...
 //                     I'm for sure never hearing whether my shot hits or misses... reports loop back
 //                     around") — a regression from v3.37.59. Every blind menu keypress speaks via
@@ -992,6 +1006,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.67';
+const VERSION = '3.37.68';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

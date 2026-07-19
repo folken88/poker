@@ -286,6 +286,18 @@
       try { this.player(next, advance); } catch (_) { advance(); }
     },
   };
+  // The live client build number, read from the topbar version badge that client.js
+  // stamps from /api/version. Josh has no way to SEE it, and a stale open tab keeps
+  // running old code after a deploy — so "is he even on the fix?" has burned real
+  // debugging time (2026-07-17/19). Spoken on blind-on and via the "version" command
+  // so he can confirm his build after a hard refresh before we chase a ghost.
+  function _buildVersion() {
+    try {
+      const el = document.querySelector('.topbar__ver');
+      const v = el && el.textContent ? el.textContent.replace(/[^0-9.]/g, '') : '';
+      return v || null;
+    } catch (_) { return null; }
+  }
   function speak(text, prio = 'event', section = null) {
     if (!state.on || !supportsTTS || !text) return;
     text = String(text);
@@ -469,7 +481,8 @@
       // It stays a normal <details>, so it can be re-opened any time.
       try { document.querySelector('.help-panel__ranks')?.removeAttribute('open'); } catch (_) {}
       earcon('ack');
-      speak('Blind support on.', 'urgent');
+      const _bv = _buildVersion();
+      speak(_bv ? `Blind support on. Build ${_bv}.` : 'Blind support on.', 'urgent');
       // If a hand is in progress, narrate where things stand RIGHT
       // NOW — the diff path only fires when something changes, so
       // without this a spectator who just turned on blind mode
@@ -916,6 +929,7 @@
 
     // Read-only queries
     if (/^repeat$/.test(raw)) { repeatLast(); return; }
+    if (/^(version|build|what.?s? (the )?(version|build)|which build)$/.test(raw)) { const v = _buildVersion(); speak(v ? `Build ${v}.` : 'Build unknown — hard refresh and try again.', 'urgent'); return; }
     if (/what.?s the pot|^pot$/i.test(raw)) { announcePot(); return; }
     if (/what.?s my (stack|cash)|^stack$|^cash$/i.test(raw)) { announceStack(); return; }
     if (/what.?s the board|^board$/i.test(raw)) { announceBoard(); return; }

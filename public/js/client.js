@@ -1341,10 +1341,18 @@
     // old client-side edge-fire is gone — it would double-attack. Just tidy the
     // local mirror once the turn arrives.
     if (isMyTurn && !_dunPrevMyTurn) _dunQueuedAttack = null;
-    // A pending "select a target" prompt never survives a TURN BOUNDARY — a stale
-    // one would silently swallow the first number key of the NEXT turn and fire
-    // last turn's action without offering a choice (Josh's "it just attacks").
-    if (isMyTurn !== _dunPrevMyTurn) _dunTarget = null;
+    // NO blind sub-menu survives a TURN BOUNDARY. A prompt/submenu left half-open from
+    // a prior turn (target select, ally pick, dispel pick, channel mode, spellbook,
+    // imbued shots) is checked BEFORE the normal action keys — so a stale one silently
+    // SWALLOWS the first action key of the next turn, and the turn passes with no action
+    // (Josh 2026-07-19: "the bell said my turn, D said no debuffs, yet I could not act and
+    // the battle kept going — we got railed"). Clearing only _dunTarget (its original bug)
+    // left the other five armed. Now every turn starts with a clean input state.
+    if (isMyTurn !== _dunPrevMyTurn) {
+      _dunTarget = null; _dunAllyPick = null; _dunDispelPick = null; _dunModePick = null;
+      _dunSbMode = false; _dunSbLevel = null; _dunSbIdx = -1;
+      _dunImbuedMode = false;
+    }
     _dunPrevMyTurn = isMyTurn;
     const turnName = turnId ? ((d.party || []).find(m => m.playerId === turnId)?.nickname || 'someone') : null;
 
