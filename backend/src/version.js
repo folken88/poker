@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.69 2026-07-19 BLIND MODE ANNOUNCES THE BUILD ONCE AT STARTUP (Tobias: "have blind mode announce
+//                     the version at the start just one time, so Josh hears 'dungeon 1.57' or whatever
+//                     and you both know what code you're working with"). Josh runs one browser (blind
+//                     constraint) and a long-open tab silently runs stale JS after a deploy — the #1
+//                     source of "still broken" reports that were already fixed. Now, as soon as blind
+//                     mode is on AND /api/version has resolved, it speaks "Folken Poker 3.37.69." exactly
+//                     ONCE per page load (client.js hands the version to BlindMode.setBuild(); fires from
+//                     whichever of restore-on-load / fetch-resolve / manual-toggle completes the pair).
+//                     The "version" voice command still re-checks on demand. Replaces v3.37.68's
+//                     say-it-on-every-toggle behavior.
 //  3.37.68 2026-07-19 "MY TURN BUT I CAN'T ACT" + A SPOKEN BUILD NUMBER (Josh: "the bell said my turn,
 //                     D said no debuffs, yet I could not act and the battle kept going — we got
 //                     railed"). Two parts: (1) STALE SUBMENU SWALLOWED HIS ACTION KEY. A blind
@@ -1006,6 +1016,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.68';
+const VERSION = '3.37.69';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

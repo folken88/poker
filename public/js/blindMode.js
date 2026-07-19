@@ -286,17 +286,39 @@
       try { this.player(next, advance); } catch (_) { advance(); }
     },
   };
-  // The live client build number, read from the topbar version badge that client.js
-  // stamps from /api/version. Josh has no way to SEE it, and a stale open tab keeps
+  // The live client build number. Josh has no way to SEE it, and a stale open tab keeps
   // running old code after a deploy — so "is he even on the fix?" has burned real
-  // debugging time (2026-07-17/19). Spoken on blind-on and via the "version" command
-  // so he can confirm his build after a hard refresh before we chase a ghost.
+  // debugging time (2026-07-17/19). client.js hands us the version via setBuild() once
+  // its /api/version fetch resolves; we fall back to the topbar badge if not yet set.
+  // Announced automatically ONCE at startup (Tobias 2026-07-19: "have blind mode announce
+  // the version at the start just one time so you both know what code you're working
+  // with") and re-checkable any time via the "version" voice command.
+  let _buildVer = null;
+  let _buildAnnounced = false;
   function _buildVersion() {
+    if (_buildVer) return _buildVer;
     try {
       const el = document.querySelector('.topbar__ver');
       const v = el && el.textContent ? el.textContent.replace(/[^0-9.]/g, '') : '';
       return v || null;
     } catch (_) { return null; }
+  }
+  // Speak the build ONCE per page load, as soon as BOTH blind mode is on AND the version
+  // is known. Called from three places so any ordering works: client.js setBuild() (the
+  // /api/version fetch resolving), the restore-on-load path in init(), and manual
+  // blind-on. The _buildAnnounced guard makes it fire exactly once.
+  function _maybeAnnounceBuild() {
+    if (_buildAnnounced || !state.on || !supportsTTS) return;
+    const v = _buildVersion();
+    if (!v) return;   // version not loaded yet — a later trigger will catch it
+    _buildAnnounced = true;
+    speak(`Folken Poker ${v}.`, 'event');
+  }
+  // client.js calls this once /api/version resolves — the reliable trigger, since the
+  // fetch usually finishes AFTER blind mode has already restored on cold load.
+  function setBuild(ver) {
+    if (ver) _buildVer = String(ver).replace(/[^0-9.]/g, '') || null;
+    _maybeAnnounceBuild();
   }
   function speak(text, prio = 'event', section = null) {
     if (!state.on || !supportsTTS || !text) return;
@@ -481,8 +503,8 @@
       // It stays a normal <details>, so it can be re-opened any time.
       try { document.querySelector('.help-panel__ranks')?.removeAttribute('open'); } catch (_) {}
       earcon('ack');
-      const _bv = _buildVersion();
-      speak(_bv ? `Blind support on. Build ${_bv}.` : 'Blind support on.', 'urgent');
+      speak('Blind support on.', 'urgent');
+      _maybeAnnounceBuild();   // once per page load: "Folken Poker 3.37.68." so he knows what code he's on
       // If a hand is in progress, narrate where things stand RIGHT
       // NOW — the diff path only fires when something changes, so
       // without this a spectator who just turned on blind mode
@@ -1360,6 +1382,7 @@
         state.on = true;
         updateChip();
         try { document.querySelector('.help-panel__ranks')?.removeAttribute('open'); } catch (_) {}   // same VoiceOver declutter as toggle-on
+        _maybeAnnounceBuild();   // if the version already resolved, say it now; else client.js's setBuild() will
       }
     } catch (_) {}
     // Voices populate async on some browsers.
@@ -1643,5 +1666,8 @@
     getPttCode, isRebinding, beginRebind, consumeRebind, pttLabel,
     // Reading-speed control (bound to [ and ] in client.js) + diagnostics.
     setRate, nudgeRate, setVolume, nudgeVolume, getLogs, log: blog,
+    // client.js hands us the build number once /api/version resolves; we announce it
+    // once at startup so Josh (and we) know exactly what code is running.
+    setBuild,
   };
 })();

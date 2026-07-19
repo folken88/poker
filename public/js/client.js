@@ -974,6 +974,10 @@
     document.querySelectorAll('.topbar__brand').forEach(el => {
       if (!el.querySelector('.topbar__ver')) el.insertAdjacentHTML('beforeend', ` <span class="topbar__ver" style="font-size:.62em;opacity:.55;font-weight:400" title="App version — see src/version.js">v${String(v.version).replace(/[^0-9a-z.\-]/gi, '')}</span>`);
     });
+    // Hand the build to blind mode so it can announce it ONCE at startup (Josh has no
+    // way to SEE the badge; this is the reliable trigger since the fetch usually
+    // resolves after blind mode has already restored on cold load).
+    try { window.BlindMode?.setBuild?.(v.version); } catch (_) {}
   }).catch(() => {});
   // SPELL-LOADOUT picker I/O ('loadout' action). No payload → fetch the model;
   // { toggle: key } → flip that spell and get the updated model back. Errors
