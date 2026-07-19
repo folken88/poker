@@ -58,6 +58,24 @@ function stepDamage(count, die, steps) {
 // (the class feat trees + fighterFeats moved to pf1data/feats.js — concept split 2026-07-04)
 // Bane's flat bonuses (the +2d6 rides on top, not crit-multiplied). See _abBane.
 const BANE_TOHIT = 2, BANE_DMG = 2, BANE_DICE = 2;
+// RUN CODENAME word lists (v3.37.70). Two easy-to-say, speech-to-text-friendly words —
+// a colour/texture adjective + a concrete critter/object noun. ~40×40 ≈ 1600 combos, so
+// same-day collisions are rare and each run is unambiguous when Josh says it aloud.
+const RUN_ADJ = ['amber', 'brave', 'brisk', 'clever', 'cozy', 'crimson', 'dapper', 'eager',
+  'fuzzy', 'gentle', 'golden', 'happy', 'jolly', 'lucky', 'mellow', 'merry', 'nimble',
+  'plucky', 'proud', 'quiet', 'rapid', 'rowdy', 'rustic', 'salty', 'shiny', 'silver',
+  'snappy', 'sneaky', 'spicy', 'sturdy', 'sunny', 'swift', 'tidy', 'trusty', 'velvet',
+  'witty', 'zesty', 'bold', 'frosty', 'pickle'];
+const RUN_NOUN = ['otter', 'badger', 'falcon', 'walrus', 'panda', 'raven', 'gecko',
+  'marmot', 'lynx', 'heron', 'beaver', 'ferret', 'moose', 'newt', 'osprey', 'puffin',
+  'quokka', 'stoat', 'tapir', 'vole', 'wombat', 'yak', 'anvil', 'lantern', 'kettle',
+  'compass', 'acorn', 'pebble', 'thistle', 'turnip', 'walnut', 'biscuit', 'muffin',
+  'pickle', 'noodle', 'waffle', 'pretzel', 'dumpling', 'mango', 'cricket'];
+function _genRunName() {
+  const a = RUN_ADJ[Math.floor(Math.random() * RUN_ADJ.length)];
+  const n = RUN_NOUN[Math.floor(Math.random() * RUN_NOUN.length)];
+  return `${a}-${n}`;
+}
 // Title-case a creature type for display ("magical beast" → "Magical Beast").
 function titleCase(s) { return String(s || '').replace(/\b\w/g, c => c.toUpperCase()); }
 // Undead & constructs are immune to mind-affecting magic — sleep, fascinate, hold
@@ -168,6 +186,12 @@ class Dungeon {
   constructor({ tableId, io, onMemberExit, onEmpty }) {
     this.id = tableId;           // one shared run per table
     this.tableId = tableId;
+    // RUN CODENAME (v3.37.70, Tobias): a fresh Dungeon instance is one RUN, so name it
+    // here once. Josh hears it at the start ("This run is Pickle Otter") and every log
+    // line is stamped with it — so a fuzzy verbal report ("it was pickle-otter and the
+    // fighter grappled a flying dragon") maps to the exact server-side ground truth we
+    // can grep, instead of us guessing from scrambled audio. Two easy-to-say words.
+    this.runName = _genRunName();
     this.io = io;
     this._onMemberExit = onMemberExit;   // (playerId, nickname, exit) — chat + roster
     this._onEmpty = onEmpty;             // () — run fully over, drop the instance
@@ -290,6 +314,11 @@ class Dungeon {
     this.log.push({ t: ++this._logSeq, text, sound: sound || null, side, kind, voiced: !!meta.voiced, phase });
     if (this.log.length > 150) this.log.shift();
     if (sound) { try { recordSound('dungeon', sound, text); } catch (_) {} }
+    // GROUND TRUTH (v3.37.70): persist EVERY narration line to dungeon.jsonl, stamped
+    // with the run codename. The in-memory this.log is capped at 150 and dies with the
+    // run; this is the durable, greppable record of exactly what happened — the whole
+    // point of the codename. `t` = the in-run sequence so lines sort even at equal ts.
+    this._log('note', { t: this._logSeq, text, side, kind, phase: phase || null });
   }
   // Run `fn` with every _note inside it attributed to one side (used to tag a
   // monster's whole turn 'enemy' in one place). Synchronous; restores on exit.
@@ -307,7 +336,7 @@ class Dungeon {
     return 'normal';
   }
   _log(type, extra) {
-    try { logDungeon({ type, run: this.id, depth: this.depth, round: this.round, ...(extra || {}) }); } catch (_) {}
+    try { logDungeon({ type, run: this.id, runName: this.runName, depth: this.depth, round: this.round, ...(extra || {}) }); } catch (_) {}
   }
 
   // ── Party membership ──────────────────────────────────────────────────────

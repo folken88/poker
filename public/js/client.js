@@ -1361,7 +1361,12 @@
     const turnName = turnId ? ((d.party || []).find(m => m.playerId === turnId)?.nickname || 'someone') : null;
 
     const meta = $('#dungeonMeta');
-    if (meta) meta.textContent = `Depth ${d.depth} · Round ${d.round || 0} · 💰 ${formatChips(d.runGold)} gp pool`;
+    if (meta) {
+      // Run codename (v3.37.70) leads the meta line so it's easy to read off when
+      // reporting a bug — "run: pickle-otter" maps a session to its logged ground truth.
+      const _rn = d.runName ? `🏷️ ${d.runName} · ` : '';
+      meta.textContent = `${_rn}Depth ${d.depth} · Round ${d.round || 0} · 💰 ${formatChips(d.runGold)} gp pool`;
+    }
 
     // Stable per-player aim color (same hash on every client → everyone sees the
     // same color for the same person's 🎯 ring).

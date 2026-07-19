@@ -171,6 +171,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     for (const t of (this.turnOrder || [])) _initOf[t.kind[0] + ':' + t.id] = t.init;
     return {
       id: this.id,
+      runName: this.runName || null,   // this run's codename (v3.37.70) — shown on screen + spoken to blind players so a verbal report maps to the logged ground truth
       depth: this.depth,
       round: this.round,
       status: this.status,

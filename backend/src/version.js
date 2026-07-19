@@ -3,6 +3,18 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.70 2026-07-19 RUN CODENAMES + FULL COMBAT LOG (Tobias: "name each session 'pickle session' so
+//                     Josh just says 'it was pickle session and the fighter grappled a flying dragon'
+//                     and you both know you're talking about the same run"). Each dungeon run (a fresh
+//                     Dungeon instance) now gets a two-word codename (adj-noun, e.g. "pickle-otter"),
+//                     SPOKEN to blind players when the run starts + shown on the dungeon meta line +
+//                     re-askable via the "run" voice command. AND: every narration line (`_note`) is
+//                     now PERSISTED to dungeon.jsonl stamped with the codename — previously the
+//                     blow-by-blow (grapples, trips, flying-state, hit/miss) lived only in memory and
+//                     died with the run, so a report like "swashbuckler grappled flying Reese" was
+//                     unverifiable. Now `grep pickle-otter dungeon.jsonl` yields the exact server-side
+//                     truth. Turns fuzzy through-scrambled-audio reports into ground truth we can read
+//                     instead of guess at. domtest 83 guards the codename + log wiring.
 //  3.37.69 2026-07-19 BLIND MODE ANNOUNCES THE BUILD ONCE AT STARTUP (Tobias: "have blind mode announce
 //                     the version at the start just one time, so Josh hears 'dungeon 1.57' or whatever
 //                     and you both know what code you're working with"). Josh runs one browser (blind
@@ -1016,6 +1028,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.69';
+const VERSION = '3.37.70';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

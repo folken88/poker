@@ -1479,6 +1479,14 @@
     if (!state.on || !st) return;
     const meId = state.deps?.state?.me?.player_id;
 
+    // Run codename (v3.37.70): announce ONCE when a run's name first appears, so Josh has
+    // a handle to quote when reporting a bug ("it was pickle-otter and the fighter grappled
+    // a flying dragon") — that maps straight to the logged server-side ground truth. Spoken
+    // as 'event' so it rides the normal queue; the hyphen reads as a pause.
+    if (st.runName && st.runName !== _dun.runName) {
+      _dun.runName = st.runName;
+      speak(`This run is ${String(st.runName).replace(/-/g, ' ')}.`, 'event');
+    }
     // New room / entry.
     if (st.depth !== _dun.depth) {
       _dun.depth = st.depth;
@@ -1602,6 +1610,7 @@
     if (/^(enemies|targets|who.?s here)$/.test(raw)) { speak(_dunEnemyPhrase(d), 'urgent'); return true; }
     if (/^(hp|health|my health|my hp)$/.test(raw)) { const me = (d.party||[]).find(m => m.playerId === (state.deps?.state?.me?.player_id)) || {}; speak(`${me.hp} of ${me.maxHp} hit points.`, 'urgent'); return true; }
     if (/^(gold|my gold|loot)$/.test(raw)) { speak(`${d.runGold} gold this run.`, 'urgent'); return true; }
+    if (/^(run|run name|codename|what run|which run)$/.test(raw)) { speak(d.runName ? `This run is ${String(d.runName).replace(/-/g, ' ')}.` : 'This run has no codename.', 'urgent'); return true; }
     // Actions
     if (/^(open|door|next|deeper|descend|go down|go deeper)$/.test(raw)) { emit('door'); return true; }
     if (/^(bail|leave|climb out|retreat|get out|escape|go up|surface)$/.test(raw)) { emit('bail'); return true; }
