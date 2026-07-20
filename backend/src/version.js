@@ -3,6 +3,20 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.72 2026-07-20 CODENAMES BECOME IN-JOKES (Tobias: "the codenames can be cheeky cute references
+//                     to previous patches or complaints"). The run-name word lists now call back to
+//                     our own bug history — silent-musket (the Holy Gun that fired in silence),
+//                     unerring-missile ("magic missile that just don't fucking miss"), scrambled-
+//                     dumpling (the out-of-order narrator + the TINY DUMPLING mixup), grumpy-goat
+//                     ("I just kept hearing goats"), sneaky-devil (Jason's summons squatting on the
+//                     target list), flying-harpy, shielded-*, stale-* … The speech-safety rule still
+//                     wins: no near-homophones, nothing obscure, since Josh round-trips these through
+//                     TTS and dictation. domtest asserts both (banned-word list + the callbacks
+//                     survive). VERIFIED same version, no code change needed: PF1 Shield is already
+//                     wizard/magus/sorcerer only, self-only, +4 AC, and divine casters get Shield of
+//                     Faith (deflection) which correctly does NOT stop Magic Missile — the v3.37.71
+//                     immunity keys on the arcane `shield` buff alone. NOTE: enemies have no dispel-a-
+//                     hero-buff path at all today, so Shield being dispellable is moot in practice.
 //  3.37.71 2026-07-20 SHIELD ACTUALLY STOPS MAGIC MISSILE — for HEROES too (Josh, run tidy-dumpling:
 //                     "our spell casters are too dumb to cast Shield... magic missile that just don't
 //                     fucking miss"). The new run-codename log proved him right on every count, and
@@ -1043,6 +1057,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.71';
+const VERSION = '3.37.72';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

@@ -61,22 +61,35 @@ const BANE_TOHIT = 2, BANE_DMG = 2, BANE_DICE = 2;
 // RUN CODENAME word lists (v3.37.70). Two easy-to-say, speech-to-text-friendly words —
 // a colour/texture adjective + a concrete critter/object noun. ~40×40 ≈ 1600 combos, so
 // same-day collisions are rare and each run is unambiguous when Josh says it aloud.
-// NO NEAR-HOMOPHONES and no obscure words: Josh hears these through TTS and repeats them
-// through speech-to-text, so a word that garbles costs us the whole lookup. Learned the
-// hard way on the FIRST run out (2026-07-20): "tidy-dumpling" came back as "TINY DUMPLING"
-// — dropped 'tidy', plus the obscure critters most likely to mangle in dictation (newt,
-// quokka, stoat, tapir, vole). Keep every entry common, 1-2 syllables where possible, and
-// phonetically distinct from the rest of the list.
-const RUN_ADJ = ['amber', 'brave', 'brisk', 'clever', 'cozy', 'crimson', 'dapper', 'eager',
-  'fuzzy', 'gentle', 'golden', 'happy', 'jolly', 'lucky', 'mellow', 'merry', 'nimble',
-  'plucky', 'proud', 'quiet', 'rapid', 'rowdy', 'rustic', 'salty', 'shiny', 'silver',
-  'snappy', 'sneaky', 'spicy', 'sturdy', 'sunny', 'swift', 'jazzy', 'trusty', 'velvet',
-  'witty', 'zesty', 'bold', 'frosty', 'pickle'];
-const RUN_NOUN = ['otter', 'badger', 'falcon', 'walrus', 'panda', 'raven', 'gecko',
-  'marmot', 'lynx', 'heron', 'beaver', 'ferret', 'moose', 'salmon', 'osprey', 'puffin',
-  'penguin', 'sparrow', 'turtle', 'rabbit', 'wombat', 'yak', 'anvil', 'lantern', 'kettle',
-  'compass', 'acorn', 'pebble', 'thistle', 'turnip', 'walnut', 'biscuit', 'muffin',
-  'pickle', 'noodle', 'waffle', 'pretzel', 'dumpling', 'mango', 'cricket'];
+// RUN CODENAME WORDS — cheeky callbacks to our own patch history and Josh's greatest-hits
+// complaints (Tobias 2026-07-20: "the codenames can be cheeky cute references to previous
+// patches or complaints"). The jokes, for whoever reads this later:
+//   silent/musket → the Holy Gun that fired in total silence (v3.37.65)
+//   unerring/missile → "magic missile that just don't fucking miss" (tidy-dumpling)
+//   shielded → the wizards who wouldn't cast Shield (v3.37.71)
+//   scrambled/jumbled → the voice reports playing out of order (v3.37.67)
+//   stale → the tab running old code for two days
+//   dumpling → "TINY DUMPLING", the first codename Josh ever quoted back (it was tidy-)
+//   goat → "I just kept hearing goats. I don't know if that was an attack or what"
+//   devil → Jason's summoned devils squatting at the top of the target list (v3.37.64)
+//   harpy → the six flying sorcerers that ended the run
+//   mirror → 8 mirror images per harpy, soaking every swing
+//   invisible → the heroes who turned invisible and then did absolutely nothing
+//   pickle → Tobias's original example when he pitched this whole idea
+// HARD RULE, learned the hard way on the very first run: NO NEAR-HOMOPHONES and nothing
+// obscure. Josh hears these through TTS and repeats them through speech-to-text, so a word
+// that garbles costs us the entire lookup — "tidy-dumpling" came back as "TINY DUMPLING".
+// Every entry stays common, short, and phonetically distinct from the rest of the list.
+const RUN_ADJ = ['silent', 'unerring', 'shielded', 'scrambled', 'jumbled', 'stale',
+  'invisible', 'flying', 'haunted', 'cursed', 'blessed', 'furious', 'sneaky', 'grumpy',
+  'amber', 'brave', 'clever', 'cozy', 'crimson', 'dapper', 'eager', 'fuzzy', 'gentle',
+  'golden', 'happy', 'jolly', 'lucky', 'mellow', 'merry', 'nimble', 'plucky', 'proud',
+  'quiet', 'rowdy', 'salty', 'shiny', 'silver', 'spicy', 'sunny', 'jazzy'];
+const RUN_NOUN = ['dumpling', 'goat', 'devil', 'harpy', 'mirror', 'missile', 'musket',
+  'pickle', 'otter', 'badger', 'falcon', 'walrus', 'panda', 'raven', 'gecko', 'marmot',
+  'lynx', 'heron', 'beaver', 'ferret', 'moose', 'salmon', 'osprey', 'puffin', 'penguin',
+  'sparrow', 'turtle', 'rabbit', 'wombat', 'anvil', 'lantern', 'kettle', 'compass',
+  'acorn', 'pebble', 'walnut', 'biscuit', 'muffin', 'noodle', 'waffle'];
 function _genRunName() {
   const a = RUN_ADJ[Math.floor(Math.random() * RUN_ADJ.length)];
   const n = RUN_NOUN[Math.floor(Math.random() * RUN_NOUN.length)];
