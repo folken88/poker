@@ -791,6 +791,16 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemyMissiles(e, target, n) {
     // PF1: SR applies even to Magic Missile's unerring bolts.
     if (this._srBlocksHero(e, target, 'the missiles')) { this._echoToTable(); this._broadcast(); return; }
+    // PF1: the SHIELD spell stops Magic Missile COLD — no save, no damage. The HERO
+    // side has always honoured this in reverse (a hero's Magic Missile bounces off a
+    // shielded foe — abilities.js `e.shieldUp`), but the enemy→hero path never checked,
+    // so a shielded hero still ate every dart. Verified in run tidy-dumpling (2026-07-20):
+    // the harpy sorcerers' own precast Shield blocked the party's missiles while the party
+    // had no such protection, and Tar Baphon died to two unerring volleys. Parity restored.
+    if (target.buffApplied && target.buffApplied.shield) {
+      this._note(`🛡️ ${e.glyph} ${e.name}'s ${n} Magic Missile${n > 1 ? 's' : ''} splash harmlessly off ${target.nickname}'s SHIELD.`, '/audio/spell_magicmissile.mp3', { side: 'enemy' });
+      this._echoToTable('/audio/spell_magicmissile.mp3'); this._broadcast(); return;
+    }
     const dmg = dRollN(n, 4) + n;
     this._dmgToMember(target, dmg);
     this._note(`✨ ${e.glyph} ${e.name} looses ${n} Magic Missile${n > 1 ? 's' : ''} at ${target.nickname} — ${dmg} force, unerring.${target.hp <= 0 ? ' ☠️' : ''}`, '/audio/spell_magicmissile.mp3', { side: 'enemy' });

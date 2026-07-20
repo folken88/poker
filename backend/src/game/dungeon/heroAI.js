@@ -633,6 +633,18 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     const fireFoes = foes.some(e => e.detonate || e.hellfire || /fire|flame|magma|salamander|phoenix/i.test(e.name));
     const protect = avail.find(a => a.protectFire);
     if (protect && fireFoes && this.livingParty().some(p => !p.protectFire)) return { slot: slot(protect), payload: {} };
+    // SHIELD vs ARCANE CASTERS — the one buff whose worth isn't its +4 AC. PF1: Shield
+    // stops MAGIC MISSILE cold, and enemy sorcerers finish wounded heroes with unerring
+    // missiles (the arcane branch in enemyAI). The potency floor below correctly writes
+    // Shield off as a "petty" level-1 buff for a high-level caster in a NORMAL fight —
+    // but against a room of arcane casters it's the difference between a wounded ally
+    // living and dying. Verified in run tidy-dumpling (2026-07-20): six harpy sorcerers,
+    // ZERO Shields cast all run, Tar Baphon (L14 wizard, Shield in his own book) killed
+    // by two unerring volleys. REACTIVE, exactly like Protection from Fire above — it
+    // answers the battlefield, so it is deliberately NOT gated by buffAppetite/potentEnough.
+    const arcaneFoes = foes.some(e => e.arcane);
+    const shieldSpell = avail.find(a => a.key === 'shield' && a.effect === 'buff');
+    if (shieldSpell && arcaneFoes && !(m.buffApplied && m.buffApplied.shield)) return { slot: slot(shieldSpell), payload: {} };
     // Buff priority (PF1 support play): a multi-target PARTY buff is almost always the
     // best use of a turn, so take those FIRST — Stoneskin (Communal), Prayer, Protection
     // from Evil, Bless reach every ally at once. Then cheap SELF buffs (Divine Favor,

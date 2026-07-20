@@ -3,6 +3,21 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.71 2026-07-20 SHIELD ACTUALLY STOPS MAGIC MISSILE — for HEROES too (Josh, run tidy-dumpling:
+//                     "our spell casters are too dumb to cast Shield... magic missile that just don't
+//                     fucking miss"). The new run-codename log proved him right on every count, and
+//                     found TWO faults. (1) PARITY BUG: a hero's Magic Missile has always bounced off
+//                     a shielded FOE (abilities.js `e.shieldUp`), but the enemy→hero path never
+//                     checked — a shielded hero still ate every unerring dart. The harpies' own
+//                     precast Shield blocked the party's missiles while the party had no such
+//                     protection; Tar Baphon (L14 wizard) died to two volleys. `_enemyMissiles` now
+//                     honours the hero's Shield. (2) AI GAP: the buff "potency floor" writes off a
+//                     lvl-1 buff for a high-level caster ("a L12 wizard opens Stoneskin, never
+//                     Shield") — correct normally, fatal against six arcane casters, where Shield's
+//                     worth is MM immunity, not +4 AC. heroAI now casts Shield REACTIVELY when arcane
+//                     foes are up (same carve-out Protection from Fire already had). Also: dropped
+//                     'tidy' + obscure critters from the codename lists — Josh heard "tidy-dumpling"
+//                     as "TINY DUMPLING", so near-homophones break the very lookup they enable.
 //  3.37.70 2026-07-19 RUN CODENAMES + FULL COMBAT LOG (Tobias: "name each session 'pickle session' so
 //                     Josh just says 'it was pickle session and the fighter grappled a flying dragon'
 //                     and you both know you're talking about the same run"). Each dungeon run (a fresh
@@ -1028,6 +1043,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.70';
+const VERSION = '3.37.71';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

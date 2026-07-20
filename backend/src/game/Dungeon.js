@@ -61,14 +61,20 @@ const BANE_TOHIT = 2, BANE_DMG = 2, BANE_DICE = 2;
 // RUN CODENAME word lists (v3.37.70). Two easy-to-say, speech-to-text-friendly words —
 // a colour/texture adjective + a concrete critter/object noun. ~40×40 ≈ 1600 combos, so
 // same-day collisions are rare and each run is unambiguous when Josh says it aloud.
+// NO NEAR-HOMOPHONES and no obscure words: Josh hears these through TTS and repeats them
+// through speech-to-text, so a word that garbles costs us the whole lookup. Learned the
+// hard way on the FIRST run out (2026-07-20): "tidy-dumpling" came back as "TINY DUMPLING"
+// — dropped 'tidy', plus the obscure critters most likely to mangle in dictation (newt,
+// quokka, stoat, tapir, vole). Keep every entry common, 1-2 syllables where possible, and
+// phonetically distinct from the rest of the list.
 const RUN_ADJ = ['amber', 'brave', 'brisk', 'clever', 'cozy', 'crimson', 'dapper', 'eager',
   'fuzzy', 'gentle', 'golden', 'happy', 'jolly', 'lucky', 'mellow', 'merry', 'nimble',
   'plucky', 'proud', 'quiet', 'rapid', 'rowdy', 'rustic', 'salty', 'shiny', 'silver',
-  'snappy', 'sneaky', 'spicy', 'sturdy', 'sunny', 'swift', 'tidy', 'trusty', 'velvet',
+  'snappy', 'sneaky', 'spicy', 'sturdy', 'sunny', 'swift', 'jazzy', 'trusty', 'velvet',
   'witty', 'zesty', 'bold', 'frosty', 'pickle'];
 const RUN_NOUN = ['otter', 'badger', 'falcon', 'walrus', 'panda', 'raven', 'gecko',
-  'marmot', 'lynx', 'heron', 'beaver', 'ferret', 'moose', 'newt', 'osprey', 'puffin',
-  'quokka', 'stoat', 'tapir', 'vole', 'wombat', 'yak', 'anvil', 'lantern', 'kettle',
+  'marmot', 'lynx', 'heron', 'beaver', 'ferret', 'moose', 'salmon', 'osprey', 'puffin',
+  'penguin', 'sparrow', 'turtle', 'rabbit', 'wombat', 'yak', 'anvil', 'lantern', 'kettle',
   'compass', 'acorn', 'pebble', 'thistle', 'turnip', 'walnut', 'biscuit', 'muffin',
   'pickle', 'noodle', 'waffle', 'pretzel', 'dumpling', 'mango', 'cricket'];
 function _genRunName() {
