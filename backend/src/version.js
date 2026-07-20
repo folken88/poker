@@ -3,6 +3,19 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.73 2026-07-20 RUNS OPEN ONE CR EASIER (Tobias: "lower starting-point difficulty by 1 CR… Josh
+//                     is playing high level characters and getting smacked around in the first 1 or 2
+//                     rooms; the game would be more fun if it started 1 CR lower, so your first round
+//                     has a higher chance of success, and the others increase from that starting
+//                     point"). Difficulty auto-scales with party level — a L13 party met CR-13 rooms
+//                     from room ONE. The ramp ORIGIN now sits one CR lower (new `_baseCR()` =
+//                     minLevel − 1 + depth/4), so that party opens at CR 12 and climbs from there.
+//                     The ramp SHAPE is untouched: still +1 CR every 4 depths, still +2 for a boss.
+//                     LEVEL-1 PARTIES ARE UNAFFECTED — 1 − 1 = 0 and the existing Math.max(1, …) floor
+//                     pins them at CR 1 exactly as before. Boss-room minion budgets share the same
+//                     origin (they had a hand-rolled duplicate of the formula that would have drifted).
+//                     Evidence: run jolly-gecko put TWELVE foes (5 of them sorceresses) against Josh's
+//                     four heroes in room 2 — see domtest 85.
 //  3.37.72 2026-07-20 CODENAMES BECOME IN-JOKES (Tobias: "the codenames can be cheeky cute references
 //                     to previous patches or complaints"). The run-name word lists now call back to
 //                     our own bug history — silent-musket (the Holy Gun that fired in silence),
@@ -1057,6 +1070,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.72';
+const VERSION = '3.37.73';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

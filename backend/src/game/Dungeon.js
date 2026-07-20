@@ -668,8 +668,17 @@ class Dungeon {
   // (so the weakest isn't one-shot), ramping ~+1 every 4 rooms as they descend,
   // +2 on boss rooms. Party SIZE is handled by the XP budget (more heroes → more
   // enemies), not by inflating each foe's CR. Capped to the bestiary.
+  // The difficulty RAMP ORIGIN — the CR a run OPENS at, before the boss bump.
+  // Difficulty auto-scales with party level (a level-13 party used to meet CR-13 rooms
+  // from room 1). v3.37.73 drops that origin by ONE CR (Tobias): Josh's high-level
+  // parties were getting mauled in the first room or two, so a run now opens a notch
+  // easier and escalates from the lower start. The ramp SHAPE is unchanged — still
+  // +1 CR every 4 depths, still +2 for a boss — the whole curve just begins one step
+  // down. LEVEL-1 PARTIES ARE UNAFFECTED: minLevel 1 − 1 = 0, which the Math.max(1, …)
+  // floor below pins back to CR 1, exactly as before.
+  _baseCR() { return this._minLevel() - 1 + Math.floor(this.depth / 4); }
   _encounterCR(boss) {
-    let cr = this._minLevel() + Math.floor(this.depth / 4);
+    let cr = this._baseCR();
     if (boss) cr += 2;
     return Math.max(1, Math.min(20, cr));   // cap tracks the bestiary — Tar-Baphon is CR 20 (the old 13 locked out every boss above 15)
   }
@@ -870,7 +879,9 @@ class Dungeon {
       if (bk === 'barzillai' && MON.rivozair) keys.push('rivozair');
       else if (bk === 'rivozair' && MON.barzillai) keys.push('barzillai');
       // Boss rooms also mob a big party — minions at a notch below the room CR.
-      const baseCR = this._minLevel() + Math.floor(this.depth / 4);
+      // Shares the ramp origin (_baseCR) so the v3.37.73 −1 CR reaches boss-room
+      // minions too; a second hand-rolled copy of the formula would have drifted.
+      const baseCR = this._baseCR();
       fill(Math.round(rawXpForCR(baseCR) * Math.max(0, partyN - 1) * 0.6),
            Math.max(0.25, encCR - 6), Math.max(1, encCR - 2), 1 + partyN);
     } else {
