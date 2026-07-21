@@ -4275,7 +4275,14 @@
   const _bankToggles = () => [$('#sidebarBankToggle'), $('#dungeonBankToggle')].filter(Boolean);
   function openBankDoll(btn) {
     const el = $('#bankDoll'); if (!el) return;
-    _bankDollOpen = true; el.hidden = false; el.innerHTML = buildPaperDollHtml();
+    // RE-ENGAGE, don't rebuild, when it's already open (v3.37.76). A wholesale innerHTML
+    // rebuild resets VoiceOver's virtual cursor to the top of the page — so if Josh taps
+    // the toggle to "find" a bank that's actually still open, rebuilding would throw his
+    // cursor out again. Only build the contents when we're truly opening it; otherwise
+    // just re-focus him inside.
+    const wasOpen = _bankDollOpen && !el.hidden;
+    _bankDollOpen = true; el.hidden = false;
+    if (!wasOpen) el.innerHTML = buildPaperDollHtml();
     // Anchor (fixed) just below the button, clamped so it can't run off-screen
     // (the dungeon button sits on the right side of its header).
     const anchor = btn || $('#dungeonBankToggle') || $('#sidebarBankToggle');
@@ -4362,6 +4369,12 @@
   const _bankToggle = (opener) => {
     const el = $('#bankDoll');
     const reallyOpen = _bankDollOpen && el && !el.hidden;
+    // BLIND MODE: the toggle only ever OPENS / re-engages — it never CLOSES (v3.37.76,
+    // Josh's detailed loot-bank report). He can't see that the bank is still open after a
+    // buy (his VO cursor got kicked to the top), so tapping the toggle to "find" it was
+    // actually closing it — the two-click dance. Now the toggle always lands him back
+    // inside the bank; closing is the ✕ button or Escape. Sighted play toggles as before.
+    if (window.BlindMode?.isOn?.()) { openBankDoll(opener); return; }
     reallyOpen ? closeBankDoll() : openBankDoll(opener);
   };
   $('#sidebarBankToggle')?.addEventListener('click', (e) => { e.stopPropagation(); _bankToggle($('#sidebarBankToggle')); });
@@ -4384,6 +4397,11 @@
   // Click anywhere outside the doll (and not a toggle / a gear button) closes it.
   document.addEventListener('click', (e) => {
     if (!_bankDollOpen) return;
+    // BLIND MODE: do NOT auto-close on an outside click (v3.37.76). VoiceOver activates
+    // (VO+Space) whatever its cursor is on, so navigating to and reading ANY element while
+    // the bank is open would fire an "outside click" and dismiss the bank — Josh's "that
+    // window just disappears if I disengage with it at all." He closes it with ✕ / Escape.
+    if (window.BlindMode?.isOn?.()) return;
     if (e.target.closest('#bankDoll') || e.target.closest('#sidebarBankToggle') || e.target.closest('#dungeonBankToggle')) return;
     closeBankDoll();
   });

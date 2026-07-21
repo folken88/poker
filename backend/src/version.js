@@ -3,6 +3,20 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.76 2026-07-21 LOOT BANK STAYS PUT + CAVALIER CHALLENGE IS A SWIFT ACTION (Josh, detailed
+//                     loot-bank report + run mellow-missile). (1) LOOT BANK, three blind-mode fixes
+//                     off his precise VoiceOver walkthrough: the bank no longer auto-closes on an
+//                     outside click (VO+Space on any element was dismissing it — "that window just
+//                     disappears if I disengage with it at all"); the 🎒 toggle now only OPENS /
+//                     re-engages, never closes (he couldn't tell the bank was still open after a buy,
+//                     so his "reopen" tap was closing it — the two-click dance); and re-opening an
+//                     already-open bank no longer rebuilds its innerHTML (which reset his VO cursor to
+//                     the top). Close is the ✕ or Escape. Sighted play unchanged. (2) CHALLENGE: PF1
+//                     Challenge is a SWIFT action, and the AI already challenges-and-strikes in one
+//                     round — but the PLAYER path ate the whole turn ("it acted like a taunt, I
+//                     couldn't attack the thing I challenged"). Added freeAction:true so a player
+//                     cavalier challenges AND still attacks; the room-use limit is unchanged, and the
+//                     bot (which inlines its own challenge) is untouched. domtest 88.
 //  3.37.75 2026-07-21 A STRAY ENTER NO LONGER ENDS YOUR RUN + domain powers named for the RIGHT domain
 //                     (Josh, runs brave-walnut / cursed-musket). (1) RUN-ENDING BUTTONS: casting Fly
 //                     on an ally, then pressing Enter for "best target", "just exited me out of the
@@ -1100,6 +1114,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.75';
+const VERSION = '3.37.76';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

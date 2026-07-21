@@ -93,7 +93,7 @@ const STUDIED_TARGET = { key: 'studiedtarget', name: 'Studied Target', icon: '�
 // +your cavalier level in DAMAGE this room (applied in _swingVsAC via challengedId/
 // challengeN). A ROOM-cost ability (uses scale: 1 + 1 per 4 levels), so it's a
 // limited, focused kill-order (unlike the slayer's at-will Studied Target).
-const CHALLENGE = { key: 'challenge', name: 'Challenge', icon: '⚔️', cost: 'room', uses: (lvl) => 1 + Math.floor(((lvl || 1) - 1) / 4), effect: 'challenge', target: 'enemy', sound: '/audio/taunt_predator.mp3', desc: 'A cavalier\'s oath: name ONE foe your quarry — every strike you land on it this room deals +your level in bonus damage. Uses per room = 1 + 1 per 4 levels.' };
+const CHALLENGE = { key: 'challenge', name: 'Challenge', icon: '⚔️', cost: 'room', uses: (lvl) => 1 + Math.floor(((lvl || 1) - 1) / 4), effect: 'challenge', target: 'enemy', freeAction: true, sound: '/audio/taunt_predator.mp3', desc: 'SWIFT ACTION — name ONE foe your quarry, then STILL attack (or act) the same turn: every strike you land on it this room deals +your level in bonus damage. PF1: Challenge is a swift action. Uses per room = 1 + 1 per 4 levels.' };
 // ORDER OF THE FLAME (Lord Gweyir) — a FREE, unlimited challenge-and-strike in one. Char-gated;
 // applies his CURRENT glory stack (+2×N damage / −2×N AC), then attacks; a KILL grows the stack
 // for next turn. Chain kills (fodder is fair game!) to pump it, then unleash on a real threat.
