@@ -1491,7 +1491,15 @@
     if (st.depth !== _dun.depth) {
       _dun.depth = st.depth;
       if (st.depth === 0) speak('You enter the dungeon. Say open to descend, or bail to leave.', 'event');
-      else { const ne = (st.enemies || []).filter(e => e.alive && !e.summoned).length; speak(`Room ${st.depth}. ${ne} ${ne === 1 ? 'enemy' : 'enemies'}. Press E to inspect them.`, 'event'); }
+      else {
+        // Read the SAME deadliest-first NUMBERED list the hot list / F key / number keys
+        // all use (Josh 2026-07-21: the old entry readout gave a grouped tally — "5
+        // sorceresses, 3 archers" — so the numbers he formed on entry never matched the
+        // deadliest-first target numbers; "I can't use that information"). Now entry, F,
+        // and the target picker are ONE ordering, so a number means the same foe from the
+        // moment the door opens. It's longer, but S skips it and the payoff is consistency.
+        speak(`Room ${st.depth}. ${_dunEnemyPhrase(st)}`, 'event');
+      }
     }
     // New combat-log lines (results) — speak EVERY fresh line, oldest first,
     // stripped of emoji. (The old `.slice(-2)` kept only the newest two, so a

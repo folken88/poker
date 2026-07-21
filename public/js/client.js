@@ -1417,7 +1417,7 @@
     // so a half-cleared room relaxes back to full-size cards.
     const _eneCompact = () => {
       if (!ene) return;
-      const n = (d.enemies || []).filter(e => e.alive).length;
+      const n = (d.enemies || []).filter(e => e.alive && !_isAllyCard(e)).length;   // only cards actually IN the enemy grid (summons render as ALLIES, not here) — v3.37.74
       ene.classList.toggle('is-compact', n > 6 && n <= 12);
       ene.classList.toggle('is-packed', n > 12);
     };
@@ -2790,7 +2790,15 @@
       if (/^[1-9]$/.test(k)) {
         e.preventDefault();
         const n = parseInt(k, 10);
-        const alive = (d.enemies || []).filter(x => x.alive).sort(byCr);   // highest-CR first
+        // MUST be the SAME filtered, deadliest-first list the spoken prompt reads (aliveE)
+        // — not a fresh unfiltered rebuild. v3.37.64 filtered ally SUMMONS + darkness out of
+        // aliveE and every spoken list, but THIS number-key picker still rebuilt its own
+        // unfiltered `alive`, so pressing "1" indexed a DIFFERENT list than the one Josh
+        // heard: Jason's bone devil (a summon) still occupied a slot here and shifted every
+        // number, so "attack the Elite Greenbrier" fired at the wrong foe — or at the devil
+        // (Josh 2026-07-21, runs mellow-walnut / golden-biscuit / invisible-biscuit, 100%
+        // confirmed). Reusing aliveE makes the numbers he hears the numbers he presses.
+        const alive = aliveE;
         // (0) In enemy-inspect mode, a number jumps to + describes that enemy.
         if (_dunEnemyMode) {
           const en = alive[n - 1];
@@ -2984,7 +2992,9 @@
       }
     }
     if (/^[1-9]$/.test(k)) {
-      const alive = (d.enemies || []).filter(x => x.alive);
+      // Sighted number-target select — same targetable filter as the blind picker and the
+      // on-screen grid (summons/darkened aren't targetable foes), v3.37.74.
+      const alive = (d.enemies || []).filter(x => x.alive && !x.summoned && !x.darkened);
       const uid = alive[parseInt(k, 10) - 1]?.uid;
       if (uid) {
         const i = _dungeonSel.indexOf(uid);
@@ -4261,8 +4271,16 @@
     // Accessibility: move keyboard/screen-reader focus INTO the dialog so it can
     // be tabbed through (it lives at the end of the DOM, far from the toggle).
     _bankOpener = anchor || null;
-    const first = el.querySelector('button:not([disabled]), [href], input, select, [tabindex]:not([tabindex="-1"])');
+    const first = el.querySelector('button:not([disabled]), [href], input, select, [tabindex]:not([tabindex="-1"])') || el;
+    // VoiceOver commonly IGNORES a focus() that fires synchronously inside its own
+    // activation (VO+Space), which is why Josh's first click seemed to do nothing and he
+    // had to click-away-and-back for it to "reappear" (2026-07-21, persistent). Focus once
+    // now for keyboard users, then AGAIN on the next frame — by then the doll has settled
+    // and VO honours the move, landing his cursor inside the bank on the FIRST activation.
+    // el itself is made focusable as a fallback so focus always lands somewhere inside.
+    try { el.tabIndex = -1; } catch (_) {}
     if (first) { try { first.focus(); } catch (_) {} }
+    setTimeout(() => { if (_bankDollOpen && el && !el.hidden) { try { (el.querySelector('button:not([disabled]), [href], input, select, [tabindex]:not([tabindex="-1"])') || el).focus(); } catch (_) {} } }, 60);
   }
   function closeBankDoll() {
     const el = $('#bankDoll'); if (el) el.hidden = true;

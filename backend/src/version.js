@@ -3,6 +3,22 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.74 2026-07-21 THE BONE DEVIL LEAVES THE TARGET PICKER FOR GOOD + entry list matches the hot
+//                     list (Josh, runs mellow-walnut / golden-biscuit / invisible-biscuit, 100%
+//                     confirmed: "Jason's bone devil is still appearing in the hot list… I meant to
+//                     attack an Elite Greenbrier, it shot at some flying thing that wasn't even my
+//                     list"). ROOT CAUSE: v3.37.64 filtered ally SUMMONS + darkness out of aliveE and
+//                     every spoken list, but the blind NUMBER-KEY picker (client.js) still rebuilt its
+//                     OWN unfiltered `alive`, so the number he PRESSED indexed a different list than
+//                     the one he HEARD — the devil kept a slot and shifted every foe's number. The
+//                     picker now reuses aliveE, so hear-number == press-number. Same unfiltered leak
+//                     fixed in the SIGHTED number-select and the enemy-grid layout count. ALSO: the
+//                     room-ENTRY readout now speaks the same deadliest-first NUMBERED list as F / the
+//                     hot list (was a grouped "5 sorceresses, 3 archers" tally whose numbers matched
+//                     nothing — "I can't use that information"). ALSO: loot-bank open now re-focuses
+//                     on the next frame — VoiceOver ignores a focus() fired inside its own activation,
+//                     which is why the bank needed the click-away-click-back dance to appear (best-
+//                     effort VO fix; awaiting Josh's confirmation).
 //  3.37.73 2026-07-20 RUNS OPEN ONE CR EASIER (Tobias: "lower starting-point difficulty by 1 CR… Josh
 //                     is playing high level characters and getting smacked around in the first 1 or 2
 //                     rooms; the game would be more fun if it started 1 CR lower, so your first round
@@ -1070,6 +1086,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.73';
+const VERSION = '3.37.74';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };
