@@ -228,6 +228,14 @@
     else if (kind === 'turn')  { make(now, 0.07, 880); make(now + 0.10, 0.07, 880); make(now + 0.20, 0.07, 880); }
     else if (kind === 'error') { make(now, 0.10, 220); make(now + 0.13, 0.10, 220); }
     else if (kind === 'ack')   make(now, 0.08, 1200);
+    // DISTINCT toggle tones (v3.37.77) — blind mode ON vs OFF must SOUND different, or
+    // Josh can't tell which state he's in (both used the same 'ack' blip, so on first
+    // login — when TTS voices haven't loaded and the "Blind support on" speech doesn't
+    // fire — the ambiguous blip made him over-press, toggling past ON: "I have to hit
+    // tilde 2 to 6 times for it to turn on and STAY ON"). 'blindon' RISES, 'blindoff'
+    // FALLS — an unmistakable by-ear confirmation that needs no working TTS.
+    else if (kind === 'blindon')  { make(now, 0.10, 500, 1000); make(now + 0.11, 0.12, 1000, 1400); }
+    else if (kind === 'blindoff') { make(now, 0.10, 1000, 500); make(now + 0.11, 0.12, 500, 300); }
     // 'clear' — a rising C-E-G chime: the ROOM IS CLEARED, the end-of-room report is
     // starting (Josh: he had no audible cue a room ended, so he'd press keys and cut
     // the report off). Distinct from 'turn' (three flat 880 pulses).
@@ -502,7 +510,7 @@
       // static list items are pure noise to a screen reader — Josh asked).
       // It stays a normal <details>, so it can be re-opened any time.
       try { document.querySelector('.help-panel__ranks')?.removeAttribute('open'); } catch (_) {}
-      earcon('ack');
+      earcon('blindon');   // rising tone — you're ON (audible even before TTS voices load)
       speak('Blind support on.', 'urgent');
       _maybeAnnounceBuild();   // once per page load: "Folken Poker 3.37.68." so he knows what code he's on
       // If a hand is in progress, narrate where things stand RIGHT
@@ -544,7 +552,7 @@
       try { TTS.cancel(); } catch (_) {}
       state.queue.length = 0;
       stopListening();
-      earcon('ack');
+      earcon('blindoff');   // falling tone — you're OFF (distinct from ON so the state is never ambiguous)
       try {
         const u = new SpeechSynthesisUtterance('Blind support off.');
         u.rate = state.rate; u.volume = state.volume; if (state.voice) u.voice = state.voice;
@@ -1561,7 +1569,14 @@
         // (incl. DOMINATED ones savaging their allies) did before his turn. 'event'
         // queues it AFTER those reports finish. Prompt + terse enemy list (name, HP,
         // flying) so he can numpad-target; no spell enumeration (he uses ?).
-        speak('Your turn. ' + _dunEnemyPhrase(st), 'event');
+        // INCAPACITATED? Say WHY the turn is lost. A Held/Paralyzed/Stunned/Asleep hero
+        // forfeits the turn (the re-save IS the action), but an ally often dispels it a
+        // beat later — so Josh would hit the turn bell, get skipped, then check D and see
+        // NOTHING wrong (it was just cleared), and think the turn "randomly skipped"
+        // (run cozy-otter: Gabriel Held by Hold Monster over and over, cleared fast).
+        const _incap = (me.conditions || []).map(c => String((c && c.label) || '').toLowerCase()).find(l => /held|paralyz|stunned|asleep/.test(l));
+        if (_incap) speak(`Your turn — but you are ${_incap} and lose it this round. It clears on its own or with a dispel.`, 'event');
+        else speak('Your turn. ' + _dunEnemyPhrase(st), 'event');
       } else if (st.status === 'exploring' && _dun.status === 'combat') {
         earcon('clear');   // audible "room cleared" cue so a blind player knows the end-of-room report is coming (Josh)
         // Only give the "open the next door / bail" prompt NOW if there's no loot to

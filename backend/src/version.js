@@ -3,6 +3,19 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.77 2026-07-21 BLIND-MODE FEEDBACK BATCH (Josh). (1) TILDE TOGGLE — blind mode ON and OFF now
+//                     make DISTINCT sounds (a rising tone vs a falling tone). Both used the same blip,
+//                     so on first login (before TTS voices load and the spoken "Blind support on"
+//                     fires) Josh couldn't tell which state he was in and over-pressed: "I have to hit
+//                     tilde 2 to 6 times for it to turn on and STAY ON." Now it's unmistakable by ear,
+//                     no working TTS required. (2) DISPEL only offers what it can actually strip — the
+//                     ally target list dropped grapple/stun/sickness (PHYSICAL, not spell effects), so
+//                     it no longer offers a grappled ally the server then refuses ("it says I can
+//                     strip grapple but won't let me"). (3) TURN CUE says WHY a turn is lost: a Held /
+//                     Paralyzed / Stunned / Asleep hero now hears "your turn — but you are held and
+//                     lose it" instead of a bare "your turn" then a silent skip. Run cozy-otter:
+//                     Gabriel was Hold-Monstered repeatedly and an ally dispelled it a beat later, so
+//                     his D readout showed clean and the skip looked random.
 //  3.37.76 2026-07-21 LOOT BANK STAYS PUT + CAVALIER CHALLENGE IS A SWIFT ACTION (Josh, detailed
 //                     loot-bank report + run mellow-missile). (1) LOOT BANK, three blind-mode fixes
 //                     off his precise VoiceOver walkthrough: the bank no longer auto-closes on an
@@ -1114,6 +1127,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.76';
+const VERSION = '3.37.77';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

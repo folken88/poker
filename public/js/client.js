@@ -2453,7 +2453,7 @@
           // FOE (strip a buff). Numbers pick; Return = smart auto. If the client
           // sees no candidate, let the server decide (it sees boss wards too) — it
           // auto-casts or refuses + speaks "nothing to dispel".
-          const CC = ['held', 'paralyzed', 'slowed', 'grappled', 'blinded', 'sickened', 'stunned'];
+          const CC = ['held', 'paralyzed', 'slowed', 'blinded'];   // v3.37.77: DISPEL-clearable only — grapple/stun/sickness are PHYSICAL, not spell effects, so the server refuses them (Josh: "it says I can strip grapple but won't let me")
           const allies = (d.party || []).filter(p => !p.left && !p.dead && (p.conditions || []).some(c => CC.includes(c.key)));
           const foes = aliveE.filter(e => (e.buffs || []).length);
           const targets = allies.map(p => ({ kind: 'ally', id: p.playerId, name: p.nickname }))
@@ -2868,7 +2868,7 @@
         }
         // Dispel Magic feature (e.g. druid) — pick an afflicted ally or enchanted foe.
         if (ab && ab.dispelPick) {
-          const CC = ['held', 'paralyzed', 'slowed', 'grappled', 'blinded', 'sickened', 'stunned'];
+          const CC = ['held', 'paralyzed', 'slowed', 'blinded'];   // v3.37.77: DISPEL-clearable only — grapple/stun/sickness are PHYSICAL, not spell effects, so the server refuses them (Josh: "it says I can strip grapple but won't let me")
           const allies = (d.party || []).filter(p => !p.left && !p.dead && (p.conditions || []).some(c => CC.includes(c.key)));
           const foes = alive.filter(e => (e.buffs || []).length);
           const targets = allies.map(p => ({ kind: 'ally', id: p.playerId, name: p.nickname }))
