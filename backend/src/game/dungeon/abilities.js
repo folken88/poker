@@ -595,7 +595,25 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (g.kind === 'fom') m._domFoMRounds = lvl;               // Liberation: level rounds/room, auto-fires
       else if (g.kind === 'healboost') m.domainHealBoost = true; // Healing: passive — cures & channels +1/die
       else if (g.kind === 'sunvuln') m.domainSunVuln = true;     // Sun: passive — bonus damage vs undead
-      else if (DOMAIN_POWERS[g.kind]) m._domPowers.push(DOMAIN_POWERS[g.kind]);
+      else if (DOMAIN_POWERS[g.kind]) {
+        // DOMAIN_POWERS is keyed by KIND (smite/reroll/…), so several domains share one
+        // template — Fire and War are both `smite`, Law and Luck are both `reroll`. Pushing
+        // the raw template meant Jason's Fire+Law showed on the pad as "Battle Rage" (War's
+        // name) and "Good Fortune" (Luck's name) — mechanically right, but named for the
+        // wrong domain (Josh, run cursed-musket: "his domain spells are Battle Rage/War and
+        // Good Fortune/Luck… they do not match those selected domains"). Re-label the
+        // template with the ACTUAL picked domain's name/icon/key so the pad matches the
+        // picker: Fire → "Fire Bolt", Law → "Touch of Law". A per-domain key also stops two
+        // same-kind domains from colliding in the uses ledger.
+        const _base = DOMAIN_POWERS[g.kind];
+        const _dom = DOMAINS[key] || {};
+        m._domPowers.push({ ..._base,
+          key: 'dom_' + key,
+          name: g.name || _base.name,
+          icon: _dom.icon || _base.icon,
+          desc: String(_base.desc || '').replace(/Domain \([^)]+\)/, `Domain (${_dom.name || key})`),
+        });
+      }
     }
   },
   // Per-room reset: refill the shared spell pool (full casters) + own-count

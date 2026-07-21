@@ -3,6 +3,20 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.75 2026-07-21 A STRAY ENTER NO LONGER ENDS YOUR RUN + domain powers named for the RIGHT domain
+//                     (Josh, runs brave-walnut / cursed-musket). (1) RUN-ENDING BUTTONS: casting Fly
+//                     on an ally, then pressing Enter for "best target", "just exited me out of the
+//                     dungeon" — VoiceOver's Return ACTIVATES whatever button holds its cursor, and
+//                     Leave / Bail / Cancel are one-click exits, so a stray Enter during a spoken
+//                     prompt nuked the run. In blind mode those three now need a SECOND click within
+//                     4s to confirm (first click just arms + warns); sighted play untouched. (2)
+//                     DOMAIN POWER NAMES: DOMAIN_POWERS is keyed by KIND, and Fire+War are both
+//                     'smite', Law+Luck both 'reroll' — so Jason's Fire+Law domains showed on the pad
+//                     as "Battle Rage" (War) and "Good Fortune" (Luck). Mechanically right, wrong
+//                     names. _domainSetup now re-labels each power with the PICKED domain's own
+//                     name/icon/key: Fire → "Fire Bolt", Law → "Touch of Law", matching the picker.
+//                     (Note for Josh: swapping to Liberation/Healing shows NO pad power because those
+//                     grants are passive/auto by design, not a bug.) domtest 87.
 //  3.37.74 2026-07-21 THE BONE DEVIL LEAVES THE TARGET PICKER FOR GOOD + entry list matches the hot
 //                     list (Josh, runs mellow-walnut / golden-biscuit / invisible-biscuit, 100%
 //                     confirmed: "Jason's bone devil is still appearing in the hot list… I meant to
@@ -1086,6 +1100,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.74';
+const VERSION = '3.37.75';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

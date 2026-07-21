@@ -870,6 +870,7 @@
   let _dunDmp = false;         // blind dungeon: domain menu open (V opens; 1-9 toggles, Tab cycles + Enter toggles, Escape closes)
   let _dunDmpIdx = -1;         // Tab cursor within the domain menu (the catalog outgrew the number row — 11 domains)
   let _dunProg = null;         // blind dungeon: class-progression reference open — the fetched { level, cls, next } (X opens; 1-9 speak later levels; Escape closes)
+  let _dactArm = { act: null, ts: 0 };   // blind-mode two-tap confirm for run-ending buttons (leave/bail/cancel) — guards a stray VoiceOver Enter from nuking the run (Josh, brave-walnut)
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
   let _dunDispelPick = null;   // blind dungeon: Dispel Magic awaiting a target — {slot,label,targets:[{kind:'ally'|'foe',id,name}]} (numbers pick, Return = smart auto)
   let _dunModePick = null;     // blind dungeon: Channel awaiting a mode — {slot,label} (1 = heal/defensive, 2 = sear/offensive, Return = auto)
@@ -1910,6 +1911,22 @@
     if (ev.target.closest('[data-dmp-toggle]')) { _dmpOpen = !_dmpOpen; if (_dmpOpen && !_dmpModel) dmpickSend(); _sbpKeepScroll(renderDungeon); return; }
     const b = ev.target.closest('[data-dact]'); if (!b || b.disabled) return;
     const act = b.dataset.dact;
+    // RUN-ENDING BUTTONS need a two-tap confirm IN BLIND MODE (Josh, run brave-walnut:
+    // pressing Enter at an ally-pick prompt "just exited me out of the dungeon"). Cause:
+    // VoiceOver's Return activates whatever button holds its cursor, and Leave / Bail /
+    // Cancel are one-click exits — so a stray Enter during a spoken prompt nukes the run.
+    // First click just ARMS + warns; a second click on the SAME action within 4s executes.
+    // Sighted play is untouched (guard only when blind mode is on).
+    const DESTRUCTIVE = { leave: 'leave the dungeon', bail: 'bail out with your share', cancel: 'cancel the whole run for everyone' };
+    if (DESTRUCTIVE[act] && window.BlindMode?.isOn?.()) {
+      const now = Date.now();
+      if (!(_dactArm.act === act && (now - _dactArm.ts) < 4000)) {
+        _dactArm = { act, ts: now };
+        try { window.BlindMode.speak(`Hold on — press again to confirm: ${DESTRUCTIVE[act]}.`, 'urgent'); } catch (_) {}
+        return;
+      }
+      _dactArm = { act: null, ts: 0 };   // confirmed — fall through and execute
+    }
     if (act === 'attack')       dungeonAction('attack', { targetUid: _dungeonSel[0] });
     else if (act === 'attackmelee')  dungeonAction('attack', { targetUid: _dungeonSel[0], mode: 'melee' });
     else if (act === 'attackranged') dungeonAction('attack', { targetUid: _dungeonSel[0], mode: 'ranged' });
