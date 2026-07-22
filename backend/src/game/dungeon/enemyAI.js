@@ -160,6 +160,10 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         // slips every hold, so the chain would land damage but never grab.
         const hookable = this._targetableParty().filter(p => !this._freedomOfMovement(p));
         const weakest = (hookable.length ? hookable : this._targetableParty()).slice().sort((a, b) => a.hp - b.hp)[0];
+        if (weakest && this._concealed(e, weakest)) {   // can't hook what it can't see — the chain finds air (nimble-gecko)
+          this._note(`⛓️ ${e.glyph} ${e.name} hurls its chain where it THINKS ${weakest.nickname} is — the hook whips through empty air. [total concealment]`, null, { side: 'enemy' });
+          this._echoToTable(); this._broadcast(); return;
+        }
         if (weakest) return this._enemyHook(e, weakest);
       }
     }
@@ -233,6 +237,14 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         this._enemyFightDefensively(e);
         if (target.grappled && target.grappledBy === e.uid) {
           this._enemyMelee(e, target);   // already holding them — crush instead of re-grabbing
+        } else if (this._concealed(e, target)) {
+          // TOTAL CONCEALMENT (PF1) — an INVISIBLE hero this foe can't see foils half its
+          // strikes: it lashes at where it guesses the hero is. Verified needed in run
+          // nimble-gecko — Gearsman Scrapers were grabbing GREATER-INVISIBLE heroes on
+          // straight rolls with NO miss chance. (An ALREADY-grappled hero is exempt above:
+          // contact beats concealment.) Covers grapple/trip/bull-rush/melee in one place.
+          this._note(`${e.glyph} ${e.name} lunges where it THINKS ${target.nickname} is — the unseen hero isn't there. [total concealment]`, null, { side: 'enemy' });
+          e._lastAtkTarget = target.playerId; this._echoToTable(); this._broadcast();
         } else {
           const mode = (e.slowed > 0) ? 'attack' : this._pickEnemyManeuver(e, target);
           if (mode === 'grapple')       this._enemyGrapple(e, target);
@@ -276,6 +288,17 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     }
   },
   // One enemy swing at a chosen target (handles the paralysis rider + signature sound).
+  // TOTAL CONCEALMENT (PF1, v3.37.78). An INVISIBLE hero a foe CAN'T see (no true-seeing /
+  // blindsense / see-invisibility) foils half its attacks — a 50% miss, lashing where it
+  // last guessed. This is what makes (mass) Invisibility actually protect the party: before
+  // this, enemies rolled straight vs AC against greater-invisible heroes (run nimble-gecko:
+  // Scrapers grappled J'Mal/Draymus on `d20 +21 vs AC 37`, no miss). A foe already GRAPPLING
+  // the hero is in contact and ignores concealment (handled at the call sites).
+  _concealed(e, target) {
+    if (!target || !(target.invisible || target.greaterInvis)) return false;
+    if (e.trueSeeing || e.blindsense || e.seeInvis) return false;
+    return dRoll(2) === 1;   // 50%
+  },
   _enemyMelee(e, target) {
     // A foe that MOVES to engage provokes: reach heroes get an AoO before it strikes (see above).
     if (target && e._lastMeleeTargetId !== target.playerId) { e._lastMeleeTargetId = target.playerId; this._provokeReachAoO(e); if (e.hp <= 0) return; }
@@ -789,6 +812,12 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   },
   // Lich Magic Missile — N unerring bolts (no save, no attack roll), 1d4+1 each.
   _enemyMissiles(e, target, n) {
+    // PF1: you must SEE a target to Magic Missile it — an invisible hero can't be picked
+    // out, so half the volleys streak into empty air (total concealment, v3.37.78).
+    if (this._concealed(e, target)) {
+      this._note(`✨ ${e.glyph} ${e.name}'s Magic Missiles streak toward where it THINKS ${target.nickname} is — and find nothing. [total concealment]`, '/audio/spell_magicmissile.mp3', { side: 'enemy' });
+      this._echoToTable('/audio/spell_magicmissile.mp3'); this._broadcast(); return;
+    }
     // PF1: SR applies even to Magic Missile's unerring bolts.
     if (this._srBlocksHero(e, target, 'the missiles')) { this._echoToTable(); this._broadcast(); return; }
     // PF1: the SHIELD spell stops Magic Missile COLD — no save, no damage. The HERO

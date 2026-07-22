@@ -3,6 +3,21 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.78 2026-07-22 THE TWO BUGS I ACTUALLY MISSED, now read from the logs Josh gave me. (1) TILDE
+//                     DOUBLE-FIRE — the real "won't stay on" bug (not the v3.37.77 earcon cosmetic).
+//                     VoiceOver double-dispatches a keypress and toggle() had no re-entry guard, so
+//                     one press flipped ON then OFF. Added a 350 ms debounce → one physical press =
+//                     one net flip. (2) INVISIBILITY DID NOTHING vs melee/grapple — run nimble-gecko
+//                     PROVES it: Gearsman Scrapers grappled GREATER-INVISIBLE J'Mal/Draymus on
+//                     straight rolls (`d20 +21 vs AC 37`), zero concealment miss. PF1: attacking a
+//                     totally-concealed (invisible) target is a 50% miss unless you can see the
+//                     unseen. New `_concealed(e, target)` gates enemy melee, grapple/trip/bull-rush,
+//                     the chain HOOK, and Magic Missiles — 50% whiff vs an invisible hero (foes with
+//                     true-seeing / blindsense / see-invisibility still connect; a foe already
+//                     GRAPPLING the hero keeps crushing — contact beats concealment). Mass invisibility
+//                     now actually halves incoming hits. domtest 89. (NOTE to self: I lectured Josh on
+//                     regular-vs-greater invis instead of grepping the run he named — he was right and
+//                     I was wrong. Read the log first, always.)
 //  3.37.77 2026-07-21 BLIND-MODE FEEDBACK BATCH (Josh). (1) TILDE TOGGLE — blind mode ON and OFF now
 //                     make DISTINCT sounds (a rising tone vs a falling tone). Both used the same blip,
 //                     so on first login (before TTS voices load and the spoken "Blind support on"
@@ -1127,6 +1142,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.77';
+const VERSION = '3.37.78';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

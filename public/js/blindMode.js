@@ -496,11 +496,20 @@
   function nudgeVolume(delta) { setVolume(state.volume + delta); }
 
   // ---------- Mode toggle ----------
+  let _lastToggle = 0;
   function toggle() {
     if (!supportsTTS) {
       state.deps?.toast?.('Speech synthesis unavailable in this browser.', true);
       return;
     }
+    // DEBOUNCE the toggle (v3.37.78) — THE actual "tilde won't stay on" bug. VoiceOver on
+    // macOS routinely dispatches a single keypress TWICE, and there was no re-entry guard,
+    // so one press flipped state ON then immediately OFF ("blind support on… off"), and
+    // Josh had to mash it an odd number of times to land on ON. Swallow any second call
+    // within 350 ms so one physical press = one net flip, however many events the OS sends.
+    const _now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if (_now - _lastToggle < 350) return;
+    _lastToggle = _now;
     state.on = !state.on;
     blog('toggle ->', state.on ? 'ON' : 'OFF');
     try { sessionStorage.setItem('blindMode', state.on ? '1' : '0'); } catch (_) {}
