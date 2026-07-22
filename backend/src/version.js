@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.80 2026-07-22 PITCH JITTER = WEAPON ATTACKS ONLY (Tobias: "don't alter the pitch of spell
+//                     noises, they are distinct enough. just weapon attacks."). The ±10% speed+pitch
+//                     jitter from .79 was hitting EVERY clip, including spell casts — which are one-offs
+//                     and already distinct, so shifting their pitch only muddied them. Now gated behind
+//                     _JITTER_SND (client playDungeonSound): only the WEAPON-IMPACT pools that REPEAT
+//                     blow-after-blow jitter (sword/flesh/whiff hits + the archetype beast/undead/
+//                     construct pools). Spells, guns, and named signature sounds play at true pitch.
 //  3.37.79 2026-07-22 FOES SOUND DIFFERENT NOW — combat SFX diversity + normalization (Tobias, for
 //                     Josh's aural observability). Before, ~86% of the 380 monsters had NO distinct
 //                     attack sound and fell back to ONE generic flesh-thunk, so a Medusa Sorceress,
@@ -1156,6 +1163,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.79';
+const VERSION = '3.37.80';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

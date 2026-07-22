@@ -928,17 +928,27 @@
     '/audio/spell_hellfire.mp3': 0.85, '/audio/wolf_bite_big.mp3': 0.9,
     '/audio/bone_slam.mp3': 1.15, '/audio/metal_clank.mp3': 1.2,   // quieter clips — lift them
   };
+  // ±10% pitch/speed jitter applies ONLY to WEAPON-IMPACT clips (v3.37.80, Tobias:
+  // "don't alter the pitch of spell noises, they are distinct enough. just weapon
+  // attacks."). These are the archetype hit pools + generic melee whiff/flesh that
+  // REPEAT blow after blow, so a stream of hits reads as many blows, not one clip on
+  // a loop. Spells are one-offs and already distinct — they play at true pitch. Named
+  // signature/gun sounds also pass through unaltered.
+  const _JITTER_SND = /\/audio\/(sword_hit|sword_slash|sword_slice|sword_smack|fight_flesh|fight_whiff|whiff_dagger|wolf_bite|bear_growl_hit|bone_slam|zombie_growl|metal_clank|enemy_caimon_bite|mjolnir_short_hitd)/;
   function playDungeonSound(url, vol) {
     if (!url || !combatSoundEnabled(url)) return;   // honors the combat-sound toggles
     try {
       const a = new Audio(url);
       const v = Math.max(0, Math.min(1, vol * (_SFX_GAIN[url] || 1)));
       a.volume = v;
-      // ±10% speed+pitch jitter (Tobias) — even the SAME clip sounds a little different
-      // every time, so a stream of hits in a big fight reads as many blows, not a loop.
-      // preservesPitch=false makes playbackRate shift PITCH too (default keeps pitch fixed).
-      try { a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; } catch (_) {}
-      a.playbackRate = 0.9 + Math.random() * 0.2;
+      // ±10% speed+pitch jitter (Tobias) — WEAPON impacts only (see _JITTER_SND). Even
+      // the SAME clip sounds a little different every time, so a stream of hits in a big
+      // fight reads as many blows, not a loop. preservesPitch=false makes playbackRate
+      // shift PITCH too (default keeps pitch fixed). Spells keep their true pitch.
+      if (_JITTER_SND.test(url)) {
+        try { a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; } catch (_) {}
+        a.playbackRate = 0.9 + Math.random() * 0.2;
+      }
       a.play().catch(() => {});
       // Long clips (the music-flavored spell sounds — ABBA's Haste, the Hetfield
       // bolt, ghosts n stuff…) start FADING at 4s and are silent by 5s. Short
