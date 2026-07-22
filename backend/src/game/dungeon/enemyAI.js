@@ -36,12 +36,23 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
     if (!hit) return { hit: false, roll, toHit, total, ac: targetAC, sound: pick(SND.whiffSword) };
+    // (hit sound chosen by foe archetype below, via _foeHitSound)
     // GLORIOUS CHALLENGE (Order of the Flame): +2 melee damage per CONSECUTIVE glorious
     // challenge this room — a kill-streak morale bonus that compounds (see _enemyMelee).
     const glory = e.gloriousChallenge ? 2 * (e.gloriousN || 0) : 0;
     let dmg = e.dmgBonus - sick - pray + glory;
     for (let i = 0; i < (e.dmgCount || 1); i++) dmg += dRoll(e.dmgDie);   // e.g. golem slam = 2d10+9
-    return { hit: true, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: pick(SND.flesh) };
+    return { hit: true, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: this._foeHitSound(e) };
+  },
+  // The connecting-blow sound for a foe with NO explicit atkSound — chosen by ARCHETYPE
+  // (v3.37.79) so a blind player can tell foe TYPES apart in a crowded room. A foe with
+  // its own atkSound/atkSounds still overrides this at the call site (_enemyMelee).
+  _foeHitSound(e) {
+    const t = (e && e.type) || 'humanoid';
+    if (t === 'undead')    return pick(SND.hitUndead);
+    if (t === 'construct') return pick(SND.hitConstruct);
+    if (t === 'animal' || t === 'magical beast' || t === 'vermin' || t === 'dragon' || t === 'ooze' || e.natural) return pick(SND.hitBeast);
+    return pick(SND.hitBlade);   // humanoids / outsiders / fey / default — weapon impacts
   },
   _enemyAct(e) {
     e.flatFooted = false;   // acting ends flat-footed

@@ -917,12 +917,28 @@
   let _dunLootClaiming = 0;    // blind dungeon: timestamp throttle so won loot is auto-claimed without spamming
   let _spectating = false;     // watching the dungeon (not a combatant) — heckle-only
 
+  // Per-clip loudness trim (v3.37.79) — some source clips are baked much hotter than
+  // others (the Tarkov gun samples especially), so they'd bury the quieter hits and the
+  // narration. A light normalization pass: scale the flat combat volume per clip. Tune by
+  // ear; anything not listed plays at 1.0. (Josh: "some SFX get lost in the shuffle.")
+  const _SFX_GAIN = {
+    '/audio/tarkov_mp153_shotgun.mp3': 0.6, '/audio/tarkov_revolver_357_shot.mp3': 0.68,
+    '/audio/tarkov_sr25_silenced_3shot_burst.mp3': 0.7, '/audio/rovadra_dragonrifle.mp3': 0.7,
+    '/audio/rifle_sv98.mp3': 0.72, '/audio/rifle_longue_carabine.mp3': 0.8,
+    '/audio/spell_hellfire.mp3': 0.85, '/audio/wolf_bite_big.mp3': 0.9,
+    '/audio/bone_slam.mp3': 1.15, '/audio/metal_clank.mp3': 1.2,   // quieter clips — lift them
+  };
   function playDungeonSound(url, vol) {
     if (!url || !combatSoundEnabled(url)) return;   // honors the combat-sound toggles
     try {
       const a = new Audio(url);
-      const v = Math.max(0, Math.min(1, vol));
+      const v = Math.max(0, Math.min(1, vol * (_SFX_GAIN[url] || 1)));
       a.volume = v;
+      // ±10% speed+pitch jitter (Tobias) — even the SAME clip sounds a little different
+      // every time, so a stream of hits in a big fight reads as many blows, not a loop.
+      // preservesPitch=false makes playbackRate shift PITCH too (default keeps pitch fixed).
+      try { a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; } catch (_) {}
+      a.playbackRate = 0.9 + Math.random() * 0.2;
       a.play().catch(() => {});
       // Long clips (the music-flavored spell sounds — ABBA's Haste, the Hetfield
       // bolt, ghosts n stuff…) start FADING at 4s and are silent by 5s. Short

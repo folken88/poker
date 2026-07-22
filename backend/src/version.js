@@ -3,6 +3,20 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.79 2026-07-22 FOES SOUND DIFFERENT NOW — combat SFX diversity + normalization (Tobias, for
+//                     Josh's aural observability). Before, ~86% of the 380 monsters had NO distinct
+//                     attack sound and fell back to ONE generic flesh-thunk, so a Medusa Sorceress,
+//                     Archer, and Swashbuckler in one room were indistinguishable by ear. Three parts:
+//                     (1) 14 more clips pulled from the foundry-media library into /audio (crunchy
+//                     sword variants, wolf/bear bites, bone slam, zombie growl, metal clank). (2)
+//                     ARCHETYPE HIT POOLS in combat.js + enemyAI `_foeHitSound(e)` — a foe with no
+//                     explicit sound now hits with a pool chosen by e.type: undead = dry bone/moan,
+//                     construct = metal & current, beast/dragon = teeth & claws, humanoid = varied
+//                     weapon impacts. (3) ±10% SPEED+PITCH JITTER per clip (client playDungeonSound,
+//                     preservesPitch=false) so even the same clip varies each time — a stream of hits
+//                     reads as many blows, not a loop. Plus a per-clip GAIN table trimming the baked-
+//                     hot Tarkov gun samples and lifting the quiet ones ("some SFX get lost in the
+//                     shuffle"). domtest 90 pins the pools + that every referenced clip exists on disk.
 //  3.37.78 2026-07-22 THE TWO BUGS I ACTUALLY MISSED, now read from the logs Josh gave me. (1) TILDE
 //                     DOUBLE-FIRE — the real "won't stay on" bug (not the v3.37.77 earcon cosmetic).
 //                     VoiceOver double-dispatches a keypress and toggle() had no re-entry guard, so
@@ -1142,6 +1156,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.78';
+const VERSION = '3.37.79';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

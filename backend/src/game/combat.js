@@ -36,6 +36,14 @@ const SND = {
   // -flaming", "smack-anime" and "smack-holy" clips (old 14/15/16/20/22) were
   // pulled — those are the vocal "yell"-type sounds.
   flesh: ['/audio/fight_flesh_1.mp3', '/audio/fight_flesh_2.mp3', '/audio/fight_flesh_3.mp3', '/audio/fight_flesh_4.mp3', '/audio/fight_flesh_5.mp3', '/audio/fight_flesh_6.mp3', '/audio/fight_flesh_7.mp3', '/audio/fight_flesh_8.mp3', '/audio/fight_flesh_9.mp3', '/audio/fight_flesh_10.mp3', '/audio/fight_flesh_11.mp3', '/audio/fight_flesh_12.mp3', '/audio/fight_flesh_13.mp3', '/audio/fight_flesh_17.mp3', '/audio/fight_flesh_18.mp3', '/audio/fight_flesh_19.mp3', '/audio/fight_flesh_21.mp3', '/audio/fight_flesh_23.mp3'],
+  // ARCHETYPE HIT POOLS (v3.37.79) — so a blind player can tell foe TYPES apart by ear
+  // in a crowded room (Josh: a Medusa Sorceress, Archer, and Swashbuckler all sounded the
+  // same generic thunk). enemyAI._foeHitSound picks the pool by e.type; the client also
+  // jitters playbackRate ±10% so even the same clip sounds a little different each time.
+  hitBlade:     ['/audio/sword_hit_meaty1.mp3', '/audio/sword_hit_meaty3.mp3', '/audio/sword_hit_meaty4.mp3', '/audio/sword_hit_meaty5.mp3', '/audio/sword_hit_meaty6.mp3', '/audio/sword_slash_crunch1.mp3', '/audio/sword_slice_bloody1.mp3', '/audio/sword_hit_clunk1.mp3', '/audio/sword_smack_big.mp3'],   // humanoids & default — crunchy WEAPON impacts
+  hitBeast:     ['/audio/wolf_bite.mp3', '/audio/wolf_bite_big.mp3', '/audio/bear_growl_hit.mp3', '/audio/enemy_caimon_bite.mp3'],   // animals / magical beasts / dragons / vermin — teeth & claws
+  hitUndead:    ['/audio/bone_slam.mp3', '/audio/zombie_growl.mp3'],   // skeletons / zombies / ghouls — dry bone & moan
+  hitConstruct: ['/audio/metal_clank.mp3', '/audio/mjolnir_short_hitd.mp3', '/audio/spell_shock.mp3'],   // golems / gearsmen — metal & current
   fumble: '/audio/fight_fumble.mp3', // natural 1 — Roblox "oof" death sound
   // Lightning Bolt — a pool of thunderclaps / zaps / charge-ups so the
   // spell doesn't sound the same every cast. One is picked at random.
