@@ -3,6 +3,27 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.81 2026-07-23 THE LUCKY-PUFFIN / PROUD-WAFFLE / SHIELDED-LANTERN BATCH — every item read from
+//                     Josh's named run logs first. (1) DOMAIN PASSIVES VISIBLE: switching Jason to
+//                     Liberation+Healing made his domains "disappear completely" — those domains grant
+//                     PASSIVES with no pad button. Passive domains now push a free dominfo pad entry
+//                     (speaks live status, freeAction), and a domain CHANGE is announced when it lands
+//                     at the next door. (2) FREEDOM OF MOVEMENT is now a real castable spell (cleric
+//                     prepared L7, inquisitor spontaneous L10; theurge inherits): caster-level pool of
+//                     shrugged grapples/hooks/holds via the same _fomSpend as Liberation; casting on a
+//                     grappled ally frees them instantly; fades between rooms. (3) ERINYES VS SUMMONS:
+//                     the enemy-vs-summon path said "smashes/swings" even for archers while the bow
+//                     sound played (proud-waffle) — verb now follows e.ranged (shoots / shot flies
+//                     wide), and "your undead X" → "your X" (devil summons exist). (4) HELD-FLYER
+//                     GRAPPLE EXPLAINED: a grounded ogre grappling flying Reese was the held-flyer
+//                     grounding rule working — the grapple line now says "held rigid mid-air, they
+//                     hang in easy reach". (5) DISPEL NAMES WHAT REMAINS: "clears paralysis (but they
+//                     are STILL stunned — that's physical, beyond dispel)" — no more cleared-then-
+//                     skipped mystery. (6) CHALLENGED chip on enemy conditions: hot-list + picker now
+//                     speak "challenged" so a cavalier knows their sworn foe still stands
+//                     (shielded-lantern). (7) MAGUS LEVEL-UPS say "new IMBUED SHOTS on your action
+//                     pad" instead of "spells" — Reese's L16 "spells" sent Josh hunting for a
+//                     spellbook a magus doesn't have.
 //  3.37.80 2026-07-22 PITCH JITTER = WEAPON ATTACKS ONLY (Tobias: "don't alter the pitch of spell
 //                     noises, they are distinct enough. just weapon attacks."). The ±10% speed+pitch
 //                     jitter from .79 was hitting EVERY clip, including spell casts — which are one-offs
@@ -1163,6 +1184,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.80';
+const VERSION = '3.37.81';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

@@ -223,8 +223,14 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
           if (target.hp <= 0) break;
           const r = this._monsterSwing(e, this._enemyAC(target));
           if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds); else if (e.atkSound && (r.hit || e.ranged)) r.sound = e.atkSound;   // ranged foes fire their bow/gun sound on a MISS too (a missed shot isn't a sword clang — Josh)
-          if (r.hit) { this._dmgE(target, r.damage); this._note(`${e.glyph} ${e.name} smashes your undead ${target.name} for ${r.damage}!${target.hp <= 0 ? ' ☠️ Destroyed!' : ''}`, r.sound, { side: 'enemy' }); }
-          else this._note(`${e.glyph} ${e.name} swings at your undead ${target.name} — and misses.`, r.sound, { side: 'enemy' });
+          // RANGED foes SHOOT summons too (v3.37.81 — Josh, run proud-waffle: "Elite
+          // arinyees are smashing folks… they are archers are they not? and its making
+          // a bow sound"). The hero-target path already said "shoots"; this summon
+          // path always said smashes/swings, so an Erinyes volleying the party's
+          // Ghoul Crusader read as a melee brawl over a bow twang. Verb now matches
+          // the weapon — and "your undead X" is just "your X" (devil summons exist).
+          if (r.hit) { this._dmgE(target, r.damage); this._note(`${e.glyph} ${e.name} ${e.ranged ? 'shoots' : 'smashes'} your ${target.name} for ${r.damage}!${target.hp <= 0 ? ' ☠️ Destroyed!' : ''}`, r.sound, { side: 'enemy' }); }
+          else this._note(e.ranged ? `${e.glyph} ${e.name}'s shot flies wide of your ${target.name}.` : `${e.glyph} ${e.name} swings at your ${target.name} — and misses.`, r.sound, { side: 'enemy' });
         }
         e._lastAtkTarget = tgtId;
         this._echoToTable();
@@ -460,11 +466,19 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   // spends one round via _fomSpend; at 0 the grapple/hold lands normally.
   // Inquisitors DEFAULT to Liberation (db.getDomains), so Tim's "never grapple me
   // again" behavior persists — now with the real PF1 limit.
-  _freedomOfMovement(m) { return !!m && (m._domFoMRounds || 0) > 0; },
+  // Two pools, one shield: the Liberation DOMAIN's auto pool (_domFoMRounds, refills
+  // each room) and the CAST Freedom of Movement spell (_fomCastRounds, v3.37.81 —
+  // now on the cleric/inquisitor lists). Domain rounds spend first (they're free).
+  _freedomOfMovement(m) { return !!m && ((m._domFoMRounds || 0) > 0 || (m._fomCastRounds || 0) > 0); },
   _fomSpend(m, what) {
     if (!this._freedomOfMovement(m)) return false;
-    m._domFoMRounds -= 1;
-    this._note(`🕊️ LIBERATION — ${m.nickname} shrugs off ${what} (${m._domFoMRounds} round${m._domFoMRounds === 1 ? '' : 's'} of freedom left).`);
+    if ((m._domFoMRounds || 0) > 0) {
+      m._domFoMRounds -= 1;
+      this._note(`🕊️ LIBERATION — ${m.nickname} shrugs off ${what} (${m._domFoMRounds} round${m._domFoMRounds === 1 ? '' : 's'} of freedom left).`);
+    } else {
+      m._fomCastRounds -= 1;
+      this._note(`🕊️ FREEDOM OF MOVEMENT — ${m.nickname} slips ${what} like water (${m._fomCastRounds} left).`);
+    }
     return true;
   },
   _enemyGrapple(e, target) {
@@ -474,7 +488,12 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const cmb = this._enemyMnvCMB(e), cmd = this._heroCMD(target);
     if (cmb < cmd) { this._note(`🤼 ${e.glyph} ${e.name} lunges to grab ${target.nickname}, who twists away. [CMB ${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword), { side: 'enemy' }); this._echoToTable(); return; }
     target.grappled = true; target.grappledBy = e.uid; target.grappleRounds = 2; target.grappledCL = this._enemyCL(e); target.grappleCMB = e.toHit || 0;   // stamp CMB for the cast-while-grappled concentration DC
-    this._note(`🤼 ${e.glyph} ${e.name} GRAPPLES ${target.nickname} — seized! −2 to hit and easier to strike until they break free. [CMB ${cmb} vs CMD ${cmd}]`, null, { side: 'enemy' });
+    // SAY WHY a grounded foe could grab a FLYER (v3.37.81 — Josh, run proud-waffle:
+    // "got grappled by a skeletal ogre somehow even though I'm flying as Reese").
+    // The mechanic was right — a HELD/grappled flyer hangs helpless in reach (the
+    // `grounded` rule) — but the narration never explained it, so it read as a bug.
+    const _aerial = (target.flying && target.paralyzed > 0) ? ' Held rigid mid-air, they hang in easy reach —' : '';
+    this._note(`🤼 ${e.glyph} ${e.name} GRAPPLES ${target.nickname} —${_aerial} seized! −2 to hit and easier to strike until they break free. [CMB ${cmb} vs CMD ${cmd}]`, null, { side: 'enemy' });
     this._broadcast();
     this._enemyMelee(e, target);   // the crushing squeeze comes with the grab
   },

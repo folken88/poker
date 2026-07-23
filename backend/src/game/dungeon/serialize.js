@@ -207,7 +207,13 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         dominated: (e.dominated > 0),   // Phase B: the client renders a dominated foe's card IN THE HERO ROW
         summoned: !!e.summoned,         // a friendly SUMMONED undead (Draymus) — client renders it in the party row, not targetable
         summonExpiry: e.summoned ? (e.summonExpiry || 0) : undefined,
-        conditions: e.hp > 0 ? this._condList(e) : [],
+        // CHALLENGED rides the condition strip (v3.37.81 — Josh, run shielded-lantern:
+        // playing Freya he "was rarely sure if the foe i had challenged was still up").
+        // The mark lives on the HERO (challengedId), so surface it here — the numpad
+        // hot-list and target picker read e.conditions and speak it automatically.
+        conditions: e.hp > 0 ? this._condList(e).concat(
+          this.party.some(p => !p.left && !p.dead && p.hp > 0 && p.challengedId === e.uid)
+            ? [{ key: 'challenged', label: 'Challenged', desc: 'a cavalier has sworn to cut this foe down (+level damage from their every blow this room)', icon: '/dungeon/conditions/markedevil.webp' }] : []) : [],
         buffs: e.hp > 0 ? this._enemyBuffList(e) : [],
       })),
       turn: this._currentTurn(),

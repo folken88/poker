@@ -1399,7 +1399,12 @@ class Dungeon {
     const s0 = slotsFor(cls, from, m.castingMod) || {}, s1 = slotsFor(cls, to, m.castingMod) || {};
     const newSlot = Object.keys(s1).filter(L => !s0[L]).map(L => `${L}${({ 1: 'st', 2: 'nd', 3: 'rd' })[L] || 'th'}-level`);
     if (newSlot.length) parts.push(`new ${newSlot.join(' & ')} spell slots`);
-    if (spells.length) parts.push(`spells: ${spells.slice(0, 4).join(', ')}`);
+    // NAME the gains the way the PAD names them (v3.37.81 — Josh, run proud-waffle:
+    // L16 announced "spells: Disintegrate, Chain Lightning…" so he hunted for a
+    // spellbook button that doesn't exist for a magus. A magus's casting IS the
+    // Imbued Shot / Spell Strike entries on the action pad — say so.)
+    const _spellWord = cls === 'magus' ? (this._isRanged(m) ? 'new IMBUED SHOTS on your action pad' : 'new SPELL STRIKES on your action pad') : 'spells';
+    if (spells.length) parts.push(`${_spellWord}: ${spells.slice(0, 4).join(', ')}`);
     return parts;
   }
   // Announce a level-up with a short summary of what the hero gained.

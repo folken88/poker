@@ -208,6 +208,7 @@ const SPELL = {
   // ── 4th-level ──
   blacktentacles: { key: 'blacktentacles', name: 'Black Tentacles', icon: '🦑', effect: 'blacktentacles', target: 'aoe', slvl: 4, sound: '/audio/kraken_crush.mp3', desc: 'Writhing tentacles erupt across the room — EACH ROUND they grapple a random 1d4+1 foes (CMB vs CMD); the grappled are helpless until they tear free. Lasts the room.' },
   infernalhealgreater: { key: 'infernalhealgreater', name: 'Infernal Healing, Greater', icon: '🩸', effect: 'infernalheal', target: 'ally', heal: 4, sticky: true, slvl: 4, sound: S.cure, desc: 'Diabolic ichor knits the ally with the LEAST HP (or the caster, if everyone is at full health) — fast healing 4 (heals 4 HP at the start of each of their turns) for the rest of the room.' },
+  freedommove:   { key: 'freedommove',   name: 'Freedom of Movement', icon: '🕊️', effect: 'freedommove', target: 'ally', slvl: 4, sticky: true, sound: S.invoke, desc: 'Nothing can bind the target: grapples, chain-hooks and holds simply slip off — one impediment shrugged per round of freedom (caster-level rounds this room). Casting it on a grappled ally frees them at once. THE counter to grapple rooms (the Gearsman Scrapers).' },
   invisgreater:  { key: 'invisgreater',  name: 'Invisibility, Greater', icon: '🫥', img: '/dungeon/buffs/invisible.webp', effect: 'invisible', greater: true, target: 'ally', slvl: 4, sound: S.invis, desc: 'Total concealment for the whole fight — you STAY invisible even when you attack. Cast it on a rogue ally and they Sneak Attack every foe that cannot see them.' },
   riverofwind:   { key: 'riverofwind',   name: 'River of Wind',  icon: '🌬️', effect: 'grease', target: 'aoe', randN: 3, randDie: 4, save: 'fort', slvl: 4, sound: S.gust, desc: 'A roaring torrent of air bowls over a RANDOM 3d4 foes — Fortitude save or be knocked prone.' },
   // ── 5th-level ──
@@ -941,6 +942,13 @@ _injectKitSpell('inquisitor', spontaneousSpell(SPELL.seeinvisibility, 4));
 _injectKitSpell('bard',       spontaneousSpell(SPELL.seeinvisibility, 7));
 _injectKitSpell('cleric',     preparedSpell(SPELL.invisibilitypurge, 5));
 _injectKitSpell('inquisitor', spontaneousSpell(SPELL.invisibilitypurge, 7));
+// Freedom of Movement (4th-level divine) — Josh 2026-07-22, run lucky-puffin: "I don't
+// even think I've seen freedom of movement anywhere on spell lists." He was right — it
+// existed only as the Liberation domain's auto pool. Now castable: cleric (prepared,
+// 4th-level prayers at L7) + inquisitor (spontaneous, 4th-level at L10). The theurge
+// inherits the cleric list automatically.
+_injectKitSpell('cleric',     preparedSpell(SPELL.freedommove, 7));
+_injectKitSpell('inquisitor', spontaneousSpell(SPELL.freedommove, 10));
 
 // ── FLY IS A TOUCH SPELL — kit-copy normalization (2026-07-16) ─────────────────────
 // v3.37.55 fixed SPELL.fly to target:'ally' (castable on allies, canHitFlyers), but the
