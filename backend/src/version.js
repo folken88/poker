@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.82 2026-07-23 STABILIZATION S1a (plan: docs/project/STABILIZATION-PLAN.md, Tobias: "stabilize
+//                     & optimize, go for it"). New _foeSwing/_foeMissText CHOKEPOINT in enemyAI: THE
+//                     one place an enemy attack roll gets its sound (pool > single+ranged-miss rule >
+//                     archetype) and its ranged/melee verbs — previously copy-pasted at the enemy-vs-
+//                     hero and enemy-vs-summon sites, which is exactly how they drifted (the Erinyes
+//                     "smashes your Ghoul while a bow twangs" bug class). Both generic sites rewired;
+//                     hook/spellstrike (bespoke flavor) and the Dungeon.js dominated/party-summon
+//                     blocks are S1b/S1c. One deliberate narration change: summon melee miss
+//                     "swings at your X — and misses" → "misses your X" (unified, terser). domtest 93
+//                     ratchets the chokepoint so the duplication can't come back.
 //  3.37.81 2026-07-23 THE LUCKY-PUFFIN / PROUD-WAFFLE / SHIELDED-LANTERN BATCH — every item read from
 //                     Josh's named run logs first. (1) DOMAIN PASSIVES VISIBLE: switching Jason to
 //                     Liberation+Healing made his domains "disappear completely" — those domains grant
@@ -1184,6 +1194,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.81';
+const VERSION = '3.37.82';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

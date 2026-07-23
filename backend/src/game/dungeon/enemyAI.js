@@ -221,16 +221,12 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         const swings = (e.slowed > 0) ? 1 : ((e._lastAtkTarget === tgtId) ? Math.max(1, e.attacks || 1) : 1);
         for (let i = 0; i < swings; i++) {
           if (target.hp <= 0) break;
-          const r = this._monsterSwing(e, this._enemyAC(target));
-          if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds); else if (e.atkSound && (r.hit || e.ranged)) r.sound = e.atkSound;   // ranged foes fire their bow/gun sound on a MISS too (a missed shot isn't a sword clang — Josh)
-          // RANGED foes SHOOT summons too (v3.37.81 — Josh, run proud-waffle: "Elite
-          // arinyees are smashing folks… they are archers are they not? and its making
-          // a bow sound"). The hero-target path already said "shoots"; this summon
-          // path always said smashes/swings, so an Erinyes volleying the party's
-          // Ghoul Crusader read as a melee brawl over a bow twang. Verb now matches
-          // the weapon — and "your undead X" is just "your X" (devil summons exist).
-          if (r.hit) { this._dmgE(target, r.damage); this._note(`${e.glyph} ${e.name} ${e.ranged ? 'shoots' : 'smashes'} your ${target.name} for ${r.damage}!${target.hp <= 0 ? ' ☠️ Destroyed!' : ''}`, r.sound, { side: 'enemy' }); }
-          else this._note(e.ranged ? `${e.glyph} ${e.name}'s shot flies wide of your ${target.name}.` : `${e.glyph} ${e.name} swings at your ${target.name} — and misses.`, r.sound, { side: 'enemy' });
+          // Sound + ranged/melee verbs come from the _foeSwing chokepoint (seam S1a)
+          // — same rules as attacks on heroes, so the two can never drift again
+          // (the "Erinyes smashes your Ghoul while a bow twangs" bug, proud-waffle).
+          const r = this._foeSwing(e, this._enemyAC(target), { meleeVerb: 'smashes' });
+          if (r.hit) { this._dmgE(target, r.damage); this._note(`${e.glyph} ${e.name} ${r.verbHit} your ${target.name} for ${r.damage}!${target.hp <= 0 ? ' ☠️ Destroyed!' : ''}`, r.sound, { side: 'enemy' }); }
+          else this._note(this._foeMissText(e, r, `your ${target.name}`, false), r.sound, { side: 'enemy' });
         }
         e._lastAtkTarget = tgtId;
         this._echoToTable();
@@ -329,13 +325,10 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     }
     // _acOf strips shield AC for dual-wielders AND ranged-weapon wielders.
     const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - (target.stunned > 0 ? 2 : 0) - (target.slowed > 0 ? 1 : 0) - this._acPenalty(target);   // helpless / stunned / slowed / rage / reckless / cleave: easier to hit (enemy melee vs prone = −4)
-    const r = this._monsterSwing(e, effAC);
-    if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);   // monk's randomized "bruce" kiai (hit or miss)
-    else if (e.atkSound && (r.hit || e.ranged)) r.sound = e.atkSound;      // melee atkSound = the connecting blow (hit only, e.g. rogue "riki" stab); a RANGED foe fires its bow/gun sound on a MISS too (Josh: a missed shot shouldn't clang like a sword)
-    // RANGED foes SHOOT — a bow/gun verb so a blind player hears it's an arrow/bullet, not
-    // a sword (Josh: "erinyes aren't archers — it isn't saying they're shooting bows"). Works
-    // for bows AND firearms; the atkSound already differentiates the two.
-    const _rHit = e.ranged ? 'shoots' : 'hits';
+    // Roll + sound + ranged/melee verb all come from the _foeSwing chokepoint (seam
+    // S1a) — one set of rules for every target kind. See the chokepoint's comment.
+    const r = this._foeSwing(e, effAC);
+    const _rHit = r.verbHit;
     if (r.hit) {
       // Swashbuckler PARRY — the first melee attack against them each round can be
       // turned aside (parry roll vs the foe's attack total). On success: NO damage
@@ -415,9 +408,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       }
       if (target.hp > 0 && target.isBot) this._tryBanter(target, 'damage', { enemy: e.name, dmg: r.damage });
     } else {
-      this._note(e.ranged
-        ? `${e.glyph} ${e.name}'s shot flies wide of ${target.nickname}. ${this._atkStr(r)}`
-        : `${e.glyph} ${e.name} misses ${target.nickname}. ${this._atkStr(r)}`, r.sound);
+      this._note(this._foeMissText(e, r, target.nickname, true), r.sound);
     }
     this._echoToTable(r.sound);
   },
@@ -426,6 +417,28 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   // foe rolls a WEIGHTED decision (partly fixed weights, partly RNG) over the attack
   // modes it can use on its target — so the same monster mixes things up turn to turn.
   // A foe's maneuver bonus: its attack bonus stands in for BAB+STR.
+  // ── FOE-SWING CHOKEPOINT (Stabilization seam S1a, v3.37.82) ────────────────
+  // THE one place an enemy attack roll gets its SOUND and its VERBS, whoever the
+  // target is (hero or party summon). The rules lived copy-pasted at each call
+  // site and drifted — the Erinyes "smashes your Ghoul while a bow twangs" class
+  // of bug (run proud-waffle). Sound precedence: signature POOL plays hit or miss
+  // (monk kiai) > single signature plays on a hit — or on a MISS too if RANGED (a
+  // missed shot still twangs, Josh) > the archetype thunk _monsterSwing set.
+  // opts.meleeVerb keeps site flavor ("smashes" vs summons). See
+  // docs/project/STABILIZATION-PLAN.md for the S1b–S1d follow-ons.
+  _foeSwing(e, targetAC, opts = {}) {
+    const r = this._monsterSwing(e, targetAC);
+    if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);
+    else if (e.atkSound && (r.hit || e.ranged)) r.sound = e.atkSound;
+    r.verbHit = e.ranged ? 'shoots' : (opts.meleeVerb || 'hits');
+    return r;
+  },
+  // The matching MISS line — one wording for every target kind.
+  _foeMissText(e, r, who, withRoll) {
+    return (e.ranged
+      ? `${e.glyph} ${e.name}'s shot flies wide of ${who}.`
+      : `${e.glyph} ${e.name} misses ${who}.`) + (withRoll ? ` ${this._atkStr(r)}` : '');
+  },
   _enemyMnvCMB(e) { return dRoll(20) + (e.toHit || 0); },
   // Is this hero a soft, high-value backliner (a caster) — prime grapple bait?
   _isSquishy(m) { return /wizard|sorcerer|cleric|oracle|druid|bard|witch|magus|inquisitor|summoner|alchemist/.test((m.cls || '').toLowerCase()); },
