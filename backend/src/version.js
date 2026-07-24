@@ -3,6 +3,31 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.85 2026-07-24 SPELL-ADAPTATION BATCH 1 — 18 CRB/UM "low hanging fruit" spells (Tobias: "look
+//                     for spells that very easily translate… for clerics/druids/wizards/bards/
+//                     everyone"). All expressible with EXISTING effect handlers; class lists read
+//                     from the content DB (PZO1110/PZO1117). Three one-line save_debuff arms unlock
+//                     conditions the engine already tracks: shaken (e.sickened), blinded (e.blinded),
+//                     dazed (e.stunned=1). NEW: Doom, Ray of Enfeeblement, Enlarge Person, Blindness,
+//                     Daze Monster, False Life, Flame Blade, Stinking Cloud, Magic Vestment, Sleet
+//                     Storm, Force Punch (UM — the wizard/magus version of Jason's Force Push),
+//                     Air Walk (the divine Fly), Divine Power, Ice Storm, Shout, Unholy Blight (the
+//                     dark Holy Smite — bites the Heavenly Host), Call Lightning Storm, Righteous
+//                     Might. Injected per real PF1 class/levels (cleric/druid/wizard/sorcerer/bard/
+//                     inquisitor/magus; theurge inherits cleric); PRIORITY lists updated so default
+//                     preps + bot AI use them. domtest 96 pins the batch.
+//  3.37.84 2026-07-24 HERO AI LEARNS FROM FAILURE + PROTECTS ITSELF (Josh's tactics reports, runs
+//                     clever-ferret + golden-panda + lucky-puffin; task #56). (1) FUTILITY LEDGER
+//                     (_ccLedger, per-hero per-ROOM, lazily re-keyed by depth — no reset-list wiring):
+//                     bots stop re-rolling proven-bad bets. Dispel: 2 FAILED checks vs a foe → that
+//                     foe stops being "worthy" this room (Femmik +18 vs the Pit Fiend's DC 32, 4 in a
+//                     row). Slow / Hideous Laughter / charm / dominate / save-or-die: 2 attempts at a
+//                     foe (success makes it ineligible anyway, so attempts ≈ failures) → leave it out
+//                     of the target pool. Mirrors the enemy-side _holdResists (v3.37.83).
+//                     (2) SELF-PRESERVATION: a caster under 45% HP spends the turn NOT dying — one
+//                     defensive self-cast per room (Greater Invis > Displacement > Mirror Image >
+//                     Stoneskin > Fire Shield, whichever the kit has). "Celeb never casts invis even
+//                     when it would save his ass" — now he does; so would Draymus in the scraper room.
 //  3.37.83 2026-07-24 REESE GETS HIS SPELLBOOK BACK + THE PIT FIEND STOPS BEING A HOLD-BOT (Josh runs
 //                     nimble-puffin / clever-ferret / golden-panda, all read first). (1) THE MAGUS WAS
 //                     MISSING from slotsFor AND loadouts.PRIORITY → buildDefaultPrepared returned {} →
@@ -1213,6 +1238,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.83';
+const VERSION = '3.37.85';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

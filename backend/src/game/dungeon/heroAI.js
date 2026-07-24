@@ -274,6 +274,16 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
   // Priority: heal the hurt → raise buffs (smite/rage/shield/inspire/bane) →
   // blast/control a group → fire a spell or maneuver at the best target. Only
   // ever returns an ability that's actually usable right now (level + uses/pool).
+  // ── FUTILITY LEDGER (v3.37.84 — Josh, runs clever-ferret/golden-panda) ──
+  // Per-hero, per-ROOM tally of CC/dispel attempts against specific foes, so a
+  // bot stops re-rolling a bet that keeps failing (Femmik cast Slow at a boss
+  // whose Will auto-saved FIVE times; dispels at DC 32 with +18 four in a row).
+  // Mirrors the enemy-side _holdResists futility (v3.37.83). Lazily re-keyed by
+  // depth — a new room wipes it with NO reset-list wiring (the .68 lesson).
+  _ccLedger(m) {
+    if (!m._ccT || m._ccT.depth !== this.depth) m._ccT = { depth: this.depth, tries: {} };
+    return m._ccT.tries;
+  },
   _botAbility(m) {
     const kit = kitFor(m.cls);
     if (!kit.abilities || !kit.abilities.length) return null;
@@ -434,7 +444,8 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
           // SPELL-flight, unveiling Invisibility or stripping Haste is worth the
           // turn; a static AC ward (Shield/Mage Armor) is NOT — fall through to
           // fighting/buffing/debuffing/healing instead.
-          const worthy = this._dispelWorthyFoe();
+          const worthy0 = this._dispelWorthyFoe();   // FUTILITY: 2 failed dispels vs this foe this room → stop (v3.37.84)
+          const worthy = (worthy0 && (this._ccLedger(m)['dispel:' + worthy0.uid] || 0) < 2) ? worthy0 : null;
           if (allyDebuffed || worthy) return { slot: slot(cleanse), payload: (worthy && !allyDebuffed) ? { targetUid: worthy.uid } : {} };
         }
         const active = targets.filter(e => !(e.grappled || e.prone || e.paralyzed > 0 || e.fascinated || e.asleep));
@@ -487,6 +498,18 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // priestly classes want 2+ undead up before burning the action.
     if (channelHeal && !someoneHurt && m.cls !== 'paladin' && m.cls !== 'antipaladin'
         && targets.filter(e => e.type === 'undead').length >= 2) return { slot: slot(channelHeal), payload: {} };
+    // 1a-bis) SELF-PRESERVATION (v3.37.84 — Josh, runs clever-ferret + lucky-puffin:
+    //     "Celeb never casts invis even when it would save his ass"; AI Draymus went
+    //     down in the depth-4 scraper room with Greater Invisibility sitting in his
+    //     book). A badly-hurt caster spends the turn NOT dying: one defensive
+    //     self-cast per room — Greater Invisibility (50% concealment), Displacement,
+    //     Mirror Image, Stoneskin, or Fire Shield, whichever their kit actually has.
+    //     Reactive (answers the battlefield), so no round-decay appetite gate.
+    if (m.hp < m.maxHp * 0.45 && !m.invisible && !m.greaterInvis && m._selfDefDepth !== this.depth) {
+      const def = ['invisgreater', 'displacement', 'mirrorimage', 'stoneskin', 'fireshield']
+        .map(k => avail.find(a => a.key === k)).find(Boolean);
+      if (def) { m._selfDefDepth = this.depth; return { slot: slot(def), payload: def.target === 'ally' ? { allyUid: m.playerId } : {} }; }
+    }
     // 1b) Dispel Magic — free a SPELL-debuffed ally, or strip a foe buff that's
     //     genuinely WORTH the turn (Tobias: bards over-dispelled — grounding
     //     spell-flight yes, peeling a Shield ward no; otherwise fall through to
@@ -494,7 +517,10 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     const cleanse = avail.find(a => a.effect === 'cleanse');
     if (cleanse) {
       const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0);   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
-      const worthy = this._dispelWorthyFoe();
+      // FUTILITY: two failed dispels against this foe this room (its effective CL
+      // outclasses ours — Femmik at +18 vs DC 32) → stop feeding it turns.
+      const worthy0 = this._dispelWorthyFoe();
+      const worthy = (worthy0 && (this._ccLedger(m)['dispel:' + worthy0.uid] || 0) < 2) ? worthy0 : null;
       if (allyDebuffed || worthy) return { slot: slot(cleanse), payload: (worthy && !allyDebuffed) ? { targetUid: worthy.uid } : {} };
     }
     // 1c) Druid WILD SHAPE — most druids fight shapeshifted. If not already in a
@@ -561,8 +587,16 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (tentacles && !this.blackTentacles && foes.length >= 2) return { slot: slot(tentacles), payload: {} };
     const slowAb = avail.find(a => a.effect === 'slow');
     if (slowAb) {
-      const fresh = targets.filter(t => !(t.slowed > 0) && !t.fascinated);
-      if (fresh.length >= 2) return { slot: slot(slowAb), payload: { targetUids: fresh.slice(0, slowAb.maxTargets || 3).map(e => e.uid) } };
+      // FUTILITY (v3.37.84, run golden-panda: Femmik + Celeb threw FIVE Slows at a
+      // boss whose Will save cleared the DC every time): a foe that's been targeted
+      // twice this room and still isn't slowed is a proven bad bet — leave it out.
+      const led = this._ccLedger(m);
+      const fresh = targets.filter(t => !(t.slowed > 0) && !t.fascinated && (led['slow:' + t.uid] || 0) < 2);
+      if (fresh.length >= 2) {
+        const picks = fresh.slice(0, slowAb.maxTargets || 3);
+        for (const t of picks) led['slow:' + t.uid] = (led['slow:' + t.uid] || 0) + 1;
+        return { slot: slot(slowAb), payload: { targetUids: picks.map(e => e.uid) } };
+      }
     }
     // The bard pins a BOSS so it misses turns — Hideous Laughter (Held) survives
     // being hit (unlike Fascinate), so the party can keep focus-firing while it
@@ -573,7 +607,13 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       const boss = targets.find(e => e.boss) || (heaviest.length >= 2 && heaviest[0].maxHp >= 1.6 * heaviest[1].maxHp ? heaviest[0] : null);
       if (boss && !(boss.paralyzed > 0)) {
         const laugh = avail.find(a => a.effect === 'save_debuff');   // Hideous Laughter → Held
-        if (laugh) return { slot: slot(laugh), payload: { targetUid: boss.uid } };
+        // FUTILITY (v3.37.84): a boss that has shrugged the joke twice this room
+        // isn't laughing — stop telling it (golden-panda: Laughter vs Will 32).
+        const led = this._ccLedger(m);
+        if (laugh && (led['save_debuff:' + boss.uid] || 0) < 2) {
+          led['save_debuff:' + boss.uid] = (led['save_debuff:' + boss.uid] || 0) + 1;
+          return { slot: slot(laugh), payload: { targetUid: boss.uid } };
+        }
       }
     }
     // 2) Put up buffs once — Smite, then sticky self/party buffs (rage, shield,
@@ -824,7 +864,11 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         // undead (no mind to tickle); death spells skip the unliving; element
         // blasts skip the immune. Death/charm spend on the BIGGEST eligible threat
         // (best case), plain damage on the weakest (finish it off).
-        const el = targets.filter(t => this._spellWorksOn(a, t) && !((a.effect === 'charm' || a.effect === 'dominate') && (ccd(t) || t.dominated > 0)));
+        // FUTILITY (v3.37.84): don't offer a CC pick at a foe who has already
+        // shrugged this effect twice this room (golden-panda: the charm/dominate
+        // loop at the Pit Fiend — huge Will + SR, attempt after attempt).
+        const _ccFx = a.effect === 'save_debuff' || a.effect === 'savedie' || a.effect === 'charm' || a.effect === 'dominate';
+        const el = targets.filter(t => this._spellWorksOn(a, t) && !((a.effect === 'charm' || a.effect === 'dominate') && (ccd(t) || t.dominated > 0)) && !(_ccFx && (this._ccLedger(m)[a.effect + ':' + t.uid] || 0) >= 2));
         if (!el.length) continue;
         const pick = (a.effect === 'savedie' || a.effect === 'charm' || a.effect === 'dominate')
           ? el.slice().sort((x, y) => y.maxHp - x.maxHp)[0]
@@ -887,6 +931,12 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     }
     if (offense.length) {
       const choice = offense.find(o => o.ab.key !== m._lastAbilityKey) || offense[0];
+      // FUTILITY tally (v3.37.84): count only the CC pick actually TAKEN — success
+      // makes the foe ineligible next time anyway, so attempts ≈ failures.
+      if (['save_debuff', 'savedie', 'charm', 'dominate'].includes(choice.ab.effect) && choice.payload && choice.payload.targetUid) {
+        const led = this._ccLedger(m), k = choice.ab.effect + ':' + choice.payload.targetUid;
+        led[k] = (led[k] || 0) + 1;
+      }
       return { slot: slot(choice.ab), payload: choice.payload };
     }
     return null;   // nothing fit → basic attack

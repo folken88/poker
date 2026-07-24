@@ -1652,6 +1652,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (foe) {
       const dc = this._dispelCheck(m, this._enemyCL(foe), ab.greater);   // DC = 11 + the foe's caster level (PF1), not depth
       if (!dc.ok) {   // its enchantment HOLDS
+        // FUTILITY tally (v3.37.84): two of these vs the same foe and the bot's
+        // dispel branch stops feeding it turns (Femmik at +18 vs the Pit Fiend's
+        // DC 32, four failed casts in a row — run clever-ferret).
+        const _led = this._ccLedger(m); _led['dispel:' + foe.uid] = (_led['dispel:' + foe.uid] || 0) + 1;
         this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${foe.name} — but its enchantment HOLDS! [dispel d20 ${dc.roll} +${dc.cl} = ${dc.total} vs DC ${dc.dc}]`, FAIL_SOUND);
         this._echoToTable(FAIL_SOUND); return;
       }
@@ -2086,6 +2090,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // costs its turn either way) — see the heldDC handling in _advanceToActor.
     if (!sv.saved && ab.debuff === 'paralyzed') { e.paralyzed = Math.max(2, Math.min(12, m.level || 1)); e.heldDC = dc; }
     else if (!sv.saved && ab.debuff === 'sickened') e.nauseated = SICKENED_ROUNDS;   // save-or-NAUSEATED (Stinking Cloud): retches, loses turns while it lingers
+    // Spell-adaptation batch 1 (v3.37.85) — three more conditions the engine already
+    // tracks, now reachable as save-or-suffer spells:
+    else if (!sv.saved && ab.debuff === 'shaken')  e.sickened = Math.max(e.sickened || 0, SICKENED_ROUNDS);   // Doom / Ray of Enfeeblement: −2 to hit & damage
+    else if (!sv.saved && ab.debuff === 'blinded') e.blinded = Math.max(e.blinded || 0, Math.max(2, Math.min(12, m.level || 1)));   // Blindness: −4 to hit, denied Dex
+    else if (!sv.saved && ab.debuff === 'dazed')   e.stunned = Math.max(e.stunned || 0, 1);   // Daze Monster: loses ONE turn, no re-save
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${(ab.debuff === 'sickened' ? 'NAUSEATED' : String(ab.debuff).toUpperCase())}!`}`, sound);
     this._echoToTable(sound);
   },

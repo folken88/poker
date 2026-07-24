@@ -209,6 +209,28 @@ const SPELL = {
   blacktentacles: { key: 'blacktentacles', name: 'Black Tentacles', icon: '🦑', effect: 'blacktentacles', target: 'aoe', slvl: 4, sound: '/audio/kraken_crush.mp3', desc: 'Writhing tentacles erupt across the room — EACH ROUND they grapple a random 1d4+1 foes (CMB vs CMD); the grappled are helpless until they tear free. Lasts the room.' },
   infernalhealgreater: { key: 'infernalhealgreater', name: 'Infernal Healing, Greater', icon: '🩸', effect: 'infernalheal', target: 'ally', heal: 4, sticky: true, slvl: 4, sound: S.cure, desc: 'Diabolic ichor knits the ally with the LEAST HP (or the caster, if everyone is at full health) — fast healing 4 (heals 4 HP at the start of each of their turns) for the rest of the room.' },
   freedommove:   { key: 'freedommove',   name: 'Freedom of Movement', icon: '🕊️', effect: 'freedommove', target: 'ally', slvl: 4, sticky: true, sound: S.invoke, desc: 'Nothing can bind the target: grapples, chain-hooks and holds simply slip off — one impediment shrugged per round of freedom (caster-level rounds this room). Casting it on a grappled ally frees them at once. THE counter to grapple rooms (the Gearsman Scrapers).' },
+  // ── SPELL-ADAPTATION BATCH 1 (v3.37.85, Tobias: "low hanging fruit" from CRB +
+  //    Ultimate Magic) — 18 spells expressible with EXISTING effect handlers (plus
+  //    three one-line save_debuff arms: shaken / blinded / dazed). Class levels are
+  //    the REAL PF1 lists, read from the content DB (PZO1110 / PZO1117). ──
+  doom:          { key: 'doom',          name: 'Doom',            icon: '🥀', effect: 'save_debuff', debuff: 'shaken', save: 'will', target: 'enemy', slvl: 1, sound: S.umbral, desc: 'A dread word saps a foe\'s nerve — Will save or SHAKEN (−2 to hit and damage) for the fight\'s opening.' },
+  rayenfeeble:   { key: 'rayenfeeble',   name: 'Ray of Enfeeblement', icon: '🦴', effect: 'save_debuff', debuff: 'shaken', save: 'fort', target: 'enemy', slvl: 1, sound: S.umbral, desc: 'A black ray saps a foe\'s strength — Fortitude save or its blows weaken (−2 to hit and damage).' },
+  enlargeperson: { key: 'enlargeperson', name: 'Enlarge Person',  icon: '🦣', effect: 'buff', target: 'ally', buff: { dmg: 2 }, slvl: 1, sticky: true, sound: S.invoke, desc: 'One ally grows a size category — heavier blows (+2 damage) for the rest of the room. Put it on the fighter.' },
+  blindness:     { key: 'blindness',     name: 'Blindness',       icon: '🙈', effect: 'save_debuff', debuff: 'blinded', save: 'fort', target: 'enemy', slvl: 2, sound: S.umbral, desc: 'Fortitude save or STRUCK BLIND — −4 to hit and denied its Dex (easier to hit, Sneak-Attackable) for caster-level rounds.' },
+  dazemonster:   { key: 'dazemonster',   name: 'Daze Monster',    icon: '💫', effect: 'save_debuff', debuff: 'dazed', save: 'will', target: 'enemy', slvl: 2, sound: S.invoke, desc: 'Will save or DAZED — the creature loses its next turn outright. Cheap, reliable turn-denial.' },
+  falselife:     { key: 'falselife',     name: 'False Life',      icon: '🫀', effect: 'buff', target: 'self', buff: { conHp: 1 }, slvl: 2, sticky: true, sound: S.umbral, desc: 'Necromantic vigor — the caster gains temporary HP (+1 per level) for the rest of the room.' },
+  flameblade:    { key: 'flameblade',    name: 'Flame Blade',     icon: '🗡️', effect: 'touch', die: 8, dice: 'halflevel', dcap: 10, dtype: 'fire', target: 'enemy', slvl: 2, sound: S.fire, desc: 'A scimitar of pure fire — a touch attack for ½level d8 FIRE (max 10d8).' },
+  stinkingcloud: { key: 'stinkingcloud', name: 'Stinking Cloud',  icon: '🤢', effect: 'save_debuff', debuff: 'sickened', save: 'fort', target: 'enemy', slvl: 3, desc: 'A choking miasma envelops one foe — Fortitude save or NAUSEATED: retching, losing turns while it lingers.' },
+  magicvestment: { key: 'magicvestment', name: 'Magic Vestment',  icon: '🥋', effect: 'buff', target: 'ally', buff: { ac: 3 }, slvl: 3, sticky: true, sound: S.invoke, desc: 'An ally\'s armor drinks in enchantment — +3 AC for the rest of the room.' },
+  sleetstorm:    { key: 'sleetstorm',    name: 'Sleet Storm',     icon: '🌨️', effect: 'grease', target: 'aoe', randN: 2, randDie: 4, save: 'reflex', slvl: 3, sound: S.gust, desc: 'Driving ice sheets the ground — a RANDOM 2d4 foes save Reflex or slip PRONE.' },
+  forcepunch:    { key: 'forcepunch',    name: 'Force Punch',     icon: '👊', effect: 'forcepush', target: 'enemy', slvl: 3, sound: S.gust, desc: 'A fist of pure force SLAMS a foe backward — every melee ally who can act gets a FREE attack against it as it reels. You forgo your own strike.' },
+  airwalk:       { key: 'airwalk',       name: 'Air Walk',        icon: '🌤️', effect: 'buff', target: 'ally', buff: {}, fly: true, canHitFlyers: true, slvl: 4, sticky: true, sound: S.invoke, desc: 'One ally treads the air itself — airborne for the room: grounded foes can\'t reach them, and they CAN close with flyers. The divine answer to Fly.' },
+  divinepower:   { key: 'divinepower',   name: 'Divine Power',    icon: '⚡', effect: 'buff', target: 'self', buff: { toHit: 4, dmg: 4, conHp: 1 }, slvl: 4, sticky: true, sound: S.charge, desc: 'The caster channels their god\'s might — +4 to hit, +4 damage and +1 temporary HP per level for the rest of the room. The battle-cleric switch.' },
+  icestorm:      { key: 'icestorm',      name: 'Ice Storm',       icon: '🧊', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 5, dtype: 'cold', slvl: 4, sound: S.coldcone, desc: 'Fist-sized hail hammers up to 4 foes — 5d6 COLD, Reflex for half.' },
+  shout:         { key: 'shout',         name: 'Shout',           icon: '📢', effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'fort', die: 6, dice: 5, dtype: 'sonic', slvl: 4, sound: '/audio/draugr_shout03_burning.mp3', desc: 'A devastating sonic BOOM staggers up to 3 foes — 5d6 SONIC, Fortitude for half.' },
+  unholyblight:  { key: 'unholyblight',  name: 'Unholy Blight',   icon: '☠️', effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'unholy', slvl: 4, sound: S.umbral, desc: 'A cold cloud of evil sears 2 foes — Will for half (½level d8). The dark mirror of Holy Smite; it bites hardest against the Heavenly Host.' },
+  callstorm:     { key: 'callstorm',     name: 'Call Lightning Storm', icon: '⛈️', effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'electricity', slvl: 5, sound: null, desc: 'The sky itself opens — bolts hammer up to 3 foes for level d6 ELECTRICITY (max 15d6), Reflex for half.' },
+  righteousmight:{ key: 'righteousmight',name: 'Righteous Might', icon: '💪', effect: 'buff', target: 'self', buff: { toHit: 2, dmg: 4, ac: 2 }, slvl: 5, sticky: true, sound: S.charge, desc: 'The caster swells into a giant of the faith — +2 to hit, +4 damage, +2 AC for the rest of the room.' },
   invisgreater:  { key: 'invisgreater',  name: 'Invisibility, Greater', icon: '🫥', img: '/dungeon/buffs/invisible.webp', effect: 'invisible', greater: true, target: 'ally', slvl: 4, sound: S.invis, desc: 'Total concealment for the whole fight — you STAY invisible even when you attack. Cast it on a rogue ally and they Sneak Attack every foe that cannot see them.' },
   riverofwind:   { key: 'riverofwind',   name: 'River of Wind',  icon: '🌬️', effect: 'grease', target: 'aoe', randN: 3, randDie: 4, save: 'fort', slvl: 4, sound: S.gust, desc: 'A roaring torrent of air bowls over a RANDOM 3d4 foes — Fortitude save or be knocked prone.' },
   // ── 5th-level ──
@@ -949,6 +971,49 @@ _injectKitSpell('inquisitor', spontaneousSpell(SPELL.invisibilitypurge, 7));
 // inherits the cleric list automatically.
 _injectKitSpell('cleric',     preparedSpell(SPELL.freedommove, 7));
 _injectKitSpell('inquisitor', spontaneousSpell(SPELL.freedommove, 10));
+// ── SPELL-ADAPTATION BATCH 1 (v3.37.85) — class lists straight from the content
+//    DB (CRB PZO1110 + UM PZO1117); minLevel = when that class reaches the slot
+//    level (full prepared: 2×slvl−1; sorcerer: 2×slvl; bard/inquisitor 6-level:
+//    1/4/7/10/13). The theurge inherits the cleric list automatically. ──
+_injectKitSpell('cleric',     preparedSpell(SPELL.doom, 1));
+_injectKitSpell('inquisitor', spontaneousSpell(SPELL.doom, 1));
+_injectKitSpell('wizard',     preparedSpell(SPELL.rayenfeeble, 1));
+_injectKitSpell('sorcerer',   spontaneousSpell(SPELL.rayenfeeble, 2));
+_injectKitSpell('wizard',     preparedSpell(SPELL.enlargeperson, 1));
+_injectKitSpell('sorcerer',   spontaneousSpell(SPELL.enlargeperson, 2));
+_injectKitSpell('wizard',     preparedSpell(SPELL.blindness, 3));
+_injectKitSpell('sorcerer',   spontaneousSpell(SPELL.blindness, 4));
+_injectKitSpell('bard',       spontaneousSpell(SPELL.blindness, 4));
+_injectKitSpell('cleric',     preparedSpell({ ...SPELL.blindness, slvl: 3 }, 5));   // cleric gets it a level later (PF1)
+_injectKitSpell('wizard',     preparedSpell(SPELL.dazemonster, 3));
+_injectKitSpell('sorcerer',   spontaneousSpell(SPELL.dazemonster, 4));
+_injectKitSpell('bard',       spontaneousSpell(SPELL.dazemonster, 4));
+_injectKitSpell('wizard',     preparedSpell(SPELL.falselife, 3));
+_injectKitSpell('sorcerer',   spontaneousSpell(SPELL.falselife, 4));
+_injectKitSpell('druid',      preparedSpell(SPELL.flameblade, 3));
+_injectKitSpell('wizard',     preparedSpell(SPELL.stinkingcloud, 5));
+_injectKitSpell('sorcerer',   spontaneousSpell(SPELL.stinkingcloud, 6));
+_injectKitSpell('cleric',     preparedSpell(SPELL.magicvestment, 5));
+_injectKitSpell('inquisitor', spontaneousSpell(SPELL.magicvestment, 7));
+_injectKitSpell('druid',      preparedSpell(SPELL.sleetstorm, 5));
+_injectKitSpell('wizard',     preparedSpell(SPELL.sleetstorm, 5));
+_injectKitSpell('wizard',     preparedSpell(SPELL.forcepunch, 5));
+_injectKitSpell('magus',      preparedSpell(SPELL.forcepunch, 7));   // UM magus 3rd-level
+_injectKitSpell('cleric',     preparedSpell({ ...SPELL.airwalk, slvl: 4 }, 7));
+_injectKitSpell('druid',      preparedSpell({ ...SPELL.airwalk, slvl: 4 }, 7));
+_injectKitSpell('cleric',     preparedSpell({ ...SPELL.divinepower, slvl: 4 }, 7));
+_injectKitSpell('inquisitor', spontaneousSpell({ ...SPELL.divinepower, slvl: 4 }, 10));
+_injectKitSpell('druid',      preparedSpell(SPELL.icestorm, 7));
+_injectKitSpell('wizard',     preparedSpell(SPELL.icestorm, 7));
+_injectKitSpell('sorcerer',   spontaneousSpell(SPELL.icestorm, 8));
+_injectKitSpell('bard',       spontaneousSpell(SPELL.shout, 10));
+_injectKitSpell('wizard',     preparedSpell(SPELL.shout, 7));
+_injectKitSpell('sorcerer',   spontaneousSpell(SPELL.shout, 8));
+_injectKitSpell('cleric',     preparedSpell({ ...SPELL.unholyblight, slvl: 4 }, 7));
+_injectKitSpell('inquisitor', spontaneousSpell({ ...SPELL.unholyblight, slvl: 4 }, 10));
+_injectKitSpell('druid',      preparedSpell({ ...SPELL.callstorm, slvl: 5 }, 9));
+_injectKitSpell('cleric',     preparedSpell({ ...SPELL.righteousmight, slvl: 5 }, 9));
+_injectKitSpell('inquisitor', spontaneousSpell({ ...SPELL.righteousmight, slvl: 5 }, 13));
 
 // ── FLY IS A TOUCH SPELL — kit-copy normalization (2026-07-16) ─────────────────────
 // v3.37.55 fixed SPELL.fly to target:'ally' (castable on allies, canHitFlyers), but the
