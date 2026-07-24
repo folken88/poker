@@ -760,7 +760,14 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     e.invisible = false;   // any other cast below is hostile → invisibility drops
     // 1) Lock down a dangerous, un-held melee bruiser with Hold Monster (5th) —
     //    only if nobody's already held (don't waste it).
-    const bruiser = heroes.find(m => !(m.paralyzed > 0) && !m.undead && MART.has(m.cls) && m.hp > m.maxHp * 0.4);   // undead heroes have no mind to hold
+    // FUTILITY (v3.37.83, runs clever-ferret + golden-panda): a hero who has shrugged
+    // this caster's Hold TWICE (or whose SR turned it) is a bad bet — stop rolling the
+    // same failed die. Azwraith (+23 Will vs DC 22) resisted the Pit Fiend's Hold every
+    // round for 61 ROUNDS, and because this branch fires FIRST, the fiend never reached
+    // its fireball/cone/chain-lightning artillery below. e is rebuilt each room, so the
+    // memory self-resets. When every bruiser is a proven bad bet, it BLASTS instead.
+    const _futileHold = (m) => ((e._holdResists && e._holdResists[m.playerId]) || 0) >= 2;
+    const bruiser = heroes.find(m => !(m.paralyzed > 0) && !m.undead && MART.has(m.cls) && m.hp > m.maxHp * 0.4 && !_futileHold(m));   // undead heroes have no mind to hold
     if (cl >= 9 && bruiser && !heroes.some(m => m.paralyzed > 0)) return this._enemyHoldHero(e, bruiser, dc(5), 'Hold Monster');
     // 2) Finish a badly-wounded hero with auto-hitting Magic Missile (1st).
     if (weakest.hp <= weakest.maxHp * 0.28) return this._enemyMissiles(e, weakest, Math.min(5, Math.floor((cl + 1) / 2)));
@@ -845,12 +852,17 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemyHoldHero(e, target, dc, label) {
     // PF1: a mind-affecting compulsion — no effect on an undead hero.
     if (target.undead) { this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — but the undead have no mind to seize. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
-    if (this._srBlocksHero(e, target, label)) { this._broadcast(); return; }   // PF1 SR (drow heroes)
+    if (this._srBlocksHero(e, target, label)) { e._holdResists = e._holdResists || {}; e._holdResists[target.playerId] = 9; this._broadcast(); return; }   // PF1 SR (drow heroes) — SR turning it once means it always will: permanently futile
     const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
     const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
     if (!saved) { target.paralyzed = Math.max(target.paralyzed || 0, 3); target.heldDC = dc; target.paralyzedCL = this._enemyCL(e); this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — HELD! ${roll} (re-save each turn to break free)`, '/audio/spell_dimensional_anchor.mp3', { side: 'enemy' }); }
-    else this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname}, who resists. ${roll}`, null, { side: 'enemy' });
+    else {
+      // Remember the shrug — two of these and _lichCast stops betting on this hero
+      // (the anti-Hold-bot futility memory, v3.37.83).
+      e._holdResists = e._holdResists || {}; e._holdResists[target.playerId] = (e._holdResists[target.playerId] || 0) + 1;
+      this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname}, who resists. ${roll}`, null, { side: 'enemy' });
+    }
     this._broadcast();
   },
   // Lich Magic Missile — N unerring bolts (no save, no attack roll), 1d4+1 each.

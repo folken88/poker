@@ -97,7 +97,7 @@ function slotsFor(cls, level, castMod = 0) {
   let base;
   if (FULL_PREPARED.has(cls))            base = _tableSlots(CLERIC_SLOTS_BY_LEVEL, level);
   else if (FOURTH_PREPARED.has(cls))     base = _tableSlots(PALADIN_SLOTS_BY_LEVEL, level);
-  else if (cls === 'inquisitor')         base = _tableSlots(INQ_SLOTS_BY_LEVEL, level);   // 6-level SPONTANEOUS divine, slower
+  else if (cls === 'inquisitor' || cls === 'magus') base = _tableSlots(INQ_SLOTS_BY_LEVEL, level);   // 6-level casters, same PF1 per-day table: inquisitor (spontaneous divine) + magus (PREPARED arcane). The magus was missing entirely → buildDefaultPrepared returned {} → castableKeys EMPTY → Reese's whole 23-spell book filtered out server-side, no Spellbook button, nothing (Josh, runs nimble-puffin/proud-waffle: "no spell book or access to a spell book… no chain lightening shot, no disintegrate")
   else if (SPONTANEOUS_CLASSES.has(cls)) base = _tableSlots(SORC_SLOTS_BY_LEVEL, level);
   else return null;
   // ABILITY-SCORE BONUS SPELLS — the caster's Int/Wis/Cha modifier grants extra spells

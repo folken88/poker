@@ -90,10 +90,21 @@ const RUN_NOUN = ['dumpling', 'goat', 'devil', 'harpy', 'mirror', 'missile', 'mu
   'lynx', 'heron', 'beaver', 'ferret', 'moose', 'salmon', 'osprey', 'puffin', 'penguin',
   'sparrow', 'turtle', 'rabbit', 'wombat', 'anvil', 'lantern', 'kettle', 'compass',
   'acorn', 'pebble', 'walnut', 'biscuit', 'muffin', 'noodle', 'waffle'];
+// Names issued THIS process — reroll on a repeat so runs stay unique between server
+// restarts (v3.37.83, Josh: "are these dungeon names being recycled?"). 40×40 = 1600
+// combos; the birthday effect makes repeats likely after ~50 runs without this. Across
+// a restart a rare repeat is still possible — the log's timestamps tell those apart.
+const _usedRunNames = new Set();
 function _genRunName() {
-  const a = RUN_ADJ[Math.floor(Math.random() * RUN_ADJ.length)];
-  const n = RUN_NOUN[Math.floor(Math.random() * RUN_NOUN.length)];
-  return `${a}-${n}`;
+  let name = '';
+  for (let i = 0; i < 25; i++) {
+    const a = RUN_ADJ[Math.floor(Math.random() * RUN_ADJ.length)];
+    const n = RUN_NOUN[Math.floor(Math.random() * RUN_NOUN.length)];
+    name = `${a}-${n}`;
+    if (!_usedRunNames.has(name)) break;
+  }
+  _usedRunNames.add(name);
+  return name;
 }
 // Title-case a creature type for display ("magical beast" → "Magical Beast").
 function titleCase(s) { return String(s || '').replace(/\b\w/g, c => c.toUpperCase()); }
@@ -1394,17 +1405,18 @@ class Dungeon {
                     : CLASS_FEAT_AT[cls] || FEAT_AT;
     for (let g = gatingLevel(cls, from) + 1; g <= gatingLevel(cls, to); g++) if (featNames[g]) feats.push(featNames[g]);
     if (feats.length) parts.push(`feat: ${feats.join(', ')}`);
-    const kit = kitFor(cls), spells = [];
-    if (kit && kit.abilities) for (const ab of kit.abilities) if (ab.minLevel && ab.minLevel > from && ab.minLevel <= to) spells.push(ab.name);
+    const kit = kitFor(cls), spells = [], strikes = [];
+    // Magus gains split by WHERE THE PAD PUTS THEM (v3.37.83 — my .81 relabel called
+    // everything an imbued shot; Josh checked the imbue menu and found no Disintegrate,
+    // because slvl spells live in the SPELLBOOK, only spellstrikes ride the imbue menu).
+    if (kit && kit.abilities) for (const ab of kit.abilities) if (ab.minLevel && ab.minLevel > from && ab.minLevel <= to) (cls === 'magus' && ab.effect === 'spellstrike' ? strikes : spells).push(ab.name);
     const s0 = slotsFor(cls, from, m.castingMod) || {}, s1 = slotsFor(cls, to, m.castingMod) || {};
     const newSlot = Object.keys(s1).filter(L => !s0[L]).map(L => `${L}${({ 1: 'st', 2: 'nd', 3: 'rd' })[L] || 'th'}-level`);
     if (newSlot.length) parts.push(`new ${newSlot.join(' & ')} spell slots`);
-    // NAME the gains the way the PAD names them (v3.37.81 — Josh, run proud-waffle:
-    // L16 announced "spells: Disintegrate, Chain Lightning…" so he hunted for a
-    // spellbook button that doesn't exist for a magus. A magus's casting IS the
-    // Imbued Shot / Spell Strike entries on the action pad — say so.)
-    const _spellWord = cls === 'magus' ? (this._isRanged(m) ? 'new IMBUED SHOTS on your action pad' : 'new SPELL STRIKES on your action pad') : 'spells';
-    if (spells.length) parts.push(`${_spellWord}: ${spells.slice(0, 4).join(', ')}`);
+    // NAME the gains the way the PAD names them (v3.37.83): a magus's spellstrikes
+    // ride the Imbued Shots submenu, but slvl spells live in the SPELLBOOK.
+    if (strikes.length) parts.push(`new ${this._isRanged(m) ? 'IMBUED SHOTS' : 'SPELL STRIKES'} on your action pad: ${strikes.slice(0, 4).join(', ')}`);
+    if (spells.length) parts.push(cls === 'magus' ? `new spells in your SPELLBOOK: ${spells.slice(0, 4).join(', ')}` : `spells: ${spells.slice(0, 4).join(', ')}`);
     return parts;
   }
   // Announce a level-up with a short summary of what the hero gained.

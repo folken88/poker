@@ -3,6 +3,25 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.83 2026-07-24 REESE GETS HIS SPELLBOOK BACK + THE PIT FIEND STOPS BEING A HOLD-BOT (Josh runs
+//                     nimble-puffin / clever-ferret / golden-panda, all read first). (1) THE MAGUS WAS
+//                     MISSING from slotsFor AND loadouts.PRIORITY → buildDefaultPrepared returned {} →
+//                     castableKeys EMPTY → every one of Reese's 23 slvl spells (Shield, Mirror Image,
+//                     Haste, Fly, Stoneskin, Disintegrate, Chain Lightning…) was filtered out server-
+//                     side: no Spellbook button, nothing anywhere — most of why "Reese feels flat".
+//                     Fixed: magus rides the INQ per-day table (PF1-identical) + a defense-first
+//                     priority list; the default prep, Spellbook button and K prepare menu all light
+//                     up via the existing pipeline. (2) LEVEL-UP GAINS split correctly for the magus:
+//                     spellstrikes → "new IMBUED SHOTS on your action pad", slvl spells → "new spells
+//                     in your SPELLBOOK" (my .81 relabel called everything an imbued shot — Josh
+//                     checked the imbue menu and rightly found no Disintegrate). (3) ANTI-HOLD-BOT
+//                     FUTILITY: _lichCast's Hold-a-bruiser branch fires FIRST and returns, so vs a
+//                     high-Will martial who kept saving (Azwraith +23 vs DC 22) the Pit Fiend cast
+//                     Hold Monster EVERY round for 61 rounds and never reached its fireball/cone/
+//                     chain-lightning artillery. Now 2 resists by a hero (or one SR turn) = stop
+//                     betting on them; all bruisers futile → it BLASTS. Boss fights get shorter and
+//                     meaner. (4) RUN CODENAMES no longer repeat within a server process (reroll on
+//                     collision; cross-restart repeats stay possible — timestamps disambiguate).
 //  3.37.82 2026-07-23 STABILIZATION S1a (plan: docs/project/STABILIZATION-PLAN.md, Tobias: "stabilize
 //                     & optimize, go for it"). New _foeSwing/_foeMissText CHOKEPOINT in enemyAI: THE
 //                     one place an enemy attack roll gets its sound (pool > single+ranged-miss rule >
@@ -1194,6 +1213,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.82';
+const VERSION = '3.37.83';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

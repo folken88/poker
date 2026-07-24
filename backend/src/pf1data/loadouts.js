@@ -32,6 +32,10 @@ const PRIORITY = {
   bard: ['curelight', 'curemoderate', 'haste', 'dispelmagic', 'glitterdust', 'hideouslaughter', 'grease', 'sleep', 'heroism', 'goodhope', 'slow', 'soundburst', 'charmperson', 'vanish', 'bullsstrength', 'catsgrace', 'bearsendurance', 'dominateperson', 'heroismgreater', 'masssuggestion'],
   oracle: ['curelight', 'curemoderate', 'cureserious', 'curecritical', 'bless', 'divinefavor', 'shieldoffaith', 'holdperson', 'mirrorimage', 'invisibility', 'dispelmagic', 'searinglight', 'fireball', 'haste', 'displacement', 'prayer', 'scorchingray', 'bullsstrength', 'bearsendurance', 'darkness', 'spiritweapon', 'protevil', 'slow', 'greatermagicweapon', 'darkvisioncomm', 'holysmite', 'blessingoffervor', 'fireshield', 'invisgreater', 'protectfire', 'burninghands', 'breathoflife', 'raisedead', 'firesnake', 'resurrection'],
   inquisitor: ['curelight', 'curemoderate', 'cureserious', 'curecritical', 'bless', 'divinefavor', 'shieldoffaith', 'holdperson', 'spiritweapon', 'dispelmagic', 'searinglight', 'prayer', 'displacement', 'bullsstrength', 'protevil', 'sleep', 'blessingoffervor', 'holysmite', 'invisgreater', 'banishment', 'dispelmagicgreater'],
+  // MAGUS (v3.37.83 — was missing entirely, which emptied Reese's default prep and
+  // with it his whole spellbook; see slotsFor). Defense + mobility first (Shield,
+  // Mirror Image, Haste, Fly) per his ranged skirmisher design, then the artillery.
+  magus: ['shield', 'mirrorimage', 'haste', 'displacement', 'fly', 'stoneskin', 'dispelmagic', 'disintegrate', 'chainlightning', 'scorchingray', 'glitterdust', 'vanish', 'grease', 'bladeddash', 'bladelash', 'seeinvisibility', 'dimensiondoor', 'fireshield', 'elementalbody', 'dimensionalblade', 'overlandflight', 'dispelmagicgreater', 'trueseeing'],
 };
 
 // The class's implemented, castable LEVELED spells (slvl ≥ 1; at-will cantrips and
