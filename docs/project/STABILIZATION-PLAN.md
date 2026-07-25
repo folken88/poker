@@ -68,6 +68,54 @@ Retires: the room-reset checklist, the dispel-eligibility list, silent passives
 (narration hooks are part of the declaration), the client turn-boundary-reset
 class of bug (blocksTurn is queryable).
 
+## Phase S4 — semantic combat EVENTS (sighted/blind consistency; approved 2026-07-25)
+
+The server narrates in PROSE (`_note`) and the blind layer re-derives meaning from
+text (sometimes by regex); the sighted UI renders from state — three surfaces, one
+truth, endless drift. S4: every state change emits an EVENT alongside its note —
+`{type:'attack', actor, target, hit, dmg, riders}`, `{type:'condition', who, what,
+applied|expired, source}`, `{type:'turnSkip', who, reason}` — and prose is GENERATED
+from events by one renderer with one verb table. Blind priorities (urgent/event/
+ambient) + Josh's verbosity rules become per-event-type POLICY. A state change with
+no event becomes a lint error — the "silent mechanic" bug class dies structurally.
+NOT an invention: jsonl lines already carry `phase`/`side`/`kind` (proto-events).
+Migration: `_note(prose, sound, {ev})` rides alongside; renderers flip event-first
+surface by surface. S3 registry effects emit condition events natively.
+
+## Phase S5 — trait-driven creatures + ONE resolution layer (PF1 consistency)
+
+PF1 = four resolution procedures (attack, save, SR, damage typing) + a trait
+ontology. Today: per-handler saves, name-REGEX immunity (`mindImmune` matches
+/golem|skelet|zombie/), and `_spellWorksOn` (bot preview) as a SEPARATE
+implementation from cast-time refusals. S5: (1) MON entries + heroes carry a real
+traits block `{type, subtypes, senses, immune[], resist, dr}` — IMPORTED from the
+content DB's Foundry raw_json where possible (real bestiary data, 380 monsters,
+no hand-flagging); (2) `resolve.save(target, {kind, tags})` consults traits ONCE —
+Elemental Body becomes `grants immune: [paralysis, stun, …]` and every current and
+FUTURE hold/stun source respects it automatically (the .86 patch needed 3 hand
+guards; under S5: zero). `_spellWorksOn` becomes a thin preview over the same check.
+
+## Phase S6 — enemy-caster unification (the parity mandate made structural)
+
+`_lichCast` owns parallel implementations of fireball/hold/fly — why concealment
+reached heroes before enemies and every new hero spell silently widens the parity
+gap. S6: enemies cast the SAME SPELL entries through the same resolution layer; AI
+brains only CHOOSE, never IMPLEMENT. Mostly falls out of S5. New hero spells then
+enrich enemy casters for free.
+
+## Explicitly NOT redesigned
+
+Per-room refresh + arcadey economy (locked — S4–S6 conform MECHANISMS, Tobias keeps
+deciding which RULES apply); client.js split (deferred — S4 reduces blindMode's
+text-coupling without touching client structure); the turn loop / room model (not a
+bug generator).
+
+## Sequencing (full arc)
+
+S1b/c → S2 (pf1core) → S3 (registry) → S5 (traits+resolution; prototype the trait
+IMPORT during S3 design — shared schema) → S4 (events) → S6 (unification).
+S4 and S5 are EACH bigger than S1–S3 combined; same discipline throughout.
+
 ## Rules of engagement
 
 - One seam per deploy; behavior byte-identical unless the changelog names the

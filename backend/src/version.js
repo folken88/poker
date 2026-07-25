@@ -3,6 +3,13 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.87 2026-07-25 STABILIZATION S1b (plan extended with approved phases S4-S6: semantic events /
+//                     trait-driven resolution / enemy-caster unification — docs/project/
+//                     STABILIZATION-PLAN.md). _foeTargetAC = THE one effective-AC stack for foe
+//                     attacks on heroes; was copy-pasted 3x with DRIFTING terms — melee applied the
+//                     stunned -2 / slowed -1 penalties, the chain-hook and vampiric spellstrike
+//                     didn't. Unified on the full list (rules-correct; slight foe buff vs CC'd
+//                     heroes). Hook + spellstrike rolls now go through the _foeSwing chokepoint too.
 //  3.37.86 2026-07-24 ELEMENTAL BODY KEPT ITS PROMISES CHECKED (Josh, run dapper-moose: "make sure
 //                     it's applying and working correctly according to the rules"). Audit of the five
 //                     promised immunities: stun ✓ (shout/gaze), melee-rider paralysis ✓, but HOLD
@@ -1248,6 +1255,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.86';
+const VERSION = '3.37.87';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

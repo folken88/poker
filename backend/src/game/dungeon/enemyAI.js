@@ -324,7 +324,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       this._note(`☄️ ${e.glyph} ${e.name} BLAZES in a final surge of glory — +4 to ALL its attacks for the rest of the room!`, '/audio/draugr_shout03_burning.mp3', { side: 'enemy' });
     }
     // _acOf strips shield AC for dual-wielders AND ranged-weapon wielders.
-    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - (target.stunned > 0 ? 2 : 0) - (target.slowed > 0 ? 1 : 0) - this._acPenalty(target);   // helpless / stunned / slowed / rage / reckless / cleave: easier to hit (enemy melee vs prone = −4)
+    const effAC = this._foeTargetAC(target);   // helpless / stunned / slowed / rage / reckless / cleave: easier to hit (S1b chokepoint)
     // Roll + sound + ranged/melee verb all come from the _foeSwing chokepoint (seam
     // S1a) — one set of rules for every target kind. See the chokepoint's comment.
     const r = this._foeSwing(e, effAC);
@@ -426,6 +426,17 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   // missed shot still twangs, Josh) > the archetype thunk _monsterSwing set.
   // opts.meleeVerb keeps site flavor ("smashes" vs summons). See
   // docs/project/STABILIZATION-PLAN.md for the S1b–S1d follow-ons.
+  // ── THE one effective-AC computation for a foe attacking a hero (seam S1b,
+  // v3.37.87). Was copy-pasted 3× with DRIFTING term lists: melee had the
+  // stunned −2 / slowed −1 penalties, the chain-hook and vampiric spellstrike
+  // didn't — but stunned/slowed make you easier to hit by EVERY attack (PF1).
+  // Unifying is a rules-correctness fix (a slight foe buff vs CC'd heroes).
+  _foeTargetAC(target) {
+    return this._acOf(target).ac + this._acBonus(target)
+      - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0)
+      - (target.stunned > 0 ? 2 : 0) - (target.slowed > 0 ? 1 : 0)
+      - this._acPenalty(target);
+  },
   _foeSwing(e, targetAC, opts = {}) {
     const r = this._monsterSwing(e, targetAC);
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);
@@ -616,8 +627,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemyHook(e, target) {
     const cfg = e.hook || {};
     const snd = cfg.grabSound || GRAB_CHAIN_SND;   // the chain-hook GRAB always rattles out the "come here!" chain (Josh); cfg.sound is reserved for the constrict/crush
-    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - this._acPenalty(target);
-    const r = this._monsterSwing(e, effAC);
+    const r = this._foeSwing(e, this._foeTargetAC(target));   // S1b: shared AC stack (gains the stunned/slowed penalties melee already had) + chokepoint roll
     if (!r.hit) {
       this._note(`⛓️ ${e.glyph} ${e.name} hurls its barbed chain at ${target.nickname} — the hook scrapes past. ${this._atkStr(r)}`, snd, { side: 'enemy' });
       this._echoToTable(snd); this._broadcast(); return;
@@ -903,8 +913,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemySpellstrike(e, target) {
     const cfg = e.spellstrike || {};
     const SS = cfg.name || 'VAMPIRIC TOUCH';
-    const effAC = this._acOf(target).ac + this._acBonus(target) - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0) - this._acPenalty(target);
-    const r = this._monsterSwing(e, effAC);
+    const r = this._foeSwing(e, this._foeTargetAC(target));   // S1b: shared AC stack (gains the stunned/slowed penalties melee already had) + chokepoint roll
     const snd = cfg.sound || null;
     if (!r.hit) { this._note(`🩸 ${e.glyph} ${e.name}'s ${SS.toLowerCase()} misses ${target.nickname}. ${this._atkStr(r)}`, snd, { side: 'enemy' }); this._echoToTable(snd); this._broadcast(); return; }
     const [phys, drTag] = this._physDR(target, r.damage);   // Stoneskin soaks the weapon part only
