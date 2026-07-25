@@ -27,7 +27,7 @@ const { babFor } = require('../../pf1data/classes');
 const GRAB_CHAIN_SND = '/audio/slorr_come_here_grapple_chain.mp3';
 
 module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC }) => ({
-  _monsterSwing(e, targetAC) {
+  _monsterSwing(e, targetAC, opts = {}) {
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
@@ -36,13 +36,25 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
     if (!hit) return { hit: false, roll, toHit, total, ac: targetAC, sound: pick(SND.whiffSword) };
+    // ENEMY CRITICAL HITS (v3.37.88 — Josh, verbatim ask: "it seems kind of stupid to
+    // only allow me to crit while not allowing the enemy to get a lucky shot"; also
+    // task #61 — until now NO enemy attack could ever crit, which left the sahuagin
+    // prince's Daunting Success as dead code). PF1 shape: a natural 20 threatens, a
+    // CONFIRMATION roll vs the same AC doubles the damage. opts.critImmune (Elemental
+    // Body heroes) turns the threat into a plain hit.
+    let crit = false;
+    if (roll === 20 && !opts.critImmune) {
+      const cRoll = dRoll(20);
+      crit = cRoll !== 1 && (cRoll === 20 || cRoll + toHit >= targetAC);
+    }
     // (hit sound chosen by foe archetype below, via _foeHitSound)
     // GLORIOUS CHALLENGE (Order of the Flame): +2 melee damage per CONSECUTIVE glorious
     // challenge this room — a kill-streak morale bonus that compounds (see _enemyMelee).
     const glory = e.gloriousChallenge ? 2 * (e.gloriousN || 0) : 0;
     let dmg = e.dmgBonus - sick - pray + glory;
     for (let i = 0; i < (e.dmgCount || 1); i++) dmg += dRoll(e.dmgDie);   // e.g. golem slam = 2d10+9
-    return { hit: true, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: this._foeHitSound(e) };
+    if (crit) dmg *= 2;   // ×2 crit (the standard shortcut: total doubled)
+    return { hit: true, crit, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: this._foeHitSound(e) };
   },
   // The connecting-blow sound for a foe with NO explicit atkSound — chosen by ARCHETYPE
   // (v3.37.79) so a blind player can tell foe TYPES apart in a crowded room. A foe with
@@ -225,7 +237,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
           // — same rules as attacks on heroes, so the two can never drift again
           // (the "Erinyes smashes your Ghoul while a bow twangs" bug, proud-waffle).
           const r = this._foeSwing(e, this._enemyAC(target), { meleeVerb: 'smashes' });
-          if (r.hit) { this._dmgE(target, r.damage); this._note(`${e.glyph} ${e.name} ${r.verbHit} your ${target.name} for ${r.damage}!${target.hp <= 0 ? ' ☠️ Destroyed!' : ''}`, r.sound, { side: 'enemy' }); }
+          if (r.hit) { this._dmgE(target, r.damage); this._note(`${e.glyph} ${e.name} ${r.crit ? 'CRITS' : r.verbHit} your ${target.name} for ${r.damage}!${target.hp <= 0 ? ' ☠️ Destroyed!' : ''}`, r.sound, { side: 'enemy' }); }
           else this._note(this._foeMissText(e, r, `your ${target.name}`, false), r.sound, { side: 'enemy' });
         }
         e._lastAtkTarget = tgtId;
@@ -327,8 +339,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const effAC = this._foeTargetAC(target);   // helpless / stunned / slowed / rage / reckless / cleave: easier to hit (S1b chokepoint)
     // Roll + sound + ranged/melee verb all come from the _foeSwing chokepoint (seam
     // S1a) — one set of rules for every target kind. See the chokepoint's comment.
-    const r = this._foeSwing(e, effAC);
-    const _rHit = r.verbHit;
+    const r = this._foeSwing(e, effAC, { critImmune: !!target.elemBody });
+    const _rHit = r.crit ? 'CRITS' : r.verbHit;
     if (r.hit) {
       // Swashbuckler PARRY — the first melee attack against them each round can be
       // turned aside (parry roll vs the foe's attack total). On success: NO damage
@@ -438,7 +450,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       - this._acPenalty(target);
   },
   _foeSwing(e, targetAC, opts = {}) {
-    const r = this._monsterSwing(e, targetAC);
+    const r = this._monsterSwing(e, targetAC, opts);
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);
     else if (e.atkSound && (r.hit || e.ranged)) r.sound = e.atkSound;
     r.verbHit = e.ranged ? 'shoots' : (opts.meleeVerb || 'hits');
@@ -627,7 +639,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemyHook(e, target) {
     const cfg = e.hook || {};
     const snd = cfg.grabSound || GRAB_CHAIN_SND;   // the chain-hook GRAB always rattles out the "come here!" chain (Josh); cfg.sound is reserved for the constrict/crush
-    const r = this._foeSwing(e, this._foeTargetAC(target));   // S1b: shared AC stack (gains the stunned/slowed penalties melee already had) + chokepoint roll
+    const r = this._foeSwing(e, this._foeTargetAC(target), { critImmune: !!target.elemBody });   // S1b chokepoint roll + shared AC stack; elemBody heroes can't be crit (v3.37.88)
     if (!r.hit) {
       this._note(`⛓️ ${e.glyph} ${e.name} hurls its barbed chain at ${target.nickname} — the hook scrapes past. ${this._atkStr(r)}`, snd, { side: 'enemy' });
       this._echoToTable(snd); this._broadcast(); return;
@@ -637,7 +649,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const _fom = (!target.dead && target.hp > -10) ? this._fomSpend(target, 'the dragging hook') : false;
     const _yankedDown = !_fom && !target.dead && target.hp > -10 && target.flying;   // a thrown chain-hook can snag a FLYER and drag it out of the sky — that's how a GROUNDED mech grabs an airborne hero (Josh's "how did the non-flying scraper grapple my flying Olbryn?"). The grapple then keeps them grounded (see the `grounded` check in _enemyAct).
     if (!target.dead && target.hp > -10 && !_fom) { target.grappled = true; target.grappledBy = e.uid; target.grappledCL = this._enemyCL(e); target.grappleCMB = e.toHit || 0; }   // stamp CMB for the cast-while-grappled concentration DC
-    this._note(`⛓️ ${e.glyph} ${e.name}'s hook BITES ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : `${_yankedDown ? ' — the chain SNATCHES them out of the air and drags them down' : ''} and drags them into a GRAPPLE! (Grease it or struggle free — no spell to dispel)`} ${this._atkStr(r)}`, snd, { side: 'enemy' });
+    this._note(`⛓️ ${e.glyph} ${e.name}'s hook ${r.crit ? 'CRITICALLY BITES' : 'BITES'} ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : `${_yankedDown ? ' — the chain SNATCHES them out of the air and drags them down' : ''} and drags them into a GRAPPLE! (Grease it or struggle free — no spell to dispel)`} ${this._atkStr(r)}`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   },
   // Crush a hero the devil is already grappling — automatic chain damage.
@@ -913,7 +925,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemySpellstrike(e, target) {
     const cfg = e.spellstrike || {};
     const SS = cfg.name || 'VAMPIRIC TOUCH';
-    const r = this._foeSwing(e, this._foeTargetAC(target));   // S1b: shared AC stack (gains the stunned/slowed penalties melee already had) + chokepoint roll
+    const r = this._foeSwing(e, this._foeTargetAC(target), { critImmune: !!target.elemBody });   // S1b chokepoint roll + shared AC stack; elemBody heroes can't be crit (v3.37.88)
     const snd = cfg.sound || null;
     if (!r.hit) { this._note(`🩸 ${e.glyph} ${e.name}'s ${SS.toLowerCase()} misses ${target.nickname}. ${this._atkStr(r)}`, snd, { side: 'enemy' }); this._echoToTable(snd); this._broadcast(); return; }
     const [phys, drTag] = this._physDR(target, r.damage);   // Stoneskin soaks the weapon part only
@@ -927,9 +939,9 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       if (cfg.healsUndead) {
         const mend = dRollN(cfg.dice || 4, cfg.die || 8) + (cfg.bonus || 0);
         target.hp = Math.min(target.maxHp, target.hp + mend);
-        this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} strikes ${target.nickname} for ${phys}${drTag} — but the negative energy KNITS the undead for ${mend}! ${this._atkStr(r)}`, cfg.sound || null, { side: 'enemy' });
+        this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} ${r.crit ? 'CRITICALLY strikes' : 'strikes'} ${target.nickname} for ${phys}${drTag} — but the negative energy KNITS the undead for ${mend}! ${this._atkStr(r)}`, cfg.sound || null, { side: 'enemy' });
       } else {
-        this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} strikes ${target.nickname} for ${phys}${drTag} — but the negative energy washes over the undead harmlessly. ${this._atkStr(r)}`, cfg.sound || null, { side: 'enemy' });
+        this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} ${r.crit ? 'CRITICALLY strikes' : 'strikes'} ${target.nickname} for ${phys}${drTag} — but the negative energy washes over the undead harmlessly. ${this._atkStr(r)}`, cfg.sound || null, { side: 'enemy' });
       }
       this._echoToTable(cfg.sound || null); this._broadcast(); return;
     }
@@ -938,7 +950,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     this._dmgToMember(target, total);
     let lifeTag = '';
     if (cfg.lifesteal && e.hp > 0) { const healed = Math.min(bonus, e.maxHp - e.hp); if (healed > 0) { e.hp += healed; lifeTag = ` and drinks ${healed} life (${e.hp}/${e.maxHp})`; } }
-    this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} rips ${target.nickname} for ${phys}${drTag}+${bonus} = ${total}${lifeTag}! ${this._atkStr(r)}`, snd, { side: 'enemy' });
+    this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} ${r.crit ? 'CRITICALLY rips' : 'rips'} ${target.nickname} for ${phys}${drTag}+${bonus} = ${total}${lifeTag}! ${this._atkStr(r)}`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   },
   // Fire Skeleton suicide bomber: on its turn it rushes in and DETONATES — one

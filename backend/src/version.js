@@ -3,6 +3,19 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.88 2026-07-25 ENEMIES CAN CRIT NOW (Josh, verbatim: "it seems kind of stupid to only allow
+//                     me to crit while not allowing the enemy to get a lucky shot" — task #61 closed
+//                     his way). PF1 shape: nat 20 threatens, confirmation roll vs the same AC, x2
+//                     damage; ~2.5% of enemy hits. Every attack surface narrates it (CRITS /
+//                     CRITICALLY BITES / CRITICALLY rips) so it's audible blind. Daunting Success
+//                     (sahuagin prince) comes ALIVE — it was dead code without crits. Elemental
+//                     Body's crit immunity is back and REAL (opts.critImmune). Plus ADAPTIVE DISPEL
+//                     ECONOMICS (Josh's pushback): vs a warded AC-38+ foe — the pit-fiend class —
+//                     stripping ANY pre-cast ward now rates the turn ("if the +15 BAB fighter can't
+//                     hit, peeling mage armor becomes a priority"); ordinary foes keep the old
+//                     attack-don't-peel rule. Summon Devil counts confirmed working as designed
+//                     (I-III + VI roll multiples of lesser devils; IV/V/VII trade count for ONE
+//                     strong devil — shiny-penguin's lone Barbed Devil was a 1 on VI's 1d3).
 //  3.37.87 2026-07-25 STABILIZATION S1b (plan extended with approved phases S4-S6: semantic events /
 //                     trait-driven resolution / enemy-caster unification — docs/project/
 //                     STABILIZATION-PLAN.md). _foeTargetAC = THE one effective-AC stack for foe
@@ -1255,6 +1268,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.87';
+const VERSION = '3.37.88';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

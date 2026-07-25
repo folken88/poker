@@ -1592,10 +1592,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // (Shield / Mage Armor / Shield of Faith / Stoneskin) score 0 — "not worth a
   // turn". Threshold 3. Innate wings (harpy, dragon) are NOT spell-flight.
   _dispelWorthyFoe() {
+    // ADAPTIVE ECONOMICS (v3.37.88 — Josh's pushback on the "don't peel AC wards"
+    // rule: "if your badass fighter with +15 BAB can't hit, what's your spellcaster
+    // with +10 gonna do? At that point does dispelling mage armor become somewhat of
+    // a priority?" He's right: against a NIGH-UNHITTABLE warded foe — the AC-38+
+    // pit-fiend class — stripping ANY pre-cast ward beats whiffing, so wards rate
+    // the turn there. Against ordinary foes the old rule stands: attack, don't peel.
     const worth = (e) => ((e.flyCast || (e.precast && e.precast.includes('fly'))) && e.flying ? 4 : 0)
       + (e.invisible ? 3 : 0) + (e.hasted > 0 ? 3 : 0)
       + ((e.buffs && ((e.buffs.toHit || 0) + (e.buffs.dmg || 0)) >= 3) ? 3 : 0)
-      + (e.images > 0 && e.boss ? 2 : 0);
+      + (e.images > 0 && e.boss ? 2 : 0)
+      + ((e.precast && e.precast.length && (e.ac || 0) >= 38) ? 3 : 0);
     return this._targetableEnemies().filter(e => worth(e) >= 3).sort((a, b) => worth(b) - worth(a))[0] || null;
   },
   _abCleanse(m, ab, payload) {
@@ -2573,7 +2580,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     else if (ab.target === 'ally') { const t = this._buffTarget(m, ab, payload); apply(t); this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${t.nickname}.`, sound); }
     // Elemental Body SPEAKS its protections (v3.37.86 — Josh, run dapper-moose: cast it
     // twice, heard only "uses Elemental Body!" and had no idea what it granted).
-    else if (ab.elemBody) { apply(m); this._note(`${ab.icon} ${m.nickname} becomes a being of raw element — IMMUNE to paralysis and hold, stun, sickening and blinding for the rest of the room!`, sound); }
+    else if (ab.elemBody) { apply(m); this._note(`${ab.icon} ${m.nickname} becomes a being of raw element — IMMUNE to critical hits, paralysis and hold, stun, sickening and blinding for the rest of the room!`, sound); }
     else { apply(m); this._note(`${ab.icon} ${m.nickname} uses ${ab.name}!`, sound); }
     this._echoToTable(sound);
   },
