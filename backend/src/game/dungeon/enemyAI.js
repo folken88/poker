@@ -366,7 +366,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       if (r.crit && e.gloriousChallenge && !e._dauntedRoom) {
         e._dauntedRoom = true;
         let n = 0;
-        for (const m of this.livingParty()) { if (!m.undead) { m.sickened = Math.max(m.sickened || 0, SICKENED_ROUNDS); n++; } }
+        for (const m of this.livingParty()) { if (!m.undead && !m.elemBody) { m.sickened = Math.max(m.sickened || 0, SICKENED_ROUNDS); n++; } }   // elemental bodies can't be shaken (v3.37.86)
         if (n) this._note(`😱 ${e.glyph} ${e.name}'s GLORIOUS critical DAUNTS the party — ${n} hero${n > 1 ? 's' : ''} shaken (−2 to hit, damage & saves)! (Daunting Success)`, '/audio/draugr_shout03_burning.mp3', { side: 'enemy' });
       }
       // Domain parity (Death — Bleeding Touch): a death-priest foe's first landed
@@ -535,6 +535,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // PF1: Hold is a mind-affecting compulsion — UNDEAD heroes (Tar-Baphon, Vrood,
     // Vesorianna, Farrus) have no mind to seize. (Mirrors the heroes' rule.)
     if (target.undead) { this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname} — but the undead have no mind to seize. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
+    // Elemental Body: immune to paralysis — Hold slides off (v3.37.86, PF1).
+    if (target.elemBody) { this._note(`🌪️ ${e.glyph} ${e.name} casts Hold Person on ${target.nickname} — but a body of raw element cannot be paralyzed. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
     const dc = e.spellDC || 13;
     const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
@@ -852,6 +854,11 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemyHoldHero(e, target, dc, label) {
     // PF1: a mind-affecting compulsion — no effect on an undead hero.
     if (target.undead) { this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — but the undead have no mind to seize. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
+    // ELEMENTAL BODY (v3.37.86 — Josh, run dapper-moose: "make sure it's applying
+    // correctly"): its promised paralysis immunity covered the melee paralyze rider
+    // but NOT Hold — a being of raw element cannot be paralyzed by it (PF1). Counts
+    // as permanently futile so the caster stops wasting rounds on them.
+    if (target.elemBody) { e._holdResists = e._holdResists || {}; e._holdResists[target.playerId] = 9; this._note(`🌪️ ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — but a body of raw element cannot be paralyzed. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
     if (this._srBlocksHero(e, target, label)) { e._holdResists = e._holdResists || {}; e._holdResists[target.playerId] = 9; this._broadcast(); return; }   // PF1 SR (drow heroes) — SR turning it once means it always will: permanently futile
     const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;

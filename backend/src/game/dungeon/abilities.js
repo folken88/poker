@@ -2571,6 +2571,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       this._note(`${ab.icon} ${m.nickname} ${ab.enemyPenalty ? `intones ${ab.name} — allies blessed, enemies cursed across the field` : ab.gmw ? `blesses the party's weapons with ${ab.name}` : `strikes up ${ab.name} — the party is emboldened`}${inspTag}!`, sound);
     }
     else if (ab.target === 'ally') { const t = this._buffTarget(m, ab, payload); apply(t); this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${t.nickname}.`, sound); }
+    // Elemental Body SPEAKS its protections (v3.37.86 — Josh, run dapper-moose: cast it
+    // twice, heard only "uses Elemental Body!" and had no idea what it granted).
+    else if (ab.elemBody) { apply(m); this._note(`${ab.icon} ${m.nickname} becomes a being of raw element — IMMUNE to paralysis and hold, stun, sickening and blinding for the rest of the room!`, sound); }
     else { apply(m); this._note(`${ab.icon} ${m.nickname} uses ${ab.name}!`, sound); }
     this._echoToTable(sound);
   },

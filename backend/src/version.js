@@ -3,6 +3,16 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.86 2026-07-24 ELEMENTAL BODY KEPT ITS PROMISES CHECKED (Josh, run dapper-moose: "make sure
+//                     it's applying and working correctly according to the rules"). Audit of the five
+//                     promised immunities: stun ✓ (shout/gaze), melee-rider paralysis ✓, but HOLD
+//                     spells ignored it — a body of raw element cannot be paralyzed, so Hold Monster/
+//                     Person now slide off (both caster paths; counts as permanently futile so the
+//                     caster stops trying), sicken guard added, and "immune to crits" was promising
+//                     NOTHING (enemy attacks never roll crits in this engine — logged as task #61,
+//                     which also means the sahuagin prince's Daunting Success has never fired). The
+//                     cast line now SPEAKS the protections instead of a bare "uses Elemental Body!"
+//                     — he cast it twice blind with no idea what it granted.
 //  3.37.85 2026-07-24 SPELL-ADAPTATION BATCH 1 — 18 CRB/UM "low hanging fruit" spells (Tobias: "look
 //                     for spells that very easily translate… for clerics/druids/wizards/bards/
 //                     everyone"). All expressible with EXISTING effect handlers; class lists read
@@ -1238,6 +1248,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.85';
+const VERSION = '3.37.86';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };
