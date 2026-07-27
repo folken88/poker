@@ -645,6 +645,7 @@ class Dungeon {
     this._spawnRoom();
     this.blackTentacles = null;   // the tentacle field doesn't carry between rooms
     this.invisPurged = false;     // an Invisibility Purge burns for its ROOM only — the next room can hide again (see _abInvisPurge)
+    this._twkShare = null;        // Tactician's shared teamwork feat lapses between rooms (v3.37.92)
     for (const m of this.present()) { this._computeCastable(m); this._resetAbilities(m); m.flatFooted = !(fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy || (this._isFlameCavalier(m) && (m.level || 1) >= 2) || this._twkActive(m, 'lookout')); }   // LOOKOUT (teamwork): a paired watch is never surprised  // re-read the spell LOADOUT (Spellbook picker edits land at the door) + refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy — and Order of the Flame's FOOLHARDY RUSH at L2 — are never caught flat-footed)
     if (Math.random() < 0.05) { try { this._reskinVorkstag(); } catch (_) {} }   // skinwalker drifts to a new face between rooms (rare)
     this._maintainBardSongs();   // Inspire Courage is a passive aura — always up, no action spent
@@ -1671,7 +1672,7 @@ class Dungeon {
     // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
     // now carry high-level scaling — see the iterative loop in _playerAttack).
     const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon, { offHand }) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };   // off-hand swing → ½ ability mod to DAMAGE (PF1 two-weapon fighting)
-    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + studiedN + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF + this._teamworkHit(attacker, target);   // Tactician: +2 for allies vs the cavalier's challenged foe. (v3.37.90: the glorious +1-to-hit/stack was REMOVED — PF1 RAW grants melee DAMAGE only, per Tobias's match-PF1 mandate)   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
+    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + studiedN + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF;   // (v3.37.92: Tactician reworked to RAW feat-SHARING — the old +2-vs-quarry term is gone; v3.37.90: glorious grants DAMAGE only, per the match-PF1 mandate)   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
     const roll = dRoll(20), total = roll + toHit;
     // Luck domain — GOOD FORTUNE: the next missed swing (fumble included) is
     // rerolled once, keep the better outcome. Consumed on the reroll.

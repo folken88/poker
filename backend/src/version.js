@@ -3,6 +3,22 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.92 2026-07-27 THE PAD JOSH COULDN'T REACH + FLAME DOCTRINE + CELEB THROWS RAYS. (1) Josh:
+//                     "I see only a challenge button" — server-side the cavalier pad was CORRECT
+//                     (verified live), but Glorious Challenge/Tactician sat at slots 10-12 behind
+//                     eight generic maneuvers and the blind numpad reaches NINE. Signature actions
+//                     now lead: Attack=1, Challenge=2, Tactician=3, Glorious=4 (Blaze appears at 15).
+//                     (2) FLAME DOCTRINE for bot Gweyir (Tobias): build the streak on the weakest
+//                     reachable foe, then at 2+ stacks TURN on the biggest target; and he eases
+//                     Power Attack OFF at 2+ stacks — the morale damage is already huge, protect the
+//                     to-hit. (3) Run dapper-marmot room 10 analyzed: futility ledger WORKED (Femmik
+//                     quit the failed dispel after exactly 2), but Celeb whiffed melee at an AC-31
+//                     boss rounds 6-8 and died to Magic Missiles — his at-will was the cleric HAMMER.
+//                     Theurge at-will is now the caster cantrip (ranged touch). His Shield trigger
+//                     was fine (witch IS arcane) — he was out of 1st-level arcane slots, which is
+//                     just PF1. (4) silent-pickle "crash": server logs show the room CLEARED, then a
+//                     connection drop — no server error; client-side hang or network, watching for
+//                     a repeat.
 //  3.37.91 2026-07-26 TEAMWORK FEATS (Tobias: "5-10 that would work well in our dungeon... usable by
 //                     anyone"). Eight PF1 APG/UC feats on existing engine hooks, granted by class/
 //                     level tables (pf1data/feats TEAMWORK). THE PAIRING RULE keeps the PF1 soul: a
@@ -1309,6 +1325,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.91';
+const VERSION = '3.37.92';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

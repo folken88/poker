@@ -965,6 +965,15 @@ _injectKitSpell('magus',      preparedSpell(SPELL.seeinvisibility, 4));
 _injectKitSpell('sorcerer',   spontaneousSpell(SPELL.seeinvisibility, 4));
 _injectKitSpell('inquisitor', spontaneousSpell(SPELL.seeinvisibility, 4));
 _injectKitSpell('bard',       spontaneousSpell(SPELL.seeinvisibility, 7));
+// THEURGE AT-WILL = the caster cantrip (v3.37.92 — run dapper-marmot: Celeb, a
+// 64-HP full caster, spent rounds 6-8 WHIFFING melee at an AC-31 boss because his
+// at-will was the cleric's hammer swing. A dual-school archmage throws rays: the
+// wizard's at-will cantrip (ranged TOUCH — hits the witch on a ~3+) replaces it.
+// KITS.theurge doesn't exist (Celeb's ability list is built by theurgeKit() in the
+// dungeon layer; kitFor('theurge') fell back to the DEFAULT weapon kit — hence the
+// hammer). Give the theurge a real kit entry whose at-will is the caster cantrip.
+if (!KITS.theurge) KITS.theurge = { atwill: KITS.wizard.atwill, note: 'Dual-school theurge — spells via his curated arcane+divine book.', abilities: [] };
+else if (KITS.wizard && KITS.wizard.atwill) KITS.theurge.atwill = KITS.wizard.atwill;
 _injectKitSpell('cleric',     preparedSpell(SPELL.invisibilitypurge, 5));
 _injectKitSpell('inquisitor', spontaneousSpell(SPELL.invisibilitypurge, 7));
 // Freedom of Movement (4th-level divine) — Josh 2026-07-22, run lucky-puffin: "I don't

@@ -23,7 +23,7 @@ const { babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../../pf1d
 const { crToNum, SIZE_RANK, SIZE_NAME, MONK_SFX } = require('../../pf1data/monsters');
 const RACES = require('../../pf1data/races');
 const { DOMAINS, maxDomainsFor } = require('../../pf1data/domains');
-const { fighterFeats, teamworkGrants } = require('../../pf1data/feats');
+const { fighterFeats, teamworkGrants, TEAMWORK } = require('../../pf1data/feats');
 const loadouts = require('../../pf1data/loadouts');
 const banter = require('../../bot/banter');
 
@@ -98,11 +98,14 @@ const CHALLENGE = { key: 'challenge', name: 'Challenge', icon: '⚔️', cost: '
 // applies his CURRENT glory stack (+2×N damage / −2×N AC), then attacks; a KILL grows the stack
 // for next turn. Chain kills (fodder is fair game!) to pump it, then unleash on a real threat.
 const GLORIOUS_CHALLENGE = { key: 'gloriouschallenge', name: 'Glorious Challenge', icon: '🔥', cost: 'free', effect: 'gloriouschallenge', target: 'enemy', sound: '/audio/draugr_shout03_burning.mp3', char: 'Lord Gweyir', desc: 'ORDER OF THE FLAME (PF1 RAW): SELECT a foe, then Glorious Challenge to challenge it AND strike at once. Each glorious challenge ISSUED this streak: +2 morale damage and −2 AC, compounding — your third in a row is +6 damage, −6 AC, on top of the base challenge\'s +level damage. Chain kills to keep it burning; the play is to build the Flame on the chaff and spend the damage on the boss. Current streak lives on the L readout; every kill announces your NEXT challenge\'s numbers. Free, unlimited, does not spend your Challenge uses.' };
-// TACTICIAN (all cavaliers, v3.37.89 — the first PF1 teamwork-tactics slice):
-// a standard action; for the rest of the room every ALLY gains +2 to hit against
-// the cavalier's CHALLENGED foe (enforced in Dungeon._teamworkHit). Uses scale
-// like PF1's 1/2/3 per day at L1/9/17 (per room here).
-const TACTICIAN = { key: 'tactician', name: 'Tactician: Coordinated Strike', icon: '🚩', cost: 'room', uses: (lvl) => ((lvl || 1) >= 17 ? 3 : (lvl || 1) >= 9 ? 2 : 1), effect: 'tactician', target: 'self', sound: '/audio/spell_buff_invoke.mp3', desc: 'PF1 teamwork tactics — rally the party: for the rest of the room, every ALLY\'s attacks against YOUR challenged foe gain +2 to hit. Challenge first, then rally; it follows each new challenge you declare.' };
+// TACTICIAN (all cavaliers — reworked v3.37.92 to PF1 RAW, Tobias: "function like a
+// buff that the cavalier can grant… he chooses which one he shares… lasts the rest
+// of that room"): a standard action that SHARES one of the cavalier's own teamwork
+// feats with the WHOLE party for the room (everyone counts as having it — see
+// _twkActive's share check). Auto-picks his best by priority; an explicit
+// payload.featKey wins (the choose-a-feat picker UI rides on this). Uses 1/2/3 at
+// L1/9/17 (PF1's per-day, per-room here).
+const TACTICIAN = { key: 'tactician', name: 'Tactician: Share a Teamwork Feat', icon: '🚩', cost: 'room', uses: (lvl) => ((lvl || 1) >= 17 ? 3 : (lvl || 1) >= 9 ? 2 : 1), effect: 'tactician', target: 'self', sound: '/audio/spell_buff_invoke.mp3', desc: 'PF1 Tactician — spend a turn drilling the party: ONE of YOUR teamwork feats is shared with every ally for the rest of the room (they count as having it, no partner needed). The share is announced with what the feat does. Your best is picked automatically for now; a chooser is coming.' };
 // ORDER OF THE FLAME order ability — BLAZE OF GLORY (L15). PF1: a standard action for Cha-mod
 // rounds granting +4 to attack (among movement perks that don't apply on the abstract grid);
 // modeled here as a once-per-room self-buff of +4 to hit for the rest of the room. Char-gated +
@@ -332,7 +335,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       forcepush:   () => this._abForcePush(m, ab, payload),
       studytarget: () => this._abStudyTarget(m, ab, payload),
       challenge: () => this._abChallenge(m, ab, payload),
-      tactician: () => this._abTactician(m, ab),
+      tactician: () => this._abTactician(m, ab, payload),
       gloriouschallenge: () => this._abGloriousChallenge(m, ab, payload),
       masscharm:   () => this._abMassCharm(m, ab, payload),
       exhaust:     () => this._abExhaust(m, ab, payload),
@@ -574,7 +577,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const kit = kitFor(m.cls).abilities;
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
     if (m.cls === 'slayer') list = list.concat(STUDIED_TARGET);   // SLAYER: swift Studied Target mark (ACG)
-    if (m.cls === 'cavalier') list = list.concat(CHALLENGE, TACTICIAN, GLORIOUS_CHALLENGE, BLAZE_OF_GLORY);   // CAVALIER: the Challenge oath (+level damage vs one foe); GLORIOUS_CHALLENGE + BLAZE_OF_GLORY (L15) are char-gated (Lord Gweyir / Order of the Flame) via _charAllows
+    if (m.cls === 'cavalier') {
+      list = list.concat(CHALLENGE, TACTICIAN, GLORIOUS_CHALLENGE, BLAZE_OF_GLORY);
+      // SIGNATURE-FIRST (v3.37.92 — Josh, runs nimble-marmot etc.: "I see only a
+      // challenge button… nothing about glorious challenge"). The blind numpad
+      // reaches NINE entries; the cavalier's class-defining actions sat at slots
+      // 10-12 behind eight generic maneuvers — unreachable by key, unheard. The
+      // signature actions now lead the pad (Attack=1, Challenge=2, Tactician=3,
+      // Glorious=4…); generic trips/disarms follow. Stable sort keeps their order.
+      const SIG = ['challenge', 'tactician', 'gloriouschallenge', 'blazeofglory'];
+      list.sort((a, b) => ((SIG.indexOf(a.key) + 1) || 99) - ((SIG.indexOf(b.key) + 1) || 99));
+    }   // CAVALIER: the Challenge oath (+level damage vs one foe); GLORIOUS_CHALLENGE + BLAZE_OF_GLORY (L15) are char-gated (Lord Gweyir / Order of the Flame) via _charAllows
     // MAGUS: name each Spell Strike by its DELIVERY — a ranged magus (Reese's bow)
     // fires it as an IMBUED SHOT; a melee magus channels it as a SPELL STRIKE. Copy
     // the ability so we never mutate the shared kit. (Same mechanic either way — the
@@ -656,7 +669,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
     if (m.cls === 'theurge') { const L = m.level || 1; m.synthUses = L >= 17 ? 3 : L >= 11 ? 2 : L >= 5 ? 1 : 0; }   // SPELL SYNTHESIS (Kobold Press): usable 1/2/3 times per room at L5/11/17
     if (m.cls === 'slayer') { m.studiedId = null; m.studiedN = 0; }   // SLAYER: Studied Target mark clears each room (fresh foes)
-    if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; m.gloriousN = 0; m.gloriousAC = 0; m._dauntedRoom = false; m._tacticianOn = false; }   // CAVALIER: Challenge oath (and Order of the Flame's glorious-challenge stack + once-per-room Daunting Success) clear each room
+    if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; m.gloriousN = 0; m.gloriousAC = 0; m._dauntedRoom = false; }   // CAVALIER: Challenge oath (and Order of the Flame's glorious-challenge stack + once-per-room Daunting Success) clear each room
     m.abilityUses = {};
     for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
@@ -2078,14 +2091,19 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._basicAttack(m, e.uid);   // ...and strike immediately (plays his estoc's attack sound after the shout)
     if (e.hp <= 0) { m.gloriousN = (m.gloriousN || 0) + 1; this._note(`🔥 ${m.nickname} stands triumphant over ${e.name} — GLORIOUS! Kill streak ${m.gloriousN} — your NEXT glorious challenge: +${2 * (m.gloriousN + 1)} morale damage, −${2 * (m.gloriousN + 1)} AC. (Unleash it again next turn.)`); }
   },
-  // TACTICIAN — the cavalier rallies the party around their sworn quarry (v3.37.89).
-  _abTactician(m, ab) {
-    if (m.challengedId == null || !this.livingEnemies().some(e => e.uid === m.challengedId)) {
-      return { ok: false, error: 'Challenge a foe first — Tactician rallies your allies against YOUR challenged quarry.' };
-    }
-    m._tacticianOn = true;
-    const quarry = this.livingEnemies().find(e => e.uid === m.challengedId);
-    this._note(`${ab.icon} ${m.nickname} rallies the party — COORDINATED STRIKE! Every ally hits ${quarry ? quarry.name : 'the challenged foe'} at +2 for the rest of the room.`, ab.sound);
+  // TACTICIAN (v3.37.92, PF1 RAW): share ONE of the cavalier's teamwork feats with
+  // the whole party for the room. payload.featKey (or .mode) picks explicitly —
+  // the chooser UI plugs in there; otherwise the best available is auto-picked.
+  // The announce TEACHES the feat (Tobias: "help text… teach Pathfinder as we go").
+  _abTactician(m, ab, payload) {
+    const mine = [...teamworkGrants(m.cls, m.level)];
+    if (!mine.length) return { ok: false, error: 'You have no teamwork feats to share yet — they unlock as you level.' };
+    const want = payload && (payload.featKey || payload.mode);
+    const ORDER = ['outflank', 'shakeitoff', 'coordman', 'twkprecise', 'brokenwing', 'lookout', 'shieldedcaster', 'alliedspell'];
+    const pick = (want && mine.includes(want)) ? want : (ORDER.find(k => mine.includes(k)) || mine[0]);
+    this._twkShare = { key: pick, by: m.playerId };
+    const tf = TEAMWORK[pick] || { name: pick, desc: '' };
+    this._note(`${ab.icon} ${m.nickname} drills the party — TACTICIAN shares ${tf.name.toUpperCase()} with every ally for this room: ${tf.desc}.`, ab.sound);
     this._broadcast();
     return { ok: true };
   },
@@ -2741,19 +2759,20 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // `this`. Pairing rule: a feat is live only while ANOTHER living hero also has
   // it — except inquisitors (Solo Tactics, PF1 RAW: works alone).
   _twkActive(m, key) {
-    if (!m || !teamworkGrants(m.cls, m.level).has(key)) return false;
+    if (!m) return false;
+    // TACTICIAN SHARE (v3.37.92): while the sharing cavalier stands, the shared
+    // feat is live for EVERYONE — allies count as having it, pairing satisfied.
+    const sh = this._twkShare;
+    if (sh && sh.key === key && this.party && this.livingParty().some(p => p.playerId === sh.by)) return true;
+    // INITIATIVE-TIMING RULE (Tobias 2026-07-27): a feat that matters at the DOOR
+    // (initiative / flat-footed) can't wait for a Tactician cast — the roll already
+    // happened. A cavalier who HAS such a feat counts as sharing it ALWAYS. Today
+    // that's Lookout; add future init-feats here.
+    if (key === 'lookout' && this.party && this.livingParty().some(p => p.cls === 'cavalier' && teamworkGrants('cavalier', p.level).has('lookout'))) return true;
+    if (!teamworkGrants(m.cls, m.level).has(key)) return false;
     if (m.cls === 'inquisitor') return true;   // Solo Tactics
     if (!this.party) return false;   // bare test fakes / no roster yet — nobody to pair with
     return this.livingParty().some(p => p !== m && p.playerId !== m.playerId && teamworkGrants(p.cls, p.level).has(key));
-  },
-  // TACTICIAN (v3.37.89): while a living cavalier has it active, every OTHER
-  // hero's attacks against that cavalier's CHALLENGED foe gain +2 to hit.
-  _teamworkHit(attacker, e) {
-    if (!e || !e.uid) return 0;
-    for (const p of this.livingParty()) {
-      if (p.cls === 'cavalier' && p._tacticianOn && p.challengedId === e.uid && p.playerId !== attacker.playerId) return 2;
-    }
-    return 0;
   },
   // SHAKE IT OFF: +1 on all saves per OTHER living ally who also has it (cap +3).
   _shakeItOff(m) {

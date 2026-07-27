@@ -102,13 +102,18 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       }
     }
     // LORD GWEYIR (Order of the Flame): every turn he GLORIOUS-CHALLENGES + strikes in one motion.
-    // He picks the WEAKEST living foe — fast kills keep the streak rolling, so he pumps the stack on
-    // fodder before it lands, monstrously, on a real threat. Each kill compounds his +damage/−AC.
+    // FLAME DOCTRINE (Tobias 2026-07-27): below 2 stacks he picks the WEAKEST reachable
+    // foe — fast kills build the streak — then at 2+ stacks he TURNS on the biggest
+    // target on the field, cashing the compounded morale damage where it matters.
     if ((m.playerId || '').toLowerCase() === 'lord gweyir') {
       const gcSlot = this._abilitiesFor(m).findIndex(ab => ab.effect === 'gloriouschallenge');
       if (gcSlot >= 0) {
-        const prey = foes.filter(e => e.hp > 0 && this._canReach(m, e)).sort((a, b) => a.hp - b.hp)[0]   // weakest reachable first (build the streak)
-                  || foes.filter(e => e.hp > 0).sort((a, b) => a.hp - b.hp)[0];
+        const live = foes.filter(e => e.hp > 0);
+        const pool0 = live.filter(e => this._canReach(m, e));
+        const pool = pool0.length ? pool0 : live;
+        const weakest = pool.slice().sort((a, b) => a.hp - b.hp)[0];
+        const biggest = pool.find(e => e.boss) || pool.slice().sort((a, b) => (b.maxHp || b.hp) - (a.maxHp || a.hp))[0];
+        const prey = ((m.gloriousN || 0) >= 2) ? biggest : weakest;
         if (prey) { const r = this._useAbility(m, gcSlot, { targetUid: prey.uid }); if (r && r.ok) { this._hasteBonus(m); return; } }
       }
     }
@@ -118,6 +123,14 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (m.cls === 'slayer' && (m.studiedId == null || !foes.some(e => e.uid === m.studiedId && e.hp > 0))) {
       const prey = this._preferredFoe(m, foes);
       if (prey) { m.studiedId = prey.uid; m.studiedN = 1 + Math.floor((m.level || 1) / 5); this._note(`🎯 ${m.nickname} studies ${prey.name} — marking it for the kill.`); }
+    }
+    // BOT TACTICIAN (v3.37.92): a cavalier opens the fight by drilling the party —
+    // share the best teamwork feat once per room, while the room is young and
+    // there's a party to drill. (Standard action — it IS the turn.)
+    if (m.cls === 'cavalier' && !this._twkShare && this.round <= 2 && this.livingParty().length >= 3
+        && ((m.abilityUses && m.abilityUses.tactician) || 0) > 0 && teamworkGrants(m.cls, m.level).size) {
+      const tSlot = this._abilitiesFor(m).findIndex(ab => ab.effect === 'tactician');
+      if (tSlot >= 0) { const r = this._useAbility(m, tSlot, {}); if (r && r.ok) { this._hasteBonus(m); return; } }
     }
     // CAVALIER auto-CHALLENGES its prey when it has a Challenge use left (room-cost, limited):
     // swear the +level-damage oath on the foe it's about to fight, re-swear when the old quarry
@@ -207,6 +220,10 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     let want = on;
     if (neededOn >= 16) want = false;                         // too tough to power through → accuracy
     else if (neededOn <= 14) want = true;                     // comfortably hits → take the damage
+    // FLAME DOCTRINE (Tobias 2026-07-27): a glorious cavalier carrying 2+ stacks
+    // protects his TO-HIT — the morale damage is already huge, so Power Attack's
+    // −hit trades badly. Ease it off and land the loaded blows.
+    if (!ranged && (m.gloriousN || 0) >= 2) want = false;
     if (want !== on) this._useAbility(m, idx, {});            // free toggle (announces the change)
     // FIGHT DEFENSIVELY — a survival stance: raise it when badly hurt (≤35% HP,
     // trade offense for +2-3 dodge AC to live until a heal lands), drop it once
