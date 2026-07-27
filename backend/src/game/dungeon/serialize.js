@@ -122,7 +122,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (m.invisible)    push('invisible', 'Invisible', 'unseen — until you attack');
     if (m.flying)       push('fly', 'Flying', 'airborne — grounded foes cannot reach you');
     if (m.images > 0)   push('mirrorimage', 'Mirror Image', `${m.images} decoy${m.images > 1 ? 's' : ''} soaking incoming attacks`, '/dungeon/buffs/fly.webp', m.images);   // no mirrorimage.webp exists — reuse the shimmer icon (matches BUFF_META); n = remaining decoys badge
-    if (m.gloriousN > 0) push('glorious', 'Glorious Challenge', `Order of the Flame — the Flame stack: +${2 * m.gloriousN} damage, +${m.gloriousN} to hit / −${2 * m.gloriousN} AC (grows with every kill this room — build on chaff, spend on the boss)`, '/dungeon/buffs/protevil.webp', m.gloriousN);   // n = current stack level
+    if (m.gloriousN > 0) push('glorious', 'Glorious Challenge', `Order of the Flame — kill streak ${m.gloriousN}: your NEXT glorious challenge is +${2 * (m.gloriousN + 1)} morale damage / −${2 * (m.gloriousN + 1)} AC (PF1 RAW — build it on chaff, spend the damage on the boss)`, '/dungeon/buffs/protevil.webp', m.gloriousN);   // n = current stack level
     if (m.untargetable) push('blur', 'Blurred', 'untargetable until your next turn (Bladed Dash)', '/dungeon/buffs/fly.webp');
     if (m.touchStrike > 0) push('dimblade', 'Dimensional Blade', 'your strikes hit on TOUCH this round', '/dungeon/buffs/magearmor.webp');
     if (m.protectFire > 0) push('protectfire', 'Fire Ward', `absorbs the next ${m.protectFire} fire damage (Protection from Fire)`);

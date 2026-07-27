@@ -3,6 +3,20 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.90 2026-07-26 ORDER OF THE FLAME = PF1 RAW (Tobias posted the order's full text: "make our
+//                     game match pf1 everywhere we possibly can"). (1) Glorious to-hit REVERTED —
+//                     RAW grants melee DAMAGE only (the .89 +1/stack was a house rule; one line
+//                     restores it if wanted). Prince parity reverted too. (2) Glorious math counts
+//                     challenges ISSUED (kills+1): the FIRST glorious is already +2 morale dmg/−2 AC;
+//                     the RAW example (3rd = +6/−6, +11 total dmg at L5) now falls out exactly.
+//                     Kill announces speak the NEXT challenge's numbers. (3) NEW RAW rule: an active
+//                     Challenge costs −2 AC vs every attacker EXCEPT the quarry (_foeTargetAC gains
+//                     the attacker — the S1b chokepoint made this a 1-line rule). (4) Challenge
+//                     uses/room now RAW: 1, +1 at L4 and every 3 thereafter (was 1+1/4 levels) —
+//                     JOSH READ HIS SHEET RIGHT ("every three levels") and I told him he misread;
+//                     the formula was wrong, not him. Foolhardy Rush (L2 passive) / hero Daunting
+//                     Success (L8, live since crits exist) / Blaze of Glory (L15) audited: already
+//                     present and RAW-shaped.
 //  3.37.89 2026-07-26 THE CAVALIER BATCH + HONEST DETECT EVIL (Josh runs jumbled-pebble +
 //                     golden-biscuit; Tobias's Flame-cavalier doctrine). (1) DETECT EVIL was marking
 //                     EVERY foe smite-able — neutral machines and good celestials included — lying as
@@ -1282,6 +1296,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.89';
+const VERSION = '3.37.90';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

@@ -31,7 +31,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
-    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.gloriousChallenge ? (e.gloriousN || 0) : 0);   // Fight Defensively: −4; Blaze of Glory: +4; prince's glory: +1 to hit per kill-streak (parity with the hero Flame, v3.37.89)
+    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0);   // Fight Defensively: −4 to attacks; Blaze of Glory: +4 for the room. (v3.37.90: glory to-hit removed — PF1 RAW glorious = damage only)
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
@@ -336,7 +336,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       this._note(`☄️ ${e.glyph} ${e.name} BLAZES in a final surge of glory — +4 to ALL its attacks for the rest of the room!`, '/audio/draugr_shout03_burning.mp3', { side: 'enemy' });
     }
     // _acOf strips shield AC for dual-wielders AND ranged-weapon wielders.
-    const effAC = this._foeTargetAC(target);   // helpless / stunned / slowed / rage / reckless / cleave: easier to hit (S1b chokepoint)
+    const effAC = this._foeTargetAC(e, target);   // helpless / stunned / slowed / rage / reckless / cleave / challenge-exposed: easier to hit (S1b chokepoint)
     // Roll + sound + ranged/melee verb all come from the _foeSwing chokepoint (seam
     // S1a) — one set of rules for every target kind. See the chokepoint's comment.
     const r = this._foeSwing(e, effAC, { critImmune: !!target.elemBody });
@@ -443,11 +443,16 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   // stunned −2 / slowed −1 penalties, the chain-hook and vampiric spellstrike
   // didn't — but stunned/slowed make you easier to hit by EVERY attack (PF1).
   // Unifying is a rules-correctness fix (a slight foe buff vs CC'd heroes).
-  _foeTargetAC(target) {
+  _foeTargetAC(e, target) {
+    // PF1 Challenge (v3.37.90, RAW): a cavalier with an active challenge takes −2 AC
+    // against every attacker EXCEPT the challenged target ("the usual −2 AC penalty
+    // against opponents other than the target"). Stacks with the glorious −2/issue
+    // (which lives in _acPenalty via gloriousAC).
+    const challengePen = (target.challengedId != null && e && e.uid !== target.challengedId) ? 2 : 0;
     return this._acOf(target).ac + this._acBonus(target)
       - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0)
       - (target.stunned > 0 ? 2 : 0) - (target.slowed > 0 ? 1 : 0)
-      - this._acPenalty(target);
+      - challengePen - this._acPenalty(target);
   },
   _foeSwing(e, targetAC, opts = {}) {
     const r = this._monsterSwing(e, targetAC, opts);
@@ -639,7 +644,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemyHook(e, target) {
     const cfg = e.hook || {};
     const snd = cfg.grabSound || GRAB_CHAIN_SND;   // the chain-hook GRAB always rattles out the "come here!" chain (Josh); cfg.sound is reserved for the constrict/crush
-    const r = this._foeSwing(e, this._foeTargetAC(target), { critImmune: !!target.elemBody });   // S1b chokepoint roll + shared AC stack; elemBody heroes can't be crit (v3.37.88)
+    const r = this._foeSwing(e, this._foeTargetAC(e, target), { critImmune: !!target.elemBody });   // S1b chokepoint roll + shared AC stack; elemBody heroes can't be crit (v3.37.88)
     if (!r.hit) {
       this._note(`⛓️ ${e.glyph} ${e.name} hurls its barbed chain at ${target.nickname} — the hook scrapes past. ${this._atkStr(r)}`, snd, { side: 'enemy' });
       this._echoToTable(snd); this._broadcast(); return;
@@ -925,7 +930,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemySpellstrike(e, target) {
     const cfg = e.spellstrike || {};
     const SS = cfg.name || 'VAMPIRIC TOUCH';
-    const r = this._foeSwing(e, this._foeTargetAC(target), { critImmune: !!target.elemBody });   // S1b chokepoint roll + shared AC stack; elemBody heroes can't be crit (v3.37.88)
+    const r = this._foeSwing(e, this._foeTargetAC(e, target), { critImmune: !!target.elemBody });   // S1b chokepoint roll + shared AC stack; elemBody heroes can't be crit (v3.37.88)
     const snd = cfg.sound || null;
     if (!r.hit) { this._note(`🩸 ${e.glyph} ${e.name}'s ${SS.toLowerCase()} misses ${target.nickname}. ${this._atkStr(r)}`, snd, { side: 'enemy' }); this._echoToTable(snd); this._broadcast(); return; }
     const [phys, drTag] = this._physDR(target, r.damage);   // Stoneskin soaks the weapon part only

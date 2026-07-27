@@ -93,11 +93,11 @@ const STUDIED_TARGET = { key: 'studiedtarget', name: 'Studied Target', icon: '�
 // +your cavalier level in DAMAGE this room (applied in _swingVsAC via challengedId/
 // challengeN). A ROOM-cost ability (uses scale: 1 + 1 per 4 levels), so it's a
 // limited, focused kill-order (unlike the slayer's at-will Studied Target).
-const CHALLENGE = { key: 'challenge', name: 'Challenge', icon: '⚔️', cost: 'room', uses: (lvl) => 1 + Math.floor(((lvl || 1) - 1) / 4), effect: 'challenge', target: 'enemy', freeAction: true, sound: '/audio/taunt_predator.mp3', desc: 'SWIFT ACTION — name ONE foe your quarry, then STILL attack (or act) the same turn: every strike you land on it this room deals +your level in bonus damage. PF1: Challenge is a swift action. Uses per room = 1 + 1 per 4 levels.' };
+const CHALLENGE = { key: 'challenge', name: 'Challenge', icon: '⚔️', cost: 'room', uses: (lvl) => ((lvl || 1) >= 4 ? 2 + Math.floor(((lvl || 1) - 4) / 3) : 1), effect: 'challenge', target: 'enemy', freeAction: true, sound: '/audio/taunt_predator.mp3', desc: 'SWIFT ACTION — name ONE foe your quarry, then STILL attack (or act) the same turn: every strike you land on it this room deals +your level in bonus damage. While your challenge stands you take −2 AC against everyone EXCEPT your quarry (PF1). Uses per room: 1, +1 at level 4 and every 3 levels after (RAW).' };
 // ORDER OF THE FLAME (Lord Gweyir) — a FREE, unlimited challenge-and-strike in one. Char-gated;
 // applies his CURRENT glory stack (+2×N damage / −2×N AC), then attacks; a KILL grows the stack
 // for next turn. Chain kills (fodder is fair game!) to pump it, then unleash on a real threat.
-const GLORIOUS_CHALLENGE = { key: 'gloriouschallenge', name: 'Glorious Challenge', icon: '🔥', cost: 'free', effect: 'gloriouschallenge', target: 'enemy', sound: '/audio/draugr_shout03_burning.mp3', char: 'Lord Gweyir', desc: 'ORDER OF THE FLAME: SELECT a foe, then Glorious Challenge to challenge it AND strike at once. Every KILL you string together this room stacks the Flame: +2 damage, +1 TO HIT, −2 AC each (it compounds). The play: whap the chaff to build the Flame, then turn it on the hardest target on the field — nobody will out-hit you. Your current stack is on the L readout ("Glorious Challenge xN") and every kill announces the new total. Free & unlimited.' };
+const GLORIOUS_CHALLENGE = { key: 'gloriouschallenge', name: 'Glorious Challenge', icon: '🔥', cost: 'free', effect: 'gloriouschallenge', target: 'enemy', sound: '/audio/draugr_shout03_burning.mp3', char: 'Lord Gweyir', desc: 'ORDER OF THE FLAME (PF1 RAW): SELECT a foe, then Glorious Challenge to challenge it AND strike at once. Each glorious challenge ISSUED this streak: +2 morale damage and −2 AC, compounding — your third in a row is +6 damage, −6 AC, on top of the base challenge\'s +level damage. Chain kills to keep it burning; the play is to build the Flame on the chaff and spend the damage on the boss. Current streak lives on the L readout; every kill announces your NEXT challenge\'s numbers. Free, unlimited, does not spend your Challenge uses.' };
 // TACTICIAN (all cavaliers, v3.37.89 — the first PF1 teamwork-tactics slice):
 // a standard action; for the rest of the room every ALLY gains +2 to hit against
 // the cavalier's CHALLENGED foe (enforced in Dungeon._teamworkHit). Uses scale
@@ -2069,13 +2069,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abGloriousChallenge(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     m.challengedId = e.uid;
-    m.challengeN = (m.level || 1) + 2 * (m.gloriousN || 0);   // base challenge + current glory (morale damage)
-    m.gloriousAC = 2 * (m.gloriousN || 0);                    // recklessness: −AC while the Flame burns (see _acPenalty)
+    m.challengeN = (m.level || 1) + 2 * ((m.gloriousN || 0) + 1);   // RAW (v3.37.90): base challenge + 2 × glorious challenges ISSUED (this one included) — the FIRST glorious already carries +2 morale damage
+    m.gloriousAC = 2 * ((m.gloriousN || 0) + 1);              // RAW (v3.37.90): −2 AC per glorious ISSUED, this one included (stacks with the base challenge's −2-vs-others in _foeTargetAC)
     const stacked = (m.gloriousN || 0) > 0;
     this._note(`🔥 ${m.nickname} bellows a GLORIOUS CHALLENGE at ${e.name}${stacked ? ` — the Flame ROARS (+${2 * m.gloriousN} damage, −${2 * m.gloriousN} AC)!` : ' — the Order of the Flame awakens!'}`, ab.sound);
     this._echoToTable(ab.sound);
     this._basicAttack(m, e.uid);   // ...and strike immediately (plays his estoc's attack sound after the shout)
-    if (e.hp <= 0) { m.gloriousN = (m.gloriousN || 0) + 1; this._note(`🔥 ${m.nickname} stands triumphant over ${e.name} — GLORIOUS! The Flame swells to ${m.gloriousN}: +${2 * m.gloriousN} damage, +${m.gloriousN} to hit, −${2 * m.gloriousN} AC. (Unleash it again next turn.)`); }
+    if (e.hp <= 0) { m.gloriousN = (m.gloriousN || 0) + 1; this._note(`🔥 ${m.nickname} stands triumphant over ${e.name} — GLORIOUS! Kill streak ${m.gloriousN} — your NEXT glorious challenge: +${2 * (m.gloriousN + 1)} morale damage, −${2 * (m.gloriousN + 1)} AC. (Unleash it again next turn.)`); }
   },
   // TACTICIAN — the cavalier rallies the party around their sworn quarry (v3.37.89).
   _abTactician(m, ab) {
