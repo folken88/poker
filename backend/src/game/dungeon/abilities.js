@@ -97,7 +97,12 @@ const CHALLENGE = { key: 'challenge', name: 'Challenge', icon: '⚔️', cost: '
 // ORDER OF THE FLAME (Lord Gweyir) — a FREE, unlimited challenge-and-strike in one. Char-gated;
 // applies his CURRENT glory stack (+2×N damage / −2×N AC), then attacks; a KILL grows the stack
 // for next turn. Chain kills (fodder is fair game!) to pump it, then unleash on a real threat.
-const GLORIOUS_CHALLENGE = { key: 'gloriouschallenge', name: 'Glorious Challenge', icon: '🔥', cost: 'free', effect: 'gloriouschallenge', target: 'enemy', sound: '/audio/draugr_shout03_burning.mp3', char: 'Lord Gweyir', desc: 'ORDER OF THE FLAME: SELECT a foe, then Glorious Challenge to challenge it AND strike at once. Deals +2 damage / takes −2 AC per KILL you\'ve strung together this room (it compounds). Drop the foe and the bonus grows for next turn. Free & unlimited — pick off the weak to build the Flame, then loose it on the mighty.' };
+const GLORIOUS_CHALLENGE = { key: 'gloriouschallenge', name: 'Glorious Challenge', icon: '🔥', cost: 'free', effect: 'gloriouschallenge', target: 'enemy', sound: '/audio/draugr_shout03_burning.mp3', char: 'Lord Gweyir', desc: 'ORDER OF THE FLAME: SELECT a foe, then Glorious Challenge to challenge it AND strike at once. Every KILL you string together this room stacks the Flame: +2 damage, +1 TO HIT, −2 AC each (it compounds). The play: whap the chaff to build the Flame, then turn it on the hardest target on the field — nobody will out-hit you. Your current stack is on the L readout ("Glorious Challenge xN") and every kill announces the new total. Free & unlimited.' };
+// TACTICIAN (all cavaliers, v3.37.89 — the first PF1 teamwork-tactics slice):
+// a standard action; for the rest of the room every ALLY gains +2 to hit against
+// the cavalier's CHALLENGED foe (enforced in Dungeon._teamworkHit). Uses scale
+// like PF1's 1/2/3 per day at L1/9/17 (per room here).
+const TACTICIAN = { key: 'tactician', name: 'Tactician: Coordinated Strike', icon: '🚩', cost: 'room', uses: (lvl) => ((lvl || 1) >= 17 ? 3 : (lvl || 1) >= 9 ? 2 : 1), effect: 'tactician', target: 'self', sound: '/audio/spell_buff_invoke.mp3', desc: 'PF1 teamwork tactics — rally the party: for the rest of the room, every ALLY\'s attacks against YOUR challenged foe gain +2 to hit. Challenge first, then rally; it follows each new challenge you declare.' };
 // ORDER OF THE FLAME order ability — BLAZE OF GLORY (L15). PF1: a standard action for Cha-mod
 // rounds granting +4 to attack (among movement perks that don't apply on the abstract grid);
 // modeled here as a once-per-room self-buff of +4 to hit for the rest of the room. Char-gated +
@@ -326,6 +331,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       forcepush:   () => this._abForcePush(m, ab, payload),
       studytarget: () => this._abStudyTarget(m, ab, payload),
       challenge: () => this._abChallenge(m, ab, payload),
+      tactician: () => this._abTactician(m, ab),
       gloriouschallenge: () => this._abGloriousChallenge(m, ab, payload),
       masscharm:   () => this._abMassCharm(m, ab, payload),
       exhaust:     () => this._abExhaust(m, ab, payload),
@@ -567,7 +573,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const kit = kitFor(m.cls).abilities;
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
     if (m.cls === 'slayer') list = list.concat(STUDIED_TARGET);   // SLAYER: swift Studied Target mark (ACG)
-    if (m.cls === 'cavalier') list = list.concat(CHALLENGE, GLORIOUS_CHALLENGE, BLAZE_OF_GLORY);   // CAVALIER: the Challenge oath (+level damage vs one foe); GLORIOUS_CHALLENGE + BLAZE_OF_GLORY (L15) are char-gated (Lord Gweyir / Order of the Flame) via _charAllows
+    if (m.cls === 'cavalier') list = list.concat(CHALLENGE, TACTICIAN, GLORIOUS_CHALLENGE, BLAZE_OF_GLORY);   // CAVALIER: the Challenge oath (+level damage vs one foe); GLORIOUS_CHALLENGE + BLAZE_OF_GLORY (L15) are char-gated (Lord Gweyir / Order of the Flame) via _charAllows
     // MAGUS: name each Spell Strike by its DELIVERY — a ranged magus (Reese's bow)
     // fires it as an IMBUED SHOT; a melee magus channels it as a SPELL STRIKE. Copy
     // the ability so we never mutate the shared kit. (Same mechanic either way — the
@@ -649,7 +655,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
     if (m.cls === 'theurge') { const L = m.level || 1; m.synthUses = L >= 17 ? 3 : L >= 11 ? 2 : L >= 5 ? 1 : 0; }   // SPELL SYNTHESIS (Kobold Press): usable 1/2/3 times per room at L5/11/17
     if (m.cls === 'slayer') { m.studiedId = null; m.studiedN = 0; }   // SLAYER: Studied Target mark clears each room (fresh foes)
-    if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; m.gloriousN = 0; m.gloriousAC = 0; m._dauntedRoom = false; }   // CAVALIER: Challenge oath (and Order of the Flame's glorious-challenge stack + once-per-room Daunting Success) clear each room
+    if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; m.gloriousN = 0; m.gloriousAC = 0; m._dauntedRoom = false; m._tacticianOn = false; }   // CAVALIER: Challenge oath (and Order of the Flame's glorious-challenge stack + once-per-room Daunting Success) clear each room
     m.abilityUses = {};
     for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
     // Hero's Defiance — a paladin's once-per-room clutch self-rescue (auto-fired
@@ -2069,7 +2075,18 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._note(`🔥 ${m.nickname} bellows a GLORIOUS CHALLENGE at ${e.name}${stacked ? ` — the Flame ROARS (+${2 * m.gloriousN} damage, −${2 * m.gloriousN} AC)!` : ' — the Order of the Flame awakens!'}`, ab.sound);
     this._echoToTable(ab.sound);
     this._basicAttack(m, e.uid);   // ...and strike immediately (plays his estoc's attack sound after the shout)
-    if (e.hp <= 0) { m.gloriousN = (m.gloriousN || 0) + 1; this._note(`🔥 ${m.nickname} stands triumphant over ${e.name} — GLORIOUS! The Flame swells to ${m.gloriousN}. (Unleash it again next turn.)`); }
+    if (e.hp <= 0) { m.gloriousN = (m.gloriousN || 0) + 1; this._note(`🔥 ${m.nickname} stands triumphant over ${e.name} — GLORIOUS! The Flame swells to ${m.gloriousN}: +${2 * m.gloriousN} damage, +${m.gloriousN} to hit, −${2 * m.gloriousN} AC. (Unleash it again next turn.)`); }
+  },
+  // TACTICIAN — the cavalier rallies the party around their sworn quarry (v3.37.89).
+  _abTactician(m, ab) {
+    if (m.challengedId == null || !this.livingEnemies().some(e => e.uid === m.challengedId)) {
+      return { ok: false, error: 'Challenge a foe first — Tactician rallies your allies against YOUR challenged quarry.' };
+    }
+    m._tacticianOn = true;
+    const quarry = this.livingEnemies().find(e => e.uid === m.challengedId);
+    this._note(`${ab.icon} ${m.nickname} rallies the party — COORDINATED STRIKE! Every ally hits ${quarry ? quarry.name : 'the challenged foe'} at +2 for the rest of the room.`, ab.sound);
+    this._broadcast();
+    return { ok: true };
   },
   // Charm Person — a living foe, Will save or CHARMED: it stops attacking the
   // party (only tends its own side) until a hero's blow snaps it out. Mindless
@@ -2611,15 +2628,18 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._note(`${ab.icon} ${m.nickname} calls a Smite — righteous fury against evil this room!`, sound);
     this._echoToTable(sound);
   },
-  // Detect Evil (paladin): a standard action that MARKS every living foe as evil
-  // (sets markedEvil), so Smite Evil applies to ALL of them this room — including
-  // the true-neutral ones (animals, constructs). Plays the "into the light" cue.
+  // Detect Evil (paladin) — HONEST since v3.37.89 (Josh, run jumbled-pebble:
+  // "surely not everything I face is evil? cause it all detects as evil"). It used
+  // to mark EVERY foe smite-able, neutral machines and good celestials included —
+  // which both lied as information and contradicted the Heavenly Host's design
+  // ("hero Smite Evil finds no purchase"). Now it marks only foes that ARE evil,
+  // and the readout says how many are NOT — real intel, especially by ear.
   _abDetectEvil(m, ab) {
     const foes = this.livingEnemies();
-    let n = 0;
-    for (const e of foes) { if (!e.markedEvil) { e.markedEvil = true; n++; } }
+    let evil = 0, clean = 0;
+    for (const e of foes) { if (e.evil) { e.markedEvil = true; evil++; } else clean++; }
     const sound = ab.sound || '/audio/into_the_light.mp3';
-    this._note(`${ab.icon || '🎯'} ${m.nickname} calls DETECT EVIL — the room floods with revealing light; ${n || foes.length} foe(s) MARKED for Smite!`, sound);
+    this._note(`${ab.icon || '🎯'} ${m.nickname} calls DETECT EVIL — ${evil} foe${evil === 1 ? '' : 's'} RADIATE${evil === 1 ? 'S' : ''} evil and ${evil === 1 ? 'is' : 'are'} MARKED for Smite${clean ? `; ${clean} do${clean === 1 ? 'es' : ''} NOT (no purchase for your smite there)` : ''}!`, sound);
     this._echoToTable(sound);
   },
   // ── DOMAIN granted powers (DOMAINS-DESIGN.md §2) ───────────────────────────

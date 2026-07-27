@@ -3,6 +3,20 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.89 2026-07-26 THE CAVALIER BATCH + HONEST DETECT EVIL (Josh runs jumbled-pebble +
+//                     golden-biscuit; Tobias's Flame-cavalier doctrine). (1) DETECT EVIL was marking
+//                     EVERY foe smite-able — neutral machines and good celestials included — lying as
+//                     intel and contradicting the Heavenly Host design. Now marks only truly-evil
+//                     foes and SAYS how many do NOT radiate ("no purchase for your smite there").
+//                     Hero nerf vs neutrals, named here. (2) GLORIOUS CHALLENGE stacks now grant
+//                     +1 TO HIT each (with the +2 damage / -2 AC) — Tobias: "whap easy foes to build
+//                     charges, then go after the hardest-to-hit target." Kill announces speak the
+//                     full running total; the L-readout chip shows the numbers; enemy prince gets the
+//                     same to-hit (parity). (3) NEW: TACTICIAN — Coordinated Strike (ALL cavaliers,
+//                     the first PF1 teamwork-tactics slice): standard action, rest of room, every
+//                     ALLY hits the cavalier's CHALLENGED foe at +2 (1/2/3 uses at L1/9/17).
+//                     Synergizes with the challenged hot-list chip. Josh's Challenge-uses question:
+//                     1 + 1 per 4 levels (L5 = 2/room) — the sheet was right, his read of it wasn't.
 //  3.37.88 2026-07-25 ENEMIES CAN CRIT NOW (Josh, verbatim: "it seems kind of stupid to only allow
 //                     me to crit while not allowing the enemy to get a lucky shot" — task #61 closed
 //                     his way). PF1 shape: nat 20 threatens, confirmation roll vs the same AC, x2
@@ -1268,6 +1282,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.88';
+const VERSION = '3.37.89';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

@@ -1552,6 +1552,17 @@ class Dungeon {
     target._meleeBy.add(attacker.playerId);
     return flanking;
   }
+  // TACTICIAN teamwork bonus (v3.37.89 — the first slice of PF1 cavalier team
+  // tactics, Tobias: "expand cavaliers... team-feats and group tactic bonuses"):
+  // while a living cavalier has Tactician active, every OTHER hero's attacks
+  // against that cavalier's CHALLENGED foe gain +2 to hit.
+  _teamworkHit(attacker, e) {
+    if (!e || !e.uid) return 0;
+    for (const p of this.livingParty()) {
+      if (p.cls === 'cavalier' && p._tacticianOn && p.challengedId === e.uid && p.playerId !== attacker.playerId) return 2;
+    }
+    return 0;
+  }
   _swingVsAC(attacker, ac, target, extraToHit = 0, offHand = false) {
     const weapon = attacker.weapon;
     if (weapon && !weapon.ranged) attacker._lastMeleeRound = this.round;   // "melee weapon is OUT" this round — drives Jason's Force Push (ally free attacks)
@@ -1669,7 +1680,7 @@ class Dungeon {
     // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
     // now carry high-level scaling — see the iterative loop in _playerAttack).
     const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon, { offHand }) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };   // off-hand swing → ½ ability mod to DAMAGE (PF1 two-weapon fighting)
-    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + studiedN + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF;   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
+    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + studiedN + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF + (attacker.gloriousN || 0) + this._teamworkHit(attacker, target);   // GLORIOUS stack: +1 to hit per kill (Tobias: build on chaff, cash in on the hard target, v3.37.89); Tactician: +2 for allies vs the cavalier's challenged foe   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
     const roll = dRoll(20), total = roll + toHit;
     // Luck domain — GOOD FORTUNE: the next missed swing (fumble included) is
     // rerolled once, keep the better outcome. Consumed on the reroll.
