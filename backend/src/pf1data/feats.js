@@ -397,7 +397,34 @@ const GUNSLINGER_FEAT_AT = {
 const CLASS_FEAT_AT = { rogue: ROGUE_FEAT_AT, monk: MONK_FEAT_AT, magus: MAGUS_FEAT_AT, cleric: CLERIC_FEAT_AT, oracle: ORACLE_FEAT_AT, bard: BARD_FEAT_AT, swashbuckler: SWASH_FEAT_AT, gunslinger: GUNSLINGER_FEAT_AT };
 const RANGED_FEAT_CLASSES = new Set(['fighter', 'ranger', 'barbarian', 'inquisitor']);
 
+
+// ── TEAMWORK FEATS (v3.37.91, Tobias: "5-10 that would work well in our dungeon…
+// usable by anyone including fighters, slayers, cavaliers, rangers"). PF1 APG/UC
+// feats adapted to existing engine mechanics. THE PAIRING RULE (the PF1 essence):
+// a teamwork feat is ACTIVE only while at least one OTHER living hero also has it —
+// EXCEPT inquisitors, whose Solo Tactics (RAW) makes their teamwork feats work
+// alone. grants = { class: minLevel }. Enforcement lives in Dungeon._twkActive +
+// the seven wire-points it feeds (flanking, damage, saves, CMB, concentration,
+// SR, flat-footed, retaliation).
+const TEAMWORK = {
+  outflank:       { name: 'Outflank',               desc: 'flanking bonus becomes +4 (from +2), and your confirmed CRITS give a flanking ally a free strike', grants: { fighter: 5, cavalier: 3, slayer: 4, ranger: 5, barbarian: 7, paladin: 7, antipaladin: 7, inquisitor: 7, rogue: 7 } },
+  twkprecise:     { name: 'Precise Strike (Teamwork)', desc: '+1d6 precision damage while flanking with a paired ally', grants: { cavalier: 5, slayer: 6, rogue: 5, fighter: 7, ranger: 7, inquisitor: 9, swashbuckler: 7 } },
+  lookout:        { name: 'Lookout',                desc: 'never caught flat-footed at the door while a paired ally keeps watch', grants: { slayer: 2, rogue: 3, ranger: 3, inquisitor: 4, cavalier: 6, fighter: 9 } },
+  shakeitoff:     { name: 'Shake It Off',           desc: '+1 on ALL saves per other paired ally standing (max +3)', grants: { fighter: 3, paladin: 3, antipaladin: 3, barbarian: 3, monk: 3, slayer: 3, cavalier: 4 } },
+  brokenwing:     { name: 'Broken Wing Gambit',     desc: 'a foe that lands a blow on you provokes a free attack from a paired ally', grants: { cavalier: 9, bard: 9, swashbuckler: 9, slayer: 10, fighter: 11 } },
+  coordman:       { name: 'Coordinated Maneuvers',  desc: '+2 on ALL combat-maneuver rolls — grapples, trips, disarms, and BREAKING a foe\'s grapple', grants: { fighter: 5, monk: 5, barbarian: 5, cavalier: 7, slayer: 7, ranger: 9 } },
+  shieldedcaster: { name: 'Shielded Caster',        desc: '+4 on concentration checks to cast while grappled — allies cover your casting', grants: { wizard: 5, sorcerer: 5, cleric: 5, druid: 5, bard: 5, oracle: 5, magus: 5, theurge: 5, inquisitor: 5, witch: 5 } },
+  alliedspell:    { name: 'Allied Spellcaster',     desc: '+2 caster level to punch through SPELL RESISTANCE while a paired caster stands', grants: { wizard: 7, sorcerer: 7, cleric: 7, bard: 7, oracle: 7, magus: 7, theurge: 7, inquisitor: 7, druid: 9 } },
+};
+/** The Set of teamwork-feat keys this class has unlocked at this level. */
+function teamworkGrants(cls, level) {
+  const out = new Set();
+  for (const [k, f] of Object.entries(TEAMWORK)) { const need = f.grants[cls]; if (need != null && (level || 1) >= need) out.add(k); }
+  return out;
+}
+
 module.exports = {
+  TEAMWORK, teamworkGrants,
   FF_NONE, fighterFeats, gatingLevel, ODD_FEAT_CLASSES,
   FEAT_AT, PALADIN_FEAT_AT, DRUID_FEAT_AT, CASTER_FEAT_AT, RANGED_FEAT_AT,
   ROGUE_FEAT_AT, MONK_FEAT_AT, MAGUS_FEAT_AT, CLERIC_FEAT_AT, ORACLE_FEAT_AT,

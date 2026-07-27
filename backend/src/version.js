@@ -3,6 +3,19 @@
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
 // change in one line below. Newest first; keep each line short.
 //
+//  3.37.91 2026-07-26 TEAMWORK FEATS (Tobias: "5-10 that would work well in our dungeon... usable by
+//                     anyone"). Eight PF1 APG/UC feats on existing engine hooks, granted by class/
+//                     level tables (pf1data/feats TEAMWORK). THE PAIRING RULE keeps the PF1 soul: a
+//                     feat is live only while ANOTHER living hero also has it — except inquisitors,
+//                     whose Solo Tactics (RAW) works alone. The eight: OUTFLANK (flank +4, crits give
+//                     a paired ally a free strike), PRECISE STRIKE teamwork (+1d6 while flanking),
+//                     LOOKOUT (never flat-footed at the door), SHAKE IT OFF (+1 saves per paired ally,
+//                     cap +3), BROKEN WING GAMBIT (a foe that hits you eats a paired ally's AoO),
+//                     COORDINATED MANEUVERS (+2 CMB incl. BREAKING grapples — the Scraper answer),
+//                     SHIELDED CASTER (+4 concentration casting grappled), ALLIED SPELLCASTER
+//                     (+2 CL vs SR — the pit-fiend answer). Active feats show as buff-strip chips
+//                     (L/B keys speak them); triggered ones (Outflank/Broken Wing) narrate their
+//                     strikes. domtest 102 pins grants, pairing, Solo Tactics and all 8 wire-points.
 //  3.37.90 2026-07-26 ORDER OF THE FLAME = PF1 RAW (Tobias posted the order's full text: "make our
 //                     game match pf1 everywhere we possibly can"). (1) Glorious to-hit REVERTED —
 //                     RAW grants melee DAMAGE only (the .89 +1/stack was a house rule; one line
@@ -1296,6 +1309,6 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.90';
+const VERSION = '3.37.91';
 const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
 module.exports = { VERSION, HEADLINE };

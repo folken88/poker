@@ -389,6 +389,18 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         this._note(`🩸 ${e.glyph} ${e.name}'s BLEEDING TOUCH opens a wound — ${target.nickname} bleeds 1d6 each round until magically healed!`, null, { side: 'enemy' });
       }
       this._fireShieldRetaliate(target, e);   // Fire Shield scorches a melee attacker
+      // BROKEN WING GAMBIT (teamwork, v3.37.91): a foe that lands a blow on a
+      // Gambit hero provokes — one paired ally with an AoO left punishes it.
+      if (e.hp > 0 && target.hp > 0 && this._twkActive(target, 'brokenwing')) {
+        const avenger = this.livingParty().find(p => p.playerId !== target.playerId && this._twkActive(p, 'brokenwing') && (p._aooLeft || 0) > 0 && !this._isRanged(p) && !(p.paralyzed > 0) && !(p.stunned > 0));
+        if (avenger) {
+          avenger._aooLeft -= 1;
+          avenger.weapon = weaponOf(avenger.gear, avenger.weaponKey);
+          const br = this._swingVsAC(avenger, this._enemyAC(e), e);
+          if (br.hit) { this._dmgE(e, br.damage); this._note(`⚑ BROKEN WING — ${e.name}'s blow on ${target.nickname} exposes it: ${avenger.nickname} punishes for ${br.damage}${br.drTag || ''}!${this._afterEnemyHit(e)}`, br.sound); }
+          else this._note(`⚑ BROKEN WING — ${avenger.nickname}'s punishing strike at ${e.name} whiffs. ${this._atkStr(br)}`, br.sound);
+        }
+      }
       // VICIOUS weapon (PF1): the blade bites its own wielder for 1d6 on every
       // hit (Burning Hate, the Black Sovereign's +5 vicious greatsword). The
       // recoil lands BEFORE the target-death returns so it's never skipped;

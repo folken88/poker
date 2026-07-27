@@ -23,7 +23,7 @@ const { babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../../pf1d
 const { crToNum, SIZE_RANK, SIZE_NAME, MONK_SFX } = require('../../pf1data/monsters');
 const RACES = require('../../pf1data/races');
 const { DOMAINS, maxDomainsFor } = require('../../pf1data/domains');
-const { fighterFeats } = require('../../pf1data/feats');
+const { fighterFeats, teamworkGrants } = require('../../pf1data/feats');
 const loadouts = require('../../pf1data/loadouts');
 const banter = require('../../bot/banter');
 
@@ -273,7 +273,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const grapCMB = (m.grappleCMB != null) ? m.grappleCMB : (m.grappledCL || 0);
       const dc = 10 + grapCMB + slvl;
       const cc = fighterFeats(m.cls, m.level, this._isRanged(m)).combatCasting ? 4 : 0;
-      const bonus = (m.level || 1) + (m.castingMod != null ? m.castingMod : CAST_MOD) + cc;
+      const shielded = this._twkActive(m, 'shieldedcaster') ? 4 : 0;   // SHIELDED CASTER (teamwork, v3.37.91): allies cover the casting
+      const bonus = (m.level || 1) + (m.castingMod != null ? m.castingMod : CAST_MOD) + cc + shielded;
       const roll = dRoll(20), total = roll + bonus;
       if (total < dc) {
         if (ab.cost === 'pool') m.spellPool = Math.max(0, (m.spellPool || 0) - 1);
@@ -767,7 +768,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _srBlocks(m, e, ab, quiet = false) {
     if (!e || !(e.sr > 0) || !ab || ab.slvl == null) return false;
     const pen = fighterFeats(m.cls, m.level, this._isRanged(m)).spellPen || 0;
-    const bonus = (m.level || 1) + pen + (m._synthActive ? 4 : 0);   // Spell Synthesis: +4 caster level vs SR
+    const bonus = (m.level || 1) + pen + (m._synthActive ? 4 : 0) + (this._twkActive(m, 'alliedspell') ? 2 : 0);   // Spell Synthesis: +4 CL vs SR; ALLIED SPELLCASTER (teamwork, v3.37.91): +2 more
     const roll = dRoll(20), total = roll + bonus;
     if (total >= e.sr) return false;   // punched through (PF1: caster-level checks have NO auto 20/1)
     if (!quiet) { this._note(`🛡️ ${e.glyph || ''} ${e.name}'s SPELL RESISTANCE turns ${ab.name} aside! [d20 ${roll}+${bonus} = ${total} vs SR ${e.sr}]`); }
@@ -2735,8 +2736,33 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const dex = (m.mods && m.mods.dex != null) ? m.mods.dex : 0;
     return Math.max(str, dex);
   },
+  // ── TEAMWORK FEATS (v3.37.91) — live-check + computed bonuses. Kept in this
+  // mixin so Dungeon.js stays under its line ratchet; everything calls them via
+  // `this`. Pairing rule: a feat is live only while ANOTHER living hero also has
+  // it — except inquisitors (Solo Tactics, PF1 RAW: works alone).
+  _twkActive(m, key) {
+    if (!m || !teamworkGrants(m.cls, m.level).has(key)) return false;
+    if (m.cls === 'inquisitor') return true;   // Solo Tactics
+    if (!this.party) return false;   // bare test fakes / no roster yet — nobody to pair with
+    return this.livingParty().some(p => p !== m && p.playerId !== m.playerId && teamworkGrants(p.cls, p.level).has(key));
+  },
+  // TACTICIAN (v3.37.89): while a living cavalier has it active, every OTHER
+  // hero's attacks against that cavalier's CHALLENGED foe gain +2 to hit.
+  _teamworkHit(attacker, e) {
+    if (!e || !e.uid) return 0;
+    for (const p of this.livingParty()) {
+      if (p.cls === 'cavalier' && p._tacticianOn && p.challengedId === e.uid && p.playerId !== attacker.playerId) return 2;
+    }
+    return 0;
+  },
+  // SHAKE IT OFF: +1 on all saves per OTHER living ally who also has it (cap +3).
+  _shakeItOff(m) {
+    if (!teamworkGrants(m.cls, m.level).has('shakeitoff')) return 0;
+    const n = this.livingParty().filter(p => p.playerId !== m.playerId && teamworkGrants(p.cls, p.level).has('shakeitoff')).length;
+    return Math.min(3, n);
+  },
   _heroCMB(m) {
-    return dRoll(20) + babFor(m.cls || 'fighter', m.level || 1)
+    return dRoll(20) + babFor(m.cls || 'fighter', m.level || 1) + (this._twkActive(m, 'coordman') ? 2 : 0)   // COORDINATED MANEUVERS (teamwork, v3.37.91): grapples, trips, disarms AND breaking free
          + this._mnvMod(m)                            // DEX-or-STR (homerule)
          + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m);
   },
@@ -3096,6 +3122,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (r.hit) {
         landed = true;
         if (r.crit) this._dauntingSuccess(m);   // Order of the Flame (L8): a confirmed crit daunts the room
+        // OUTFLANK rider (teamwork, v3.37.91): a confirmed crit while flanking lets a
+        // paired flanking ally seize the opening — one free strike at the same foe.
+        if (r.crit && e.hp > 0 && this._twkActive(m, 'outflank')) {
+          const wing = this.livingParty().find(p => p.playerId !== m.playerId && this._twkActive(p, 'outflank') && !this._isRanged(p) && !(p.paralyzed > 0) && !(p.stunned > 0) && !p.asleep);
+          if (wing) {
+            wing.weapon = weaponOf(wing.gear, wing.weaponKey);
+            const wr = this._swingVsAC(wing, this._enemyAC(e), e);
+            if (wr.hit) { this._dmgE(e, wr.damage); this._note(`🗡️ OUTFLANK — ${m.nickname}'s crit opens the line and ${wing.nickname} strikes for ${wr.damage}${wr.drTag || ''}!${this._afterEnemyHit(e)}`, wr.sound); }
+            else this._note(`🗡️ OUTFLANK — ${wing.nickname} lunges into the opening but misses. ${this._atkStr(wr)}`, wr.sound);
+          }
+        }
         // Rogue Offensive Defense (feat tree n8): landing a sneak attack grants +2 AC
         // until they next act — the strike leaves the foe off-balance.
         if (r.sneakDice && fighterFeats(m.cls, m.level, this._isRanged(m)).offDef && !m._offDef) { m._offDef = true; this._note(`🤸 ${m.nickname}'s strike leaves them covered — +2 AC until their next move (Offensive Defense).`); }

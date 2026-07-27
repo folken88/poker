@@ -645,7 +645,7 @@ class Dungeon {
     this._spawnRoom();
     this.blackTentacles = null;   // the tentacle field doesn't carry between rooms
     this.invisPurged = false;     // an Invisibility Purge burns for its ROOM only — the next room can hide again (see _abInvisPurge)
-    for (const m of this.present()) { this._computeCastable(m); this._resetAbilities(m); m.flatFooted = !(fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy || (this._isFlameCavalier(m) && (m.level || 1) >= 2)); }  // re-read the spell LOADOUT (Spellbook picker edits land at the door) + refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy — and Order of the Flame's FOOLHARDY RUSH at L2 — are never caught flat-footed)
+    for (const m of this.present()) { this._computeCastable(m); this._resetAbilities(m); m.flatFooted = !(fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy || (this._isFlameCavalier(m) && (m.level || 1) >= 2) || this._twkActive(m, 'lookout')); }   // LOOKOUT (teamwork): a paired watch is never surprised  // re-read the spell LOADOUT (Spellbook picker edits land at the door) + refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy — and Order of the Flame's FOOLHARDY RUSH at L2 — are never caught flat-footed)
     if (Math.random() < 0.05) { try { this._reskinVorkstag(); } catch (_) {} }   // skinwalker drifts to a new face between rooms (rare)
     this._maintainBardSongs();   // Inspire Courage is a passive aura — always up, no action spent
     this.status = 'combat';
@@ -1490,7 +1490,8 @@ class Dungeon {
   // stack with itself and ends exactly when Haste does. (Engine saves are generic,
   // so the Reflex bonus reads as +1 to all saves — a small, benign approximation.)
   _hasteMod(m) { return (m && m.hasted > 0 && m.hasteFull) ? 1 : 0; }
-  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.slowed > 0 && tags && tags.includes('reflex') ? 1 : 0) + (m._domWardRounds > 0 ? 2 : 0); }   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged; Slow drags Reflex −1 — PF1; Resistant Touch (Protection domain) +2 while warded)
+  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.slowed > 0 && tags && tags.includes('reflex') ? 1 : 0) + (m._domWardRounds > 0 ? 2 : 0) + this._shakeItOff(m); }
+   // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged; Slow drags Reflex −1 — PF1; Resistant Touch (Protection domain) +2 while warded)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
   _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0) + (m.gloriousAC || 0); }   // gloriousAC: Order of the Flame recklessness (−2 per consecutive glorious challenge this room)
@@ -1552,17 +1553,7 @@ class Dungeon {
     target._meleeBy.add(attacker.playerId);
     return flanking;
   }
-  // TACTICIAN teamwork bonus (v3.37.89 — the first slice of PF1 cavalier team
-  // tactics, Tobias: "expand cavaliers... team-feats and group tactic bonuses"):
-  // while a living cavalier has Tactician active, every OTHER hero's attacks
-  // against that cavalier's CHALLENGED foe gain +2 to hit.
-  _teamworkHit(attacker, e) {
-    if (!e || !e.uid) return 0;
-    for (const p of this.livingParty()) {
-      if (p.cls === 'cavalier' && p._tacticianOn && p.challengedId === e.uid && p.playerId !== attacker.playerId) return 2;
-    }
-    return 0;
-  }
+  // (teamwork helpers _twkActive/_teamworkHit/_shakeItOff live in the abilities mixin — the <2300 ratchet holds)
   _swingVsAC(attacker, ac, target, extraToHit = 0, offHand = false) {
     const weapon = attacker.weapon;
     if (weapon && !weapon.ranged) attacker._lastMeleeRound = this.round;   // "melee weapon is OUT" this round — drives Jason's Force Push (ally free attacks)
@@ -1634,7 +1625,7 @@ class Dungeon {
     // first to close gets nothing (moved up alone); every ally who joins the
     // melee on that foe afterward is flanking. Tracked per-room on the foe.
     const flanking = this._flankRegister(attacker, target, weapon);
-    const flankHit = flanking ? 2 : 0;   // PF1 flanking bonus (both flankers, once positioned)
+    const flankHit = flanking ? (this._twkActive(attacker, 'outflank') ? 4 : 2) : 0;   // PF1 flanking +2 — OUTFLANK (teamwork, v3.37.91) sharpens it to +4
     // SLAYER Studied Target: the foe this slayer has MARKED takes +N insight to hit
     // AND damage from them (N scales with the slayer's level; set by _abStudyTarget).
     const studied = !!(target && attacker.studiedId != null && attacker.studiedId === target.uid);
@@ -1751,6 +1742,8 @@ class Dungeon {
     let sneakDmg = 0;
     if (preciseDmg) dmg += preciseDmg;   // swashbuckler Precise Strike
     if (sneakDice) { sneakDmg = dRollN(sneakDice, 6); dmg += sneakDmg; }
+    let twkDmg = 0;
+    if (flanking && this._twkActive(attacker, 'twkprecise')) { twkDmg = dRoll(6); dmg += twkDmg; }   // PRECISE STRIKE (teamwork, v3.37.91): +1d6 while flanking with a paired ally
     if (buff.bonusDice) dmg += dRollN(buff.bonusDice, 6);   // misc bonus dice
     if (baneOn) dmg += dRollN(BANE_DICE, 6);                // Inquisitor Bane — +2d6 vs the declared type
     if (smite) dmg += 2 * lvl;   // Smite Evil: +double level damage
@@ -1812,7 +1805,7 @@ class Dungeon {
     // (unholy). Rides on top: not soaked by physical DR, not crit-multiplied.
     if (arcHoly && (target.evil || target.markedEvil)) dmg += dRollN(arcHoly, 6);
     if (arcUnholy && target.good) dmg += dRollN(arcUnholy, 6);
-    return { hit: true, crit, smite, sneakDice, sneakDmg, damage: Math.max(0, dmg), drTag, roll, toHit, total, ac, sound: pick(SND.flesh) };
+    return { hit: true, crit, smite, sneakDice, sneakDmg, damage: Math.max(0, dmg), drTag: (twkDmg ? `${drTag || ''} (+${twkDmg} teamwork)` : drTag), roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
   // (the villain brain — _monsterSwing/_enemyAct/maneuvers/caster brains — moved to game/dungeon/enemyAI.js — Phase-2 seam 3)
   // (the hero-bot brain — _allyAct/_botAbility/_botStance/_preferredFoe/_sneakPrey/_forcedFoe/_drBlocksWeapon — moved to game/dungeon/heroAI.js — heroAI seam)
