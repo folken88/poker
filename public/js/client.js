@@ -869,6 +869,10 @@
   let _dmpModel = null;        // fetched domain model { max, picks, domains } — shared by the sighted panel + blind V menu
   let _dunDmp = false;         // blind dungeon: domain menu open (V opens; 1-9 toggles, Tab cycles + Enter toggles, Escape closes)
   let _dunDmpIdx = -1;         // Tab cursor within the domain menu (the catalog outgrew the number row — 11 domains)
+  let _padOpen = false;        // "🎛 My Pad ▾" numpad-manager popover open/closed (sighted, v3.37.93)
+  let _padMgrModel = null;     // fetched pad model { abilities:[{key,name,icon,desc,hidden}], shown } — shared by the sighted panel + blind N menu
+  let _dunPad = false;         // blind dungeon: numpad manager open (N opens; 1-9 toggles hide/show, Tab cycles + Enter toggles, Escape closes)
+  let _dunPadIdx = -1;         // Tab cursor within the pad-manager menu (ability lists far outgrow the number row)
   let _dunProg = null;         // blind dungeon: class-progression reference open — the fetched { level, cls, next } (X opens; 1-9 speak later levels; Escape closes)
   let _dactArm = { act: null, ts: 0 };   // blind-mode two-tap confirm for run-ending buttons (leave/bail/cancel) — guards a stray VoiceOver Enter from nuking the run (Josh, brave-walnut)
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
@@ -1110,6 +1114,45 @@
     return `<span class="dungeon__sb-wrap dungeon__dmp-wrap">` +
       `<button type="button" class="btn ${_dmpOpen ? 'btn--primary' : 'btn--ghost'}" data-dmp-toggle aria-expanded="${_dmpOpen}" title="Choose your divine domains — granted powers (and, for clerics, domain spells); changes land at the next room (blind: V key)">⛪ Domains ▾</button>` +
       `<div class="dungeon__spellbook ${_dmpOpen ? 'is-open' : ''}">${body}</div>` +
+    `</span>`;
+  }
+  // NUMPAD MANAGER I/O ('padpick' action, v3.37.93 — Josh: "we only have 9 keys").
+  // Mirrors dmpickSend: no payload → fetch the model; { toggle: key } → hide/show
+  // an ability on YOUR pad. Unlike domains this lands IMMEDIATELY — the pad
+  // renumbers on the spot (the server rebroadcasts). Forerunner of feat swapping.
+  function padpickSend(payload, spoken) {
+    socket.emit('dungeon:action', { kind: 'padpick', ...(payload || {}) }, (resp) => {
+      if (resp && resp.ok === false) {
+        if (resp.error) {
+          toast(resp.error, true);
+          try { if (window.BlindMode?.isOn?.()) window.BlindMode.speak(resp.error, 'urgent'); } catch (_) {}
+        }
+        return;
+      }
+      if (resp && resp.ok) {
+        _padMgrModel = resp;
+        try { if (spoken) spoken(resp); } catch (_) {}
+        if (document.body.dataset.screen === 'dungeon') _sbpKeepScroll(renderDungeon);
+      }
+    });
+  }
+  // Sighted "🎛 My Pad ▾" popover: every ability as a tile — lit = on your pad,
+  // dim = hidden. The tooltip TEACHES the ability (name + full effect text) per
+  // the teach-as-you-go mandate; click flips it. Blind players: the N key.
+  function _padMgrHtml() {
+    let body;
+    if (!_padMgrModel) body = `<div class="dungeon__sb-head">Loading your pad…</div>`;
+    else {
+      const mdl = _padMgrModel;
+      body = `<div class="dungeon__sb-head">Your action pad — ${mdl.shown} of ${(mdl.abilities || []).length} shown · click to hide/show (takes effect instantly; the blind numpad renumbers)</div>` +
+        `<div class="dungeon__sb-scroll"><div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">` +
+        (mdl.abilities || []).map(a =>
+          `<button class="btn ${a.hidden ? 'btn--ghost' : 'btn--primary'} btn--sm" style="flex:0 0 auto;width:auto;min-width:0;padding:4px 9px${a.hidden ? ';opacity:.55' : ''}" data-dact="padpick" data-padkey="${escapeAttr(a.key)}" aria-pressed="${!a.hidden}" title="${escapeAttr(a.name)}${a.desc ? ': ' + escapeAttr(a.desc) : ''} — click to ${a.hidden ? 'RESTORE to' : 'HIDE from'} your pad.">${a.icon} ${escapeText(a.name)}${a.hidden ? ' (hidden)' : ''}</button>`
+        ).join('') + `</div></div>`;
+    }
+    return `<span class="dungeon__sb-wrap dungeon__pad-wrap">` +
+      `<button type="button" class="btn ${_padOpen ? 'btn--primary' : 'btn--ghost'}" data-pad-toggle aria-expanded="${_padOpen}" title="Manage your action pad — hide abilities you don't use so the 9-key blind numpad fits your favorites; hidden ones can always be restored here (blind: N key)">🎛 My Pad ▾</button>` +
+      `<div class="dungeon__spellbook ${_padOpen ? 'is-open' : ''}">${body}</div>` +
     `</span>`;
   }
   function dungeonAction(kind, payload) {
@@ -1780,6 +1823,7 @@
             // Domain picker (Phase C) — clerics & inquisitors choose their domains;
             // granted powers/spells land at the next room. Blind: the V key.
             (kit.domainsMax ? _dmpickHtml() : '') +
+            _padMgrHtml() +
             abilHtml +
           `</div>` +
           `<div class="dungeon__actrow dungeon__actrow--nav" role="group" aria-label="Navigation and session controls">` +
@@ -1935,6 +1979,7 @@
     // Prepare (spell-loadout) picker expand/collapse — fetches the model on first open.
     if (ev.target.closest('[data-sbp-toggle]')) { _sbpOpen = !_sbpOpen; if (_sbpOpen && !_sbpModel) sbpickSend(); _sbpKeepScroll(renderDungeon); return; }
     if (ev.target.closest('[data-dmp-toggle]')) { _dmpOpen = !_dmpOpen; if (_dmpOpen && !_dmpModel) dmpickSend(); _sbpKeepScroll(renderDungeon); return; }
+    if (ev.target.closest('[data-pad-toggle]')) { _padOpen = !_padOpen; if (_padOpen) padpickSend(); _sbpKeepScroll(renderDungeon); return; }   // always refetch — the ability list shifts with level/loadout
     const b = ev.target.closest('[data-dact]'); if (!b || b.disabled) return;
     const act = b.dataset.dact;
     // RUN-ENDING BUTTONS need a two-tap confirm IN BLIND MODE (Josh, run brave-walnut:
@@ -1970,6 +2015,7 @@
     else if (act === 'metamagic') dungeonAction('metamagic', { key: b.dataset.mmkey });   // toggle a metamagic on/off (spontaneous casters)
     else if (act === 'sbpick')  sbpickSend({ toggle: b.dataset.sbkey });   // toggle a spell in the loadout picker (server enforces slot caps)
     else if (act === 'dmpick')  dmpickSend({ toggle: b.dataset.dmkey });   // toggle a domain (server enforces the 2/1 cap)
+    else if (act === 'padpick') padpickSend({ toggle: b.dataset.padkey }); // hide/show a pad ability (instant — the pad renumbers)
     else if (act === 'door')    dungeonAction('door');
     else if (act === 'bail')    dungeonAction('bail');
     else if (act === 'join')    enterDungeon();        // spectator → combatant
@@ -2023,6 +2069,19 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape' && _dmpOpen && document.body.dataset.screen === 'dungeon') {
       _dmpOpen = false;
+      renderDungeon();
+    }
+  });
+  // The numpad-manager popover follows the same dismissal rules.
+  document.addEventListener('click', (ev) => {
+    if (!_padOpen || document.body.dataset.screen !== 'dungeon') return;
+    if (ev.target.closest('.dungeon__pad-wrap')) return;   // inside the picker/toggle — keep it
+    _padOpen = false;
+    renderDungeon();
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && _padOpen && document.body.dataset.screen === 'dungeon') {
+      _padOpen = false;
       renderDungeon();
     }
   });
@@ -2335,6 +2394,63 @@
         _dunDmp = true; _dunDmpIdx = -1;
         if (_dmpModel) _dmpSpeak();
         else { sayU('Opening your domains.'); dmpickSend({}, () => { if (_dunDmp) _dmpSpeak(); }); }
+        return;
+      }
+      // ----- Numpad manager — N (v3.37.93). Josh: "we only have 9 keys" — the
+      // cavalier pad overflowed the number row. N lists every ability with its
+      // shown/hidden state; numbers 1-9 toggle directly, Tab steps the whole
+      // list (Enter toggles the one you're on — Tab reaches past 9), Escape
+      // closes. Hiding lands INSTANTLY: the numpad renumbers on the spot, so
+      // after any change the pad is re-read. Enter on a Tab stop also SPEAKS
+      // the ability's effect text first — the teach-as-you-go layer.
+      const _padSpeak = () => {
+        const mdl = _padMgrModel; if (!mdl) { sayU('Still loading your pad.'); return; }
+        const list = (mdl.abilities || []).map((a, i) => `${i + 1} ${a.name}${a.hidden ? ', hidden' : ''}`).join('; ');
+        sayU(`Pad manager — ${mdl.shown} of ${(mdl.abilities || []).length} abilities on your pad: ${list}. Numbers 1 through 9 hide or restore; Tab steps through them all and Enter toggles the one you are on; Escape closes. Changes are instant — your number pad renumbers right away.`);
+      };
+      const _padToggleAb = (a) => {
+        padpickSend({ toggle: a.key }, (m2) => {
+          const now = (m2.abilities || []).find(x => x.key === a.key);
+          sayU(`${a.name} ${now && now.hidden ? 'hidden' : 'restored'}. ${m2.shown} abilities on your pad now — the numbers have shifted, so re-read your pad before acting.`);
+        });
+      };
+      if (_dunPad) {
+        if (e.key === 'Escape') { e.preventDefault(); _dunPad = false; _dunPadIdx = -1; sayU('Pad manager closed.'); return; }
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const mdl = _padMgrModel;
+          if (!mdl || !(mdl.abilities || []).length) { sayU('Still loading your pad.'); return; }
+          const n = mdl.abilities.length;
+          _dunPadIdx = ((_dunPadIdx + (e.shiftKey ? -1 : 1)) % n + n) % n;
+          const a = mdl.abilities[_dunPadIdx];
+          sayU(`${_dunPadIdx + 1}, ${a.name}${a.hidden ? ', hidden' : ''}. ${a.desc ? a.desc + ' ' : ''}Enter to ${a.hidden ? 'restore' : 'hide'}.`);
+          return;
+        }
+        if (e.key === 'Enter' && _dunPadIdx >= 0) {
+          e.preventDefault();
+          const mdl = _padMgrModel;
+          const a = mdl && (mdl.abilities || [])[_dunPadIdx];
+          if (!a) { sayU('Still loading your pad.'); return; }
+          _padToggleAb(a);
+          return;
+        }
+        if (/^[1-9]$/.test(k)) {
+          e.preventDefault();
+          const mdl = _padMgrModel;
+          if (!mdl) { sayU('Still loading your pad.'); return; }
+          const a = (mdl.abilities || [])[parseInt(k, 10) - 1];
+          if (!a) { sayU(`No ability ${k}.`); return; }
+          _padToggleAb(a);
+          return;
+        }
+      }
+      if (k === 'n') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('N: pad manager. Your number pad has only nine slots — press N, then a number 1 through 9 hides or restores an ability; Tab steps through the full list with each ability explained, and Enter toggles the one you are on. Hidden abilities leave your pad instantly and can always be restored the same way.'); return; }
+        if (_dunPad) { _dunPad = false; _dunPadIdx = -1; sayU('Pad manager closed.'); return; }
+        _dunPad = true; _dunPadIdx = -1;
+        sayU('Opening your pad manager.');
+        padpickSend({}, () => { if (_dunPad) _padSpeak(); });   // always refetch — the list shifts with level and loadout
         return;
       }
       // ----- Class-progression reference — X (Josh: "what does each level give

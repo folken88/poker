@@ -1325,6 +1325,15 @@
 // HEADLINE — a very succinct (one or two sentence) summary of the LATEST version's change,
 // posted to the poker table chat on every reboot (see server.js boot note). Rewrite this with
 // each version bump; keep it player-facing and short (Tobias 2026-07-08).
-const VERSION = '3.37.92';
-const HEADLINE = "The loot-bank shop stops throwing you out — buy a piece of gear and you stay right there, focus on that slot, ready to buy the next piece. No more click-away-and-click-back dance between purchases.";
+//  3.37.93 2026-07-27 NUMPAD MANAGER (Josh: "we only have 9 keys" + Tobias: enable/disable features).
+//                     New 'padpick' action + per-class db.hidden_pad: players hide abilities they
+//                     don't use, and the pad renumbers instantly (slot indices stay stable — they
+//                     index the UNfiltered _abilitiesFor array). Sighted: "🎛 My Pad ▾" popover with
+//                     teach-as-you-go tooltips; blind: the N key (numbers toggle, Tab+Enter reach the
+//                     whole list, Tab stops speak each ability's effect). Forerunner of feat swapping.
+//                     Also: the GLORIOUS CHALLENGE bellow now announces the numbers actually APPLIED
+//                     — 2×(streak+1) — and the first "awakens" cast admits its +2/−2 (silver-mirror
+//                     showed "next: +4" then a bellow claiming +2; the math was right, the words lied).
+const VERSION = '3.37.93';
+const HEADLINE = "Your number pad is yours now — press N (blind) or open 🎛 My Pad to hide abilities you never use, so your nine numpad slots hold the ones you love. And Glorious Challenge finally announces the bonus it was actually giving you.";
 module.exports = { VERSION, HEADLINE };

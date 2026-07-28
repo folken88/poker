@@ -1201,6 +1201,48 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     return { ok: true, ...this._domainModel(m) };
   },
+  // ── PAD LOADOUT — the numpad manager (v3.37.93, Josh + Tobias) ─────────────
+  // The blind numpad has only 9 slots and ability lists outgrow it (the cavalier
+  // pad overflow, v3.37.92). Players now HIDE abilities they don't use: hidden
+  // keys are filtered out of the serialized pad (serialize.js), so the numbering
+  // compacts immediately — slot indices stay stable because `slot` is the index
+  // into the UNfiltered _abilitiesFor array. Purely presentational: a hidden
+  // ability is still legal if invoked another way, and bots ignore hiding.
+  // Forerunner of the planned feat pick/swap system. 'padpick' action: no
+  // payload → model; { toggle: key } → flip + persist per class (db.hidden_pad).
+  _padHiddenKeys(m) {
+    if (!m._padHidden) {
+      try { m._padHidden = new Set(db.getHiddenPad(m.playerId, m.cls) || []); } catch (_) { m._padHidden = new Set(); }
+    }
+    return m._padHidden;
+  },
+  padPick(playerId, payload = {}) {
+    const m = this.member(playerId);
+    if (!m || m.left) return { ok: false, error: 'not in this run' };
+    if (payload.toggle) {
+      const key = String(payload.toggle);
+      const ab = this._abilitiesFor(m).find(a => a.key === key && this._charAllows(a, m));
+      if (!ab) return { ok: false, error: 'no such ability' };
+      const cur = new Set(db.getHiddenPad(m.playerId, m.cls) || []);
+      if (cur.has(key)) cur.delete(key); else cur.add(key);
+      db.setHiddenPad(m.playerId, m.cls, [...cur]);
+      m._padHidden = null;   // lazy-rebuild from db on next read
+      this._broadcast();     // the pad renumbers NOW (unlike domains, this is pure UI)
+    }
+    return { ok: true, ...this._padModel(m) };
+  },
+  _padModel(m) {
+    const hidden = this._padHiddenKeys(m);
+    const abs = this._abilitiesFor(m).filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m));
+    return {
+      abilities: abs.map(ab => ({
+        key: ab.key, name: ab.name, icon: ab.icon || '✨',
+        desc: ab.desc || '',
+        hidden: hidden.has(ab.key),
+      })),
+      shown: abs.filter(ab => !hidden.has(ab.key)).length,
+    };
+  },
   // ── CLASS-PROGRESSION REFERENCE (Josh: "what does each level give me?") ───
   // A pure lookup: per-level gain summaries for the member's class from their
   // next level up to +9 (capped at 20), built from the same _levelGains the
@@ -2086,7 +2128,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.challengeN = (m.level || 1) + 2 * ((m.gloriousN || 0) + 1);   // RAW (v3.37.90): base challenge + 2 × glorious challenges ISSUED (this one included) — the FIRST glorious already carries +2 morale damage
     m.gloriousAC = 2 * ((m.gloriousN || 0) + 1);              // RAW (v3.37.90): −2 AC per glorious ISSUED, this one included (stacks with the base challenge's −2-vs-others in _foeTargetAC)
     const stacked = (m.gloriousN || 0) > 0;
-    this._note(`🔥 ${m.nickname} bellows a GLORIOUS CHALLENGE at ${e.name}${stacked ? ` — the Flame ROARS (+${2 * m.gloriousN} damage, −${2 * m.gloriousN} AC)!` : ' — the Order of the Flame awakens!'}`, ab.sound);
+    // v3.37.93: the announce now matches the APPLIED numbers — 2×(streak+1), this
+    // glorious included (silver-mirror showed "next: +4" then a bellow saying +2).
+    const gBonus = 2 * ((m.gloriousN || 0) + 1);
+    this._note(`🔥 ${m.nickname} bellows a GLORIOUS CHALLENGE at ${e.name}${stacked ? ` — the Flame ROARS (+${gBonus} damage, −${gBonus} AC)!` : ` — the Order of the Flame awakens (+${gBonus} damage, −${gBonus} AC)!`}`, ab.sound);
     this._echoToTable(ab.sound);
     this._basicAttack(m, e.uid);   // ...and strike immediately (plays his estoc's attack sound after the shout)
     if (e.hp <= 0) { m.gloriousN = (m.gloriousN || 0) + 1; this._note(`🔥 ${m.nickname} stands triumphant over ${e.name} — GLORIOUS! Kill streak ${m.gloriousN} — your NEXT glorious challenge: +${2 * (m.gloriousN + 1)} morale damage, −${2 * (m.gloriousN + 1)} AC. (Unleash it again next turn.)`); }

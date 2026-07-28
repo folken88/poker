@@ -341,7 +341,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
       spellPool: isPoolClass(m.cls) ? { remaining: m.spellPool || 0, max: spellSlots(lvl) } : null,
       // Per-spell-level slots for spontaneous casters: { 1: {remaining,max}, … }.
       slots: maxSlots ? Object.fromEntries(Object.keys(maxSlots).map(L => [L, { remaining: (m.slots && m.slots[L]) || 0, max: maxSlots[L] }])) : null,
-      abilities: abs.filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m) && _showStance(ab)).map(ab => {
+      abilities: abs.filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m) && _showStance(ab) && !this._padHiddenKeys(m).has(ab.key)).map(ab => {   // PAD LOADOUT (v3.37.93): player-hidden keys drop out so the 9-slot blind numpad compacts
         // Slot spells re-level by the active metamagic; the UI shows the effective
         // level, draws the right slot count, and greys out if there's no slot there
         // (or it pushes past 9th).

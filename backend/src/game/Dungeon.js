@@ -2104,6 +2104,7 @@ class Dungeon {
     if (kind === 'loadout') return this.loadout(playerId, payload);   // Spellbook picker: fetch the loadout model / toggle a spell (lands at the next door)
     if (kind === 'domains') return this.domains(playerId, payload);   // Domain picker (Phase C): fetch the model / toggle a domain (lands at the next door)
     if (kind === 'progression') return this.progression(playerId);    // class-progression reference (Josh's blind X key) — pure lookup, any time
+    if (kind === 'padpick') return this.padPick(playerId, payload);   // Numpad manager (v3.37.93): fetch the pad model / hide-show an ability (blind: N key) — renumbers immediately
 
     if (this.status === 'exploring') {
       if (kind === 'door') return this.openDoor();
