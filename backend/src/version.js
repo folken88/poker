@@ -1351,6 +1351,15 @@
 //                     no longer applies to melee swings. (4) Backup-crossbow strikes SAY "with the
 //                     crossbow" — the silent haste bonus shot sounded like a greatsword reaching a
 //                     flyer (it never was; the reach rule held).
-const VERSION = '3.37.95';
-const HEADLINE = "Your numpad is FULLY yours now — press N, pick a key, pick what lives on it (Josh's design). Also: Celeb remembers he's a real wizard-priest again (he'd been stuck flicking cantrips since the theurge rework), and Power Attack stops sneaking onto crossbow shots.";
+//  3.37.96 2026-07-28 MANEUVERS = FIGHTER-TYPE ONLY (Tobias's ruling on Josh's "does a bard need
+//                     bull rush?"): standing rule codified in pf1data/abilities.js — combat maneuvers
+//                     belong to FULL-BAB classes ("fighter" in the PF1 sense: fighter, ranger,
+//                     paladin…), never ¾-BAB skirmishers/casters. Monk keeps them (RAW Maneuver
+//                     Training); swashbuckler stays disarm-only by design. RANGER + ANTIPALADIN
+//                     were full-BAB but missing the suite — ranger's kit now gets Trip/Disarm/
+//                     Bull Rush/Grapple/Fight Defensively (antipaladin already rode the fighter
+//                     kit). Bards never had Bull Rush — Josh's worry was hypothetical, now a
+//                     domtest-guarded invariant.
+const VERSION = '3.37.96';
+const HEADLINE = "Combat maneuvers now follow the Pathfinder rule: they belong to the full-BAB fighter types — and RANGERS finally get their missing Trip, Disarm, Bull Rush and Grapple. Bards, as ever, sing instead of shoving.";
 module.exports = { VERSION, HEADLINE };

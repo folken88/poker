@@ -856,14 +856,29 @@ const _DISARM_MV  = { key: 'disarm',  name: 'Disarm',   icon: '🌀', cost: 'fre
 const _BULLRUSH_MV= { key: 'bullrush',name: 'Bull Rush',icon: '💪', cost: 'free', effect: 'bullrush',target: 'enemy', desc: 'Shove a foe back — an opposed maneuver (your CMB vs its CMD). On a success it\'s driven out of reach and loses its turn closing again; a hard shove (5+ over its CMD) slams it prone. No free attack — you\'ve pushed it away.' };
 const _GRAPPLE_MV = { key: 'grapple', name: 'Grapple',  icon: '🤼', cost: 'free', effect: 'grapple', target: 'enemy', desc: 'Seize a foe — an opposed maneuver (your CMB vs its CMD). On a success it\'s grappled and helpless, burning its turns struggling free (~2 rounds), and your grip crushes for a free strike. Can\'t grapple incorporeal foes.' };
 const _FIGHT_DEF  = { key: 'fightdefensively', name: 'Fight Defensively', icon: '🛡️', cost: 'free', freeAction: true, effect: 'buff', target: 'self', fightdefensively: true, sticky: true, minLevel: 1, sound: S.invoke, desc: 'A FREE toggle — −4 to all your attacks (and combat maneuvers) for a +2 dodge AC (+3 if you\'re acrobatic, e.g. a monk). Flip on or off without spending your turn.' };
-const _MANEUVER_CLASSES = ['fighter', 'barbarian', 'paladin', 'monk'];   // cavalier rides the fighter DEFAULT_KIT
-for (const _ck of _MANEUVER_CLASSES) {
-  const _k = KITS[_ck]; if (!_k || !_k.abilities) continue;
-  const _have = new Set(_k.abilities.map(a => a.key));
-  for (const _mv of [_TRIP_MV, _DISARM_MV, _BULLRUSH_MV, _GRAPPLE_MV, _FIGHT_DEF]) {
-    if (!_have.has(_mv.key)) _k.abilities.push({ ..._mv });
+// STANDING RULE (Tobias 2026-07-28, answering Josh's "does a bard need bull
+// rush?"): combat maneuvers are a FIGHTER-CLASS thing — and in PF1 "fighter"
+// means any FULL-BAB class (fighter, ranger, paladin…), not just the fighter
+// class itself. So: full-BAB classes get the maneuver suite; ¾-BAB skirmishers
+// and casters (bard, rogue, cleric…) never see these buttons. Exceptions:
+//   · monk keeps them by PF1 RAW — Maneuver Training is a real monk feature;
+//   · swashbuckler stays DISARM-only by design (a precision fencer, not a
+//     shover — its kit hand-picks the one maneuver that fits).
+const _MANEUVER_CLASSES = ['fighter', 'barbarian', 'paladin', 'antipaladin', 'ranger', 'monk'];   // cavalier + slayer ride the fighter DEFAULT_KIT / their own kits; ranger + antipaladin added v3.37.96 (full BAB, were missing the suite entirely)
+// The injection itself runs AFTER the kits.generated override (below) — injecting
+// here got WIPED when `KITS = _gen` swapped the object (v3.37.96: ranger's new
+// maneuvers vanished; the older classes only kept theirs because the generated
+// kits happened to already contain them). Idempotent, so it's a no-op for those.
+const _injectManeuvers = () => {
+  for (const _ck of _MANEUVER_CLASSES) {
+    const _k = KITS[_ck]; if (!_k || !_k.abilities) continue;
+    const _have = new Set(_k.abilities.map(a => a.key));
+    for (const _mv of [_TRIP_MV, _DISARM_MV, _BULLRUSH_MV, _GRAPPLE_MV, _FIGHT_DEF]) {
+      if (!_have.has(_mv.key)) _k.abilities.push({ ..._mv });
+    }
   }
-}
+};
+_injectManeuvers();   // hand-coded fallback kits (in case the generated file is ever missing)
 // Wizards & sorcerers get Scribe Scroll + Eschew Materials free (the caster "tax"
 // feats), so their feat budget goes straight to Spell Focus / metamagic. Neither has
 // a dungeon-combat effect (no component tracking here — spells already cast freely),
@@ -920,6 +935,11 @@ try {
 // omits it — re-attach the hand-coded kit AFTER the override (same pattern as
 // Olbryn's storm spec below). TODO: migrate into kit_abilities on the next regen.
 if (_bloodragerKit && !KITS.bloodrager) KITS.bloodrager = _bloodragerKit;
+
+// MANEUVERS re-injection (v3.37.96, Tobias's fighter-type ruling): the generated
+// kits carry maneuvers only for the classes that had them at generation time —
+// ranger's were missing entirely. Idempotent re-run against the LIVE KITS object.
+_injectManeuvers();
 
 // MAGUS spellstrike rework (v3.35.0): the generated kit still carries the OLD 8-shot
 // "SS …" list. Swap in the clean hand-coded 5 (Shocking Grasp / Frigid / Vampiric /
