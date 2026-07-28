@@ -302,8 +302,14 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     return m._ccT.tries;
   },
   _botAbility(m) {
-    const kit = kitFor(m.cls);
-    if (!kit.abilities || !kit.abilities.length) return null;
+    // v3.37.95: guard on the EFFECTIVE ability list, not the raw class kit.
+    // KITS.theurge carries an empty abilities[] (its spells come from theurgeKit
+    // via _abilitiesFor), so the old `kitFor(cls).abilities.length` early-out
+    // silently reduced bot Celeb to at-will cantrips for every fight since
+    // v3.37.85 (Josh, nimble-wombat: "Caleb is insisting on using cantrips…
+    // did we break Caleb somehow?" — yes, we did).
+    const allAbs = this._abilitiesFor(m);   // class kit + injected DOMAIN powers + the theurge dual list
+    if (!allAbs.length) return null;
     const lvl = m.level || 1;
     const foes = this._targetableEnemies();   // can't target Darkness-shrouded foes
     if (!foes.length) return null;
@@ -337,11 +343,10 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (flyFoe) {
       const stuck = this.livingParty().find(a => a.hp > 0 && !this._isRanged(a) && !this._canReach(a, flyFoe) && !(a._tpStrike > 0) && !a.blinkedBy);
       if (stuck) {
-        const tpIdx = this._abilitiesFor(m).findIndex(ab => ab.effect === 'tpstrike' && usable(ab));
+        const tpIdx = allAbs.findIndex(ab => ab.effect === 'tpstrike' && usable(ab));
         if (tpIdx >= 0) return { slot: tpIdx, payload: { allyUid: stuck.playerId } };
       }
     }
-    const allAbs = this._abilitiesFor(m);   // class kit + injected DOMAIN powers
     const slot = (ab) => allAbs.indexOf(ab);
     const avail = allAbs.filter(usable);
     if (!avail.length) return null;

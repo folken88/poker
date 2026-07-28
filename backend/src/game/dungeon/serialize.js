@@ -327,6 +327,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         return { key: a.key, name: a.name, icon: a.icon, img: a.img || at.img || null };
       })(),
       caster: isCaster(m.cls),
+      padMap: this._padMapOf(m),   // PAD MAP v2 (v3.37.95): explicit numpad-slot assignments — resolved client-side against the live action list
       domainsMax: maxDomainsFor(m.cls) || 0,   // cleric 2 / inquisitor 1 / else 0 — shows the Domain picker (Phase C)
       spellNote: kit.note || null,
       metamagic: mmFeats.length ? mmFeats : null,    // null → no toggle buttons (prepared casters bake metamagic into spell entries)

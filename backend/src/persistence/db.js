@@ -119,6 +119,12 @@ ensureColumn('players', 'domains', "TEXT NOT NULL DEFAULT '{}'");
 // forerunner of the planned feat pick/swap system. Purely presentational — a
 // hidden ability is still legal to cast if something else triggers it.
 ensureColumn('players', 'hidden_pad', "TEXT NOT NULL DEFAULT '{}'");
+// PAD MAP (v3.37.95, Josh's design) — explicit numpad SLOT assignments, per class:
+//   pad_map = { "cavalier": { "1": "gloriouschallenge", "4": "none", … } }
+// Values: an ability key, 'attack', 'spellbook', 'imbued', or 'none' (dead key).
+// Slots absent from the map auto-fill in natural order client-side; the map is
+// resolved gracefully (unknown/unavailable keys just fall back to auto-fill).
+ensureColumn('players', 'pad_map', "TEXT NOT NULL DEFAULT '{}'");
 // The chosen ability for a FLEX race's floating +2 (human/half-elf/half-orc),
 // e.g. 'str'. Empty = auto (highest base stat). Pinned from characterBuilds.
 ensureColumn('players', 'race_flex', "TEXT NOT NULL DEFAULT ''");
@@ -881,6 +887,25 @@ function setHiddenPad(playerId, cls, keys) {
   db.prepare('UPDATE players SET hidden_pad = ? WHERE player_id = ?').run(JSON.stringify(map), playerId);
 }
 
+/** Explicit numpad-slot assignments { "1": key, … } for a class (v3.37.95). */
+function getPadMap(playerId, cls) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return {};
+  const klass = cls || p.class || 'fighter';
+  let map = {};
+  try { map = JSON.parse(p.pad_map || '{}') || {}; } catch { map = {}; }
+  return (map[klass] && typeof map[klass] === 'object') ? map[klass] : {};
+}
+function setPadMap(playerId, cls, slots) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return;
+  const klass = cls || p.class || 'fighter';
+  let map = {};
+  try { map = JSON.parse(p.pad_map || '{}') || {}; } catch { map = {}; }
+  map[klass] = (slots && typeof slots === 'object') ? slots : {};
+  db.prepare('UPDATE players SET pad_map = ? WHERE player_id = ?').run(JSON.stringify(map), playerId);
+}
+
 // ---- PF1 race (one per character; see pf1data/races.js + characterBuilds.js) ----
 const _setRaceStmt = db.prepare('UPDATE players SET race = ? WHERE player_id = ?');
 const _setFlexStmt = db.prepare('UPDATE players SET race_flex = ? WHERE player_id = ?');
@@ -992,6 +1017,8 @@ module.exports = {
   setDomains,
   getHiddenPad,
   setHiddenPad,
+  getPadMap,
+  setPadMap,
   getRace,
   getRaceFlex,
   setRace,

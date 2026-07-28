@@ -1338,6 +1338,19 @@
 //                     checked raw class grants, so a Tactician-SHARED Shake It Off read as active
 //                     everywhere but paid +0 saves to the sharee. Now routed through _twkActive —
 //                     the share counts, inquisitor Solo Tactics counts, natural pairing unchanged.
-const VERSION = '3.37.94';
-const HEADLINE = "Shake It Off now actually pays when the cavalier shares it — the save bonus was showing up on the sheet but skipping the roll for everyone who got it via Tactician.";
+//  3.37.95 2026-07-28 THE PAD IS TRULY YOURS + CELEB UN-BROKEN (Josh's nimble-wombat batch).
+//                     (1) PAD MAP v2 (Josh's own design): N now opens a SLOT view — Tab reads numpad
+//                     1-9 with what's mapped; pressing a digit opens an assignment menu (every pad
+//                     action + Nothing to kill a key); assignments persist per class (db.pad_map),
+//                     auto-fill covers unassigned slots in natural order, no gaps. Sighted: 9 slot
+//                     dropdowns in the My Pad popover. Attack is finally announced (and movable).
+//                     (2) BOT CELEB FIXED: _botAbility early-outed on kitFor().abilities.length —
+//                     KITS.theurge (v3.37.85) has an empty abilities[], so Celeb was cantrip-locked
+//                     for two weeks. Guard now uses _abilitiesFor (the real list). (3) PF1 RAW:
+//                     Power Attack no longer applies to the backup crossbow (melee-only), Deadly Aim
+//                     no longer applies to melee swings. (4) Backup-crossbow strikes SAY "with the
+//                     crossbow" — the silent haste bonus shot sounded like a greatsword reaching a
+//                     flyer (it never was; the reach rule held).
+const VERSION = '3.37.95';
+const HEADLINE = "Your numpad is FULLY yours now — press N, pick a key, pick what lives on it (Josh's design). Also: Celeb remembers he's a real wizard-priest again (he'd been stuck flicking cantrips since the theurge rework), and Power Attack stops sneaking onto crossbow shots.";
 module.exports = { VERSION, HEADLINE };

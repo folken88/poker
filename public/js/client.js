@@ -871,8 +871,9 @@
   let _dunDmpIdx = -1;         // Tab cursor within the domain menu (the catalog outgrew the number row — 11 domains)
   let _padOpen = false;        // "🎛 My Pad ▾" numpad-manager popover open/closed (sighted, v3.37.93)
   let _padMgrModel = null;     // fetched pad model { abilities:[{key,name,icon,desc,hidden}], shown } — shared by the sighted panel + blind N menu
-  let _dunPad = false;         // blind dungeon: numpad manager open (N opens; 1-9 toggles hide/show, Tab cycles + Enter toggles, Escape closes)
-  let _dunPadIdx = -1;         // Tab cursor within the pad-manager menu (ability lists far outgrow the number row)
+  let _dunPad = false;         // blind dungeon: numpad manager open — SLOT view (N opens; Tab steps keys 1-9, a digit/Enter opens that key's assignment menu, Escape closes) — PAD MAP v2, v3.37.95
+  let _dunPadIdx = -1;         // Tab cursor within the slot view (0-8)
+  let _dunPadAssign = null;    // assignment submenu for one key — { slot: 1-9, idx } (digits/Tab+Enter pick the action, Escape backs out)
   let _dunProg = null;         // blind dungeon: class-progression reference open — the fetched { level, cls, next } (X opens; 1-9 speak later levels; Escape closes)
   let _dactArm = { act: null, ts: 0 };   // blind-mode two-tap confirm for run-ending buttons (leave/bail/cancel) — guards a stray VoiceOver Enter from nuking the run (Josh, brave-walnut)
   let _dunAllyPick = null;     // blind dungeon: an ally-targeted spell awaiting an ALLY choice — {slot,label,allies:[playerId]} (numbers pick, Return = smart auto)
@@ -1144,10 +1145,24 @@
     if (!_padMgrModel) body = `<div class="dungeon__sb-head">Loading your pad…</div>`;
     else {
       const mdl = _padMgrModel;
+      // PAD MAP v2 (v3.37.95): per-key numpad assignments. Options beyond your
+      // real kit (Spellbook/Imbued) are harmless — an assignment the character
+      // can't honor simply auto-fills. '' = Auto (natural order).
+      const _slotOpts = (cur) => {
+        const opts = [['', 'Auto'], ['attack', '⚔ Attack'], ['spellbook', '📖 Spellbook (casters)'], ['imbued', '🏹 Imbued Shots (magus)'], ['none', '🚫 Nothing (dead key)']]
+          .concat((mdl.abilities || []).filter(a => !a.hidden).map(a => [a.key, `${a.icon} ${a.name}`]));
+        return opts.map(([v, l]) => `<option value="${escapeAttr(v)}"${v === cur ? ' selected' : ''}>${escapeText(l)}</option>`).join('');
+      };
+      const map = mdl.map || {};
       body = `<div class="dungeon__sb-head">Your action pad — ${mdl.shown} of ${(mdl.abilities || []).length} shown · click to hide/show (takes effect instantly; the blind numpad renumbers)</div>` +
         `<div class="dungeon__sb-scroll"><div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">` +
         (mdl.abilities || []).map(a =>
           `<button class="btn ${a.hidden ? 'btn--ghost' : 'btn--primary'} btn--sm" style="flex:0 0 auto;width:auto;min-width:0;padding:4px 9px${a.hidden ? ';opacity:.55' : ''}" data-dact="padpick" data-padkey="${escapeAttr(a.key)}" aria-pressed="${!a.hidden}" title="${escapeAttr(a.name)}${a.desc ? ': ' + escapeAttr(a.desc) : ''} — click to ${a.hidden ? 'RESTORE to' : 'HIDE from'} your pad.">${a.icon} ${escapeText(a.name)}${a.hidden ? ' (hidden)' : ''}</button>`
+        ).join('') + `</div>` +
+        `<div class="dungeon__sb-head" style="margin-top:8px" title="Pin any action to a specific numpad key — Auto keeps the natural order; unpinned actions fill the remaining keys, so there are never gaps. Blind: the N key does the same by ear.">Numpad keys — pin an action to a key</div>` +
+        `<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">` +
+        [1, 2, 3, 4, 5, 6, 7, 8, 9].map(s =>
+          `<label style="display:flex;align-items:center;gap:3px;font-size:.85em">${s}<select data-pad-slot="${s}" aria-label="Numpad key ${s} assignment">${_slotOpts(map[s] ?? map[String(s)] ?? '')}</select></label>`
         ).join('') + `</div></div>`;
     }
     return `<span class="dungeon__sb-wrap dungeon__pad-wrap">` +
@@ -2079,6 +2094,12 @@
     _padOpen = false;
     renderDungeon();
   });
+  // Sighted numpad-key selects (PAD MAP v2): a change pins that key ('' = Auto).
+  document.addEventListener('change', (ev) => {
+    const sel = ev.target.closest && ev.target.closest('[data-pad-slot]');
+    if (!sel) return;
+    padpickSend({ assign: { slot: parseInt(sel.dataset.padSlot, 10), key: sel.value } });
+  });
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape' && _padOpen && document.body.dataset.screen === 'dungeon') {
       _padOpen = false;
@@ -2396,63 +2417,10 @@
         else { sayU('Opening your domains.'); dmpickSend({}, () => { if (_dunDmp) _dmpSpeak(); }); }
         return;
       }
-      // ----- Numpad manager — N (v3.37.93). Josh: "we only have 9 keys" — the
-      // cavalier pad overflowed the number row. N lists every ability with its
-      // shown/hidden state; numbers 1-9 toggle directly, Tab steps the whole
-      // list (Enter toggles the one you're on — Tab reaches past 9), Escape
-      // closes. Hiding lands INSTANTLY: the numpad renumbers on the spot, so
-      // after any change the pad is re-read. Enter on a Tab stop also SPEAKS
-      // the ability's effect text first — the teach-as-you-go layer.
-      const _padSpeak = () => {
-        const mdl = _padMgrModel; if (!mdl) { sayU('Still loading your pad.'); return; }
-        const list = (mdl.abilities || []).map((a, i) => `${i + 1} ${a.name}${a.hidden ? ', hidden' : ''}`).join('; ');
-        sayU(`Pad manager — ${mdl.shown} of ${(mdl.abilities || []).length} abilities on your pad: ${list}. Numbers 1 through 9 hide or restore; Tab steps through them all and Enter toggles the one you are on; Escape closes. Changes are instant — your number pad renumbers right away.`);
-      };
-      const _padToggleAb = (a) => {
-        padpickSend({ toggle: a.key }, (m2) => {
-          const now = (m2.abilities || []).find(x => x.key === a.key);
-          sayU(`${a.name} ${now && now.hidden ? 'hidden' : 'restored'}. ${m2.shown} abilities on your pad now — the numbers have shifted, so re-read your pad before acting.`);
-        });
-      };
-      if (_dunPad) {
-        if (e.key === 'Escape') { e.preventDefault(); _dunPad = false; _dunPadIdx = -1; sayU('Pad manager closed.'); return; }
-        if (e.key === 'Tab') {
-          e.preventDefault();
-          const mdl = _padMgrModel;
-          if (!mdl || !(mdl.abilities || []).length) { sayU('Still loading your pad.'); return; }
-          const n = mdl.abilities.length;
-          _dunPadIdx = ((_dunPadIdx + (e.shiftKey ? -1 : 1)) % n + n) % n;
-          const a = mdl.abilities[_dunPadIdx];
-          sayU(`${_dunPadIdx + 1}, ${a.name}${a.hidden ? ', hidden' : ''}. ${a.desc ? a.desc + ' ' : ''}Enter to ${a.hidden ? 'restore' : 'hide'}.`);
-          return;
-        }
-        if (e.key === 'Enter' && _dunPadIdx >= 0) {
-          e.preventDefault();
-          const mdl = _padMgrModel;
-          const a = mdl && (mdl.abilities || [])[_dunPadIdx];
-          if (!a) { sayU('Still loading your pad.'); return; }
-          _padToggleAb(a);
-          return;
-        }
-        if (/^[1-9]$/.test(k)) {
-          e.preventDefault();
-          const mdl = _padMgrModel;
-          if (!mdl) { sayU('Still loading your pad.'); return; }
-          const a = (mdl.abilities || [])[parseInt(k, 10) - 1];
-          if (!a) { sayU(`No ability ${k}.`); return; }
-          _padToggleAb(a);
-          return;
-        }
-      }
-      if (k === 'n') {
-        e.preventDefault();
-        if (_blindHelp) { sayU('N: pad manager. Your number pad has only nine slots — press N, then a number 1 through 9 hides or restores an ability; Tab steps through the full list with each ability explained, and Enter toggles the one you are on. Hidden abilities leave your pad instantly and can always be restored the same way.'); return; }
-        if (_dunPad) { _dunPad = false; _dunPadIdx = -1; sayU('Pad manager closed.'); return; }
-        _dunPad = true; _dunPadIdx = -1;
-        sayU('Opening your pad manager.');
-        padpickSend({}, () => { if (_dunPad) _padSpeak(); });   // always refetch — the list shifts with level and loadout
-        return;
-      }
+      // ----- Numpad manager — N: MOVED below the pad build (v3.37.95). The v2
+      // slot-assignment menu (Josh's own design) needs `naturalActions` /
+      // `blindActions`, which are const-declared further down this handler —
+      // referencing them here would be a temporal-dead-zone crash. -----
       // ----- Class-progression reference — X (Josh: "what does each level give
       // me?"). X speaks your level + what the NEXT level grants; while open,
       // digits 1-9 speak the gains at current+N; Escape closes. Pure lookup —
@@ -2535,7 +2503,7 @@
       // 2026-07-17: he's already in the imbued menu, the prefix is dead weight). A
       // no-op for names that don't carry the prefix.
       const imbuedName = (ab) => String((ab && ab.name) || '').replace(/^\s*imbued\s*shot\s*[:\-–(]*\s*/i, '').replace(/\s*\)\s*$/, '').trim() || (ab && ab.name) || '';
-      const blindActions = [{ kind: 'attack', label: kit.atwill?.name || 'Attack' }];
+      const naturalActions = [{ kind: 'attack', label: kit.atwill?.name || 'Attack' }];
       const feats = [];
       (kit.abilities || []).forEach((ab, i) => {   // class FEATURES only (spells → spellbook, imbued shots → their submenu)
         if (ab.slvl != null) return;
@@ -2552,9 +2520,98 @@
         const RANK = { deadlyaim: 0, powerattack: 0, piranhastrike: 0, rapidshot: 1, bullseye: 2 };
         feats.sort((a, b) => (RANK[a.ab.key] ?? 9) - (RANK[b.ab.key] ?? 9));
       }
-      feats.forEach(f => blindActions.push(f));
-      if (imbued.length) blindActions.push({ kind: 'imbued', label: 'Imbued Shots' });   // magus submenu — numpad opens it, then a number fires a shot
-      if (hasSpellbook) blindActions.push({ kind: 'spellbook', label: 'Spellbook' });
+      feats.forEach(f => naturalActions.push(f));
+      if (imbued.length) naturalActions.push({ kind: 'imbued', label: 'Imbued Shots' });   // magus submenu — numpad opens it, then a number fires a shot
+      if (hasSpellbook) naturalActions.push({ kind: 'spellbook', label: 'Spellbook' });
+      // ── PAD MAP v2 (v3.37.95, Josh's own design): explicit slot assignments ──
+      // kit.padMap = { "3": "gloriouschallenge", "7": "none", … } pins actions to
+      // numpad slots. Resolution: explicit slots first (first claim wins; unknown
+      // or unavailable keys are ignored), then unplaced actions AUTO-FILL the
+      // remaining slots in natural order — so there are never accidental gaps,
+      // only deliberate 'none' dead keys. No map = the natural order, unchanged.
+      const _padIdOf = (it) => it.kind === 'ability' ? it.ab.key : it.kind;
+      let blindActions = naturalActions;
+      const _padMapK = kit.padMap || {};
+      if (Object.keys(_padMapK).length) {
+        const byId = new Map(naturalActions.map(it => [_padIdOf(it), it]));
+        const slots = new Array(9).fill(undefined);
+        const used = new Set();
+        for (let s = 1; s <= 9; s++) {
+          const k = _padMapK[s] ?? _padMapK[String(s)];
+          if (!k) continue;
+          if (k === 'none') { slots[s - 1] = null; continue; }   // deliberately dead key
+          const it = byId.get(k);
+          if (it && !used.has(k)) { slots[s - 1] = it; used.add(k); }
+        }
+        const rest = naturalActions.filter(it => !used.has(_padIdOf(it)));
+        for (let s = 0; s < 9; s++) if (slots[s] === undefined) slots[s] = rest.shift() || null;
+        blindActions = slots;
+      }
+      // ----- Numpad manager — N (v3.37.95, PAD MAP v2 — Josh's own design).
+      // N opens a SLOT view: Tab steps numpad keys 1-9 speaking what each is
+      // mapped to; pressing a DIGIT (or Enter on a Tab stop) opens the
+      // assignment menu for that key — every pad action numbered (plus
+      // "Nothing" to disable the key), Tab steps them with their effect text
+      // (teach-as-you-go), a digit or Enter assigns. Assignments persist per
+      // class and land instantly; unassigned keys auto-fill in natural order,
+      // so there are never accidental gaps. Escape backs out one level.
+      const _padSlotLabel = (s) => { const it = blindActions[s - 1]; return it ? it.label : 'unassigned'; };
+      const _padChoices = () => naturalActions.map(it => ({ id: _padIdOf(it), label: it.label, desc: (it.kind === 'ability' && it.ab.desc) ? it.ab.desc : '' }))
+        .concat([{ id: 'none', label: 'Nothing — disable this key', desc: 'The key does nothing, so a stray press can never waste your turn.' }]);
+      const _padSpeakSlots = () => {
+        const list = []; for (let s = 1; s <= 9; s++) list.push(`${s}, ${_padSlotLabel(s)}`);
+        sayU(`Pad manager — your numpad: ${list.join('; ')}. Press a number to choose what lives on that key; Tab steps through the keys, Enter re-maps the one you are on; Escape closes.`);
+      };
+      const _padOpenAssign = (s) => {
+        _dunPadAssign = { slot: s, idx: -1 };
+        const list = _padChoices().map((c, i) => `${i + 1} ${c.label}`).join('; ');
+        sayU(`Key ${s} is ${_padSlotLabel(s)}. Choose its new action: ${list}. Numbers pick; Tab steps through with descriptions and Enter picks; Escape backs out.`);
+      };
+      const _padAssign = (s, c) => {
+        _dunPadAssign = null; _dunPadIdx = s - 1;
+        padpickSend({ assign: { slot: s, key: c.id } }, () => {
+          sayU(`Key ${s} is now ${c.label}.${c.id === 'none' ? '' : ' Anything it displaced shifts to the next open key.'}`);
+        });
+      };
+      if (_dunPadAssign) {
+        if (e.key === 'Escape') { e.preventDefault(); const s = _dunPadAssign.slot; _dunPadAssign = null; sayU(`Key ${s} unchanged.`); return; }
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const ch = _padChoices(); const n = ch.length;
+          _dunPadAssign.idx = ((_dunPadAssign.idx + (e.shiftKey ? -1 : 1)) % n + n) % n;
+          const c = ch[_dunPadAssign.idx];
+          sayU(`${_dunPadAssign.idx + 1}, ${c.label}. ${c.desc ? c.desc + ' ' : ''}Enter to put it on key ${_dunPadAssign.slot}.`);
+          return;
+        }
+        if (e.key === 'Enter' && _dunPadAssign.idx >= 0) { e.preventDefault(); const c = _padChoices()[_dunPadAssign.idx]; if (c) _padAssign(_dunPadAssign.slot, c); return; }
+        if (/^[1-9]$/.test(k)) {
+          e.preventDefault();
+          const c = _padChoices()[parseInt(k, 10) - 1];
+          if (!c) { sayU(`No choice ${k}.`); return; }
+          _padAssign(_dunPadAssign.slot, c);
+          return;
+        }
+        return;   // swallow anything else while the assignment menu is open
+      }
+      if (_dunPad) {
+        if (e.key === 'Escape') { e.preventDefault(); _dunPad = false; _dunPadIdx = -1; sayU('Pad manager closed.'); return; }
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          _dunPadIdx = ((_dunPadIdx + (e.shiftKey ? -1 : 1)) % 9 + 9) % 9;
+          sayU(`Key ${_dunPadIdx + 1}: ${_padSlotLabel(_dunPadIdx + 1)}. Enter to re-map it.`);
+          return;
+        }
+        if (e.key === 'Enter' && _dunPadIdx >= 0) { e.preventDefault(); _padOpenAssign(_dunPadIdx + 1); return; }
+        if (/^[1-9]$/.test(k)) { e.preventDefault(); _padOpenAssign(parseInt(k, 10)); return; }
+      }
+      if (k === 'n') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('N: pad manager. Press N, then Tab through your nine numpad keys to hear what each does; press a key\'s number to choose what lives on it — any of your actions, or Nothing to disable the key. Your layout is saved for this class and every key you leave alone fills in automatically.'); return; }
+        if (_dunPad) { _dunPad = false; _dunPadIdx = -1; _dunPadAssign = null; sayU('Pad manager closed.'); return; }
+        _dunPad = true; _dunPadIdx = -1; _dunPadAssign = null;
+        _padSpeakSlots();
+        return;
+      }
       // Fire a spell with sensible auto-targeting: single-enemy spells hit your
       // locked target (or the deadliest foe); AoE hits everything; self/ally let
       // the server pick (e.g. healing finds the lowest-HP ally).
@@ -2980,7 +3037,7 @@
         // (b) Otherwise the number chooses an action from the blind action list:
         //     1 = Attack, then each class FEATURE, then "Spellbook" (casters).
         const act = blindActions[n - 1];
-        if (!act) { window.BlindMode.speak(`No action ${n}.`, 'urgent'); return; }
+        if (!act) { window.BlindMode.speak(`Key ${n} is unassigned. Press N to map it.`, 'urgent'); return; }
         if (_blindHelp) { window.BlindMode.speak(`${n}: ${act.label}.`, 'urgent'); return; }
         // Spellbook → open the sub-mode (numbers pick a spell LEVEL, Tab cycles
         // spells, Return casts). Browsable off-turn; the cast itself checks turn.

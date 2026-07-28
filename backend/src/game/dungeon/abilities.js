@@ -1216,9 +1216,32 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     return m._padHidden;
   },
+  _padMapOf(m) {
+    if (!m._padMap) {
+      try { m._padMap = db.getPadMap(m.playerId, m.cls) || {}; } catch (_) { m._padMap = {}; }
+    }
+    return m._padMap;
+  },
   padPick(playerId, payload = {}) {
     const m = this.member(playerId);
     if (!m || m.left) return { ok: false, error: 'not in this run' };
+    // PAD MAP v2 (v3.37.95, Josh's design): { assign: { slot: 1-9, key } } pins an
+    // action to a numpad slot. key = ability key | 'attack' | 'spellbook' |
+    // 'imbued' | 'none' (dead key) | '' (clear → back to auto-fill). The map is
+    // stored raw; the CLIENT resolves it against the live action list, so a key
+    // that stops existing (level reset, loadout change) just auto-fills — no
+    // validation trap here beyond sanity.
+    if (payload.assign) {
+      const slot = parseInt(payload.assign.slot, 10);
+      const key = String(payload.assign.key == null ? '' : payload.assign.key).slice(0, 40);
+      if (!(slot >= 1 && slot <= 9)) return { ok: false, error: 'slot must be 1 to 9' };
+      const map = { ...this._padMapOf(m) };
+      if (!key) delete map[slot]; else map[slot] = key;
+      db.setPadMap(m.playerId, m.cls, map);
+      m._padMap = null;
+      this._broadcast();   // kit.padMap rides the next state → the pad re-resolves everywhere
+      return { ok: true, ...this._padModel(m) };
+    }
     if (payload.toggle) {
       const key = String(payload.toggle);
       const ab = this._abilitiesFor(m).find(a => a.key === key && this._charAllows(a, m));
@@ -1241,6 +1264,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         hidden: hidden.has(ab.key),
       })),
       shown: abs.filter(ab => !hidden.has(ab.key)).length,
+      map: this._padMapOf(m),   // explicit slot assignments (v3.37.95)
     };
   },
   // ── CLASS-PROGRESSION REFERENCE (Josh: "what does each level give me?") ───
@@ -3176,10 +3200,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (r.sneakDice && isSneakClass(m.cls) && ['dagger', 'kukri', 'shortsword'].includes(m.weaponKey) && i === 0) r.sound = '/audio/sneak_riki.mp3';
       if (i === 0) flurrySound = r.sound;
       const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` (+${r.sneakDmg} sneak)` : '');
+      // Name the improvised weapon on the strike line (v3.37.95, Josh): the HASTE
+      // bonus strike is `quiet`, so its crossbow swap was silent — he heard a bare
+      // "Gabriel hits [flying foe]" and reasonably concluded a greatsword was
+      // reaching into the sky. Now every backup-crossbow strike says so.
+      const wTag = drewCrossbow ? ' with the crossbow' : '';
       if (!multi) {
         if (r.fumble) this._note(`${m.nickname} fumbles the attack! ${this._atkStr(r)}`, r.sound);
-        else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name} for ${r.damage}${r.drTag || ''}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`, r.sound); }
-        else this._note(`${m.nickname} misses ${tgt.name}. ${this._atkStr(r)}`, r.sound);
+        else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name}${wTag} for ${r.damage}${r.drTag || ''}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`, r.sound); }
+        else this._note(`${m.nickname} misses ${tgt.name}${wTag}. ${this._atkStr(r)}`, r.sound);
       } else {
         let g = groups[groups.length - 1];
         if (!g || g.tgt !== tgt) { g = { tgt, bits: [] }; groups.push(g); }

@@ -1672,7 +1672,15 @@ class Dungeon {
     // placeholder, and the level-scaled damage ramp is dropped (iteratives + feats
     // now carry high-level scaling — see the iterative loop in _playerAttack).
     const _ap = attacker.mods ? attackProfile({ mods: attacker.mods }, weapon, { offHand }) : { toHitMod: ABILITY_MOD, dmgBonus: ABILITY_MOD };   // off-hand swing → ½ ability mod to DAMAGE (PF1 two-weapon fighting)
-    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + studiedN + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF;   // (v3.37.92: Tactician reworked to RAW feat-SHARING — the old +2-vs-quarry term is gone; v3.37.90: glorious grants DAMAGE only, per the match-PF1 mandate)   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
+    // PF1 RAW (v3.37.95): POWER ATTACK is MELEE-only, DEADLY AIM is RANGED-only.
+    // Both stances fold into m.buffs (toHit/dmg), which this swing applies blind —
+    // so Gabriel's backup light crossbow was shooting with Power Attack's −4/+12
+    // (nimble-wombat). When the weapon in hand is the wrong kind, back the stance
+    // out of THIS swing (the stance itself stays on for the real weapon).
+    const _paX  = (weapon && weapon.ranged) ? { hit: (attacker._paPen || 0), dmg: -(attacker._paBonus || 0) } : { hit: 0, dmg: 0 };
+    const _aimX = (weapon && !weapon.ranged && attacker.buffApplied && attacker.buffApplied.deadlyaim) ? { hit: 2, dmg: -(attacker._aimBonus || 0) } : { hit: 0, dmg: 0 };
+    const _stanceHit = _paX.hit + _aimX.hit, _stanceDmg = _paX.dmg + _aimX.dmg;
+    const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + _stanceHit + pbs + flankHit + studiedN + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF;   // (v3.37.92: Tactician reworked to RAW feat-SHARING — the old +2-vs-quarry term is gone; v3.37.90: glorious grants DAMAGE only, per the match-PF1 mandate)   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
     const roll = dRoll(20), total = roll + toHit;
     // Luck domain — GOOD FORTUNE: the next missed swing (fumble included) is
     // rerolled once, keep the better outcome. Consumed on the reroll.
@@ -1714,7 +1722,7 @@ class Dungeon {
     }
     // Damage = weapon dice (NdX) + enhancement + ½ level + ability mod + buff dmg (+ Point Blank).
     const judgDmg = attacker.judgment === 'destruction' ? Math.max(1, Math.floor(lvl / 3)) : 0;   // inquisitor Judgement: Destruction
-    const flatDmg = _ap.dmgBonus + (buff.dmg || 0) + (baneOn ? BANE_DMG : 0) + pbs + judgDmg + ff.dmg + swashSpec + arcEnhDelta;
+    const flatDmg = _ap.dmgBonus + (buff.dmg || 0) + _stanceDmg + (baneOn ? BANE_DMG : 0) + pbs + judgDmg + ff.dmg + swashSpec + arcEnhDelta;
     // Natural attacks (a druid's claws/bite) grow their DICE with the wielder's SIZE
     // (the bigger combat forms enlarge them) and with Improved Natural Weapon — both
     // step the dice up the PF1 size table (1d6→1d8→2d6→…), stacking.
@@ -1737,7 +1745,7 @@ class Dungeon {
     const impCrit = ff.impCrit || (weapon.impCritAt && lvl >= weapon.impCritAt) || (swashFin && lvl >= 5) || arcKeen;   // fighter / swashbuckler / magus arcane-pool keen / weapon-borne (Bastard's Blade at 9) — don't stack
     const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
     const critFocus = ((ff.critFocus || (weapon && weapon.critFocus)) ? 4 : 0) + (ff.critMastery ? 4 : 0);   // Critical Focus +4 (fighter feat OR weapon-borne — Lammas / Sawtooth Sabers), Critical Mastery +4 more (+8 confirm)
-    if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + pbs + flankHit + studiedN + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
+    if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + _stanceHit + pbs + flankHit + studiedN + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
     // Precision (sneak / swashbuckler Precise Strike), smite, and bane dice ride on
     // top — NOT multiplied by a crit.
     let sneakDmg = 0;
