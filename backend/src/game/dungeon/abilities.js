@@ -2821,8 +2821,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   // SHAKE IT OFF: +1 on all saves per OTHER living ally who also has it (cap +3).
   _shakeItOff(m) {
-    if (!teamworkGrants(m.cls, m.level).has('shakeitoff')) return 0;
-    const n = this.livingParty().filter(p => p.playerId !== m.playerId && teamworkGrants(p.cls, p.level).has('shakeitoff')).length;
+    // v3.37.94: route through _twkActive, not raw grants — a Tactician-SHARED
+    // Shake It Off read as "active" everywhere but paid +0 (the sharee never
+    // earns the feat by class). Now the share counts, and so does inquisitor
+    // Solo Tactics; the natural-grant pairing math is unchanged.
+    if (!this._twkActive(m, 'shakeitoff')) return 0;
+    const n = this.livingParty().filter(p => p.playerId !== m.playerId && this._twkActive(p, 'shakeitoff')).length;
     return Math.min(3, n);
   },
   _heroCMB(m) {

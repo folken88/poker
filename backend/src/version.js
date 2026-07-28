@@ -1334,6 +1334,10 @@
 //                     Also: the GLORIOUS CHALLENGE bellow now announces the numbers actually APPLIED
 //                     — 2×(streak+1) — and the first "awakens" cast admits its +2/−2 (silver-mirror
 //                     showed "next: +4" then a bellow claiming +2; the math was right, the words lied).
-const VERSION = '3.37.93';
-const HEADLINE = "Your number pad is yours now — press N (blind) or open 🎛 My Pad to hide abilities you never use, so your nine numpad slots hold the ones you love. And Glorious Challenge finally announces the bonus it was actually giving you.";
+//  3.37.94 2026-07-28 SHARED SHAKE IT OFF PAYS UP (found by the PGM parity smoke test): _shakeItOff
+//                     checked raw class grants, so a Tactician-SHARED Shake It Off read as active
+//                     everywhere but paid +0 saves to the sharee. Now routed through _twkActive —
+//                     the share counts, inquisitor Solo Tactics counts, natural pairing unchanged.
+const VERSION = '3.37.94';
+const HEADLINE = "Shake It Off now actually pays when the cavalier shares it — the save bonus was showing up on the sheet but skipping the roll for everyone who got it via Tactician.";
 module.exports = { VERSION, HEADLINE };
