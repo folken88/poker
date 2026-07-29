@@ -1360,6 +1360,19 @@
 //                     Bull Rush/Grapple/Fight Defensively (antipaladin already rode the fighter
 //                     kit). Bards never had Bull Rush — Josh's worry was hypothetical, now a
 //                     domtest-guarded invariant.
-const VERSION = '3.37.96';
-const HEADLINE = "Combat maneuvers now follow the Pathfinder rule: they belong to the full-BAB fighter types — and RANGERS finally get their missing Trip, Disarm, Bull Rush and Grapple. Bards, as ever, sing instead of shoving.";
+//  3.37.97 2026-07-29 SCRAMBLED-LYNX BATCH (Josh, both notes verified in the log). (1) PAD CATALOG
+//                     UN-HIDE: his v1 hide/show hides emptied the v2 assignment menu (Gweyir showed
+//                     only attack/challenge/tactician/cleave) — the N catalog now comes from the
+//                     SERVER pad model incl. hidden abilities (marked, assigning restores; spells
+//                     excluded via new model slvl), and padPick assign un-hides server-side.
+//                     (2) HOLD FUTILITY, ROOM-WIDE: per-hero 2-strike ledger let a boss waste
+//                     ~2×party turns holding down the line — now 3 failed holds TOTAL abandon the
+//                     tactic ("he should've brought out the big boy spells quicker"). (3) HOPELESS-
+//                     CANTRIP ESCALATION: Celeb zapped Jolt at touch 32 for NINE rounds needing an
+//                     18 while holding Slay Living (landed later for 125) — when the at-will needs
+//                     17+ vs the deadliest foe, the bot now reaches for its highest SAVE-based
+//                     leveled spell (no attack roll — ignores AC and mirror images), SR risk and
+//                     all. Gabriel-vs-flyers re-verified: crossbow every time, now clearly narrated.
+const VERSION = '3.37.97';
+const HEADLINE = "Your pad manager now offers EVERYTHING you own — hidden abilities included, and picking one restores it. Enemy casters give up on hopeless holds after three failed tries room-wide, and your caster allies stop flicking cantrips at unhittable bosses when a real save-or-suffer spell is in the book.";
 module.exports = { VERSION, HEADLINE };

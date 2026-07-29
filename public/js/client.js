@@ -2556,8 +2556,19 @@
       // class and land instantly; unassigned keys auto-fill in natural order,
       // so there are never accidental gaps. Escape backs out one level.
       const _padSlotLabel = (s) => { const it = blindActions[s - 1]; return it ? it.label : 'unassigned'; };
-      const _padChoices = () => naturalActions.map(it => ({ id: _padIdOf(it), label: it.label, desc: (it.kind === 'ability' && it.ab.desc) ? it.ab.desc : '' }))
-        .concat([{ id: 'none', label: 'Nothing — disable this key', desc: 'The key does nothing, so a stray press can never waste your turn.' }]);
+      // v3.37.97: the assignment catalog comes from the SERVER pad model, which
+      // includes HIDDEN abilities — Josh's v1 hide/show hides had emptied the
+      // catalog (only attack/challenge/tactician/cleave survived on Gweyir) with
+      // no blind way to restore. Assigning a hidden ability un-hides it
+      // server-side. Spells stay off the catalog (they live in the Spellbook).
+      const _padChoices = () => {
+        const ch = [{ id: 'attack', label: (kit.atwill && kit.atwill.name) || 'Attack', desc: '' }];
+        (((_padMgrModel || {}).abilities) || []).filter(a => a.slvl == null).forEach(a => ch.push({ id: a.key, label: a.name + (a.hidden ? ' — hidden, assigning restores it' : ''), desc: a.desc || '' }));
+        if (naturalActions.some(it => it.kind === 'imbued')) ch.push({ id: 'imbued', label: 'Imbued Shots', desc: '' });
+        if (naturalActions.some(it => it.kind === 'spellbook')) ch.push({ id: 'spellbook', label: 'Spellbook', desc: 'Opens your leveled spell list.' });
+        ch.push({ id: 'none', label: 'Nothing — disable this key', desc: 'The key does nothing, so a stray press can never waste your turn.' });
+        return ch;
+      };
       const _padSpeakSlots = () => {
         const list = []; for (let s = 1; s <= 9; s++) list.push(`${s}, ${_padSlotLabel(s)}`);
         sayU(`Pad manager — your numpad: ${list.join('; ')}. Press a number to choose what lives on that key; Tab steps through the keys, Enter re-maps the one you are on; Escape closes.`);
@@ -2610,6 +2621,7 @@
         if (_dunPad) { _dunPad = false; _dunPadIdx = -1; _dunPadAssign = null; sayU('Pad manager closed.'); return; }
         _dunPad = true; _dunPadIdx = -1; _dunPadAssign = null;
         _padSpeakSlots();
+        padpickSend({});   // fetch the full catalog (hidden included) for the assignment menus
         return;
       }
       // Fire a spell with sensible auto-targeting: single-enemy spells hit your

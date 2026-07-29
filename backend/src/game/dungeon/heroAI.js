@@ -598,6 +598,19 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         if (haste && !this.livingParty().some(p => p.hasted > 0)) return { slot: slot(haste), payload: {} };
         const b = bestBlast();
         if (b) return b;
+        // v3.37.97 HOPELESS-CANTRIP ESCALATION (Josh, scrambled-lynx d10: Celeb
+        // zapped Jolt at touch AC 32 for NINE rounds — needing an 18 — while
+        // holding Slay Living, which later landed for 125). If the at-will ray
+        // needs a 17+ vs the deadliest standing foe, a leveled SAVE spell (no
+        // attack roll — it ignores AC and mirror images) beats hoping, SR risk
+        // and all. Highest slot level first: the kill spell before the slap.
+        const big2 = targets[0];
+        const atwillHit = (m.castingMod || 0) + Math.floor(lvl / 2);
+        if (big2 && this._enemyAC(big2, { touch: true }) - atwillHit >= 17) {
+          const saver = avail.filter(a => (a.slvl >= 1) && (a.effect === 'savedie' || a.effect === 'save_debuff' || (a.effect === 'aoe' && a.save)))
+                             .sort((x, y) => (y.slvl || 0) - (x.slvl || 0))[0];
+          if (saver) return { slot: slot(saver), payload: saver.effect === 'aoe' ? { targetUid: big2.uid, targetUids: targets.slice(0, 6).map(e => e.uid) } : { targetUid: big2.uid } };
+        }
         return null;   // damage spells spent → cantrip / weapon swing
       }
     }

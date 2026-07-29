@@ -807,7 +807,13 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // round for 61 ROUNDS, and because this branch fires FIRST, the fiend never reached
     // its fireball/cone/chain-lightning artillery below. e is rebuilt each room, so the
     // memory self-resets. When every bruiser is a proven bad bet, it BLASTS instead.
-    const _futileHold = (m) => ((e._holdResists && e._holdResists[m.playerId]) || 0) >= 2;
+    // v3.37.97 (Josh, scrambled-lynx d10): per-hero futility alone let a boss
+    // waste ~2×party-size turns holding DOWN THE LINE before escalating. Now a
+    // ROOM-WIDE cap too: 3 failed holds total and the tactic is abandoned — the
+    // caster moves to its real spells ("he should've brought out the big boy
+    // spells quicker — he'd probably have killed us").
+    const _holdFailTotal = Object.values(e._holdResists || {}).reduce((a, n) => a + Math.min(2, n), 0);
+    const _futileHold = (m) => _holdFailTotal >= 3 || ((e._holdResists && e._holdResists[m.playerId]) || 0) >= 2;
     const bruiser = heroes.find(m => !(m.paralyzed > 0) && !m.undead && MART.has(m.cls) && m.hp > m.maxHp * 0.4 && !_futileHold(m));   // undead heroes have no mind to hold
     if (cl >= 9 && bruiser && !heroes.some(m => m.paralyzed > 0)) return this._enemyHoldHero(e, bruiser, dc(5), 'Hold Monster');
     // 2) Finish a badly-wounded hero with auto-hitting Magic Missile (1st).

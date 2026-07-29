@@ -1235,6 +1235,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const slot = parseInt(payload.assign.slot, 10);
       const key = String(payload.assign.key == null ? '' : payload.assign.key).slice(0, 40);
       if (!(slot >= 1 && slot <= 9)) return { ok: false, error: 'slot must be 1 to 9' };
+      // Assigning a HIDDEN ability UN-HIDES it (v3.37.97 — Josh, scrambled-lynx:
+      // his v1 hide/show hides emptied the v2 assignment catalog, with no blind
+      // way to restore; picking something for a key must always just work).
+      const hid = this._padHiddenKeys(m);   // cache-aware: the live set, loaded from db
+      if (hid.has(key)) { hid.delete(key); db.setHiddenPad(m.playerId, m.cls, [...hid]); }
       const map = { ...this._padMapOf(m) };
       if (!key) delete map[slot]; else map[slot] = key;
       db.setPadMap(m.playerId, m.cls, map);
@@ -1261,6 +1266,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       abilities: abs.map(ab => ({
         key: ab.key, name: ab.name, icon: ab.icon || '✨',
         desc: ab.desc || '',
+        slvl: ab.slvl != null ? ab.slvl : null,   // v3.37.97: lets the N catalog exclude spells (they live in the Spellbook, not on pad keys)
         hidden: hidden.has(ab.key),
       })),
       shown: abs.filter(ab => !hidden.has(ab.key)).length,
