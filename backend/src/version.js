@@ -1373,6 +1373,14 @@
 //                     17+ vs the deadliest foe, the bot now reaches for its highest SAVE-based
 //                     leveled spell (no attack roll — ignores AC and mirror images), SR risk and
 //                     all. Gabriel-vs-flyers re-verified: crossbow every time, now clearly narrated.
-const VERSION = '3.37.97';
-const HEADLINE = "Your pad manager now offers EVERYTHING you own — hidden abilities included, and picking one restores it. Enemy casters give up on hopeless holds after three failed tries room-wide, and your caster allies stop flicking cantrips at unhittable bosses when a real save-or-suffer spell is in the book.";
+//  3.37.98 2026-07-29 SILENT OVERFLOW CAP (Josh, sunny-musket/jazzy-acorn: "the voice says
+//                     'skipping X number of lines'… if this is the backend compensating it
+//                     shouldn't be reported to the user"). He's right — blindMode's >8-line
+//                     backlog cap (fires on joining a run / busy rounds) kept its CAP but lost
+//                     its NARRATION: the voice now just starts at the fresh news, the capped
+//                     lines stay on screen. The big-room "Plus N more enemy actions" tally
+//                     stays — that's condensed CONTENT, not plumbing. PRINCIPLE (his words):
+//                     compensation happens behind the scenes; the player should never hear it.
+const VERSION = '3.37.98';
+const HEADLINE = "The narrator stops announcing its own housekeeping — no more 'skipping X lines' when you join a busy run. It just starts at the fresh news, like a narrator should.";
 module.exports = { VERSION, HEADLINE };

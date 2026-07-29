@@ -1545,7 +1545,10 @@
           const mine = live.filter(isMine);
           const enemyTally = live.length - mine.length;          // collapsed enemy actions
           const show = mine.length > 8 ? mine.slice(-8) : mine;   // cap a reconnect flood of ally lines too
-          if (show.length < mine.length) said(`Skipping ${mine.length - show.length} earlier ally lines.`, 'combat');
+          // v3.37.98 (Josh, sunny-musket/jazzy-acorn): the overflow cap stays, its
+          // NARRATION goes — "Skipping N earlier lines" is backend bookkeeping the
+          // player should never hear. The capped lines are still on screen (and A
+          // repeats the last real report); the voice just starts at the fresh news.
           for (const e of show) said(_stripGlyphs(e.text), e.phase || 'combat');
           if (enemyTally) said(`Plus ${enemyTally} more enemy action${enemyTally > 1 ? 's' : ''} — press E to inspect the foes.`, 'combat');
         } else {
@@ -1560,7 +1563,7 @@
           const active = live.filter(e => !isIdleNoop(e));
           const idleN = live.length - active.length;
           const toSay = active.length > 8 ? active.slice(-8) : active;
-          if (toSay.length < active.length) said(`Skipping ${active.length - toSay.length} earlier lines.`, toSay[0] && toSay[0].phase);
+          // (v3.37.98: the "Skipping N earlier lines" announce is gone — silent cap, see above.)
           for (const e of toSay) said(_stripGlyphs(e.text), e.phase || (st.status === 'combat' ? 'combat' : null));
           if (idleN) said(`${idleN} foe${idleN === 1 ? '' : 's'} stand idle — entranced or held — and do nothing.`, 'combat');
         }
