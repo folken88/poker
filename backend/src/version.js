@@ -1391,6 +1391,15 @@
 //                     CONTROL SANITY: never charm/dominate the LAST standing foe (its only value is
 //                     attacking allies), and never even attempt it on a target that saves on a 4+
 //                     — hold/laughter keep their try-twice gamble ledger.
-const VERSION = '3.37.99';
-const HEADLINE = "Two new companion instincts: a caster who can't possibly hit the foe stops flicking hopeless cantrips and HEALS or shields the party instead — and nobody wastes a turn trying to charm the last monster standing or a boss that shrugs mind control on a 4.";
+//  3.37.100 2026-07-30 THE PROVEN-SAVER RULE (Tobias: "generally don't have either hero or villain
+//                     ai attempt 'save or lose' type spells on targets that have already proven they
+//                     have greater than 50% chance of making it"). Both brains now share the
+//                     evidence rule: the FIRST attempt is always fair (you haven't seen the roll);
+//                     after ONE observed save, retry only if the target still fails on an 11+
+//                     (known save bonus vs the caster's DC). Hero side: the _ccLedger filter for
+//                     savedie/save_debuff/charm/dominate (2-attempt cap stays as the floor).
+//                     Villain side: _futileHold goes odds-aware after the first shrug (room-wide
+//                     3-fail cap stays). Supersedes pure attempt-counting with real odds.
+const VERSION = '3.37.100';
+const HEADLINE = "The proven-saver rule: once you've watched a foe shrug off a save-or-lose spell, nobody on EITHER side keeps rolling that same bad die unless the odds beat a coin flip. One fair try, then respect the evidence.";
 module.exports = { VERSION, HEADLINE };

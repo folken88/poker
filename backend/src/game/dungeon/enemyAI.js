@@ -813,7 +813,13 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // caster moves to its real spells ("he should've brought out the big boy
     // spells quicker — he'd probably have killed us").
     const _holdFailTotal = Object.values(e._holdResists || {}).reduce((a, n) => a + Math.min(2, n), 0);
-    const _futileHold = (m) => _holdFailTotal >= 3 || ((e._holdResists && e._holdResists[m.playerId]) || 0) >= 2;
+    // STANDING RULE (Tobias 2026-07-30): neither side retries a SAVE-OR-LOSE on a
+    // target that has PROVEN a better-than-50% save. First try is always fair (you
+    // haven't seen the roll yet); once this hero has shrugged ONE hold, the caster
+    // has seen their resolve — retry only if they still fail on an 11+.
+    const _futileHold = (m) => _holdFailTotal >= 3
+      || ((e._holdResists && e._holdResists[m.playerId]) || 0) >= 2
+      || (((e._holdResists && e._holdResists[m.playerId]) || 0) >= 1 && this._partySaveMod(m, ['will']) >= dc(5) - 10);
     const bruiser = heroes.find(m => !(m.paralyzed > 0) && !m.undead && MART.has(m.cls) && m.hp > m.maxHp * 0.4 && !_futileHold(m));   // undead heroes have no mind to hold
     if (cl >= 9 && bruiser && !heroes.some(m => m.paralyzed > 0)) return this._enemyHoldHero(e, bruiser, dc(5), 'Hold Monster');
     // 2) Finish a badly-wounded hero with auto-hitting Magic Missile (1st).

@@ -912,7 +912,20 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         const _lastFoe = this.livingEnemies().filter(x => !x.summoned).length <= 1;
         const _mcDC = 10 + Math.floor((m.level || 1) / 2) + (m.castingMod || 4);
         const _mcHopeless = (t) => { try { return this._enemySave(t, 'will') + 4 >= _mcDC; } catch (_) { return false; } };
-        const el = targets.filter(t => this._spellWorksOn(a, t) && !((a.effect === 'charm' || a.effect === 'dominate') && (ccd(t) || t.dominated > 0 || _lastFoe || _mcHopeless(t))) && !(_ccFx && (this._ccLedger(m)[a.effect + ':' + t.uid] || 0) >= 2));
+        // STANDING RULE (Tobias 2026-07-30, both AIs): don't retry a SAVE-OR-LOSE
+        // on a target that has PROVEN a better-than-50% save. The first attempt is
+        // always fair; after ONE observed save, retry only if the target still
+        // fails on an 11 or better (the caster has seen the roll — engine save
+        // bonus vs this caster's DC). The hard 2-attempt cap stays as the floor.
+        const _svKind = a.save || 'will';
+        const _svDC = 10 + Math.floor((m.level || 1) / 2) + (m.castingMod || 4);
+        const _provenSaver = (t) => {
+          const n = (this._ccLedger(m)[a.effect + ':' + t.uid] || 0);
+          if (n >= 2) return true;
+          if (!n) return false;
+          try { return this._enemySave(t, _svKind) >= _svDC - 10; } catch (_) { return false; }
+        };
+        const el = targets.filter(t => this._spellWorksOn(a, t) && !((a.effect === 'charm' || a.effect === 'dominate') && (ccd(t) || t.dominated > 0 || _lastFoe || _mcHopeless(t))) && !(_ccFx && _provenSaver(t)));
         if (!el.length) continue;
         const pick = (a.effect === 'savedie' || a.effect === 'charm' || a.effect === 'dominate')
           ? el.slice().sort((x, y) => y.maxHp - x.maxHp)[0]
