@@ -903,7 +903,16 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         // shrugged this effect twice this room (golden-panda: the charm/dominate
         // loop at the Pit Fiend — huge Will + SR, attempt after attempt).
         const _ccFx = a.effect === 'save_debuff' || a.effect === 'savedie' || a.effect === 'charm' || a.effect === 'dominate';
-        const el = targets.filter(t => this._spellWorksOn(a, t) && !((a.effect === 'charm' || a.effect === 'dominate') && (ccd(t) || t.dominated > 0)) && !(_ccFx && (this._ccLedger(m)[a.effect + ':' + t.uid] || 0) >= 2));
+        // v3.37.99 MIND-CONTROL SANITY (Josh, plucky-gecko d5: Femmik charmed the
+        // boss — Will +17 vs DC 20 — with almost nobody left to turn it on):
+        // (1) never charm/dominate the LAST standing foe — its whole value is
+        // attacking its allies; (2) don't even ATTEMPT mind control on a target
+        // that saves on a 4 or better — that's not a gamble, it's a wasted turn.
+        // (Hold/Laughter keep their try-twice ledger — those are worth gambles.)
+        const _lastFoe = this.livingEnemies().filter(x => !x.summoned).length <= 1;
+        const _mcDC = 10 + Math.floor((m.level || 1) / 2) + (m.castingMod || 4);
+        const _mcHopeless = (t) => { try { return this._enemySave(t, 'will') + 4 >= _mcDC; } catch (_) { return false; } };
+        const el = targets.filter(t => this._spellWorksOn(a, t) && !((a.effect === 'charm' || a.effect === 'dominate') && (ccd(t) || t.dominated > 0 || _lastFoe || _mcHopeless(t))) && !(_ccFx && (this._ccLedger(m)[a.effect + ':' + t.uid] || 0) >= 2));
         if (!el.length) continue;
         const pick = (a.effect === 'savedie' || a.effect === 'charm' || a.effect === 'dominate')
           ? el.slice().sort((x, y) => y.maxHp - x.maxHp)[0]
@@ -973,6 +982,24 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         led[k] = (led[k] || 0) + 1;
       }
       return { slot: slot(choice.ab), payload: choice.payload };
+    }
+    // v3.37.99 WHEN YOU CAN'T HURT IT, HELP SOMEONE (Josh, plucky-gecko d5: a
+    // dry-of-save-spells Celeb Jolt-spammed the boss's touch AC 30, needing a
+    // 20, round after round — "why weren't they helping?!"). If this is a caster
+    // whose at-will is hopeless (17+ to hit) against EVERY standing foe and no
+    // offensive pick fit above, spend the turn usefully instead: top up the
+    // most-hurt ally (even chip damage counts when you're useless otherwise),
+    // else raise a defensive buff that isn't already running. If the cantrip can
+    // still hit SOMETHING, the basic attack remains the right call.
+    const _isCasterM = !!(m.slots || m.spellPool || m.castingMod != null);
+    const _atwillHit2 = (m.castingMod || 0) + Math.floor(lvl / 2);
+    const _allHopeless = _isCasterM && targets.length && targets.every(t => { try { return this._enemyAC(t, { touch: true }) - _atwillHit2 >= 17; } catch (_) { return false; } });
+    if (_allHopeless) {
+      const hurt = allies.filter(a2 => !a2.undead && a2.hp < a2.maxHp * 0.8).sort((x, y) => (x.hp / x.maxHp) - (y.hp / y.maxHp))[0];
+      const healAb = hurt && avail.find(a2 => a2.effect === 'heal');
+      if (healAb) return { slot: slot(healAb), payload: { allyUid: hurt.playerId } };
+      const defBuff = avail.find(a2 => a2.effect === 'buff' && a2.sticky && a2.target !== 'enemy' && !(m.buffApplied && m.buffApplied[a2.key]));
+      if (defBuff) return { slot: slot(defBuff), payload: {} };
     }
     return null;   // nothing fit → basic attack
   },

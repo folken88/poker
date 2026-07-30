@@ -1381,6 +1381,16 @@
 //                     lines stay on screen. The big-room "Plus N more enemy actions" tally
 //                     stays — that's condensed CONTENT, not plumbing. PRINCIPLE (his words):
 //                     compensation happens behind the scenes; the player should never hear it.
-const VERSION = '3.37.98';
-const HEADLINE = "The narrator stops announcing its own housekeeping — no more 'skipping X lines' when you join a busy run. It just starts at the fresh news, like a narrator should.";
+//  3.37.99 2026-07-30 TWO NEW BOT PRINCIPLES (Josh, plucky-gecko d5 — log truth: his casters were
+//                     EXCELLENT R1-7, stripping 4 boss wards incl. crashing its Fly, and Suffocation
+//                     killed Vakra; but once Celeb ran dry of save spells he Jolt-spammed touch AC 30
+//                     needing a 20, and Femmik charmed the boss — Will +17 vs DC 20 — near the end).
+//                     (1) WHEN YOU CAN'T HURT IT, HELP SOMEONE: a caster whose at-will is hopeless
+//                     (17+ to hit) vs EVERY standing foe now heals the most-hurt ally (even chip
+//                     damage) or raises a missing defensive buff instead of 5%-zapping. (2) MIND-
+//                     CONTROL SANITY: never charm/dominate the LAST standing foe (its only value is
+//                     attacking allies), and never even attempt it on a target that saves on a 4+
+//                     — hold/laughter keep their try-twice gamble ledger.
+const VERSION = '3.37.99';
+const HEADLINE = "Two new companion instincts: a caster who can't possibly hit the foe stops flicking hopeless cantrips and HEALS or shields the party instead — and nobody wastes a turn trying to charm the last monster standing or a boss that shrugs mind control on a 4.";
 module.exports = { VERSION, HEADLINE };
