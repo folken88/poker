@@ -1959,6 +1959,21 @@
     const k = ev.target.closest?.('[data-dungeon-kick]');
     if (k) {
       ev.preventDefault();
+      // v3.37.104 (Josh, silver-rabbit: "Binch just disappeared" — he had
+      // dismissed her himself with a stray VoiceOver Enter mid-fight and never
+      // knew): dismissing an ally is run-altering, so blind mode gets the same
+      // two-tap confirm as Leave/Bail/Cancel — spoken WITH the ally's name.
+      if (window.BlindMode?.isOn?.()) {
+        const nick = ((state.dungeon && state.dungeon.party) || []).find(p => p.playerId === k.dataset.dungeonKick)?.nickname || 'this ally';
+        const akey = 'kick:' + k.dataset.dungeonKick;
+        const now = Date.now();
+        if (!(_dactArm.act === akey && (now - _dactArm.ts) < 4000)) {
+          _dactArm = { act: akey, ts: now };
+          try { window.BlindMode.speak(`Hold on — press again to DISMISS ${nick} from the party.`, 'urgent'); } catch (_) {}
+          return;
+        }
+        _dactArm = { act: null, ts: 0 };
+      }
       socket.emit('dungeon:kick', { botId: k.dataset.dungeonKick }, (resp) => {
         if (!resp?.ok) toast(resp?.error || 'Could not dismiss ally', true);
       });
@@ -2597,8 +2612,17 @@
       };
       const _padAssign = (s, c) => {
         _dunPadAssign = null; _dunPadIdx = s - 1;
-        padpickSend({ assign: { slot: s, key: c.id } }, () => {
-          sayU(`Key ${s} is now ${c.label}.${c.id === 'none' ? '' : ' Anything it displaced shifts to the next open key.'}`);
+        // v3.37.104 (Josh, silver-rabbit: "stop trying to think through things
+        // and reassign everything — you should just assign each number"): PIN
+        // the current layout as explicit before the swap so NOTHING reflows —
+        // assignment changes exactly one key. If the chosen action already sat
+        // on another key, that key goes empty: one action, one key, no cascade.
+        const map = {};
+        for (let i9 = 0; i9 < 9; i9++) { const it9 = blindActions[i9]; map[i9 + 1] = it9 ? _padIdOf(it9) : 'none'; }
+        for (let j9 = 1; j9 <= 9; j9++) if (j9 !== s && map[j9] === c.id) map[j9] = 'none';
+        map[s] = c.id;
+        padpickSend({ setMap: map }, () => {
+          sayU(`Key ${s} is now ${c.label}. Nothing else moved.`);
         });
       };
       if (_dunPadAssign) {

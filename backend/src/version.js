@@ -1424,6 +1424,23 @@
 //  3.37.102 2026-08-01 TRANSCRIPT HOTFIX: /transcript was swallowed by the SPA fallback (served
 //                     index.html) — routes moved under /api/transcript (+ /api/transcript/<name>),
 //                     which the fallback excludes and nginx proxies to the backend.
-const VERSION = '3.37.103';
-const HEADLINE = "Tactician is now a MOVE action — drill the party AND still swing the same turn. Glorious Challenge's bonus sticks to your quarry (no re-bellowing every attack). And every run now has a full text transcript at /transcript — read your own battles line by line.";
+//  3.37.104 2026-08-01 THE SILVER-RABBIT/LUCKY-MOOSE BATCH (all four Josh reports log-verified).
+//                     (1) PAD ASSIGNMENT = EXACTLY ONE KEY (his ruling: "stop reassigning
+//                     everything"): the client PINS the current layout before a swap (padpick
+//                     setMap writes the whole map atomically); a duplicate action's old key goes
+//                     empty; nothing reflows — editing key 9 can never move key 8 again. Catalog
+//                     now stance-filtered (no Deadly Aim offered to a melee slayer — his
+//                     "wouldn't let me" was the pad refusing what it could never show).
+//                     (2) KICK CONFIRM: "Binch just disappeared" = he dismissed her himself with
+//                     a stray VoiceOver Enter — ally-dismiss now gets the Leave/Bail two-tap
+//                     confirm, spoken with the ally's NAME. (3) BLAZE OF GLORY = SWIFT (house
+//                     rule; PF1 standard): it's a +4-to-hit self-buff, never an auto-attack —
+//                     now it keeps your turn, and the desc says to aim your own strikes after.
+//                     (4) CHALLENGE TAG: hits on your challenged quarry say "(+N challenge)"
+//                     like sneak/teamwork — lucky-moose's "bonus not applying" was nat-1s + the
+//                     Scraper's chain-grapple eating turns; the damage was always in, now the
+//                     line SAYS so. OPEN DESIGN Q (Tobias): RAW glorious gating (must down the
+//                     challenged foe first?) + glorious-as-swift — awaiting his call.
+const VERSION = '3.37.104';
+const HEADLINE = "Pad assignment now changes EXACTLY the key you touched — no more mysterious reshuffles. Dismissing an ally asks you twice, by name. Blaze of Glory is a swift action that keeps your turn. And every hit on your challenged quarry announces its (+N challenge) bonus out loud.";
 module.exports = { VERSION, HEADLINE };

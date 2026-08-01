@@ -111,7 +111,7 @@ const TACTICIAN = { key: 'tactician', name: 'Tactician: Share a Teamwork Feat', 
 // modeled here as a once-per-room self-buff of +4 to hit for the rest of the room. Char-gated +
 // minLevel 15 like the other Flame deeds. (Foolhardy Rush L2 & Daunting Success L8 are passives
 // wired in Dungeon.js: _isFlameCavalier / openDoor / _rollInitiative / _dauntingSuccess.)
-const BLAZE_OF_GLORY = { key: 'blazeofglory', name: 'Blaze of Glory', icon: '☄️', cost: 'room', uses: 1, minLevel: 15, effect: 'buff', target: 'self', buff: { toHit: 4 }, sticky: true, char: 'Lord Gweyir', sound: '/audio/draugr_shout03_burning.mp3', desc: 'ORDER OF THE FLAME (L15): blaze up in a final surge of glory — +4 to ALL your attacks for the rest of the room. Once per room.' };
+const BLAZE_OF_GLORY = { key: 'blazeofglory', name: 'Blaze of Glory', icon: '☄️', cost: 'room', uses: 1, minLevel: 15, effect: 'buff', target: 'self', buff: { toHit: 4 }, sticky: true, freeAction: true, char: 'Lord Gweyir', sound: '/audio/draugr_shout03_burning.mp3', desc: 'ORDER OF THE FLAME (L15) — SWIFT ACTION (house rule; PF1 says standard): blaze up in a final surge of glory — +4 to ALL your attacks for the rest of the room, and you STILL act this turn. It is a buff on you, not an attack: after lighting it, aim your own strikes as usual. Once per room.' };
 
 // Signature Spell Strike sounds per magus (keyed by dungeon nickname). Human
 // magi (and any unlisted magus) fall back to the spell's default electric zap.
@@ -1231,6 +1231,26 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // stored raw; the CLIENT resolves it against the live action list, so a key
     // that stops existing (level reset, loadout change) just auto-fills — no
     // validation trap here beyond sanity.
+    // v3.37.104 (Josh's ruling, silver-rabbit): { setMap: {1..9: key} } replaces
+    // the WHOLE layout in one write — the client pins the current board first,
+    // so an assignment changes exactly one key and NOTHING reflows. Hidden
+    // abilities being pinned are un-hidden, same as single assigns.
+    if (payload.setMap && typeof payload.setMap === 'object') {
+      const map = {};
+      for (const [k, v] of Object.entries(payload.setMap)) {
+        const slot = parseInt(k, 10);
+        if (!(slot >= 1 && slot <= 9)) continue;
+        const key = String(v == null ? '' : v).slice(0, 40);
+        if (key) map[slot] = key;
+      }
+      const hid2 = this._padHiddenKeys(m); let unhid = false;
+      for (const v of Object.values(map)) if (hid2.has(v)) { hid2.delete(v); unhid = true; }
+      if (unhid) db.setHiddenPad(m.playerId, m.cls, [...hid2]);
+      db.setPadMap(m.playerId, m.cls, map);
+      m._padMap = null;
+      this._broadcast();
+      return { ok: true, ...this._padModel(m) };
+    }
     if (payload.assign) {
       const slot = parseInt(payload.assign.slot, 10);
       const key = String(payload.assign.key == null ? '' : payload.assign.key).slice(0, 40);
@@ -1261,7 +1281,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   _padModel(m) {
     const hidden = this._padHiddenKeys(m);
-    const abs = this._abilitiesFor(m).filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m));
+    // v3.37.104 (Josh, silver-rabbit: "it wouldn't let me assign Deadly Aim no
+    // matter what" — his slayer is melee): the catalog now applies the same
+    // stance rule the pad itself uses — no Deadly Aim for a melee wielder, no
+    // Power Attack for a ranged one. Never offer what the pad can't show.
+    const rangedNow = this._isRanged(m);
+    const abs = this._abilitiesFor(m).filter(ab => this._charAllows(ab, m) && this._loadoutAllows(ab, m)
+      && !(ab.powerattack && rangedNow) && !(ab.deadlyaim && !rangedNow));
     return {
       abilities: abs.map(ab => ({
         key: ab.key, name: ab.name, icon: ab.icon || '✨',
@@ -3205,7 +3231,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // Rogue Sneak Attack with a light blade (dagger/kukri/shortsword) → Riki.
       if (r.sneakDice && isSneakClass(m.cls) && ['dagger', 'kukri', 'shortsword'].includes(m.weaponKey) && i === 0) r.sound = '/audio/sneak_riki.mp3';
       if (i === 0) flurrySound = r.sound;
-      const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` (+${r.sneakDmg} sneak)` : '');
+      // v3.37.104 (Josh, lucky-moose: "it did not say it was applying my
+      // challenge bonus"): hits on YOUR challenged quarry now carry the bonus
+      // tag, same as sneak/teamwork — the number was always in the damage;
+      // now the line says so.
+      const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` (+${r.sneakDmg} sneak)` : '')
+        + ((r.hit && tgt.uid === m.challengedId && (m.challengeN || 0) > 0) ? ` (+${m.challengeN} challenge)` : '');
       // Name the improvised weapon on the strike line (v3.37.95, Josh): the HASTE
       // bonus strike is `quiet`, so its crossbow swap was silent — he heard a bare
       // "Gabriel hits [flying foe]" and reasonably concluded a greatsword was
