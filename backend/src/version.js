@@ -1400,6 +1400,21 @@
 //                     savedie/save_debuff/charm/dominate (2-attempt cap stays as the floor).
 //                     Villain side: _futileHold goes odds-aware after the first shrug (room-wide
 //                     3-fail cap stays). Supersedes pure attempt-counting with real odds.
-const VERSION = '3.37.100';
-const HEADLINE = "The proven-saver rule: once you've watched a foe shrug off a save-or-lose spell, nobody on EITHER side keeps rolling that same bad die unless the odds beat a coin flip. One fair try, then respect the evidence.";
+//  3.37.101 2026-08-01 TACTICIAN = MOVE ACTION + RUN TRANSCRIPTS (Josh's clarity batch + Tobias).
+//                     (1) TACTICIAN is a MOVE action (Tobias's house rule — PF1 says standard; it
+//                     was acting as the whole turn): drill the party AND still attack the same
+//                     turn — freeAction plumbing, same as Challenge's swift; bot cavaliers now
+//                     drill-then-fight in one turn. Desc states the scope plainly: the share lasts
+//                     THIS ROOM ONLY, re-drill each room. (2) GLORIOUS CHALLENGE desc now states
+//                     THE BONUS STICKS — every blow on the bellowed foe keeps it until it falls;
+//                     re-bellow only to switch targets or bank a kill (Josh: "do I have to hit
+//                     glorious every time?" — no, and the code always worked that way, challengeN
+//                     rides every swing vs challengedId). (3) RUN TRANSCRIPTS (Tobias: "provide
+//                     josh a text transcript of every run"): GET /transcript = dated index of
+//                     recent runs (rescues erased codenames), GET /transcript/<name> = the full
+//                     play-by-play, plain text, emoji-stripped, VoiceOver-friendly; streams the
+//                     jsonl. Also verified from logs: unerring-moose was a DEATH not a stall (the
+//                     bots cleared room 8 without him; the silence was his client dropping).
+const VERSION = '3.37.101';
+const HEADLINE = "Tactician is now a MOVE action — drill the party AND still swing the same turn. Glorious Challenge's bonus sticks to your quarry (no re-bellowing every attack). And every run now has a full text transcript at /transcript — read your own battles line by line.";
 module.exports = { VERSION, HEADLINE };

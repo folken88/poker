@@ -36,6 +36,53 @@ app.get('/api/roster', (_req, res) => {
   res.json({ players: db.listPlayers(), defaultStack: db.DEFAULT_STACK });
 });
 
+// ── RUN TRANSCRIPTS (v3.37.101, Tobias: "provide josh a text transcript of
+// every run for his own analysis"). Plain text, screen-reader friendly: emoji
+// stripped, one line per event, chronological — VoiceOver reads it like a book.
+//   GET /transcript            → index of recent runs (name · started · rooms)
+//   GET /transcript/<runName>  → the full play-by-play for that run
+// Streams the persistent narration log (logs/dungeon.jsonl, tens of MB — never
+// slurped into memory). Codenames CAN repeat across weeks; a collision simply
+// concatenates both runs, each line still stamped with its room and round.
+const _tsFs = require('fs');
+const _tsRl = require('readline');
+const _TS_LOG = require('path').join(__dirname, '../logs/dungeon.jsonl');
+const _tsStrip = (s) => String(s || '')
+  .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{2300}-\u{23FF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}]/gu, ' ')
+  .replace(/\s{2,}/g, ' ').trim();
+async function _tsScan(onLine) {
+  const rl = _tsRl.createInterface({ input: _tsFs.createReadStream(_TS_LOG), crlfDelay: Infinity });
+  for await (const line of rl) { try { onLine(JSON.parse(line)); } catch (_) {} }
+}
+app.get('/transcript', async (_req, res) => {
+  try {
+    const runs = new Map();
+    await _tsScan(e => {
+      const n = e.runName; if (!n) return;
+      let r = runs.get(n); if (!r) { r = { first: e.ts || '', maxDepth: 0, lines: 0 }; runs.set(n, r); }
+      r.lines++; if ((e.depth || 0) > r.maxDepth) r.maxDepth = e.depth || 0;
+    });
+    const rows = [...runs.entries()].sort((a, b) => (a[1].first < b[1].first ? 1 : -1)).slice(0, 60);
+    res.set('Content-Type', 'text/plain; charset=utf-8').set('Cache-Control', 'no-cache');
+    res.send('FOLKEN DUNGEON RUN TRANSCRIPTS - newest first.\nOpen /transcript/ followed by a run name for the full play-by-play.\n\n'
+      + rows.map(([n, r]) => `${n} - started ${String(r.first).slice(0, 16).replace('T', ' ')} UTC - reached room ${r.maxDepth} - ${r.lines} lines`).join('\n') + '\n');
+  } catch (e) { res.status(500).set('Content-Type', 'text/plain; charset=utf-8').send('Transcript index unavailable: ' + e.message); }
+});
+app.get('/transcript/:run', async (req, res) => {
+  try {
+    const want = String(req.params.run || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+    if (!want) return res.status(400).set('Content-Type', 'text/plain; charset=utf-8').send('Bad run name.');
+    const out = [];
+    await _tsScan(e => {
+      if (e.runName !== want || e.type !== 'note') return;
+      out.push(`[room ${e.depth != null ? e.depth : '?'} round ${e.round != null ? e.round : '?'}] ${_tsStrip(e.text)}`);
+    });
+    res.set('Content-Type', 'text/plain; charset=utf-8').set('Cache-Control', 'no-cache');
+    if (!out.length) return res.status(404).send(`No transcript found for "${want}". The list of runs is at /transcript`);
+    res.send(`RUN TRANSCRIPT: ${want} - ${out.length} lines.\n\n` + out.join('\n') + '\n');
+  } catch (e) { res.status(500).set('Content-Type', 'text/plain; charset=utf-8').send('Transcript unavailable: ' + e.message); }
+});
+
 // Name-pronunciation overrides — the SAME list the 11labs TTS uses, served
 // to the browser so blind-mode Web Speech narration shares one source of
 // truth (see util/pronunciations.js). Cached briefly; it changes rarely.

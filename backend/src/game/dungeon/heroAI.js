@@ -126,11 +126,13 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     }
     // BOT TACTICIAN (v3.37.92): a cavalier opens the fight by drilling the party —
     // share the best teamwork feat once per room, while the room is young and
-    // there's a party to drill. (Standard action — it IS the turn.)
+    // there's a party to drill. (v3.37.101, Tobias: Tactician is a MOVE action
+    // now — the drill happens and the cavalier STILL fights this same turn, so
+    // the bot falls through to its normal attack instead of returning.)
     if (m.cls === 'cavalier' && !this._twkShare && this.round <= 2 && this.livingParty().length >= 3
         && ((m.abilityUses && m.abilityUses.tactician) || 0) > 0 && teamworkGrants(m.cls, m.level).size) {
       const tSlot = this._abilitiesFor(m).findIndex(ab => ab.effect === 'tactician');
-      if (tSlot >= 0) { const r = this._useAbility(m, tSlot, {}); if (r && r.ok) { this._hasteBonus(m); return; } }
+      if (tSlot >= 0) this._useAbility(m, tSlot, {});   // free-action plumbing keeps the turn — keep acting below
     }
     // CAVALIER auto-CHALLENGES its prey when it has a Challenge use left (room-cost, limited):
     // swear the +level-damage oath on the foe it's about to fight, re-swear when the old quarry
