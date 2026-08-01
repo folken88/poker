@@ -1415,9 +1415,15 @@
 //                     play-by-play, plain text, emoji-stripped, VoiceOver-friendly; streams the
 //                     jsonl. Also verified from logs: unerring-moose was a DEATH not a stall (the
 //                     bots cleared room 8 without him; the silence was his client dropping).
+//  3.37.103 2026-08-01 TRANSCRIPTS LIVE IN THE GAME (Tobias: "redesign the transcript system to
+//                     exist within poker dungeon"): the run codename on the meta bar is now a LINK
+//                     (📜 name → this run's transcript page), and blind mode gets the T KEY — opens
+//                     the current run's full written play-by-play in a new tab, mid-run or after.
+//                     The pages were always served by the poker backend itself (never external);
+//                     this makes them reachable from INSIDE the dungeon instead of by typed URL.
 //  3.37.102 2026-08-01 TRANSCRIPT HOTFIX: /transcript was swallowed by the SPA fallback (served
 //                     index.html) — routes moved under /api/transcript (+ /api/transcript/<name>),
 //                     which the fallback excludes and nginx proxies to the backend.
-const VERSION = '3.37.102';
+const VERSION = '3.37.103';
 const HEADLINE = "Tactician is now a MOVE action — drill the party AND still swing the same turn. Glorious Challenge's bonus sticks to your quarry (no re-bellowing every attack). And every run now has a full text transcript at /transcript — read your own battles line by line.";
 module.exports = { VERSION, HEADLINE };

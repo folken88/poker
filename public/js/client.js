@@ -1449,8 +1449,14 @@
     if (meta) {
       // Run codename (v3.37.70) leads the meta line so it's easy to read off when
       // reporting a bug — "run: pickle-otter" maps a session to its logged ground truth.
-      const _rn = d.runName ? `🏷️ ${d.runName} · ` : '';
-      meta.textContent = `${_rn}Depth ${d.depth} · Round ${d.round || 0} · 💰 ${formatChips(d.runGold)} gp pool`;
+      // v3.37.103: the codename is now a LINK to the run's live transcript (the
+      // in-game way in — blind players use the T key for the same page).
+      const _metaTail = `Depth ${d.depth} · Round ${d.round || 0} · 💰 ${formatChips(d.runGold)} gp pool`;
+      if (d.runName) {
+        meta.innerHTML = `<a href="/api/transcript/${escapeAttr(d.runName)}" target="_blank" rel="noopener" title="Open this run's full written play-by-play — every line, in order (blind: the T key)" style="color:inherit">📜 ${escapeText(d.runName)}</a> · ${escapeText(_metaTail)}`;
+      } else {
+        meta.textContent = _metaTail;
+      }
     }
 
     // Stable per-player aim color (same hash on every client → everyone sees the
@@ -2421,6 +2427,17 @@
       // slot-assignment menu (Josh's own design) needs `naturalActions` /
       // `blindActions`, which are const-declared further down this handler —
       // referencing them here would be a temporal-dead-zone crash. -----
+      // ----- Transcript — T (v3.37.103): the in-game door to this run's full
+      // written play-by-play. Opens the plain-text page in a new tab; VoiceOver
+      // reads it like a book. Works mid-run (transcript so far) and after.
+      if (k === 't') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('T: transcript. Opens this run\'s full written play-by-play in a new browser tab — every line in order, with the room and round in front, no symbols. Read along mid-run or study it after.'); return; }
+        if (!d.runName) { sayU('No transcript yet — it starts when a run begins.'); return; }
+        try { window.open('/api/transcript/' + encodeURIComponent(d.runName), '_blank'); } catch (_) {}
+        sayU('Transcript for ' + d.runName + ' opened in a new tab. Switch tabs to read it.');
+        return;
+      }
       // ----- Class-progression reference — X (Josh: "what does each level give
       // me?"). X speaks your level + what the NEXT level grants; while open,
       // digits 1-9 speak the gains at current+N; Escape closes. Pure lookup —
