@@ -1424,6 +1424,15 @@
 //  3.37.102 2026-08-01 TRANSCRIPT HOTFIX: /transcript was swallowed by the SPA fallback (served
 //                     index.html) — routes moved under /api/transcript (+ /api/transcript/<name>),
 //                     which the fallback excludes and nginx proxies to the backend.
+//  3.37.105 2026-08-01 GLORIOUS CHALLENGE — TOBIAS'S LAW ("he GC a target, he downs that target,
+//                     he gains a charge and can GC someone else. repeat"): the bellow is now a
+//                     SWIFT MARK (freeAction — mark, then attack/Cleave the same turn, answering
+//                     Josh's action-economy question); while the marked foe stands NO new glorious
+//                     may be issued; downing the mark WITH YOUR OWN BLOW banks the charge (_gcBank,
+//                     wired into the weapon-kill + cleave-kill sites); an ally stealing the kill
+//                     frees the mark but banks NOTHING. Bot Gweyir marks-then-fights (falls
+//                     through) and always finishes his live mark (_preferredFoe). Streak still
+//                     resets each room; numbers unchanged (level + 2x(streak+1) dmg, -2x(streak+1) AC).
 //  3.37.104 2026-08-01 THE SILVER-RABBIT/LUCKY-MOOSE BATCH (all four Josh reports log-verified).
 //                     (1) PAD ASSIGNMENT = EXACTLY ONE KEY (his ruling: "stop reassigning
 //                     everything"): the client PINS the current layout before a swap (padpick
@@ -1441,6 +1450,6 @@
 //                     Scraper's chain-grapple eating turns; the damage was always in, now the
 //                     line SAYS so. OPEN DESIGN Q (Tobias): RAW glorious gating (must down the
 //                     challenged foe first?) + glorious-as-swift — awaiting his call.
-const VERSION = '3.37.104';
-const HEADLINE = "Pad assignment now changes EXACTLY the key you touched — no more mysterious reshuffles. Dismissing an ally asks you twice, by name. Blaze of Glory is a swift action that keeps your turn. And every hit on your challenged quarry announces its (+N challenge) bonus out loud.";
+const VERSION = '3.37.105';
+const HEADLINE = "Glorious Challenge, by the law: bellow to MARK (a swift — you still swing), down your mark with your OWN blade to bank the charge, then bellow at the next with the fire stacked higher. Kill-stealers bank you nothing.";
 module.exports = { VERSION, HEADLINE };

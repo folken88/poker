@@ -114,7 +114,11 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         const weakest = pool.slice().sort((a, b) => a.hp - b.hp)[0];
         const biggest = pool.find(e => e.boss) || pool.slice().sort((a, b) => (b.maxHp || b.hp) - (a.maxHp || a.hp))[0];
         const prey = ((m.gloriousN || 0) >= 2) ? biggest : weakest;
-        if (prey) { const r = this._useAbility(m, gcSlot, { targetUid: prey.uid }); if (r && r.ok) { this._hasteBonus(m); return; } }
+        // v3.37.105 (Tobias's law): the bellow is a SWIFT MARK now — issue it only
+        // when no live mark stands, then FALL THROUGH and fight (the kill of the
+        // mark by his own blow banks the charge via _gcBank).
+        const markAlive = m._gcTargetUid && live.some(e => e.uid === m._gcTargetUid);
+        if (prey && !markAlive) this._useAbility(m, gcSlot, { targetUid: prey.uid });
       }
     }
     // SLAYER auto-STUDIES its prey (Studied Target is a swift/free action): mark the
@@ -262,6 +266,12 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // Taunted → compelled to go straight for the taunter (cleared at turn's end).
     const forced = this._forcedFoe(m);
     if (forced) return forced;
+    // GLORIOUS MARK (v3.37.105, Tobias's law): a cavalier with a live glorious
+    // challenge finishes THAT foe — the charge only banks on his own killing blow.
+    if (m._gcTargetUid) {
+      const gcT = foes.find(e => e.uid === m._gcTargetUid && e.hp > 0);
+      if (gcT && this._canReach(m, gcT)) return gcT;
+    }
     // Melee fighters can't reach flyers — prefer grounded foes (fall back to flyers
     // only if that's all that's left, so the wasted-swing message still fires).
     const _w = m.weapon || weaponOf(m.gear, m.weaponKey);
