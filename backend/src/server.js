@@ -39,8 +39,8 @@ app.get('/api/roster', (_req, res) => {
 // ── RUN TRANSCRIPTS (v3.37.101, Tobias: "provide josh a text transcript of
 // every run for his own analysis"). Plain text, screen-reader friendly: emoji
 // stripped, one line per event, chronological — VoiceOver reads it like a book.
-//   GET /transcript            → index of recent runs (name · started · rooms)
-//   GET /transcript/<runName>  → the full play-by-play for that run
+//   GET /api/transcript        → index of recent runs (name · started · rooms)
+//   GET /api/transcript/<name> → the full play-by-play for that run
 // Streams the persistent narration log (logs/dungeon.jsonl, tens of MB — never
 // slurped into memory). Codenames CAN repeat across weeks; a collision simply
 // concatenates both runs, each line still stamped with its room and round.
@@ -54,7 +54,7 @@ async function _tsScan(onLine) {
   const rl = _tsRl.createInterface({ input: _tsFs.createReadStream(_TS_LOG), crlfDelay: Infinity });
   for await (const line of rl) { try { onLine(JSON.parse(line)); } catch (_) {} }
 }
-app.get('/transcript', async (_req, res) => {
+app.get('/api/transcript', async (_req, res) => {
   try {
     const runs = new Map();
     await _tsScan(e => {
@@ -64,11 +64,11 @@ app.get('/transcript', async (_req, res) => {
     });
     const rows = [...runs.entries()].sort((a, b) => (a[1].first < b[1].first ? 1 : -1)).slice(0, 60);
     res.set('Content-Type', 'text/plain; charset=utf-8').set('Cache-Control', 'no-cache');
-    res.send('FOLKEN DUNGEON RUN TRANSCRIPTS - newest first.\nOpen /transcript/ followed by a run name for the full play-by-play.\n\n'
+    res.send('FOLKEN DUNGEON RUN TRANSCRIPTS - newest first.\nOpen /api/transcript/ followed by a run name for the full play-by-play.\n\n'
       + rows.map(([n, r]) => `${n} - started ${String(r.first).slice(0, 16).replace('T', ' ')} UTC - reached room ${r.maxDepth} - ${r.lines} lines`).join('\n') + '\n');
   } catch (e) { res.status(500).set('Content-Type', 'text/plain; charset=utf-8').send('Transcript index unavailable: ' + e.message); }
 });
-app.get('/transcript/:run', async (req, res) => {
+app.get('/api/transcript/:run', async (req, res) => {
   try {
     const want = String(req.params.run || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
     if (!want) return res.status(400).set('Content-Type', 'text/plain; charset=utf-8').send('Bad run name.');
@@ -78,7 +78,7 @@ app.get('/transcript/:run', async (req, res) => {
       out.push(`[room ${e.depth != null ? e.depth : '?'} round ${e.round != null ? e.round : '?'}] ${_tsStrip(e.text)}`);
     });
     res.set('Content-Type', 'text/plain; charset=utf-8').set('Cache-Control', 'no-cache');
-    if (!out.length) return res.status(404).send(`No transcript found for "${want}". The list of runs is at /transcript`);
+    if (!out.length) return res.status(404).send(`No transcript found for "${want}". The list of runs is at /api/transcript`);
     res.send(`RUN TRANSCRIPT: ${want} - ${out.length} lines.\n\n` + out.join('\n') + '\n');
   } catch (e) { res.status(500).set('Content-Type', 'text/plain; charset=utf-8').send('Transcript unavailable: ' + e.message); }
 });

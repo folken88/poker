@@ -1415,6 +1415,9 @@
 //                     play-by-play, plain text, emoji-stripped, VoiceOver-friendly; streams the
 //                     jsonl. Also verified from logs: unerring-moose was a DEATH not a stall (the
 //                     bots cleared room 8 without him; the silence was his client dropping).
-const VERSION = '3.37.101';
+//  3.37.102 2026-08-01 TRANSCRIPT HOTFIX: /transcript was swallowed by the SPA fallback (served
+//                     index.html) — routes moved under /api/transcript (+ /api/transcript/<name>),
+//                     which the fallback excludes and nginx proxies to the backend.
+const VERSION = '3.37.102';
 const HEADLINE = "Tactician is now a MOVE action — drill the party AND still swing the same turn. Glorious Challenge's bonus sticks to your quarry (no re-bellowing every attack). And every run now has a full text transcript at /transcript — read your own battles line by line.";
 module.exports = { VERSION, HEADLINE };
