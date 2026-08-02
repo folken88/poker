@@ -217,7 +217,13 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         // hot-list and target picker read e.conditions and speak it automatically.
         conditions: e.hp > 0 ? this._condList(e).concat(
           this.party.some(p => !p.left && !p.dead && p.hp > 0 && p.challengedId === e.uid)
-            ? [{ key: 'challenged', label: 'Challenged', desc: 'a cavalier has sworn to cut this foe down (+level damage from their every blow this room)', icon: '/dungeon/conditions/markedevil.webp' }] : []) : [],
+            ? [{ key: 'challenged', label: 'Challenged', desc: 'a cavalier has sworn to cut this foe down (+level damage from their every blow this room)', icon: '/dungeon/conditions/markedevil.webp' }] : [],
+          // STUDIED rides the strip the same way (v3.37.106 — Josh, run sunny-kettle:
+          // "the study target needs to be identified in the hot list just like the
+          // Cavalier challenge"; he re-pressed STUDY almost every round because
+          // nothing showed the mark had held).
+          this.party.some(p => !p.left && !p.dead && p.hp > 0 && p.studiedId === e.uid)
+            ? [{ key: 'studied', label: 'Studied', desc: 'a slayer has read this foe\'s guard (+N to hit and damage from their every blow until they study another or the room ends)', icon: '/dungeon/conditions/markedevil.webp' }] : []) : [],
         buffs: e.hp > 0 ? this._enemyBuffList(e) : [],
       })),
       turn: this._currentTurn(),

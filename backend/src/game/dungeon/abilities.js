@@ -2158,7 +2158,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const e = this._oneEnemy(payload); if (!e) return;
     m.studiedId = e.uid;
     m.studiedN = 1 + Math.floor((m.level || 1) / 5);
-    this._note(`${ab.icon} ${m.nickname} STUDIES ${e.name} — reading its guard for the kill: +${m.studiedN} to hit and damage against it.`, ab.sound);
+    this._note(`${ab.icon} ${m.nickname} STUDIES ${e.name} — reading its guard for the kill: +${m.studiedN} to hit and damage against it. The mark holds until you study another or the room ends.`, ab.sound);
     this._echoToTable(ab.sound);
   },
   // CAVALIER — Challenge: swear an oath against ONE foe. Every strike the cavalier
@@ -2773,7 +2773,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abDetectEvil(m, ab) {
     const foes = this.livingEnemies();
     let evil = 0, clean = 0;
-    for (const e of foes) { if (e.evil) { e.markedEvil = true; evil++; } else clean++; }
+    // Every foe gets stamped SCANNED — evil or not (v3.37.106, run clever-mirror:
+    // bot Gabriel re-cast this every round of a clean room because non-evil foes
+    // never recorded that they'd already been read). New arrivals scan fresh.
+    for (const e of foes) { e._devScanned = true; if (e.evil) { e.markedEvil = true; evil++; } else clean++; }
     const sound = ab.sound || '/audio/into_the_light.mp3';
     this._note(`${ab.icon || '🎯'} ${m.nickname} calls DETECT EVIL — ${evil} foe${evil === 1 ? '' : 's'} RADIATE${evil === 1 ? 'S' : ''} evil and ${evil === 1 ? 'is' : 'are'} MARKED for Smite${clean ? `; ${clean} do${clean === 1 ? 'es' : ''} NOT (no purchase for your smite there)` : ''}!`, sound);
     this._echoToTable(sound);
@@ -3252,7 +3255,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // tag, same as sneak/teamwork — the number was always in the damage;
       // now the line says so.
       const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` (+${r.sneakDmg} sneak)` : '')
-        + ((r.hit && tgt.uid === m.challengedId && (m.challengeN || 0) > 0) ? ` (+${m.challengeN} challenge)` : '');
+        + ((r.hit && tgt.uid === m.challengedId && (m.challengeN || 0) > 0) ? ` (+${m.challengeN} challenge)` : '')
+        + ((r.hit && tgt.uid === m.studiedId && (m.studiedN || 0) > 0) ? ` (+${m.studiedN} studied)` : '');
       // Name the improvised weapon on the strike line (v3.37.95, Josh): the HASTE
       // bonus strike is `quiet`, so its crossbow swap was silent — he heard a bare
       // "Gabriel hits [flying foe]" and reasonably concluded a greatsword was

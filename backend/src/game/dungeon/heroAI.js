@@ -670,7 +670,9 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // Paladin: Detect Evil reveals NON-evil foes (animals/constructs) so Smite
     // bites them — a standard action, worth it when not every foe is already evil.
     const detectEvil = avail.find(a => a.effect === 'detectevil');
-    if (detectEvil && this.livingEnemies().some(e => !e.evil && !e.markedEvil)) return { slot: slot(detectEvil), payload: {} };
+    // …but only foes never yet SCANNED justify the standard action (v3.37.106):
+    // one clean sweep answers the question for everyone it touched.
+    if (detectEvil && this.livingEnemies().some(e => !e.evil && !e.markedEvil && !e._devScanned)) return { slot: slot(detectEvil), payload: {} };
     // Mage Armor — a free, run-long +4 AC; put it up once if not already on.
     const mageArmor = avail.find(a => a.effect === 'magearmor');
     if (mageArmor && !m.mageArmor) return { slot: slot(mageArmor), payload: {} };

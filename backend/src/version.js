@@ -1450,6 +1450,21 @@
 //                     Scraper's chain-grapple eating turns; the damage was always in, now the
 //                     line SAYS so. OPEN DESIGN Q (Tobias): RAW glorious gating (must down the
 //                     challenged foe first?) + glorious-as-swift — awaiting his call.
-const VERSION = '3.37.105';
-const HEADLINE = "Glorious Challenge, by the law: bellow to MARK (a swift — you still swing), down your mark with your OWN blade to bank the charge, then bellow at the next with the fire stacked higher. Kill-stealers bank you nothing.";
+//  3.37.106 2026-08-02 THE SUNNY-KETTLE/CLEVER-MIRROR PAIR (both log-verified). (1) GABRIEL'S
+//                     DETECT-EVIL SPAM (Josh: "he casted it maybe four times... nothing evil in
+//                     the room" — clever-mirror room 4 was worse: EVERY round, 8+ casts, 0 evil
+//                     each time): _abDetectEvil only stamped markedEvil on EVIL foes, so a clean
+//                     room never recorded it had been read and the bot re-burned a standard
+//                     action forever. Every scanned foe now gets _devScanned; the bot only casts
+//                     when an UNSCANNED foe stands (new waves scan fresh; per-room objects
+//                     self-clean). (2) STUDIED TARGET VISIBILITY (Josh: "needs to be identified
+//                     in the hot list just like the Cavalier challenge... unclear if it survives
+//                     round to round" — sunny-kettle shows him re-pressing STUDY nearly every
+//                     round on the SAME foe): it always persisted; now it SHOWS — the studied
+//                     foe carries a Studied chip in the condition strip (spoken by the hot list
+//                     and target picker exactly like Challenged), hits on the mark are tagged
+//                     "(+N studied)" like challenge/sneak, and the STUDY announce states the
+//                     duration ("holds until you study another or the room ends").
+const VERSION = '3.37.106';
+const HEADLINE = "The slayer's mark now SHOWS: your studied foe carries a Studied chip in the hot list, your hits on it say (+N studied), and it holds until you study another or the room ends. And Gabriel finally trusts his own senses — one Detect Evil per batch of foes, not one per round.";
 module.exports = { VERSION, HEADLINE };
