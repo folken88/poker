@@ -1465,6 +1465,22 @@
 //                     and target picker exactly like Challenged), hits on the mark are tagged
 //                     "(+N studied)" like challenge/sneak, and the STUDY announce states the
 //                     duration ("holds until you study another or the room ends").
-const VERSION = '3.37.106';
-const HEADLINE = "The slayer's mark now SHOWS: your studied foe carries a Studied chip in the hot list, your hits on it say (+N studied), and it holds until you study another or the room ends. And Gabriel finally trusts his own senses — one Detect Evil per batch of foes, not one per round.";
+//  3.37.107 2026-08-04 SAVE YOURSELF (Josh, sneaky-dumpling + furious-penguin: "thought Celeb was
+//                     suposed to save himself... no invis... and gavreial didn't heal"). Log verdict
+//                     was HALF right: Gabriel healed CONSTANTLY (8 channels in the deva room, twice
+//                     "Celeb back up!") — but Celeb truly never saved himself: slot-dry from round 4,
+//                     he stood in an Elite Movanic Deva's reach (hits him on a 5) plinking resisted
+//                     5-point rays for 12 rounds until SLAIN. ROOT CAUSE: no rule in the bot brain
+//                     ever read the bot's OWN life bar — the "when you can't hurt it, help someone"
+//                     branch (v3.37.99) only fires when the cantrip can't hit ANYTHING (17+), and
+//                     his rays needed 13-15. NEW RULE: a PURE CASTER below 35% HP now (1) heals
+//                     ITSELF if any heal is castable, (2) raises an unused sticky defensive buff,
+//                     (3) dry of both with only a long-shot cantrip left (10+ to touch), gives
+//                     ground on TOTAL DEFENSE — +4 dodge AC until it next acts ({guard:true}
+//                     sentinel → m._totalDefense, applied in _foeTargetAC, cleared at its next turn
+//                     and at the door). Martials/hybrids excluded on purpose — their sword IS their
+//                     self-preservation. Guard sentinel is ignored while invisible and inside the
+//                     synthesis pairing (never _useAbility'd).
+const VERSION = '3.37.107';
+const HEADLINE = "Casters save themselves now: below 35% HP a bot caster heals ITSELF, then shields itself, and — dry of everything — gives ground on TOTAL DEFENSE (+4 AC) instead of standing in a deva's face plinking resisted rays until it dies. Celeb's death in sneaky-dumpling wrote this rule.";
 module.exports = { VERSION, HEADLINE };

@@ -20,6 +20,12 @@ const { attackProfile } = require('../character');
 const { crToNum } = require('../../pf1data/monsters');
 const { fighterFeats } = require('../../pf1data/feats');
 
+// v3.37.107: the classes whose basic attack is a CANTRIP, not a weapon — the
+// population the self-preservation guard (total defense at <35% HP) applies to.
+// Martials and hybrid sword-casters are excluded on purpose: their basic attack
+// is real damage, and standing to swing IS their self-preservation.
+const PURE_CASTERS = new Set(['wizard', 'sorcerer', 'cleric', 'oracle', 'druid', 'witch', 'theurge', 'necromancer', 'arcanist']);
+
 module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd }) => ({
   // A living foe this member is compelled (taunted) to attack, or null.
   _forcedFoe(m) {
@@ -30,6 +36,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     const foes = this._targetableEnemies();   // can't target Darkness-shrouded foes
     if (!foes.length) return;
     m._unseenStrike = false;   // reset the unseen-opening-strike flag each turn (set only when a hidden hero breaks cover to attack)
+    m._totalDefense = false;   // v3.37.107: last turn's TOTAL DEFENSE guard ends the moment they act again (PF1)
     // Taunted by a goblin barbarian → drop the clever play and just go hit it.
     if (m.tauntedBy && foes.some(e => e.uid === m.tauntedBy)) {
       const tgt = this._preferredFoe(m, foes);   // returns + consumes the taunter
@@ -71,7 +78,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         // stab a motherfucker, not hide in the corner "for the right moment" that never
         // comes.) The breaking strike catches the foe unseen, so it denies its Dex.
         const c = this._botAbility(m);
-        if (c) {
+        if (c && !c.guard) {   // guard sentinel is meaningless while unseen — fall through
           const ab = this._abilitiesFor(m)[c.slot];
           if (ab && ab.target !== 'enemy' && ab.target !== 'aoe' && ab.effect !== 'attack') {
             const r = this._useAbility(m, c.slot, c.payload);
@@ -156,15 +163,15 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // worthwhile cast — otherwise he saves it for a normal single spell.
     if (m.playerId === 'celeb' && (m.synthUses || 0) > 0) {
       m._synthSchool = 'arcane'; const cA = this._botAbility(m); m._synthSchool = null;
-      if (cA) {
+      if (cA && !cA.guard) {
         m._synthSchool = 'divine'; const cDp = this._botAbility(m); m._synthSchool = null;
-        if (cDp) {
+        if (cDp && !cDp.guard) {
           m.synthUses--; m._synthActive = true;
           this._note(`✨🌓 ${m.nickname} weaves the arcane and the divine as ONE — SPELL SYNTHESIS! (${m.synthUses} left this room)`, '/audio/spell_buff_invoke.mp3');
           this._echoToTable('/audio/spell_buff_invoke.mp3');
           this._useAbility(m, cA.slot, cA.payload);
           m._synthSchool = 'divine'; const cD = this._botAbility(m); m._synthSchool = null;   // recompute after the arcane cast changed the board
-          if (cD) this._useAbility(m, cD.slot, cD.payload);
+          if (cD && !cD.guard) this._useAbility(m, cD.slot, cD.payload);
           m._synthActive = false;
           this._hasteBonus(m); return;
         }
@@ -173,6 +180,14 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // Then see if a class ability is the smart play this turn (heal, buff,
     // blast, spell). If so, use it; otherwise fall back to a basic attack.
     const choice = this._botAbility(m);
+    // v3.37.107 TOTAL DEFENSE (the guard sentinel): a dying, slot-dry caster
+    // gives ground instead of feeding its turn to chip damage — +4 AC until
+    // they act again (_foeTargetAC reads m._totalDefense). Consumes the turn.
+    if (choice && choice.guard) {
+      m._totalDefense = true;
+      this._note(`🛡️ ${m.nickname} gives ground and GUARDS — total defense, +4 AC until they act again. Nothing left in the tank worth standing still for.`);
+      return;
+    }
     if (choice) {
       const ab = this._abilitiesFor(m)[choice.slot];
       m._botMM = this._botPickMetamagic(m, ab);   // spontaneous bot may empower/maximize a damage spell when flush on high slots
@@ -361,7 +376,20 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     }
     const slot = (ab) => allAbs.indexOf(ab);
     const avail = allAbs.filter(usable);
-    if (!avail.length) return null;
+    if (!avail.length) {
+      // v3.37.107 SAVE YOURSELF, the DRY case (sneaky-dumpling d4: this very
+      // early-out is where slot-dry Celeb's brain gave up every round while a
+      // Movanic Deva beat him from 91 HP to SLAIN — the self-preservation
+      // block at the bottom of this function sat unreachable behind it).
+      // Nothing castable means heal/buff are off the table; the one tool left
+      // is TOTAL DEFENSE: a dying pure caster whose cantrip is a long shot
+      // (10+ vs the softest touch AC) gives ground instead of plinking.
+      if (PURE_CASTERS.has(m.cls) && m.hp > 0 && m.hp < m.maxHp * 0.35 && targets.length) {
+        const _soft0 = Math.min.apply(null, targets.map(t => { try { return this._enemyAC(t, { touch: true }); } catch (_) { return 99; } }));
+        if (_soft0 - ((m.castingMod || 0) + Math.floor(lvl / 2)) >= 10) return { guard: true };
+      }
+      return null;
+    }
     const allies = this.livingParty();
     const someoneHurt = allies.some(a => !a.undead && a.hp < a.maxHp * 0.55);   // the undead don't count — positive energy can't help them anyway
     const weakestFoe = targets.slice().sort((a, b) => a.hp - b.hp)[0];
@@ -1027,6 +1055,25 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       if (healAb) return { slot: slot(healAb), payload: { allyUid: hurt.playerId } };
       const defBuff = avail.find(a2 => a2.effect === 'buff' && a2.sticky && a2.target !== 'enemy' && !(m.buffApplied && m.buffApplied[a2.key]));
       if (defBuff) return { slot: slot(defBuff), payload: {} };
+    }
+    // v3.37.107 SELF-PRESERVATION — SAVE YOURSELF (Josh, sneaky-dumpling d4: a
+    // slot-dry Celeb stood in a Movanic Deva's melee reach and plinked resisted
+    // 5-point rays from 91 HP all the way down to SLAIN — 12 rounds — because
+    // nothing in this brain ever read the bot's OWN life bar; the branch above
+    // only fires when the cantrip can't hit ANYTHING). Below 35% HP a PURE
+    // CASTER stops feeding its turn to chip damage: heal YOURSELF if any heal
+    // is still castable, raise an unused sticky defensive buff, and — dry of
+    // both, with only a long-shot cantrip left (10+ to touch) — give ground on
+    // TOTAL DEFENSE (the {guard:true} sentinel; +4 AC until they next act).
+    // (The fully-DRY twin of this check lives up at the `!avail.length`
+    // early-out — a slot-dry caster never reaches this far.)
+    if (PURE_CASTERS.has(m.cls) && m.hp > 0 && m.hp < m.maxHp * 0.35 && targets.length) {
+      const healSelf = avail.find(a2 => a2.effect === 'heal');
+      if (healSelf) return { slot: slot(healSelf), payload: { allyUid: m.playerId } };
+      const defSelf = avail.find(a2 => a2.effect === 'buff' && a2.sticky && a2.target !== 'enemy' && !(m.buffApplied && m.buffApplied[a2.key]));
+      if (defSelf) return { slot: slot(defSelf), payload: {} };
+      const _soft = Math.min.apply(null, targets.map(t => { try { return this._enemyAC(t, { touch: true }); } catch (_) { return 99; } }));
+      if (_soft - _atwillHit2 >= 10) return { guard: true };
     }
     return null;   // nothing fit → basic attack
   },

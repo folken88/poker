@@ -461,7 +461,9 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // against opponents other than the target"). Stacks with the glorious −2/issue
     // (which lives in _acPenalty via gloriousAC).
     const challengePen = (target.challengedId != null && e && e.uid !== target.challengedId) ? 2 : 0;
-    return this._acOf(target).ac + this._acBonus(target)
+    // v3.37.107 TOTAL DEFENSE: a dying, slot-dry bot caster that GUARDS instead
+    // of plinking gets PF1's +4 dodge until it next acts (heroAI sets/clears).
+    return this._acOf(target).ac + this._acBonus(target) + (target._totalDefense ? 4 : 0)
       - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0)
       - (target.stunned > 0 ? 2 : 0) - (target.slowed > 0 ? 1 : 0)
       - challengePen - this._acPenalty(target);
