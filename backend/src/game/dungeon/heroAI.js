@@ -983,6 +983,16 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // can't Rapid Shot a bolt-action rifle
       for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint', 'disarm', 'stunfist', 'grapple', 'bullrush'].includes(a.effect)) {
         if (a.needsRepeating && boltAction) continue;
+        // v3.37.108 (Josh: bot Duristan averaged 35/round while he averaged 140
+        // piloting the SAME character — silent-salmon vs proud-otter). The
+        // single-shot ranged deeds predate the real full-attack engine: Bullseye
+        // is ONE shot at +4, the Rapid Shot deed is TWO at −2 — but a shooter
+        // with iteratives (BAB 6+) full-attacks 4-5 times on the BASIC attack,
+        // Rapid Shot FEAT included (_attackOffsets). The bot was picking the
+        // deed every round and throwing away the volley. Bots now skip both
+        // deeds once iteratives exist; the buttons remain for humans and for
+        // low-level shooters, where they still out-shoot a single basic attack.
+        if ((a.effect === 'rapidshot' || a.effect === 'bullseye') && (m.iteratives || []).length > 1) continue;
         // GRAPPLE — lock down a DANGEROUS foe (caster/boss) the bot can reach; never
         // an incorporeal or already-grappled one (those refuse + waste the turn).
         if (a.effect === 'grapple') {

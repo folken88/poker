@@ -1481,6 +1481,19 @@
 //                     and at the door). Martials/hybrids excluded on purpose — their sword IS their
 //                     self-preservation. Guard sentinel is ignored while invisible and inside the
 //                     synthesis pairing (never _useAbility'd).
-const VERSION = '3.37.107';
-const HEADLINE = "Casters save themselves now: below 35% HP a bot caster heals ITSELF, then shields itself, and — dry of everything — gives ground on TOTAL DEFENSE (+4 AC) instead of standing in a deva's face plinking resisted rays until it dies. Celeb's death in sneaky-dumpling wrote this rule.";
+//  3.37.108 2026-08-06 THE GUNSLINGER GAP (Josh: "when I run him... close to 100 routinely. When
+//                     the AI runs it he's printing 30 to 40" — log-verified EXACTLY: bot Duristan
+//                     in silent-salmon/fuzzy-pickle fired ONE "takes aim" shot (~35) every round;
+//                     Josh piloting the same character in proud-otter threw 4-shot volleys for
+//                     ~140). ROOT CAUSE: the single-shot ranged deeds predate the full-attack
+//                     engine — Bullseye is ONE shot at +4, the Rapid Shot DEED two at −2 — but a
+//                     BAB-6+ shooter's BASIC attack is a 4-5 shot volley (Rapid Shot FEAT already
+//                     rides _attackOffsets), and the bot brain preferred ANY offense ability over
+//                     the basic attack, every round, forever. Bots now skip both deeds once
+//                     iteratives exist ((m.iteratives).length > 1); the buttons remain for humans
+//                     and for low-level shooters (where 2@−2 really does beat 1@0). Affects every
+//                     ranged bot: Duristan, Reese, Danger, hired rangers. Enemy-side gunslinger
+//                     damage (Josh's "20-30") is CR-budgeted stat-block damage, not this bug.
+const VERSION = '3.37.108';
+const HEADLINE = "Bot shooters finally empty the magazine: the AI was choosing single-shot deeds (Bullseye, Rapid Shot) over the full 4-5 shot volley every round — bot Duristan averaged 35 damage while Josh averaged 140 piloting the same character. Once a shooter has iteratives, the volley wins. Fixed.";
 module.exports = { VERSION, HEADLINE };
