@@ -291,6 +291,11 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // only if that's all that's left, so the wasted-swing message still fires).
     const _w = m.weapon || weaponOf(m.gear, m.weaponKey);
     if (_w && !_w.ranged && !_w.reachFly) { const grounded = foes.filter(e => !e.flying); if (grounded.length) foes = grounded; }
+    // v3.37.109 (Josh, spicy-marmot: "I don't think anyone attacked the flying
+    // spellcasting big boy until close to the end" — the Lich): a RANGED or
+    // flyer-reaching hero is often the ONLY one who can bite an airborne foe,
+    // so while any flyer stands, that's their job.
+    else if (_w && (_w.ranged || _w.reachFly || (m.canHitFlyers && m.flying))) { const flyers = foes.filter(e => e.flying); if (flyers.length) foes = flyers; }
     // DR awareness: go for a foe this weapon can actually bite into. But if EVERY foe
     // is warded by DR we can't pierce (an enemy Stoneskin, a room full of skeletons for
     // a swordsman), DON'T give up — keep the whole list and swing anyway; a crit can
@@ -368,10 +373,16 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // next strike reaches ANY foe with a full attack.
     const flyFoe = targets.find(e => e.flying);
     if (flyFoe) {
-      const stuck = this.livingParty().find(a => a.hp > 0 && !this._isRanged(a) && !this._canReach(a, flyFoe) && !(a._tpStrike > 0) && !a.blinkedBy);
+      // v3.37.109 ONE FERRY PER ALLY PER ROOM (Josh, spicy-marmot d2: Farrah spent
+      // rounds 1-4 Dimension-Dooring Concetta and Binch — every round, forever —
+      // instead of casting Chain Lightning, because a delivered ally's blink flags
+      // clear the moment they strike and the branch saw them as "stuck" again).
+      // The blink already lands them a full attack against ANY foe — once each is
+      // delivery enough; after that the caster goes back to being a caster.
+      const stuck = this.livingParty().find(a => a.hp > 0 && !this._isRanged(a) && !this._canReach(a, flyFoe) && !(a._tpStrike > 0) && !a.blinkedBy && !a._ddFerried);
       if (stuck) {
         const tpIdx = allAbs.findIndex(ab => ab.effect === 'tpstrike' && usable(ab));
-        if (tpIdx >= 0) return { slot: tpIdx, payload: { allyUid: stuck.playerId } };
+        if (tpIdx >= 0) { stuck._ddFerried = true; return { slot: tpIdx, payload: { allyUid: stuck.playerId } }; }
       }
     }
     const slot = (ab) => allAbs.indexOf(ab);
@@ -992,7 +1003,11 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         // deed every round and throwing away the volley. Bots now skip both
         // deeds once iteratives exist; the buttons remain for humans and for
         // low-level shooters, where they still out-shoot a single basic attack.
-        if ((a.effect === 'rapidshot' || a.effect === 'bullseye') && (m.iteratives || []).length > 1) continue;
+        // v3.37.109: the .108 gate keyed on m.iteratives — which HIRED bots don't
+        // carry (no derived ability scores), so Duristan kept single-shotting two
+        // days after the "fix" (spicy-marmot). Level is the honest signal: every
+        // class holding these deeds is full-BAB, so level 6+ ⇔ iteratives exist.
+        if ((a.effect === 'rapidshot' || a.effect === 'bullseye') && ((m.iteratives || []).length > 1 || (m.level || 1) >= 6)) continue;
         // GRAPPLE — lock down a DANGEROUS foe (caster/boss) the bot can reach; never
         // an incorporeal or already-grappled one (those refuse + waste the turn).
         if (a.effect === 'grapple') {

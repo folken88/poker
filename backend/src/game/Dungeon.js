@@ -2120,8 +2120,14 @@ class Dungeon {
       // Flight) before opening the door — their choice, never auto-cast for them.
       if (kind === 'ability' && m) {
         const ab = this._abilitiesFor(m)[payload.slot | 0];
-        if (this._isRunLongBuff(ab)) return this._useAbility(m, payload.slot | 0, payload || {});
-        return { ok: false, error: 'only long-lasting buffs (Mage Armor, Bless, Overland Flight) can be cast before the door' };
+        // v3.37.109 (Josh, asked TWICE across a month: "I've tried to Raise Dead
+        // in between rooms and it hasn't worked"): the death message and the
+        // _useAbility gate both PROMISE a between-rooms raise, but this router
+        // only ever let run-long buffs through — the ritual was refused at the
+        // door since the day it shipped. Raise rituals now pass; _useAbility's
+        // own raiseDead gate (no mid-combat casting) still applies.
+        if (this._isRunLongBuff(ab) || (ab && ab.raiseDead)) return this._useAbility(m, payload.slot | 0, payload || {});
+        return { ok: false, error: 'only long-lasting buffs (Mage Armor, Bless, Overland Flight) — or a Raise Dead ritual — can be cast before the door' };
       }
       return { ok: false, error: 'invalid while exploring' };
     }

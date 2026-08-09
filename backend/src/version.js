@@ -1494,6 +1494,22 @@
 //                     and for low-level shooters (where 2@−2 really does beat 1@0). Affects every
 //                     ranged bot: Duristan, Reese, Danger, hired rangers. Enemy-side gunslinger
 //                     damage (Josh's "20-30") is CR-budgeted stat-block damage, not this bug.
-const VERSION = '3.37.108';
-const HEADLINE = "Bot shooters finally empty the magazine: the AI was choosing single-shot deeds (Bullseye, Rapid Shot) over the full 4-5 shot volley every round — bot Duristan averaged 35 damage while Josh averaged 140 piloting the same character. Once a shooter has iteratives, the volley wins. Fixed.";
+//  3.37.109 2026-08-08 THE LOST-NOTES BATCH (Josh's three overnight reports, all log-verified on
+//                     spicy-marmot). (1) THE .108 GUNSLINGER FIX NEVER ENGAGED for HIRED bots:
+//                     the gate keyed on m.iteratives, which recruited AI-heroes don't carry (no
+//                     derived scores) — Duristan was STILL "takes aim"-ing every round two days
+//                     after the fix. Gate now also accepts level 6+ (every deed-holding class is
+//                     full-BAB, so level ⇔ BAB). (2) THE FLYING LICH NOBODY SHOT: two causes —
+//                     Farrah spent rounds 1-4 Dimension-Dooring allies at the flyer (a delivered
+//                     ally's blink flags clear on strike, so the ferry branch re-fired forever;
+//                     now ONE ferry per ally per room, then she casts again), and ranged bots had
+//                     no flyer preference (now: a ranged/flyer-reaching hero prefers airborne foes
+//                     — they're the ones nobody else can bite). (3) RAISE DEAD BETWEEN ROOMS WAS
+//                     A LIE (Josh asked TWICE over a month): the death message + _useAbility gate
+//                     both promise it, but the exploring-status router only ever passed run-long
+//                     buffs — the ritual was refused at the door since the day it shipped. Raise
+//                     rituals now pass while exploring. OPEN (Toby's call): Danger the ranger is
+//                     bow-only but holds melee maneuver feats — backup blade, or archer purist?
+const VERSION = '3.37.109';
+const HEADLINE = "Josh's three lost notes, all real: the gunslinger fix now actually reaches HIRED shooters (level-6 gate), casters ferry each melee ally at a flyer ONCE then go back to blasting, ranged heroes prioritize the airborne, and Raise Dead between rooms finally works — the door was refusing the ritual the tooltip promised.";
 module.exports = { VERSION, HEADLINE };
