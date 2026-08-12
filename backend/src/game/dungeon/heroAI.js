@@ -1050,6 +1050,17 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
           offense.push({ ab: a, payload: { targetUid: best.uid } });
           continue;
         }
+        // v3.37.110 (Josh, shielded-wombat d4: Lv-2 Duristan aimed at grounded
+        // drones for two rounds while the Collector flew overhead): the ranged
+        // deeds are legitimate at low level, but their aim was hard-coded to
+        // weakest-first — bypassing _preferredFoe and its flyer preference.
+        // The aimed shot now goes where the basic attack would: at the foe
+        // nobody else can reach.
+        if (a.effect === 'rapidshot' || a.effect === 'bullseye') {
+          const prey = this._preferredFoe(m, targets) || weakestFoe;
+          offense.push({ ab: a, payload: { targetUid: prey.uid } });
+          continue;
+        }
         offense.push({ ab: a, payload: { targetUid: weakestFoe.uid } });
       }
     }

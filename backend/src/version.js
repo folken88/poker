@@ -1510,6 +1510,19 @@
 //                     buffs — the ritual was refused at the door since the day it shipped. Raise
 //                     rituals now pass while exploring. OPEN (Toby's call): Danger the ranger is
 //                     bow-only but holds melee maneuver feats — backup blade, or archer purist?
-const VERSION = '3.37.109';
-const HEADLINE = "Josh's three lost notes, all real: the gunslinger fix now actually reaches HIRED shooters (level-6 gate), casters ferry each melee ally at a flyer ONCE then go back to blasting, ranged heroes prioritize the airborne, and Raise Dead between rooms finally works — the door was refusing the ritual the tooltip promised.";
+//  3.37.110 2026-08-12 THE SHIELDED-WOMBAT VERDICT (Josh: "check your work... shooting a spider
+//                     rather than a flying gargoyle"). Log says the run was mostly INNOCENT:
+//                     Duristan is Lv 2 there (helpers scale to Josh's level) — at BAB 2 one shot
+//                     IS the full attack, and the aimed +4 shot is his best play; and the Mecha
+//                     Gargoyle never flew (it traded melee blows with Dismas from round 1 — Josh
+//                     heard "gargoyle" and fairly assumed wings). The spiders he shot were the
+//                     ones GRAPPLING his allies. BUT one real gap fell out: the ranged deeds'
+//                     aim was hard-coded weakest-first, BYPASSING _preferredFoe and its .109
+//                     flyer preference — in d4 Lv-2 Duristan aimed at grounded drones while the
+//                     Collector flew. Deeds now aim through _preferredFoe. Also: domtest 120
+//                     answers Josh's "have you TESTED the between-rooms tooltip?" — Mage Armor /
+//                     Overland Flight / persistent buffs pass the door gate behaviorally,
+//                     room-scoped buffs are correctly refused.
+const VERSION = '3.37.110';
+const HEADLINE = "Low-level shooters now aim their trick shots at the foe nobody else can reach (the deeds bypassed the flyer preference), and the between-rooms casting rules are now under test: Mage Armor, Overland Flight, and every run-long buff really do cast at the door.";
 module.exports = { VERSION, HEADLINE };
