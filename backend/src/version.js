@@ -1523,6 +1523,21 @@
 //                     answers Josh's "have you TESTED the between-rooms tooltip?" — Mage Armor /
 //                     Overland Flight / persistent buffs pass the door gate behaviorally,
 //                     room-scoped buffs are correctly refused.
-const VERSION = '3.37.110';
-const HEADLINE = "Low-level shooters now aim their trick shots at the foe nobody else can reach (the deeds bypassed the flyer preference), and the between-rooms casting rules are now under test: Mage Armor, Overland Flight, and every run-long buff really do cast at the door.";
+//  3.37.111 2026-08-12 THE DOOR WAS LOCKED FROM THE CLIENT SIDE (Josh, flying-anvil, testing as
+//                     Olbryn: "Confirmed. I could not cast our per level spells before door
+//                     opened"). He was right and the .110 test was HALF a test: domtest 120
+//                     proved the SERVER accepts run-long buffs at the door — but the client
+//                     disabled every ability control outside combat (sighted action bar + spell
+//                     tiles hard-disabled; blind castSpell + pad digits hard-gated "Not your
+//                     turn") — so no human could ever ASK. The server's door gate has been
+//                     reachable only by BOTS (_preDoorBuffs) since the day it shipped. Now:
+//                     while EXPLORING, sighted buttons/tiles enable and blind presses pass
+//                     through; the server refuses ineligible casts with its toasted+SPOKEN
+//                     reason, and the sighted tooltip teaches the door rule. Combat turn-gating
+//                     unchanged. LESSON (again): test the full path the PLAYER walks, not the
+//                     layer the fix lives in. Also from the same note, queued for next batches:
+//                     prep-menu slot counts ("4 of 7 prepared"), player-facing Dimension Door
+//                     targeting (ally/foe pickers) — tracked.
+const VERSION = '3.37.111';
+const HEADLINE = "The between-rooms door is truly unlocked now: the server always allowed Mage Armor, Overland Flight, Bless, and Raise rituals at the door — but every button and key that could ASK was disabled outside combat. Cast away; anything not door-legal tells you why, out loud.";
 module.exports = { VERSION, HEADLINE };

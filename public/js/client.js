@@ -1706,6 +1706,13 @@
       } else {
         const combat = d.status === 'combat';
         const myTurn = combat && isMyTurn;
+        // v3.37.111 (Josh, flying-anvil: "Confirmed. I could not cast our per
+        // level spells before door opened"): the SERVER has accepted run-long
+        // buffs at the door since forever (and raise rituals since .109), but
+        // the client disabled every ability control outside combat — nobody
+        // could ever ASK. While exploring the buttons now send; the server
+        // answers ineligible casts with its own clear refusal (toasted+spoken).
+        const preDoor = d.status === 'exploring';
         // Players can OPEN their spellbook any time (to read what they have) — the
         // spell tiles themselves stay disabled until their turn, so it's view-only
         // off-turn. It's still freely closeable (the toggle, an outside click, or
@@ -1740,14 +1747,14 @@
             return `<button class="${cls}" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(a)}" data-mode="defensive"${dis} title="${escapeAttr(ttl)}\nHeal the whole party.">${mark}💖 ${escapeText(ab.name)}: Heal${count}</button>`
                  + `<button class="btn btn--ghost" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(a)}" data-mode="offensive"${dis} title="Channel offensively — SEAR the undead instead of healing.">🔥 ${escapeText(ab.name)}: Sear${count}</button>`;
           }
-          return `<button class="${cls}" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(ab.key || '')}"${(combat && ok) ? '' : ' disabled'} title="${escapeAttr(ttl)}">${mark}${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
+          return `<button class="${cls}" data-dact="ability" data-slot="${slot}" data-abkey="${escapeAttr(ab.key || '')}"${((combat || preDoor) && ok) ? '' : ' disabled'} title="${escapeAttr(ttl)}${preDoor ? '\n(before the door: only run-long buffs — Mage Armor, Bless, Overland Flight — and Raise rituals will cast)' : ''}">${mark}${ic(ab)}${escapeText(ab.name)}${tgt}${count}</button>`;
         };
         // Spellbook tile: icon ONLY (name + short description show on hover).
         // A corner badge carries the uses-left count, or 🔒 when level-locked.
         const spellIcon = (ab, slot) => {
           const locked = !ab.available;
           const ok = !locked && (ab.cost === 'free' ? true : (ab.remaining > 0));
-          const dis = !combat || !ok;   // off-turn casts QUEUE (fire at turn start); view-only while exploring
+          const dis = !(combat || preDoor) || !ok;   // off-turn casts QUEUE (fire at turn start); pre-door sends too — the server refuses non-run-long casts with a spoken reason (v3.37.111)
           const cnt = (ab.cost === 'room' || ab.cost === 'run') && ab.max ? `${ab.remaining}/${ab.max}` : '';
           const badge = locked ? `<span class="dungeon__sb-badge dungeon__sb-lock">🔒</span>`
                       : (cnt ? `<span class="dungeon__sb-badge">${cnt}</span>` : '');
@@ -2669,7 +2676,11 @@
       // locked target (or the deadliest foe); AoE hits everything; self/ally let
       // the server pick (e.g. healing finds the lowest-HP ally).
       const castSpell = (ab) => {
-        if (!myTurn) { window.BlindMode.speak('Not your turn.', 'ambient'); return; }   // hard gate; AMBIENT so it can't cut off the end-of-room report (Josh)
+        // v3.37.111 (Josh, flying-anvil): while EXPLORING the press goes through —
+        // the server accepts run-long buffs / raise rituals at the door and
+        // refuses everything else with a spoken reason. Only combat stays
+        // turn-gated.
+        if (!myTurn && d.status !== 'exploring') { window.BlindMode.speak('Not your turn.', 'ambient'); return; }   // hard gate; AMBIENT so it can't cut off the end-of-room report (Josh)
         const slot = (ab.slot != null ? ab.slot : 0);
         if (ab.target === 'enemy') {
           // Single-target enemy spells (Suffocation, Hold Person, Disintegrate,
@@ -3106,7 +3117,7 @@
           sayU('Imbued shots: ' + imbued.map((s, i) => `${i + 1} ${imbuedName(s.ab)}`).join(', ') + '. Press a number to fire, Escape to close.');
           return;
         }
-        if (!myTurn) { window.BlindMode.speak('Not your turn.', 'ambient'); return; }   // AMBIENT — never cut off the end-of-room report (Josh)
+        if (!myTurn && d.status !== 'exploring') { window.BlindMode.speak('Not your turn.', 'ambient'); return; }   // AMBIENT — never cut off the end-of-room report (Josh); pre-door casts pass through (v3.37.111)
         const ab = act.ab || null;
         const label = act.label;
         // Ally-targeted FEATURE (a druid's Cure, Barkskin, Bull's Strength…) →
