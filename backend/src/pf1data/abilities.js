@@ -772,7 +772,14 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
 // Blessing of Fervor from the cleric list (its haste-choice extra attack) AND get
 // the full Haste spell below — two distinct options.
 KITS.oracle.abilities = [
-  ...KITS.cleric.abilities.map(a => ({ ...a })),
+  // v3.37.112 (Josh, cozy-pebble, playing Vasoriana: "Hold person is spent for
+  // this room????? It's a 2nd lvl spel... I think not!"): the clone used to copy
+  // the cleric entries AS-IS — including their prepared-style once-per-room
+  // caps — despite the comment above declaring the oracle a full SPONTANEOUS
+  // caster. Every leveled prayer now converts to cost:'slot' (cast it as often
+  // as 2nd-level slots remain, like any spontaneous caster); Channel stays a
+  // room-metered class feature and Bless stays the cast-once run-long blessing.
+  ...KITS.cleric.abilities.map(a => (a.cost === 'room' && a.slvl >= 1) ? { ...a, cost: 'slot', uses: undefined } : { ...a }),
   // ── FLAME mystery — Elfrip ONLY (most oracles never see fire spells; the
   //    char tag is enforced by Dungeon._charAllows in the UI, bot AI and casts).
   { ...spontaneousSpell(SPELL.burninghands, 1), char: 'Elfrip' },
@@ -1046,6 +1053,21 @@ _injectKitSpell('inquisitor', spontaneousSpell({ ...SPELL.unholyblight, slvl: 4 
 _injectKitSpell('druid',      preparedSpell({ ...SPELL.callstorm, slvl: 5 }, 9));
 _injectKitSpell('cleric',     preparedSpell({ ...SPELL.righteousmight, slvl: 5 }, 9));
 _injectKitSpell('inquisitor', spontaneousSpell({ ...SPELL.righteousmight, slvl: 5 }, 13));
+
+// ── ORACLE SPONTANEITY — kit-copy normalization (v3.37.112) ────────────────────────
+// Josh (cozy-pebble, playing Vasoriana): "Hold person is spent for this room?????
+// It's a 2nd lvl spel... I think not!" The generated oracle kit bakes the CLERIC
+// prayer list with its prepared-style 1/room caps — same override trap as Fly
+// below (the hand-coded clone at KITS.oracle above converts them, then `KITS =
+// _gen` swaps the object and the caps come back). An oracle is a full SPONTANEOUS
+// caster: every leveled prayer converts to cost:'slot' here, AFTER the override,
+// so it survives regeneration. Channel (no slvl) stays a room-metered class
+// feature; Bless (cost:'run') stays the cast-once run-long blessing. Idempotent.
+// TODO: fix the oracle rows in kit_abilities on the next DB regen, then delete.
+if (KITS.oracle && Array.isArray(KITS.oracle.abilities)) {
+  KITS.oracle.abilities = KITS.oracle.abilities.map(a =>
+    (a && a.cost === 'room' && (a.slvl || 0) >= 1) ? { ...a, cost: 'slot', uses: undefined } : a);
+}
 
 // ── FLY IS A TOUCH SPELL — kit-copy normalization (2026-07-16) ─────────────────────
 // v3.37.55 fixed SPELL.fly to target:'ally' (castable on allies, canHitFlyers), but the

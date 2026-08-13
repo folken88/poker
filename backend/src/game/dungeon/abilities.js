@@ -914,7 +914,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (!a) return { ok: false, error: 'no melee ally to send — everyone is already placed (or ranged)' };
     a._tpStrike = 2;            // survives the cast round; active through their next attack
     a.blinkedBy = m.playerId;   // untouchable until the CASTER's next turn
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${a.playerId === m.playerId ? 'they blink' : `${a.nickname} blinks`} through folded space! Untouchable until ${m.nickname} acts again — and their next strike reaches ANY foe with a FULL attack.`, ab.sound);
+    // v3.37.112 (Josh, rowdy-musket: "it does not tell me who I am expected to
+    // target"): when a flyer stands, the announce now NAMES the intended prey.
+    const _flyer = (this.enemies || []).find(e => e.flying && e.hp > 0);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${a.playerId === m.playerId ? 'they blink' : `${a.nickname} blinks`} through folded space! Untouchable until ${m.nickname} acts again — and their next strike reaches ANY foe with a FULL attack${_flyer ? `. The airborne ${_flyer.name} is in reach of ${a.playerId === m.playerId ? 'their' : 'your'} blade now` : ''}.`, ab.sound);
     this._broadcast();
     return { ok: true };
   },
@@ -3212,7 +3215,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (foes.some(f => f.flying) && foes.some(f => !f.flying) && dRoll(10) <= 4) forceRanged = true;
     }
     let drewCrossbow = false;
-    if (forceRanged || (e.flying && !m.weapon.ranged && !m.weapon.reachFly && !(m.canHitFlyers && m.flying))) {
+    // v3.37.112 (Josh, rowdy-musket: ferried by Dimension Door, his sword worked
+    // on flyers "about 50-50"): the blink window (_tpStrike — "next strike
+    // reaches ANY foe") was honored by _canReach (bots) but NOT here — the
+    // human attack path still drew the backup crossbow at a flyer unless it
+    // happened to be grappled/held (the groundable rule). A blinked melee hero
+    // now swings steel, exactly as the announce promises.
+    if (forceRanged || (e.flying && !(m._tpStrike > 0) && !m.weapon.ranged && !m.weapon.reachFly && !(m.canHitFlyers && m.flying))) {
       const bk = this._backupRangedKey(m);
       m.weapon = weaponOf(bk === 'lightcrossbow' ? {} : m.gear, bk);   // signature sidearms keep the wielder's enchant; the generic crossbow stays plain
       // The improvised LIGHT CROSSBOW fires a SINGLE shot — PF1: a crossbow can't

@@ -1538,6 +1538,21 @@
 //                     layer the fix lives in. Also from the same note, queued for next batches:
 //                     prep-menu slot counts ("4 of 7 prepared"), player-facing Dimension Door
 //                     targeting (ally/foe pickers) — tracked.
-const VERSION = '3.37.111';
-const HEADLINE = "The between-rooms door is truly unlocked now: the server always allowed Mage Armor, Overland Flight, Bless, and Raise rituals at the door — but every button and key that could ASK was disabled outside combat. Cast away; anything not door-legal tells you why, out loud.";
+//  3.37.112 2026-08-13 THE ORACLE WAS NEVER SPONTANEOUS + THE 50/50 BLINK (both Josh, cozy-pebble
+//                     + rowdy-musket). (1) "Hold person is spent for this room????? It's a 2nd lvl
+//                     spel... I think not!" — dead right, and bigger than Hold Person: the oracle
+//                     kit CLONED the cleric's prayer list as-is, prepared-style once-per-room caps
+//                     included, despite the comment declaring oracle a full spontaneous caster.
+//                     Every leveled prayer now converts to cost:'slot' on the clone (cast while
+//                     slots remain); Channel stays a room-metered feature, Bless stays the
+//                     cast-once run blessing. Vasoriana/Rhyarca/Casandalee/Elfrip all affected
+//                     since oracles shipped. (2) Ferried by Dimension Door, Josh's sword worked on
+//                     flyers "about 50-50": the blink window (_tpStrike) was honored by _canReach
+//                     (bots) but NOT by _playerAttack's crossbow-draw branch — a blinked human
+//                     still drew the crossbow at a flyer unless it happened to be grappled/held.
+//                     Blinked melee now swings steel, as the announce promises — and the announce
+//                     NAMES the airborne prey ("The airborne Lich is in reach of your blade now"),
+//                     answering "it does not tell me who I am expected to target."
+const VERSION = '3.37.112';
+const HEADLINE = "Oracles are finally the spontaneous casters they claim to be — Hold Person and every leveled prayer now cast from spell slots, not a once-per-room ration. And a Dimension-Doored hero's sword now ALWAYS works on the flyer they were delivered to, with the announce naming the prey.";
 module.exports = { VERSION, HEADLINE };
