@@ -2116,7 +2116,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // the victim's card across the battlefield; for now the 💫 narration carries it.)
   _abDominate(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
-    if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — undead and constructs have no mind to command.`); this._echoToTable(); return; }
+    if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
     if (e.dominated > 0) { this._note(`${ab.icon} ${e.name} is already dominated.`); return; }
     const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, 'will'), dc);
@@ -2234,7 +2234,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // foes (undead/constructs) are immune; an already-charmed foe is left be.
   _abCharm(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
-    if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — undead and constructs have no mind to charm.`); this._echoToTable(); return; }
+    if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
     if (e.charmed) { this._note(`${ab.icon} ${e.name} is already charmed.`); return; }
     const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
@@ -2246,7 +2246,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // Save-or-be-disabled (Hold Person): Will save or paralyzed.
   _abSaveDebuff(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
-    if (ab.debuff === 'paralyzed' && mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — undead and constructs have no mind to seize.`); this._echoToTable(); return; }
+    if (ab.debuff === 'paralyzed' && mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
     const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
     const sound = ab.sound || pick(SND.stink);
@@ -2775,6 +2775,18 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // which both lied as information and contradicted the Heavenly Host's design
   // ("hero Smite Evil finds no purchase"). Now it marks only foes that ARE evil,
   // and the readout says how many are NOT — real intel, especially by ear.
+  // v3.37.113 (Josh, by ear: "ARE ALL VAMPIRES CONSIDERED CONSTRUCTS?" — the old
+  // one-size refusal said "undead and constructs have no mind to..." and the
+  // word he caught was "constructs"; Tobias: "vampires are undead, not
+  // constructs"): the refusal now names the foe's ACTUAL nature, so a blind
+  // player learns the right category. PF1 RAW is unchanged — undead ARE immune
+  // to mind-affecting effects (a vampire keeps its cunning, but its mind is
+  // undead and beyond charms, commands, and Hold Person's grip).
+  _mindImmuneWhy(e) {
+    if (e && e.type === 'construct') return `it is a CONSTRUCT — a mindless machine, nothing in there to reach`;
+    if (e && e.type === 'undead') return `it is UNDEAD — the mind behind those eyes is dead, beyond charms and commands`;
+    return `it has no mind to reach`;
+  },
   _abDetectEvil(m, ab) {
     const foes = this.livingEnemies();
     let evil = 0, clean = 0;

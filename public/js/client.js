@@ -1001,7 +1001,17 @@
   // App VERSION badge — the topbar brand shows "Folken Poker v3.1.0" (semver from
   // /api/version; see backend src/version.js and the living-docs mandate). Fails
   // silent on old backends that lack the route.
-  fetch('/api/version').then(r => r.json()).then(v => {
+  // ── STALE-TAB DETECTOR (v3.37.113) ──────────────────────────────────────────
+  // Josh's SPA tab lives for DAYS without a page load, so deployed client fixes
+  // never reach him until a hard refresh he only does when a patch note says so
+  // ("still cannot cast per lvl spells" — his presses produced ZERO server
+  // traffic because his tab still ran the pre-fix bundle). CLIENT_BUILD is this
+  // bundle's baked stamp; the server reports which bundle it SHIPPED. On
+  // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
+  // minutes while stale — a blind player must never miss it.
+  const CLIENT_BUILD = 33813;
+  let _staleNaggedAt = 0;
+  const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
     document.querySelectorAll('.topbar__brand').forEach(el => {
       if (!el.querySelector('.topbar__ver')) el.insertAdjacentHTML('beforeend', ` <span class="topbar__ver" style="font-size:.62em;opacity:.55;font-weight:400" title="App version — see src/version.js">v${String(v.version).replace(/[^0-9a-z.\-]/gi, '')}</span>`);
@@ -1010,7 +1020,14 @@
     // way to SEE the badge; this is the reliable trigger since the fetch usually
     // resolves after blind mode has already restored on cold load).
     try { window.BlindMode?.setBuild?.(v.version); } catch (_) {}
+    if (v.clientBuild && v.clientBuild !== CLIENT_BUILD && Date.now() - _staleNaggedAt > 10 * 60 * 1000) {
+      _staleNaggedAt = Date.now();
+      toast('🔄 A new game version is live — press Command Option R (or Ctrl F5) to load it. Some fixes will not work until you do.', true);
+      try { if (window.BlindMode?.isOn?.()) window.BlindMode.speak('A new game version is live. Press Command Option R to load it. Some fixes will not work until you refresh.', 'event'); } catch (_) {}
+    }
   }).catch(() => {});
+  _checkVersion();
+  setInterval(_checkVersion, 5 * 60 * 1000);   // a live tab re-checks every 5 minutes — deploys announce themselves
   // SPELL-LOADOUT picker I/O ('loadout' action). No payload → fetch the model;
   // { toggle: key } → flip that spell and get the updated model back. Errors
   // toast + speak (slot caps: "level 3 is full…"); success stores the model,

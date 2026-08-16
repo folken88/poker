@@ -1553,6 +1553,27 @@
 //                     Blinked melee now swings steel, as the announce promises — and the announce
 //                     NAMES the airborne prey ("The airborne Lich is in reach of your blade now"),
 //                     answering "it does not tell me who I am expected to target."
-const VERSION = '3.37.112';
-const HEADLINE = "Oracles are finally the spontaneous casters they claim to be — Hold Person and every leveled prayer now cast from spell slots, not a once-per-room ration. And a Dimension-Doored hero's sword now ALWAYS works on the flyer they were delivered to, with the announce naming the prey.";
-module.exports = { VERSION, HEADLINE };
+//  3.37.113 2026-08-16 STALE CLIENTS FINALLY ANNOUNCE THEMSELVES + VAMPIRES ARE UNDEAD (Tobias's
+//                     ruling). (1) THE PRE-DOOR MYSTERY, third round: Josh "still cannot cast per
+//                     lvl spells before door" — but his 1:25 AM attempts produced ZERO server
+//                     traffic while the deployed client provably carries the .111 pass-through
+//                     gates. Verdict: a STALE CLIENT — his SPA tab lives for days without a page
+//                     load, so no deploy ever reaches him until a hard refresh he only does when
+//                     a patch note says so. Durable fix: the client bakes CLIENT_BUILD and
+//                     compares it against /api/version's clientBuild every few minutes — on
+//                     mismatch it toasts AND SPEAKS "a new game version is live — press Command
+//                     Option R". No more silent staleness, ever. (2) VAMPIRES (Tobias: "vampires
+//                     are undead, not constructs"): the base 'Vampire' was the only one of 13
+//                     missing type:'undead' (also making it inconsistently dominable — fixed),
+//                     and the mind-immune refusal now names the foe's ACTUAL nature ("it is
+//                     UNDEAD — the mind behind those eyes is dead") instead of the one-size
+//                     "undead and constructs" line Josh mis-heard. RAW unchanged: undead are
+//                     immune to mind-affecting. (3) fuzzy-salmon synthesis audit: LEGAL — every
+//                     pair was arcane+divine (Tentacles+Air Walk/ProtFire/RM; Slow+RM/Holy
+//                     Smite); Josh heard consecutive rounds as one pair.
+const VERSION = '3.37.113';
+// The client bundle stamp — bumped with EVERY client.js deploy; /api/version
+// serves it so a live tab can hear that its files are stale (v3.37.113).
+const CLIENT_BUILD = 33813;
+const HEADLINE = "Your game now TELLS you when it's out of date — a live table that misses an update says, out loud, 'a new version is live, press Command Option R.' Also: vampires are properly UNDEAD everywhere (never 'constructs'), and the refusal line teaches the real reason a charm can't land.";
+module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

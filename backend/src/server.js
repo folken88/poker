@@ -23,13 +23,13 @@ const _json4k = express.json({ limit: '4kb' });
 app.use((req, res, next) => (req.path === '/api/cropsave' ? next() : _json4k(req, res, next)));   // cropsave carries an IMAGE — its route mounts its own 12mb parser (the 4kb gate would 413 it first)
 app.set('trust proxy', true);
 
-const { VERSION, HEADLINE } = require('./version');   // ONE app semver + a one-line "what changed" HEADLINE (posted to table chat on reboot) — see src/version.js
+const { VERSION, HEADLINE, CLIENT_BUILD } = require('./version');   // ONE app semver + a one-line "what changed" HEADLINE (posted to table chat on reboot) + the client bundle stamp (stale-tab detector, v3.37.113) — see src/version.js
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, version: VERSION, defaultStack: db.DEFAULT_STACK });
 });
 app.get('/api/version', (_req, res) => {
   res.set('Cache-Control', 'no-cache');
-  res.json({ version: VERSION });
+  res.json({ version: VERSION, clientBuild: CLIENT_BUILD });   // clientBuild: the bundle this server SHIPPED — a live tab compares its own baked stamp and announces staleness (v3.37.113)
 });
 
 app.get('/api/roster', (_req, res) => {
