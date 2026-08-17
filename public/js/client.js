@@ -1009,7 +1009,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33813;
+  const CLIENT_BUILD = 33814;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -2703,9 +2703,10 @@
           // Single-target enemy spells (Suffocation, Hold Person, Disintegrate,
           // Searing Ray…) let you AIM at a specific foe — Josh wasted a Suffocate
           // on a lich because it auto-locked the deadliest. Prompt to pick when
-          // 2+ foes are up. Magic Missile & other auto-hit spells (effect
-          // 'missile') keep snapping to the deadliest, as Josh prefers.
-          if (ab.effect !== 'missile' && aliveE.length > 1) {
+          // 2+ foes are up. v3.37.114: MAGIC MISSILE prompts too — Josh: "it's a
+          // directly targeted spell... not being able to choose who I'm hitting
+          // is absurd" (the old auto-snap-to-deadliest note is superseded).
+          if (aliveE.length > 1) {
             _dunTarget = { kind: 'ability', slot, label: ab.name };
             // Percentages, not raw HP (Josh 2026-07-17: this ability/imbued-shot target
             // prompt read "160 HP" while the F quick-list reads percentages — the SAME
@@ -2782,11 +2783,11 @@
           const at = sbAt(_dunSbLevel);
           const sp = at[n - 1];
           if (!sp) { sayU(`No spell ${n} at this level.`); return; }
-          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (!myTurn && d.status !== 'exploring') { sayU('Not your turn.'); return; }   // v3.37.114: EVERY cast gate passes through while exploring — the SERVER is the one judge of what's door-legal (three rounds of missed client gates taught us)
           if (sp.available === false) { sayU(`${sp.name} is out of slots.`); return; }
           closeSb();
           const willPrompt = sp.allyPick || sp.dispelPick
-            || (sp.target === 'enemy' && sp.effect !== 'missile' && aliveE.length > 1);
+            || (sp.target === 'enemy' && aliveE.length > 1);   // v3.37.114: missile prompts too
           if (!willPrompt) sayU(`Casting ${sp.name}.`);
           castSpell(sp);
           return;
@@ -2814,14 +2815,14 @@
           const at = sbAt(_dunSbLevel);
           const sp = at[_dunSbIdx];
           if (!sp) { sayU('No spell selected.'); return; }
-          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (!myTurn && d.status !== 'exploring') { sayU('Not your turn.'); return; }   // v3.37.114: EVERY cast gate passes through while exploring — the SERVER is the one judge of what's door-legal (three rounds of missed client gates taught us)
           if (sp.available === false) { sayU(`${sp.name} is out of slots.`); return; }
           closeSb();
           // Skip the pre-announce when castSpell will PROMPT for a target (ally
           // pick, dispel pick, or a single-target enemy spell with 2+ foes) — the
           // picker speaks its own "on whom?" / "select a target" line.
           const willPrompt = sp.allyPick || sp.dispelPick
-            || (sp.target === 'enemy' && sp.effect !== 'missile' && aliveE.length > 1);
+            || (sp.target === 'enemy' && aliveE.length > 1);   // v3.37.114: missile prompts too
           if (!willPrompt) sayU(`Casting ${sp.name}.`);
           castSpell(sp);
           return;
@@ -2840,9 +2841,9 @@
           const n = parseInt(k, 10);
           const sh = imbued[n - 1];
           if (!sh) { sayU(`No imbued shot ${n}.`); return; }
-          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (!myTurn && d.status !== 'exploring') { sayU('Not your turn.'); return; }   // v3.37.114: EVERY cast gate passes through while exploring — the SERVER is the one judge of what's door-legal (three rounds of missed client gates taught us)
           _dunImbuedMode = false;
-          const willPrompt = sh.ab.target === 'enemy' && sh.ab.effect !== 'missile' && aliveE.length > 1;
+          const willPrompt = sh.ab.target === 'enemy' && aliveE.length > 1;   // v3.37.114: no missile exception anywhere
           if (!willPrompt) sayU(`Firing ${imbuedName(sh.ab)}.`);
           castSpell(sh.ab);
           return;
@@ -2857,7 +2858,7 @@
         if (e.key === 'Enter' || e.code === 'NumpadEnter') {
           e.preventDefault();
           const p = _dunAllyPick; _dunAllyPick = null;
-          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (!myTurn && d.status !== 'exploring') { sayU('Not your turn.'); return; }   // v3.37.114: EVERY cast gate passes through while exploring — the SERVER is the one judge of what's door-legal (three rounds of missed client gates taught us)
           sayU(`Casting ${p.label} on the best target.`);
           dungeonAction('ability', { slot: p.slot });   // no allyUid → server smart-picks
           return;
@@ -2869,7 +2870,7 @@
           const pid = p.allies[parseInt(e.key, 10) - 1];
           if (!pid) { sayU(`No ally ${e.key}.`); return; }
           _dunAllyPick = null;
-          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (!myTurn && d.status !== 'exploring') { sayU('Not your turn.'); return; }   // v3.37.114: EVERY cast gate passes through while exploring — the SERVER is the one judge of what's door-legal (three rounds of missed client gates taught us)
           const who = (d.party || []).find(x => x.playerId === pid);
           sayU(`Casting ${p.label} on ${who ? who.nickname : 'them'}.`);
           dungeonAction('ability', { slot: p.slot, allyUid: pid });
@@ -2885,7 +2886,7 @@
         if (e.key === 'Enter' || e.code === 'NumpadEnter') {
           e.preventDefault();
           const p = _dunDispelPick; _dunDispelPick = null;
-          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (!myTurn && d.status !== 'exploring') { sayU('Not your turn.'); return; }   // v3.37.114: EVERY cast gate passes through while exploring — the SERVER is the one judge of what's door-legal (three rounds of missed client gates taught us)
           sayU(`Casting ${p.label} on the best target.`);
           dungeonAction('ability', { slot: p.slot });   // no target → server smart-picks / refuses
           return;
@@ -2897,7 +2898,7 @@
           const t = p.targets[parseInt(e.key, 10) - 1];
           if (!t) { sayU(`No target ${e.key}.`); return; }
           _dunDispelPick = null;
-          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (!myTurn && d.status !== 'exploring') { sayU('Not your turn.'); return; }   // v3.37.114: EVERY cast gate passes through while exploring — the SERVER is the one judge of what's door-legal (three rounds of missed client gates taught us)
           sayU(`Casting ${p.label} on ${t.name}.`);
           dungeonAction('ability', t.kind === 'ally' ? { slot: p.slot, allyUid: t.id } : { slot: p.slot, targetUid: t.id });
           return;
@@ -2911,7 +2912,7 @@
         if (e.key === 'Enter' || e.code === 'NumpadEnter') {
           e.preventDefault();
           const p = _dunModePick; _dunModePick = null;
-          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (!myTurn && d.status !== 'exploring') { sayU('Not your turn.'); return; }   // v3.37.114: EVERY cast gate passes through while exploring — the SERVER is the one judge of what's door-legal (three rounds of missed client gates taught us)
           sayU(`Channeling — the smart choice.`);
           dungeonAction('ability', { slot: p.slot });   // no mode → server auto-decides
           return;
@@ -2919,7 +2920,7 @@
         if (e.key === '1' || e.key === '2') {
           e.preventDefault();
           const p = _dunModePick; _dunModePick = null;
-          if (!myTurn) { sayU('Not your turn.'); return; }
+          if (!myTurn && d.status !== 'exploring') { sayU('Not your turn.'); return; }   // v3.37.114: EVERY cast gate passes through while exploring — the SERVER is the one judge of what's door-legal (three rounds of missed client gates taught us)
           const mode = e.key === '1' ? 'defensive' : 'offensive';
           sayU(e.key === '1' ? 'Channeling to heal the party.' : 'Channeling to sear the undead.');
           dungeonAction('ability', { slot: p.slot, mode });
@@ -3106,7 +3107,7 @@
         //     pending action on it.
         if (_dunTarget) {
           // The turn may have ended while a target was pending — never fire off-turn.
-          if (!myTurn) { _dunTarget = null; window.BlindMode.speak('Not your turn.', 'urgent'); return; }
+          if (!myTurn && d.status !== 'exploring') { _dunTarget = null; window.BlindMode.speak('Not your turn.', 'urgent'); return; }   // v3.37.114: uniform exploring pass-through
           const tgt = alive[n - 1];
           if (!tgt) { window.BlindMode.speak(`No enemy ${n}.`, 'urgent'); return; }
           const pend = _dunTarget; _dunTarget = null;

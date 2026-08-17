@@ -1571,9 +1571,25 @@
 //                     immune to mind-affecting. (3) fuzzy-salmon synthesis audit: LEGAL — every
 //                     pair was arcane+divine (Tentacles+Air Walk/ProtFire/RM; Slow+RM/Holy
 //                     Smite); Josh heard consecutive rounds as one pair.
-const VERSION = '3.37.113';
+//  3.37.114 2026-08-17 THE THIRD GATE — AND AN APOLOGY OWED (Josh, invisible-anvil, testing on a
+//                     FRESH browser with CURRENT files: "It is not your turn!... there is a
+//                     fallacy in your testing"). He was right and the stale-tab theory was WRONG
+//                     for him: his spellbook cast path had its OWN turn gate (the digit-casts and
+//                     Enter-casts checks inside the sb submenu) sitting UPSTREAM of the castSpell
+//                     gate .111 fixed — so the fix was real but unreachable from the spellbook,
+//                     which is exactly where a sorcerer's Mage Armor lives. NEW RULE, no more
+//                     whack-a-mole: EVERY blind turn-gate (spellbook, imbued, ally-pick, dispel-
+//                     pick, mode-pick, pending-target, features, castSpell) passes through while
+//                     EXPLORING — the SERVER is the single judge of what's door-legal, and its
+//                     refusal is spoken. ALSO: MAGIC MISSILE IS TARGETABLE (Josh's day-one ask,
+//                     re-reported: "it's a directly targeted spell... absurd") — the auto-snap-
+//                     to-deadliest exception is gone; missile prompts for its target like every
+//                     other single-target spell. Balance check from his flyer run (stale-anvil):
+//                     the "maximized fireball" at level 6 was an EMPOWERED one (46 fire, CL~7)
+//                     at DEPTH FOURTEEN — the deep-run ramp, working as intended.
+const VERSION = '3.37.114';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33813;
-const HEADLINE = "Your game now TELLS you when it's out of date — a live table that misses an update says, out loud, 'a new version is live, press Command Option R.' Also: vampires are properly UNDEAD everywhere (never 'constructs'), and the refusal line teaches the real reason a charm can't land.";
+const CLIENT_BUILD = 33814;
+const HEADLINE = "Door-casting works from the SPELLBOOK now — the last hidden 'not your turn' gate is gone, and while exploring, every key goes through and the server explains anything it refuses. And Magic Missile finally asks WHO you want to hit.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
