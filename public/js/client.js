@@ -1009,7 +1009,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33814;
+  const CLIENT_BUILD = 33815;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -5686,11 +5686,23 @@
       const text = input.value.trim();
       if (!text) return;
       socket.emit('table:say', { text }, (resp) => {
-        if (resp?.ok) input.value = '';
+        if (resp?.ok) {
+          input.value = '';
+          // Blind: confirm and hand the keys back to the game (mirrors the dungeon chat, v3.37.115).
+          if (window.BlindMode?.isOn?.()) { try { input.blur(); } catch (_) {} window.BlindMode.speak('Message sent.', 'urgent'); }
+        }
         else toast(resp?.error || 'Could not send chat', true);
       });
     });
   }
+  // Escape in the table chat box cancels and returns the keys to the game —
+  // exactly like the dungeon's chat field (v3.37.115, Josh's parity ask).
+  $('#chatInput')?.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+      ev.preventDefault(); ev.target.value = ''; ev.target.blur();
+      if (window.BlindMode?.isOn?.()) window.BlindMode.speak('Cancelled. Back to the table.', 'urgent');
+    }
+  });
 
   $('#switchBtn').addEventListener('click', () => {
     socket.emit('table:stand', null, () => {});
@@ -6274,6 +6286,33 @@
             window.BlindMode.readCardSlot?.(+ck[1]);
             return;
           }
+        }
+        // ── \ TABLE CHAT (v3.37.115, Josh: "the chat to work like it does in the
+        // dungeon, please") ── backslash focuses the chat box exactly like the
+        // dungeon's: type, Enter sends (spoken "Message sent."), Escape cancels
+        // and returns the keys to the game. Incoming chat was already spoken.
+        if (e.key === '\\') {
+          e.preventDefault();
+          if (_blindHelp) { window.BlindMode.speak('Backslash: open the chat to type to the table. Enter sends, Escape cancels.', 'urgent'); return; }
+          const _ci = $('#chatInput');
+          if (!_ci || _ci.disabled) { window.BlindMode.speak('No chat here — sit at the table first.', 'urgent'); return; }
+          _ci.focus();
+          window.BlindMode.speak('Type your message. Enter sends, Escape cancels.', 'urgent');
+          return;
+        }
+        // ── W WHO'S STILL IN (v3.37.115, Josh: "a key to tell me who is still in
+        // on the hand") ── the live hand roster by ear: names (you and all-ins
+        // tagged), the count, and who has folded.
+        if (e.code === 'KeyW') {
+          e.preventDefault();
+          if (_blindHelp) { window.BlindMode.speak('W: who is still in the hand — names, all-ins, and the count.', 'urgent'); return; }
+          const _ps = (_h && _h.players) || [];
+          if (!_h || !_ps.length) { window.BlindMode.speak('No hand running.', 'urgent'); return; }
+          const _alive = _ps.filter(p => !p.folded);
+          const _nm = (p) => `${p.nickname || p.name || p.playerId}${p.playerId === _meId ? ', you' : ''}${p.allIn ? ', all in' : ''}`;
+          const _folded = _ps.filter(p => p.folded).map(p => p.nickname || p.name || p.playerId);
+          window.BlindMode.speak(`Still in: ${_alive.map(_nm).join('; ')} — ${_alive.length} of ${_ps.length}.${_folded.length ? ` Folded: ${_folded.join(', ')}.` : ''}`, 'urgent');
+          return;
         }
         const BET_KEYS = ['KeyF', 'KeyK', 'KeyR', 'KeyT', 'KeyV'];   // A (all-in) UNMAPPED per Josh 2026-07-08 — accidental one-key shoves; all-in is now via R→4 (raise menu) or T (pot, which caps at all-in)
         // HELP MODE describes the bet keys even when it's NOT your turn (Josh:

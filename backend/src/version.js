@@ -1587,9 +1587,19 @@
 //                     other single-target spell. Balance check from his flyer run (stale-anvil):
 //                     the "maximized fireball" at level 6 was an EMPOWERED one (46 fire, CL~7)
 //                     at DEPTH FOURTEEN — the deep-run ramp, working as intended.
-const VERSION = '3.37.114';
+//  3.37.115 2026-08-17 THE POKER-SIDE PAIR (Josh's two asks, same-day): (1) TABLE CHAT works like
+//                     the dungeon's — backslash focuses the chat box ("Type your message. Enter
+//                     sends, Escape cancels."), a sent message confirms out loud ("Message
+//                     sent.") and hands the keys back to the game, Escape cancels the same way.
+//                     Incoming table chat was already spoken (BlindMode.onChat). (2) W = WHO'S
+//                     STILL IN THE HAND: "Still in: Josh, you; Fred, all in; Concetta — 3 of 6.
+//                     Folded: Kate, Vaughan, Chef." Names tag YOU and all-ins, then the folded
+//                     list. Both keys are blind-mode-only, table-screen-only, and teach
+//                     themselves in help mode. Both were free keys (W unused; backslash mirrors
+//                     the dungeon's own chat key — same muscle memory both screens).
+const VERSION = '3.37.115';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33814;
-const HEADLINE = "Door-casting works from the SPELLBOOK now — the last hidden 'not your turn' gate is gone, and while exploring, every key goes through and the server explains anything it refuses. And Magic Missile finally asks WHO you want to hit.";
+const CLIENT_BUILD = 33815;
+const HEADLINE = "The poker table catches up to the dungeon: backslash opens the chat by ear (Enter sends, Escape cancels, 'Message sent' confirms), and W tells you who's still in the hand — names, all-ins, the count, and who folded.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
