@@ -545,7 +545,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.buffs.toHit += fb.toHit; m.buffs.dmg += fb.dmg; m.buffs.ac += fb.ac;
     m._formBuff = fb;
     if (f.dr)  { m._formDr = f.dr; m.dr = Math.max(m.dr || 0, f.dr); }
-    if (f.fly) m.flying = true;
+    if (f.fly) { m.flying = true; m.canHitFlyers = true; }   // v3.37.116 (Josh: "a hawk can't wind a crossbow"): a flying form's talons meet wings — no more crossbow draws at airborne foes
     const thp = (f.tempHpPerLevel || 0) * (m.level || 1) + (f.tempHp || 0);
     if (thp > 0) this._grantTempHp(m, thp);
     let atkStr = '';
@@ -707,6 +707,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.touchStrike = 0; m.untargetable = false; m.blinded = 0; m.canHitFlyers = false;
     if (m.overlandFlight) { m.flying = true; m.canHitFlyers = true; }   // Overland Flight is RUN-long — re-assert flight + airborne reach
     if (m.ghost) { m.flying = true; m.canHitFlyers = true; }            // Vesorianna never lands — a ghost drifts over every room
+    if (m.form && m.flying) m.canHitFlyers = true;                      // v3.37.116: Hawk Form re-asserts airborne reach each turn, same as Overland Flight
     m.acPenRound = -1; m.acPenAmt = 0;
   },
   // Inspire Courage is a passive bard AURA — it costs the bard NO action and is

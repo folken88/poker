@@ -947,15 +947,16 @@ class Dungeon {
         const isDevil = e.summonFlavor === 'devil';
         const glyph = isDevil ? '😈' : '☠️';
         const kind = isDevil ? 'your devil' : 'your undead';
-        const foes = this.livingEnemies().filter(x => !x.summoned && x.hp > 0);
+        const foes0 = this.livingEnemies().filter(x => !x.summoned && x.hp > 0);
+        // v3.37.116 (Josh, proud-mirror: grounded raised dead "rending" airborne Bone Devils): a flightless summon obeys the same law as everyone — no melee at the sky.
+        const foes = e.flying ? foes0 : foes0.filter(x => !x.flying);
         if (foes.length) {
           const prey = foes.slice().sort((a, b) => a.hp - b.hp)[0];   // finish the weakest first
           const r = this._monsterSwing(e, this._enemyAC(prey));
           if (r.hit) { this._dmgE(prey, r.damage); this._note(`${glyph} ${e.name} (${kind}) rends ${prey.name} for ${r.damage}!${prey.hp <= 0 ? ` ${glyph} Slain!` : ''}`, null, { side: 'party' }); }
           else this._note(`${glyph} ${e.name} (${kind}) ${isDevil ? 'lashes' : 'claws'} at ${prey.name} — and misses.`, null, { side: 'party' });
-        } else {
-          this._note(`${glyph} ${e.name} (${kind}) stands ready — no foe in reach.`, null, { side: 'party' });
-        }
+        } else if (foes0.length) this._note(`${glyph} ${e.name} (${kind}) ${isDevil ? 'lashes' : 'claws'} at the air — the survivors are airborne, out of its reach.`, null, { side: 'party' });
+        else this._note(`${glyph} ${e.name} (${kind}) stands ready — no foe in reach.`, null, { side: 'party' });
         e.summonExpiry = (e.summonExpiry || 1) - 1;
         if (e.summonExpiry <= 0) { e.hp = 0; this._note(`${glyph} ${e.name} ${isDevil ? 'is banished back to Hell — the pact expires' : 'crumbles back to dust — the summoning ends'}.`, null, { side: 'party' }); }
         this._broadcast(); return this._nextTurn();

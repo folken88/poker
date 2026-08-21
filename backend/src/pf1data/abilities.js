@@ -717,13 +717,13 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     // form is usable once per room. Generic druids get Tiger/Bear/Hawk; Rissa gets
     // her own Beast Mode + Promethean in place of Tiger/Bear (Hawk is shared). ──
     { key: 'tigerform', name: 'Tiger Form', icon: '🐯', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
-      form: { key: 'tiger', label: 'Tiger Form', glyph: '🐯', art: '/tokens/form_tiger.webp', weapon: 'form_tiger', sizeSteps: 1, ac: 1, toHit: 2, dmg: 4, sound: '/audio/enemy_yak.mp3' },
+      form: { key: 'tiger', label: 'Tiger Form', glyph: '🐯', art: '/tokens/form_tiger.webp', weapon: 'form_tiger', sizeSteps: 1, ac: 1, toHit: 2, dmg: 4, sound: '/audio/tyrannosaur_low_roar_reverb.mp3' },
       desc: 'Become a DIRE TIGER — pounce on prey with claws + bite (3 attacks at full strength), +2 to hit, +4 damage, +1 AC. Lasts until you change back.' },
     { key: 'bearform', name: 'Bear Form', icon: '🐻', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
-      form: { key: 'bear', label: 'Bear Form', glyph: '🐻', art: '/tokens/token-animal-great-spirit-bear-dd-monster-resembles-griz.webp', weapon: 'form_bear', sizeSteps: 1, ac: 3, toHit: 2, dmg: 4, tempHpPerLevel: 2, sound: '/audio/enemy_yak.mp3' },
+      form: { key: 'bear', label: 'Bear Form', glyph: '🐻', art: '/tokens/token-animal-great-spirit-bear-dd-monster-resembles-griz.webp', weapon: 'form_bear', sizeSteps: 1, ac: 3, toHit: 2, dmg: 4, tempHpPerLevel: 2, sound: '/audio/bear_growl_hit.mp3' },
       desc: 'Become a DIRE BEAR — a wall of muscle: claws + bite (3 attacks), +2 to hit, +4 damage, +3 natural-armor AC, and +2 HP per level. Lasts until you change back.' },
     { key: 'hawkform', name: 'Hawk Form', icon: '🦅', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self',
-      form: { key: 'hawk', label: 'Hawk Form', glyph: '🦅', fly: true, ac: 1, toHit: 1, sound: S.invis },
+      form: { key: 'hawk', label: 'Hawk Form', glyph: '🦅', fly: true, weapon: 'form_hawk', ac: 1, toHit: 1, sound: S.invis },
       desc: 'Take to the sky — FLY out of reach of grounded foes (they cannot hit you), with +1 to hit & AC. You can STILL cast your spells from the air. Lasts until you change back.' },
     { key: 'beastmode', name: 'Beast Mode', icon: '🐲', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', char: 'Rissa',
       form: { key: 'beast', label: 'Beast Mode', glyph: '🐲', art: '/tokens/beast-of-lepidstadt.webp', weapon: 'form_beast', sizeSteps: 1, ac: 2, toHit: 3, dmg: 6, tempHpPerLevel: 2, dr: 10, sound: '/audio/rissa_beast.mp3' },
@@ -1067,6 +1067,21 @@ _injectKitSpell('inquisitor', spontaneousSpell({ ...SPELL.righteousmight, slvl: 
 if (KITS.oracle && Array.isArray(KITS.oracle.abilities)) {
   KITS.oracle.abilities = KITS.oracle.abilities.map(a =>
     (a && a.cost === 'room' && (a.slvl || 0) >= 1) ? { ...a, cost: 'slot', uses: undefined } : a);
+}
+
+// ── DRUID FORM SOUNDS + HAWK TALONS — kit-copy normalization (v3.37.116) ───────────
+// Josh: "Wild shape is a goat. Attack in wild shape is a goat... a hawk can't
+// wind a crossbow." The generated kits bake the yak placeholder into Tiger and
+// Bear and leave Hawk Form WEAPONLESS (so an airborne druid drew the crossbow).
+// Same override trap as Fly/oracle above — normalize AFTER the swap. Idempotent.
+for (const _k of Object.values(KITS)) {
+  if (!_k || !Array.isArray(_k.abilities)) continue;
+  for (const _a of _k.abilities) {
+    const _f = _a && _a.form; if (!_f) continue;
+    if (_f.key === 'tiger') _f.sound = '/audio/tyrannosaur_low_roar_reverb.mp3';
+    if (_f.key === 'bear')  _f.sound = '/audio/bear_growl_hit.mp3';
+    if (_f.key === 'hawk')  _f.weapon = _f.weapon || 'form_hawk';
+  }
 }
 
 // ── FLY IS A TOUCH SPELL — kit-copy normalization (2026-07-16) ─────────────────────

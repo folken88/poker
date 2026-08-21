@@ -1597,9 +1597,28 @@
 //                     list. Both keys are blind-mode-only, table-screen-only, and teach
 //                     themselves in help mode. Both were free keys (W unused; backslash mirrors
 //                     the dungeon's own chat key — same muscle memory both screens).
-const VERSION = '3.37.115';
+//  3.37.116 2026-08-20 THE PROUD-MIRROR GRAB-BAG (Josh's overnight six-pack, log-verified).
+//                     (1) GROUNDED SUMMONS STOP PUNCHING THE SKY: his raised dead were "rending"
+//                     airborne Bone Devils — the summon turn at Dungeon.js picked weakest-first
+//                     with NO flying check. A flightless summon now claws at the air ("the
+//                     survivors are airborne, out of its reach") like everyone else. (2) THE
+//                     GOATS ARE GONE: Tiger/Bear wild shapes (shift AND attack) played the yak
+//                     placeholder — tiger now ROARS, bear GROWLS (staples atkSound + kit form
+//                     sound, normalized post-override — trap instance #4). (3) HAWK FORM GETS
+//                     TALONS + AIRBORNE REACH: it had NO natural weapon and never set
+//                     canHitFlyers, so a FLYING druid drew the CROSSBOW at flyers ("they ain't
+//                     got no hands to be windin that crossbow"). form_hawk talons (2×1d6) +
+//                     _abForm sets canHitFlyers + per-turn re-assert like Overland Flight.
+//                     (4) GLAIVE (and longspear) GET REACH: the SRD staple rows never carried
+//                     reachFly, so the "representative polearm" fought like a shortsword while
+//                     every custom fauchard plucked flyers. NOT bugs (explained in the notes):
+//                     Greater Rage exists and bellows its tier (log receipts, numbers on the L
+//                     buff chip per Josh's own 2026-07-04 ruling); the "rending Erinyes" were
+//                     his OWN summons; no teamwork feats = 3 casters + a barb (pairing rule,
+//                     working correctly); wild-shape duration self-answered.
+const VERSION = '3.37.116';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33815;
-const HEADLINE = "The poker table catches up to the dungeon: backslash opens the chat by ear (Enter sends, Escape cancels, 'Message sent' confirms), and W tells you who's still in the hand — names, all-ins, the count, and who folded.";
+const HEADLINE = "The druid finally sounds like a druid — tigers roar, bears growl, and a hawk fights with TALONS instead of somehow winding a crossbow mid-flight. Plus: grounded summons stop punching the sky, and the glaive remembers it's a reach weapon.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

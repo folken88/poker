@@ -42,6 +42,12 @@ const STAPLE_BY_KEY = Object.fromEntries(STAPLE_WEAPONS.map(w => [w.key, w]));
 // Per-staple signature attack sounds (override the generic blunt/swing report).
 const STAPLE_SOUNDS = { warhammer: '/audio/weapon_warhammer.mp3' };
 for (const [k, snd] of Object.entries(STAPLE_SOUNDS)) if (STAPLE_BY_KEY[k]) STAPLE_BY_KEY[k].atkSound = snd;
+// PF1 REACH polearms from the SRD table (v3.37.116, Josh's slayer: "Glaive
+// (1d10 slashing) — does this not have reach???"): the SRD rows don't carry
+// our reachFly flag, so the staple glaive fought like a shortsword while every
+// custom fauchard plucked flyers. Glaive and longspear are RAW reach weapons.
+if (STAPLE_BY_KEY.glaive)    STAPLE_BY_KEY.glaive.reachFly = true;
+if (STAPLE_BY_KEY.longspear) STAPLE_BY_KEY.longspear.reachFly = true;
 const DEFAULT_WEAPON = 'dagger';
 
 // Named NPC SIGNATURE weapons — not selectable in the dropdown, assigned to
@@ -212,8 +218,13 @@ const CUSTOM_WEAPONS = {
   // the member's base weapon is restored when the form drops). All are natural
   // (noShield), strike at full BAB per attack (naturalAttacks), and play a meaty
   // bite/slam report. ──
-  form_tiger:      { key: 'form_tiger',      name: 'Tiger Claws & Bite',    cat: 'light', ranged: false, dmgCount: 1, dmgDie: 8,  crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 3, noShield: true, atkSound: '/audio/enemy_yak.mp3' },
-  form_bear:       { key: 'form_bear',       name: 'Bear Claws & Bite',     cat: 'light', ranged: false, dmgCount: 1, dmgDie: 8,  crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 3, noShield: true, atkSound: '/audio/enemy_yak.mp3' },
+  // v3.37.116 (Josh: "Wild shape is a goat. Attack in wild shape is a goat...
+  // Can't we really pretty pretty pretty please?"): the yak placeholder is out —
+  // a dire tiger ROARS, a bear GROWLS, and a hawk gets real TALONS (it used to
+  // have no natural weapon at all, so an airborne druid drew the CROSSBOW).
+  form_tiger:      { key: 'form_tiger',      name: 'Tiger Claws & Bite',    cat: 'light', ranged: false, dmgCount: 1, dmgDie: 8,  crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 3, noShield: true, atkSound: '/audio/tyrannosaur_low_roar_reverb.mp3' },
+  form_bear:       { key: 'form_bear',       name: 'Bear Claws & Bite',     cat: 'light', ranged: false, dmgCount: 1, dmgDie: 8,  crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 3, noShield: true, atkSound: '/audio/bear_growl_hit.mp3' },
+  form_hawk:       { key: 'form_hawk',       name: 'Hawk Talons',           cat: 'light', ranged: false, dmgCount: 1, dmgDie: 6,  crit: 20, mult: 2, type: 'S', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 2, noShield: true, reachFly: true, atkSound: '/audio/sword_slash_crunch1.mp3' },
   // Rissa — the Beast of Lepidstadt: huge slams, can swat airborne foes (reachFly).
   form_beast:      { key: 'form_beast',      name: 'Beast Slams',           cat: '2h',    ranged: false, dmgCount: 1, dmgDie: 10, crit: 20, mult: 2, type: 'B', group: 'natural', prof: 'simple', custom: true, naturalAttacks: 2, noShield: true, reachFly: true, atkSound: '/audio/weapon_blunt.mp3' },
   // Rissa — Promethean horror: FOUR tentacle strikes, 15' reach (hits flyers), and
