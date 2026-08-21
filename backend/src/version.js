@@ -1628,9 +1628,21 @@
 //                     with the restless dead AND each other — themed drowned-crew rooms. Also in
 //                     UNDEAD_KEYS (cold immunity). The Boali Charau-Ka actor turned out to be a
 //                     GM loot chest, not a monster — skipped. Rides the sync to PGM's bestiary.
-const VERSION = '3.37.117';
+//  3.37.118 2026-08-21 REACH IS A POLEARM PROPERTY (Tobias's ruling, after Josh pushed back on the
+//                     v3.37.116 glaive change: "take the glaive question back to Tobi... make sure
+//                     we're not cheating the system"). Ruling: "glaive is a polearm, it normally has
+//                     10-foot reach, which we represent as additional opportunity for attacks so
+//                     its normal reach power isn't disabled by our lack of positioning. This should
+//                     be an advantage for ALL polearms (fauchard, longspear, etc). Home rule: reach
+//                     weapons also function in direct melee (RAW needs 5 feet)." So the .116 one-off
+//                     became a GENERIC rule in staples: every polearms-group staple (+ longspear)
+//                     gets reachFly — which already carries the whole model (strike low flyers +
+//                     the reach AoO on movers, enemyAI._provokeReachAoO keys on it). Any polearm
+//                     added to the staple list inherits it. Signature polearms (Bastard's Blade,
+//                     Fauchard, Ton Bokiri, Force Pike) were already flagged — unchanged.
+const VERSION = '3.37.118';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33815;
-const HEADLINE = "New blood — well, no blood at all: the BOALI CURSED CREW sails in from Toby's own campaign table. Six drowned pirates walking again — a scythe-reaper, a raging sworn soldier, a storm-calling sorcerer, and the cursed ship's crew up to their swashbuckling captain. Undead rooms just got a navy.";
+const HEADLINE = "Toby's ruling: reach belongs to EVERY polearm — glaive, longspear, fauchard alike — striking low flyers and punishing foes who move in. Signature blades keep their own enchantments; the reach itself was never the special part.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

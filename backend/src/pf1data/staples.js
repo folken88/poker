@@ -42,12 +42,17 @@ const STAPLE_BY_KEY = Object.fromEntries(STAPLE_WEAPONS.map(w => [w.key, w]));
 // Per-staple signature attack sounds (override the generic blunt/swing report).
 const STAPLE_SOUNDS = { warhammer: '/audio/weapon_warhammer.mp3' };
 for (const [k, snd] of Object.entries(STAPLE_SOUNDS)) if (STAPLE_BY_KEY[k]) STAPLE_BY_KEY[k].atkSound = snd;
-// PF1 REACH polearms from the SRD table (v3.37.116, Josh's slayer: "Glaive
-// (1d10 slashing) — does this not have reach???"): the SRD rows don't carry
-// our reachFly flag, so the staple glaive fought like a shortsword while every
-// custom fauchard plucked flyers. Glaive and longspear are RAW reach weapons.
-if (STAPLE_BY_KEY.glaive)    STAPLE_BY_KEY.glaive.reachFly = true;
-if (STAPLE_BY_KEY.longspear) STAPLE_BY_KEY.longspear.reachFly = true;
+// REACH = A POLEARM PROPERTY (Tobias's ruling, v3.37.118, after Josh asked whether
+// the glaive should "cheat" its way to reach): "glaive is a polearm, it normally
+// has 10-foot reach, which we represent as additional opportunity for attacks so
+// its normal reach power isn't disabled by our lack of positioning. This should be
+// an advantage for ALL polearms (fauchard, longspear, etc). Home rule: reach
+// weapons also function in direct melee (RAW needs 5 feet of distance)." One
+// flag carries the whole model — reachFly = can strike low flyers AND provokes
+// the reach Attack of Opportunity on movers (enemyAI._provokeReachAoO). Applied
+// GENERICALLY to every staple in the polearms group (+ the longspear, a RAW reach
+// spear), so any polearm added to the staple list inherits it automatically.
+for (const w of STAPLE_WEAPONS) if (w.group === 'polearms' || w.key === 'longspear') w.reachFly = true;
 const DEFAULT_WEAPON = 'dagger';
 
 // Named NPC SIGNATURE weapons — not selectable in the dropdown, assigned to
