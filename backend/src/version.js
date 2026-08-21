@@ -1616,9 +1616,21 @@
 //                     buff chip per Josh's own 2026-07-04 ruling); the "rending Erinyes" were
 //                     his OWN summons; no teamwork feats = 3 casters + a barb (pairing rule,
 //                     working correctly); wild-shape duration self-answered.
-const VERSION = '3.37.116';
+//  3.37.117 2026-08-20 THE BOALI CURSED CREW SETS SAIL (Tobias: imported live from his Shackles
+//                     FOUNDRY world via the MCP bridge — get-world-info/get-character straight off
+//                     the running server). Six new UNDEAD pirates join the bestiary, statted from
+//                     their actual Foundry sheets: Boali Reaper (CR2, the Cursed Scythe), Boali
+//                     Sworn Soldier (CR4, raging falchion), Boali Stormcaller (CR6, storm-sorcerer
+//                     arcane caster), Cursed Able (CR3 rank-and-file), Cursed Bos'n (CR6 brawler —
+//                     his to-hit drives the generic grapple AI), Cursed Captain (CR7 swashbuckler,
+//                     evasion + high reflex for the parry feel). All type:'undead' (mind-immune,
+//                     unsuffocatable, Searing Light bites), all in the 'undead' gang so they room
+//                     with the restless dead AND each other — themed drowned-crew rooms. Also in
+//                     UNDEAD_KEYS (cold immunity). The Boali Charau-Ka actor turned out to be a
+//                     GM loot chest, not a monster — skipped. Rides the sync to PGM's bestiary.
+const VERSION = '3.37.117';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33815;
-const HEADLINE = "The druid finally sounds like a druid — tigers roar, bears growl, and a hawk fights with TALONS instead of somehow winding a crossbow mid-flight. Plus: grounded summons stop punching the sky, and the glaive remembers it's a reach weapon.";
+const HEADLINE = "New blood — well, no blood at all: the BOALI CURSED CREW sails in from Toby's own campaign table. Six drowned pirates walking again — a scythe-reaper, a raging sworn soldier, a storm-calling sorcerer, and the cursed ship's crew up to their swashbuckling captain. Undead rooms just got a navy.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

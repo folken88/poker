@@ -132,6 +132,16 @@ const MON = {
   ww_gravecaller:    { name: 'WW Gravecaller',     glyph: '🕯️', cr: '4',   hp: 36,  ac: 18, toHit: 6,  dmgDie: 8,  dmgBonus: 2,  fort: 6,  reflex: 2,  gold: [34, 72],  evil: true, healer: { dice: 2, uses: 2 }, caster: 'holdperson', spellDC: 15, summon: { pool: ['skeleton', 'ghoul'], count: '1d2', uses: 2 } },   // C5 — divine Hold Person (2nd-level ✓) + mendings; raises a few lesser undead
   ww_bladebound:     { name: 'WW Bladebound',      glyph: '⚔️', cr: '5',   hp: 45,  ac: 18, toHit: 8,  dmgDie: 8,  dmgBonus: 4,  fort: 6,  reflex: 4,  gold: [42, 90],  evil: true, spellstrike: { dice: 3, die: 6, dtype: 'negative', lifesteal: true, sound: '/audio/spell_umbral_bolt.mp3' } },   // Mag6 — Vampiric Touch spellstrikes
   ww_necromancer:    { name: 'WW Necromancer',     glyph: '🧙', cr: '6',   hp: 40,  ac: 16, toHit: 5,  dmgDie: 4,  dmgBonus: 0,  fort: 4,  reflex: 4,  gold: [55, 115], evil: true, arcane: true, precast: ['magearmor', 'shield'], summon: { pool: ['skeleton', 'ghoul', 'skeletal_champion'], count: '1d3', uses: 2 } },   // W7 — full wizard casting (pre-warded as a boss); Animate Dead reinforcements
+  // ── THE BOALI CURSED CREW (v3.37.117) — imported straight from Tobias's Shackles
+  // Foundry world via the MCP bridge: the crew that ran afoul of the Boali curse,
+  // drowned pirates walking again. All UNDEAD (mind-immune, unsuffocatable, and
+  // Searing Light bites them hard) — a themed mid-CR family for pirate rooms.
+  boali_reaper:      { name: 'Boali Reaper',        glyph: '💀', cr: '2',   hp: 24,  ac: 15, toHit: 6,  dmgDie: 8,  dmgBonus: 3,  fort: 3,  reflex: 4,  gold: [20, 45],  type: 'undead', evil: true, atkSound: '/audio/sword_slice_bloody1.mp3' },   // Foundry: Seaman 2 + cursed undead — the Cursed Scythe of Boali swings low
+  boali_sworn:       { name: 'Boali Sworn Soldier', glyph: '⚔️', cr: '4',   hp: 60,  ac: 17, toHit: 8,  dmgDie: 8,  dmgBonus: 6,  fort: 6,  reflex: 4,  gold: [35, 75],  type: 'undead', evil: true, atkSound: '/audio/sword_hit_meaty3.mp3' },   // Foundry: Barbarian 5 + cursed undead — the Falchion of the Cursed Boali, dead fury with Spring Attack footwork
+  boali_stormcaller: { name: 'Boali Stormcaller',   glyph: '🌩️', cr: '6',   hp: 57,  ac: 16, toHit: 6,  dmgDie: 4,  dmgBonus: 1,  fort: 4,  reflex: 5,  gold: [60, 120], type: 'undead', evil: true, arcane: true, precast: ['shield'] },   // Foundry: Sorcerer 7 + cursed undead — storm arcana (Lightning Bolt, Glitterdust, Mirror Image; the Soulburn Ray rides the arcane list)
+  cursed_able:       { name: 'Cursed Able',         glyph: '🏴‍☠️', cr: '3',  hp: 30,  ac: 16, toHit: 7,  dmgDie: 6,  dmgBonus: 3,  fort: 4,  reflex: 4,  gold: [25, 55],  type: 'undead', evil: true, atkSound: '/audio/sword_hit_clunk1.mp3' },   // Foundry: the rank-and-file of the cursed crew — able seamen who never made port
+  cursed_bosn:       { name: "Cursed Bos'n",        glyph: '🤼', cr: '6',   hp: 85,  ac: 19, toHit: 10, dmgDie: 8,  dmgBonus: 5,  fort: 7,  reflex: 6,  attacks: 2, gold: [55, 115], type: 'undead', evil: true },   // Foundry: Brawler 6 + cursed undead — Improved/Greater Grapple; his dead hands go for the throat (generic maneuver AI wrestles off his to-hit)
+  cursed_captain:    { name: 'Cursed Captain',      glyph: '☠️', cr: '7',   hp: 95,  ac: 21, toHit: 12, dmgDie: 6,  dmgBonus: 6,  fort: 6,  reflex: 9,  attacks: 2, gold: [90, 180], type: 'undead', evil: true, evasion: true, atkSound: '/audio/sword_slash_crunch1.mp3' },   // Foundry: Swashbuckler 7 + cursed undead — the Trusty Cutlass still dances (parry-quick: evasion + high reflex)
   ww_slayer:         { name: 'WW Slayer',          glyph: '🗡️', cr: '7',   hp: 60,  ac: 20, toHit: 11, dmgDie: 6,  dmgBonus: 4,  fort: 4,  reflex: 10, attacks: 2, sneakDice: 4, evasion: true, gold: [70, 150], evil: true, atkSound: '/audio/fight_riki.mp3' },   // R8 — twin swords + deep sneak
   ww_deathpriest:    { name: 'WW Death Priest',    glyph: '🕯️', cr: '8',   hp: 70,  ac: 21, toHit: 11, dmgDie: 8,  dmgBonus: 4,  fort: 9,  reflex: 4,  gold: [95, 190], evil: true, healer: { dice: 3, uses: 3 }, caster: 'holdperson', spellDC: 17, shout: { fear: true, dc: 17, sound: '/audio/enemy_lich_gaze.mp3' }, precast: ['shieldoffaith', 'protfire'], bleedTouch: true, summon: { pool: ['ghoul', 'skeletal_champion', 'wight'], count: '1d3', uses: 2 } },   // C9 — dread litany, Hold Person, battle-mendings, Death-domain Bleeding Touch (first hit/room bleeds 1d6); raises undead
   ww_deathblade:     { name: 'WW Deathblade',      glyph: '⚔️', cr: '10',  hp: 95,  ac: 23, toHit: 15, dmgDie: 8,  dmgBonus: 7,  fort: 9,  reflex: 7,  attacks: 2, gold: [120, 240], evil: true, spellstrike: { name: 'INFLICT CRITICAL WOUNDS', dice: 4, die: 8, bonus: 11, dtype: 'negative', healsUndead: true, sound: '/audio/spell_umbral_bolt.mp3' }, precast: ['magearmor', 'shield'] },   // Magus 11 — Whispering Way training grants the INFLICT line to arcane spellstrikes: Inflict Critical Wounds (4d8+11) rides the blade — and it MENDS any undead it strikes (yes, including your undead heroes)
@@ -341,6 +351,10 @@ const MON_GANGS = {
   // Way cultist herds them
   skeleton: ['undead'], zombie: ['undead'], ghoul: ['undead'], ghoul_crusader: ['undead'], shadow: ['undead'],
   wight: ['undead'], fire_skeleton: ['undead'], skeletal_champion: ['undead'], skeletal_ogre: ['undead'], cultist: ['undead'],
+  // v3.37.117: the Boali cursed crew sail with the restless dead — themed
+  // pirate-undead rooms, and they mix freely with the other walking dead.
+  boali_reaper: ['undead'], boali_sworn: ['undead'], boali_stormcaller: ['undead'],
+  cursed_able: ['undead'], cursed_bosn: ['undead'], cursed_captain: ['undead'],
   ww_initiate: ['undead'], ww_knife: ['undead'], ww_gravecaller: ['undead'], ww_bladebound: ['undead'],
   ww_necromancer: ['undead'], ww_slayer: ['undead'], ww_deathpriest: ['undead'], ww_deathblade: ['undead'],
   ww_archnecromancer: ['undead'],
@@ -435,6 +449,11 @@ const MON_ART = {
   monk_shaolin: 'monk_shaolin', monk_sailor: 'monk_sailor', monk_greenbriar: 'monk_greenbriar',
   monk_redactor: 'monk_redactor', monk_redactor2: 'monk_redactor2', monk_vakra: 'monk_vakra',
   monk_beastmode: 'monk_beastmode', monk_puff: 'monk_puff', monk_kobold: 'monk_kobold', monk_kobold_big: 'monk_kobold_big',
+  // The Boali cursed crew (v3.37.117) — Charau-Ka pirate tokens (the Boali
+  // curse's own region) + a spirit for the Reaper; files copied from the
+  // /tokens/ library into /dungeon/monsters/ at deploy.
+  boali_reaper: 'boali_reaper', boali_sworn: 'boali_sworn', boali_stormcaller: 'boali_stormcaller',
+  cursed_able: 'cursed_able', cursed_bosn: 'cursed_bosn', cursed_captain: 'cursed_captain',
   // The Whispering Way cell — plague-masked tokens from carrion_crown/whisperingway.
   ww_initiate: 'ww_initiate', ww_knife: 'ww_knife', ww_gravecaller: 'ww_gravecaller',
   ww_bladebound: 'ww_bladebound', ww_necromancer: 'ww_necromancer', ww_slayer: 'ww_slayer',
@@ -542,7 +561,8 @@ for (const k of Object.keys(MON)) if (!MON[k].type) MON[k].type = 'humanoid';   
 // 1.5 = vulnerable (takes 50% more). Physical (B/S/P) and untyped damage are
 // never modified here. Most undead shrug off cold (PF1e) — a Fire Skeleton is
 // the exception (made of fire: immune to its own element, vulnerable to cold).
-const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'skeletal_ogre', 'zombie', 'ghoul', 'ghoul_crusader', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich', 'fungal_pirate', 'fungal_oracle', 'fungal_captain', 'amalokla', 'tar_baphon'];
+const UNDEAD_KEYS = ['skeleton', 'skeletal_champion', 'skeletal_ogre', 'zombie', 'ghoul', 'ghoul_crusader', 'wight', 'shadow', 'fire_skeleton', 'vampire', 'lich', 'fungal_pirate', 'fungal_oracle', 'fungal_captain', 'amalokla', 'tar_baphon',
+  'boali_reaper', 'boali_sworn', 'boali_stormcaller', 'cursed_able', 'cursed_bosn', 'cursed_captain'];   // v3.37.117: the Boali cursed crew — drowned dead shrug off cold like the rest
 const RESIST_BY_KEY = {
   fire_skeleton: { fire: 0, cold: 1.5 },          // burning bones: fireproof, but cold shatters them
   wood_golem:    { fire: 1.5 },                    // dry timber: catches fire easily
