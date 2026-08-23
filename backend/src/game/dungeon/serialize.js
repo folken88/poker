@@ -113,6 +113,15 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     for (const src of [m.buffApplied || {}, m.runBuffApplied || {}]) {
       for (const key of Object.keys(src)) {
         if (!src[key]) continue;
+        // v3.37.119 (Josh: 'it was still reporting as rage' at Greater levels - he
+        // was right, the chip was hard-coded 'Rage +2' forever): the rage chip now
+        // states the TIER and the real numbers for this barbarian's level.
+        if (key === 'rage') {
+          const _rl = m.level || 1, _rm = _rl >= 20 ? 4 : _rl >= 11 ? 3 : 2;
+          const _rt = _rl >= 20 ? 'Mighty Rage' : _rl >= 11 ? 'Greater Rage' : 'Rage';
+          push('rage', _rt, `+${_rm} to hit, +${_rm + 1} damage, +${_rm} Will, −2 AC (this room)`, `${I}rage.webp`);
+          continue;
+        }
         const meta = BUFF_META[key];
         if (meta) push(key, meta.label, meta.desc, meta.icon);
       }

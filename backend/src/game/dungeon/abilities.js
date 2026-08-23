@@ -2219,6 +2219,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // the chooser UI plugs in there; otherwise the best available is auto-picked.
   // The announce TEACHES the feat (Tobias: "help text… teach Pathfinder as we go").
   _abTactician(m, ab, payload) {
+    // v3.37.119 (Josh, nimble-penguin: bot Gweyir re-drilled the SAME feat twice a
+    // room, both rooms): ONE share per room is the design - enforce it at the
+    // source so no caller (bot loop or human spam) can re-share. Refusal spends
+    // nothing; the bot falls through to its normal attack.
+    if (this._twkShare) return { ok: false, error: 'The party is already drilled — the shared feat stands for this room.' };
     const mine = [...teamworkGrants(m.cls, m.level)];
     if (!mine.length) return { ok: false, error: 'You have no teamwork feats to share yet — they unlock as you level.' };
     const want = payload && (payload.featKey || payload.mode);
@@ -2972,7 +2977,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // Spiritual Weapon (cleric): conjure a force-blade over a chosen foe. It strikes
   // that foe on EACH of the cleric's turns — see _spiritWeaponStrike, fired from
   // _advanceToActor — so the cleric can do other things while it fights on. Lasts
-  // 1 round per ½ caster level, and it swings the moment it's summoned.
+  // 1 round per caster level (PF1 RAW, v3.37.119), swinging the moment it's summoned.
   // A divine caster's SPIRITUAL WEAPON takes the shape of their GOD's favored
   // weapon: Besmara's rapier (Rhyarca), Sarenrae's scimitar (Elfrip), Brigh's
   // multitool (Dinvaya — closest staple: battleaxe), Vesorianna's lash (whip).
@@ -2983,7 +2988,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   _abSpiritWeapon(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
-    const rounds = Math.max(1, Math.floor((m.level || 1) / 2));   // 1 round per 2 caster levels
+    const rounds = Math.max(1, (m.level || 1));   // v3.37.119: 1 round per CASTER LEVEL - PF1 RAW (was a half-level house nerf; Josh caught it at cleric 2: 'went one round and disappeared')
     m.spiritWeapon = { targetUid: e.uid, rounds };
     const shape = weaponOf({}, this._spiritWeaponKey(m)).name.replace(/^Masterwork /, '');
     this._note(`🗡️✨ ${m.nickname} conjures a SPIRITUAL ${shape.toUpperCase()} over ${e.name} — it will strike on every turn for ${rounds} rounds!`, ab.sound || '/audio/spell_holy_smite.mp3');

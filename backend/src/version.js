@@ -1640,9 +1640,26 @@
 //                     the reach AoO on movers, enemyAI._provokeReachAoO keys on it). Any polearm
 //                     added to the staple list inherits it. Signature polearms (Bastard's Blade,
 //                     Fauchard, Ton Bokiri, Force Pike) were already flagged — unchanged.
-const VERSION = '3.37.118';
+//  3.37.119 2026-08-23 THE SUNDAY FOUR-PACK (Josh, all log/code-verified). (1) SPIRITUAL WEAPON =
+//                     1 ROUND PER CASTER LEVEL (PF1 RAW) - the code ran a half-level house nerf
+//                     and the descs taught it; Josh caught it at cleric 2 ("went one round and
+//                     disappeared. Pretty damn sure!"). He was. (2) THE RAGE CHIP TELLS THE TRUTH:
+//                     the L-key buff chip was hard-coded "Rage +2 hit & damage" at EVERY tier - so
+//                     a Greater-Rage barbarian heard plain "Rage" from his buff list (the bellow
+//                     was already correct). The chip now states the tier and this level's real
+//                     numbers. (3) ONE DRILL PER ROOM, ENFORCED AT THE SOURCE: nimble-penguin
+//                     showed bot Gweyir re-sharing the same TACTICIAN feat twice a room (rounds
+//                     1 AND 2, both rooms) - _abTactician itself now refuses while a share
+//                     stands, whatever the calling path. (4) TRUE SEEING FOR DIVINE CASTERS:
+//                     Josh's Mirror-Image counter - cleric (prepared) + oracle (spontaneous) get
+//                     True Seeing at 5th level / char 9 (arcane keeps 6th); the engine's
+//                     ab.trueSeeing already pierces images, displacement, and invisibility.
+//                     TRACKED, not shipped: the "a potion could save them" revive tease vs
+//                     no-potion-carrying economy (Toby design call) + dungeon sluggishness after
+//                     long poker sessions (3+ sightings, needs profiling) + Dismas pad (task 74).
+const VERSION = '3.37.119';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33815;
-const HEADLINE = "Toby's ruling: reach belongs to EVERY polearm — glaive, longspear, fauchard alike — striking low flyers and punishing foes who move in. Signature blades keep their own enchantments; the reach itself was never the special part.";
+const HEADLINE = "Four Josh catches: Spiritual Weapon now lasts a full round per caster level (the book was right, we were stingy), the rage chip finally says GREATER when it is, the Tactician drills the party exactly once per room, and clerics can prepare TRUE SEEING - the answer to mirror images.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
