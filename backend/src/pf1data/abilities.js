@@ -221,7 +221,7 @@ const SPELL = {
   falselife:     { key: 'falselife',     name: 'False Life',      icon: '🫀', effect: 'buff', target: 'self', buff: { conHp: 1 }, slvl: 2, sticky: true, sound: S.umbral, desc: 'Necromantic vigor — the caster gains temporary HP (+1 per level) for the rest of the room.' },
   flameblade:    { key: 'flameblade',    name: 'Flame Blade',     icon: '🗡️', effect: 'touch', die: 8, dice: 'halflevel', dcap: 10, dtype: 'fire', target: 'enemy', slvl: 2, sound: S.fire, desc: 'A scimitar of pure fire — a touch attack for ½level d8 FIRE (max 10d8).' },
   stinkingcloud: { key: 'stinkingcloud', name: 'Stinking Cloud',  icon: '🤢', effect: 'save_debuff', debuff: 'sickened', save: 'fort', target: 'enemy', slvl: 3, desc: 'A choking miasma envelops one foe — Fortitude save or NAUSEATED: retching, losing turns while it lingers.' },
-  magicvestment: { key: 'magicvestment', name: 'Magic Vestment',  icon: '🥋', effect: 'buff', target: 'ally', buff: { ac: 3 }, slvl: 3, sticky: true, sound: S.invoke, desc: 'An ally\'s armor drinks in enchantment — +3 AC for the rest of the room.' },
+  magicvestment: { key: 'magicvestment', name: 'Magic Vestment',  icon: '🥋', effect: 'buff', target: 'ally', buff: { ac: 3 }, slvl: 3, sticky: true, persist: true, sound: S.invoke, desc: 'An ally\'s armor drinks in enchantment — +3 AC for the rest of the DUNGEON (an hour-per-level blessing, castable at the door like Mage Armor).' },
   sleetstorm:    { key: 'sleetstorm',    name: 'Sleet Storm',     icon: '🌨️', effect: 'grease', target: 'aoe', randN: 2, randDie: 4, save: 'reflex', slvl: 3, sound: S.gust, desc: 'Driving ice sheets the ground — a RANDOM 2d4 foes save Reflex or slip PRONE.' },
   forcepunch:    { key: 'forcepunch',    name: 'Force Punch',     icon: '👊', effect: 'forcepush', target: 'enemy', slvl: 3, sound: S.gust, desc: 'A fist of pure force SLAMS a foe backward — every melee ally who can act gets a FREE attack against it as it reels. You forgo your own strike.' },
   airwalk:       { key: 'airwalk',       name: 'Air Walk',        icon: '🌤️', effect: 'buff', target: 'ally', buff: {}, fly: true, canHitFlyers: true, slvl: 4, sticky: true, sound: S.invoke, desc: 'One ally treads the air itself — airborne for the room: grounded foes can\'t reach them, and they CAN close with flyers. The divine answer to Fly.' },
@@ -1058,6 +1058,15 @@ _injectKitSpell('cleric',     preparedSpell({ ...SPELL.righteousmight, slvl: 5 }
 // The engine already pierces images/displacement/invisibility off ab.trueSeeing.
 _injectKitSpell('cleric', preparedSpell({ ...SPELL.trueseeing, slvl: 5 }, 9));
 _injectKitSpell('oracle', spontaneousSpell({ ...SPELL.trueseeing, slvl: 5 }, 9));
+// MAGIC VESTMENT is HOUR/LEVEL (v3.37.120, Josh: 'why wouldn't you do the same
+// for magic vestment?' - he's right, it sat room-only while Mage Armor ran the
+// dungeon): baked kit copies get persist + the run-long desc, door-castable.
+for (const _k of Object.values(KITS)) {
+  if (!_k || !Array.isArray(_k.abilities)) continue;
+  for (const _a of _k.abilities) {
+    if (_a && _a.key === 'magicvestment') { _a.persist = true; _a.desc = 'An ally\'s armor drinks in enchantment — +3 AC for the rest of the DUNGEON (an hour-per-level blessing, castable at the door like Mage Armor).'; }
+  }
+}
 // SPIRITUAL WEAPON desc normalization (v3.37.119): the baked kit descs still
 // taught the old half-level duration - the spell is 1 round per caster level (RAW).
 for (const _k of Object.values(KITS)) {

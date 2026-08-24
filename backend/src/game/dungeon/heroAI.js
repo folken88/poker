@@ -994,6 +994,12 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // can't Rapid Shot a bolt-action rifle
       for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint', 'disarm', 'stunfist', 'grapple', 'bullrush'].includes(a.effect)) {
         if (a.needsRepeating && boltAction) continue;
+        // v3.37.120 (Josh, proud-kettle: 'he put on deadly aim and then bull rushed
+        // a goddamn large ass robot... why wouldn't he just shoot them in the
+        // fucking eyeball with his goddamn bow!'): a bot wielding a RANGED weapon
+        // never picks a MELEE maneuver - trip/disarm/bull rush/grapple/cleave/
+        // feint/reckless all want a blade in hand, not a bow. He shoots instead.
+        if (this._isRanged(m) && ['trip', 'disarm', 'bullrush', 'grapple', 'cleave', 'feint', 'reckless', 'stunfist'].includes(a.effect)) continue;
         // v3.37.108 (Josh: bot Duristan averaged 35/round while he averaged 140
         // piloting the SAME character — silent-salmon vs proud-otter). The
         // single-shot ranged deeds predate the real full-attack engine: Bullseye

@@ -1657,9 +1657,24 @@
 //                     TRACKED, not shipped: the "a potion could save them" revive tease vs
 //                     no-potion-carrying economy (Toby design call) + dungeon sluggishness after
 //                     long poker sessions (3+ sightings, needs profiling) + Dismas pad (task 74).
-const VERSION = '3.37.119';
+//  3.37.120 2026-08-24 THE HELD BLOW + THE WRESTLING ARCHER (Josh's evening batch, log-verified).
+//                     (1) 'Casting Fly broke my invis' (unerring-walnut) - the log acquits Fly:
+//                     the AUTOMATIC Haste bonus strike fired right after his cast, and attacking
+//                     breaks Invisibility (RAW, working as designed). The real bug was AGENCY: a
+//                     hero hidden under normal Invisibility now HOLDS the hasted blow (no forced
+//                     attack, no spent haste round); Greater Invisibility swings freely. (2) THE
+//                     WRESTLING ARCHER (proud-kettle: 'deadly aim and then bull rushed a goddamn
+//                     large ass robot'): bot Danger spent rounds 4-12 tripping/grappling bosses
+//                     with a BOW in hand - effective cheese, incoherent flavor. Ranged bots now
+//                     never pick melee maneuvers; they shoot. (3) MAGIC VESTMENT = HOUR/LEVEL:
+//                     Josh caught the inconsistency - it sat room-only while Mage Armor ran the
+//                     dungeon. Now persist (run-long) + door-castable, baked copies normalized.
+//                     ANSWERED not changed: prepared-cleric loadouts (each prepared prayer casts
+//                     once/room; stacking = task 54), 10-min/level tier (Toby design Q), sluggish-
+//                     after-poker parameters logged for the profiling pass.
+const VERSION = '3.37.120';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33815;
-const HEADLINE = "Four Josh catches: Spiritual Weapon now lasts a full round per caster level (the book was right, we were stingy), the rage chip finally says GREATER when it is, the Tactician drills the party exactly once per room, and clerics can prepare TRUE SEEING - the answer to mirror images.";
+const HEADLINE = "An invisible hero now HOLDS their hasted bonus strike instead of being forced to swing and burn the spell; archer bots stop wrestling robots and just shoot; and Magic Vestment joins Mage Armor as a dungeon-long blessing you can cast at the door.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

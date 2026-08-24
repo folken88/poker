@@ -1972,6 +1972,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const forced = this._forcedFoe(m);
     m.tauntedBy = null;
     if (!(m.hasted > 0) || m.hp <= 0 || m.left || m.dead) return;
+    // v3.37.120 (Josh, unerring-walnut: 'casting Fly on an ally broke my invis' -
+    // the log shows the AUTOMATIC Haste bonus strike fired after his cast, and
+    // attacking breaks Invisibility, correctly): a hero hidden under normal
+    // Invisibility now HOLDS the hasted blow rather than burning the spell
+    // without consent. Greater Invisibility swings freely (it survives attacks),
+    // and the held turn does NOT spend a hasted round.
+    if (m.invisible && !m.greaterInvis) return;
     if (m._justHasted) { m._justHasted = false; return; }   // cast Haste this turn → bonus starts next turn
     m.hasted -= 1;   // spend one of the hasted turns
     const foes = this._targetableEnemies();   // the bonus swing hits a REAL foe, never a summoned ally
