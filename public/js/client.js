@@ -1009,7 +1009,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33815;
+  const CLIENT_BUILD = 33816;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -2037,7 +2037,7 @@
     // Spellbook expand/collapse (caster classes).
     if (ev.target.closest('[data-spellbook-toggle]')) { _spellbookOpen = !_spellbookOpen; renderDungeon(); return; }
     // Prepare (spell-loadout) picker expand/collapse — fetches the model on first open.
-    if (ev.target.closest('[data-sbp-toggle]')) { _sbpOpen = !_sbpOpen; if (_sbpOpen && !_sbpModel) sbpickSend(); _sbpKeepScroll(renderDungeon); return; }
+    if (ev.target.closest('[data-sbp-toggle]')) { _sbpOpen = !_sbpOpen; if (_sbpOpen) sbpickSend(); _sbpKeepScroll(renderDungeon); return; }   // ALWAYS re-fetch on open (v3.37.121) — a cached model goes stale across level-ups/deploys
     if (ev.target.closest('[data-dmp-toggle]')) { _dmpOpen = !_dmpOpen; if (_dmpOpen && !_dmpModel) dmpickSend(); _sbpKeepScroll(renderDungeon); return; }
     if (ev.target.closest('[data-pad-toggle]')) { _padOpen = !_padOpen; if (_padOpen) padpickSend(); _sbpKeepScroll(renderDungeon); return; }   // always refetch — the ability list shifts with level/loadout
     const b = ev.target.closest('[data-dact]'); if (!b || b.disabled) return;
@@ -2398,8 +2398,13 @@
         if (!kit.caster) { sayU('Your class has no spells to prepare.'); return; }
         if (_dunSbp) { _dunSbp = null; sayU('Prepare menu closed.'); return; }
         _dunSbp = { lvl: null, idx: -1 };
-        if (_sbpModel) _sbpSpeakLevels();
-        else { sayU('Opening your spell loadout.'); sbpickSend({}, () => { if (_dunSbp && _dunSbp.lvl == null) _sbpSpeakLevels(); }); }
+        // v3.37.121 (Josh, blessed-puffin: "Level 15 cleric. No true site? Doesn't
+        // appear in the prepare menu at all"): the loadout model was fetched ONCE and
+        // cached for the tab's whole life, so spells unlocked by LEVEL-UPS mid-run
+        // (level 1 → 15 in one delve!) and spells added by a deploy never reached
+        // the menu. ALWAYS re-fetch on open — the model is tiny and the fetch is fast.
+        sayU('Opening your spell loadout.');
+        sbpickSend({}, () => { if (_dunSbp && _dunSbp.lvl == null) _sbpSpeakLevels(); });
         return;
       }
       // ----- Domain menu — V (Domains Phase C) -------------------------------

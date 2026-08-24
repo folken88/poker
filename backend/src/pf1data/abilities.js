@@ -230,7 +230,7 @@ const SPELL = {
   shout:         { key: 'shout',         name: 'Shout',           icon: '📢', effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'fort', die: 6, dice: 5, dtype: 'sonic', slvl: 4, sound: '/audio/draugr_shout03_burning.mp3', desc: 'A devastating sonic BOOM staggers up to 3 foes — 5d6 SONIC, Fortitude for half.' },
   unholyblight:  { key: 'unholyblight',  name: 'Unholy Blight',   icon: '☠️', effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'unholy', slvl: 4, sound: S.umbral, desc: 'A cold cloud of evil sears 2 foes — Will for half (½level d8). The dark mirror of Holy Smite; it bites hardest against the Heavenly Host.' },
   callstorm:     { key: 'callstorm',     name: 'Call Lightning Storm', icon: '⛈️', effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'electricity', slvl: 5, sound: null, desc: 'The sky itself opens — bolts hammer up to 3 foes for level d6 ELECTRICITY (max 15d6), Reflex for half.' },
-  righteousmight:{ key: 'righteousmight',name: 'Righteous Might', icon: '💪', effect: 'buff', target: 'self', buff: { toHit: 2, dmg: 4, ac: 2 }, slvl: 5, sticky: true, sound: S.charge, desc: 'The caster swells into a giant of the faith — +2 to hit, +4 damage, +2 AC for the rest of the room.' },
+  righteousmight:{ key: 'righteousmight',name: 'Righteous Might', icon: '💪', effect: 'buff', target: 'self', buff: { toHit: 2, dmg: 4, ac: 2, cmd: 2 }, slvl: 5, sticky: true, sound: S.charge, desc: 'The caster swells into a GIANT of the faith — +2 to hit, +4 damage, +2 AC, and Large size that anchors you against grabs: +2 CMD vs grapples, trips and bull rushes. Lasts the room.' },
   invisgreater:  { key: 'invisgreater',  name: 'Invisibility, Greater', icon: '🫥', img: '/dungeon/buffs/invisible.webp', effect: 'invisible', greater: true, target: 'ally', slvl: 4, sound: S.invis, desc: 'Total concealment for the whole fight — you STAY invisible even when you attack. Cast it on a rogue ally and they Sneak Attack every foe that cannot see them.' },
   riverofwind:   { key: 'riverofwind',   name: 'River of Wind',  icon: '🌬️', effect: 'grease', target: 'aoe', randN: 3, randDie: 4, save: 'fort', slvl: 4, sound: S.gust, desc: 'A roaring torrent of air bowls over a RANDOM 3d4 foes — Fortitude save or be knocked prone.' },
   // ── 5th-level ──
@@ -1065,6 +1065,18 @@ for (const _k of Object.values(KITS)) {
   if (!_k || !Array.isArray(_k.abilities)) continue;
   for (const _a of _k.abilities) {
     if (_a && _a.key === 'magicvestment') { _a.persist = true; _a.desc = 'An ally\'s armor drinks in enchantment — +3 AC for the rest of the DUNGEON (an hour-per-level blessing, castable at the door like Mage Armor).'; }
+  }
+}
+// RIGHTEOUS MIGHT is a SIZE spell (v3.37.121, Josh, blessed-puffin: 'If I am
+// now large. That means my CMD would be higher.' — he's right): Large size +4
+// Str nets +2 CMD per PF1 (Str +2, size +1, Dex −1), which the old flat
+// +2/+4/+2 payload never carried, so a freshly-giant cleric grappled like a
+// halfling. Every baked or injected copy gets the cmd payload + the honest desc
+// (the +4 damage already abstracts the weapon-size step).
+for (const _k of Object.values(KITS)) {
+  if (!_k || !Array.isArray(_k.abilities)) continue;
+  for (const _a of _k.abilities) {
+    if (_a && _a.key === 'righteousmight' && _a.buff) { _a.buff.cmd = 2; _a.desc = SPELL.righteousmight.desc; }
   }
 }
 // SPIRITUAL WEAPON desc normalization (v3.37.119): the baked kit descs still

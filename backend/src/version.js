@@ -1672,9 +1672,30 @@
 //                     ANSWERED not changed: prepared-cleric loadouts (each prepared prayer casts
 //                     once/room; stacking = task 54), 10-min/level tier (Toby design Q), sluggish-
 //                     after-poker parameters logged for the profiling pass.
-const VERSION = '3.37.120';
+//  3.37.121 2026-08-24 THE ARCHMAGE KOBOLD-DECKHAND + THE HALFLING GIANT + THE FROZEN SPELLBOOK
+//                     (Josh's two late-night reports, log-verified). (1) eager-marmot d12: a CR-5
+//                     Elite Shackles Sea-Caster loosed MAXIMIZED 16d6 CHAIN LIGHTNING (DC 24, 96
+//                     electricity, '4 hit, 4 down') at a party of LEVEL TWOS - "reallly???". Enemy
+//                     caster level was pure depth with a FLOOR of 12 (+4 elite advancement = CL 16,
+//                     crossing both the chain-lightning gate at 11 AND the Maximize gate at 16 -
+//                     every number in his log line reproduced). Now the foe's own CR caps it
+//                     (~wizard of CR+2): the deck wizard casts 7d6 fireballs at DC 18, and real
+//                     high-CR casters are unchanged (their cap sits above the depth term).
+//                     (2) blessed-puffin: 'Is righteous Mike functioning correctly... If I am now
+//                     large. That means my CMD would be higher.' - HE'S RIGHT. Righteous Might was
+//                     a flat +2/+4/+2 with NO size payload; the giant cleric grappled like a
+//                     halfling (the actual r1 knockdown was the CR-14 Assassin's CMB-36 bull rush,
+//                     and Liberation DID shrug the vampire grabs - but the spell was still lying).
+//                     Now buff.cmd +2 (PF1: Str +2, size +1, Dex -1) flows through _heroCMD, desc
+//                     tells the truth. (3) 'Level 15 cleric. No true site? Doesn't appear in the
+//                     prepare menu at all' - server pool was CORRECT (True Seeing sat in L5);
+//                     the CLIENT cached the loadout model for the tab's whole life, so spells
+//                     unlocked by MID-RUN LEVEL-UPS (level 1 -> 15 in one delve!) or by a deploy
+//                     never reached the K menu. Prepare now re-fetches on every open (sighted
+//                     popover too). Tests 131-135; CLIENT_BUILD 33816.
+const VERSION = '3.37.121';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33815;
-const HEADLINE = "An invisible hero now HOLDS their hasted bonus strike instead of being forced to swing and burn the spell; archer bots stop wrestling robots and just shoot; and Magic Vestment joins Mage Armor as a dungeon-long blessing you can cast at the door.";
+const CLIENT_BUILD = 33816;
+const HEADLINE = "Enemy casters now cast at their OWN power — no more archmage chain lightning from a CR-5 deckhand against level twos; Righteous Might's giant size finally hardens your CMD; and the Prepare menu refreshes itself, so mid-run level-ups and new spells like True Seeing actually show up.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

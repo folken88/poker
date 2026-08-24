@@ -2727,6 +2727,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // excess of this over the ring's deflection.
       who.buffs.deflect = Math.max(who.buffs.deflect || 0, (ab.buff && ab.buff.deflect) || 0);
       who.buffs.save += (ab.buff && ab.buff.save) || 0;
+      who.buffs.cmd = (who.buffs.cmd || 0) + ((ab.buff && ab.buff.cmd) || 0);   // Righteous Might: Large size + Str — feeds _heroCMD vs grapples/trips/bull rushes
       who.buffs.dexMod = (who.buffs.dexMod || 0) + ((ab.buff && ab.buff.dexMod) || 0);   // Cat's Grace: +Dex modifier — feeds the reach-weapon AoO count (Combat Reflexes)
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
       if (ab.dr) who.dr = Math.max(who.dr || 0, ab.dr);   // Stoneskin — DR vs physical blows
@@ -2944,7 +2945,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _heroCMD(m) {
     return 10 + babFor(m.cls || 'fighter', m.level || 1)
          + ((m.mods && m.mods.str != null) ? m.mods.str : ABILITY_MOD)
-         + ((m.mods && m.mods.dex != null) ? m.mods.dex : 0);
+         + ((m.mods && m.mods.dex != null) ? m.mods.dex : 0)
+         + ((m.buffs && m.buffs.cmd) || 0);   // size/Str buffs (Righteous Might, v3.37.121) — a giant is harder to tackle
   },
   // A foe's CMD vs a maneuver: its offense (toHit ≈ BAB+STR) over 10, plus, for
   // moves that try to upend/move/seize it, stability from extra legs + big size.

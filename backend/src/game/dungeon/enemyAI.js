@@ -762,7 +762,15 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _lichCast(e) {
     const heroes = this._targetableParty();
     if (!heroes.length) return;
-    const cl = Math.min(30, Math.max(12, this.depth || 12) + (e.bossLevels || 0));   // caster level by depth (+ boss advancement: bigger dice AND DCs)
+    // v3.37.121 (Josh, eager-marmot d12: a CR-5 Elite Sea-Caster loosed MAXIMIZED
+    // 16d6 CHAIN LIGHTNING — DC 24, 96 damage, "4 hit, 4 down" — at a party of
+    // LEVEL TWOS). Caster level was pure depth with a FLOOR of 12, so ANY arcane
+    // spawn cast like an archmage no matter how small its statblock. Now the
+    // foe's own CR caps it (PF1: an NPC caster is roughly a wizard of level
+    // CR+1, +1 margin for advancement). High-CR deep-run casters are unchanged —
+    // their cap sits at or above the depth term; only over-their-head spawns calm down.
+    const _crCap = Math.max(3, Math.round(parseFloat(e.cr) || 5) + 2);
+    const cl = Math.min(30, Math.min(Math.max(12, this.depth || 12) + (e.bossLevels || 0), _crCap));   // caster level by depth (+ boss advancement), capped by the foe's CR
     const im = 4 + Math.floor(cl / 4);                          // Intelligence modifier
     const dc = (slvl) => 10 + slvl + im;                        // PF1 spell save DC
     const MART = new Set(['fighter', 'barbarian', 'paladin', 'antipaladin', 'ranger', 'rogue', 'monk', 'magus', 'cavalier', 'inquisitor', 'slayer', 'bloodrager']);
