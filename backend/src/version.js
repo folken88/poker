@@ -1693,9 +1693,28 @@
 //                     unlocked by MID-RUN LEVEL-UPS (level 1 -> 15 in one delve!) or by a deploy
 //                     never reached the K menu. Prepare now re-fetches on every open (sighted
 //                     popover too). Tests 131-135; CLIENT_BUILD 33816.
-const VERSION = '3.37.121';
+//  3.37.122 2026-08-24 RANGE TOUCH MEANS ANY ALLY + CASTERS AND ROGUES DON'T WRESTLE (Josh's
+//                     afternoon pair, log-verified). (1) True Seeing was imported target:'self' -
+//                     Josh: 'You have fallen into a trap that seems to be consistently a trap for
+//                     you... True seeing is range touch... I can see through the seven mirror
+//                     images of the Lich. But the fighter who can swing at it five times cannot.'
+//                     He's right. Now target:'ally' (self or anyone), all baked/injected copies
+//                     normalized; the desc teaches it. LESSON GENERALIZED for future imports:
+//                     range personal -> self, touch -> ally, close+ -> enemy/aoe. See Invisibility
+//                     stays self (genuinely personal in PF1). (2) salty-harpy: Kobold/Goblin
+//                     SHAMANS (caster statblocks: Hold Person + a heal) were grappling and Elite-
+//                     grappling heroes, and _pickEnemyManeuver offered wrestle weights to EVERY
+//                     corporeal melee foe. Now caster/arcane statblocks and sneak-attackers
+//                     (sneakDice - the rogues Josh flagged) always just attack; animals (spiders,
+//                     centipedes) keep their grabs - that's their schtick. His 11:43 'does Toby
+//                     WANT deep runs to wreck you' question logged for Toby - design, not a bug.
+//                     BONUS (test 136 caught it): wizard/sorcerer had NO True Seeing at all -
+//                     the wizard spellbook SOURCE lists it but the baked kit predates it (only
+//                     the magus carried a copy). Injected: wizard prepared 6th (L11), sorcerer
+//                     spontaneous 6th (L12). Tests 136-138. Backend only; CLIENT_BUILD 33816.
+const VERSION = '3.37.122';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33816;
-const HEADLINE = "Enemy casters now cast at their OWN power — no more archmage chain lightning from a CR-5 deckhand against level twos; Righteous Might's giant size finally hardens your CMD; and the Prepare menu refreshes itself, so mid-run level-ups and new spells like True Seeing actually show up.";
+const HEADLINE = "True Seeing is range TOUCH like the book says — cast it on yourself OR the fighter who needs to see through mirror images; and enemy shamans and rogues stop wrestling: casters cast, knife-artists stab, only actual beasts keep their grabs.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

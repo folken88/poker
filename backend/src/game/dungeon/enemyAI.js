@@ -499,6 +499,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _pickEnemyManeuver(e, target) {
     if (e.ranged) return 'attack';                      // an archer doesn't wrestle
     if (e.flying) return 'attack';                      // a swooping flyer STRIKES (or casts) — it doesn't trip/grapple/bull-rush a grounded foe from the air (Josh 2026-07-12: flying angel clerics were wrestling)
+    if (e.caster || e.arcane) return 'attack';          // v3.37.122 (Josh, salty-harpy: 'shaman grappling and or bull rush? I thought shaman was more of a spellcaster type') — a caster statblock casts or pokes; it doesn't wrestle
+    if (e.sneakDice) return 'attack';                   // v3.37.122 (same run: 'rogues tend to be more of the feint and get sneak attack type') — a knife-artist wants its sneak dice, not a grapple
     const corporeal = !e.incorporeal;
     const menu = [['attack', 12]];
     if (corporeal && !target.grappled) menu.push(['grapple', this._isSquishy(target) ? 6 : 3]);
