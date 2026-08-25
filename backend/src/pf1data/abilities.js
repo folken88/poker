@@ -308,6 +308,18 @@ const SPELL = {
   mindblank:      { key: 'mindblank',      name: 'Mind Blank',         icon: '🧠', effect: 'buff', target: 'ally', persist: true, sticky: true, mindBlank: true, buff: {}, slvl: 8, sound: S.invoke, desc: 'Seal an ally\'s mind — IMMUNE to holds, fear and every mind-affecting assault for the REST OF THE DUNGEON (a day-long ward).' },
   foresight:      { key: 'foresight',      name: 'Foresight',          icon: '🔮', effect: 'buff', target: 'ally', persist: true, sticky: true, foresight: true, buff: { ac: 2, save: 2 }, slvl: 9, sound: S.invoke, desc: 'A sixth sense whispers of each danger before it lands — +2 insight AC and saves, and NEVER caught flat-footed, for the REST OF THE DUNGEON (10 min/level).' },
   firebrand:      { key: 'firebrand',      name: 'Firebrand',          icon: '🔥', effect: 'buff', target: 'self', party: true, sticky: true, buff: { bonusDice: 1 }, slvl: 7, sound: S.scorch, desc: 'Every ally\'s weapon IGNITES — +1d6 fire on every hit for the rest of the room. (UM)' },
+  // ── v3.37.125 (Toby's follow-up rulings): Time Stop, Wish/Miracle, the Summon
+  //    Monster / Nature's Ally ladder ("simpler versions of existing monsters" —
+  //    the bestiary's own beasts, unadvanced), and more druid forms. ──
+  timestop:       { key: 'timestop',       name: 'Time Stop',          icon: '⏳', effect: 'timestop', target: 'self', freeAction: true, slvl: 9, sound: S.invoke, desc: 'Time freezes for everyone but YOU — 1d4+1 stolen moments (PF1 roll): casting it costs no action, and your next casts this turn are FREE actions too (buffs, healing, summons — anything not aimed at a foe; each still spends its own slot). Striking at a foe CRASHES time back into motion. Summons rise inside the stop but cannot strike until time resumes.' },
+  wish:           { key: 'wish',           name: 'Wish',               icon: '🌠', effect: 'wish', target: 'enemy', slvl: 9, sound: S.invoke, desc: 'Bend reality itself. The magic reads your need: fallen allies are CALLED BACK to life; else a badly-hurt party is MADE WHOLE (15d8+25 to everyone); else it strikes at your chosen foe — Will save or be UNMADE (a boss or a made save still suffers grievously).' },
+  miracle:        { key: 'miracle',        name: 'Miracle',            icon: '🙏', effect: 'wish', target: 'enemy', slvl: 9, sound: '/audio/spell_channel_charge.mp3', desc: 'Call directly upon your god. The divine will reads your need: the fallen are RAISED; else the party is MADE WHOLE (15d8+25 to everyone); else your god strikes your chosen foe — Will save or be UNMADE (a boss or a made save still suffers grievously).' },
+  summonmonster4: { key: 'summonmonster4', name: 'Summon Monster IV',  icon: '🦍', effect: 'summon', target: 'self', slvl: 4, summon: { pool: ['dire_ape', 'dire_boar'], count: 1, flavor: 'celestial' }, sound: S.invoke, desc: 'Call a celestial beast — a dire ape or dire boar — to fight for the party. It acts on your initiative and fades after ~1 round per level.' },
+  summonmonster6: { key: 'summonmonster6', name: 'Summon Monster VI',  icon: '🦁', effect: 'summon', target: 'self', slvl: 6, summon: { pool: ['blood_caimon', 'silvermane'], count: 1, flavor: 'celestial' }, sound: S.invoke, desc: 'Call a greater celestial beast — a blood caiman or a lioness — to fight for the party (~1 round per level).' },
+  summonmonster8: { key: 'summonmonster8', name: 'Summon Monster VIII',icon: '🐻', effect: 'summon', target: 'self', slvl: 8, summon: { pool: ['dire_bear', 'winter_wolf'], count: 1, flavor: 'celestial' }, sound: S.invoke, desc: 'Call a mighty celestial beast — a dire bear or a winter wolf — to fight for the party (~1 round per level).' },
+  summonnature4:  { key: 'summonnature4',  name: "Summon Nature's Ally IV",  icon: '🐗', effect: 'summon', target: 'self', slvl: 4, summon: { pool: ['dire_ape', 'dire_boar'], count: 1, flavor: 'nature' }, sound: S.invoke, desc: 'The wild answers — a dire ape or dire boar charges in to fight for the party (~1 round per level).' },
+  summonnature6:  { key: 'summonnature6',  name: "Summon Nature's Ally VI",  icon: '🐊', effect: 'summon', target: 'self', slvl: 6, summon: { pool: ['blood_caimon', 'silvermane'], count: 1, flavor: 'nature' }, sound: S.invoke, desc: 'The wild answers — a blood caiman or a lioness joins the fight (~1 round per level).' },
+  summonnature8:  { key: 'summonnature8',  name: "Summon Nature's Ally VIII", icon: '🐺', effect: 'summon', target: 'self', slvl: 8, summon: { pool: ['dire_bear', 'winter_wolf'], count: 1, flavor: 'nature' }, sound: S.invoke, desc: 'The wild answers with its greatest — a dire bear or a winter wolf (~1 round per level).' },
   masscurelight:  { key: 'masscurelight',  name: 'Mass Cure Light Wounds',    icon: '💞', effect: 'heal', heal: 'party', massHeal: true, healDice: 1, healCap: 25, target: 'ally', slvl: 5, sound: '/audio/spell_channel_charge.mp3', desc: 'A wave of healing washes the WHOLE party — 1d8 + caster level (max +25) to every ally.' },
   masscuremoderate:{ key: 'masscuremoderate', name: 'Mass Cure Moderate Wounds', icon: '💞', effect: 'heal', heal: 'party', massHeal: true, healDice: 2, healCap: 30, target: 'ally', slvl: 6, sound: '/audio/spell_channel_charge.mp3', desc: 'A stronger wave — the WHOLE party heals 2d8 + caster level (max +30).' },
   masscureserious:{ key: 'masscureserious', name: 'Mass Cure Serious Wounds',  icon: '💞', effect: 'heal', heal: 'party', massHeal: true, healDice: 3, healCap: 35, target: 'ally', slvl: 7, sound: '/audio/spell_channel_charge.mp3', desc: 'A surging tide — the WHOLE party heals 3d8 + caster level (max +35).' },
@@ -1141,6 +1153,51 @@ _injectKitSpell('druid',    preparedSpell(SPELL.plaguestorm, 11));
 _injectKitSpell('druid',    preparedSpell(SPELL.sunbeam, 13));
 _injectKitSpell('bard',     spontaneousSpell(SPELL.irresistibledance, 16));
 _injectKitSpell('druid',    preparedSpell({ ...SPELL.fingerofdeath, slvl: 8 }, 15));   // PF1: Finger of Death is DRUID 8
+// ── v3.37.125 injections: the capstones + the summon ladder ──
+_injectKitSpell('wizard',   preparedSpell(SPELL.timestop, 17));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.timestop, 18));
+_injectKitSpell('wizard',   preparedSpell(SPELL.wish, 17));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.wish, 18));
+_injectKitSpell('cleric',   preparedSpell(SPELL.miracle, 17));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.miracle, 17));
+_injectKitSpell('wizard',   preparedSpell(SPELL.summonmonster4, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.summonmonster4, 8));
+_injectKitSpell('cleric',   preparedSpell(SPELL.summonmonster4, 7));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.summonmonster4, 7));
+_injectKitSpell('wizard',   preparedSpell(SPELL.summonmonster6, 11));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.summonmonster6, 12));
+_injectKitSpell('cleric',   preparedSpell(SPELL.summonmonster6, 11));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.summonmonster6, 11));
+_injectKitSpell('wizard',   preparedSpell(SPELL.summonmonster8, 15));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.summonmonster8, 16));
+_injectKitSpell('cleric',   preparedSpell(SPELL.summonmonster8, 15));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.summonmonster8, 15));
+_injectKitSpell('druid',    preparedSpell(SPELL.summonnature4, 7));
+_injectKitSpell('druid',    preparedSpell(SPELL.summonnature6, 11));
+_injectKitSpell('druid',    preparedSpell(SPELL.summonnature8, 15));
+// ── v3.37.125 (Toby: 'druid does need more shapeshift forms, including any
+//    animals we have'): four new WILD SHAPE forms modeled on the bestiary's own
+//    animals (lioness, dire ape, dire boar, blood caiman). Pushed post-override
+//    (forms live in the baked kit, so source-list additions never reach it).
+//    Rissa keeps her customs (notChar); each has a niche: lion = pounce blades,
+//    ape = rending arms, boar = tough gore (+1 HP/level ferocity), croc = the
+//    single biggest bite. ──
+for (const _f of [
+  { key: 'lionform', name: 'Lion Form', icon: '🦁', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
+    form: { key: 'lion', label: 'Lion Form', glyph: '🦁', weapon: 'form_lion', sizeSteps: 1, ac: 1, toHit: 2, dmg: 3, sound: '/audio/enemy_yak.mp3' },
+    desc: 'Become a LION — a pounce of claw/claw/bite (3 attacks), +2 to hit, +3 damage, +1 AC. Lasts until you change back.' },
+  { key: 'apeform', name: 'Dire Ape Form', icon: '🦍', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
+    form: { key: 'ape', label: 'Dire Ape Form', glyph: '🦍', weapon: 'form_ape', sizeSteps: 1, ac: 1, toHit: 2, dmg: 3, sound: '/audio/bear_growl_hit.mp3' },
+    desc: 'Become a DIRE APE — long rending arms (2 attacks that can BATTER flyers from the air), +2 to hit, +3 damage, +1 AC. Lasts until you change back.' },
+  { key: 'boarform', name: 'Dire Boar Form', icon: '🐗', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
+    form: { key: 'boar', label: 'Dire Boar Form', glyph: '🐗', weapon: 'form_boar', sizeSteps: 1, ac: 2, toHit: 1, dmg: 4, tempHpPerLevel: 1, sound: '/audio/bear_growl_hit.mp3' },
+    desc: 'Become a DIRE BOAR — a goring tusker with FEROCITY: +1 to hit, +4 damage, +2 AC and +1 HP per level. Lasts until you change back.' },
+  { key: 'crocform', name: 'Crocodile Form', icon: '🐊', cost: 'room', uses: 1, effect: 'form', freeAction: true, target: 'self', notChar: 'Rissa',
+    form: { key: 'croc', label: 'Crocodile Form', glyph: '🐊', weapon: 'form_croc', sizeSteps: 1, ac: 2, toHit: 2, dmg: 5, sound: '/audio/enemy_caimon_bite.mp3' },
+    desc: 'Become a GREAT CROCODILE — one colossal vice-grip bite (the hardest single hit of any form), +2 to hit, +5 damage, +2 AC. Lasts until you change back.' },
+]) {
+  if (KITS.druid && Array.isArray(KITS.druid.abilities) && !KITS.druid.abilities.some(a => a.key === _f.key)) KITS.druid.abilities.push(_f);
+}
 // MAGIC VESTMENT is HOUR/LEVEL (v3.37.120, Josh: 'why wouldn't you do the same
 // for magic vestment?' - he's right, it sat room-only while Mage Armor ran the
 // dungeon): baked kit copies get persist + the run-long desc, door-castable.

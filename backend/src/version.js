@@ -1752,9 +1752,27 @@
 //                     noSave/physicalHold/mindAffect branches; savedie grows killNote + the
 //                     onlyUndead inverse filter; new powerword + maze handlers; PRIORITY lists
 //                     extended so bots actually cast them. Tests 147-153. Backend only.
-const VERSION = '3.37.124';
+//  3.37.125 2026-08-24 THE CAPSTONES + THE SUMMON LADDER + FOUR NEW FORMS (Toby's follow-up
+//                     rulings). (1) TIME STOP (wiz/sorc 9): PF1's 1d4+1 rounds become 1d4+1 FREE
+//                     castings - the cast itself is a free action and each following non-offensive
+//                     cast this turn is too (each spends its own slot); hostile magic CRASHES time
+//                     back; summons rise inside the stop but act only when time resumes (Toby's
+//                     rule, naturally enforced by initiative). Bots auto-layer their best buffs.
+//                     (2) WISH (arcane) + MIRACLE (divine) 9th: the magic reads the need - fallen
+//                     allies get full Resurrection (all of them), a battered party gets a
+//                     Mass-Heal-sized mending, else the CHOSEN FOE saves vs Will or is UNMADE
+//                     (Toby: 'kill a particular enemy unless they save' - transcends death-effect
+//                     immunity; boss/made-save takes heavy damage). (3) SUMMON MONSTER IV/VI/VIII
+//                     + SUMMON NATURE'S ALLY IV/VI/VIII: the bestiary's own beasts (dire ape/boar,
+//                     blood caiman, lioness, dire bear, winter wolf) as celestial/wild summons -
+//                     Toby: 'simpler versions of existing monsters'. New non-evil summon flavors.
+//                     (4) FOUR NEW DRUID FORMS from the bestiary's animals: Lion (pounce blades),
+//                     Dire Ape (rending arms, swats flyers), Dire Boar (ferocity +1 HP/level),
+//                     Crocodile (the biggest single bite) - pushed post-override; Rissa keeps her
+//                     customs. Tests 154-158. Backend only; CLIENT_BUILD stays 33816.
+const VERSION = '3.37.125';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33816;
-const HEADLINE = "TWENTY-ONE new high-level spells from the Core Rulebook and Ultimate Magic: Power Word Kill, Maze, Mass Hold Monster, Mind Blank, Foresight, Flesh to Stone, Destruction, Chains of Light, the Mass Cure line, Firebrand, Sunbeam and more — PF1 numbers kept, in every caster's Prepare menu now.";
+const HEADLINE = "The capstones arrive: TIME STOP layers free castings into a frozen moment, WISH and MIRACLE read your need (raise the fallen, mend the party, or unmake a foe), the Summon Monster and Nature's Ally ladders call real beasts to your side — and druids gain Lion, Dire Ape, Dire Boar and Crocodile forms.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

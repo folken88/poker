@@ -327,6 +327,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       savedie:     () => this._abSaveDie(m, ab, payload),
       powerword:   () => this._abPowerWord(m, ab, payload),
       maze:        () => this._abMaze(m, ab, payload),
+      timestop:    () => this._abTimeStop(m, ab),
+      wish:        () => this._abWish(m, ab, payload),
       judgment:    () => this._abJudgment(m, ab),
       bane:        () => this._abBane(m, ab, payload),
       cleanse:     () => this._abCleanse(m, ab, payload),
@@ -442,6 +444,19 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       } else {
         m._swiftUsed = true;
         this._note(`⚡ ${m.nickname} QUICKENS the casting — a swift action! (cast again or strike this turn)`);
+        this._broadcast();
+        return { ok: true, freeAction: true };
+      }
+    }
+    // TIME STOP window (v3.37.125): while it holds, non-offensive casts are FREE
+    // actions (each already spent its slot above); aiming at a foe crashes time back.
+    if ((m._timeStopCasts || 0) > 0 && ab.effect !== 'timestop' && !ab.freeAction) {   // already-free actions (Rage, Judgement...) never spend a stolen moment
+      if (ab.target === 'enemy' || ab.target === 'aoe') {
+        m._timeStopCasts = 0;
+        this._note(`⏳ Time CRASHES back into motion — ${m.nickname}'s hostile magic ends the stolen moment.`);
+      } else {
+        m._timeStopCasts--;
+        this._note(`⏳ Cast within the stolen moment — ${m._timeStopCasts} free casting${m._timeStopCasts === 1 ? '' : 's'} left.`);
         this._broadcast();
         return { ok: true, freeAction: true };
       }
@@ -686,7 +701,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m.cls === 'slayer') { m.studiedId = null; m.studiedN = 0; }   // SLAYER: Studied Target mark clears each room (fresh foes)
     m._totalDefense = false;   // v3.37.107: a guard stance never survives the door
     m._ddFerried = false;      // v3.37.109: teleport-tactics ferry is once per ally per ROOM
-    m.blinkedBy = null; m._blinkHold = 0; m._tpStrike = 0;   // v3.37.123: no blink outlives its room — belt for poker, LOAD-BEARING for PGM (its turn loop never cleared blinkedBy, so a ferried ally stayed untargetable forever)
+    m.blinkedBy = null; m._blinkHold = 0; m._tpStrike = 0; m._timeStopCasts = 0;   // v3.37.123: no blink outlives its room — belt for poker, LOAD-BEARING for PGM (its turn loop never cleared blinkedBy); v3.37.125: Time Stop windows close at the door too
     if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; m.gloriousN = 0; m.gloriousAC = 0; m._gcTargetUid = null; m._dauntedRoom = false; }   // CAVALIER: Challenge oath (and Order of the Flame's glorious-challenge stack + once-per-room Daunting Success) clear each room
     m.abilityUses = {};
     for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
@@ -1958,6 +1973,66 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       this._note(`${ab.icon} ${m.nickname}'s ${ab.name} ${ab.killNote ? 'wracks' : 'chokes'} ${e.name} — ${!sv.saved ? 'too mighty to fell outright' : 'it endures the worst of it'}: ${dmg} damage. [${svLbl} ${sv.total} vs ${dc}]${e.hp <= 0 ? ' ☠️' : ''}`, sound);
     }
     this._echoToTable(sound);
+  },
+  // TIME STOP (v3.37.125, Toby: 'basically it's to get some other spells up
+  // quickly... it can be used for summoning but the summons cannot attack within
+  // the time stop'). PF1's 1d4+1 rounds become 1d4+1 FREE castings: the cast
+  // itself is a free action (def flag), and each following non-offensive cast
+  // this turn is free too (the tail hook in _useAbility). Aiming at a foe crashes
+  // time back. Summons rise on the caster's initiative, so their first act
+  // naturally waits for time to resume. Bots get the intent without the UI: an
+  // immediate auto-volley of their best unapplied buffs.
+  _abTimeStop(m, ab) {
+    const n = dRoll(4) + 1;
+    if (m.isBot) {
+      let castCount = 0;
+      const abs = this._abilitiesFor(m);
+      for (let i = 0; i < abs.length && castCount < n; i++) {
+        const a = abs[i];
+        if (!a || a.key === 'timestop' || a.target === 'enemy' || a.target === 'aoe') continue;
+        if (!(a.effect === 'buff' || a.effect === 'magearmor' || a.effect === 'overlandflight' || a.effect === 'mirrorimage' || a.effect === 'summon')) continue;
+        if (a.sticky && ((m.buffApplied && m.buffApplied[a.key]) || (m.runBuffApplied && m.runBuffApplied[a.key]))) continue;
+        const r = this._useAbility(m, i, {});
+        if (r && r.ok) castCount++;
+      }
+      this._note(`${ab.icon} ${m.nickname} STOPS TIME — and layers ${castCount} casting${castCount === 1 ? '' : 's'} into the frozen moment!`, ab.sound);
+    } else {
+      m._timeStopCasts = n;
+      this._note(`${ab.icon} ${m.nickname} STOPS TIME — the room hangs frozen! ${n} free castings: buffs, healing or summons cost no action this turn (each spends its slot). Striking at a foe restarts time.`, ab.sound);
+    }
+    this._broadcast();
+  },
+  // WISH / MIRACLE (v3.37.125, Toby: 'give wish those default choices. including
+  // an option to kill a particular enemy unless they save vs it'). The magic
+  // reads the party's need: fallen allies → full Resurrection for every one of
+  // them; a battered party → a Mass-Heal-sized mending; otherwise the chosen foe
+  // saves vs Will or is UNMADE (wish transcends death-effect immunity — undead
+  // and constructs are NOT exempt; a boss or a made save takes heavy damage).
+  _abWish(m, ab, payload) {
+    const anyDead = this.party.some(a => a.dead && !a.left);
+    if (anyDead) {
+      this._note(`${ab.icon} ${m.nickname} speaks a ${ab.name.toUpperCase()} — reality bends: the fallen are CALLED BACK!`, ab.sound);
+      let guard = 0;
+      while (this.party.some(a => a.dead && !a.left) && guard++ < 12) this._abRevive(m, { ...ab, effect: 'revive', raiseDead: true, full: true }, {});
+      this._broadcast(); return;
+    }
+    const battered = this.livingParty().filter(a => a.hp < a.maxHp * 0.6).length >= 2;
+    if (battered) {
+      this._note(`${ab.icon} ${m.nickname} speaks a ${ab.name.toUpperCase()} — the party is MADE WHOLE!`, ab.sound);
+      this._abHeal(m, { ...ab, effect: 'heal', heal: 'party', massHeal: true, healDice: 15, healCap: 25 }, {});
+      return;
+    }
+    const e = this._oneEnemy(payload); if (!e) return;
+    const dc = this._spellDC(m, ab);
+    const sv = this._saveVs(this._enemySave(e, 'will'), dc);
+    if (!sv.saved && !e.boss) {
+      this._dmgE(e, e.hp + 20, 'force');
+      this._note(`${ab.icon} ${m.nickname} speaks a ${ab.name.toUpperCase()} — reality forgets ${e.name} ever existed. [Will ${sv.total} vs ${dc}] ☠️`, ab.sound);
+    } else {
+      const dmg = this._dmgE(e, Math.max(6, Math.floor((e.maxHp || 20) * (!sv.saved ? 0.5 : 0.25))), 'force');
+      this._note(`${ab.icon} ${m.nickname}'s ${ab.name} tears at ${e.name} — ${!sv.saved ? 'too mighty to unmake outright' : 'it clings to existence'}: ${dmg} damage. [Will ${sv.total} vs ${dc}]${e.hp <= 0 ? ' ☠️' : ''}`, ab.sound);
+    }
+    this._echoToTable(ab.sound);
   },
   // POWER WORDS (v3.37.124, CRB): no save, no roll — raw arcane authority, gated by
   // the target's remaining life. The over-cap refusal lives in _useAbility (slot

@@ -30,6 +30,11 @@ module.exports = {
     const FL = {
       undead: { fizzle: 'the grave yields nothing',            raise: 'tears open the grave',    join: (n) => `claw${n > 1 ? '' : 's'} free to fight for the party`,                align: 'NE' },
       devil:  { fizzle: 'the infernal contract goes unanswered', raise: 'seals an INFERNAL PACT', join: (n) => `answer${n > 1 ? '' : 's'} the call, marching up from Hell to serve the party`, align: 'LE' },
+      // v3.37.125 (Toby: 'we will add more creatures to summon, they will be simpler
+      // versions of existing monsters'): the Summon Monster / Nature's Ally ladder
+      // calls the bestiary's own beasts — celestial-touched or wild, and NOT evil.
+      celestial: { fizzle: 'the heavens do not answer',  raise: 'calls down a shaft of radiance', join: (n) => `stride${n > 1 ? '' : 's'} out of the light to fight for the party`, align: 'NG', good: true },
+      nature:    { fizzle: 'the wild does not answer',   raise: 'calls to the wild',              join: (n) => `crash${n > 1 ? '' : 'es'} onto the field to fight for the party`,   align: 'N',  good: true },
     };
     const fl = FL[spec.flavor] || FL.undead;
     const pool = spec.pool || (spec.key ? [spec.key] : []);
@@ -51,7 +56,7 @@ module.exports = {
       e.summoned = true; e.summonedBy = m.playerId; e.summonExpiry = rounds; e.summonFlavor = spec.flavor || 'undead';
       e.flatFooted = false;                   // it rises ready to fight
       e.gold = 0;                             // a summon drops no loot
-      e.align = fl.align; e.evil = true;      // summoned fiend/undead fights on the party's side but is still evil
+      e.align = fl.align; e.evil = !fl.good;  // summoned fiend/undead is still evil; a celestial/wild beast (v3.37.125) is not
       this.enemies.push(e);
       newTurns.push({ kind: 'enemy', id: e.uid, init: casterInit });   // shares the caster's initiative
     }
