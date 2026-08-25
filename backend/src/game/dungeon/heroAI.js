@@ -371,6 +371,14 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // who can't reach it → blink the ally in (Dimension Door / Teleport). The
     // recipient becomes untouchable until this caster's next turn, and their
     // next strike reaches ANY foe with a full attack.
+    // ESCAPE HATCH (Toby 2026-08-24): Dimension Door / Teleport yanks a SEIZED ally
+    // out of a grapple — higher priority than the flyer ferry (a pinned ally is
+    // losing turns right now). Same one-ferry-per-ally-per-room ledger.
+    const seizedAlly = this.livingParty().find(a => a.hp > 0 && a.grappled && !a.blinkedBy && !a._ddFerried);
+    if (seizedAlly) {
+      const tpIdx = allAbs.findIndex(ab => ab.effect === 'tpstrike' && usable(ab));
+      if (tpIdx >= 0) { seizedAlly._ddFerried = true; return { slot: tpIdx, payload: { allyUid: seizedAlly.playerId } }; }
+    }
     const flyFoe = targets.find(e => e.flying);
     if (flyFoe) {
       // v3.37.109 ONE FERRY PER ALLY PER ROOM (Josh, spicy-marmot d2: Farrah spent

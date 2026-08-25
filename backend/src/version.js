@@ -1712,9 +1712,31 @@
 //                     the wizard spellbook SOURCE lists it but the baked kit predates it (only
 //                     the magus carried a copy). Injected: wizard prepared 6th (L11), sorcerer
 //                     spontaneous 6th (L12). Tests 136-138. Backend only; CLIENT_BUILD 33816.
-const VERSION = '3.37.122';
+//  3.37.123 2026-08-24 SIX RULINGS FROM TOBY, LANDED. (1) THE +2 CEILING: enemy CR may never
+//                     exceed the HIGHEST hero level +2 - _encounterCR clamps the pick band AND
+//                     elite/boss advancement respects the headroom ('you can outnumber the heroes
+//                     but you should not be much higher level than them or you will kill them,
+//                     and that's not fun'). Depth now raises NUMBERS via the XP budget, never the
+//                     ceiling. (2) PREPARED DUPLICATES: already the engine's behavior - slots are
+//                     a per-LEVEL cast budget (m.slots refills each room; any prepared spell can
+//                     spend every slot of its level), so 3x Shield of Faith needs no sheet
+//                     duplicates; test 141 pins it. (3) RANGED BACKUP STEEL: a shooter seized in
+//                     a grapple draws a boot dagger and fights the GRAPPLER in close (AoO logic
+//                     abstracted; Freedom of Movement keeps shooting). (4) DD/TELEPORT UTILITY:
+//                     both now TEAR a grappled ally free (auto-picked as the most urgent
+//                     passenger, bots prioritize it); Teleport grants TWO caster-turns of safe
+//                     harbor via _blinkHold. (5) THE 10-MIN/LEVEL TIER IS RUN-LONG: airwalk,
+//                     stoneskin(+comm), GMW, false life, see invis, darkvision comm, protect
+//                     fire, heroism, barkskin persist for the DUNGEON, door-castable. Fixing
+//                     that exposed a .120 REGRESSION: the persist branch dropped everything but
+//                     toHit/dmg - Magic Vestment's +3 AC never actually landed. New snapshot
+//                     machinery (runBuffPayloads + _applyRunBuffSnap) applies the full payload
+//                     at cast AND re-applies it every room. (6) POTIONS/ITEM STORE: scoped for
+//                     the next cycle (port of PGM's items.js store; needs blind-first UX design).
+//                     Tests 139-146. Backend only; CLIENT_BUILD stays 33816.
+const VERSION = '3.37.123';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33816;
-const HEADLINE = "True Seeing is range TOUCH like the book says — cast it on yourself OR the fighter who needs to see through mirror images; and enemy shamans and rogues stop wrestling: casters cast, knife-artists stab, only actual beasts keep their grabs.";
+const HEADLINE = "Toby's rulings land: enemies never spawn more than 2 CR above your best hero; long buffs like Stoneskin and Heroism now truly last the whole dungeon; Dimension Door tears grappled allies free (Teleport shelters them two rounds); and a grappled shooter draws a boot dagger instead of firing from the scrum.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

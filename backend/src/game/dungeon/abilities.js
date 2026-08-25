@@ -671,6 +671,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m.cls === 'slayer') { m.studiedId = null; m.studiedN = 0; }   // SLAYER: Studied Target mark clears each room (fresh foes)
     m._totalDefense = false;   // v3.37.107: a guard stance never survives the door
     m._ddFerried = false;      // v3.37.109: teleport-tactics ferry is once per ally per ROOM
+    m.blinkedBy = null; m._blinkHold = 0; m._tpStrike = 0;   // v3.37.123: no blink outlives its room — belt for poker, LOAD-BEARING for PGM (its turn loop never cleared blinkedBy, so a ferried ally stayed untargetable forever)
     if (m.cls === 'cavalier') { m.challengedId = null; m.challengeN = 0; m.gloriousN = 0; m.gloriousAC = 0; m._gcTargetUid = null; m._dauntedRoom = false; }   // CAVALIER: Challenge oath (and Order of the Flame's glorious-challenge stack + once-per-room Daunting Success) clear each room
     m.abilityUses = {};
     for (const ab of this._abilitiesFor(m)) if (ab.cost === 'room') m.abilityUses[ab.key] = roomUses(ab, m.level || 1, m);
@@ -708,6 +709,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m.overlandFlight) { m.flying = true; m.canHitFlyers = true; }   // Overland Flight is RUN-long — re-assert flight + airborne reach
     if (m.ghost) { m.flying = true; m.canHitFlyers = true; }            // Vesorianna never lands — a ghost drifts over every room
     if (m.form && m.flying) m.canHitFlyers = true;                      // v3.37.116: Hawk Form re-asserts airborne reach each turn, same as Overland Flight
+    // v3.37.123 (Toby): 10-min-per-level-and-longer buffs last the WHOLE dungeon —
+    // re-apply every run-long buff's payload from its cast-time snapshot (the
+    // per-room clears above just wiped the AC/DR/wards/sight/flight they grant).
+    for (const _snap of Object.values(m.runBuffPayloads || {})) this._applyRunBuffSnap(m, _snap);
     m.acPenRound = -1; m.acPenAmt = 0;
   },
   // Inspire Courage is a passive bard AURA — it costs the bard NO action and is
@@ -911,14 +916,23 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const pickedId = payload && (payload.allyUid || payload.targetUid);
     const explicit = pickedId ? this.livingParty().find(a => a.playerId === pickedId) : null;
     const melee = this.livingParty().filter(a => a.hp > 0 && !this._isRanged(a) && !(a._tpStrike > 0) && !a.blinkedBy);
-    const a = explicit || melee.sort((x, y) => (y.level || 1) - (x.level || 1))[0];
+    // v3.37.123 (Toby): the ESCAPE mode — with no explicit pick, a GRAPPLED ally is
+    // the most urgent passenger (any class, even a shooter); else the biggest blade.
+    const seized = this.livingParty().find(x => x.hp > 0 && x.grappled && !x.blinkedBy);
+    const a = explicit || seized || melee.sort((x, y) => (y.level || 1) - (x.level || 1))[0];
     if (!a) return { ok: false, error: 'no melee ally to send — everyone is already placed (or ranged)' };
+    let freed = '';
+    if (a.grappled) {   // Toby: "dimension door can help an ally escape a grapple" — nothing holds a body that isn't there
+      a.grappled = false; a.grappledBy = null; a.grappleRounds = 0;
+      freed = ` The grapple TEARS LOOSE as ${a.playerId === m.playerId ? 'they vanish' : `${a.nickname} vanishes`}!`;
+    }
     a._tpStrike = 2;            // survives the cast round; active through their next attack
     a.blinkedBy = m.playerId;   // untouchable until the CASTER's next turn
+    if (ab.key === 'teleport') a._blinkHold = 1;   // Toby: Teleport grants TWO rounds of safe harbor (one extra caster-turn)
     // v3.37.112 (Josh, rowdy-musket: "it does not tell me who I am expected to
     // target"): when a flyer stands, the announce now NAMES the intended prey.
     const _flyer = (this.enemies || []).find(e => e.flying && e.hp > 0);
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${a.playerId === m.playerId ? 'they blink' : `${a.nickname} blinks`} through folded space! Untouchable until ${m.nickname} acts again — and their next strike reaches ANY foe with a FULL attack${_flyer ? `. The airborne ${_flyer.name} is in reach of ${a.playerId === m.playerId ? 'their' : 'your'} blade now` : ''}.`, ab.sound);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${a.playerId === m.playerId ? 'they blink' : `${a.nickname} blinks`} through folded space!${freed} Untouchable ${ab.key === 'teleport' ? `for TWO full rounds` : `until ${m.nickname} acts again`} — and their next strike reaches ANY foe with a FULL attack${_flyer ? `. The airborne ${_flyer.name} is in reach of ${a.playerId === m.playerId ? 'their' : 'your'} blade now` : ''}.`, ab.sound);
     this._broadcast();
     return { ok: true };
   },
@@ -2592,7 +2606,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // wasted slot/turn. So pick only from allies who DON'T have THIS buff yet; if
     // everyone already has it, fall back to the full list (the bot's buffFullyUp
     // gate, which calls this too, then sees the buff is up and skips the cast).
-    const has = (a) => !!(a.buffApplied && a.buffApplied[ab.key]);
+    const has = (a) => !!((a.buffApplied && a.buffApplied[ab.key]) || (a.runBuffApplied && a.runBuffApplied[ab.key]));   // v3.37.123: run-long buffs count too — never re-pick an ally already carrying the dungeon-long copy
     const eligible = allies.filter(a => !has(a));
     const pool = eligible.length ? eligible : allies;
     const acScore = (a) => this._acOf(a).ac + this._acBonus(a) - this._acPenalty(a);
@@ -2671,6 +2685,29 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.buffs.toHit -= 4;
     if (!silent) { this._note(`🛡️ ${m.nickname} fights defensively — −4 to hit, +${dodge} dodge AC.`, sound); this._echoToTable(sound); }
   },
+  // Re-apply one run-long buff's non-toHit/dmg payload (v3.37.123, Toby: "10 minute
+  // per level buffs should last the whole dungeon"). Called at cast time and again by
+  // _resetAbilities each room — the snapshot is plain data, so a buff keeps protecting
+  // its wearer even after the caster leaves.
+  _applyRunBuffSnap(who, snap) {
+    if (!snap) return;
+    who.buffs = who.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 };
+    who.buffs.ac += snap.ac || 0;
+    who.buffs.deflect = Math.max(who.buffs.deflect || 0, snap.deflect || 0);
+    who.buffs.save += snap.save || 0;
+    who.buffs.dexMod = (who.buffs.dexMod || 0) + (snap.dexMod || 0);
+    who.buffs.cmd = (who.buffs.cmd || 0) + (snap.cmd || 0);
+    who.buffs.bonusDice += snap.bonusDice || 0;
+    if (snap.tempHp) this._grantTempHp(who, snap.tempHp);
+    if (snap.dr) who.dr = Math.max(who.dr || 0, snap.dr);
+    if (snap.protectFire) who.protectFire = Math.max(who.protectFire || 0, snap.protectFire);
+    if (snap.darkvision) who.darkvision = true;
+    if (snap.fly) who.flying = true;
+    if (snap.canHitFlyers) who.canHitFlyers = true;
+    if (snap.seeInvis) who.seeInvis = true;
+    if (snap.trueSeeing) who.trueSeeing = true;
+    if (snap.displace) who.displaced = true;
+  },
   _abBuff(m, ab, payload) {
     const sound = ab.sound || pick(SND.flesh);
     const lvl = m.level || 1;
@@ -2706,14 +2743,31 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       who.buffApplied = who.buffApplied || {};
       if (ab.sticky && who.buffApplied[ab.key]) return;   // already active this room — don't stack
       if (ab.sticky) who.buffApplied[ab.key] = true;
-      if (ab.persist) {   // Bless / Inspire: a run-long buff that survives room resets (never fades)
-        const tH = ab.key === 'inspire' ? inspMod : ((ab.buff && ab.buff.toHit) || 0);
-        const dG = ab.key === 'inspire' ? inspMod : ((ab.buff && ab.buff.dmg) || 0);
+      if (ab.persist) {   // Bless / Inspire / Magic Vestment / the 10-min-per-level tier: run-long, survives room resets
+        who.runBuffApplied = who.runBuffApplied || {};
+        if (who.runBuffApplied[ab.key]) return;   // already carried for the run — never double-stack
+        const tH = ab.key === 'inspire' ? inspMod : ab.gmw ? gmwMod : ((ab.buff && ab.buff.toHit) || 0);
+        const dG = ab.key === 'inspire' ? inspMod : ab.gmw ? gmwMod : ((ab.buff && ab.buff.dmg) || 0);
         who.runBuffs = who.runBuffs || { toHit: 0, dmg: 0 };
         who.runBuffs.toHit += tH;
         who.runBuffs.dmg   += dG;
-        who.runBuffApplied = who.runBuffApplied || {};
         who.runBuffApplied[ab.key] = true;
+        // v3.37.123: the REST of the payload (AC, saves, DR, wards, sight, flight)
+        // used to be silently DROPPED here — Magic Vestment's +3 AC never actually
+        // landed (a .120 regression). Snapshot it (caster-level pools frozen at cast
+        // time) and apply now; _resetAbilities re-applies it every room.
+        const _b = ab.buff || {};
+        const snap = {
+          ac: _b.ac || 0, deflect: _b.deflect || 0, save: _b.save || 0, dexMod: _b.dexMod || 0,
+          cmd: _b.cmd || 0, bonusDice: _b.bonusDice || 0,
+          tempHp: _b.conHp ? _b.conHp * (who.level || 1) : 0,
+          dr: ab.dr || 0, protectFire: ab.protectFire ? Math.min(120, 12 * (m.level || 1)) : 0,
+          darkvision: !!ab.darkvision, fly: !!ab.fly, canHitFlyers: !!ab.canHitFlyers,
+          seeInvis: !!ab.seeInvis, trueSeeing: !!ab.trueSeeing, displace: !!ab.displace,
+        };
+        who.runBuffPayloads = who.runBuffPayloads || {};
+        who.runBuffPayloads[ab.key] = snap;
+        this._applyRunBuffSnap(who, snap);
         return;
       }
       who.buffs = who.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 };
@@ -3222,7 +3276,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.flatFooted = false;   // acting ends flat-footed
     if (!quiet) m._offDef = false;   // Offensive Defense lasts until the rogue next acts
     if (!m.greaterInvis) m.invisible = false;    // attacking breaks Invisibility (Greater persists)
-    const e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
+    let e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
     if (!e) return;
     m.weapon = weaponOf(m.gear, m.weaponKey);
     if (e.darkened > 0) { this._note(`🌑 ${m.nickname} can't find ${e.name} in the magical darkness!`); this._broadcast(); return; }
@@ -3242,13 +3296,25 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (foes.some(f => f.flying) && foes.some(f => !f.flying) && dRoll(10) <= 4) forceRanged = true;
     }
     let drewCrossbow = false;
+    // v3.37.123 (Toby): a SHOOTER seized in a grapple doesn't fire point-blank from
+    // inside the scrum — that's an attack of opportunity begging to happen. They draw
+    // backup steel (a boot dagger) and fight the GRAPPLER hand-to-hand until they
+    // wrench free. Freedom of Movement shrugs the grab entirely — those keep shooting.
+    let drewBlade = false;
+    if (m.weapon.ranged && m.grappled && !this._freedomOfMovement(m)) {
+      m.weapon = weaponOf({}, 'dagger');   // plain steel — always worse than the real bow, that's the cost of being caught
+      drewBlade = true; forceRanged = false;
+      const _gr = (this.enemies || []).find(x => x.uid === m.grappledBy && x.hp > 0);
+      if (_gr) e = _gr;   // the fight is with whoever's holding you
+      if (!quiet) this._note(`🗡️ ${m.nickname} is locked in the grapple — no room to draw a bead! They pull a boot dagger and fight in close.`);
+    }
     // v3.37.112 (Josh, rowdy-musket: ferried by Dimension Door, his sword worked
     // on flyers "about 50-50"): the blink window (_tpStrike — "next strike
     // reaches ANY foe") was honored by _canReach (bots) but NOT here — the
     // human attack path still drew the backup crossbow at a flyer unless it
     // happened to be grappled/held (the groundable rule). A blinked melee hero
     // now swings steel, exactly as the announce promises.
-    if (forceRanged || (e.flying && !(m._tpStrike > 0) && !m.weapon.ranged && !m.weapon.reachFly && !(m.canHitFlyers && m.flying))) {
+    if (!drewBlade && (forceRanged || (e.flying && !(m._tpStrike > 0) && !m.weapon.ranged && !m.weapon.reachFly && !(m.canHitFlyers && m.flying)))) {
       const bk = this._backupRangedKey(m);
       m.weapon = weaponOf(bk === 'lightcrossbow' ? {} : m.gear, bk);   // signature sidearms keep the wielder's enchant; the generic crossbow stays plain
       // The improvised LIGHT CROSSBOW fires a SINGLE shot — PF1: a crossbow can't

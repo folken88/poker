@@ -574,7 +574,7 @@ class Dungeon {
           if (ab.effect === 'magearmor' && m.mageArmor) return;
           if (ab.effect === 'overlandflight' && m.flying) return;
           const flag = ab.persist ? 'runBuffApplied' : 'buffApplied';
-          if (m[flag] && m[flag][ab.key]) return;                                  // already up
+          if ((ab.target === 'ally' || ab.party) ? this.livingParty().every(a => a[flag] && a[flag][ab.key]) : (m[flag] && m[flag][ab.key])) return;   // already up — ally/party buffs re-cast each door to SPREAD across the party until everyone carries them (v3.37.123)
           if (ab.cost === 'run' && !((m.runAbilityUses || {})[ab.key] > 0)) return; // none left
           const r = this._useAbility(m, slot, {});
           if (r && r.ok) cast.push(`${m.nickname} — ${ab.name}`);
@@ -689,11 +689,11 @@ class Dungeon {
   // down. LEVEL-1 PARTIES ARE UNAFFECTED: minLevel 1 − 1 = 0, which the Math.max(1, …)
   // floor below pins back to CR 1, exactly as before.
   _baseCR() { return this._minLevel() - 1 + Math.floor(this.depth / 4); }
-  _encounterCR(boss) {
-    let cr = this._baseCR();
-    if (boss) cr += 2;
-    return Math.max(1, Math.min(20, cr));   // cap tracks the bestiary — Tar-Baphon is CR 20 (the old 13 locked out every boss above 15)
-  }
+  _maxLevel() { const p = Array.isArray(this.party) ? this.alivePresent() : []; return p.length ? Math.max(1, ...p.map(m => m.level || 1)) : 18; }   // HIGHEST party level — the hard spawn ceiling (no party context → no clamp)
+  // v3.37.123 (Toby): "the max hd or cr of enemies should not be more than 2 higher than the highest level hero...
+  // you can outnumber the heroes but you should not be much higher level than them or you will kill them, and
+  // that's not fun." Depth raises NUMBERS (XP budget), never the ceiling.
+  _encounterCR(boss) { return Math.max(1, Math.min(20, this._baseCR() + (boss ? 2 : 0), this._maxLevel() + 2)); }
   // Strongest thematic foe (incl. boss-only creatures) the party can handle.
   _pickBoss(capCR) {
     const cand = Object.keys(MON).filter(k => MON[k].crNum <= capCR);
@@ -761,7 +761,7 @@ class Dungeon {
     // the levels bring EVERYTHING — hp, to-hit, saves, DCs. A boss ALWAYS
     // advances (2-4 levels; the old 1d4 could roll a wet +1); a regular spawn
     // advances only when the spawner flags it ELITE to fill a thin CR band.
-    const extra = boss ? 1 + dRoll(3) : (elite || 0);
+    const extra = Math.min(boss ? 1 + dRoll(3) : (elite || 0), Math.max(0, Math.round((this._maxLevel() + 2 - (base.crNum || 0)) * 2)));   // v3.37.123 (Toby's +2 ceiling): advancement can't push a spawn past maxHeroLevel+2 CR either (eager-marmot's CR-3 deckhand became CR-5 Elite vs LEVEL TWOS this way)
     const half = Math.floor(extra / 2);
     // BOSS PRE-CAST WARDS — a caster boss "cheats": every long-duration buff
     // (anything NOT measured in rounds/level — Mage Armor, Shield, Stoneskin,
@@ -1068,7 +1068,7 @@ class Dungeon {
     m._swiftUsed = false;         // PF1: ONE swift action per turn (shared by Curator / Quicken Channel / metamagic Quicken)
     if (m.untargetable) m.untargetable = false;   // Bladed Dash blur ends at the start of the magus's next turn
     if (m._tpStrike > 0) m._tpStrike -= 1;         // Dimension Door/Teleport strike-window ticks down at the recipient's turns
-    for (const x of this.present()) if (x.blinkedBy === m.playerId) x.blinkedBy = null;   // the CASTER's turn arrived — their blinked allies become targetable again
+    for (const x of this.present()) if (x.blinkedBy === m.playerId) { if ((x._blinkHold || 0) > 0) x._blinkHold--; else x.blinkedBy = null; }   // caster's turn arrived — blinked allies targetable again (Teleport: _blinkHold spends one extra caster-turn of safe harbor first, Toby 2026-08-24)
     if (m.touchStrike > 0) m.touchStrike -= 1;     // Dimensional Blade touch-strikes lapse after the round
     if (m._domWardRounds > 0) m._domWardRounds -= 1;   // Resistant Touch (Protection domain) ticks down
     // Bleeding (a death-priest's touch): 1d6 at the turn's top until magically healed.
