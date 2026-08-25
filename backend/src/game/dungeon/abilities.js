@@ -258,6 +258,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         return { ok: false, error: `${ab.name} only unmakes the UNDEAD — ${tgt.name} still lives.` };
       }
     }
+    // DEATH EFFECTS need a LIVING target (v3.37.126, Josh, shielded-beaver:
+    // Destruction on a Vampire Priest BURNED the slot for 'no living soul
+    // answers'): refuse pre-cast — slot kept — and TEACH the PF1 rule.
+    if (ab.effect === 'savedie' && !ab.onlyUndead) {
+      const tgt = this._oneEnemy(payload);
+      if (tgt && (tgt.type === 'undead' || tgt.type === 'construct' || /golem|skelet|zombie|wraith|ghost|lich|vampire|wight|ghoul|ghast|shadow|ooze|elemental/i.test(tgt.name || ''))) {
+        return { ok: false, error: `${ab.name} is a death effect — ${tgt.name} has no life to end (PF1: undead, constructs, oozes and elementals are immune). Your slot is kept.` };
+      }
+    }
     // POWER WORDS reach only so much life (PF1's HP caps, v3.37.124) — an over-cap
     // target refuses the cast, slot kept (enemy HP is already public on the cards).
     if (ab.pwCap) {
@@ -2745,7 +2754,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // wasted slot/turn. So pick only from allies who DON'T have THIS buff yet; if
     // everyone already has it, fall back to the full list (the bot's buffFullyUp
     // gate, which calls this too, then sees the buff is up and skips the cast).
-    const has = (a) => !!((a.buffApplied && a.buffApplied[ab.key]) || (a.runBuffApplied && a.runBuffApplied[ab.key]));   // v3.37.123: run-long buffs count too — never re-pick an ally already carrying the dungeon-long copy
+    const _eqK = (ab.key === 'stoneskin' || ab.key === 'stoneskincomm') ? ['stoneskin', 'stoneskincomm'] : [ab.key];   // v3.37.126: the two Stoneskins are ONE ward — DR 10 never stacks
+    const has = (a) => _eqK.some(k => (a.buffApplied && a.buffApplied[k]) || (a.runBuffApplied && a.runBuffApplied[k]));   // v3.37.123: run-long buffs count too — never re-pick an ally already carrying the dungeon-long copy
     const eligible = allies.filter(a => !has(a));
     const pool = eligible.length ? eligible : allies;
     const acScore = (a) => this._acOf(a).ac + this._acBonus(a) - this._acPenalty(a);

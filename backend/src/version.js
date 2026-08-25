@@ -1770,9 +1770,27 @@
 //                     Dire Ape (rending arms, swats flyers), Dire Boar (ferocity +1 HP/level),
 //                     Crocodile (the biggest single bite) - pushed post-override; Rissa keeps her
 //                     customs. Tests 154-158. Backend only; CLIENT_BUILD stays 33816.
-const VERSION = '3.37.125';
+//  3.37.126 2026-08-24 THE FIRST CAPSTONE FIELD REPORT (Josh, shielded-beaver, log-verified).
+//                     (1) DESTRUCTION vs Vampire Priest burned the slot for 'no living soul
+//                     answers' - the refusal was RULES-CORRECT (PF1: death effects need the
+//                     living; his casts on living foes worked, incl. finishing Boss Rivozair) but
+//                     the cast was consumed. Death effects now REFUSE pre-cast (slot kept) with a
+//                     teaching message. (2) STONESKIN + STONESKIN (COMMUNAL) both pre-door-cast on
+//                     Kovira - DR 10 never stacks, pure slot waste. The two are now ONE ward
+//                     everywhere (bot picker, pre-door spread, ally auto-target). Communal's
+//                     duration ruling (split = room-only?) referred to Toby. (3) DANGER'S -6
+//                     RAPID SHOT: the generic bot buff-picker was grabbing Fight Defensively as
+//                     an unapplied 'buff' every round while _botStance turned it off - a stance
+//                     tug-of-war ('he wasn't in extreme danger'). FD is now stance-managed ONLY
+//                     (>35% HP bots never raise it). (4) ENEMY HASTE (Josh: 'they fucking
+//                     should') - a CL5+ caster with a crew of 3+ hastens its side once a room:
+//                     +1 to hit and an extra full-attack swing for 3 rounds; Dispel already
+//                     prioritizes it. (5) DINVAYA'S MATH audited clean: Lv 16 swinging at +25/+27
+//                     vs AC 26-32 - she hits on ~3+; the misses Josh felt were an AC-32 witch and
+//                     a mirror-image decoy. Tests 159-162. Backend only; CLIENT_BUILD 33816.
+const VERSION = '3.37.126';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33816;
-const HEADLINE = "The capstones arrive: TIME STOP layers free castings into a frozen moment, WISH and MIRACLE read your need (raise the fallen, mend the party, or unmake a foe), the Summon Monster and Nature's Ally ladders call real beasts to your side — and druids gain Lion, Dire Ape, Dire Boar and Crocodile forms.";
+const HEADLINE = "Death effects now refuse an undead target and KEEP your slot (with the PF1 rule spoken aloud); the two Stoneskins count as one ward so casters stop double-warding; archer bots stop flip-flopping Fight Defensively; and enemy casters finally cast HASTE on their own crews.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

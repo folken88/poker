@@ -31,7 +31,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
-    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0);   // Fight Defensively: −4 to attacks; Blaze of Glory: +4 for the room. (v3.37.90: glory to-hit removed — PF1 RAW glorious = damage only)
+    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.hasted > 0 ? 1 : 0);   // Fight Defensively: −4; Blaze of Glory: +4; Haste (v3.37.126): +1 (PF1)
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
@@ -70,6 +70,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     e.flatFooted = false;   // acting ends flat-footed
     // MAZE (v3.37.124): lost in the labyrinth — no turn, untargetable, back when the counter runs out.
     if (e.mazed > 0) { e.mazed--; this._note(`🌀 ${e.glyph} ${e.name} wanders the extradimensional maze${e.mazed ? ' — lost to the fight' : ' — and FINDS THE EXIT! It returns, furious'}.`, null, { side: 'enemy' }); this._echoToTable(); return; }
+    if (e.hasted > 0) e.hasted--;   // enemy Haste (v3.37.126) burns down one round per turn
     // PF1: standing up from prone is a MOVE ACTION. A slowed (staggered) creature's
     // single action is spent entirely on standing; everyone else stands and has
     // only their STANDARD left (one attack on the same target, or spend it closing
@@ -278,7 +279,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
           else if (mode === 'trip')     this._enemyTrip(e, target);
           else if (mode === 'bullrush') this._enemyBullRush(e, target);
           else {
-            const swings = (e.slowed > 0) ? 1 : (fullAttack ? Math.max(1, e.attacks || 1) : 1);
+            const swings = (e.slowed > 0) ? 1 : ((fullAttack ? Math.max(1, e.attacks || 1) : 1) + ((e.hasted > 0 && fullAttack) ? 1 : 0));   // Haste (v3.37.126): one extra full-attack swing (PF1)
             for (let i = 0; i < swings; i++) {
               if (target.hp <= 0 || target.left) break;   // target dropped mid-routine — the rest of the swings are spent closing on someone new
               this._enemyMelee(e, target);
@@ -795,6 +796,20 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     //    + the offensive casts below clearing e.invisible).
     const hurt = e.hp < e.maxHp * 0.6;
     const meleeSwarm = heroes.filter(m => MART.has(m.cls) && !m.flying).length >= 2;
+    // ENEMY HASTE (v3.37.126, Josh, shielded-beaver: 'our enemy spellcasters,
+    // casting great buff spells such as haste? They fucking should. They're gonna
+    // whip my ass, but that's how it should work.'): once a room, a caster with a
+    // crew of 3+ hastens its side — +1 to hit and one extra full-attack swing for
+    // 3 rounds. Dispel Magic already prioritizes hasted foes.
+    if (cl >= 5 && !e._hasteCast && dRoll(3) === 1) {
+      const crew = this.livingEnemies().filter(x => !x.summoned && x.hp > 0 && !(x.hasted > 0)).slice(0, 6);
+      if (crew.length >= 3) {
+        e._hasteCast = true;
+        for (const x of crew) x.hasted = Math.max(x.hasted || 0, 3);
+        this._note(`💨 ${e.glyph} ${e.name} casts HASTE — ${crew.length} foes BLUR with speed (+1 to hit and an extra attack, 3 rounds)!`, '/audio/spell_buff_invoke.mp3', { side: 'enemy' });
+        this._echoToTable('/audio/spell_buff_invoke.mp3'); this._broadcast(); return;
+      }
+    }
     if (cl >= 4 && !(e.images > 0) && (this.round <= 2 || hurt) && dRoll(3) === 1) {
       e.images = Math.min(8, dRoll(4) + Math.floor(cl / 3));
       this._note(`🪞 ${e.glyph} ${e.name} conjures ${e.images} mirror image${e.images > 1 ? 's' : ''} — decoys to soak your blows!`, '/audio/spell_buff_invoke.mp3', { side: 'enemy' });

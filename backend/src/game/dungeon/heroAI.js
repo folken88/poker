@@ -499,7 +499,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         // Higher-level buff first when time is short (Tobias): Stoneskin (4) over
         // Mirror Image (2) over Shield (1) — rank the openers by spell level.
         const opens = avail.filter(a =>
-             (a.effect === 'buff' && a.sticky && a.target === 'self' && !a.powerattack && !a.deadlyaim
+             (a.effect === 'buff' && a.sticky && a.target === 'self' && !a.powerattack && !a.deadlyaim && !a.fightdefensively
                && !(m.buffApplied && m.buffApplied[a.key]) && !(m.runBuffApplied && m.runBuffApplied[a.key]))
           || (a.effect === 'mirrorimage' && !(m.images > 0)))
           .sort((x, y) => (y.slvl || 0) - (x.slvl || 0));
@@ -763,7 +763,11 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         const def = (a.buff && a.buff.deflect) || 0;
         return recips.every(w => !w || (w[flag] && w[flag][a.key]) || (Number(w.gear && w.gear.ring) || 0) >= def || ((w.buffs && w.buffs.deflect) || 0) >= def);
       }
-      return recips.every(w => w && w[flag] && w[flag][a.key]);
+      // STONESKIN ≡ STONESKIN (COMMUNAL) (v3.37.126, Josh, shielded-beaver: Kovira
+      // pre-door-cast BOTH on herself — DR 10 doesn't stack, the slot was pure
+      // waste): either key counts as "already stone-hard".
+      const _eq = (a.key === 'stoneskin' || a.key === 'stoneskincomm') ? ['stoneskin', 'stoneskincomm'] : [a.key];
+      return recips.every(w => w && _eq.some(k => (w.buffApplied && w.buffApplied[k]) || (w.runBuffApplied && w.runBuffApplied[k])));
     };
     // Protection from Fire — only worth a slot when fiery foes are on the field.
     const fireFoes = foes.some(e => e.detonate || e.hellfire || /fire|flame|magma|salamander|phoenix/i.test(e.name));
@@ -797,7 +801,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // a PETTY single-ally buff (slvl < 4) is skipped, but a meaty one (Stoneskin) counts.
     const buffCands = avail.filter(a => buffAppetite && potentEnough(a)
       && a.effect === 'buff' && a.sticky && !a.protectFire
-      && !a.powerattack && !a.deadlyaim && !buffFullyUp(a)
+      && !a.powerattack && !a.deadlyaim && !a.fightdefensively && !buffFullyUp(a)   // v3.37.126: FD is a STANCE managed by _botStance — the generic picker grabbing it made Danger flip it on every round (Josh: rapid-shotting at −6)
       && (a.target !== 'ally' || (m.level || 1) < 7 || (a.slvl || 0) >= 4));
     const fervor = avail.find(a => a.effect === 'haste');
     if (fervor && buffAppetite && !this.livingParty().some(p => p.hasted > 0)) buffCands.push(fervor);   // Haste/Fervor ranks by its own spell level

@@ -573,8 +573,8 @@ class Dungeon {
           if (!this._isRunLongBuff(ab) || (m.level || 1) < (ab.minLevel || 1)) return;
           if (ab.effect === 'magearmor' && m.mageArmor) return;
           if (ab.effect === 'overlandflight' && m.flying) return;
-          const flag = ab.persist ? 'runBuffApplied' : 'buffApplied';
-          if ((ab.target === 'ally' || ab.party) ? this.livingParty().every(a => a[flag] && a[flag][ab.key]) : (m[flag] && m[flag][ab.key])) return;   // already up — ally/party buffs re-cast each door to SPREAD across the party until everyone carries them (v3.37.123)
+          const flag = ab.persist ? 'runBuffApplied' : 'buffApplied', eqk = (ab.key === 'stoneskin' || ab.key === 'stoneskincomm') ? ['stoneskin', 'stoneskincomm'] : [ab.key];   // v3.37.126: the two Stoneskins are ONE ward
+          if ((ab.target === 'ally' || ab.party) ? this.livingParty().every(a => eqk.some(k => (a.buffApplied && a.buffApplied[k]) || (a.runBuffApplied && a.runBuffApplied[k]))) : eqk.some(k => m[flag] && m[flag][k])) return;   // already up — ally/party buffs re-cast each door to SPREAD across the party until everyone carries them (v3.37.123)
           if (ab.cost === 'run' && !((m.runAbilityUses || {})[ab.key] > 0)) return; // none left
           const r = this._useAbility(m, slot, {});
           if (r && r.ok) cast.push(`${m.nickname} — ${ab.name}`);
