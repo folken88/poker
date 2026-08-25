@@ -68,6 +68,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   },
   _enemyAct(e) {
     e.flatFooted = false;   // acting ends flat-footed
+    // MAZE (v3.37.124): lost in the labyrinth — no turn, untargetable, back when the counter runs out.
+    if (e.mazed > 0) { e.mazed--; this._note(`🌀 ${e.glyph} ${e.name} wanders the extradimensional maze${e.mazed ? ' — lost to the fight' : ' — and FINDS THE EXIT! It returns, furious'}.`, null, { side: 'enemy' }); this._echoToTable(); return; }
     // PF1: standing up from prone is a MOVE ACTION. A slowed (staggered) creature's
     // single action is spent entirely on standing; everyone else stands and has
     // only their STANDARD left (one attack on the same target, or spend it closing
@@ -154,7 +156,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       // Skeletal Champion: a bone-rattling shout — 1d8 + save-or-stunned.
       if (e.shout && e.shoutsLeft > 0 && dRoll(2) === 1) {
         // Undead heroes are immune to the stun (and to fear) — shout at the living.
-        const awake = this._targetableParty().filter(m => !(m.stunned > 0) && !(m.paralyzed > 0) && !m.undead);
+        const awake = this._targetableParty().filter(m => !(m.stunned > 0) && !(m.paralyzed > 0) && !m.undead && !m.mindBlank);   // Mind Blank (v3.37.124): fear finds no purchase
         if (awake.length) return this._enemyShout(e, pick(awake));
       }
       // Vampire (magus of its level): a Vampiric Touch spellstrike — a draining
@@ -378,7 +380,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       if (r.crit && e.gloriousChallenge && !e._dauntedRoom) {
         e._dauntedRoom = true;
         let n = 0;
-        for (const m of this.livingParty()) { if (!m.undead && !m.elemBody) { m.sickened = Math.max(m.sickened || 0, SICKENED_ROUNDS); n++; } }   // elemental bodies can't be shaken (v3.37.86)
+        for (const m of this.livingParty()) { if (!m.undead && !m.elemBody && !m.mindBlank) { m.sickened = Math.max(m.sickened || 0, SICKENED_ROUNDS); n++; } }   // elemental bodies can't be shaken (v3.37.86)
         if (n) this._note(`😱 ${e.glyph} ${e.name}'s GLORIOUS critical DAUNTS the party — ${n} hero${n > 1 ? 's' : ''} shaken (−2 to hit, damage & saves)! (Daunting Success)`, '/audio/draugr_shout03_burning.mp3', { side: 'enemy' });
       }
       // Domain parity (Death — Bleeding Touch): a death-priest foe's first landed
@@ -782,7 +784,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // ~1-in-6: freeze a hero with the dread gaze (its limited fear attack).
     if (e.shout && e.shoutsLeft > 0 && dRoll(6) === 1) {
       // The dread gaze is FEAR — undead heroes don't feel it; glare at the living.
-      const awake = heroes.filter(m => !(m.stunned > 0) && !(m.paralyzed > 0) && !m.undead);
+      const awake = heroes.filter(m => !(m.stunned > 0) && !(m.paralyzed > 0) && !m.undead && !m.mindBlank);   // Mind Blank (v3.37.124)
       if (awake.length) return this._enemyShout(e, pick(awake));
     }
     // ── SELF-BUFF (arcane survival) ── a caster "does everything heroes can": it
@@ -832,7 +834,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const _futileHold = (m) => _holdFailTotal >= 3
       || ((e._holdResists && e._holdResists[m.playerId]) || 0) >= 2
       || (((e._holdResists && e._holdResists[m.playerId]) || 0) >= 1 && this._partySaveMod(m, ['will']) >= dc(5) - 10);
-    const bruiser = heroes.find(m => !(m.paralyzed > 0) && !m.undead && MART.has(m.cls) && m.hp > m.maxHp * 0.4 && !_futileHold(m));   // undead heroes have no mind to hold
+    const bruiser = heroes.find(m => !(m.paralyzed > 0) && !m.undead && !m.mindBlank && MART.has(m.cls) && m.hp > m.maxHp * 0.4 && !_futileHold(m));   // undead heroes have no mind to hold; Mind Blank (v3.37.124) seals the living ones
     if (cl >= 9 && bruiser && !heroes.some(m => m.paralyzed > 0)) return this._enemyHoldHero(e, bruiser, dc(5), 'Hold Monster');
     // 2) Finish a badly-wounded hero with auto-hitting Magic Missile (1st).
     if (weakest.hp <= weakest.maxHp * 0.28) return this._enemyMissiles(e, weakest, Math.min(5, Math.floor((cl + 1) / 2)));
@@ -915,6 +917,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   // Lich Hold Monster — a hero fails a Will save or is HELD (re-saves each turn,
   // the attempt costing the turn). Same mechanic as the shaman's Hold Person.
   _enemyHoldHero(e, target, dc, label) {
+    if (target && target.mindBlank) { this._note(`🧠 ${target.nickname}'s MIND BLANK turns ${label || 'the compulsion'} aside — nothing to grip.`, null, { side: 'enemy' }); this._echoToTable(); return; }   // v3.37.124: the sealed mind refuses every hold
     // PF1: a mind-affecting compulsion — no effect on an undead hero.
     if (target.undead) { this._note(`🪄 ${e.glyph} ${e.name} casts ${label} on ${target.nickname} — but the undead have no mind to seize. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
     // ELEMENTAL BODY (v3.37.86 — Josh, run dapper-moose: "make sure it's applying

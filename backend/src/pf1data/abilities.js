@@ -288,6 +288,32 @@ const SPELL = {
   masssuggestion:  { key: 'masssuggestion',  name: 'Mass Suggestion',     icon: '🗣️', effect: 'masscharm', target: 'aoe', maxTargets: 3, save: 'will', slvl: 6, sound: '/audio/spell_fascinate.mp3', desc: 'Up to 3 foes, Will save or CHARMED — they stop attacking the party; a hit snaps each out. No effect on the mindless.' },
   banishment:      { key: 'banishment',      name: 'Banishment',          icon: '🚪', effect: 'savedie', target: 'enemy', save: 'will', onlyOutsiders: true, slvl: 5, sound: '/audio/spell_dimensional_anchor.mp3', desc: 'Hurl an OUTSIDER back to its home plane — Will save or GONE; a made save still wracks it. Only works on outsiders (demons, devils, fiends).' },
   waveexhaustion:  { key: 'waveexhaustion',  name: 'Waves of Exhaustion', icon: '🌊', effect: 'exhaust', target: 'aoe', maxTargets: 6, slvl: 7, sound: '/audio/spell_umbral_bolt.mp3', desc: 'A wave of crushing fatigue — up to 6 LIVING foes are EXHAUSTED, NO save (one action a turn, −1 hit, −1 AC). Undead and constructs are untouched.' },
+  // ── HIGH-LEVEL EXPANSION (v3.37.124, Toby: 'we need more spells for spellcasters.
+  //    use core rulebook and ultimate magic spells from pathfinder 1... adapt them to
+  //    our dungeon but use pf1 rules & parameters wherever possible'). CRB unless
+  //    tagged (UM). PF1 numbers kept: Power Word HP caps, Maze's no-save banishment,
+  //    mass cure dice, Hold Monster's any-living reach. ──
+  holdmonster:    { key: 'holdmonster',    name: 'Hold Monster',       icon: '✋', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', slvl: 5, sound: S.anchor, desc: 'ANY living foe must save or be HELD helpless — Hold Person\'s big brother, no humanoid restriction. It re-saves each turn to break free (the attempt costs its turn). Mindless undead and constructs are immune.' },
+  massholdperson: { key: 'massholdperson', name: 'Hold Person, Mass',  icon: '🖐️', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', onlyHumanoids: true, maxTargets: 4, slvl: 7, sound: S.anchor, desc: 'Up to FOUR humanoid foes must each save or be HELD helpless (each re-saves on its turn to break free). Humanoids only (PF1).' },
+  massholdmonster:{ key: 'massholdmonster',name: 'Hold Monster, Mass', icon: '✋', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'paralyzed', maxTargets: 4, slvl: 9, sound: S.anchor, desc: 'Up to FOUR foes of any living kind must each save or be HELD helpless. The 9th-level lockdown.' },
+  chainsoflight:  { key: 'chainsoflight',  name: 'Chains of Light',    icon: '⛓️', effect: 'save_debuff', target: 'enemy', save: 'reflex', debuff: 'paralyzed', physicalHold: true, slvl: 6, sound: S.anchor, desc: 'Blazing chains of pure force erupt and BIND one foe — Reflex save or held fast (it struggles free on a later turn\'s save; the struggle costs the turn). FORCE, not mind-magic: it binds undead, constructs, anything with a body. (UM)' },
+  irresistibledance:{ key: 'irresistibledance', name: 'Irresistible Dance', icon: '💃', effect: 'save_debuff', target: 'enemy', debuff: 'dazed', noSave: true, mindAffect: true, danceRounds: true, slvl: 6, sound: S.invoke, desc: 'The foe MUST dance — NO SAVE (PF1): capering helplessly for 1d4+1 rounds, no actions. Mindless undead and constructs don\'t hear the tune.' },
+  fleshtostone:   { key: 'fleshtostone',   name: 'Flesh to Stone',     icon: '🗿', effect: 'savedie', target: 'enemy', save: 'fort', killNote: 'greys, stiffens and TURNS TO LIFELESS STONE', slvl: 6, sound: S.anchor, desc: 'Fortitude save or the foe is a STATUE — out of the fight for good. A made save (or a boss too mighty to fell outright) still cracks and calcifies for heavy damage. Flesh only — no effect on undead, constructs, oozes or elementals.' },
+  undeathtodeath: { key: 'undeathtodeath', name: 'Undeath to Death',   icon: '⚰️', effect: 'savedie', target: 'enemy', save: 'will', onlyUndead: true, killNote: 'collapses into inert GRAVE-DUST', slvl: 6, sound: S.umbral, desc: 'The animating necromancy is TORN OUT of one undead — Will save or it is DESTROYED; a made save (or a boss lich) still takes heavy damage. Undead only.' },
+  destruction:    { key: 'destruction',    name: 'Destruction',        icon: '💥', effect: 'savedie', target: 'enemy', save: 'fort', killNote: 'is UNMADE in a flash of consuming holy fire', slvl: 7, sound: S.umbral, desc: 'A word of pure annihilation — Fortitude save or the foe is destroyed utterly; a made save (or a boss) still takes heavy damage. A death effect — no purchase on undead or constructs.' },
+  pwblind:        { key: 'pwblind',        name: 'Power Word Blind',   icon: '🕶️', effect: 'powerword', target: 'enemy', pw: 'blind', pwCap: 200, slvl: 7, sound: S.umbral, desc: 'One word of raw authority — NO SAVE: a foe at 200 HP or less is struck BLIND (−4 to hit, denied its Dex). A mightier foe is beyond the word\'s reach — the cast refuses and keeps your slot (PF1 HP cap).' },
+  pwstun:         { key: 'pwstun',         name: 'Power Word Stun',    icon: '💫', effect: 'powerword', target: 'enemy', pw: 'stun', pwCap: 150, slvl: 8, sound: S.umbral, desc: 'One word — NO SAVE: a foe at 150 HP or less is STUNNED for 1d4 turns. Over the cap, the word refuses and keeps your slot (PF1).' },
+  pwkill:         { key: 'pwkill',         name: 'Power Word Kill',    icon: '⚫', effect: 'powerword', target: 'enemy', pw: 'kill', pwCap: 100, slvl: 9, sound: S.umbral, desc: 'The last word — NO SAVE, no roll: a foe at 100 HP or less simply DIES. Over the cap, the word refuses and keeps your slot (PF1).' },
+  maze:           { key: 'maze',           name: 'Maze',               icon: '🌀', effect: 'maze', target: 'enemy', slvl: 8, sound: S.invoke, desc: 'Banish one foe — even a boss — into an extradimensional LABYRINTH. NO SAVE: it is simply GONE (untargetable, no turns) for 1d4+1 rounds while it hunts the exit. The ultimate stall.' },
+  mindblank:      { key: 'mindblank',      name: 'Mind Blank',         icon: '🧠', effect: 'buff', target: 'ally', persist: true, sticky: true, mindBlank: true, buff: {}, slvl: 8, sound: S.invoke, desc: 'Seal an ally\'s mind — IMMUNE to holds, fear and every mind-affecting assault for the REST OF THE DUNGEON (a day-long ward).' },
+  foresight:      { key: 'foresight',      name: 'Foresight',          icon: '🔮', effect: 'buff', target: 'ally', persist: true, sticky: true, foresight: true, buff: { ac: 2, save: 2 }, slvl: 9, sound: S.invoke, desc: 'A sixth sense whispers of each danger before it lands — +2 insight AC and saves, and NEVER caught flat-footed, for the REST OF THE DUNGEON (10 min/level).' },
+  firebrand:      { key: 'firebrand',      name: 'Firebrand',          icon: '🔥', effect: 'buff', target: 'self', party: true, sticky: true, buff: { bonusDice: 1 }, slvl: 7, sound: S.scorch, desc: 'Every ally\'s weapon IGNITES — +1d6 fire on every hit for the rest of the room. (UM)' },
+  masscurelight:  { key: 'masscurelight',  name: 'Mass Cure Light Wounds',    icon: '💞', effect: 'heal', heal: 'party', massHeal: true, healDice: 1, healCap: 25, target: 'ally', slvl: 5, sound: '/audio/spell_channel_charge.mp3', desc: 'A wave of healing washes the WHOLE party — 1d8 + caster level (max +25) to every ally.' },
+  masscuremoderate:{ key: 'masscuremoderate', name: 'Mass Cure Moderate Wounds', icon: '💞', effect: 'heal', heal: 'party', massHeal: true, healDice: 2, healCap: 30, target: 'ally', slvl: 6, sound: '/audio/spell_channel_charge.mp3', desc: 'A stronger wave — the WHOLE party heals 2d8 + caster level (max +30).' },
+  masscureserious:{ key: 'masscureserious', name: 'Mass Cure Serious Wounds',  icon: '💞', effect: 'heal', heal: 'party', massHeal: true, healDice: 3, healCap: 35, target: 'ally', slvl: 7, sound: '/audio/spell_channel_charge.mp3', desc: 'A surging tide — the WHOLE party heals 3d8 + caster level (max +35).' },
+  masscurecritical:{ key: 'masscurecritical', name: 'Mass Cure Critical Wounds', icon: '💞', effect: 'heal', heal: 'party', massHeal: true, healDice: 4, healCap: 40, target: 'ally', slvl: 8, sound: '/audio/spell_channel_charge.mp3', desc: 'A flood of positive energy — the WHOLE party heals 4d8 + caster level (max +40).' },
+  plaguestorm:    { key: 'plaguestorm',    name: 'Plague Storm',       icon: '🦠', effect: 'aoe', target: 'aoe', randN: 2, randDie: 4, maxTargets: 8, save: 'fort', die: 6, dice: 'halflevel', dcap: 10, dtype: 'poison', slvl: 6, sound: S.acid, desc: 'A rolling bank of windborne disease engulfs a RANDOM 2d4 foes — Fortitude for half (½-level d6, max 10d6). Cloudkill\'s festering cousin. (UM)' },
+  sunbeam:        { key: 'sunbeam',        name: 'Sunbeam',            icon: '🌅', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 8, dice: 'halflevel', dcap: 10, dtype: 'fire', slvl: 7, sound: S.scorch, desc: 'A shaft of concentrated daylight sweeps up to 4 foes — Reflex for half (½-level d8, max 10d8) of searing radiance.' },
   prismaticspray:  { key: 'prismaticspray',  name: 'Prismatic Spray',     icon: '🌈', effect: 'prismatic', target: 'aoe', maxTargets: 6, die: 6, dice: 'level', dcap: 12, slvl: 7, sound: '/audio/spell_holysmite.mp3', desc: 'A fan of clashing rays — every foe struck takes a RANDOM element for level d6 (Reflex half, max 12d6), and a violet ray (1-in-8) UNMAKES the living outright on a failed Fortitude save.' },
   sunburst:        { key: 'sunburst',        name: 'Sunburst',            icon: '☀️', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 12, blindRider: true, slvl: 8, sound: '/audio/spell_searinglight.mp3', desc: 'A globe of blazing daylight — up to 6 foes take level d6 (max 12d6, Reflex half); a failed save also BLINDS for 3 rounds.' },
   // ── NECROMANCY (Draymus's specialty; char-gated to him in the wizard kit) ──
@@ -1064,6 +1090,57 @@ _injectKitSpell('oracle', spontaneousSpell({ ...SPELL.trueseeing, slvl: 5 }, 9))
 // 6th (wizard 11 = 2×6−1; sorcerer 12 = 2×6 per the v3.37.85 convention).
 _injectKitSpell('wizard',   preparedSpell(SPELL.trueseeing, 11));
 _injectKitSpell('sorcerer', spontaneousSpell(SPELL.trueseeing, 12));
+// ── HIGH-LEVEL EXPANSION injections (v3.37.124, Toby). minLevels follow the
+//    house convention: full prepared 2×slvl−1, sorcerer 2×slvl, bard 6-level
+//    (1/4/7/10/13/16). The theurge inherits the cleric list automatically. ──
+_injectKitSpell('wizard',   preparedSpell(SPELL.holdmonster, 9));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.holdmonster, 10));
+_injectKitSpell('bard',     spontaneousSpell({ ...SPELL.holdmonster, slvl: 4 }, 10));
+_injectKitSpell('wizard',   preparedSpell(SPELL.fleshtostone, 11));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.fleshtostone, 12));
+_injectKitSpell('wizard',   preparedSpell(SPELL.undeathtodeath, 11));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.undeathtodeath, 12));
+_injectKitSpell('cleric',   preparedSpell(SPELL.undeathtodeath, 11));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.undeathtodeath, 11));
+_injectKitSpell('wizard',   preparedSpell(SPELL.massholdperson, 13));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.massholdperson, 14));
+_injectKitSpell('wizard',   preparedSpell(SPELL.firebrand, 13));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.firebrand, 14));
+_injectKitSpell('wizard',   preparedSpell(SPELL.pwblind, 13));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.pwblind, 14));
+_injectKitSpell('wizard',   preparedSpell(SPELL.mindblank, 15));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.mindblank, 16));
+_injectKitSpell('wizard',   preparedSpell(SPELL.maze, 15));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.maze, 16));
+_injectKitSpell('wizard',   preparedSpell(SPELL.pwstun, 15));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.pwstun, 16));
+_injectKitSpell('wizard',   preparedSpell(SPELL.massholdmonster, 17));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.massholdmonster, 18));
+_injectKitSpell('wizard',   preparedSpell(SPELL.pwkill, 17));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.pwkill, 18));
+_injectKitSpell('wizard',   preparedSpell(SPELL.foresight, 17));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.foresight, 18));
+_injectKitSpell('druid',    preparedSpell(SPELL.foresight, 17));
+_injectKitSpell('cleric',   preparedSpell(SPELL.masscurelight, 9));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.masscurelight, 9));
+_injectKitSpell('druid',    preparedSpell({ ...SPELL.masscurelight, slvl: 6 }, 11));
+_injectKitSpell('bard',     spontaneousSpell({ ...SPELL.masscurelight, slvl: 5 }, 13));
+_injectKitSpell('cleric',   preparedSpell(SPELL.chainsoflight, 11));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.chainsoflight, 11));
+_injectKitSpell('cleric',   preparedSpell(SPELL.masscuremoderate, 11));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.masscuremoderate, 11));
+_injectKitSpell('cleric',   preparedSpell(SPELL.destruction, 13));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.destruction, 13));
+_injectKitSpell('cleric',   preparedSpell(SPELL.masscureserious, 13));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.masscureserious, 13));
+_injectKitSpell('cleric',   preparedSpell(SPELL.masscurecritical, 15));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.masscurecritical, 15));
+_injectKitSpell('cleric',   preparedSpell(SPELL.plaguestorm, 11));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.plaguestorm, 11));
+_injectKitSpell('druid',    preparedSpell(SPELL.plaguestorm, 11));
+_injectKitSpell('druid',    preparedSpell(SPELL.sunbeam, 13));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.irresistibledance, 16));
+_injectKitSpell('druid',    preparedSpell({ ...SPELL.fingerofdeath, slvl: 8 }, 15));   // PF1: Finger of Death is DRUID 8
 // MAGIC VESTMENT is HOUR/LEVEL (v3.37.120, Josh: 'why wouldn't you do the same
 // for magic vestment?' - he's right, it sat room-only while Mage Armor ran the
 // dungeon): baked kit copies get persist + the run-long desc, door-castable.

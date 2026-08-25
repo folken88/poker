@@ -392,11 +392,11 @@ class Dungeon {
     // darkness AND foes who've gone INVISIBLE (enemy casters can now vanish).
     const dv = this.party.some(p => !p.left && p.hp > 0 && (p.darkvision || p.blindsense > 0 || p.trueSeeing || p.seeInvis));
     // SUMMONED undead are the party's OWN allies — never a valid target for the party.
-    let list = this.enemies.filter(e => e.hp > 0 && !e.summoned && (dv || (!(e.darkened > 0) && !e.invisible)));
+    let list = this.enemies.filter(e => e.hp > 0 && !e.summoned && !(e.mazed > 0) && (dv || (!(e.darkened > 0) && !e.invisible)));   // mazed (v3.37.124): banished to the labyrinth — truly not there
     // If invisibility/darkness hid EVERY foe, the party can still flail into the dark
     // (each swing eats the 50% concealment miss in _swingVsAC) — never leave them with
     // zero targets and a stuck room.
-    if (!list.length) list = this.enemies.filter(e => e.hp > 0 && !e.summoned);
+    if (!list.length) list = this.enemies.filter(e => e.hp > 0 && !e.summoned && !(e.mazed > 0));
     return list;
   }
 
@@ -646,7 +646,7 @@ class Dungeon {
     this.blackTentacles = null;   // the tentacle field doesn't carry between rooms
     this.invisPurged = false;     // an Invisibility Purge burns for its ROOM only — the next room can hide again (see _abInvisPurge)
     this._twkShare = null;        // Tactician's shared teamwork feat lapses between rooms (v3.37.92)
-    for (const m of this.present()) { this._computeCastable(m); this._resetAbilities(m); m.flatFooted = !(fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy || (this._isFlameCavalier(m) && (m.level || 1) >= 2) || this._twkActive(m, 'lookout')); }   // LOOKOUT (teamwork): a paired watch is never surprised  // re-read the spell LOADOUT (Spellbook picker edits land at the door) + refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy — and Order of the Flame's FOOLHARDY RUSH at L2 — are never caught flat-footed)
+    for (const m of this.present()) { this._computeCastable(m); this._resetAbilities(m); m.flatFooted = !(fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy || (this._isFlameCavalier(m) && (m.level || 1) >= 2) || this._twkActive(m, 'lookout') || m.foresight); }   // LOOKOUT (teamwork): a paired watch is never surprised  // re-read the spell LOADOUT (Spellbook picker edits land at the door) + refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy — and Order of the Flame's FOOLHARDY RUSH at L2 — are never caught flat-footed)
     if (Math.random() < 0.05) { try { this._reskinVorkstag(); } catch (_) {} }   // skinwalker drifts to a new face between rooms (rare)
     this._maintainBardSongs();   // Inspire Courage is a passive aura — always up, no action spent
     this.status = 'combat';

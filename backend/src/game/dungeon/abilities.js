@@ -251,6 +251,19 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         return { ok: false, error: `${ab.name} only holds HUMANOIDS — ${tgt.name} is no person.` };
       }
     }
+    // UNDEATH TO DEATH only unmakes the UNDEAD (v3.37.124) — refuse, keeping the slot.
+    if (ab.onlyUndead) {
+      const tgt = this._oneEnemy(payload);
+      if (tgt && tgt.type !== 'undead' && !/skelet|zombie|wraith|ghost|lich|vampire|wight|ghoul|ghast|shadow/i.test(tgt.name || '')) {
+        return { ok: false, error: `${ab.name} only unmakes the UNDEAD — ${tgt.name} still lives.` };
+      }
+    }
+    // POWER WORDS reach only so much life (PF1's HP caps, v3.37.124) — an over-cap
+    // target refuses the cast, slot kept (enemy HP is already public on the cards).
+    if (ab.pwCap) {
+      const tgt = this._oneEnemy(payload);
+      if (tgt && tgt.hp > ab.pwCap) return { ok: false, error: `${tgt.name} holds too much life (${tgt.hp} HP) — ${ab.name} fells only creatures at ${ab.pwCap} HP or less.` };
+    }
     // MELEE MANEUVERS need to physically REACH the foe — a grounded hero can't
     // trip / disarm / bull rush / grapple / feint a flyer on the wing (Josh: you
     // could cheat down airborne sorcerers & dragons with these). Unlike a basic
@@ -312,6 +325,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       infernalheal: () => this._abInfernalHeal(m, ab, payload),
       blacktentacles: () => this._abBlackTentacles(m, ab),
       savedie:     () => this._abSaveDie(m, ab, payload),
+      powerword:   () => this._abPowerWord(m, ab, payload),
+      maze:        () => this._abMaze(m, ab, payload),
       judgment:    () => this._abJudgment(m, ab),
       bane:        () => this._abBane(m, ab, payload),
       cleanse:     () => this._abCleanse(m, ab, payload),
@@ -1922,25 +1937,57 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abSaveDie(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     const sound = ab.sound || pick(SND.lightning);
-    // Only living, breathing creatures can be suffocated — undead, constructs,
-    // oozes and elementals are immune (by type, with a name fallback).
-    const immune = e.type === 'undead' || e.type === 'construct'
-      || /golem|skelet|zombie|wraith|ghost|lich|vampire|wight|ghoul|ghast|shadow|ooze|elemental|construct|undead/i.test(e.name || '');
+    // Only living, breathing creatures answer a death effect — undead, constructs,
+    // oozes and elementals are immune (by type, with a name fallback). Undeath to
+    // Death INVERTS the filter (its target gate already refused the living).
+    const immune = ab.onlyUndead ? false : (e.type === 'undead' || e.type === 'construct'
+      || /golem|skelet|zombie|wraith|ghost|lich|vampire|wight|ghoul|ghast|shadow|ooze|elemental|construct|undead/i.test(e.name || ''));
     if (immune) {
-      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — but it doesn't breathe. No effect.`, sound);
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — but ${ab.killNote ? 'no living soul answers the call' : "it doesn't breathe"}. No effect.`, sound);
       this._echoToTable(sound); return;
     }
+    const svLbl = (ab.save || 'fort') === 'will' ? 'Will' : (ab.save === 'reflex' ? 'Ref' : 'Fort');
     const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'fort'), dc);
     if (!sv.saved && !e.boss) {
       this._dmgE(e, e.hp + 20, ab.dtype);   // lethal
-      this._note(`${ab.icon} ${m.nickname} SUFFOCATES ${e.name}! [Fort ${sv.total} vs ${dc}] — it collapses, airless and lifeless. ☠️`, sound);
+      this._note(`${ab.icon} ${m.nickname} ${ab.killNote ? `casts ${ab.name} — ${e.name} ${ab.killNote}` : `SUFFOCATES ${e.name}`}! [${svLbl} ${sv.total} vs ${dc}] ☠️`, sound);
     } else {
       const frac = !sv.saved ? 0.5 : 0.25;   // boss-failed = half max HP; made save = a quarter
       const dmg = this._dmgE(e, Math.max(6, Math.floor((e.maxHp || 20) * frac)), ab.dtype);
-      this._note(`${ab.icon} ${m.nickname}'s ${ab.name} chokes ${e.name} — ${!sv.saved ? 'too mighty to fell outright' : 'it claws in a breath'}: ${dmg} damage. [Fort ${sv.total} vs ${dc}]${e.hp <= 0 ? ' ☠️' : ''}`, sound);
+      this._note(`${ab.icon} ${m.nickname}'s ${ab.name} ${ab.killNote ? 'wracks' : 'chokes'} ${e.name} — ${!sv.saved ? 'too mighty to fell outright' : 'it endures the worst of it'}: ${dmg} damage. [${svLbl} ${sv.total} vs ${dc}]${e.hp <= 0 ? ' ☠️' : ''}`, sound);
     }
     this._echoToTable(sound);
+  },
+  // POWER WORDS (v3.37.124, CRB): no save, no roll — raw arcane authority, gated by
+  // the target's remaining life. The over-cap refusal lives in _useAbility (slot
+  // kept); by the time we're here, the word simply LANDS. PF1 caps: blind ≤200 HP,
+  // stun ≤150, kill ≤100 — bosses under the cap die like anything else.
+  _abPowerWord(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    const sound = ab.sound || pick(SND.lightning);
+    if (ab.pw === 'kill') {
+      this._dmgE(e, e.hp + 20, 'negative');
+      this._note(`${ab.icon} ${m.nickname} speaks the WORD OF DEATH — ${e.name} simply DIES. No save, no roll. ☠️`, sound);
+    } else if (ab.pw === 'stun') {
+      const r = dRoll(4);
+      e.stunned = Math.max(e.stunned || 0, r);
+      this._note(`${ab.icon} ${m.nickname} speaks the WORD OF STUNNING — ${e.name} reels, STUNNED for ${r} turn${r > 1 ? 's' : ''}. No save.`, sound);
+    } else {
+      e.blinded = Math.max(e.blinded || 0, Math.max(2, Math.min(12, m.level || 1)));
+      this._note(`${ab.icon} ${m.nickname} speaks the WORD OF BLINDNESS — ${e.name}'s eyes go DARK (−4 to hit, denied its Dex). No save.`, sound);
+    }
+    this._echoToTable(sound);
+  },
+  // MAZE (v3.37.124, CRB): no save — the foe is banished into an extradimensional
+  // labyrinth for 1d4+1 rounds: untargetable (Dungeon._targetableEnemies) and its
+  // turns are spent wandering (_enemyAct decrements e.mazed and skips).
+  _abMaze(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    if (e.mazed > 0) { this._note(`${ab.icon} ${e.name} is already lost in a maze.`); this._echoToTable(); return; }
+    e.mazed = dRoll(4) + 1;
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${e.name} vanishes into an extradimensional LABYRINTH! Gone from the fight while it hunts the exit (~${e.mazed} rounds). No save.`, ab.sound);
+    this._broadcast();
   },
   // Judgement (inquisitor): set the one active judgement. Switching is a FREE
   // action (see _useAbility returning freeAction). destruction=+dmg, protection=
@@ -2272,10 +2319,27 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   // Save-or-be-disabled (Hold Person): Will save or paralyzed.
   _abSaveDebuff(m, ab, payload) {
+    // MASS versions (v3.37.124: Hold Person/Monster, Mass) — the same save-or-held
+    // logic per foe, one summary line. Mind-immune and non-humanoid foes are
+    // filtered out rather than refused (a mass spell washes over the whole field).
+    if ((ab.maxTargets || 1) > 1) {
+      const picked = this._enemyTargets(payload, ab.maxTargets)
+        .filter(e => !(ab.debuff === 'paralyzed' && !ab.physicalHold && mindImmune(e)) && !(ab.onlyHumanoids && !this._isHumanoid(e)));
+      if (!picked.length) { this._note(`${ab.icon} ${ab.name} finds no valid target on this field.`); this._echoToTable(); return; }
+      const dc = this._spellDC(m, ab); const held = [], resisted = [];
+      for (const e of picked) {
+        const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
+        if (!sv.saved) { e.paralyzed = Math.max(2, Math.min(12, m.level || 1)); e.heldDC = dc; held.push(e.name); }
+        else resisted.push(e.name);
+      }
+      const sound = ab.sound || pick(SND.stink);
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — DC ${dc}: ${held.length ? `HELD: ${held.join(', ')}` : 'nobody held'}${resisted.length ? `; resisted: ${resisted.join(', ')}` : ''}.`, sound);
+      this._echoToTable(sound); return;
+    }
     const e = this._oneEnemy(payload); if (!e) return;
-    if (ab.debuff === 'paralyzed' && mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
+    if ((ab.debuff === 'paralyzed' && !ab.physicalHold || ab.mindAffect) && mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
     const dc = this._spellDC(m, ab);
-    const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
+    const sv = ab.noSave ? { saved: false, total: null } : this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
     const sound = ab.sound || pick(SND.stink);
     // Hold Person / Hideous Laughter: HELD for up to 1 round per caster level,
     // but a NEW Will save each of the foe's turns can end it early (the re-save
@@ -2286,8 +2350,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // tracks, now reachable as save-or-suffer spells:
     else if (!sv.saved && ab.debuff === 'shaken')  e.sickened = Math.max(e.sickened || 0, SICKENED_ROUNDS);   // Doom / Ray of Enfeeblement: −2 to hit & damage
     else if (!sv.saved && ab.debuff === 'blinded') e.blinded = Math.max(e.blinded || 0, Math.max(2, Math.min(12, m.level || 1)));   // Blindness: −4 to hit, denied Dex
-    else if (!sv.saved && ab.debuff === 'dazed')   e.stunned = Math.max(e.stunned || 0, 1);   // Daze Monster: loses ONE turn, no re-save
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${(ab.debuff === 'sickened' ? 'NAUSEATED' : String(ab.debuff).toUpperCase())}!`}`, sound);
+    else if (!sv.saved && ab.debuff === 'dazed')   e.stunned = Math.max(e.stunned || 0, ab.danceRounds ? dRoll(4) + 1 : 1);   // Daze Monster: ONE turn; Irresistible Dance (v3.37.124): 1d4+1 capering turns, NO save (PF1)
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — ${ab.noSave ? `NO save (PF1): ${ab.danceRounds ? `it DANCES helplessly (${e.stunned} turns)!` : `${String(ab.debuff).toUpperCase()}!`}` : `save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${(ab.debuff === 'sickened' ? 'NAUSEATED' : String(ab.debuff).toUpperCase())}!`}`}`, sound);
     this._echoToTable(sound);
   },
   // Touch spell (Shocking Grasp): a ranged touch attack for level d6.
@@ -2707,6 +2771,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (snap.seeInvis) who.seeInvis = true;
     if (snap.trueSeeing) who.trueSeeing = true;
     if (snap.displace) who.displaced = true;
+    if (snap.mindBlank) who.mindBlank = true;   // Mind Blank (v3.37.124): immune to holds/fear/charms — see the enemyAI guards
+    if (snap.foresight) who.foresight = true;   // Foresight (v3.37.124): never flat-footed — see the room-open assignment
   },
   _abBuff(m, ab, payload) {
     const sound = ab.sound || pick(SND.flesh);
@@ -2764,6 +2830,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
           dr: ab.dr || 0, protectFire: ab.protectFire ? Math.min(120, 12 * (m.level || 1)) : 0,
           darkvision: !!ab.darkvision, fly: !!ab.fly, canHitFlyers: !!ab.canHitFlyers,
           seeInvis: !!ab.seeInvis, trueSeeing: !!ab.trueSeeing, displace: !!ab.displace,
+          mindBlank: !!ab.mindBlank, foresight: !!ab.foresight,   // v3.37.124: Mind Blank / Foresight — run-long flags
         };
         who.runBuffPayloads = who.runBuffPayloads || {};
         who.runBuffPayloads[ab.key] = snap;

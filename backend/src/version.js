@@ -1734,9 +1734,27 @@
 //                     at cast AND re-applies it every room. (6) POTIONS/ITEM STORE: scoped for
 //                     the next cycle (port of PGM's items.js store; needs blind-first UX design).
 //                     Tests 139-146. Backend only; CLIENT_BUILD stays 33816.
-const VERSION = '3.37.123';
+//  3.37.124 2026-08-24 THE HIGH-LEVEL SPELL EXPANSION (Toby: 'we need more spells for spellcasters.
+//                     use core rulebook and ultimate magic... adapt them to our dungeon but use pf1
+//                     rules & parameters wherever possible'). 21 NEW SPELLS, PF1 numbers kept:
+//                     ARCANE - Hold Monster (5, +bard 4), Flesh to Stone (6), Undeath to Death
+//                     (6, +cleric/oracle), Mass Hold Person (7), Firebrand (UM 7, party +1d6
+//                     fire), Power Word Blind/Stun/Kill (7/8/9, NO save, PF1 HP caps 200/150/100
+//                     - over-cap REFUSES and keeps the slot), Mind Blank (8, run-long immunity
+//                     to holds/fear - new guards at every enemy mind-assault site), Maze (8, no
+//                     save, 1d4+1 rounds in the labyrinth - untargetable, turns skipped), Mass
+//                     Hold Monster (9), Foresight (9, +druid: run-long never-flat-footed +2
+//                     AC/saves). DIVINE - Mass Cure Light/Mod/Serious/Critical (5-8, +druid/bard
+//                     get Mass CLW), Chains of Light (UM 6, Reflex-save FORCE hold that binds
+//                     even undead/constructs), Destruction (7), Plague Storm (UM 6, +druid),
+//                     Sunbeam (druid 7), druid Finger of Death at 8 (PF1). BARD - Irresistible
+//                     Dance (6, NO save, 1d4+1 lost turns, PF1). ENGINE: save_debuff grows mass/
+//                     noSave/physicalHold/mindAffect branches; savedie grows killNote + the
+//                     onlyUndead inverse filter; new powerword + maze handlers; PRIORITY lists
+//                     extended so bots actually cast them. Tests 147-153. Backend only.
+const VERSION = '3.37.124';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33816;
-const HEADLINE = "Toby's rulings land: enemies never spawn more than 2 CR above your best hero; long buffs like Stoneskin and Heroism now truly last the whole dungeon; Dimension Door tears grappled allies free (Teleport shelters them two rounds); and a grappled shooter draws a boot dagger instead of firing from the scrum.";
+const HEADLINE = "TWENTY-ONE new high-level spells from the Core Rulebook and Ultimate Magic: Power Word Kill, Maze, Mass Hold Monster, Mind Blank, Foresight, Flesh to Stone, Destruction, Chains of Light, the Mass Cure line, Firebrand, Sunbeam and more — PF1 numbers kept, in every caster's Prepare menu now.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
