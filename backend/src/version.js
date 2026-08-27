@@ -1810,9 +1810,19 @@
 //                     invis/heroism/displacement/stoneskin brews). (6) THE I KEY reads your
 //                     inventory: 'wielding <weapon>. +N Weapon · +N Ring...' - gear + weaponName
 //                     now ride the party payload. Tests 163-166; CLIENT_BUILD 33817.
-const VERSION = '3.37.127';
+//  3.37.128 2026-08-26 THE INVESTIGATOR, PF1-TRUE (Toby: 'pf1 has an investigator class, it's half
+//                     rogue half alchemist, sort of. follow pf1'). The .127 kit borrowed the
+//                     slayer's numbers; the ACG class is sharper: STUDIED COMBAT is +HALF LEVEL
+//                     to hit and damage vs the studied foe (not +1-per-5), and from L4 every hit
+//                     on the mark carries STUDIED STRIKE dice (1d6, +1d6 per 2 levels — the rogue
+//                     half, riding the sneak-dice channel in _swingVsAC). Bots study now too
+//                     (the slayer auto-mark extended to investigators; it never fired for them).
+//                     Fighter feats trimmed from the kit (no Cleave/Power Attack/Deadly Aim — an
+//                     ACG investigator doesn't take those); universal maneuvers + Feint + the six
+//                     extracts stay. Tests 167-169. Backend only; CLIENT_BUILD stays 33817.
+const VERSION = '3.37.128';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33817;
-const HEADLINE = "Press I to hear your inventory; every dungeon-long buff finally shows in the L and B readouts; clerics stop wasting channels on a healthy party; and the investigator becomes a real class — Studied Combat plus six alchemical extracts.";
+const HEADLINE = "The investigator is now PF1-true — half rogue, half alchemist: Studied Combat grants +half level to hit and damage, every hit on the studied foe carries Studied Strike dice from level 4, and the extracts rack rounds out the alchemist side.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

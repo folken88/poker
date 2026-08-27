@@ -1635,7 +1635,7 @@ class Dungeon {
     // CAVALIER Challenge: +level bonus DAMAGE (not to-hit) vs the challenged foe.
     const challengeN = (target && attacker.challengedId != null && attacker.challengedId === target.uid) ? (attacker.challengeN || 0) : 0;
     const sneakOk = SNEAK_CLASSES.has(cls) && (denied || flanking);
-    const sneakDice = sneakOk ? Math.min(SNEAK_DICE_CAP, Math.max(1, Math.ceil(lvl / 2))) : 0;
+    const sneakDice = sneakOk ? Math.min(SNEAK_DICE_CAP, Math.max(1, Math.ceil(lvl / 2))) : ((cls === 'investigator' && studied && lvl >= 4) ? Math.min(SNEAK_DICE_CAP, Math.floor((lvl - 2) / 2)) : 0);   // investigator STUDIED STRIKE (PF1 ACG, v3.37.128): 1d6 at L4, +1d6 per 2 levels vs the STUDIED foe — the rogue half of the class
     // Sticky room buffs (Rage / Judgment / Bane / Inspire Courage / Prayer)
     // PLUS run-long buffs (Bless's +1 to-hit) that persist across rooms.
     const rb = attacker.runBuffs || {};

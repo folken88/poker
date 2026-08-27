@@ -707,7 +707,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.slots = slotsFor(m.cls, m.level || 1, m.castingMod);   // per-spell-level slots (base + casting-stat bonus + domain/school)
     this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
     if (m.cls === 'theurge') { const L = m.level || 1; m.synthUses = L >= 17 ? 3 : L >= 11 ? 2 : L >= 5 ? 1 : 0; }   // SPELL SYNTHESIS (Kobold Press): usable 1/2/3 times per room at L5/11/17
-    if (m.cls === 'slayer') { m.studiedId = null; m.studiedN = 0; }   // SLAYER: Studied Target mark clears each room (fresh foes)
+    if (m.cls === 'slayer' || m.cls === 'investigator') { m.studiedId = null; m.studiedN = 0; }   // SLAYER/INVESTIGATOR: the studied mark clears each room (fresh foes)
     m._totalDefense = false;   // v3.37.107: a guard stance never survives the door
     m._ddFerried = false;      // v3.37.109: teleport-tactics ferry is once per ally per ROOM
     m.blinkedBy = null; m._blinkHold = 0; m._tpStrike = 0; m._timeStopCasts = 0;   // v3.37.123: no blink outlives its room — belt for poker, LOAD-BEARING for PGM (its turn loop never cleared blinkedBy); v3.37.125: Time Stop windows close at the door too
@@ -2315,8 +2315,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abStudyTarget(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     m.studiedId = e.uid;
-    m.studiedN = 1 + Math.floor((m.level || 1) / 5);
-    this._note(`${ab.icon} ${m.nickname} STUDIES ${e.name} — reading its guard for the kill: +${m.studiedN} to hit and damage against it. The mark holds until you study another or the room ends.`, ab.sound);
+    // v3.37.128 (Toby: 'follow pf1'): the INVESTIGATOR's Studied Combat is +½ level
+    // (ACG) — much sharper than the slayer's +1-per-5 track. From L4 their strikes
+    // vs the studied foe also carry STUDIED STRIKE dice (see _swingVsAC).
+    m.studiedN = m.cls === 'investigator' ? Math.max(1, Math.floor((m.level || 1) / 2)) : 1 + Math.floor((m.level || 1) / 5);
+    this._note(`${ab.icon} ${m.nickname} STUDIES ${e.name} — reading its guard for the kill: +${m.studiedN} to hit and damage${m.cls === 'investigator' && (m.level || 1) >= 4 ? ', and STUDIED STRIKE dice on every hit,' : ''} against it. The mark holds until you study another or the room ends.`, ab.sound);
     this._echoToTable(ab.sound);
   },
   // CAVALIER — Challenge: swear an oath against ONE foe. Every strike the cavalier

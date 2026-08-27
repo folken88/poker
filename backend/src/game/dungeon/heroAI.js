@@ -131,9 +131,9 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     // SLAYER auto-STUDIES its prey (Studied Target is a swift/free action): mark the
     // foe it's about to fight so its attacks land the +N insight bonus. Re-mark when
     // the old mark is dead or gone.
-    if (m.cls === 'slayer' && (m.studiedId == null || !foes.some(e => e.uid === m.studiedId && e.hp > 0))) {
+    if ((m.cls === 'slayer' || m.cls === 'investigator') && (m.studiedId == null || !foes.some(e => e.uid === m.studiedId && e.hp > 0))) {   // v3.37.128 (Toby: 'follow pf1' — half rogue, half alchemist): investigator bots study too
       const prey = this._preferredFoe(m, foes);
-      if (prey) { m.studiedId = prey.uid; m.studiedN = 1 + Math.floor((m.level || 1) / 5); this._note(`🎯 ${m.nickname} studies ${prey.name} — marking it for the kill.`); }
+      if (prey) { m.studiedId = prey.uid; m.studiedN = m.cls === 'investigator' ? Math.max(1, Math.floor((m.level || 1) / 2)) : 1 + Math.floor((m.level || 1) / 5); this._note(`🎯 ${m.nickname} studies ${prey.name} — marking it for the kill.`); }   // investigator STUDIED COMBAT: +½ level (PF1); slayer keeps its own track
     }
     // BOT TACTICIAN (v3.37.92): a cavalier opens the fight by drilling the party —
     // share the best teamwork feat once per room, while the room is young and
