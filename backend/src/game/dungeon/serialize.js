@@ -191,6 +191,8 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (e.invisible)  c.push({ key: 'invisible',   label: 'Invisible',    desc: 'unseen — your hits suffer 50% concealment (True Seeing / blindsense pierce it); dispellable', icon: `${I}invisible.webp` });
     if (e.images > 0) c.push({ key: 'mirrorimage', label: 'Mirror Image', n: e.images, desc: `${e.images} decoy${e.images === 1 ? '' : 's'} soaking your blows — each hit has a 1-in-${e.images + 1} chance to tag the REAL foe; the rest pop a decoy. Dispellable.`, icon: `${I}fly.webp` });
     if (e.flyCast)    c.push({ key: 'flycast',     label: 'Flying',       desc: 'airborne by magic — grounded foes can\'t reach it; DISPEL it and it crashes', icon: `${I}fly.webp` });
+    if (e.silenced > 0) c.push({ key: 'silenced', label: 'Silenced', desc: `wrapped in silence — no spells for ${e.silenced} more round${e.silenced === 1 ? '' : 's'}`, icon: `${I}magearmor.webp` });   // v3.37.129 (CRB batch 1)
+    if (e.cursed)     c.push({ key: 'cursed',    label: 'Cursed',   desc: '−4 on all its attacks for the room (Bestow Curse)', icon: `${I}magearmor.webp` });
     return c;
   },
 

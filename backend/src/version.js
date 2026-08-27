@@ -1820,9 +1820,21 @@
 //                     Fighter feats trimmed from the kit (no Cleave/Power Attack/Deadly Aim — an
 //                     ACG investigator doesn't take those); universal maneuvers + Feint + the six
 //                     extracts stay. Tests 167-169. Backend only; CLIENT_BUILD stays 33817.
-const VERSION = '3.37.128';
+//  3.37.129 2026-08-26 CRB PARITY, BATCH 1 (Toby: 'make a plan... include all core rulebook
+//                     spells... 5 spells at a time until we have full CRB parity'). THE LEDGER is
+//                     docs/CRB-SPELL-PARITY.md — every CRB spell tracked as in-game / adapted /
+//                     queued (10 batches sketched) / impractical-with-reason (divination, travel,
+//                     social, downtime, object-target and figment families, each explained).
+//                     BATCH 1, control & anti-caster: OBSCURING MIST (rides the magical-darkness
+//                     system), SILENCE (Will or caster-level rounds of no casts - a muted enemy
+//                     caster falls back on steel, announced; the anti-Tech-Witch tool), RAY OF
+//                     EXHAUSTION (single-target Waves), BESTOW CURSE (Will or -4 attacks for the
+//                     room, new cursed chip), COMMAND ('FALL!' - Will or prone + turn lost,
+//                     mind-affecting). New enemy chips: Silenced (with rounds left), Cursed.
+//                     Bots learn all five via PRIORITY. Tests 170-173. Backend only.
+const VERSION = '3.37.129';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33817;
-const HEADLINE = "The investigator is now PF1-true — half rogue, half alchemist: Studied Combat grants +half level to hit and damage, every hit on the studied foe carries Studied Strike dice from level 4, and the extracts rack rounds out the alchemist side.";
+const HEADLINE = "The road to full Core Rulebook parity begins — batch 1 lands SILENCE (mute an enemy caster and watch it fall back on steel), Bestow Curse, Command, Ray of Exhaustion and Obscuring Mist; plus the PF1-true investigator: Studied Combat at half level with Studied Strike dice.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

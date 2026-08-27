@@ -31,7 +31,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
-    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.hasted > 0 ? 1 : 0);   // Fight Defensively: −4; Blaze of Glory: +4; Haste (v3.37.126): +1 (PF1)
+    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.hasted > 0 ? 1 : 0) - (e.cursed ? 4 : 0);   // Fight Defensively: −4; Blaze of Glory: +4; Haste (v3.37.126): +1; Bestow Curse (v3.37.129): −4
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
@@ -71,6 +71,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // MAZE (v3.37.124): lost in the labyrinth — no turn, untargetable, back when the counter runs out.
     if (e.mazed > 0) { e.mazed--; this._note(`🌀 ${e.glyph} ${e.name} wanders the extradimensional maze${e.mazed ? ' — lost to the fight' : ' — and FINDS THE EXIT! It returns, furious'}.`, null, { side: 'enemy' }); this._echoToTable(); return; }
     if (e.hasted > 0) e.hasted--;   // enemy Haste (v3.37.126) burns down one round per turn
+    if (e.silenced > 0) e.silenced--;   // Silence (v3.37.129) fades one round per turn — the cast gates below check what's left
     // PF1: standing up from prone is a MOVE ACTION. A slowed (staggered) creature's
     // single action is spent entirely on standing; everyone else stands and has
     // only their STANDARD left (one attack on the same target, or spend it closing
@@ -142,7 +143,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       // the rite is spent — so the party feels the horde swell. See _enemySummon.
       if (e.summon && e.summonLeft > 0 && (this.round <= 2 || dRoll(2) === 1)) return this._enemySummon(e);
       // Kobold shaman: cast Hold Person on an unheld target before resorting to melee.
-      if (e.caster === 'holdperson' && e.castsLeft > 0) {
+      if (e.caster === 'holdperson' && e.castsLeft > 0 && !(e.silenced > 0)) {   // Silence (v3.37.129): a muted shaman can't shape the hold
         // Smart caster: never Hold an UNDEAD hero — no mind to seize (same
         // knowledge the hero bots use; Tobias: "enemies play smart").
         const free = this._targetableParty().filter(m => !(m.paralyzed > 0) && !m.undead);
@@ -767,6 +768,14 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _lichCast(e) {
     const heroes = this._targetableParty();
     if (!heroes.length) return;
+    // SILENCE (v3.37.129, CRB batch 1): a silenced caster cannot shape a spell —
+    // it snarls into the muffling dome and falls back on bare steel.
+    if (e.silenced > 0) {
+      const t = pick(heroes);
+      this._note(`🤫 ${e.glyph} ${e.name} mouths arcane words into the SILENCE — nothing comes. It falls on ${t ? t.nickname : 'the party'} with steel instead.`, null, { side: 'enemy' });
+      if (t) this._enemyMelee(e, t);
+      this._echoToTable(); return;
+    }
     // v3.37.121 (Josh, eager-marmot d12: a CR-5 Elite Sea-Caster loosed MAXIMIZED
     // 16d6 CHAIN LIGHTNING — DC 24, 96 damage, "4 hit, 4 down" — at a party of
     // LEVEL TWOS). Caster level was pure depth with a FLOOR of 12, so ANY arcane

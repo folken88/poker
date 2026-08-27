@@ -2438,7 +2438,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     else if (!sv.saved && ab.debuff === 'shaken')  e.sickened = Math.max(e.sickened || 0, SICKENED_ROUNDS);   // Doom / Ray of Enfeeblement: −2 to hit & damage
     else if (!sv.saved && ab.debuff === 'blinded') e.blinded = Math.max(e.blinded || 0, Math.max(2, Math.min(12, m.level || 1)));   // Blindness: −4 to hit, denied Dex
     else if (!sv.saved && ab.debuff === 'dazed')   e.stunned = Math.max(e.stunned || 0, ab.danceRounds ? dRoll(4) + 1 : 1);   // Daze Monster: ONE turn; Irresistible Dance (v3.37.124): 1d4+1 capering turns, NO save (PF1)
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — ${ab.noSave ? `NO save (PF1): ${ab.danceRounds ? `it DANCES helplessly (${e.stunned} turns)!` : `${String(ab.debuff).toUpperCase()}!`}` : `save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${(ab.debuff === 'sickened' ? 'NAUSEATED' : String(ab.debuff).toUpperCase())}!`}`}`, sound);
+    // ── CRB batch 1 (v3.37.129) ──
+    else if (!sv.saved && ab.debuff === 'silenced') e.silenced = Math.max(e.silenced || 0, Math.max(2, Math.min(12, m.level || 1)));   // Silence: no casts while it holds (enemy caster AI falls back to steel)
+    else if (!sv.saved && ab.debuff === 'cursed')  e.cursed = true;   // Bestow Curse: −4 on its attacks for the room (the enemyAI swing math)
+    else if (!sv.saved && ab.debuff === 'commanded') { e.stunned = Math.max(e.stunned || 0, 1); e.prone = true; }   // Command: "FALL!" — prone + turn lost
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — ${ab.noSave ? `NO save (PF1): ${ab.danceRounds ? `it DANCES helplessly (${e.stunned} turns)!` : `${String(ab.debuff).toUpperCase()}!`}` : `save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${(ab.debuff === 'sickened' ? 'NAUSEATED' : ab.debuff === 'commanded' ? 'it FALLS PRONE — turn lost' : String(ab.debuff).toUpperCase())}!`}`}`, sound);
     this._echoToTable(sound);
   },
   // Touch spell (Shocking Grasp): a ranged touch attack for level d6.

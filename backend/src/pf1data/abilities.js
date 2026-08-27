@@ -326,6 +326,13 @@ const SPELL = {
   masscurecritical:{ key: 'masscurecritical', name: 'Mass Cure Critical Wounds', icon: '💞', effect: 'heal', heal: 'party', massHeal: true, healDice: 4, healCap: 40, target: 'ally', slvl: 8, sound: '/audio/spell_channel_charge.mp3', desc: 'A flood of positive energy — the WHOLE party heals 4d8 + caster level (max +40).' },
   plaguestorm:    { key: 'plaguestorm',    name: 'Plague Storm',       icon: '🦠', effect: 'aoe', target: 'aoe', randN: 2, randDie: 4, maxTargets: 8, save: 'fort', die: 6, dice: 'halflevel', dcap: 10, dtype: 'poison', slvl: 6, sound: S.acid, desc: 'A rolling bank of windborne disease engulfs a RANDOM 2d4 foes — Fortitude for half (½-level d6, max 10d6). Cloudkill\'s festering cousin. (UM)' },
   sunbeam:        { key: 'sunbeam',        name: 'Sunbeam',            icon: '🌅', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 8, dice: 'halflevel', dcap: 10, dtype: 'fire', slvl: 7, sound: S.scorch, desc: 'A shaft of concentrated daylight sweeps up to 4 foes — Reflex for half (½-level d8, max 10d8) of searing radiance.' },
+  // ── CRB PARITY BATCH 1 (v3.37.129, Toby: 'do 5 spells at a time until we have
+  //    full corerulebook parity' — the ledger is docs/CRB-SPELL-PARITY.md).
+  //    Control & anti-caster. ──
+  silence:       { key: 'silence',       name: 'Silence',            icon: '🤫', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'silenced', slvl: 2, sound: S.anchor, desc: 'Will save or the foe is wrapped in perfect SILENCE for caster-level rounds — no spells, no holds, no healing words: an enemy caster falls back on its weapons. THE anti-caster tool. (Adapted: single target, not an area — no grid.)' },
+  bestowcurse:   { key: 'bestowcurse',   name: 'Bestow Curse',       icon: '🕯️', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'cursed', slvl: 3, sound: S.umbral, desc: 'Will save or CURSED — −4 on all its attacks for the rest of the room. (PF1 offers three curse shapes; the attack-rot is the one that matters in here.)' },
+  command:       { key: 'command',       name: 'Command',            icon: '🗣️', effect: 'save_debuff', target: 'enemy', save: 'will', debuff: 'commanded', mindAffect: true, slvl: 1, sound: S.anchor, desc: '"FALL!" — Will save or the foe drops PRONE and loses its next turn. Mind-affecting and language-driven: the mindless dead and constructs don\'t listen.' },
+  rayofexhaustion: { key: 'rayofexhaustion', name: 'Ray of Exhaustion', icon: '🩶', effect: 'exhaust', target: 'aoe', maxTargets: 1, slvl: 3, sound: '/audio/spell_umbral_bolt.mp3', desc: 'A grey beam drains one LIVING foe — EXHAUSTED (one action a turn, −1 hit, −1 AC), no save. The single-target little brother of Waves of Exhaustion. Undead and constructs are untouched.' },
   prismaticspray:  { key: 'prismaticspray',  name: 'Prismatic Spray',     icon: '🌈', effect: 'prismatic', target: 'aoe', maxTargets: 6, die: 6, dice: 'level', dcap: 12, slvl: 7, sound: '/audio/spell_holysmite.mp3', desc: 'A fan of clashing rays — every foe struck takes a RANDOM element for level d6 (Reflex half, max 12d6), and a violet ray (1-in-8) UNMAKES the living outright on a failed Fortitude save.' },
   sunburst:        { key: 'sunburst',        name: 'Sunburst',            icon: '☀️', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 12, blindRider: true, slvl: 8, sound: '/audio/spell_searinglight.mp3', desc: 'A globe of blazing daylight — up to 6 foes take level d6 (max 12d6, Reflex half); a failed save also BLINDS for 3 rounds.' },
   // ── NECROMANCY (Draymus's specialty; char-gated to him in the wizard kit) ──
@@ -1175,6 +1182,23 @@ _injectKitSpell('oracle',   spontaneousSpell(SPELL.summonmonster8, 15));
 _injectKitSpell('druid',    preparedSpell(SPELL.summonnature4, 7));
 _injectKitSpell('druid',    preparedSpell(SPELL.summonnature6, 11));
 _injectKitSpell('druid',    preparedSpell(SPELL.summonnature8, 15));
+// ── CRB PARITY BATCH 1 injections (v3.37.129): control & anti-caster ──
+const _MIST = { ...SPELL.darkness, key: 'obscuringmist', name: 'Obscuring Mist', icon: '🌫️', slvl: 1, desc: 'A bank of fog swallows the enemy line — shrouded foes stumble blindly (losing turns, your blows landing easier) until it disperses. Rides the magical-darkness rules.' };
+_injectKitSpell('cleric',   preparedSpell(_MIST, 1));
+_injectKitSpell('druid',    preparedSpell(_MIST, 1));
+_injectKitSpell('wizard',   preparedSpell(_MIST, 1));
+_injectKitSpell('sorcerer', spontaneousSpell(_MIST, 2));
+_injectKitSpell('cleric',   preparedSpell(SPELL.silence, 3));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.silence, 3));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.silence, 4));
+_injectKitSpell('wizard',   preparedSpell(SPELL.rayofexhaustion, 5));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.rayofexhaustion, 6));
+_injectKitSpell('cleric',   preparedSpell(SPELL.bestowcurse, 5));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.bestowcurse, 5));
+_injectKitSpell('wizard',   preparedSpell({ ...SPELL.bestowcurse, slvl: 4 }, 7));
+_injectKitSpell('sorcerer', spontaneousSpell({ ...SPELL.bestowcurse, slvl: 4 }, 8));
+_injectKitSpell('cleric',   preparedSpell(SPELL.command, 1));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.command, 1));
 // ── v3.37.125 (Toby: 'druid does need more shapeshift forms, including any
 //    animals we have'): four new WILD SHAPE forms modeled on the bestiary's own
 //    animals (lioness, dire ape, dire boar, blood caiman). Pushed post-override
