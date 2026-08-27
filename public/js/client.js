@@ -1009,7 +1009,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33816;
+  const CLIENT_BUILD = 33817;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -2392,6 +2392,16 @@
       // K (spell KIT) — NOT S: S is the global "stop talking" key, and the first
       // Prepare build sat on it — Josh pressed S to silence a report and silently
       // un-prepared spells instead (2026-07-03). K is free in the dungeon.
+      // ----- Inventory readout — I (v3.37.127, Josh: 'Can we map letter I to read
+      // out my inventory. So I know if I have a +5 or +1 ring etc?') ------------
+      if (k === 'i') {
+        e.preventDefault();
+        if (_blindHelp) { sayU('I: inventory. Speaks your magic items and their bonuses — weapon, armor, ring, cloak and the rest.'); return; }
+        const _gearTxt = dungeonGearTip(meM.gear);
+        const _wpn = (meM.weapon && meM.weapon.name) || meM.weaponName || null;
+        sayU(`Inventory: ${_wpn ? `wielding ${_wpn}. ` : ''}${_gearTxt}.`);
+        return;
+      }
       if (k === 'k') {
         e.preventDefault();
         if (_blindHelp) { sayU('K: prepare spells, your spell kit. Press a level number, then a number toggles a spell — or Tab steps through the level one spell at a time and Enter toggles the one you are on. Changes land at the next door.'); return; }

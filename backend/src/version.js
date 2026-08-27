@@ -1788,9 +1788,31 @@
 //                     prioritizes it. (5) DINVAYA'S MATH audited clean: Lv 16 swinging at +25/+27
 //                     vs AC 26-32 - she hits on ~3+; the misses Josh felt were an AC-32 witch and
 //                     a mirror-image decoy. Tests 159-162. Backend only; CLIENT_BUILD 33816.
-const VERSION = '3.37.126';
+//  3.37.127 2026-08-26 SIX FROM JOSH'S AFTERNOON THREAD (clever-anvil, log-verified). (1) INVISIBLE
+//                     RUN-BUFFS: 'magic vestment does not appear in the buff lines' - the chip walk
+//                     skips keys with no BUFF_META entry, so EVERY run-long buff shipped since .120
+//                     (vestment, GMW, airwalk, see invis, false life, darkvision comm, firebrand,
+//                     mindblank, foresight) was invisible to the L and B readouts. All labeled now,
+//                     and the run-long tier says '(this dungeon)'. (2) SPIRITUAL WEAPON AUDIT: it
+//                     already rides ALL the caster's combat math via _swingVsAC - Divine Favor,
+//                     Divine Power, Prayer, GMW, weapon enhancement, Haste extra swing AND Bane
+//                     (baneHit lives in the swing chokepoint) - exactly Josh's table rule; no code
+//                     change, receipts in the email. Inquisitor is 3/4 BAB (PF1). (3) INQUISITOR
+//                     4TH-LEVEL SPELLS: the progression menu is RIGHT - it says LEVEL 10 ('new
+//                     4th-level spell slots'), PF1's 6-level track (1/4/7/10/13). At 9 the K menu
+//                     correctly offers none. (4) THE FULL-HP CHANNEL (clever-anvil: Binch channeled
+//                     EVERY round of d2 into a near-full party): the pickHeal fallthrough fired on
+//                     ANY scratch. Now the patch-up needs a REAL dent - someone under 75% or party
+//                     missing HP >= 6x level - preserving Josh's own 'valid pre-top tactic' case.
+//                     (5) THE INVESTIGATOR GETS AN IDENTITY: KITS.investigator never existed
+//                     (fighter DEFAULT fallback). Now an INT skirmisher: STUDIED COMBAT (slayer
+//                     machinery) + six alchemical EXTRACTS on the 6-level track (cure/shield/see
+//                     invis/heroism/displacement/stoneskin brews). (6) THE I KEY reads your
+//                     inventory: 'wielding <weapon>. +N Weapon · +N Ring...' - gear + weaponName
+//                     now ride the party payload. Tests 163-166; CLIENT_BUILD 33817.
+const VERSION = '3.37.127';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33816;
-const HEADLINE = "Death effects now refuse an undead target and KEEP your slot (with the PF1 rule spoken aloud); the two Stoneskins count as one ward so casters stop double-warding; archer bots stop flip-flopping Fight Defensively; and enemy casters finally cast HASTE on their own crews.";
+const CLIENT_BUILD = 33817;
+const HEADLINE = "Press I to hear your inventory; every dungeon-long buff finally shows in the L and B readouts; clerics stop wasting channels on a healthy party; and the investigator becomes a real class — Studied Combat plus six alchemical extracts.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

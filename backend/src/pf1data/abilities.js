@@ -1198,6 +1198,29 @@ for (const _f of [
 ]) {
   if (KITS.druid && Array.isArray(KITS.druid.abilities) && !KITS.druid.abilities.some(a => a.key === _f.key)) KITS.druid.abilities.push(_f);
 }
+// ── THE INVESTIGATOR GETS AN IDENTITY (v3.37.127, Josh: 'Investigator sucks. It
+//    looks like a vanilla fighter. What is it supposed to be?') — he was right:
+//    KITS.investigator never existed, so kitFor fell back to the fighter DEFAULT
+//    kit. The PF1 investigator is an INT-fueled skirmisher: STUDIED COMBAT (the
+//    slayer's swift-action mark machinery, reused) and alchemical EXTRACTS —
+//    self-brewed spell-effects on the 6-level alchemist track (1st at 1, 2nd at
+//    4, 3rd at 7, 4th at 10). Simplified here as per-room brews. ──
+if (!KITS.investigator) {
+  // Base = the martial basics COPIED from the fighter kit by key (kitFor is
+  // unusable here — DEFAULT_KIT initializes later in the module, TDZ).
+  const _IKEYS = ['deadlyaim', 'powerattack', 'trip', 'cleave', 'disarm', 'bullrush', 'grapple', 'feint', 'fightdefensively'];
+  const _ibase = ((KITS.fighter && KITS.fighter.abilities) || []).filter(a => a && _IKEYS.includes(a.key)).map(a => ({ ...a }));
+  KITS.investigator = { atwill: KITS.fighter && KITS.fighter.atwill, note: 'INT-fueled skirmisher: Studied Combat + alchemical extracts.', abilities: _ibase };
+  KITS.investigator.abilities.push(
+    { key: 'studiedtarget', name: 'Studied Combat', icon: '🎯', cost: 'free', effect: 'studytarget', target: 'enemy', freeAction: true, desc: 'STUDIED COMBAT (investigator) — SWIFT: study a foe, +N to hit & damage against it (N = 1 + 1 per 5 levels). Re-study any turn to switch marks; lasts until then or the room ends.' },   // the slayer's studytarget machinery, reused
+    { key: 'ext_curelight', name: 'Extract: Cure Light Wounds', icon: '🧪', cost: 'room', uses: 2, minLevel: 1, effect: 'heal', heal: 'single', healDice: 1, healCap: 5, target: 'ally', sound: '/audio/spell_cure.mp3', desc: 'Drink (or share) a healing brew — 1d8 + level (max +5). Two vials per room.' },
+    { ...SPELL.shield,          key: 'ext_shield',   name: 'Extract: Shield',           icon: '🧪', cost: 'room', uses: 1, minLevel: 1,  desc: 'A brewed ward — +4 AC for the rest of the room, and IMMUNE to Magic Missile.' },
+    { ...SPELL.seeinvisibility, key: 'ext_seeinvis', name: 'Extract: See Invisibility', icon: '🧪', cost: 'room', uses: 1, minLevel: 4, persist: true, desc: 'A drop in each eye — find, target and strike INVISIBLE foes. Lasts the whole DUNGEON (10 min/level).' },
+    { key: 'ext_heroism', name: 'Extract: Heroism', icon: '🧪', cost: 'room', uses: 1, minLevel: 7, effect: 'buff', target: 'self', buff: { toHit: 2, save: 2 }, sticky: true, persist: true, sound: S.invoke, desc: 'Liquid courage — +2 to hit and +2 on saves for the rest of the DUNGEON (10 min/level).' },
+    { ...SPELL.displacement,    key: 'ext_displace', name: 'Extract: Displacement',     icon: '🧪', cost: 'room', uses: 1, minLevel: 7,  target: 'self', desc: 'Your outline swims — 50% of incoming blows miss outright for the rest of the room.' },
+    { ...SPELL.stoneskin,       key: 'ext_stoneskin',name: 'Extract: Stoneskin',        icon: '🧪', cost: 'room', uses: 1, minLevel: 10, persist: true, target: 'self', desc: 'Your skin drinks the brew and hardens — DR 10 vs physical blows for the rest of the DUNGEON (10 min/level).' }
+  );
+}
 // MAGIC VESTMENT is HOUR/LEVEL (v3.37.120, Josh: 'why wouldn't you do the same
 // for magic vestment?' - he's right, it sat room-only while Mage Armor ran the
 // dungeon): baked kit copies get persist + the run-long desc, door-castable.

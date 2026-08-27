@@ -564,7 +564,14 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         const worst = allies.slice().sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp))[0];
         if (worst && worst.hp < worst.maxHp * 0.5) return { slot: slot(bigCure), payload: {} };   // one badly hurt → big single cure
       }
-      if ((channelHeal || bigCure) && someoneHurt) return { slot: slot(channelHeal || bigCure), payload: {} };
+      // v3.37.127 (Josh, clever-anvil: 'my clerick just channeld when everyone was
+      // at almost 100% hp... been telling you bout this one for a while'): the old
+      // fallthrough fired on ANY scratch — Binch channeled EVERY round of a room
+      // for +15-24 into a near-full party. Now the patch-up needs a REAL dent:
+      // somebody under 75%, or enough total damage that a channel isn't wasted.
+      const _missing = allies.reduce((s, a) => s + (a.undead ? 0 : Math.max(0, (a.maxHp || 0) - a.hp)), 0);
+      const _dented = allies.some(a => !a.undead && a.hp < a.maxHp * 0.75) || _missing >= (m.level || 1) * 6;
+      if ((channelHeal || bigCure) && _dented) return { slot: slot(channelHeal || bigCure), payload: {} };
       return null;
     };
     // Healing is PRIORITY-BY-SEVERITY: someone dying, or an ally below 30%, and

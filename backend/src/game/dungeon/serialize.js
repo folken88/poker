@@ -31,15 +31,33 @@ const BUFF_META = {
   shieldoffaith: { label: 'Shield of Faith', desc: '+2 deflection AC (this room)' },
   protevil:      { label: 'Protection from Evil', desc: '+2 AC & +2 saves (this room)' },
   magearmor:     { label: 'Mage Armor',      desc: '+4 armor AC (this dungeon)' },
-  stoneskin:     { label: 'Stoneskin',       desc: 'DR 10 vs physical blows (this room)' },
-  stoneskincomm: { label: 'Stoneskin (Communal)', desc: 'DR 10 vs physical blows — whole party (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
+  stoneskin:     { label: 'Stoneskin',       desc: 'DR 10 vs physical blows (this dungeon)' },
+  stoneskincomm: { label: 'Stoneskin (Communal)', desc: 'DR 10 vs physical blows — whole party (this dungeon)', icon: '/dungeon/buffs/stoneskin.webp' },
   ironskin:      { label: 'Iron Skin',       desc: 'DR 10 vs physical blows (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
-  barkskin:      { label: 'Barkskin',        desc: '+3 natural-armor AC (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
+  barkskin:      { label: 'Barkskin',        desc: '+3 natural-armor AC (this dungeon)', icon: '/dungeon/buffs/stoneskin.webp' },
+  // v3.37.127 (Josh: 'magic vestment does not appear in the buff lines. neither
+  // report from L tells me if it is on, nor the report from B') — the chip walk
+  // skips any key with no BUFF_META entry, so every run-long buff shipped since
+  // .120 was INVISIBLE to the readouts. All present and labeled now.
+  magicvestment: { label: 'Magic Vestment',  desc: '+3 armor AC (this dungeon)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  greatermagicweapon: { label: 'Greater Magic Weapon', desc: '+hit & damage enhancement — whole party (this dungeon)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  airwalk:       { label: 'Air Walk',        desc: 'airborne — grounded foes can\'t reach you (this dungeon)', icon: '/dungeon/buffs/fly.webp' },
+  seeinvisibility: { label: 'See Invisibility', desc: 'sees the unseen — strike invisible foes (this dungeon)', icon: '/dungeon/buffs/fly.webp' },
+  falselife:     { label: 'False Life',      desc: '+temporary HP (this dungeon)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  darkvisioncomm:{ label: 'Darkvision (Communal)', desc: 'sees through magical darkness — whole party (this dungeon)', icon: '/dungeon/buffs/fly.webp' },
+  firebrand:     { label: 'Firebrand',       desc: '+1d6 fire on every weapon hit (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  mindblank:     { label: 'Mind Blank',      desc: 'immune to holds, fear and mind-magic (this dungeon)', icon: '/dungeon/buffs/fly.webp' },
+  foresight:     { label: 'Foresight',       desc: 'never flat-footed, +2 AC & saves (this dungeon)', icon: '/dungeon/buffs/fly.webp' },
+  ext_shield:    { label: 'Extract: Shield', desc: '+4 AC, immune to Magic Missile (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  ext_seeinvis:  { label: 'Extract: See Invisibility', desc: 'sees the unseen (this dungeon)', icon: '/dungeon/buffs/fly.webp' },
+  ext_heroism:   { label: 'Extract: Heroism', desc: '+2 to hit & +2 on saves (this dungeon)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  ext_displace:  { label: 'Extract: Displacement', desc: '50% of incoming blows miss (this room)', icon: '/dungeon/buffs/fly.webp' },
+  ext_stoneskin: { label: 'Extract: Stoneskin', desc: 'DR 10 vs physical blows (this dungeon)', icon: '/dungeon/buffs/stoneskin.webp' },
   magicfang:     { label: 'Magic Fang',      desc: '+1 to hit & damage — natural weapons (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   catsgrace:     { label: "Cat's Grace",     desc: '+2 AC & +1 to hit — Dexterity (this room)' },
   bullsstrength: { label: "Bull's Strength", desc: '+2 hit & damage — Strength (this room)' },
   bearsendurance:{ label: "Bear's Endurance",desc: '+temporary HP — Constitution (this room)' },
-  heroism:       { label: 'Heroism',         desc: '+2 to hit & +2 on saves (this room)' },
+  heroism:       { label: 'Heroism',         desc: '+2 to hit & +2 on saves (this dungeon)' },
   goodhope:      { label: 'Good Hope',       desc: 'allies +2 hit, damage & saves (this room)' },
   deadlyaim:     { label: 'Deadly Aim',      desc: 'trading aim for power — −hit, +damage' },
   powerattack:   { label: 'Power Attack',    desc: 'trading accuracy for power — −hit, +damage' },
@@ -192,6 +210,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
       party: this.party.map(m => ({
         playerId: m.playerId, init: (_initOf['p:' + m.playerId] ?? null), nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot, crowned: !!m.crowned,
         cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
+        gear: m.gear || null, weaponName: ((m.weapon || weaponOf(m.gear, m.weaponKey)) || {}).name || null,   // v3.37.127: the blind I-key inventory readout ('so I know if I have a +5 or +1 ring')
         race: m.race || 'human', raceName: RACES.raceName(m.race), vision: m.vision || 'normal', blindsense: m.blindsense || 0,   // PF1 race + vision (+ blindsense ft); blind mode reads vision; non-human shows on the hero card
         form: m.form ? { key: m.form.key, label: m.form.label, glyph: m.form.glyph, art: m.form.art } : null,   // active Wild Shape (drives the token swap on the hero card)
         level: m.level, ...this._xpInfo(m), ...this._heroACs(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
