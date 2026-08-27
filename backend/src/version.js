@@ -1832,9 +1832,20 @@
 //                     room, new cursed chip), COMMAND ('FALL!' - Will or prone + turn lost,
 //                     mind-affecting). New enemy chips: Silenced (with rounds left), Cursed.
 //                     Bots learn all five via PRIORITY. Tests 170-173. Backend only.
-const VERSION = '3.37.129';
+//  3.37.130 2026-08-26 THE CLASS-LIST COVERAGE PASS (Toby's confirmed parity rules: (1) as-PF1-as-
+//                     possible, (2) EVERY correct caster gets it - class/domain/specialty, prepared
+//                     AND spontaneous, (3) adaptation allowed when named). Auditing batch 1 + the
+//                     expansions against the CRB lists found owed casters: INQUISITOR gets Silence
+//                     (Inq 2 - Josh's own class was owed the anti-caster tool) and Command (Inq 1);
+//                     ORACLE gets Obscuring Mist; WIZARD/SORCERER get Heroism (Sor/Wiz 3) and
+//                     Irresistible Dance (Sor/Wiz 8); DRUID gets True Seeing (Drd 7), Freedom of
+//                     Movement (Drd 4) and Mass Cure Moderate (Drd 7); BARD gets Hold Person
+//                     (Brd 2) and Mass Cure Moderate (Brd 6). All at PF1 unlock levels; PRIORITY
+//                     extended so bots use them. Rule 2 is now a standing checklist item for every
+//                     future batch. Tests 174-175. Backend only; CLIENT_BUILD stays 33817.
+const VERSION = '3.37.130';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33817;
-const HEADLINE = "The road to full Core Rulebook parity begins — batch 1 lands SILENCE (mute an enemy caster and watch it fall back on steel), Bestow Curse, Command, Ray of Exhaustion and Obscuring Mist; plus the PF1-true investigator: Studied Combat at half level with Studied Strike dice.";
+const HEADLINE = "Every spell reaches every caster the book gives it to: inquisitors gain Silence and Command, wizards gain Heroism and Irresistible Dance, druids gain True Seeing and Freedom of Movement, bards gain Hold Person — ten owed class-list entries delivered at their PF1 levels.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

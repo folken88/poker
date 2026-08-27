@@ -1199,6 +1199,23 @@ _injectKitSpell('wizard',   preparedSpell({ ...SPELL.bestowcurse, slvl: 4 }, 7))
 _injectKitSpell('sorcerer', spontaneousSpell({ ...SPELL.bestowcurse, slvl: 4 }, 8));
 _injectKitSpell('cleric',   preparedSpell(SPELL.command, 1));
 _injectKitSpell('oracle',   spontaneousSpell(SPELL.command, 1));
+// ── THE CLASS-LIST COVERAGE PASS (v3.37.130, Toby's confirmed rule 2: 'the
+//    appropriate casters must have access to it due to their class or domain or
+//    specialty... both prepared and spontaneous'). Audit of batch 1 + the recent
+//    expansions against the PF1 CRB class lists found these owed casters: ──
+_injectKitSpell('inquisitor', spontaneousSpell(SPELL.silence, 4));       // PF1 Inq 2 — Josh's own class was owed the anti-caster tool
+_injectKitSpell('inquisitor', spontaneousSpell(SPELL.command, 1));       // PF1 Inq 1
+_injectKitSpell('oracle',     spontaneousSpell(_MIST, 1));               // oracles cast the cleric list
+const _HEROISM = { key: 'heroism', name: 'Heroism', icon: '🦸', effect: 'buff', target: 'ally', buff: { toHit: 2, save: 2 }, sticky: true, persist: true, slvl: 3, sound: '/audio/spell_buff_invoke.mp3', desc: 'One ally becomes heroic — +2 to hit and +2 on saves for the rest of the DUNGEON (10 min/level).' };
+_injectKitSpell('wizard',     preparedSpell(_HEROISM, 5));               // PF1 Sor/Wiz 3 — only the bard carried it
+_injectKitSpell('sorcerer',   spontaneousSpell(_HEROISM, 6));
+_injectKitSpell('wizard',     preparedSpell({ ...SPELL.irresistibledance, slvl: 8 }, 15));   // PF1 Sor/Wiz 8
+_injectKitSpell('sorcerer',   spontaneousSpell({ ...SPELL.irresistibledance, slvl: 8 }, 16));
+_injectKitSpell('druid',      preparedSpell({ ...SPELL.trueseeing, slvl: 7 }, 13));          // PF1 Drd 7
+_injectKitSpell('druid',      preparedSpell({ ...SPELL.freedommove, slvl: 4 }, 7));          // PF1 Drd 4
+_injectKitSpell('druid',      preparedSpell({ ...SPELL.masscuremoderate, slvl: 7 }, 13));    // PF1 Drd 7
+_injectKitSpell('bard',       spontaneousSpell({ ...SPELL.holdperson, slvl: 2 }, 4));        // PF1 Brd 2
+_injectKitSpell('bard',       spontaneousSpell({ ...SPELL.masscuremoderate, slvl: 6 }, 16)); // PF1 Brd 6
 // ── v3.37.125 (Toby: 'druid does need more shapeshift forms, including any
 //    animals we have'): four new WILD SHAPE forms modeled on the bestiary's own
 //    animals (lioness, dire ape, dire boar, blood caiman). Pushed post-override

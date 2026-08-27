@@ -5,6 +5,20 @@ rulebook spells into the game... let me know if you think a spell is
 impractical for our game and why. do 5 spells at a time until we have full CRB
 parity."
 
+Toby's confirmed parity rules (2026-08-26):
+1. The spell should be as similar to PF1 as it can be.
+2. The appropriate casters must have access — class list, domain, specialty or
+   known home rule — BOTH prepared and spontaneous.
+3. The spell may be adapted to fit the game's format (adaptations named in the
+   spell's own description).
+
+v3.37.130 ran the first RULE-2 COVERAGE AUDIT over batch 1 + the expansions and
+delivered ten owed entries: inquisitor Silence (Inq 2) + Command (Inq 1),
+oracle Obscuring Mist, wizard/sorcerer Heroism (3) + Irresistible Dance (8),
+druid True Seeing (7) + Freedom of Movement (4) + Mass Cure Moderate (7), bard
+Hold Person (2) + Mass Cure Moderate (6). Every future batch closes with the
+same audit.
+
 Ground rules for every port (the standing spell-import checklist):
 - PF1 numbers wherever the dungeon can hold them; adaptations are named in the
   spell's own description.
