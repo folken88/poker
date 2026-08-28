@@ -58,6 +58,15 @@ const CLERIC_SLOTS_BY_LEVEL = {
 // draws from the cleric list but progresses SLOWER than a cleric: he only ever
 // reaches 6th-level spells, and gains each spell level later (2nd at L4, 3rd at
 // L7, 4th at L10…). Base table (no ability-bonus slots), one room = one "day".
+// PF1 BARD spells per day (CRB Table 3-3) — v3.37.131: the bard had been riding
+// the SORCERER'S 9-level table (6th-level slots at 12 instead of 16, over-slotted
+// throughout). Caught by the boundary audit Josh demanded in grumpy-raven.
+const BARD_SLOTS_BY_LEVEL = {
+  1: [1], 2: [2], 3: [3], 4: [3, 1], 5: [4, 2], 6: [4, 3], 7: [4, 3, 1], 8: [4, 4, 2],
+  9: [5, 4, 3], 10: [5, 4, 3, 1], 11: [5, 4, 4, 2], 12: [5, 5, 4, 3],
+  13: [5, 5, 4, 3, 1], 14: [5, 5, 4, 4, 2], 15: [5, 5, 5, 4, 3], 16: [5, 5, 5, 4, 3, 1],
+  17: [5, 5, 5, 4, 4, 2], 18: [5, 5, 5, 5, 4, 3], 19: [5, 5, 5, 5, 5, 4], 20: [5, 5, 5, 5, 5, 5],
+};
 const INQ_SLOTS_BY_LEVEL = {
   1: [2], 2: [3], 3: [4], 4: [4, 2], 5: [4, 3], 6: [5, 3], 7: [5, 4, 2], 8: [5, 4, 3],
   9: [5, 5, 3], 10: [5, 5, 4, 2], 11: [6, 5, 4, 3], 12: [6, 6, 5, 3],
@@ -98,6 +107,7 @@ function slotsFor(cls, level, castMod = 0) {
   if (FULL_PREPARED.has(cls))            base = _tableSlots(CLERIC_SLOTS_BY_LEVEL, level);
   else if (FOURTH_PREPARED.has(cls))     base = _tableSlots(PALADIN_SLOTS_BY_LEVEL, level);
   else if (cls === 'inquisitor' || cls === 'magus') base = _tableSlots(INQ_SLOTS_BY_LEVEL, level);   // 6-level casters, same PF1 per-day table: inquisitor (spontaneous divine) + magus (PREPARED arcane). The magus was missing entirely → buildDefaultPrepared returned {} → castableKeys EMPTY → Reese's whole 23-spell book filtered out server-side, no Spellbook button, nothing (Josh, runs nimble-puffin/proud-waffle: "no spell book or access to a spell book… no chain lightening shot, no disintegrate")
+  else if (cls === 'bard')               base = _tableSlots(BARD_SLOTS_BY_LEVEL, level);   // v3.37.131: the bard is a 6-LEVEL caster (CRB Table 3-3) — it had been riding the sorcerer's 9-level table
   else if (SPONTANEOUS_CLASSES.has(cls)) base = _tableSlots(SORC_SLOTS_BY_LEVEL, level);
   else return null;
   // ABILITY-SCORE BONUS SPELLS — the caster's Int/Wis/Cha modifier grants extra spells

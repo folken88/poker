@@ -1843,9 +1843,22 @@
 //                     (Brd 2) and Mass Cure Moderate (Brd 6). All at PF1 unlock levels; PRIORITY
 //                     extended so bots use them. Rule 2 is now a standing checklist item for every
 //                     future batch. Tests 174-175. Backend only; CLIENT_BUILD stays 33817.
-const VERSION = '3.37.130';
+//  3.37.131 2026-08-28 THE PROGRESSION MISPARSE (Josh, grumpy-raven: 'your progression menu is
+//                     wrong... 15th level grants new six level slots'). The LOG acquits the data:
+//                     his own L15 inquisitor announce carried NO slot text, and the '8th-level
+//                     slots at 15' line was BINCH THE CLERIC (full caster - correct). The real
+//                     bug was the SENTENCE SHAPE: the X menu opened with 'You are level 15...
+//                     Level 16 grants: new 6th-level spell slots' - one TTS breath, two levels,
+//                     begging to be welded ('you are dead to rights bitch' - he was, about the
+//                     UX). Every spoken progression line now binds level to FUTURE tense: 'When
+//                     you reach level 16, you will gain...'. His original 4th-at-9 report was the
+//                     SAME misparse - my earlier 'the menu is right' answer missed it; owned in
+//                     the email. Boundary tests pin the PF1 tables he asked audited: inquisitor/
+//                     bard 6th at 16 not 15, cleric 8th at 15, sorcerer 9th at 18, paladin 1st
+//                     at 4. Tests 176-177; CLIENT_BUILD 33818.
+const VERSION = '3.37.131';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33817;
-const HEADLINE = "Every spell reaches every caster the book gives it to: inquisitors gain Silence and Command, wizards gain Heroism and Irresistible Dance, druids gain True Seeing and Freedom of Movement, bards gain Hold Person — ten owed class-list entries delivered at their PF1 levels.";
+const CLIENT_BUILD = 33818;
+const HEADLINE = "The progression menu now speaks in the future tense — 'When you reach level 16, you will gain new 6th-level spell slots' — so a level and its grants can never be misheard as one clause; the spell tables themselves audit clean against PF1's book values.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

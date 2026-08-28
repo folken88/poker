@@ -1009,7 +1009,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33817;
+  const CLIENT_BUILD = 33818;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -2503,7 +2503,11 @@
           e.preventDefault();
           const entry = (_dunProg.next || [])[parseInt(k, 10) - 1];
           if (!entry) { sayU(`Nothing that far — you cap at level 20.`); return; }
-          sayU(`Level ${entry.level}: ${entry.gains}.`);
+          // v3.37.131 (Josh, grumpy-raven: "the progression menu says 15th level grants
+          // new six level slots" — it didn't, but the SENTENCE SHAPE invited the weld:
+          // "You are level 15… Level 16 grants: new 6th-level slots" reads as one clause
+          // over TTS). Every spoken entry now binds the level to the FUTURE tense.
+          sayU(`When you reach level ${entry.level}, you will gain: ${entry.gains}.`);
           return;
         }
       }
@@ -2516,7 +2520,7 @@
           if (!resp || resp.ok === false) { sayU((resp && resp.error) || 'Progression unavailable.'); return; }
           _dunProg = resp;
           const first = (resp.next || [])[0];
-          sayU(`You are level ${resp.level} ${resp.cls}. ` + (first ? `Level ${first.level} grants: ${first.gains}. Press 2 through 9 for later levels, Escape to close.` : 'You are at the level cap.'));
+          sayU(`You are level ${resp.level} ${resp.cls}. ` + (first ? `Your NEXT level — when you reach level ${first.level} — will grant: ${first.gains}. Press 2 through 9 for later levels, Escape to close.` : 'You are at the level cap.'));
         });
         return;
       }
