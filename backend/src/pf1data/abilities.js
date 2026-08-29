@@ -1226,6 +1226,13 @@ _injectKitSpell('druid',      preparedSpell({ ...SPELL.freedommove, slvl: 4 }, 7
 _injectKitSpell('druid',      preparedSpell({ ...SPELL.masscuremoderate, slvl: 7 }, 13));    // PF1 Drd 7
 _injectKitSpell('bard',       spontaneousSpell({ ...SPELL.holdperson, slvl: 2 }, 4));        // PF1 Brd 2
 _injectKitSpell('bard',       spontaneousSpell({ ...SPELL.masscuremoderate, slvl: 6 }, 16)); // PF1 Brd 6
+// v3.37.132 (Josh: 'I've never seen the ability for one of my spellcasters to use
+// mirror image. Yet enemy folks use this to their great advantage all the fucking
+// time... all sorcerers can take mirror image if they want it.' — he's right:
+// PF1 Mirror Image is Sor/Wiz 2 and Brd 2, and only the magus/oracle carried it):
+_injectKitSpell('wizard',   preparedSpell({ ...SPELL.mirrorimage, slvl: 2 }, 3));
+_injectKitSpell('sorcerer', spontaneousSpell({ ...SPELL.mirrorimage, slvl: 2 }, 4));
+_injectKitSpell('bard',     spontaneousSpell({ ...SPELL.mirrorimage, slvl: 2 }, 4));
 // ── v3.37.125 (Toby: 'druid does need more shapeshift forms, including any
 //    animals we have'): four new WILD SHAPE forms modeled on the bestiary's own
 //    animals (lioness, dire ape, dire boar, blood caiman). Pushed post-override

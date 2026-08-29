@@ -1372,7 +1372,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const gains = this._levelGains(m, L - 1, L);
       next.push({ level: L, gains: gains.length ? gains.join(', ') : 'steady growth' });
     }
-    return { ok: true, level: cur, cls: m.cls, next };
+    // v3.37.132 (Josh: 'I need a menu that tells me what each level fucking does...
+    // I can't go back and look at past levels'): the FULL ladder, levels 2-20,
+    // past and future, each labeled — the client's X menu arrows through it.
+    const all = [];
+    for (let L = 2; L <= 20; L++) {
+      const gains = this._levelGains(m, L - 1, L);
+      all.push({ level: L, past: L <= cur, gains: gains.length ? gains.join(', ') : 'steady growth' });
+    }
+    return { ok: true, level: cur, cls: m.cls, next, all };
   },
   _domainModel(m) {
     const picks = db.getDomains(m.playerId, m.cls) || [];

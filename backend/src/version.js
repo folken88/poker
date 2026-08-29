@@ -1856,9 +1856,31 @@
 //                     the email. Boundary tests pin the PF1 tables he asked audited: inquisitor/
 //                     bard 6th at 16 not 15, cleric 8th at 15, sorcerer 9th at 18, paladin 1st
 //                     at 4. Tests 176-177; CLIENT_BUILD 33818.
-const VERSION = '3.37.131';
+//  3.37.132 2026-08-28 THE PARITY-OF-ARMS RELEASE (Josh's evening triple). (1) THE CROSSBOW
+//                     DISPEL (v130 thread: 'instead of dispelling a Lich with 27 buffs the bug
+//                     makes me shoot it with a fucking crossbow'): a pending DISPEL pick was only
+//                     honored by its own number menu — confirming the foe through the E enemy
+//                     BROWSER fell through to the attack path. Enter there now fires the armed
+//                     dispel. (2) MIRROR IMAGE FOR THE PARTY (Josh: 'enemy folks use this to
+//                     their great advantage all the fucking time... all sorcerers can take
+//                     mirror image' — rule-2 audit agreed: only magus/oracle carried it): wizard
+//                     prepared Sor/Wiz 2, sorcerer + bard spontaneous, bots prioritize it. (3)
+//                     ENEMY CHANNEL: a living enemy priest with 2+ wounded living allies now
+//                     CHANNELS positive energy over its whole flock (mirror of the undead
+//                     court's negative burst). (4) ENEMY DISPEL ('I should be dispelled...
+//                     that's part of the game'): once a room a CL9+ caster strips the shiniest
+//                     hero — haste, images, displacement, invisibility, flight, stoneskin, mage
+//                     armor, wards, magical sight; CL13+ = GREATER, sweeps them all; run-long
+//                     snapshots deleted so dispelled dungeon-buffs stay gone until re-cast.
+//                     (5) THE FULL PROGRESSION LADDER (his thrice-made ask): X now browses ALL
+//                     levels 2-20 with Tab/arrows — past levels say 'you gained', future 'you
+//                     will gain'; digits still jump ahead. Mass Hold confirmed vs PF1 (chain-
+//                     lightning-style multi-target, 30-ft geometry has no grid — desc says so);
+//                     Maze he self-corrected (DC 20 INT ≈ our no-save; the exit announce exists).
+//                     Tests 178-181; CLIENT_BUILD 33819.
+const VERSION = '3.37.132';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33818;
-const HEADLINE = "The progression menu now speaks in the future tense — 'When you reach level 16, you will gain new 6th-level spell slots' — so a level and its grants can never be misheard as one clause; the spell tables themselves audit clean against PF1's book values.";
+const CLIENT_BUILD = 33819;
+const HEADLINE = "Parity of arms: your wizards finally get MIRROR IMAGE, enemy priests channel over their flocks, enemy casters DISPEL your buffs right back — plus the dispel-that-fired-a-crossbow bug is dead, and X now browses your whole level history, 2 through 20.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

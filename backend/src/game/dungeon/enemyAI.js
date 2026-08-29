@@ -129,6 +129,21 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
           const courtHurt = this.livingEnemies().filter(x => x.hp > 0 && x.type === 'undead' && x.hp <= x.maxHp * 0.5);
           if (courtHurt.length >= 2) return this._enemyChannelNeg(e, courtHurt);
         }
+        // v3.37.132 (Josh: 'Enemy clerics never channel... They should be able to use
+        // them too. This makes the game harder and you have to actually think.'): a
+        // LIVING priest with 2+ wounded LIVING allies CHANNELS positive energy over
+        // all of them at once — the mirror of the undead court's negative burst.
+        if (e.type !== 'undead' && e.type !== 'construct') {
+          const flockHurt = this.livingEnemies().filter(x => x.hp > 0 && x.type !== 'undead' && x.type !== 'construct' && x.hp <= x.maxHp * 0.5);
+          if (flockHurt.length >= 2) {
+            e.healsLeft -= 1;
+            const cd = (e.healer && e.healer.dice) || 1;
+            let tot = 0;
+            for (const x of flockHurt.slice(0, 6)) { const h = dRollN(cd, 8) + 2; x.hp = Math.min(x.maxHp, x.hp + h); tot += h; }
+            this._note(`💖 ${e.glyph} ${e.name} CHANNELS divine energy over its flock — ${flockHurt.length} allies mended (+${tot} total)!`, '/audio/spell_channel_charge.mp3', { side: 'enemy' });
+            this._echoToTable(); this._broadcast(); return;
+          }
+        }
         // A CONSTRUCT's repair works ONLY on machines — its drills & welders can't mend
         // ORGANIC allies, living OR dead (a Gearghost can't "repair" a humanoid or an
         // undead). A living/undead priest-healer can still mend anyone on its own side.
@@ -817,6 +832,39 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         for (const x of crew) x.hasted = Math.max(x.hasted || 0, 3);
         this._note(`💨 ${e.glyph} ${e.name} casts HASTE — ${crew.length} foes BLUR with speed (+1 to hit and an extra attack, 3 rounds)!`, '/audio/spell_buff_invoke.mp3', { side: 'enemy' });
         this._echoToTable('/audio/spell_buff_invoke.mp3'); this._broadcast(); return;
+      }
+    }
+    // ENEMY DISPEL (v3.37.132, Josh: 'I should be dispelled. Just as I'm dispelling
+    // enemies they should be trying to dispel me... You have to develop tactics. And
+    // those tactics get screwed up when your spellcaster gets all her shit ripped
+    // down by a great massive dispel. That's part of the game.'): once a room, a
+    // CL9+ caster tears the magic off the SHINIEST hero — the cleanly-reversible
+    // effects (haste, images, displacement, invisibility, flight, stoneskin, mage
+    // armor, wards, magical sight). CL13+ casts the GREATER version and sweeps them
+    // all; below that it rips 1d3. Run-long snapshots are deleted too, so a
+    // dispelled dungeon-buff stays gone until re-cast. Numeric aggregates survive v1.
+    if (cl >= 9 && !e._dispelCast && dRoll(4) === 1) {
+      const _dScore = (m) => (m.hasted > 0 ? 1 : 0) + (m.images > 0 ? 1 : 0) + (m.displaced ? 1 : 0) + ((m.flying && !m.innateFly && !m.ghost) ? 1 : 0) + ((m.invisible && !m.greaterInvis) ? 1 : 0) + (m.dr > 0 ? 1 : 0) + (m.mageArmor ? 1 : 0) + (m.protectFire > 0 ? 1 : 0) + (m.seeInvis ? 1 : 0) + (m.trueSeeing ? 1 : 0);
+      const tgt = heroes.slice().sort((a, b) => _dScore(b) - _dScore(a))[0];
+      if (tgt && _dScore(tgt) >= 3) {
+        e._dispelCast = true;
+        const stripped = [], cap = cl >= 13 ? 10 : dRoll(3);
+        const ripRun = (...keys) => { for (const kk of keys) { if (tgt.runBuffPayloads) delete tgt.runBuffPayloads[kk]; if (tgt.runBuffApplied) delete tgt.runBuffApplied[kk]; } };
+        const rip = (cond, label, fn) => { if (cond && stripped.length < cap) { fn(); stripped.push(label); } };
+        rip(tgt.hasted > 0, 'Haste', () => { tgt.hasted = 0; tgt.hasteFull = false; });
+        rip(tgt.images > 0, 'Mirror Image', () => { tgt.images = 0; });
+        rip(tgt.displaced, 'Displacement', () => { tgt.displaced = false; });
+        rip(tgt.invisible && !tgt.greaterInvis, 'Invisibility', () => { tgt.invisible = false; });
+        rip(tgt.flying && !tgt.innateFly && !tgt.ghost, 'flight', () => { tgt.flying = false; tgt.overlandFlight = false; if (!tgt.form) tgt.canHitFlyers = false; ripRun('airwalk'); });
+        rip(tgt.dr > 0, 'Stoneskin', () => { tgt.dr = 0; ripRun('stoneskin', 'stoneskincomm', 'ext_stoneskin'); });
+        rip(tgt.mageArmor, 'Mage Armor', () => { tgt.mageArmor = false; });
+        rip(tgt.protectFire > 0, 'Fire Ward', () => { tgt.protectFire = 0; ripRun('protectfire'); });
+        rip(tgt.trueSeeing, 'True Seeing', () => { tgt.trueSeeing = false; });
+        rip(tgt.seeInvis, 'See Invisibility', () => { tgt.seeInvis = false; ripRun('seeinvisibility', 'ext_seeinvis'); });
+        if (stripped.length) {
+          this._note(`🌀 ${e.glyph} ${e.name} casts ${cl >= 13 ? 'GREATER DISPEL MAGIC' : 'DISPEL MAGIC'} on ${tgt.nickname} — STRIPS ${stripped.join(', ')}!`, '/audio/spell_dispel.mp3', { side: 'enemy' });
+          this._echoToTable('/audio/spell_dispel.mp3'); this._broadcast(); return;
+        }
       }
     }
     if (cl >= 4 && !(e.images > 0) && (this.round <= 2 || hurt) && dRoll(3) === 1) {

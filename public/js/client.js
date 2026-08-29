@@ -1009,7 +1009,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33818;
+  const CLIENT_BUILD = 33819;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -2499,28 +2499,45 @@
       // (X audited free across global + poker + dungeon handlers.)
       if (_dunProg) {
         if (e.key === 'Escape') { e.preventDefault(); _dunProg = null; sayU('Progression closed.'); return; }
+        // v3.37.132 (Josh: 'I need a menu that tells me what each level fucking does...
+        // I can't go back and look at past levels'): Tab / arrows BROWSE the whole
+        // ladder, levels 2-20 — past levels say "you gained", future say "you will
+        // gain", one level per breath. Digits still jump to your next levels.
+        const _progSpeak = (entry) => {
+          if (!entry) { sayU('Nothing there.'); return; }
+          sayU(entry.past ? `At level ${entry.level} you gained: ${entry.gains}.` : `When you reach level ${entry.level}, you will gain: ${entry.gains}.`);
+        };
+        if (e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const allP = _dunProg.all || [];
+          if (!allP.length) { sayU('Progression list unavailable — hard refresh for the new menu.'); return; }
+          const back = (e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey));
+          if (_dunProg._idx == null) _dunProg._idx = allP.findIndex(x => !x.past);   // start at your NEXT level
+          else _dunProg._idx = (((_dunProg._idx + (back ? -1 : 1)) % allP.length) + allP.length) % allP.length;
+          if (_dunProg._idx < 0) _dunProg._idx = 0;
+          _progSpeak(allP[_dunProg._idx]);
+          return;
+        }
         if (/^[1-9]$/.test(k)) {
           e.preventDefault();
           const entry = (_dunProg.next || [])[parseInt(k, 10) - 1];
           if (!entry) { sayU(`Nothing that far — you cap at level 20.`); return; }
-          // v3.37.131 (Josh, grumpy-raven: "the progression menu says 15th level grants
-          // new six level slots" — it didn't, but the SENTENCE SHAPE invited the weld:
-          // "You are level 15… Level 16 grants: new 6th-level slots" reads as one clause
-          // over TTS). Every spoken entry now binds the level to the FUTURE tense.
+          // v3.37.131: every spoken entry binds the level to the FUTURE tense (the
+          // "you are level 15… level 16 grants" weld); v3.37.132 adds the browse.
           sayU(`When you reach level ${entry.level}, you will gain: ${entry.gains}.`);
           return;
         }
       }
       if (k === 'x') {
         e.preventDefault();
-        if (_blindHelp) { sayU('X: class progression. Speaks what your next level grants — feats, spells, slots. While open, press 1 through 9 for further levels; Escape closes.'); return; }
+        if (_blindHelp) { sayU('X: class progression. Speaks your level, then Tab or the arrow keys browse EVERY level, 2 through 20 — past levels say what you gained, future levels what you will gain. Digits 1 through 9 jump to your next levels. Escape closes.'); return; }
         if (_dunProg) { _dunProg = null; sayU('Progression closed.'); return; }
         sayU('Looking up your progression.');
         socket.emit('dungeon:action', { kind: 'progression' }, (resp) => {
           if (!resp || resp.ok === false) { sayU((resp && resp.error) || 'Progression unavailable.'); return; }
           _dunProg = resp;
           const first = (resp.next || [])[0];
-          sayU(`You are level ${resp.level} ${resp.cls}. ` + (first ? `Your NEXT level — when you reach level ${first.level} — will grant: ${first.gains}. Press 2 through 9 for later levels, Escape to close.` : 'You are at the level cap.'));
+          sayU(`You are level ${resp.level} ${resp.cls}. Tab or arrows browse every level from 2 to 20 — past and future. ` + (first ? `Your NEXT level — when you reach level ${first.level} — will grant: ${first.gains}.` : 'You are at the level cap.'));
         });
         return;
       }
@@ -3033,6 +3050,16 @@
           sayU(`${pend.label} ${en.name}.`);
           if (pend.kind === 'attack') dungeonAction('attack', { targetUid: en.uid });
           else dungeonAction('ability', { slot: pend.slot, targetUid: en.uid, targetUids: [en.uid] });
+          return;
+        }
+        // v3.37.132 (Josh, the Lich with 27 buffs: 'I tried to dispel it, but the bug
+        // makes me shoot it with a fucking crossbow'): a pending DISPEL pick was only
+        // honored by its own number menu — picking the foe through THIS enemy browser
+        // fell through to the attack below. Now Enter here fires the armed dispel.
+        if (_dunDispelPick && myTurn) {
+          const p = _dunDispelPick; _dunDispelPick = null;
+          sayU(`Casting ${p.label} on ${en.name}.`);
+          dungeonAction('ability', { slot: p.slot, targetUid: en.uid });
           return;
         }
         _dunTarget = null;   // never leave a stale pending action behind this path
