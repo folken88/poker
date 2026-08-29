@@ -733,7 +733,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m.aimOn) this._applyDeadlyAim(m, true, { silent: true });
     m._fdAc = 0; if (m.fdOn) this._applyFightDefensively(m, true, { silent: true });
     m.smiteActive = false;
-    m.hasted = 0; m.hasteFull = false; m._justHasted = false; m.stunned = 0;   // transient round effects clear each room
+    m.hasted = 0; m.hasteFull = false; m._justHasted = false; m._dpSwing = false; m.stunned = 0;   // transient round effects clear each room (Divine Power's extra swing rides its room-length buff)
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
     m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
@@ -2924,6 +2924,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         // time) and apply now; _resetAbilities re-applies it every room.
         const _b = ab.buff || {};
         const snap = {
+          toHit: tH, dmg: dG,   // v3.37.134: recorded so an enemy Dispel can REVERSE the run-long to-hit/damage it granted (see enemyAI ripRun)
           ac: _b.ac || 0, deflect: _b.deflect || 0, save: _b.save || 0, dexMod: _b.dexMod || 0,
           cmd: _b.cmd || 0, bonusDice: _b.bonusDice || 0,
           tempHp: _b.conHp ? _b.conHp * (who.level || 1) : 0,
@@ -2938,6 +2939,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         return;
       }
       who.buffs = who.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 };
+      if (ab.key === 'divinepower') {   // PF1 (v3.37.134, Josh): +1 LUCK to hit & damage per 3 caster levels (max +6), temp HP = caster level, and an extra full-attack swing that does NOT stack with Haste (_attackOffsets reads _dpSwing)
+        const dp = Math.min(6, Math.max(1, Math.floor(lvl / 3)));
+        who.buffs.toHit += dp; who.buffs.dmg += dp;
+        this._grantTempHp(who, lvl);
+        who._dpSwing = true;
+        return;
+      }
       who.buffs.toHit += ab.gmw ? gmwMod : ((ab.buff && ab.buff.toHit) || 0);   // Greater Magic Weapon scales the enhancement with caster level
       who.buffs.dmg += ab.gmw ? gmwMod : ((ab.buff && ab.buff.dmg) || 0);
       who.buffs.bonusDice += (ab.buff && ab.buff.bonusDice) || 0;
@@ -3432,6 +3440,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (rapidOn) off.push({ off: twfPen, oh: false });         // Rapid Shot's extra shot (full BAB, −2 like the rest)
     if (isRanged && fullAttack && ff.manyshot && m.weapon && m.weapon.group === 'bows') off.push({ off: twfPen, oh: false });   // Manyshot's 2nd arrow
     if (fullAttack) {
+      if (m._dpSwing && !(m.hasted > 0)) off.push({ off: twfPen, oh: false });   // Divine Power's extra attack (PF1, v3.37.134) — suppressed while Hasted (they don't stack)
       if (bab >= 6)  off.push({ off: twfPen - 5,  oh: false });   // main-hand iterative
       if (bab >= 11) off.push({ off: twfPen - 10, oh: false });
       if (bab >= 16) off.push({ off: twfPen - 15, oh: false });

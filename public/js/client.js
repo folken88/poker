@@ -1009,7 +1009,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33820;
+  const CLIENT_BUILD = 33821;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -2352,13 +2352,14 @@
         // TAB browses the current level's spells ONE at a time (Shift-Tab back), so
         // nothing has to be memorized and spells past #9 are reachable; ENTER toggles
         // the one under the cursor. Same browse pattern as the V domain menu.
-        if (e.key === 'Tab' && _dunSbp.lvl != null) {
+        if ((e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') && _dunSbp.lvl != null) {   // v3.37.134 (Josh): arrows + Home/End in every browse menu
           e.preventDefault();
           const mdl = _sbpModel;
           const at = mdl ? _sbpAt(mdl, _dunSbp.lvl) : [];
           if (!at.length) { sayU('Still loading your spell list.'); return; }
           const n = at.length;
-          _dunSbp.idx = (((_dunSbp.idx == null ? -1 : _dunSbp.idx) + (e.shiftKey ? -1 : 1)) % n + n) % n;
+          if (e.key === 'Home') _dunSbp.idx = 0; else if (e.key === 'End') _dunSbp.idx = n - 1;
+          else _dunSbp.idx = (((_dunSbp.idx == null ? -1 : _dunSbp.idx) + ((e.shiftKey || e.key === 'ArrowUp') ? -1 : 1)) % n + n) % n;
           const sp = at[_dunSbp.idx];
           const picked = _sbpPicked(mdl, sp);
           sayU(`${_dunSbp.idx + 1}, ${sp.name}, ${picked ? (mdl.spont ? 'known' : 'prepared') : 'available'}. Enter to ${picked ? 'remove' : (mdl.spont ? 'learn' : 'prepare')}.`);
@@ -2439,12 +2440,13 @@
       };
       if (_dunDmp) {
         if (e.key === 'Escape') { e.preventDefault(); _dunDmp = false; _dunDmpIdx = -1; sayU('Domain menu closed.'); return; }
-        if (e.key === 'Tab') {
+        if ((e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End')) {
           e.preventDefault();
           const mdl = _dmpModel;
           if (!mdl || !(mdl.domains || []).length) { sayU('Still loading your domains.'); return; }
           const n = mdl.domains.length;
-          _dunDmpIdx = ((_dunDmpIdx + (e.shiftKey ? -1 : 1)) % n + n) % n;
+          if (e.key === 'Home') _dunDmpIdx = 0; else if (e.key === 'End') _dunDmpIdx = n - 1;
+          else _dunDmpIdx = ((_dunDmpIdx + ((e.shiftKey || e.key === 'ArrowUp') ? -1 : 1)) % n + n) % n;
           const d = mdl.domains[_dunDmpIdx];
           sayU(`${_dunDmpIdx + 1}, ${d.name}${d.picked ? ', picked' : ''}. Enter to ${d.picked ? 'drop' : 'pick'}.`);
           return;
@@ -2687,10 +2689,11 @@
       };
       if (_dunPadAssign) {
         if (e.key === 'Escape') { e.preventDefault(); const s = _dunPadAssign.slot; _dunPadAssign = null; sayU(`Key ${s} unchanged.`); return; }
-        if (e.key === 'Tab') {
+        if ((e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End')) {
           e.preventDefault();
           const ch = _padChoices(); const n = ch.length;
-          _dunPadAssign.idx = ((_dunPadAssign.idx + (e.shiftKey ? -1 : 1)) % n + n) % n;
+          if (e.key === 'Home') _dunPadAssign.idx = 0; else if (e.key === 'End') _dunPadAssign.idx = n - 1;
+          else _dunPadAssign.idx = ((_dunPadAssign.idx + ((e.shiftKey || e.key === 'ArrowUp') ? -1 : 1)) % n + n) % n;
           const c = ch[_dunPadAssign.idx];
           sayU(`${_dunPadAssign.idx + 1}, ${c.label}. ${c.desc ? c.desc + ' ' : ''}Enter to put it on key ${_dunPadAssign.slot}.`);
           return;
@@ -2707,9 +2710,10 @@
       }
       if (_dunPad) {
         if (e.key === 'Escape') { e.preventDefault(); _dunPad = false; _dunPadIdx = -1; sayU('Pad manager closed.'); return; }
-        if (e.key === 'Tab') {
+        if ((e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End')) {
           e.preventDefault();
-          _dunPadIdx = ((_dunPadIdx + (e.shiftKey ? -1 : 1)) % 9 + 9) % 9;
+          if (e.key === 'Home') _dunPadIdx = 0; else if (e.key === 'End') _dunPadIdx = 8;
+          else _dunPadIdx = ((_dunPadIdx + ((e.shiftKey || e.key === 'ArrowUp') ? -1 : 1)) % 9 + 9) % 9;
           sayU(`Key ${_dunPadIdx + 1}: ${_padSlotLabel(_dunPadIdx + 1)}. Enter to re-map it.`);
           return;
         }
@@ -2833,14 +2837,17 @@
           if (_dunSbLevel != null) { _dunSbLevel = null; _dunSbIdx = -1; sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level.`); }
           return;
         }
-        if (e.key === 'Tab') {
+        if ((e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End')) {
           e.preventDefault();
           if (_dunSbLevel == null) { sayU(`Pick a spell level first: ${spellLevels.map(ord).join(', ')}.`); return; }
           const at = sbAt(_dunSbLevel);
           if (!at.length) { sayU('No spells at this level.'); return; }
-          _dunSbIdx = e.shiftKey ? _dunSbIdx - 1 : _dunSbIdx + 1;
-          if (_dunSbIdx < 0) _dunSbIdx = at.length - 1;
-          if (_dunSbIdx >= at.length) _dunSbIdx = 0;
+          if (e.key === 'Home') _dunSbIdx = 0; else if (e.key === 'End') _dunSbIdx = at.length - 1;
+          else {
+            _dunSbIdx = (e.shiftKey || e.key === 'ArrowUp') ? _dunSbIdx - 1 : _dunSbIdx + 1;
+            if (_dunSbIdx < 0) _dunSbIdx = at.length - 1;
+            if (_dunSbIdx >= at.length) _dunSbIdx = 0;
+          }
           const sp = at[_dunSbIdx];
           sayU(`${sp.name}${sp.available === false ? ', no slots' : ''}.`);
           return;
@@ -2976,9 +2983,9 @@
         { label: 'Cancel run', fn: () => cancelDungeon() },
       ];
       if (_dunSessionMode) {
-        if (e.key === 'Tab') {
+        if (e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp') {
           e.preventDefault();
-          _dunSessionIdx = (e.shiftKey ? _dunSessionIdx - 1 + SESSION_ITEMS.length : _dunSessionIdx + 1) % SESSION_ITEMS.length;
+          _dunSessionIdx = ((e.shiftKey || e.key === 'ArrowUp') ? _dunSessionIdx - 1 + SESSION_ITEMS.length : _dunSessionIdx + 1) % SESSION_ITEMS.length;
           sayU(SESSION_ITEMS[_dunSessionIdx].label + '.'); return;
         }
         // Numbers are deliberately NOT mapped here (Josh: a stray number after Esc

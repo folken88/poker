@@ -1898,9 +1898,27 @@
 //                     Spiritual Weapon is one-at-a-time (recast re-aims; PF1 multiples queued),
 //                     Spirit Ally is APG (parity ledger queue), Divine Power + Favor DO stack
 //                     (verified additive). Tests 182-185; CLIENT_BUILD 33820.
-const VERSION = '3.37.133';
+//  3.37.134 2026-08-28 JOSH'S MIDNIGHT TRIPLE (his three late replies). (1) THE CHIP AUDIT ('not
+//                     sure divine favor nor divine power are showing up... similar issue as magic
+//                     investment?'): five sticky buffs had NO BUFF_META entry — Divine Power,
+//                     Righteous Might, Enlarge Person, Greater Heroism, Bloodline Surge — all
+//                     invisible to L/B readouts. Added, plus a coverage domtest that fails the
+//                     build on any future chip-less buff. (2) DIVINE POWER goes full PF1: +1 luck
+//                     per 3 CL (max +6) to hit & damage, temp HP = level, and an EXTRA full-attack
+//                     swing that doesn't stack with Haste; GMW's cleric copy is 4th-level (PF1 —
+//                     his table audit again). (3) ENEMY DISPEL v2 ('make sure dispel works for
+//                     good AND bad people'): ripRun now REVERSES each snapshot's numerics (AC,
+//                     saves, run-long hit/damage, temp HP) and Vestment/GMW/Heroism/False Life/
+//                     Bless/Barkskin/Mind Blank/Foresight are strippable; a dispelled buff is
+//                     RE-CASTABLE the same room (no more 'already up' after the strip). (4) ARROWS
+//                     + HOME/END in EVERY browse menu ('the domain list. And the prepare menu'):
+//                     K-prepare, V-domains, spellbook, pad manager, pad assign, session menu.
+//                     (5) SOUND ROUND 2: Righteous Might BOOMS, See Invisibility goes spectral,
+//                     Divine Favor rings mjolnir, Shield of Faith clanks, Prot-from-Evil shines.
+//                     Tests 186+; CLIENT_BUILD 33821.
+const VERSION = '3.37.134';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33820;
-const HEADLINE = "Arrows, Home and End now drive the enemy selector; Freedom of Movement finally asks WHO to unshackle; bot clerics discover Air Walk; and the sound pass lands — Divine Power rings the god-hammer, the sear blazes, and the investigator's extracts mix a drink.";
+const CLIENT_BUILD = 33821;
+const HEADLINE = "Every browse menu takes arrows, Home and End; five invisible buff chips surface (Divine Power now full PF1 with its extra swing); enemy Dispel truly strips Vestment-class buffs — and lets you re-cast them; five more spells get their own voices.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

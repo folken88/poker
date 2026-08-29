@@ -35,6 +35,15 @@ const BUFF_META = {
   stoneskincomm: { label: 'Stoneskin (Communal)', desc: 'DR 10 vs physical blows — whole party (this dungeon)', icon: '/dungeon/buffs/stoneskin.webp' },
   ironskin:      { label: 'Iron Skin',       desc: 'DR 10 vs physical blows (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
   barkskin:      { label: 'Barkskin',        desc: '+3 natural-armor AC (this dungeon)', icon: '/dungeon/buffs/stoneskin.webp' },
+  // v3.37.134 (Josh: 'not sure divine favor nor divine power are showing up in the
+  // buff list... a similar issue as magic investment?') — same disease, wider rash:
+  // FIVE sticky buffs had no entry here. A domtest now walks every kit key so the
+  // next chip-less buff fails the build instead of going silent.
+  divinepower:    { label: 'Divine Power',    desc: '+1 per 3 levels to hit & damage (max +6), temp HP, extra full-attack swing (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  righteousmight: { label: 'Righteous Might', desc: '+2 hit, +4 damage, +2 AC, +2 CMD vs grabs (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  enlargeperson:  { label: 'Enlarge Person',  desc: 'grown a size category — +2 damage (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  heroismgreater: { label: 'Greater Heroism', desc: '+4 to hit & +4 on saves (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  bloodlinesurge: { label: 'Bloodline Surge', desc: '+1 hit, +3 damage, +2 AC (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   // v3.37.127 (Josh: 'magic vestment does not appear in the buff lines. neither
   // report from L tells me if it is on, nor the report from B') — the chip walk
   // skips any key with no BUFF_META entry, so every run-long buff shipped since

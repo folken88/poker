@@ -842,25 +842,49 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // effects (haste, images, displacement, invisibility, flight, stoneskin, mage
     // armor, wards, magical sight). CL13+ casts the GREATER version and sweeps them
     // all; below that it rips 1d3. Run-long snapshots are deleted too, so a
-    // dispelled dungeon-buff stays gone until re-cast. Numeric aggregates survive v1.
+    // dispelled dungeon-buff stays gone until re-cast. v2 (v3.37.134, Josh caught
+    // it: 'magic vestment... still said already up' after a Greater Dispel):
+    // ripRun now REVERSES the numeric aggregate each snapshot granted (AC, saves,
+    // run-long to-hit/damage, temp HP) before deleting it, and the pure-numeric
+    // run-buffs (Vestment, GMW, Heroism, False Life, Bless) are strippable too.
     if (cl >= 9 && !e._dispelCast && dRoll(4) === 1) {
-      const _dScore = (m) => (m.hasted > 0 ? 1 : 0) + (m.images > 0 ? 1 : 0) + (m.displaced ? 1 : 0) + ((m.flying && !m.innateFly && !m.ghost) ? 1 : 0) + ((m.invisible && !m.greaterInvis) ? 1 : 0) + (m.dr > 0 ? 1 : 0) + (m.mageArmor ? 1 : 0) + (m.protectFire > 0 ? 1 : 0) + (m.seeInvis ? 1 : 0) + (m.trueSeeing ? 1 : 0);
+      const _runHas = (m, ...ks) => ks.some(k => m.runBuffApplied && m.runBuffApplied[k]);
+      const _dScore = (m) => (m.hasted > 0 ? 1 : 0) + (m.images > 0 ? 1 : 0) + (m.displaced ? 1 : 0) + ((m.flying && !m.innateFly && !m.ghost) ? 1 : 0) + ((m.invisible && !m.greaterInvis) ? 1 : 0) + (m.dr > 0 ? 1 : 0) + (m.mageArmor ? 1 : 0) + (m.protectFire > 0 ? 1 : 0) + (m.seeInvis ? 1 : 0) + (m.trueSeeing ? 1 : 0) + (_runHas(m, 'magicvestment', 'greatermagicweapon', 'heroism', 'ext_heroism') ? 1 : 0);
       const tgt = heroes.slice().sort((a, b) => _dScore(b) - _dScore(a))[0];
       if (tgt && _dScore(tgt) >= 3) {
         e._dispelCast = true;
         const stripped = [], cap = cl >= 13 ? 10 : dRoll(3);
-        const ripRun = (...keys) => { for (const kk of keys) { if (tgt.runBuffPayloads) delete tgt.runBuffPayloads[kk]; if (tgt.runBuffApplied) delete tgt.runBuffApplied[kk]; } };
+        const ripRun = (...keys) => { for (const kk of keys) {
+          const sp = tgt.runBuffPayloads && tgt.runBuffPayloads[kk];
+          if (sp) {   // reverse what the snapshot granted — see abilities._applyRunBuffSnap
+            if (tgt.buffs) { tgt.buffs.ac -= sp.ac || 0; tgt.buffs.save -= sp.save || 0; tgt.buffs.dexMod = (tgt.buffs.dexMod || 0) - (sp.dexMod || 0); tgt.buffs.cmd = (tgt.buffs.cmd || 0) - (sp.cmd || 0); tgt.buffs.bonusDice -= sp.bonusDice || 0; if (sp.deflect && tgt.buffs.deflect === sp.deflect) tgt.buffs.deflect = 0; }
+            if (tgt.runBuffs) { tgt.runBuffs.toHit -= sp.toHit || 0; tgt.runBuffs.dmg -= sp.dmg || 0; }
+            if (sp.tempHp && tgt.tempHp > 0) { const cut = Math.min(tgt.tempHp, sp.tempHp); tgt.tempHp -= cut; tgt.maxHp -= cut; if (tgt.hp > tgt.maxHp) tgt.hp = tgt.maxHp; }
+          }
+          if (tgt.runBuffPayloads) delete tgt.runBuffPayloads[kk]; if (tgt.runBuffApplied) delete tgt.runBuffApplied[kk];
+          if (tgt.buffApplied) delete tgt.buffApplied[kk];   // v2: a dispelled buff must be RE-CASTABLE this room — no more 'already up' after the strip (Josh)
+        } };
         const rip = (cond, label, fn) => { if (cond && stripped.length < cap) { fn(); stripped.push(label); } };
         rip(tgt.hasted > 0, 'Haste', () => { tgt.hasted = 0; tgt.hasteFull = false; });
         rip(tgt.images > 0, 'Mirror Image', () => { tgt.images = 0; });
-        rip(tgt.displaced, 'Displacement', () => { tgt.displaced = false; });
+        rip(tgt.displaced, 'Displacement', () => { tgt.displaced = false; if (tgt.buffApplied) { delete tgt.buffApplied.displacement; delete tgt.buffApplied.ext_displace; } });
         rip(tgt.invisible && !tgt.greaterInvis, 'Invisibility', () => { tgt.invisible = false; });
         rip(tgt.flying && !tgt.innateFly && !tgt.ghost, 'flight', () => { tgt.flying = false; tgt.overlandFlight = false; if (!tgt.form) tgt.canHitFlyers = false; ripRun('airwalk'); });
         rip(tgt.dr > 0, 'Stoneskin', () => { tgt.dr = 0; ripRun('stoneskin', 'stoneskincomm', 'ext_stoneskin'); });
         rip(tgt.mageArmor, 'Mage Armor', () => { tgt.mageArmor = false; });
         rip(tgt.protectFire > 0, 'Fire Ward', () => { tgt.protectFire = 0; ripRun('protectfire'); });
-        rip(tgt.trueSeeing, 'True Seeing', () => { tgt.trueSeeing = false; });
+        rip(tgt.trueSeeing, 'True Seeing', () => { tgt.trueSeeing = false; if (tgt.buffApplied) delete tgt.buffApplied.trueseeing; });
         rip(tgt.seeInvis, 'See Invisibility', () => { tgt.seeInvis = false; ripRun('seeinvisibility', 'ext_seeinvis'); });
+        // v2: the pure-numeric run-long buffs — no flag to clear, ripRun's reversal does all the work
+        rip(_runHas(tgt, 'magicvestment'), 'Magic Vestment', () => ripRun('magicvestment'));
+        rip(_runHas(tgt, 'greatermagicweapon'), 'Greater Magic Weapon', () => ripRun('greatermagicweapon'));
+        rip(_runHas(tgt, 'heroism', 'ext_heroism'), 'Heroism', () => ripRun('heroism', 'ext_heroism'));
+        rip(_runHas(tgt, 'falselife'), 'False Life', () => ripRun('falselife'));
+        rip(_runHas(tgt, 'bless'), 'Bless', () => ripRun('bless'));
+        rip(_runHas(tgt, 'barkskin'), 'Barkskin', () => ripRun('barkskin'));
+        rip(tgt.darkvision && _runHas(tgt, 'darkvisioncomm'), 'Darkvision', () => { tgt.darkvision = false; ripRun('darkvisioncomm'); });
+        rip(tgt.mindBlank, 'Mind Blank', () => { tgt.mindBlank = false; ripRun('mindblank'); });
+        rip(tgt.foresight, 'Foresight', () => { tgt.foresight = false; ripRun('foresight'); });
         if (stripped.length) {
           this._note(`🌀 ${e.glyph} ${e.name} casts ${cl >= 13 ? 'GREATER DISPEL MAGIC' : 'DISPEL MAGIC'} on ${tgt.nickname} — STRIPS ${stripped.join(', ')}!`, '/audio/spell_dispel.mp3', { side: 'enemy' });
           this._echoToTable('/audio/spell_dispel.mp3'); this._broadcast(); return;

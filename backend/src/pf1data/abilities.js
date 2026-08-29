@@ -235,7 +235,7 @@ const SPELL = {
   sleetstorm:    { key: 'sleetstorm',    name: 'Sleet Storm',     icon: '🌨️', effect: 'grease', target: 'aoe', randN: 2, randDie: 4, save: 'reflex', slvl: 3, sound: S.gust, desc: 'Driving ice sheets the ground — a RANDOM 2d4 foes save Reflex or slip PRONE.' },
   forcepunch:    { key: 'forcepunch',    name: 'Force Punch',     icon: '👊', effect: 'forcepush', target: 'enemy', slvl: 3, sound: S.gust, desc: 'A fist of pure force SLAMS a foe backward — every melee ally who can act gets a FREE attack against it as it reels. You forgo your own strike.' },
   airwalk:       { key: 'airwalk',       name: 'Air Walk',        icon: '🌤️', effect: 'buff', target: 'ally', buff: {}, fly: true, canHitFlyers: true, slvl: 4, sticky: true, sound: S.invoke, desc: 'One ally treads the air itself — airborne for the room: grounded foes can\'t reach them, and they CAN close with flyers. The divine answer to Fly.' },
-  divinepower:   { key: 'divinepower',   name: 'Divine Power',    icon: '⚡', effect: 'buff', target: 'self', buff: { toHit: 4, dmg: 4, conHp: 1 }, slvl: 4, sticky: true, sound: S.charge, desc: 'The caster channels their god\'s might — +4 to hit, +4 damage and +1 temporary HP per level for the rest of the room. The battle-cleric switch.' },
+  divinepower:   { key: 'divinepower',   name: 'Divine Power',    icon: '⚡', effect: 'buff', target: 'self', buff: { toHit: 4, dmg: 4, conHp: 1 }, slvl: 4, sticky: true, sound: S.charge, desc: 'The caster channels their god\'s might — +1 to hit and damage per 3 caster levels (max +6), temporary HP equal to your level, and an EXTRA attack whenever you full attack (doesn\'t stack with Haste\'s). Lasts the room — the battle-cleric switch. (PF1)' },
   icestorm:      { key: 'icestorm',      name: 'Ice Storm',       icon: '🧊', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 5, dtype: 'cold', slvl: 4, sound: S.coldcone, desc: 'Fist-sized hail hammers up to 4 foes — 5d6 COLD, Reflex for half.' },
   shout:         { key: 'shout',         name: 'Shout',           icon: '📢', effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'fort', die: 6, dice: 5, dtype: 'sonic', slvl: 4, sound: '/audio/draugr_shout03_burning.mp3', desc: 'A devastating sonic BOOM staggers up to 3 foes — 5d6 SONIC, Fortitude for half.' },
   unholyblight:  { key: 'unholyblight',  name: 'Unholy Blight',   icon: '☠️', effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'unholy', slvl: 4, sound: S.umbral, desc: 'A cold cloud of evil sears 2 foes — Will for half (½level d8). The dark mirror of Holy Smite; it bites hardest against the Heavenly Host.' },
@@ -479,7 +479,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { key: 'cureserious',  name: 'Cure Serious Wounds',  icon: '💚', cost: 'room', uses: 1, slvl: 3, minLevel: 5, effect: 'heal', heal: 'single', healDice: 3, healCap: 15, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 3d8 + caster level (max +15). Once per room.' },
     { key: 'dispelmagic',  name: 'Dispel Magic',         icon: '🌀', cost: 'room', uses: 1, slvl: 3, minLevel: 5, effect: 'cleanse', target: 'ally', sound: S.dispel, desc: 'End hostile SPELL effects on an ally (hold, slow, magical blindness) — or strip a buff off a foe. Physical grapple/stun/sickness are beyond it (PF1).' },
     preparedSpell(SPELL.invisibilitypurge, 5),   // 3rd-level prayer — reveal every invisible foe for the party + lock out re-vanishing
-    { ...SPELL.greatermagicweapon, cost: 'room', uses: 1, minLevel: 5 },   // craft priests' team buff: party weapons +1/4 levels (max +5)
+    { ...SPELL.greatermagicweapon, slvl: 4, cost: 'room', uses: 1, minLevel: 7 },   // craft priests' team buff: party weapons +1/4 levels (max +5). PF1: cleric FOURTH (the base slvl 3 is the Sor/Wiz line) — v3.37.134, Josh's table audit
     // ── 4th-level prayers ──
     { key: 'curecritical', name: 'Cure Critical Wounds', icon: '💚', cost: 'room', uses: 1, slvl: 4, minLevel: 7, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20). Once per room.' },
     { key: 'protectfire',  name: 'Protection from Fire',  icon: '🔥', cost: 'room', uses: 1, slvl: 4, minLevel: 7, effect: 'buff', target: 'self', party: true, protectFire: true, sticky: true, sound: S.invoke, desc: 'Ward the whole party against FIRE — each ally gains a ward that ABSORBS the next 12 fire damage per caster level (max 120), soaked before it burns, until spent. (PF1 Protection from Energy — cast it when fiery foes loom.)' },
@@ -1318,6 +1318,15 @@ for (const _k of Object.values(KITS)) {
   for (const _a of _k.abilities) {
     if (_a && _a.key === 'divinepower') _a.sound = '/audio/weapon_warhammer_smite.mp3';
     if (_a && typeof _a.key === 'string' && _a.key.startsWith('ext_')) _a.sound = '/audio/mix_drink.mp3';
+    // ROUND 2 (v3.37.134, Josh: 'Righteous might is still sounding the same as
+    // channel... divine favor, shield of faith both have the same sound... I think
+    // see invisibility [too]'): five more distinct identities. Extracts keep their
+    // drink-mix (round 1) — only the PLAIN See Invisibility gets the new tag.
+    if (_a && _a.key === 'righteousmight') _a.sound = '/audio/vine_boom.mp3';
+    if (_a && _a.key === 'seeinvisibility') _a.sound = '/audio/ghosts_n_stuff_intro.mp3';
+    if (_a && _a.key === 'divinefavor') _a.sound = '/audio/mjolnir_short_hitd.mp3';
+    if (_a && _a.key === 'shieldoffaith') _a.sound = '/audio/metal_clank.mp3';
+    if (_a && _a.key === 'protevil') _a.sound = '/audio/radiohead_everything_intro.mp3';   // NOT into_the_light — that's already Detect Evil's identity (the exact re-share Josh flags)
   }
 }
 // TRUE SEEING is RANGE TOUCH (v3.37.122, Josh: 'You have fallen into a trap
@@ -1331,6 +1340,17 @@ for (const _k of Object.values(KITS)) {
   if (!_k || !Array.isArray(_k.abilities)) continue;
   for (const _a of _k.abilities) {
     if (_a && _a.key === 'trueseeing') { _a.target = 'ally'; _a.desc = SPELL.trueseeing.desc; }
+  }
+}
+// GMW IS A 4TH-LEVEL PRAYER on the divine lists (v3.37.134, Josh's table audit
+// strikes again): PF1 puts Greater Magic Weapon at cleric 4 / Sor+Wiz 3, and the
+// generated divine kits inherited the arcane slvl. Post-override normalization —
+// the baked kit literal is DEAD once `KITS = _gen` swaps the object.
+for (const [_gmwName, _k] of Object.entries(KITS)) {
+  if (!_k || !Array.isArray(_k.abilities)) continue;
+  if (_gmwName !== 'cleric' && _gmwName !== 'oracle') continue;
+  for (const _a of _k.abilities) {
+    if (_a && _a.key === 'greatermagicweapon') { _a.slvl = 4; _a.minLevel = 7; }
   }
 }
 // RIGHTEOUS MIGHT is a SIZE spell (v3.37.121, Josh, blessed-puffin: 'If I am
