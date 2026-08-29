@@ -2685,8 +2685,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
           if (e.hp <= 0) slainN++;
         }
         const tally = `${hitN} seared${savedN ? `, ${savedN} saved` : ''}${slainN ? `, ${slainN} destroyed` : ''}`;
-        this._note(`${ab.icon} ${m.nickname} channels positive energy — SEARS the undead, Will DC ${dc} (${dmg}): ${tally}.`, sound);
-        this._echoToTable(sound);
+        this._note(`${ab.icon} ${m.nickname} channels positive energy — SEARS the undead, Will DC ${dc} (${dmg}): ${tally}.`, '/audio/spell_holysmite.mp3');   // v3.37.133 (Josh's sound essay): the SEAR gets its own blaze — no longer the heal-charge sound
+        this._echoToTable('/audio/spell_holysmite.mp3');
         return;
       }
       // PF1e: a channel rolls its healing ONCE and heals EVERY hero in the burst.

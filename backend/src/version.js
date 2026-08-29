@@ -1878,9 +1878,29 @@
 //                     lightning-style multi-target, 30-ft geometry has no grid — desc says so);
 //                     Maze he self-corrected (DC 20 INT ≈ our no-save; the exit announce exists).
 //                     Tests 178-181; CLIENT_BUILD 33819.
-const VERSION = '3.37.132';
+//  3.37.133 2026-08-28 THE BACKLOG SWEEP + ERGONOMICS (Josh's 'wonderful great job' reply + the
+//                     unprocessed tail of the v127 thread). (1) ENEMY SELECTOR ERGONOMICS: arrows
+//                     now cycle it (up/left back, down/right forward), HOME jumps to the first
+//                     foe, END to the last; Tab still works ('whichever is more comfortable for
+//                     how you position your hands'). (2) FREEDOM OF MOVEMENT ON AN ALLY ('why can
+//                     i not cast this on someone else... I carry it to unfuck the spellcaster
+//                     from grapple'): the effect isn't 'buff', so the client's allyPick flag
+//                     never offered the prompt — the server honored allyUid all along. Prompt
+//                     wired. (3) BOT CLERICS NEVER CAST AIR WALK ('inconceivable... a cleric has
+//                     a similar yet ghetto ability'): airwalk sat so LATE in the cleric PRIORITY
+//                     that default preps never included it — the bot legally couldn't cast what
+//                     its kit 'had'. Promoted above the blast line; the pre-door spread and the
+//                     fly-an-ally branch both light up. (4) THE SOUND DIFFERENTIATION PASS (his
+//                     essay): Divine Power now rings the god-hammer (was the same charge as
+//                     channel AND righteous might), the channel SEAR blazes with holy fire (was
+//                     the heal sound), the six investigator EXTRACTS mix a drink (were the
+//                     invisibility sound) - his hypo-gun idea noted for Toby. (5) Answered:
+//                     Spiritual Weapon is one-at-a-time (recast re-aims; PF1 multiples queued),
+//                     Spirit Ally is APG (parity ledger queue), Divine Power + Favor DO stack
+//                     (verified additive). Tests 182-185; CLIENT_BUILD 33820.
+const VERSION = '3.37.133';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33819;
-const HEADLINE = "Parity of arms: your wizards finally get MIRROR IMAGE, enemy priests channel over their flocks, enemy casters DISPEL your buffs right back — plus the dispel-that-fired-a-crossbow bug is dead, and X now browses your whole level history, 2 through 20.";
+const CLIENT_BUILD = 33820;
+const HEADLINE = "Arrows, Home and End now drive the enemy selector; Freedom of Movement finally asks WHO to unshackle; bot clerics discover Air Walk; and the sound pass lands — Divine Power rings the god-hammer, the sear blazes, and the investigator's extracts mix a drink.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

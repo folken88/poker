@@ -1009,7 +1009,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33819;
+  const CLIENT_BUILD = 33820;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -3004,17 +3004,25 @@
         e.preventDefault();
         if (_blindHelp) { sayU('E: inspect enemies — Tab to cycle, Return to target, E to exit.'); return; }
         _dunEnemyMode = !_dunEnemyMode; _dunEnemyIdx = -1;
-        if (_dunEnemyMode) sayU(`Enemy inspect: ${aliveE.length} ${aliveE.length === 1 ? 'enemy' : 'enemies'}. Tab to cycle, a number to jump, Return to target it, E to exit.`);
+        if (_dunEnemyMode) sayU(`Enemy inspect: ${aliveE.length} ${aliveE.length === 1 ? 'enemy' : 'enemies'}. Tab or arrows to cycle, Home for the first, End for the last, a number to jump, Return to target it, E to exit.`);
         else sayU('Exited enemy inspect.');
         return;
       }
       // In inspect mode: Tab / Shift+Tab cycle through enemies; Esc or E exits.
-      if (_dunEnemyMode && e.key === 'Tab') {
+      // v3.37.133 (Josh: 'make the enemy selector navigable with arrows as well as
+      // the tab key... home should take you to the top, end to the bottom — it
+      // becomes whichever is more comfortable for how you position your hands').
+      if (_dunEnemyMode && (e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End')) {
         e.preventDefault();
         if (!aliveE.length) { sayU('No enemies.'); return; }
-        _dunEnemyIdx = (e.shiftKey ? _dunEnemyIdx - 1 : _dunEnemyIdx + 1);
-        if (_dunEnemyIdx < 0) _dunEnemyIdx = aliveE.length - 1;
-        if (_dunEnemyIdx >= aliveE.length) _dunEnemyIdx = 0;
+        if (e.key === 'Home') _dunEnemyIdx = 0;
+        else if (e.key === 'End') _dunEnemyIdx = aliveE.length - 1;
+        else {
+          const back = e.key === 'ArrowUp' || e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey);
+          _dunEnemyIdx = (back ? _dunEnemyIdx - 1 : _dunEnemyIdx + 1);
+          if (_dunEnemyIdx < 0) _dunEnemyIdx = aliveE.length - 1;
+          if (_dunEnemyIdx >= aliveE.length) _dunEnemyIdx = 0;
+        }
         sayU(enemyDesc(aliveE[_dunEnemyIdx], _dunEnemyIdx));
         return;
       }
