@@ -3263,9 +3263,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // can't touch, then the MOST DANGEROUS of those (boss > caster > CR/threat),
   // rather than mopping up the weakest. Falls back to the deadliest grounded foe
   // when nothing's flying.
-  _spiritTarget() {
-    const foes = this._targetableEnemies();   // never re-acquire onto a summoned ally
+  _spiritTarget(m) {
+    // Toby (2026-08-30): a spirit hunts with its CASTER'S senses — it can only
+    // acquire what the caster can perceive (magical darkness needs Darkvision or
+    // True Seeing; invisibility needs See Invisibility or True Seeing). Preference:
+    // the caster's CURRENT target first, then foes the caster can't reach (flyers
+    // — a force blade has no reach problem), then the biggest visible threat.
+    const sees = (e) => !(e.darkened > 0 && !(m && (m.darkvision || m.trueSeeing))) && !(e.invisible && !(m && (m.seeInvis || m.trueSeeing)));
+    const foes = this._targetableEnemies().filter(sees);   // never re-acquire onto a summoned ally
     if (!foes.length) return null;
+    const cur = m && m._lastAtkTarget ? foes.find(e => e.uid === m._lastAtkTarget) : null;
+    if (cur) return cur;
     const flyers = foes.filter(e => e.flying);
     const pool = flyers.length ? flyers : foes;
     const threat = (e) => (e.boss ? 100 : 0)
@@ -3282,7 +3290,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     sw.rounds -= 1;
     let e = this.enemies.find(x => x.uid === sw.targetUid && x.hp > 0);
     if (!e) {
-      e = this._spiritTarget();
+      e = this._spiritTarget(m);
       if (e) { sw.targetUid = e.uid; this._note(`${tag} ${m.nickname}'s ${label} seeks a new mark — ${e.name}${e.flying ? ' on the wing' : ''}!`); }
     }
     if (e) {

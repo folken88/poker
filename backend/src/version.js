@@ -1950,9 +1950,17 @@
 //                     enhancement natural armor DO stack). (5) The extracts fire Toby's
 //                     tarkov_stim hypo (Josh's idea, was mix_drink). (6) TOBY-QUESTIONS.md:
 //                     all six questions ruled and archived. Tests 199+; backend-only.
-const VERSION = '3.37.136';
+//  3.37.137 2026-08-30 SPIRIT DOCTRINE (Toby's follow-ups, same evening): both spirit spells
+//                     re-acquire when their mark falls with duration left (already true —
+//                     now PINNED by tests for weapon AND angel separately), and the retarget
+//                     brain follows his exact doctrine: the caster's CURRENT target first,
+//                     then foes the caster can't reach (flyers), then the biggest threat —
+//                     and the spirits hunt with the CASTER'S SENSES: they cannot acquire an
+//                     invisible foe without the caster's See Invisibility / True Seeing, nor
+//                     a darkness-shrouded one without Darkvision / True Seeing. Tests 203+.
+const VERSION = '3.37.137';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33822;
-const HEADLINE = "Toby's six rulings land: rangers, bloodragers and both paladins get their real PF1 spellbooks; a guardian angel (Spiritual Ally) fights beside your Spiritual Weapon; communal Stoneskin is room-only per the book; the extracts fire a hypo-stim.";
+const HEADLINE = "The spirit spells follow their caster: a Spiritual Weapon or Ally that outlives its mark hunts the caster's current target first, favors foes the caster can't reach, and sees only what the caster can see.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
