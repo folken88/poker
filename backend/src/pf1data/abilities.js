@@ -1324,7 +1324,7 @@ for (const _k of Object.values(KITS)) {
     // drink-mix (round 1) — only the PLAIN See Invisibility gets the new tag.
     if (_a && _a.key === 'righteousmight') _a.sound = '/audio/vine_boom.mp3';
     if (_a && _a.key === 'seeinvisibility') _a.sound = '/audio/ghosts_n_stuff_intro.mp3';
-    if (_a && _a.key === 'divinefavor') _a.sound = '/audio/mjolnir_short_hitd.mp3';
+    if (_a && _a.key === 'divinefavor') { _a.sound = '/audio/mjolnir_short_hitd.mp3'; _a.desc = 'Your god\'s luck rides your blows — +1 to hit and damage per 3 caster levels (max +3, LUCK — doesn\'t stack with Divine Power\'s luck; the bigger stands) for the rest of the room.'; }   // v3.37.135: PF1 scaling + the non-stack warning in the desc itself
     if (_a && _a.key === 'shieldoffaith') _a.sound = '/audio/metal_clank.mp3';
     if (_a && _a.key === 'protevil') _a.sound = '/audio/radiohead_everything_intro.mp3';   // NOT into_the_light — that's already Detect Evil's identity (the exact re-share Josh flags)
   }

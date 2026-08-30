@@ -1009,7 +1009,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33821;
+  const CLIENT_BUILD = 33822;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -2657,7 +2657,7 @@
       // server-side. Spells stay off the catalog (they live in the Spellbook).
       const _padChoices = () => {
         const ch = [{ id: 'attack', label: (kit.atwill && kit.atwill.name) || 'Attack', desc: '' }];
-        (((_padMgrModel || {}).abilities) || []).filter(a => a.slvl == null).forEach(a => ch.push({ id: a.key, label: a.name + (a.hidden ? ' — hidden, assigning restores it' : ''), desc: a.desc || '' }));
+        (((_padMgrModel || {}).abilities) || []).filter(a => a.slvl == null).forEach(a => ch.push({ id: a.key, locked: !!a.locked, minLevel: a.minLevel || 1, label: a.name + (a.hidden ? ' — hidden, assigning restores it' : '') + (a.locked ? ` — unlocks at level ${a.minLevel}` : ''), desc: a.desc || '' }));   // v3.37.135: level-locked entries SAY so (Josh assigned a locked Channel Negative and heard nothing was wrong)
         if (naturalActions.some(it => it.kind === 'imbued')) ch.push({ id: 'imbued', label: 'Imbued Shots', desc: '' });
         if (naturalActions.some(it => it.kind === 'spellbook')) ch.push({ id: 'spellbook', label: 'Spellbook', desc: 'Opens your leveled spell list.' });
         ch.push({ id: 'none', label: 'Nothing — disable this key', desc: 'The key does nothing, so a stray press can never waste your turn.' });
@@ -2679,12 +2679,21 @@
         // the current layout as explicit before the swap so NOTHING reflows —
         // assignment changes exactly one key. If the chosen action already sat
         // on another key, that key goes empty: one action, one key, no cascade.
+        // v3.37.135 (Josh's antipaladin session): pin only OCCUPIED slots. The old
+        // pin wrote 'none' for merely-EMPTY slots too, permanently killing their
+        // auto-fill — his key 9 went dead and Touch of Corruption had nowhere to
+        // land when it unlocked. Empty ≠ deliberately disabled: only the explicit
+        // "Nothing" choice writes 'none' now.
         const map = {};
-        for (let i9 = 0; i9 < 9; i9++) { const it9 = blindActions[i9]; map[i9 + 1] = it9 ? _padIdOf(it9) : 'none'; }
-        for (let j9 = 1; j9 <= 9; j9++) if (j9 !== s && map[j9] === c.id) map[j9] = 'none';
+        for (let i9 = 0; i9 < 9; i9++) { const it9 = blindActions[i9]; if (it9) map[i9 + 1] = _padIdOf(it9); }
+        for (let j9 = 1; j9 <= 9; j9++) if (j9 !== s && map[j9] === c.id) delete map[j9];
         map[s] = c.id;
         padpickSend({ setMap: map }, () => {
-          sayU(`Key ${s} is now ${c.label}. Nothing else moved.`);
+          // A LEVEL-LOCKED pick "succeeds" server-side but the pad can't show it
+          // until the level arrives — say so instead of lying (his Channel
+          // Negative at level ~2 sounded assigned and then "didn't work").
+          if (c.locked) sayU(`Key ${s} is saved for ${c.label} — it unlocks at level ${c.minLevel}. Until then the key fills in automatically.`);
+          else sayU(`Key ${s} is now ${c.label}. Nothing else moved.`);
         });
       };
       if (_dunPadAssign) {

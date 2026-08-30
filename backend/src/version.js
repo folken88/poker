@@ -1916,9 +1916,27 @@
 //                     (5) SOUND ROUND 2: Righteous Might BOOMS, See Invisibility goes spectral,
 //                     Divine Favor rings mjolnir, Shield of Faith clanks, Prot-from-Evil shines.
 //                     Tests 186+; CLIENT_BUILD 33821.
-const VERSION = '3.37.134';
+//  3.37.135 2026-08-30 THE PAD MANAGER VERDICT + THE LUCK CHANNEL. (1) Josh's antipaladin pad
+//                     report SOLVED via his live db row: the assignment DID save ("8":"channelneg"
+//                     is right there) — but his antipaladin was under level 4, the N catalog
+//                     offered the level-locked ability with no warning, the pad (correctly)
+//                     drops locked abilities, and the key auto-filled: "it didn't work." Now the
+//                     catalog says "unlocks at level N", the assignment speech says the key is
+//                     SAVED and will light up at that level. (2) The pin bug: pinning wrote
+//                     'none' for merely-EMPTY slots, permanently killing their auto-fill (his
+//                     key 9 went dead; Touch of Corruption would have had nowhere to land).
+//                     Empty slots are left unpinned now — only the explicit Nothing choice
+//                     writes 'none'. (3) LUCK IS ONE CHANNEL (his rules-lawyering + the PF1
+//                     standing rule): Divine Favor scales +1/3 CL (max +3), Divine Power max +6,
+//                     both LUCK — the bigger stands, never the sum; DP's temp HP + extra swing
+//                     always apply; the refusal is spoken. (4) docs/TOBY-QUESTIONS.md — the
+//                     consolidated ruling queue (his process complaint: Toby never saw the
+//                     stacked questions). (5) Chip receipts: divinefavor/divinepower/
+//                     righteousmight all proven SHOWN by behavioral test 195.
+//                     Tests 193+; CLIENT_BUILD 33822.
+const VERSION = '3.37.135';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33821;
-const HEADLINE = "Every browse menu takes arrows, Home and End; five invisible buff chips surface (Divine Power now full PF1 with its extra swing); enemy Dispel truly strips Vestment-class buffs — and lets you re-cast them; five more spells get their own voices.";
+const CLIENT_BUILD = 33822;
+const HEADLINE = "The pad manager tells the truth now — level-locked picks say when they unlock instead of silently not appearing, and pinning a key no longer kills empty slots; Divine Favor and Divine Power share one luck channel per the book.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

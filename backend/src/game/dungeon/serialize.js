@@ -25,7 +25,7 @@ const { TEAMWORK } = require('../../pf1data/feats');
 const BUFF_META = {
   rage:          { label: 'Rage',            desc: '+2 hit & damage, −2 AC (this room)' },
   bane:          { label: 'Bane',            desc: '+2 hit, +2d6+2 vs foes (this room)' },
-  divinefavor:   { label: 'Divine Favor',    desc: '+3 hit & damage (this room)' },
+  divinefavor:   { label: 'Divine Favor',    desc: '+1 per 3 levels to hit & damage (max +3, luck — the bigger of this and Divine Power stands) (this room)' },
   prayer:        { label: 'Prayer',          desc: 'allies +1 hit, damage & saves (this room)' },
   shield:        { label: 'Shield',          desc: '+4 AC (this room)' },
   shieldoffaith: { label: 'Shield of Faith', desc: '+2 deflection AC (this room)' },
@@ -39,7 +39,7 @@ const BUFF_META = {
   // buff list... a similar issue as magic investment?') — same disease, wider rash:
   // FIVE sticky buffs had no entry here. A domtest now walks every kit key so the
   // next chip-less buff fails the build instead of going silent.
-  divinepower:    { label: 'Divine Power',    desc: '+1 per 3 levels to hit & damage (max +6), temp HP, extra full-attack swing (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  divinepower:    { label: 'Divine Power',    desc: '+1 per 3 levels to hit & damage (max +6, luck — supersedes Divine Favor), temp HP, extra full-attack swing (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   righteousmight: { label: 'Righteous Might', desc: '+2 hit, +4 damage, +2 AC, +2 CMD vs grabs (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   enlargeperson:  { label: 'Enlarge Person',  desc: 'grown a size category — +2 damage (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   heroismgreater: { label: 'Greater Heroism', desc: '+4 to hit & +4 on saves (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },

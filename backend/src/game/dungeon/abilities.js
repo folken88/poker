@@ -733,7 +733,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m.aimOn) this._applyDeadlyAim(m, true, { silent: true });
     m._fdAc = 0; if (m.fdOn) this._applyFightDefensively(m, true, { silent: true });
     m.smiteActive = false;
-    m.hasted = 0; m.hasteFull = false; m._justHasted = false; m._dpSwing = false; m.stunned = 0;   // transient round effects clear each room (Divine Power's extra swing rides its room-length buff)
+    m.hasted = 0; m.hasteFull = false; m._justHasted = false; m._dpSwing = false; m._luck = 0; m.stunned = 0;   // transient round effects clear each room (Divine Power's extra swing + the shared luck channel ride their room-length buffs)
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
     m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
@@ -1353,6 +1353,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         desc: ab.desc || '',
         slvl: ab.slvl != null ? ab.slvl : null,   // v3.37.97: lets the N catalog exclude spells (they live in the Spellbook, not on pad keys)
         hidden: hidden.has(ab.key),
+        minLevel: ab.minLevel || 1,   // v3.37.135: the catalog must TELL a low-level hero an entry is level-locked —
+        locked: (m.level || 1) < (ab.minLevel || 1),   // Josh assigned locked Channel Negative, the pad couldn't show it, and it read as "the manager is broken"
       })),
       shown: abs.filter(ab => !hidden.has(ab.key)).length,
       map: this._padMapOf(m),   // explicit slot assignments (v3.37.95)
@@ -2939,11 +2941,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         return;
       }
       who.buffs = who.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 };
-      if (ab.key === 'divinepower') {   // PF1 (v3.37.134, Josh): +1 LUCK to hit & damage per 3 caster levels (max +6), temp HP = caster level, and an extra full-attack swing that does NOT stack with Haste (_attackOffsets reads _dpSwing)
-        const dp = Math.min(6, Math.max(1, Math.floor(lvl / 3)));
-        who.buffs.toHit += dp; who.buffs.dmg += dp;
-        this._grantTempHp(who, lvl);
-        who._dpSwing = true;
+      if (ab.key === 'divinepower' || ab.key === 'divinefavor') {
+        // PF1 (v3.37.134/.135, Josh's rules-lawyering): Divine Favor is +1 LUCK to hit &
+        // damage per 3 CL (max +3); Divine Power the same at max +6, plus temp HP = CL and
+        // an extra full-attack swing that yields to Haste (_attackOffsets reads _dpSwing).
+        // Both are LUCK bonuses — same type never stacks (RAW): one shared channel, the
+        // bigger stands. Toby can veto in TOBY-QUESTIONS.md; until then the book rules.
+        const luck = Math.min(ab.key === 'divinepower' ? 6 : 3, Math.max(1, Math.floor(lvl / 3)));
+        const cur = who._luck || 0;
+        if (luck > cur) { who.buffs.toHit += luck - cur; who.buffs.dmg += luck - cur; who._luck = luck; }
+        else this._note(`⚖️ ${ab.name}'s +${luck} luck bonus doesn't stack with the +${cur} already up — the bigger one stands (PF1).`);
+        if (ab.key === 'divinepower') { this._grantTempHp(who, lvl); who._dpSwing = true; }
         return;
       }
       who.buffs.toHit += ab.gmw ? gmwMod : ((ab.buff && ab.buff.toHit) || 0);   // Greater Magic Weapon scales the enhancement with caster level
