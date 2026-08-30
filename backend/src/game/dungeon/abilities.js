@@ -316,6 +316,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       bullrush:    () => this._abBullRush(m, payload),
       grapple:     () => this._abGrapple(m, payload),
       spiritweapon: () => this._abSpiritWeapon(m, ab, payload),
+      spiritally: () => this._abSpiritAlly(m, ab, payload),
       cleave:      () => this._abCleave(m, ab, payload),
       feint:       () => this._abFeint(m, payload),
       reckless:    () => this._abReckless(m, payload),
@@ -736,7 +737,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m._dpSwing = false; m._luck = 0; m.stunned = 0;   // transient round effects clear each room (Divine Power's extra swing + the shared luck channel ride their room-length buffs)
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.spiritAlly = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
     m.queuedAction = null;   // pre-loaded actions never carry into a new room (stale targets)
@@ -3241,6 +3242,18 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._echoToTable(ab.sound || '/audio/spell_holy_smite.mp3');
     this._spiritWeaponStrike(m);   // it lashes out the instant it appears
   },
+  // SPIRITUAL ALLY (APG, v3.37.136 — Toby: 'it should be an angel of some type',
+  // and both spirit spells may fight side by side). An angel with a blazing
+  // longsword; same engine as the weapon — one round per caster level, rides the
+  // caster's buffs (Toby's home rule; _spiritStrike uses _swingVsAC), retargets.
+  _abSpiritAlly(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    const rounds = Math.max(1, (m.level || 1));
+    m.spiritAlly = { targetUid: e.uid, rounds };
+    this._note(`👼 A guardian ANGEL descends at ${m.nickname}'s call, blazing longsword over ${e.name} — it will strike on every turn for ${rounds} rounds!`, ab.sound || '/audio/spell_holy_smite.mp3');
+    this._echoToTable(ab.sound || '/audio/spell_holy_smite.mp3');
+    this._spiritStrike(m, 'spiritAlly');
+  },
   // One round of the spiritual weapon's attacks. It uses the cleric's weapon and
   // ALL their combat math (buffs, feats, Prayer/Bless/Divine Favor) via _swingVsAC,
   // and gets an extra swing while the cleric is Hasted. Re-targets if its foe dies,
@@ -3260,29 +3273,33 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       + (crToNum(e.cr) || 0) * 4 + (e.toHit || 0);
     return pool.slice().sort((a, b) => threat(b) - threat(a))[0];
   },
-  _spiritWeaponStrike(m) {
-    const sw = m.spiritWeapon; if (!sw) return;
+  _spiritWeaponStrike(m) { this._spiritStrike(m, 'spiritWeapon'); },   // kept as the PGM-facing name (its turn loop calls this)
+  // One spirit's round — shared by Spiritual Weapon and Spiritual Ally (v3.37.136).
+  _spiritStrike(m, field) {
+    const ally = field === 'spiritAlly';
+    const sw = m[field]; if (!sw) return;
+    const label = ally ? 'Spiritual Ally' : 'Spiritual Weapon', tag = ally ? '👼' : '🗡️✨';
     sw.rounds -= 1;
     let e = this.enemies.find(x => x.uid === sw.targetUid && x.hp > 0);
     if (!e) {
       e = this._spiritTarget();
-      if (e) { sw.targetUid = e.uid; this._note(`🗡️✨ ${m.nickname}'s Spiritual Weapon seeks a new mark — ${e.name}${e.flying ? ' on the wing' : ''}!`); }
+      if (e) { sw.targetUid = e.uid; this._note(`${tag} ${m.nickname}'s ${label} seeks a new mark — ${e.name}${e.flying ? ' on the wing' : ''}!`); }
     }
     if (e) {
-      m.weapon = weaponOf(m.gear, this._spiritWeaponKey(m));   // the god's weapon, riding the caster's enhancement
+      m.weapon = weaponOf(ally ? {} : m.gear, ally ? 'longsword' : this._spiritWeaponKey(m));   // the god's weapon rides the caster's enhancement; the angel bears its own blade
       const swings = 1 + (m.hasted > 0 ? 1 : 0);   // benefits from Haste — an extra strike
       const snd = '/audio/spell_holy_smite.mp3';    // its own ringing note
       const parts = [];
       for (let i = 0; i < swings && e.hp > 0; i++) {
-        const r = this._swingVsAC(m, this._enemyAC(e), e);
+        const r = this._swingVsAC(m, this._enemyAC(e), e);   // the caster's full math — Toby's home rule: active buffs (Divine Favor, Prayer) ride BOTH spirit spells
         if (r.hit) { this._dmgE(e, r.damage); parts.push(`${r.crit ? 'CRIT ' : ''}${r.damage}`); }
         else parts.push('miss');
       }
-      this._note(`🗡️✨ ${m.nickname}'s Spiritual Weapon strikes ${e.name} — ${parts.join(', ')}.${this._afterEnemyHit(e)} (${sw.rounds} rd left)`, snd);
+      this._note(`${tag} ${m.nickname}'s ${label} strikes ${e.name} — ${parts.join(', ')}.${this._afterEnemyHit(e)} (${sw.rounds} rd left)`, snd);
       this._echoToTable(snd);
       if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     }
-    if (sw.rounds <= 0) { m.spiritWeapon = null; this._note(`🗡️✨ ${m.nickname}'s Spiritual Weapon dissolves into motes of light.`); }
+    if (sw.rounds <= 0) { m[field] = null; this._note(ally ? `👼 ${m.nickname}'s guardian angel bows and ascends in a column of light.` : `🗡️✨ ${m.nickname}'s Spiritual Weapon dissolves into motes of light.`); }
     this._broadcast();
   },
   // Cleave: hit the target; then swing at a second foe (−2). A barbarian's

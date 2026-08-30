@@ -1296,7 +1296,16 @@ for (const _k of Object.values(KITS)) {
 // also makes it door-castable and bot-pre-door-castable via _isRunLongBuff);
 // the desc's room language turns into DUNGEON language. Minute- and round-per-
 // level spells (Haste, Divine Favor, Righteous Might, True Seeing...) stay room.
-const _RUNLONG_KEYS = ['airwalk', 'stoneskin', 'stoneskincomm', 'greatermagicweapon', 'falselife', 'seeinvisibility', 'darkvisioncomm', 'protectfire', 'heroism', 'barkskin'];
+// v3.37.136 (Toby): stoneskincomm REMOVED from the run-long tier — PF1's communal
+// casting DIVIDES the 10-min/level duration among targets, dropping it below the
+// dungeon-long bar. Solo Stoneskin keeps the full duration and stays run-long.
+const _RUNLONG_KEYS = ['airwalk', 'stoneskin', 'greatermagicweapon', 'falselife', 'seeinvisibility', 'darkvisioncomm', 'protectfire', 'heroism', 'barkskin'];
+for (const _k of Object.values(KITS)) {
+  if (!_k || !Array.isArray(_k.abilities)) continue;
+  for (const _a of _k.abilities) {
+    if (_a && _a.key === 'stoneskincomm') { _a.persist = false; _a.desc = 'The WHOLE party\'s skin turns to stone — DR 10 vs physical blows for every ally, for the rest of the ROOM. (The communal casting divides the duration among its targets — PF1; the solo Stoneskin lasts the whole dungeon.)'; }
+  }
+}
 for (const _k of Object.values(KITS)) {
   if (!_k || !Array.isArray(_k.abilities)) continue;
   for (const _a of _k.abilities) {
@@ -1317,7 +1326,7 @@ for (const _k of Object.values(KITS)) {
   if (!_k || !Array.isArray(_k.abilities)) continue;
   for (const _a of _k.abilities) {
     if (_a && _a.key === 'divinepower') _a.sound = '/audio/weapon_warhammer_smite.mp3';
-    if (_a && typeof _a.key === 'string' && _a.key.startsWith('ext_')) _a.sound = '/audio/mix_drink.mp3';
+    if (_a && typeof _a.key === 'string' && _a.key.startsWith('ext_')) _a.sound = '/audio/tarkov_stim.mp3';   // v3.37.136: Josh's hypo-gun idea, granted by Toby — the Tarkov stim inject IS the extract identity (was mix_drink)
     // ROUND 2 (v3.37.134, Josh: 'Righteous might is still sounding the same as
     // channel... divine favor, shield of faith both have the same sound... I think
     // see invisibility [too]'): five more distinct identities. Extracts keep their
@@ -1374,6 +1383,42 @@ for (const _k of Object.values(KITS)) {
   }
 }
 _injectKitSpell('inquisitor', spontaneousSpell({ ...SPELL.righteousmight, slvl: 5 }, 13));
+// ── THE MARTIAL CASTERS (v3.37.136, Toby's ruling on Josh's "flat like a fighter"
+// complaint: "normally paladin, bloodrager, etc don't get spells until level 4 and
+// they get very slow progression. use pathfinder 1e rules... so use them!"):
+// paladin / antipaladin / ranger / bloodrager get their PF1 class spell lists on
+// the PF1 four-level ladder — 1st at character level 4, 2nd at 7, 3rd at 10,
+// 4th at 13. This RETIRES the old spells-from-level-1 paladin home rule. Entries
+// are cloned from the kits that already carry each spell (cures from the cleric,
+// woodcraft from the druid, Haste from the wizard) so mechanics stay identical.
+const _findKitAb = (cls, key) => ((KITS[cls] && KITS[cls].abilities) || []).find(a => a && a.key === key);
+const _mcClone = (srcCls, key, slvl) => {
+  const b = _findKitAb(srcCls, key);
+  return b ? { ...b, cost: 'room', uses: 1, slvl, minLevel: 3 * slvl + 1 } : null;
+};
+const _mcSpell = (spell, slvl) => ({ ...spell, cost: 'room', uses: 1, slvl, minLevel: 3 * slvl + 1 });
+const _MARTIAL_LISTS = {
+  //          PF1 list source:  Pal = CRB paladin, Antipal = ARG/UM antipaladin, Rgr = CRB ranger, Br = ACG bloodrager
+  paladin:     [_mcClone('cleric', 'divinefavor', 1), _mcClone('cleric', 'curelight', 1), _mcClone('cleric', 'bearsendurance', 2), _mcClone('cleric', 'curemoderate', 3), _mcClone('cleric', 'cureserious', 4)],
+  antipaladin: [_mcSpell(SPELL.doom, 1), _mcSpell(SPELL.invisibility, 2), _mcSpell(SPELL.darkness, 2), _mcSpell(SPELL.dispelmagic, 3)],
+  ranger:      [_mcClone('druid', 'entangle', 1), _mcClone('druid', 'magicfang', 1), _mcClone('cleric', 'curelight', 2), _mcClone('druid', 'barkskin', 2), _mcClone('cleric', 'curemoderate', 3), _mcClone('cleric', 'cureserious', 4), _mcSpell(SPELL.freedommove, 4)],
+  bloodrager:  [_mcSpell(SPELL.shield, 1), _mcSpell(SPELL.enlargeperson, 1), _mcSpell(SPELL.mirrorimage, 2), _mcClone('cleric', 'bullsstrength', 2), _mcSpell(SPELL.displacement, 3), _mcClone('wizard', 'haste', 3), { ..._mcSpell(SPELL.stoneskin, 4), persist: true, desc: SPELL.stoneskin.desc.replace('for the rest of the room', 'for the rest of the DUNGEON') }],   // stoneskin is 10 min/level → dungeon-long everywhere (the _RUNLONG loop ran before this injection)
+};
+for (const [_mcCls, _mcList] of Object.entries(_MARTIAL_LISTS)) {
+  for (const _mcAb of _mcList) if (_mcAb) _injectKitSpell(_mcCls, _mcAb);
+}
+// The PALADIN's four baked spells move onto the same PF1 ladder (they sat on the
+// retired every-3-levels-from-1 home ladder: 1/4/7/10 → 4/7/10/13).
+for (const _a of ((KITS.paladin || {}).abilities || [])) {
+  if (_a && _a.slvl != null && ['shieldoffaith', 'bullsstrength', 'prayer', 'blessingoffervor'].includes(_a.key)) _a.minLevel = 3 * _a.slvl + 1;
+}
+// SPIRITUAL ALLY (APG; Toby: "it should be an angel of some type", and his home
+// rule stands — a caster's spiritual weapon AND ally both ride the caster's
+// active buffs, which _spiritStrike already does via _swingVsAC. Weapon + Ally
+// may fight side by side; only a second copy of the SAME spell replaces itself.)
+const _SPIRITALLY = { key: 'spiritally', name: 'Spiritual Ally', icon: '👼', slvl: 4, effect: 'spiritally', target: 'enemy', sound: S.holy, desc: 'Call a guardian ANGEL bearing a blazing longsword over a foe — it strikes on EACH of your turns (riding your buffs: Divine Favor, Prayer, Haste) for 1 round per caster level, retargeting when its mark falls. It fights happily alongside your Spiritual Weapon. (APG — the ally is an angel, per Toby.)' };
+_injectKitSpell('cleric', preparedSpell(_SPIRITALLY, 7));
+_injectKitSpell('oracle', spontaneousSpell(_SPIRITALLY, 7));
 
 // ── ORACLE SPONTANEITY — kit-copy normalization (v3.37.112) ────────────────────────
 // Josh (cozy-pebble, playing Vasoriana): "Hold person is spent for this room?????

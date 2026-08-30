@@ -1010,6 +1010,11 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         const sw = avail.find(a => a.effect === 'spiritweapon');
         if (sw) { const tough = targets.slice().sort((a, b) => b.maxHp - a.maxHp)[0] || weakestFoe; offense.push({ ab: sw, payload: { targetUid: tough.uid } }); }
       }
+      // Spiritual ALLY (v3.37.136) fights alongside the weapon — same doctrine, its own guard.
+      if (!(m.spiritAlly && m.spiritAlly.rounds > 0)) {
+        const sa = avail.find(a => a.effect === 'spiritally');
+        if (sa) { const tough = targets.slice().sort((a, b) => b.maxHp - a.maxHp)[0] || weakestFoe; offense.push({ ab: sa, payload: { targetUid: tough.uid } }); }
+      }
       const boltAction = !!weaponOf(m.gear, m.weaponKey).boltAction;   // can't Rapid Shot a bolt-action rifle
       for (const a of avail) if (['rapidshot', 'bullseye', 'cleave', 'trip', 'reckless', 'feint', 'disarm', 'stunfist', 'grapple', 'bullrush'].includes(a.effect)) {
         if (a.needsRepeating && boltAction) continue;

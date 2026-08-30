@@ -1934,9 +1934,25 @@
 //                     stacked questions). (5) Chip receipts: divinefavor/divinepower/
 //                     righteousmight all proven SHOWN by behavioral test 195.
 //                     Tests 193+; CLIENT_BUILD 33822.
-const VERSION = '3.37.135';
+//  3.37.136 2026-08-30 TOBY'S SIX RULINGS LAND. (1) THE MARTIAL CASTERS: paladin, antipaladin,
+//                     ranger and bloodrager get their PF1 spell lists on the PF1 four-level
+//                     ladder (1st@4, 2nd@7, 3rd@10, 4th@13 — the spells-from-level-1 paladin
+//                     home rule is RETIRED): ranger gets entangle/magic fang/cures/barkskin/
+//                     freedom of movement, bloodrager gets shield/enlarge/mirror image/bull's
+//                     strength/displacement/HASTE/stoneskin, antipaladin gets doom/invisibility/
+//                     darkness/dispel, paladin adds divine favor + the cure line. (2) SPIRITUAL
+//                     ALLY (APG): an ANGEL with a blazing longsword — same engine as Spiritual
+//                     Weapon (rides the caster's buffs per Toby's home rule), and the two fight
+//                     SIDE BY SIDE. Cleric prepared + oracle spontaneous, 4th level. (3)
+//                     STONESKIN COMMUNAL is room-only (PF1: the communal cast divides the
+//                     duration); solo Stoneskin stays dungeon-long. (4) Bonus-typing policy
+//                     recorded (same type never stacks; categorize instead — racial vs
+//                     enhancement natural armor DO stack). (5) The extracts fire Toby's
+//                     tarkov_stim hypo (Josh's idea, was mix_drink). (6) TOBY-QUESTIONS.md:
+//                     all six questions ruled and archived. Tests 199+; backend-only.
+const VERSION = '3.37.136';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33822;
-const HEADLINE = "The pad manager tells the truth now — level-locked picks say when they unlock instead of silently not appearing, and pinning a key no longer kills empty slots; Divine Favor and Divine Power share one luck channel per the book.";
+const HEADLINE = "Toby's six rulings land: rangers, bloodragers and both paladins get their real PF1 spellbooks; a guardian angel (Spiritual Ally) fights beside your Spiritual Weapon; communal Stoneskin is room-only per the book; the extracts fire a hypo-stim.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

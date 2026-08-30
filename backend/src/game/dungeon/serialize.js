@@ -32,7 +32,7 @@ const BUFF_META = {
   protevil:      { label: 'Protection from Evil', desc: '+2 AC & +2 saves (this room)' },
   magearmor:     { label: 'Mage Armor',      desc: '+4 armor AC (this dungeon)' },
   stoneskin:     { label: 'Stoneskin',       desc: 'DR 10 vs physical blows (this dungeon)' },
-  stoneskincomm: { label: 'Stoneskin (Communal)', desc: 'DR 10 vs physical blows — whole party (this dungeon)', icon: '/dungeon/buffs/stoneskin.webp' },
+  stoneskincomm: { label: 'Stoneskin (Communal)', desc: 'DR 10 vs physical blows — whole party (this ROOM; the communal casting splits the duration — PF1)', icon: '/dungeon/buffs/stoneskin.webp' },
   ironskin:      { label: 'Iron Skin',       desc: 'DR 10 vs physical blows (this room)', icon: '/dungeon/buffs/stoneskin.webp' },
   barkskin:      { label: 'Barkskin',        desc: '+3 natural-armor AC (this dungeon)', icon: '/dungeon/buffs/stoneskin.webp' },
   // v3.37.134 (Josh: 'not sure divine favor nor divine power are showing up in the

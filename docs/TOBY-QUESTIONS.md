@@ -7,38 +7,38 @@ moves to the Ruled section with the version that implemented it.
 
 ## Open
 
-1. **Divine Favor + Divine Power stacking.** Both are LUCK bonuses in PF1 —
-   same-type bonuses don't stack (RAW), so the bigger one stands. Josh
-   remembers you running it that way. Per your standing "use PF1 when in
-   doubt" rule, v3.37.135 implements book-strict non-stacking (one shared
-   luck channel; Divine Power's temp HP and extra swing always apply).
-   **Veto if you'd rather they add.**
+*(empty — all six questions ruled 2026-08-30; new ones land here)*
 
-2. **Flat martial classes — spell kits & flavor** (Josh, twice now): paladin,
-   antipaladin, bloodrager, and especially RANGER play "flat, like a
-   fighter." All of them have real PF1 spell lists (ranger and antipaladin
-   currently carry only 2–3 spells; ranger may have none visible). Do you
-   want fuller 4th-level-caster spellbooks built for them (PF1 lists, spells
-   unlock at level 4), plus class-identity abilities (e.g. bloodrager
-   bloodline powers so Gabriel stops playing like a straight paladin)?
-   Josh: "we have built druids with flexibility that feels good. Surely we
-   can do something like that here."
+## Standing policy (Toby, 2026-08-30)
 
-3. **Stoneskin (Communal) duration.** The communal split divides the
-   duration — should the communal version be room-only while solo Stoneskin
-   stays dungeon-long, or keep both dungeon-long?
-
-4. **Spiritual Weapon multiples.** PF1 allows several active (one per cast);
-   ours is one-at-a-time with recast re-aiming. Build true multiples?
-
-5. **Spirit Ally** (APG, Josh requested) — in scope after CRB parity?
-
-6. **Hypo-gun audio** — Josh's idea: the Iron Gods hypo-gun sound as the
-   investigator extract tag, if you have the asset. Also sound round 3 is
-   queued: mage armor, shield, greater invisibility need their own voices.
+- **Bonus typing:** same-type bonuses never stack — and PF1 has enough bonus
+  categories that we never bend this; instead we CATEGORIZE correctly. A magic
+  item carries the bonus type of the spell that crafts it (amulet of natural
+  armor = Barkskin = enhancement to natural armor); racial bonuses (nagaji +1
+  natural armor) are their own type and DO stack with enhancement. Apply this
+  typing to every new bonus imported.
+- **PF1 first:** "pf1 rules always to start with, then deviate when we have to."
 
 ## Ruled
 
+- **Divine Favor + Divine Power don't stack** (both luck; bigger stands) —
+  confirmed 2026-08-30, shipped v3.37.135 (the shared luck channel).
+- **Martial casters get their PF1 spell lists on the PF1 ladder** (1st at
+  level 4, 2nd at 7, 3rd at 10, 4th at 13 — the old spells-from-level-1
+  paladin home rule is retired): paladin, antipaladin, ranger, bloodrager —
+  v3.37.136.
+- **Stoneskin (Communal) is room-only** (the communal casting divides the
+  10-min/level duration below the dungeon-long bar, per PF1); solo Stoneskin
+  stays dungeon-long. Tier rule reaffirmed: 10-min/level+ = whole dungeon,
+  round/minute-per-level = room — v3.37.136.
+- **Spiritual Weapon and Spiritual Ally may fight side by side** (one of EACH,
+  not two of one), and Toby's home rule: both ride the caster's active buffs
+  (Divine Favor, Prayer, Weapon of Awe...) — v3.37.136 (the engine's
+  _swingVsAC already carried the buffs; the ally joins the same engine).
+- **Spiritual Ally is an angel** (APG import approved; keep bringing over all
+  CRB spells) — v3.37.136.
+- **The extract sound is the hypo-stim** — Toby's tarkov_stim.mp3 from the
+  Foundry media library — v3.37.136.
 - **Enemy CR cap** ≤ highest hero level +2 — v3.37.121.
 - **Prepared casters may duplicate spells / auto-fill empty slots** —
   already true by construction (slots are a per-level budget).
