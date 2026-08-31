@@ -7,7 +7,21 @@ moves to the Ruled section with the version that implemented it.
 
 ## Open
 
-*(empty — all six questions ruled 2026-08-30; new ones land here)*
+1. **Buff-flavored sound assets** (Josh, 2026-08-30): "a buff spell should sound
+   like it's buffing you... the sound of a hammer infers someone just got their
+   head crushed." Divine Favor and Divine Power had inherited your ATTACK sounds
+   (mjolnir / warhammer-smite) and confused him mid-fight; v3.37.138 moved them
+   to interim buff-family sounds (spell_buff_invoke / spell_prayer). The pool
+   has almost no dedicated buff/shimmer/chime assets. Options: (a) point at
+   buff-appropriate files in your Foundry media library (like the tarkov_stim
+   find), (b) approve generating a few short SFX on your ElevenLabs account,
+   (c) name your file categories so future assignments stay in-lane. Sound
+   round 3 is also still queued: mage armor, shield, greater invisibility.
+
+2. **Blessing of Fervor on the paladin list** — flagged by the range audit:
+   BoF is a cleric-4 APG spell, not paladin-4 (the paladin copy predates the
+   PF1-ladder work). Keep it as a home-rule paladin capstone, or swap it for
+   the book's Holy Sword-style option?
 
 ## Standing policy (Toby, 2026-08-30)
 

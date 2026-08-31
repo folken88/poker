@@ -861,6 +861,8 @@
   let _dunPrevMyTurn = false;  // edge-detect the start of the blind player's dungeon turn
   let _dunSbMode = false;      // blind dungeon: spellbook open (numbers pick a spell LEVEL, Tab cycles spells)
   let _dunImbuedMode = false;  // blind dungeon: magus Imbued Shots submenu open (numbers fire a shot) — Josh's Reese layout
+  let _dunManeuvers = false;   // blind dungeon: Combat Maneuvers submenu open (v3.37.138, Josh's stable-pad design)
+  let _dunMvIdx = -1;          // Tab/arrow cursor inside the maneuvers submenu
   let _dunMmMenu = null;       // blind dungeon: metamagic toggle menu open ([{key,name,adj,on}] or null) — numbers toggle
   let _sbpOpen = false;        // caster "🧠 Prepare ▾" spell-LOADOUT picker popover open/closed (sighted)
   let _sbpModel = null;        // fetched loadout model { spont, pool, caps, prepared|known } — shared by sighted panel + blind S menu
@@ -1009,7 +1011,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33822;
+  const CLIENT_BUILD = 33823;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -1457,7 +1459,7 @@
     if (isMyTurn !== _dunPrevMyTurn) {
       _dunTarget = null; _dunAllyPick = null; _dunDispelPick = null; _dunModePick = null;
       _dunSbMode = false; _dunSbLevel = null; _dunSbIdx = -1;
-      _dunImbuedMode = false;
+      _dunImbuedMode = false; _dunManeuvers = false; _dunMvIdx = -1;
     }
     _dunPrevMyTurn = isMyTurn;
     const turnName = turnId ? ((d.party || []).find(m => m.playerId === turnId)?.nickname || 'someone') : null;
@@ -2581,7 +2583,7 @@
       // they're reached by opening the spellbook and picking a spell LEVEL.
       const ord = (nn) => { const s = ['th', 'st', 'nd', 'rd'], v = nn % 100; return nn + (s[(v - 20) % 10] || s[v] || s[0]); };
       const spells = (kit.abilities || []).filter(a => a.slvl != null);
-      const hasSpellbook = !!kit.caster && spells.length > 0;
+      const hasSpellbook = spells.length > 0;   // v3.37.138 (Josh, twice: 'spell book appears nowhere'): ANY class whose kit carries spells gets the book — paladin/antipaladin/ranger/bloodrager included, and it shows BEFORE the unlock level (stable pad; inside it says when spells unlock)
       const spellLevels = [...new Set(spells.map(s => s.slvl))].sort((a, b) => a - b);
       // Spellbook order is ALPHABETICAL within each level (Josh: "no discernible
       // order... alphabetical just makes sense") — numbering follows this sort.
@@ -2614,7 +2616,11 @@
         const RANK = { deadlyaim: 0, powerattack: 0, piranhastrike: 0, rapidshot: 1, bullseye: 2 };
         feats.sort((a, b) => (RANK[a.ab.key] ?? 9) - (RANK[b.ab.key] ?? 9));
       }
-      feats.forEach(f => naturalActions.push(f));
+      const MANEUVER_FX = ['trip', 'disarm', 'bullrush', 'grapple', 'feint'];
+      const maneuvers = feats.filter(f => f.ab && MANEUVER_FX.includes(f.ab.effect));
+      const featsOut = maneuvers.length >= 2 ? feats.filter(f => !(f.ab && MANEUVER_FX.includes(f.ab.effect))) : feats;
+      featsOut.forEach(f => naturalActions.push(f));
+      if (maneuvers.length >= 2) naturalActions.push({ kind: 'maneuvers', label: 'Combat Maneuvers' });   // v3.37.138 (Josh's stable-pad design): trip/disarm/bull rush/grapple/feint live in ONE menu — the pad stops reflowing as classes grow
       if (imbued.length) naturalActions.push({ kind: 'imbued', label: 'Imbued Shots' });   // magus submenu — numpad opens it, then a number fires a shot
       if (hasSpellbook) naturalActions.push({ kind: 'spellbook', label: 'Spellbook' });
       // ── PAD MAP v2 (v3.37.95, Josh's own design): explicit slot assignments ──
@@ -2657,7 +2663,8 @@
       // server-side. Spells stay off the catalog (they live in the Spellbook).
       const _padChoices = () => {
         const ch = [{ id: 'attack', label: (kit.atwill && kit.atwill.name) || 'Attack', desc: '' }];
-        (((_padMgrModel || {}).abilities) || []).filter(a => a.slvl == null).forEach(a => ch.push({ id: a.key, locked: !!a.locked, minLevel: a.minLevel || 1, label: a.name + (a.hidden ? ' — hidden, assigning restores it' : '') + (a.locked ? ` — unlocks at level ${a.minLevel}` : ''), desc: a.desc || '' }));   // v3.37.135: level-locked entries SAY so (Josh assigned a locked Channel Negative and heard nothing was wrong)
+        (((_padMgrModel || {}).abilities) || []).filter(a => a.slvl == null && !(maneuvers.length >= 2 && maneuvers.some(f => f.ab && f.ab.key === a.key))).forEach(a => ch.push({ id: a.key, locked: !!a.locked, minLevel: a.minLevel || 1, label: a.name + (a.hidden ? ' — hidden, assigning restores it' : '') + (a.locked ? ` — unlocks at level ${a.minLevel}` : ''), desc: a.desc || '' }));   // v3.37.135: locked entries SAY so; v3.37.138: maneuvers assign as ONE entry, not five
+        if (naturalActions.some(it => it.kind === 'maneuvers')) ch.push({ id: 'maneuvers', label: 'Combat Maneuvers', desc: 'Trip, disarm, bull rush, grapple and feint — one menu, one key.' });
         if (naturalActions.some(it => it.kind === 'imbued')) ch.push({ id: 'imbued', label: 'Imbued Shots', desc: '' });
         if (naturalActions.some(it => it.kind === 'spellbook')) ch.push({ id: 'spellbook', label: 'Spellbook', desc: 'Opens your leveled spell list.' });
         ch.push({ id: 'none', label: 'Nothing — disable this key', desc: 'The key does nothing, so a stray press can never waste your turn.' });
@@ -2858,7 +2865,7 @@
             if (_dunSbIdx >= at.length) _dunSbIdx = 0;
           }
           const sp = at[_dunSbIdx];
-          sayU(`${sp.name}${sp.available === false ? ', no slots' : ''}.`);
+          sayU(`${sp.name}${sp.available === false ? (sp.minLevel && (meM.level || 1) < sp.minLevel ? `, unlocks at level ${sp.minLevel}` : ', no slots') : ''}.`);
           return;
         }
         if (e.key === 'Enter' || e.code === 'NumpadEnter') {
@@ -2886,6 +2893,28 @@
       //   (Shocking Grasp, Frigid Touch, …); Escape (or 0) backs out. castSpell handles
       //   the target prompt just like a spell. Only the shots you can USE are listed, so
       //   the numbering is short and stable — new ones slot in as Reese levels.
+      if (_dunManeuvers) {
+        if (e.key === 'Escape' || k === '0') { e.preventDefault(); _dunManeuvers = false; _dunMvIdx = -1; sayU('Combat maneuvers closed.'); return; }
+        if (e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') {
+          e.preventDefault();
+          const n = maneuvers.length;
+          if (e.key === 'Home') _dunMvIdx = 0; else if (e.key === 'End') _dunMvIdx = n - 1;
+          else _dunMvIdx = ((_dunMvIdx + ((e.shiftKey || e.key === 'ArrowUp') ? -1 : 1)) % n + n) % n;
+          const f = maneuvers[_dunMvIdx];
+          sayU(`${_dunMvIdx + 1}, ${f.label}. ${(f.ab && f.ab.desc) || ''} Enter to use it.`);
+          return;
+        }
+        if (e.key === 'Enter' && _dunMvIdx >= 0) { e.preventDefault(); const f = maneuvers[_dunMvIdx]; _dunManeuvers = false; _dunMvIdx = -1; castSpell(f.ab); return; }
+        if (/^[1-9]$/.test(k)) {
+          e.preventDefault();
+          const f = maneuvers[parseInt(k, 10) - 1];
+          if (!f) { sayU(`No maneuver ${k}.`); return; }
+          _dunManeuvers = false; _dunMvIdx = -1;
+          castSpell(f.ab);
+          return;
+        }
+        e.preventDefault(); return;   // swallow the rest — no stray attacks while choosing
+      }
       if (_dunImbuedMode) {
         if (e.key === 'Escape' || k === '0') { e.preventDefault(); _dunImbuedMode = false; sayU('Imbued shots closed.'); return; }
         if (/^[1-9]$/.test(k)) {
@@ -3194,9 +3223,21 @@
         // Spellbook → open the sub-mode (numbers pick a spell LEVEL, Tab cycles
         // spells, Return casts). Browsable off-turn; the cast itself checks turn.
         if (act.kind === 'spellbook') {
+          const _sbLocked = spells.every(sp => sp.available === false);
+          if (_sbLocked && spells.length) {   // v3.37.138 (Josh): the book shows from level 1 — and says when it wakes
+            const _sbMin = Math.min(...spells.map(sp => sp.minLevel || 1));
+            sayU(`Spellbook. No spells available yet — your first spells unlock at level ${_sbMin}. The X key reads your whole progression.`);
+            return;
+          }
           _dunSbMode = true; _dunSbLevel = null; _dunSbIdx = -1; _spellbookOpen = true;
           if (document.body.dataset.screen === 'dungeon') renderDungeon();
           sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level, then press a spell's number to cast it. Escape to close.`);
+          return;
+        }
+        if (act.kind === 'maneuvers') {   // Combat Maneuvers submenu (v3.37.138, Josh's stable-pad design)
+          if (!maneuvers.length) { sayU('No combat maneuvers available.'); return; }
+          _dunManeuvers = true; _dunMvIdx = -1;
+          sayU('Combat maneuvers: ' + maneuvers.map((f, i) => `${i + 1} ${f.label}`).join(', ') + '. Press a number to use one, Tab or arrows to hear what each does, Escape to close.');
           return;
         }
         if (act.kind === 'imbued') {   // magus Imbued Shots submenu (Josh's Reese layout)

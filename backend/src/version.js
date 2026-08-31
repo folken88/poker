@@ -1958,9 +1958,26 @@
 //                     and the spirits hunt with the CASTER'S SENSES: they cannot acquire an
 //                     invisible foe without the caster's See Invisibility / True Seeing, nor
 //                     a darkness-shrouded one without Darkvision / True Seeing. Tests 203+.
-const VERSION = '3.37.137';
+//  3.37.138 2026-08-30 JOSH'S STABLE PAD + THE MARTIAL RANGE AUDIT. (1) THE MISSING SPELLBOOK
+//                     (his L4 antipaladin + paladin reports): hasSpellbook required kit.caster,
+//                     and the four martial casters aren't in CASTER_CLASSES — their new spells
+//                     were invisible to the blind pad. The book now appears for ANY class whose
+//                     kit carries spells, from LEVEL 1 (his design: never hide the button);
+//                     opening it early says 'your first spells unlock at level 4', and locked
+//                     spells in the browse say their unlock level. (2) COMBAT MANEUVERS SUBMENU
+//                     (his design, verbatim): trip/disarm/bull rush/grapple/feint collapse into
+//                     ONE pad entry with its own browsable menu — the pad stops reflowing as
+//                     classes grow; the N catalog offers 'Combat Maneuvers' as one assignable
+//                     entry. (3) RANGE AUDIT of the martial lists (his demand): Magic Fang and
+//                     Displacement are RANGE TOUCH per PF1 — now ally-castable everywhere (the
+//                     drunk extract stays self). (4) BUFF SPELLS SOUND LIKE BUFFS: Divine Favor
+//                     and Divine Power lose Toby's ATTACK sounds (the mjolnir/warhammer reads as
+//                     'someone got hit') for buff-family sounds — interim until dedicated assets;
+//                     ghosts_n_stuff also left the Haste rotation (it's See Invisibility's now).
+//                     Tests 205+; CLIENT_BUILD 33823.
+const VERSION = '3.37.138';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33822;
-const HEADLINE = "The spirit spells follow their caster: a Spiritual Weapon or Ally that outlives its mark hunts the caster's current target first, favors foes the caster can't reach, and sees only what the caster can see.";
+const CLIENT_BUILD = 33823;
+const HEADLINE = "The pad goes stable: every spell-capable class shows its Spellbook from level 1 (it says when it wakes), combat maneuvers live in one menu, Magic Fang and Displacement reach allies per the book, and buff spells finally sound like buffs.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

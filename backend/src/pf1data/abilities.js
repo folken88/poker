@@ -178,7 +178,7 @@ const S = {
 // repeated spell doesn't drone the same clip (Fireball / Lightning Bolt / Haste).
 const FIREBALL_SFX = ['/audio/fireball_1.mp3', '/audio/fireball_2.mp3', '/audio/fireball_3.mp3', '/audio/fireball_4.mp3'];
 const THUNDER_SFX  = ['/audio/thunder_1.mp3', '/audio/thunder_2.mp3', '/audio/thunder_3.mp3', '/audio/thunder_4.mp3', '/audio/thunder_5.mp3', '/audio/thunderclap_slow.mp3'];   // slow clap retired from Chain Lightning into the Lightning Bolt pool
-const HASTE_SFX    = ['/audio/spell_haste.mp3', '/audio/spell_haste2.mp3', '/audio/ghosts_n_stuff_intro.mp3'];
+const HASTE_SFX    = ['/audio/spell_haste.mp3', '/audio/spell_haste2.mp3'];   // v3.37.138: ghosts_n_stuff_intro left the rotation — it became See Invisibility's identity in v134 (no re-shares, Josh's rule)
 // Blessing of Fervor incants ABBA's "Gimme! Gimme! Gimme!" — one of three clips.
 const FERVOR_SFX   = ['/audio/abba_gimme_intro.mp3', '/audio/abba_gimme_chorus.mp3', '/audio/abba_gimme_chorus2.mp3'];
 
@@ -260,7 +260,7 @@ const SPELL = {
   glitterdust:   { key: 'glitterdust',   name: 'Glitterdust',    icon: '✨', effect: 'glitterdust', target: 'aoe', randBase: 1, randDie: 4, save: 'will', slvl: 2, sound: S.glitter, desc: 'A burst of clinging gold dust — a RANDOM 1d4 foes must make a Will save or be BLINDED: −4 to hit and denied their Dex (easier to hit, Sneak-Attackable) for a few rounds.' },
   mirrorimage:   { key: 'mirrorimage',   name: 'Mirror Image',   icon: '🪞', effect: 'mirrorimage', target: 'self', slvl: 2, sound: S.invis, desc: 'Conjure shimmering duplicates (1d4 + 1 per 3 levels, max 8) — each enemy attack that would hit you instead destroys an image, until they are all gone. Lasts the room.' },
   bladeddash:    { key: 'bladeddash',    name: 'Bladed Dash',    icon: '💨', effect: 'bladeddash', target: 'enemy', slvl: 2, sound: S.haste, desc: 'Dash through the fray with a single deadly cut — strike one foe, then you become UNTARGETABLE (no attack, buff, or heal can reach you) until your next turn.' },
-  displacement:  { key: 'displacement',  name: 'Displacement',   icon: '🌫️', effect: 'buff', target: 'self', displace: true, sticky: true, slvl: 3, sound: S.invis, desc: 'Your form blurs and slips aside — 50% of attacks that would hit you MISS instead, for the rest of the room.' },
+  displacement:  { key: 'displacement',  name: 'Displacement',   icon: '🌫️', effect: 'buff', target: 'ally', displace: true, sticky: true, slvl: 3, sound: S.invis, desc: 'An ally\'s form blurs and slips aside (range touch — yours or any ally\'s) — 50% of attacks that would hit them MISS instead, for the rest of the room.' },   // v3.37.138: RANGE TOUCH per PF1 (Josh's range audit) — was locked to self
   fireshield:    { key: 'fireshield',    name: 'Fire Shield',    icon: '🔥', effect: 'buff', target: 'self', fireShield: true, sticky: true, slvl: 4, sound: S.invoke, desc: 'Wreathe yourself in flame — any foe that hits you in melee is scorched for 1d6 + level fire. Lasts the room.' },
   // v3.37.88: enemy crits EXIST now (Josh's ask), so Elemental Body's crit immunity
   // is back and REAL — enforced via opts.critImmune in _monsterSwing. Desc = the
@@ -1325,7 +1325,7 @@ for (const _k of Object.values(KITS)) {
 for (const _k of Object.values(KITS)) {
   if (!_k || !Array.isArray(_k.abilities)) continue;
   for (const _a of _k.abilities) {
-    if (_a && _a.key === 'divinepower') _a.sound = '/audio/weapon_warhammer_smite.mp3';
+    if (_a && _a.key === 'divinepower') _a.sound = '/audio/spell_prayer.mp3';   // v3.37.138 (Josh: the warhammer read as an ATTACK): a holy chant — divine-buff family, distinct from Favor. Interim until Toby supplies dedicated buff assets
     if (_a && typeof _a.key === 'string' && _a.key.startsWith('ext_')) _a.sound = '/audio/tarkov_stim.mp3';   // v3.37.136: Josh's hypo-gun idea, granted by Toby — the Tarkov stim inject IS the extract identity (was mix_drink)
     // ROUND 2 (v3.37.134, Josh: 'Righteous might is still sounding the same as
     // channel... divine favor, shield of faith both have the same sound... I think
@@ -1333,7 +1333,7 @@ for (const _k of Object.values(KITS)) {
     // drink-mix (round 1) — only the PLAIN See Invisibility gets the new tag.
     if (_a && _a.key === 'righteousmight') _a.sound = '/audio/vine_boom.mp3';
     if (_a && _a.key === 'seeinvisibility') _a.sound = '/audio/ghosts_n_stuff_intro.mp3';
-    if (_a && _a.key === 'divinefavor') { _a.sound = '/audio/mjolnir_short_hitd.mp3'; _a.desc = 'Your god\'s luck rides your blows — +1 to hit and damage per 3 caster levels (max +3, LUCK — doesn\'t stack with Divine Power\'s luck; the bigger stands) for the rest of the room.'; }   // v3.37.135: PF1 scaling + the non-stack warning in the desc itself
+    if (_a && _a.key === 'divinefavor') { _a.sound = '/audio/spell_buff_invoke.mp3'; _a.desc = 'Your god\'s luck rides your blows — +1 to hit and damage per 3 caster levels (max +3, LUCK — doesn\'t stack with Divine Power\'s luck; the bigger stands) for the rest of the room.'; }   // v3.37.135: PF1 scaling + the non-stack warning in the desc itself
     if (_a && _a.key === 'shieldoffaith') _a.sound = '/audio/metal_clank.mp3';
     if (_a && _a.key === 'protevil') _a.sound = '/audio/radiohead_everything_intro.mp3';   // NOT into_the_light — that's already Detect Evil's identity (the exact re-share Josh flags)
   }
@@ -1360,6 +1360,17 @@ for (const [_gmwName, _k] of Object.entries(KITS)) {
   if (_gmwName !== 'cleric' && _gmwName !== 'oracle') continue;
   for (const _a of _k.abilities) {
     if (_a && _a.key === 'greatermagicweapon') { _a.slvl = 4; _a.minLevel = 7; }
+  }
+}
+// MAGIC FANG + DISPLACEMENT are RANGE TOUCH (v3.37.138 — Josh's martial-list
+// range audit: 'we have come across some range issues before... read the range').
+// PF1: both target a creature TOUCHED — ally-castable, not personal. The
+// investigator's Extract: Displacement stays SELF (an extract is drunk).
+for (const _k of Object.values(KITS)) {
+  if (!_k || !Array.isArray(_k.abilities)) continue;
+  for (const _a of _k.abilities) {
+    if (_a && _a.key === 'magicfang') { _a.target = 'ally'; _a.desc = 'Bless an ally\'s natural weapons (claws, fangs, fists — range touch) — +1 to hit and +1 damage for the rest of the room.'; }
+    if (_a && _a.key === 'displacement') { _a.target = 'ally'; _a.desc = 'An ally\'s form blurs and slips aside (range touch — yours or any ally\'s) — 50% of attacks that would hit them MISS instead, for the rest of the room.'; }
   }
 }
 // RIGHTEOUS MIGHT is a SIZE spell (v3.37.121, Josh, blessed-puffin: 'If I am
