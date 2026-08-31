@@ -122,6 +122,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (o.darkened > 0)  c.push({ key: 'darkened',  label: 'Darkness',  desc: 'shrouded in darkness — cannot act or be attacked (2 rounds)', icon: `${I}darkened.webp` });
     if (o.prone)         c.push({ key: 'prone',     label: 'Prone',     desc: 'knocked down — +4 for all to hit it', icon: `${I}prone.webp` });
     if (o.markedEvil)    c.push({ key: 'markedevil', label: 'Marked',   desc: 'revealed by Detect Evil — smite-able', icon: `${I}markedevil.webp` });
+    if (o.markedGood)    c.push({ key: 'markedgood', label: 'Marked',   desc: 'revealed by Detect Good — Smite Good bites it (antipaladin)', icon: `${I}markedevil.webp` });
     return c;
   },
 

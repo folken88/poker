@@ -1975,9 +1975,21 @@
 //                     'someone got hit') for buff-family sounds — interim until dedicated assets;
 //                     ghosts_n_stuff also left the Haste rotation (it's See Invisibility's now).
 //                     Tests 205+; CLIENT_BUILD 33823.
-const VERSION = '3.37.138';
+//  3.37.139 2026-08-31 THE DARK MIRROR (Josh: 'antipal also get detect good... also get smite
+//                     good. These are standard anti-paladin features'). (1) SMITE GOOD + DETECT
+//                     GOOD lead the antipaladin pad — the honest-scan mirror of the paladin's
+//                     pair: extra fury ONLY vs good-aligned foes, Detect Good marks what
+//                     radiates good and says how many do not; bot antipaladins smite-good only
+//                     when a good foe is actually fielded. (2) THE LATENT BUG his report
+//                     exposed: NO monster ever carried good:true — the Heavenly Host and the
+//                     Glorious Reclamation are now flagged, which also wakes the Fiendish
+//                     Boon's unholy weapon rider (it checked target.good and had NEVER fired).
+//                     Detect Good marks feed the unholy rider too. (3) His spell-list links
+//                     acknowledged — per-class lists at per-class levels is exactly how the
+//                     martial kits were built (and audited, v138). Tests 209+; backend-only.
+const VERSION = '3.37.139';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33823;
-const HEADLINE = "The pad goes stable: every spell-capable class shows its Spellbook from level 1 (it says when it wakes), combat maneuvers live in one menu, Magic Fang and Displacement reach allies per the book, and buff spells finally sound like buffs.";
+const HEADLINE = "The antipaladin gets its dark mirror — Smite Good and Detect Good lead the pad, and flagging the Heavenly Host as good-aligned wakes the unholy weapon rider that had never fired.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

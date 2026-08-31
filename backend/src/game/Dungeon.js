@@ -797,7 +797,7 @@ class Dungeon {
       toHit: base.toHit + extra,
       dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus + half,
       fort: base.fort + Math.ceil(extra / 2), reflex: base.reflex + Math.ceil(extra / 2),
-      align: base.align || 'NE', evil: !!base.evil, markedEvil: false, type: base.type || 'humanoid',
+      align: base.align || 'NE', evil: !!base.evil, markedEvil: false, good: !!base.good, markedGood: false, type: base.type || 'humanoid',   // good: the Heavenly Host / Reclamation — Smite Good + the unholy boon key on it (v3.37.139)
       flatFooted: true, prone: false, fascinated: false, asleep: false, loseTurn: false,
       paralyze: !!base.paralyze, paralyzeDC: (base.paralyzeDC || PARALYZE_DC) + half, sickened: 0,
       attacks: base.attacks || 1,
@@ -1616,7 +1616,7 @@ class Dungeon {
     const pbs = (weapon && weapon.ranged && target && target._engagedAlly) ? (fighterFeats(cls, lvl, true).pbs || 0) : 0;
     // Smite Evil: an ACTIVATED smite (paladin's ability) vs an evil foe adds a
     // to-hit bump + bonus (un-multiplied) damage equal to level.
-    const smite = !!(attacker.smiteActive && target && (target.evil || target.markedEvil));   // Detect Evil marks neutral foes smite-able
+    const smite = !!(attacker.smiteActive && target && (target.evil || target.markedEvil)) || !!(attacker.smiteGoodActive && target && (target.good || target.markedGood));   // Detect Evil/Good mark neutral foes smite-able (Smite Good = the antipaladin mirror, v3.37.139)
     // Sneak Attack: rogue-likes add precision dice vs a target that's denied its
     // defenses — flat-footed, prone, sickened, or paralyzed (PF1e). NOT crit-multiplied.
     // A target is denied its Dex vs an UNSEEN attacker too — Greater Invisibility
@@ -1814,7 +1814,7 @@ class Dungeon {
     // energy that only bites the opposed alignment — vs EVIL foes (holy) / GOOD foes
     // (unholy). Rides on top: not soaked by physical DR, not crit-multiplied.
     if (arcHoly && (target.evil || target.markedEvil)) dmg += dRollN(arcHoly, 6);
-    if (arcUnholy && target.good) dmg += dRollN(arcUnholy, 6);
+    if (arcUnholy && (target.good || target.markedGood)) dmg += dRollN(arcUnholy, 6);   // Detect Good marks a foe for the unholy rider too
     return { hit: true, crit, smite, sneakDice, sneakDmg, damage: Math.max(0, dmg), drTag: (twkDmg ? `${drTag || ''} (+${twkDmg} teamwork)` : drTag), roll, toHit, total, ac, sound: pick(SND.flesh) };
   }
   // (the villain brain — _monsterSwing/_enemyAct/maneuvers/caster brains — moved to game/dungeon/enemyAI.js — Phase-2 seam 3)

@@ -733,7 +733,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m.paOn)  this._applyPowerAttack(m, true, { silent: true });
     if (m.aimOn) this._applyDeadlyAim(m, true, { silent: true });
     m._fdAc = 0; if (m.fdOn) this._applyFightDefensively(m, true, { silent: true });
-    m.smiteActive = false;
+    m.smiteActive = false; m.smiteGoodActive = false;
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m._dpSwing = false; m._luck = 0; m.stunned = 0;   // transient round effects clear each room (Divine Power's extra swing + the shared luck channel ride their room-length buffs)
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
@@ -3016,9 +3016,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   // Smite Evil — your strikes smite evil foes this room.
   _abSmite(m, ab) {
-    m.smiteActive = true;
+    // v3.37.139 (Josh: 'antipal also get smite good... should function opposite of
+    // smite evil'): ab.smiteGood flips the polarity — extra fury vs GOOD foes only.
+    if (ab.smiteGood) m.smiteGoodActive = true; else m.smiteActive = true;
     const sound = ab.sound || pick(SND.flesh);
-    this._note(`${ab.icon} ${m.nickname} calls a Smite — righteous fury against evil this room!`, sound);
+    this._note(ab.smiteGood
+      ? `${ab.icon} ${m.nickname} calls a SMITE GOOD — unholy fury against the righteous this room!`
+      : `${ab.icon} ${m.nickname} calls a Smite — righteous fury against evil this room!`, sound);
     this._echoToTable(sound);
   },
   // Detect Evil (paladin) — HONEST since v3.37.89 (Josh, run jumbled-pebble:
@@ -3041,6 +3045,14 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   _abDetectEvil(m, ab) {
     const foes = this.livingEnemies();
+    if (ab.detectGood) {   // the antipaladin mirror (v3.37.139) — same honest scan, opposite polarity
+      let good = 0, dull = 0;
+      for (const e of foes) { e._dgScanned = true; if (e.good) { e.markedGood = true; good++; } else dull++; }
+      const snd2 = ab.sound || '/audio/into_the_light.mp3';
+      this._note(`${ab.icon || '🎯'} ${m.nickname} calls DETECT GOOD — ${good} foe${good === 1 ? '' : 's'} RADIATE${good === 1 ? 'S' : ''} good and ${good === 1 ? 'is' : 'are'} MARKED for Smite Good${dull ? `; ${dull} do${dull === 1 ? 'es' : ''} NOT (no purchase for your smite there)` : ''}!`, snd2);
+      this._echoToTable(snd2);
+      return;
+    }
     let evil = 0, clean = 0;
     // Every foe gets stamped SCANNED — evil or not (v3.37.106, run clever-mirror:
     // bot Gabriel re-cast this every round of a clean room because non-evil foes

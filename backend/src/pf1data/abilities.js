@@ -1430,6 +1430,19 @@ for (const _a of ((KITS.paladin || {}).abilities || [])) {
 const _SPIRITALLY = { key: 'spiritally', name: 'Spiritual Ally', icon: '👼', slvl: 4, effect: 'spiritally', target: 'enemy', sound: S.holy, desc: 'Call a guardian ANGEL bearing a blazing longsword over a foe — it strikes on EACH of your turns (riding your buffs: Divine Favor, Prayer, Haste) for 1 round per caster level, retargeting when its mark falls. It fights happily alongside your Spiritual Weapon. (APG — the ally is an angel, per Toby.)' };
 _injectKitSpell('cleric', preparedSpell(_SPIRITALLY, 7));
 _injectKitSpell('oracle', spontaneousSpell(_SPIRITALLY, 7));
+// ANTIPALADIN SIGNATURE PAIR (v3.37.139 — Josh: 'antipal also get detect good...
+// also get smite good. This should function opposite of smite evil. These are
+// standard anti-paladin features'): the dark mirror of the paladin's pair,
+// UNSHIFTED so the signature actions lead the pad (the v3.37.92 mandate).
+// Smite Good bites only GOOD-aligned foes (the Heavenly Host, the Glorious
+// Reclamation); Detect Good is the same honest scan as Detect Evil — it marks
+// what actually radiates good and says how many foes do NOT.
+if (KITS.antipaladin && Array.isArray(KITS.antipaladin.abilities) && !KITS.antipaladin.abilities.some(a => a && a.key === 'smitegood')) {
+  KITS.antipaladin.abilities.unshift(
+    { key: 'smitegood', name: 'Smite Good', icon: '🗡️', cost: 'room', uses: smiteUses, freeAction: true, effect: 'smite', smiteGood: true, target: 'self', sound: S.umbral, desc: 'A FREE action (no action cost): your strikes smite GOOD foes this room — +to-hit and +double your level to damage, but ONLY vs creatures of good alignment (angels, azatas, the Reclamation\'s crusaders). Use Detect Good first to see who qualifies. Once per 5 levels per room. (The dark mirror of Smite Evil.)' },
+    { key: 'detectgood', name: 'Detect Good', img: '/dungeon/conditions/markedevil.webp', icon: '🎯', cost: 'free', freeAction: true, effect: 'detectevil', detectGood: true, target: 'aoe', sound: S.umbral, desc: 'Sweep the room with profane sight (a FREE action) — every foe that RADIATES GOOD is marked for your Smite Good, and you hear how many do not (no purchase for your smite there).' },
+  );
+}
 
 // ── ORACLE SPONTANEITY — kit-copy normalization (v3.37.112) ────────────────────────
 // Josh (cozy-pebble, playing Vasoriana): "Hold person is spent for this room?????

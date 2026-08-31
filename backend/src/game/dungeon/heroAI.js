@@ -719,14 +719,20 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     }
     // 2) Put up buffs once — Smite, then sticky self/party buffs (rage, shield,
     //    bane, divine favor, inspire). Sticky guard stops re-casting.
-    const smite = avail.find(a => a.effect === 'smite' && !m.smiteActive);
+    const smite = avail.find(a => a.effect === 'smite' && !a.smiteGood && !m.smiteActive);
     if (smite) return { slot: slot(smite), payload: {} };
+    // ANTIPALADIN mirror (v3.37.139): Smite Good only when a GOOD foe is actually
+    // on the field (the celestial court) — an all-evil room would waste the use.
+    const smiteG = avail.find(a => a.effect === 'smite' && a.smiteGood && !m.smiteGoodActive);
+    if (smiteG && this.livingEnemies().some(e => e.good || e.markedGood)) return { slot: slot(smiteG), payload: {} };
     // Paladin: Detect Evil reveals NON-evil foes (animals/constructs) so Smite
     // bites them — a standard action, worth it when not every foe is already evil.
-    const detectEvil = avail.find(a => a.effect === 'detectevil');
+    const detectEvil = avail.find(a => a.effect === 'detectevil' && !a.detectGood);
     // …but only foes never yet SCANNED justify the standard action (v3.37.106):
     // one clean sweep answers the question for everyone it touched.
     if (detectEvil && this.livingEnemies().some(e => !e.evil && !e.markedEvil && !e._devScanned)) return { slot: slot(detectEvil), payload: {} };
+    const detectGood = avail.find(a => a.detectGood);
+    if (detectGood && this.livingEnemies().some(e => e.good && !e.markedGood && !e._dgScanned)) return { slot: slot(detectGood), payload: {} };
     // Mage Armor — a free, run-long +4 AC; put it up once if not already on.
     const mageArmor = avail.find(a => a.effect === 'magearmor');
     if (mageArmor && !m.mageArmor) return { slot: slot(mageArmor), payload: {} };
