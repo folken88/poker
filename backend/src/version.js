@@ -1987,9 +1987,23 @@
 //                     Detect Good marks feed the unholy rider too. (3) His spell-list links
 //                     acknowledged — per-class lists at per-class levels is exactly how the
 //                     martial kits were built (and audited, v138). Tests 209+; backend-only.
-const VERSION = '3.37.139';
+//  3.37.140 2026-08-31 THE SPEED RACE + THE BOOK'S PALADIN. (1) Josh's caster-tactics audit
+//                     (flying-noodle, six medusa sorceresses): nimble-salmon ACQUITS the bots
+//                     (Fervor round 1, three rooms running), but flying-noodle convicts them —
+//                     Fervor landed at depth-1 ROUND SIX (fight over) and NEVER fired in the
+//                     medusa room while Dinvaya ground flyers and the elites hasted their own
+//                     side twice. THE SPEED RACE rule: vs a big (4+) or caster-heavy (2+) field,
+//                     party haste/Fervor now outranks the summon opener, ward setup and dispel
+//                     duels. (2) His d20pfsrd link settles the paladin list: HOLY SWORD (pal 4,
+//                     the class signature) ships — +2/+2 and +2d6 HOLY vs evil/marked foes on
+//                     every hit (the Redeemer's channel); Bear's Endurance (v136 import error)
+//                     REMOVED; BoF + Shield of Faith flagged as off-book legacies for Toby.
+//                     (3) His alignment-weapon audit: the three UNHOLY blades (Ton Bokiri, Twin
+//                     Battleaxes, Angelbone Scythe) were dead vs celestials until v139's good
+//                     flags — receipts in the email; the holy trio always worked. Tests 212+.
+const VERSION = '3.37.140';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33823;
-const HEADLINE = "The antipaladin gets its dark mirror — Smite Good and Detect Good lead the pad, and flagging the Heavenly Host as good-aligned wakes the unholy weapon rider that had never fired.";
+const HEADLINE = "Casters win the speed race now - against a big or caster-heavy field, Haste and Blessing of Fervor go up FIRST; and the paladin gets the book's own Holy Sword.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

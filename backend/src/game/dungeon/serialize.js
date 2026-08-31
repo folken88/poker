@@ -44,6 +44,7 @@ const BUFF_META = {
   enlargeperson:  { label: 'Enlarge Person',  desc: 'grown a size category — +2 damage (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   heroismgreater: { label: 'Greater Heroism', desc: '+4 to hit & +4 on saves (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   bloodlinesurge: { label: 'Bloodline Surge', desc: '+1 hit, +3 damage, +2 AC (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
+  holysword:      { label: 'Holy Sword',      desc: '+2 hit & damage, +2d6 holy vs evil foes (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   // v3.37.127 (Josh: 'magic vestment does not appear in the buff lines. neither
   // report from L tells me if it is on, nor the report from B') — the chip walk
   // skips any key with no BUFF_META entry, so every run-long buff shipped since

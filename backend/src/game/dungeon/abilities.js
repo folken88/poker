@@ -733,7 +733,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m.paOn)  this._applyPowerAttack(m, true, { silent: true });
     if (m.aimOn) this._applyDeadlyAim(m, true, { silent: true });
     m._fdAc = 0; if (m.fdOn) this._applyFightDefensively(m, true, { silent: true });
-    m.smiteActive = false; m.smiteGoodActive = false;
+    m.smiteActive = false; m.smiteGoodActive = false; m._holySword = 0;
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m._dpSwing = false; m._luck = 0; m.stunned = 0;   // transient round effects clear each room (Divine Power's extra swing + the shared luck channel ride their room-length buffs)
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
@@ -2975,6 +2975,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (ab.canHitFlyers) who.canHitFlyers = true; // Magus Fly/Overland Flight — can melee airborne foes
       if (ab.displace) who.displaced = true;        // Displacement — 50% incoming-miss (this room)
       if (ab.fireShield) who.fireShield = { die: 6, bonus: who.level || 1 };   // Fire Shield — retaliate on melee hit
+      if (ab.holySword) who._holySword = 2;                                     // Holy Sword — +2d6 HOLY vs evil/marked foes on every hit (v3.37.140)
       if (ab.elemBody) who.elemBody = true;         // Elemental Body — crit + CC immunity
       if (ab.trueSeeing) who.trueSeeing = true;     // True Seeing — pierce darkness/illusion/invisibility
       if (ab.seeInvis) who.seeInvis = true;         // See Invisibility — find/strike the INVISIBLE (but NOT mirror image / displacement)

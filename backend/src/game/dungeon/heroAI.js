@@ -457,6 +457,20 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       const b = bestBlast();
       if (b) return b;
     }
+    // 0d9) THE SPEED RACE (v3.37.140 — Josh, flying-noodle: 'when you have 12
+    //      enemies on the battlefield and a quarter of them are spellcasters...
+    //      HASTE needs to be one of the first things to go up'): against a BIG or
+    //      caster-heavy field, party speed beats the summon opener, ward setup and
+    //      dispel duels — one cast covers everyone, every round it's up. Dinvaya
+    //      spent the medusa room grounding flyers while her Blessing of Fervor sat
+    //      unspent; the elite medusas hasted THEIR side twice.
+    {
+      const _bigField = targets.length >= 4 || targets.filter(e => e.arcane || e.healer || e.caster || e.spellstrike).length >= 2;
+      if (_bigField) {
+        const _h0 = avail.find(a => a.effect === 'haste');
+        if (_h0 && !this.livingParty().some(p => p.hasted > 0)) return { slot: slot(_h0), payload: {} };
+      }
+    }
     // 0e) SUMMONER OPENER (generic — Draymus's UNDEAD, Jason's DEVILS): if this caster has
     //     a summon ability and NONE of its minions is currently up, call the biggest one
     //     NOW — extra bodies soak hits and swing every round, so they're worth the most

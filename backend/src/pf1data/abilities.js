@@ -1410,7 +1410,7 @@ const _mcClone = (srcCls, key, slvl) => {
 const _mcSpell = (spell, slvl) => ({ ...spell, cost: 'room', uses: 1, slvl, minLevel: 3 * slvl + 1 });
 const _MARTIAL_LISTS = {
   //          PF1 list source:  Pal = CRB paladin, Antipal = ARG/UM antipaladin, Rgr = CRB ranger, Br = ACG bloodrager
-  paladin:     [_mcClone('cleric', 'divinefavor', 1), _mcClone('cleric', 'curelight', 1), _mcClone('cleric', 'bearsendurance', 2), _mcClone('cleric', 'curemoderate', 3), _mcClone('cleric', 'cureserious', 4)],
+  paladin:     [_mcClone('cleric', 'divinefavor', 1), _mcClone('cleric', 'curelight', 1), _mcClone('cleric', 'curemoderate', 3), _mcClone('cleric', 'cureserious', 4)],   // v3.37.140: bearsendurance REMOVED — not on the paladin list (d20pfsrd; a v136 import error Josh's link caught). CMW is paladin THIRD per the book
   antipaladin: [_mcSpell(SPELL.doom, 1), _mcSpell(SPELL.invisibility, 2), _mcSpell(SPELL.darkness, 2), _mcSpell(SPELL.dispelmagic, 3)],
   ranger:      [_mcClone('druid', 'entangle', 1), _mcClone('druid', 'magicfang', 1), _mcClone('cleric', 'curelight', 2), _mcClone('druid', 'barkskin', 2), _mcClone('cleric', 'curemoderate', 3), _mcClone('cleric', 'cureserious', 4), _mcSpell(SPELL.freedommove, 4)],
   bloodrager:  [_mcSpell(SPELL.shield, 1), _mcSpell(SPELL.enlargeperson, 1), _mcSpell(SPELL.mirrorimage, 2), _mcClone('cleric', 'bullsstrength', 2), _mcSpell(SPELL.displacement, 3), _mcClone('wizard', 'haste', 3), { ..._mcSpell(SPELL.stoneskin, 4), persist: true, desc: SPELL.stoneskin.desc.replace('for the rest of the room', 'for the rest of the DUNGEON') }],   // stoneskin is 10 min/level → dungeon-long everywhere (the _RUNLONG loop ran before this injection)
@@ -1430,6 +1430,12 @@ for (const _a of ((KITS.paladin || {}).abilities || [])) {
 const _SPIRITALLY = { key: 'spiritally', name: 'Spiritual Ally', icon: '👼', slvl: 4, effect: 'spiritally', target: 'enemy', sound: S.holy, desc: 'Call a guardian ANGEL bearing a blazing longsword over a foe — it strikes on EACH of your turns (riding your buffs: Divine Favor, Prayer, Haste) for 1 round per caster level, retargeting when its mark falls. It fights happily alongside your Spiritual Weapon. (APG — the ally is an angel, per Toby.)' };
 _injectKitSpell('cleric', preparedSpell(_SPIRITALLY, 7));
 _injectKitSpell('oracle', spontaneousSpell(_SPIRITALLY, 7));
+// HOLY SWORD (v3.37.140 — Josh's d20pfsrd link: paladin 4th, the class
+// signature the kit lacked while carrying two off-book spells): the blade
+// blazes with holy wrath — flat +2/+2 plus a +2d6 HOLY rider on every hit
+// against EVIL (and Detect-Evil-marked) foes, riding the same channel as the
+// Redeemer's enchantment (_holySword -> arcHoly in the swing).
+_injectKitSpell('paladin', { key: 'holysword', name: 'Holy Sword', icon: '⚔️', cost: 'room', uses: 1, slvl: 4, minLevel: 13, effect: 'buff', target: 'self', sticky: true, buff: { toHit: 2, dmg: 2 }, holySword: true, sound: S.holy, desc: 'Your weapon BLAZES with holy wrath — +2 to hit and damage, and +2d6 HOLY on every hit against EVIL foes (Detect Evil marks count), for the rest of the room. (Paladin 4th — the class signature.)' });
 // ANTIPALADIN SIGNATURE PAIR (v3.37.139 — Josh: 'antipal also get detect good...
 // also get smite good. This should function opposite of smite evil. These are
 // standard anti-paladin features'): the dark mirror of the paladin's pair,
