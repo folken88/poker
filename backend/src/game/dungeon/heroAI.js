@@ -466,7 +466,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     //      unspent; the elite medusas hasted THEIR side twice.
     {
       const _bigField = targets.length >= 4 || targets.filter(e => e.arcane || e.healer || e.caster || e.spellstrike).length >= 2;
-      if (_bigField) {
+      if (_bigField && Math.random() < 0.8) {   // v3.37.141 (Toby): haste-first 'should weigh heavily' with 'a little rng' — 4 rounds in 5 the speed race wins; the 5th, another opening (summon, dispel) gets its day. Re-rolls every round until speed is up
         const _h0 = avail.find(a => a.effect === 'haste');
         if (_h0 && !this.livingParty().some(p => p.hasted > 0)) return { slot: slot(_h0), payload: {} };
       }

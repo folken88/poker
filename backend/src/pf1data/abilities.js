@@ -1325,7 +1325,7 @@ for (const _k of Object.values(KITS)) {
 for (const _k of Object.values(KITS)) {
   if (!_k || !Array.isArray(_k.abilities)) continue;
   for (const _a of _k.abilities) {
-    if (_a && _a.key === 'divinepower') _a.sound = '/audio/spell_prayer.mp3';   // v3.37.138 (Josh: the warhammer read as an ATTACK): a holy chant — divine-buff family, distinct from Favor. Interim until Toby supplies dedicated buff assets
+    if (_a && _a.key === 'divinepower') _a.sound = '/audio/Invoker_Alacrity.mp3';   // v3.37.141: Toby's dedicated buff asset (the interim prayer-chant retired) — a surge of divine alacrity
     if (_a && typeof _a.key === 'string' && _a.key.startsWith('ext_')) _a.sound = '/audio/tarkov_stim.mp3';   // v3.37.136: Josh's hypo-gun idea, granted by Toby — the Tarkov stim inject IS the extract identity (was mix_drink)
     // ROUND 2 (v3.37.134, Josh: 'Righteous might is still sounding the same as
     // channel... divine favor, shield of faith both have the same sound... I think
@@ -1333,9 +1333,22 @@ for (const _k of Object.values(KITS)) {
     // drink-mix (round 1) — only the PLAIN See Invisibility gets the new tag.
     if (_a && _a.key === 'righteousmight') _a.sound = '/audio/vine_boom.mp3';
     if (_a && _a.key === 'seeinvisibility') _a.sound = '/audio/ghosts_n_stuff_intro.mp3';
-    if (_a && _a.key === 'divinefavor') { _a.sound = '/audio/spell_buff_invoke.mp3'; _a.desc = 'Your god\'s luck rides your blows — +1 to hit and damage per 3 caster levels (max +3, LUCK — doesn\'t stack with Divine Power\'s luck; the bigger stands) for the rest of the room.'; }   // v3.37.135: PF1 scaling + the non-stack warning in the desc itself
+    if (_a && _a.key === 'divinefavor') { _a.sound = '/audio/invoke.mp3'; _a.desc = 'Your god\'s luck rides your blows — +1 to hit and damage per 3 caster levels (max +3, LUCK — doesn\'t stack with Divine Power\'s luck; the bigger stands) for the rest of the room.'; }   // v3.37.135: PF1 scaling + the non-stack warning in the desc itself
     if (_a && _a.key === 'shieldoffaith') _a.sound = '/audio/metal_clank.mp3';
     if (_a && _a.key === 'protevil') _a.sound = '/audio/radiohead_everything_intro.mp3';   // NOT into_the_light — that's already Detect Evil's identity (the exact re-share Josh flags)
+  }
+}
+// TOBY'S INVOKER SET (v3.37.141 — he pointed at three dedicated buff assets from
+// the Foundry library): Greater Invisibility walks like a ghost; Divine Favor and
+// Divine Power take the other two (assigned in the sound pass above). And the
+// PALADIN HOME RULES are stamped: Toby keeps Blessing of Fervor and Shield of
+// Faith on the paladin ('this is a home rule') even though the book's list lacks
+// them — the descs say so, so nobody re-audits them into a bug report.
+for (const [_ivName, _ivK] of Object.entries(KITS)) {
+  if (!_ivK || !Array.isArray(_ivK.abilities)) continue;
+  for (const _a of _ivK.abilities) {
+    if (_a && _a.key === 'invisgreater') _a.sound = '/audio/invoker_ghost_walk.mp3';
+    if (_ivName === 'paladin' && _a && (_a.key === 'blessingoffervor' || _a.key === 'shieldoffaith') && typeof _a.desc === 'string' && !_a.desc.includes('home rule')) _a.desc += ' (Kept on the paladin by home rule.)';
   }
 }
 // TRUE SEEING is RANGE TOUCH (v3.37.122, Josh: 'You have fallen into a trap

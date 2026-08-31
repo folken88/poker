@@ -2001,9 +2001,21 @@
 //                     (3) His alignment-weapon audit: the three UNHOLY blades (Ton Bokiri, Twin
 //                     Battleaxes, Angelbone Scythe) were dead vs celestials until v139's good
 //                     flags — receipts in the email; the holy trio always worked. Tests 212+.
-const VERSION = '3.37.140';
+//  3.37.141 2026-08-31 TOBY'S RULINGS ROUND TWO. (1) THE INVOKER SET — his three dedicated buff
+//                     assets land: Divine Favor invokes (invoke.mp3), Divine Power surges with
+//                     alacrity, Greater Invisibility walks like a ghost (sound round 3 item one;
+//                     mage armor + shield still queued). The interim prayer-chant/buff-invoke
+//                     loans are retired. (2) PALADIN HOME RULES STAMPED: Blessing of Fervor and
+//                     Shield of Faith stay on the paladin by Toby's explicit home rule (descs
+//                     say so — no more re-audits); Hero's Defiance untouched, as beloved. (3)
+//                     THE SPEED RACE gets Toby's dice: haste-first fires 4 rounds in 5 (re-
+//                     rolling every round) so bot openers keep 'a little rng'. (4) The WALL
+//                     mechanic is RULED for CRB batch 2 (queued next): a standing wall blocks
+//                     flanking + sneak attacks on the party and caps melee attackers at TWO per
+//                     target per turn. Tests updated; backend-only.
+const VERSION = '3.37.141';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33823;
-const HEADLINE = "Casters win the speed race now - against a big or caster-heavy field, Haste and Blessing of Fervor go up FIRST; and the paladin gets the book's own Holy Sword.";
+const HEADLINE = "Toby's buff sounds land — Divine Favor invokes, Divine Power surges with alacrity, Greater Invisibility ghost-walks — and the paladin's Blessing of Fervor and Shield of Faith are stamped as home rules to stay.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
