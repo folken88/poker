@@ -2013,9 +2013,25 @@
 //                     mechanic is RULED for CRB batch 2 (queued next): a standing wall blocks
 //                     flanking + sneak attacks on the party and caps melee attackers at TWO per
 //                     target per turn. Tests updated; backend-only.
-const VERSION = '3.37.141';
+//  3.37.142 2026-09-01 THE GHOST IN THE SPELLBOOK (Josh's prepare dossier, finally cracked with
+//                     his own saved data). His Dinvaya map held ANOTHER CHARACTER'S spells —
+//                     Jason's summondevil line — legal kit keys that _charAllows hides from her
+//                     menu: they occupied slots INVISIBLY ('she can carry four... currently she
+//                     has three. I tried to select a fourth and it did not let me' — the 4th slot
+//                     was a ghost), and the overflow trim then DELETED her legitimate Summon
+//                     Monster VIII to make room. The rebucket now drops every key the member
+//                     can't actually cast (wrong character, or above their level after a helper
+//                     levels down) — menu counts always match what's heard, and one toggle heals
+//                     a corrupted save. THE K MENU now teaches the model: each level's count is
+//                     CASTINGS PER ROOM shared across the prepared picks (duplicates automatic —
+//                     Toby's ruling, now spoken), DOMAIN spells are announced as always-ready
+//                     (the 'how does she keep summoning' mystery: domain + prep are different
+//                     pools), and ARROWS work at the LEVEL stage too (his 'arrows do not work in
+//                     the spell menu' — they only worked after picking a level). Tests 216+;
+//                     CLIENT_BUILD 33824.
+const VERSION = '3.37.142';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33823;
-const HEADLINE = "Toby's buff sounds land — Divine Favor invokes, Divine Power surges with alacrity, Greater Invisibility ghost-walks — and the paladin's Blessing of Fervor and Shield of Faith are stamped as home rules to stay.";
+const CLIENT_BUILD = 33824;
+const HEADLINE = "The prepare menu's ghost is exorcised: stray spells from other characters no longer eat your slots invisibly, the K menu speaks the castings-per-room model out loud, domain spells announce themselves as always-ready, and arrows browse the spell levels.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

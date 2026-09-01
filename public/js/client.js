@@ -1011,7 +1011,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33823;
+  const CLIENT_BUILD = 33824;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -2328,12 +2328,14 @@
           const cap = mdl.spont ? null : (((mdl.caps || {})[L]) | 0);
           return `level ${L}, ${picked}${cap != null ? ` of ${cap} prepared` : ' known'}`;
         });
-        sayU(`Prepare spells: ${parts.join('; ')}. Press a level number, Escape to close.`);
+        const dom = (!mdl.spont && (mdl.domainSpells || []).length) ? ` Your domain spells are ALWAYS ready and never use a prepared slot: ${mdl.domainSpells.map(d => d.name).join(', ')}.` : '';
+        sayU(`Prepare spells: ${parts.join('; ')}.${dom} Each level's count is CASTINGS PER ROOM, shared across whatever you prepare — casting the same spell twice is automatic, no duplicate slots needed. Press a level number (or Tab through the levels), Escape to close.`);
       };
       const _sbpSpeakLevel = (L) => {
         const mdl = _sbpModel; if (!mdl) return;
         const at = _sbpAt(mdl, L);
-        sayU(`Level ${L}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + '. Number toggles; Tab steps through one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
+        const capL = mdl.spont ? null : (((mdl.caps || {})[L]) | 0);
+        sayU(`Level ${L}${capL != null ? ` — ${capL} castings per room, shared across your prepared picks` : ''}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + '. Number toggles; Tab or arrows step one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
       };
       // One toggle path for BOTH the number keys and Tab+Enter (Josh 2026-07-16: "being
       // able to tab through and see what the possibilities are would be helpful... right
@@ -2354,6 +2356,30 @@
         // TAB browses the current level's spells ONE at a time (Shift-Tab back), so
         // nothing has to be memorized and spells past #9 are reachable; ENTER toggles
         // the one under the cursor. Same browse pattern as the V domain menu.
+        if ((e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') && _dunSbp.lvl == null) {
+          // v3.37.142 (Josh: 'the arrow keys do not work in the spell menu'): the LEVEL
+          // stage only answered to digits — arrows now browse the levels too, Enter opens.
+          e.preventDefault();
+          const mdl2 = _sbpModel; if (!mdl2) { sayU('Still loading your spell list.'); return; }
+          const lvls = _sbpLvls(mdl2); const nL = lvls.length;
+          if (!nL) { sayU('No spell levels yet.'); return; }
+          _dunSbp.lidx = _dunSbp.lidx == null ? -1 : _dunSbp.lidx;
+          if (e.key === 'Home') _dunSbp.lidx = 0; else if (e.key === 'End') _dunSbp.lidx = nL - 1;
+          else _dunSbp.lidx = ((_dunSbp.lidx + ((e.shiftKey || e.key === 'ArrowUp') ? -1 : 1)) % nL + nL) % nL;
+          const Lx = lvls[_dunSbp.lidx];
+          const atx = _sbpAt(mdl2, Lx);
+          const pickedx = atx.filter(sp2 => _sbpPicked(mdl2, sp2)).length;
+          const capx = mdl2.spont ? null : (((mdl2.caps || {})[Lx]) | 0);
+          sayU(`Level ${Lx}, ${pickedx}${capx != null ? ` of ${capx} prepared` : ' known'}. Enter to open it.`);
+          return;
+        }
+        if (e.key === 'Enter' && _dunSbp.lvl == null && _dunSbp.lidx != null && _dunSbp.lidx >= 0) {
+          e.preventDefault();
+          const mdl2 = _sbpModel; const lvls = mdl2 ? _sbpLvls(mdl2) : [];
+          const Lx = lvls[_dunSbp.lidx];
+          if (Lx != null) { _dunSbp.lvl = Lx; _dunSbp.idx = -1; _sbpSpeakLevel(Lx); }
+          return;
+        }
         if ((e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') && _dunSbp.lvl != null) {   // v3.37.134 (Josh): arrows + Home/End in every browse menu
           e.preventDefault();
           const mdl = _sbpModel;

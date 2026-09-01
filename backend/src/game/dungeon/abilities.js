@@ -1181,9 +1181,20 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       .filter(ab => (m.level || 1) >= (ab.minLevel || 1))   // only spells THIS character can cast at their level
       .map(ab => ({ key: ab.key, name: ab.name, icon: ab.icon || '✨', slvl: ab.slvl }));
     const caps = spont ? null : (slotsFor(m.cls, m.level || 1, m.castingMod) || {});
+    // v3.37.142: a cleric's DOMAIN spells are always castable without occupying a
+    // prepared slot (their +1/level domain slot is already in the caps) — the K
+    // menu now SAYS so instead of leaving Josh hunting for how Dinvaya kept
+    // casting spells he couldn't find in her loadout.
+    const domainSpells = [];
+    if (m.cls === 'cleric') {
+      for (const dk of (db.getDomains(m.playerId, m.cls) || [])) {
+        const d = DOMAINS[dk];
+        if (d && d.spells) for (const sk of Object.values(d.spells)) { const ab = src.find(a => a.key === sk); domainSpells.push({ key: sk, name: (ab && ab.name) || sk, domain: d.name || dk }); }
+      }
+    }
     return spont
       ? { spont, pool, caps, known: db.getKnownSpells(m.playerId, m.cls) || [] }
-      : { spont, pool, caps, prepared: this._loadoutRebucket(m, db.getPreparedSpells(m.playerId, m.cls) || {}) };
+      : { spont, pool, caps, domainSpells, prepared: this._loadoutRebucket(m, db.getPreparedSpells(m.playerId, m.cls) || {}) };
   },
   // Self-heal a stored prepared map when a spell's slot LEVEL changes (e.g. the
   // metamagic-baked variants moving to their PF1-correct effective levels): any
@@ -1191,14 +1202,27 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // unknown keys drop; over-cap overflow trims. Keeps old saves from jamming a
   // level's cap with strays. (View-only here; a toggle persists the clean map.)
   _loadoutRebucket(m, prep) {
-    const bySlvl = {};
-    for (const s of (m.cls === 'theurge' ? theurgeKit() : loadouts.kitSpells(m.cls))) if (s.slvl != null) bySlvl[s.key] = String(s.slvl);
+    // v3.37.142 (Josh's Dinvaya audit — 'she can carry four... it did not let me
+    // [pick a fourth]'): her saved map held ANOTHER CHARACTER'S spells (Jason's
+    // summondevil line) — legal kit keys that _charAllows hides from HER menu, so
+    // they occupied slots INVISIBLY (menu showed 3 of 4, the 4th slot was a ghost)
+    // — and worse, the overflow trim then deleted LEGITIMATE spells to make room
+    // for the ghosts (her Summon Monster VIII vanished this way). The rebucket now
+    // drops any key this member can't actually cast: wrong character (charAllows)
+    // or above their level (a helper leveled DOWN keeps only what it can use).
+    // Every kept key is VISIBLE in the menu, so counts always match what's heard.
+    const kit = (m.cls === 'theurge' ? theurgeKit() : loadouts.kitSpells(m.cls));
+    const byKey = {};
+    for (const s of kit) if (s.slvl != null) byKey[s.key] = s;
     const caps = slotsFor(m.cls, m.level || 1, m.castingMod) || {};
     const out = {};
     for (const arr of Object.values(prep || {})) {
       for (const key of (Array.isArray(arr) ? arr : [])) {
-        const sl = bySlvl[key];
-        if (!sl) continue;                                   // spell no longer exists
+        const ab = byKey[key];
+        if (!ab) continue;                                   // spell no longer exists
+        if (!this._charAllows(ab, m)) continue;              // another character's signature spell — a ghost occupant
+        if ((m.level || 1) < (ab.minLevel || 1)) continue;   // above this member's level — invisible in the menu, uncastable anyway
+        const sl = String(ab.slvl);
         out[sl] = out[sl] || [];
         if (!out[sl].includes(key)) out[sl].push(key);
       }
