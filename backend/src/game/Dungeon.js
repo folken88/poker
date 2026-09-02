@@ -1106,7 +1106,7 @@ class Dungeon {
     }
     // Spiritual Weapon fights independently — it strikes at the start of the
     // cleric's turn (even if they're held), then the cleric does their own thing.
-    for (const _sk of ['spiritWeapon', 'spiritAlly']) if (m[_sk] && m[_sk].rounds > 0) { this._spiritStrike(m, _sk); if (this._endIfResolved()) return; }   // v3.37.136: weapon AND angel fight side by side (Toby)
+    for (const _sk of ['spiritWeapon', 'spiritAlly']) if (m[_sk] && m[_sk].rounds > 0) { this._spiritStrike(m, _sk); if (this._endIfResolved()) return; } if (m.storm && m.storm.rounds > 0) { this._stormStrike(m); if (this._endIfResolved()) return; }   // v3.37.136 spirits + v3.37.143 the lingering storm all act at the caster's turn start
     if (m.paralyzed > 0) {
       if (m.heldDC) {   // Hold Person on a hero: re-save each turn, costs the turn either way (PF1e).
         m.paralyzed -= 1; const hdc = m.heldDC;

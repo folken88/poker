@@ -1011,7 +1011,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33824;
+  const CLIENT_BUILD = 33825;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -2802,6 +2802,12 @@
           const tgt = locked || aliveE[0];
           dungeonAction('ability', { slot, targetUid: tgt?.uid, targetUids: tgt ? [tgt.uid] : [] });
         } else if (ab.target === 'aoe') {
+          if (ab.aimAoe && aliveE.length > 1) {   // v3.37.143 (Josh: 'should sunbeam have the ability to aim it?'): a BEAM is aimed — pick the primary, the sweep follows
+            _dunTarget = { kind: 'ability', slot, label: ab.name, aoeAll: true };
+            const list = aliveE.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}, ${Math.round(100 * Math.max(0, x.hp | 0) / (x.maxHp || 1))}%`).join('; ');
+            sayU(`${ab.name} — AIM the beam, deadliest first: ${list}. The sweep catches others near your pick.`);
+            return;
+          }
           dungeonAction('ability', { slot, targetUid: aliveE[0]?.uid, targetUids: aliveE.slice(0, 6).map(x => x.uid) });
         } else if (ab.allyPick) {
           // Aimed at a CHOSEN ally (Josh: hide Vaughn, not always Nomkath). Prompt
@@ -3238,6 +3244,7 @@
           const pend = _dunTarget; _dunTarget = null;
           window.BlindMode.speak(`${pend.label} ${tgt.name}.`, 'urgent');
           if (pend.kind === 'attack') dungeonAction('attack', { targetUid: tgt.uid });
+          else if (pend.aoeAll) dungeonAction('ability', { slot: pend.slot, targetUid: tgt.uid, targetUids: [tgt.uid, ...alive.filter(x => x.uid !== tgt.uid).slice(0, 5).map(x => x.uid)] });   // aimed AoE (Sunbeam): the pick leads, the sweep follows
           else dungeonAction('ability', { slot: pend.slot, targetUid: tgt.uid, targetUids: [tgt.uid] });
           return;
         }

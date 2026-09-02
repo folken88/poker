@@ -417,7 +417,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
         slot: abs.indexOf(ab),   // stable index into kit+domain abilities (the action payload `slot`) — SAME array as above so magus spellstrikes resolve (were -1)
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
-        minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null,
+        minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null, aimAoe: !!ab.aimAoe,   // v3.37.143: Sunbeam is a BEAM — the client prompts for its primary target
         available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction) && !(ab.cost === 'slot' && (slvlEff > 9 || !(maxSlots && maxSlots[slvlEff]))), desc: ab.desc || '',
         remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'slot' ? ((m.slots && m.slots[slvlEff]) || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,
         max: ab.cost === 'pool' ? spellSlots(lvl) : ab.cost === 'slot' ? ((maxSlots && maxSlots[slvlEff]) || 0) : ab.cost === 'room' ? roomUses(ab, lvl, m) : ab.cost === 'run' ? (typeof ab.uses === 'function' ? ab.uses(lvl, m) : (ab.uses || 1)) : null,

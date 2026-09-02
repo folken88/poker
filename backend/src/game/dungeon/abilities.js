@@ -737,7 +737,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m._dpSwing = false; m._luck = 0; m.stunned = 0;   // transient round effects clear each room (Divine Power's extra swing + the shared luck channel ride their room-length buffs)
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.spiritAlly = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.spiritAlly = null; m.storm = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
     m.queuedAction = null;   // pre-loaded actions never carry into a new room (stale targets)
@@ -1496,21 +1496,57 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // then a TALLY of how many failed / saved / were slain — NOT a per-enemy list.
     // Keeps mid-combat narration fast; the blind player inspects enemies (E) on their
     // own turn for exactly who's left and how hurt.
-    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0;
+    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0, searedN = 0;
     for (const e of chosen) {
       if (this._srBlocks(m, e, ab, true)) { srN++; continue; }   // PF1 SR: checked per target, tallied (counts-only for Josh)
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
       const evaded = sv.saved && saveStat === 'reflex' && e.evasion;
-      const raw = sv.saved ? (evaded ? 0 : Math.floor(full / 2)) : full;
+      // SUNLIGHT spells (Sunbeam/Sunburst, v3.37.143 — Josh: 'is it affecting undead
+      // to the effect that it needs to?'): the daylight table, per target — UNDEAD
+      // take 1d6 per caster level (max 15d6), light-vulnerable undead (vampires)
+      // 1d8 per level. Rolled per seared target; the living share the one burst roll.
+      let tFull = full;
+      if (ab.sunlight && e.hp > 0) {
+        const lightVuln = e.lightVuln || /vampire/i.test(e.name || '');
+        if (lightVuln || e.type === 'undead') { tFull = this._rollSpell(m, Math.min(15, Math.max(1, m.level || 1)), lightVuln ? 8 : 6, ab); searedN++; }
+      }
+      const raw = sv.saved ? (evaded ? 0 : Math.floor(tFull / 2)) : tFull;
       this._dmgE(e, raw, ab.dtype);
       // SUNBURST-style rider: a failed save also BLINDS (3 rounds, like Glitterdust).
       if (ab.blindRider && !sv.saved && e.hp > 0) { e.blinded = Math.max(e.blinded || 0, 3); blindN++; }
       if (sv.saved) savedN++; else failN++;
       if (e.hp <= 0) slainN++;
     }
-    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${slainN ? `, ${slainN} slain` : ''}`;
+    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${searedN ? `, ${searedN} undead SEARED by true daylight` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${slainN ? `, ${slainN} slain` : ''}`;
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${saveLbl} DC ${dc} (${full} ${ab.dtype || ''}): ${tally}.`, sound);
     this._echoToTable(sound);
+    // THE STORM LINGERS (v3.37.143 — Josh: 'they keep going after you cast... you
+    // can be doing other things but also causing damage'): Call Lightning (3d6
+    // bolts) and Call Lightning Storm (5d6) stay overhead for the room — a free
+    // bolt auto-called at the start of each of the caster's turns (_stormStrike),
+    // hunting with the caster's senses like the spirit spells.
+    if (ab.stormCall) {
+      m.storm = { rounds: Math.min(10, Math.max(1, m.level || 1)), dice: ab.stormDice || 3, dc, name: ab.name };
+      this._note(`⛈️ The storm LINGERS over the field — a free ${m.storm.dice}d6 bolt on each of ${m.nickname}'s turns (${m.storm.rounds} rounds).`);
+    }
+  },
+  // One round of a lingering storm: a single free bolt at the caster's mark
+  // (current target first, then unreachable flyers — _spiritTarget's doctrine).
+  _stormStrike(m) {
+    const st = m.storm; if (!st) return;
+    st.rounds -= 1;
+    const e = this._spiritTarget(m);
+    if (e) {
+      const sv = this._saveVs(this._enemySave(e, 'reflex'), st.dc);
+      const raw = Math.max(1, this._rollSpell(m, st.dice, 6, {}));
+      const dmg = sv.saved ? Math.floor(raw / 2) : raw;
+      this._dmgE(e, dmg, 'electricity');
+      const snd = pick(SND.lightning);
+      this._note(`🌩️ ${m.nickname}'s storm hurls a bolt at ${e.name} — ${dmg} electricity${sv.saved ? ' (saved for half)' : ''}.${this._afterEnemyHit(e)} (${st.rounds} rd left)`, snd);
+      this._echoToTable(snd);
+    }
+    if (st.rounds <= 0) { m.storm = null; this._note(`⛈️ ${m.nickname}'s storm rumbles itself out.`); }
+    this._broadcast();
   },
   // Disintegrate (PF1e): a ranged TOUCH ATTACK; on a hit, 2d6 per caster level
   // (cap 40d6 at CL20). Fortitude PARTIAL — a made save still takes 5d6 (NOT

@@ -2029,9 +2029,21 @@
 //                     pools), and ARROWS work at the LEVEL stage too (his 'arrows do not work in
 //                     the spell menu' — they only worked after picking a level). Tests 216+;
 //                     CLIENT_BUILD 33824.
-const VERSION = '3.37.142';
+//  3.37.143 2026-09-01 THE DRUID DOSSIER (Josh played Drew deep and asked three book questions).
+//                     (1) THE STORM LINGERS: Call Lightning and Call Lightning Storm now stay
+//                     overhead for the room — a free bolt (3d6 / 5d6, Reflex half) auto-called at
+//                     the start of each of the caster's turns, hunting with the caster's senses
+//                     like the spirit spells (his own analogy; PF1's lingering-storm mechanic,
+//                     auto-called as our adaptation — flagged for Toby's veto). (2) TRUE DAYLIGHT:
+//                     Sunbeam and Sunburst now run the PF1 undead table per target — 1d6 per
+//                     level (max 15d6) vs undead, 1d8 per level vs light-vulnerable undead
+//                     (vampires) — with the seared count spoken in the tally. (3) SUNBEAM IS
+//                     AIMED ('should sunbeam have the ability to aim it?' — yes, it's a beam):
+//                     the blind flow prompts for the primary target and the sweep follows it.
+//                     Tests 219+; CLIENT_BUILD 33825.
+const VERSION = '3.37.143';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33824;
-const HEADLINE = "The prepare menu's ghost is exorcised: stray spells from other characters no longer eat your slots invisibly, the K menu speaks the castings-per-room model out loud, domain spells announce themselves as always-ready, and arrows browse the spell levels.";
+const CLIENT_BUILD = 33825;
+const HEADLINE = "The druid's storms linger — a free bolt every turn for the rest of the room; Sunbeam and Sunburst sear the undead with true daylight per the book, and the beam is yours to aim.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
