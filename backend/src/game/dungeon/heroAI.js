@@ -361,6 +361,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       if (!this._charAllows(ab, m)) return false;   // char-gated forms (Rissa vs generic druids)
       if (!this._loadoutAllows(ab, m)) return false;   // PHASE C: bot only casts prepared/known spells
       if (ab.effect === 'form' && m.form && m.form.key === (ab.form && ab.form.key)) return false;   // already in this form
+      if (ab.stormCall && m.storm && m.storm.rounds >= 3 && m.storm.dice >= (ab.stormDice || 3)) return false;   // a storm that size already rides the sky — don't burn a slot renewing it (v3.37.144)
       if (ab.cost === 'pool') return (m.spellPool || 0) > 0;
       if (ab.cost === 'slot') return ((m.slots && m.slots[ab.slvl]) || 0) > 0;   // spontaneous: a slot of that level
       if (ab.cost === 'room') return ((m.abilityUses && m.abilityUses[ab.key]) || 0) > 0;

@@ -1525,9 +1525,18 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // bolts) and Call Lightning Storm (5d6) stay overhead for the room — a free
     // bolt auto-called at the start of each of the caster's turns (_stormStrike),
     // hunting with the caster's senses like the spirit spells.
+    // ONE SKY PER CASTER (v3.37.144 — spicy-dumpling: Josh cast Call Lightning under
+    // his own 5d6 storm and it silently shrank to 3d6 with the clock reset — "quit
+    // sticking around"). The bigger storm stands (the luck-channel doctrine): a
+    // lesser cast keeps its opening strike but is swallowed; an equal cast RENEWS
+    // the clock; a greater cast replaces. Every outcome is spoken.
     if (ab.stormCall) {
-      m.storm = { rounds: Math.min(10, Math.max(1, m.level || 1)), dice: ab.stormDice || 3, dc, name: ab.name };
-      this._note(`⛈️ The storm LINGERS over the field — a free ${m.storm.dice}d6 bolt on each of ${m.nickname}'s turns (${m.storm.rounds} rounds).`);
+      const dice = ab.stormDice || 3, rounds = Math.min(10, Math.max(1, m.level || 1)), old = m.storm;
+      if (old && old.dice > dice) this._note(`⛈️ ${m.nickname}'s greater storm (${old.dice}d6, ${old.rounds} rd left) still rules the sky — the lesser storm is swallowed into it.`);
+      else {
+        m.storm = { rounds, dice, dc, name: ab.name };
+        this._note(`⛈️ ${old ? (old.dice === dice ? 'The storm is RENEWED' : `The new storm swallows the old ${old.dice}d6 one`) : 'The storm LINGERS over the field'} — a free ${dice}d6 bolt on each of ${m.nickname}'s turns (${rounds} rounds).`);
+      }
     }
   },
   // One round of a lingering storm: a single free bolt at the caster's mark
@@ -1544,7 +1553,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const snd = pick(SND.lightning);
       this._note(`🌩️ ${m.nickname}'s storm hurls a bolt at ${e.name} — ${dmg} electricity${sv.saved ? ' (saved for half)' : ''}.${this._afterEnemyHit(e)} (${st.rounds} rd left)`, snd);
       this._echoToTable(snd);
-    }
+    } else if (st.rounds > 0) this._note(`🌩️ ${m.nickname}'s storm crackles overhead but finds nothing ${m.nickname} can see to strike. (${st.rounds} rd left)`);   // v3.37.144: a silent round read as "did nothing" to a blind player
     if (st.rounds <= 0) { m.storm = null; this._note(`⛈️ ${m.nickname}'s storm rumbles itself out.`); }
     this._broadcast();
   },

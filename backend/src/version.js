@@ -2041,9 +2041,27 @@
 //                     AIMED ('should sunbeam have the ability to aim it?' — yes, it's a beam):
 //                     the blind flow prompts for the primary target and the sweep follows it.
 //                     Tests 219+; CLIENT_BUILD 33825.
-const VERSION = '3.37.143';
+//  3.37.144 2026-09-03 BLIND SWINGS + ONE SKY PER CASTER (Josh's fuzzy-penguin / spicy-dumpling
+//                     reports). (1) BLINDED ATTACKERS MISS: a blinded foe's attacks carry PF1's
+//                     50% total-concealment miss chance (was a silent flat −4 — fuzzy-penguin's
+//                     blinded Vampire Monks landed three straight hits on the Winter Wolf).
+//                     Spoken as a blind miss; blindsense creatures (dragons, oozes) ignore it;
+//                     blindness wearing off is announced. (2) ONE SKY: a lesser Call Lightning
+//                     no longer overwrites a greater storm (spicy-dumpling: his 5d6 storm
+//                     silently became 3d6 with the clock reset) — bigger stands, equal renews,
+//                     greater replaces, all spoken; a storm round with no visible target is
+//                     narrated instead of silent; bot druids stop re-casting a riding storm.
+//                     (3) THE ORPHAN BESTIARY, AGAIN — v3.37.47's trap recurred: since v139 the
+//                     deploy template copied the bestiary to `game/monsters.js`, which NOTHING
+//                     requires (the engine resolves `../pf1data/monsters`), and domtest read the
+//                     orphan, so the gate passed blind. The v139 good-alignment flags (Smite Good,
+//                     Detect Good, the unholy rider) were therefore dead in prod for four releases.
+//                     The bestiary now ships to its canonical path, the orphan is deleted, the test
+//                     is repointed, and a guard test fails the build if the orphan ever returns.
+//                     Tests 222+; CLIENT_BUILD unchanged.
+const VERSION = '3.37.144';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33825;
-const HEADLINE = "The druid's storms linger — a free bolt every turn for the rest of the room; Sunbeam and Sunburst sear the undead with true daylight per the book, and the beam is yours to aim.";
+const HEADLINE = "Blinded foes now swing at the dark — a 50% miss on every attack, per the book; a storm keeps its sky (a lesser Call Lightning can no longer overwrite a greater one); and the bestiary's good-alignment flags are finally live — Smite Good has teeth.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

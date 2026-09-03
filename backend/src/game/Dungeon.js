@@ -797,7 +797,7 @@ class Dungeon {
       toHit: base.toHit + extra,
       dmgDie: base.dmgDie, dmgCount: base.dmgCount || 1, dmgBonus: base.dmgBonus + half,
       fort: base.fort + Math.ceil(extra / 2), reflex: base.reflex + Math.ceil(extra / 2),
-      align: base.align || 'NE', evil: !!base.evil, markedEvil: false, good: !!base.good, markedGood: false, type: base.type || 'humanoid',   // good: the Heavenly Host / Reclamation — Smite Good + the unholy boon key on it (v3.37.139)
+      align: base.align || 'NE', evil: !!base.evil, markedEvil: false, good: !!base.good, markedGood: false, type: base.type || 'humanoid', blindsense: !!base.blindsense,   // blindsense: no 50% blind-miss (v3.37.144); good: the Heavenly Host / Reclamation — Smite Good + the unholy boon key on it (v3.37.139)
       flatFooted: true, prone: false, fascinated: false, asleep: false, loseTurn: false,
       paralyze: !!base.paralyze, paralyzeDC: (base.paralyzeDC || PARALYZE_DC) + half, sickened: 0,
       attacks: base.attacks || 1,
@@ -973,7 +973,7 @@ class Dungeon {
         this._note(`🟢 Acid keeps sizzling on ${e.name} — ${dealt} acid${this._resistTag(e, 'acid')}.${this._afterEnemyHit(e)}`, null, { side: 'enemy' });
         if (e.hp <= 0) { this._broadcast(); return this._nextTurn(); }
       }
-      if (e.blinded > 0) e.blinded -= 1;   // Glitterdust wears off (doesn't cost the turn — just −4 to hit / denied Dex while it lasts)
+      if (e.blinded > 0 && --e.blinded === 0) this._note(`👁️ ${e.name} blinks the light back into its eyes — no longer blind.`, null, { side: 'enemy' });   // blindness wears off (doesn't cost the turn — 50% miss / denied Dex while it lasts, v3.37.144)
       if (e.fascinated) { this._note(`${e.glyph} ${e.name} ${e.asleep ? 'sleeps soundly' : 'stands fascinated'} — does nothing.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       // DOMINATED (hero magic): the foe fights FOR the party this turn — it turns
       // on its own allies. A fresh Will save each of its turns can shake the hold;

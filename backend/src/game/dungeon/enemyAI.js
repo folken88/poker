@@ -28,10 +28,16 @@ const GRAB_CHAIN_SND = '/audio/slorr_come_here_grapple_chain.mp3';
 
 module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_MOD, PARALYZE_DC }) => ({
   _monsterSwing(e, targetAC, opts = {}) {
+    // BLIND SWINGS (v3.37.144 — Josh, fuzzy-penguin: blinded Vampire Monks "never
+    // missed"): PF1 blinded = every foe has TOTAL CONCEALMENT from you, a 50% miss
+    // chance on EVERY attack. The old flat −4 stood in for it, and a +23 monk barely
+    // felt it. Senses that need no eyes — blindsense/blindsight (dragons, oozes) —
+    // ignore it: the exception Josh guessed at (PF1 vampires have darkvision only).
+    if (e.blinded > 0 && !e.blindsense && dRoll(2) === 1) return { hit: false, blindMiss: true, roll: 0, toHit: e.toHit, total: 0, ac: targetAC, sound: pick(SND.whiffSword) };
     const sick = e.sickened > 0 ? SICKENED_PENALTY : 0;
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
-    const toHit = e.toHit - sick - pray - (e.blinded > 0 ? 4 : 0) + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.hasted > 0 ? 1 : 0) - (e.cursed ? 4 : 0);   // Fight Defensively: −4; Blaze of Glory: +4; Haste (v3.37.126): +1; Bestow Curse (v3.37.129): −4
+    const toHit = e.toHit - sick - pray + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.hasted > 0 ? 1 : 0) - (e.cursed ? 4 : 0);   // Fight Defensively: −4; Blaze of Glory: +4; Haste (v3.37.126): +1; Bestow Curse (v3.37.129): −4
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
@@ -496,6 +502,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   },
   // The matching MISS line — one wording for every target kind.
   _foeMissText(e, r, who, withRoll) {
+    if (r.blindMiss) return `${e.glyph} ${e.name}, BLIND, ${e.ranged ? 'looses a shot' : 'lashes out'} at where ${who} was — total concealment, and it finds nothing. [50% miss]`;
     return (e.ranged
       ? `${e.glyph} ${e.name}'s shot flies wide of ${who}.`
       : `${e.glyph} ${e.name} misses ${who}.`) + (withRoll ? ` ${this._atkStr(r)}` : '');
