@@ -361,7 +361,8 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       if (!this._charAllows(ab, m)) return false;   // char-gated forms (Rissa vs generic druids)
       if (!this._loadoutAllows(ab, m)) return false;   // PHASE C: bot only casts prepared/known spells
       if (ab.effect === 'form' && m.form && m.form.key === (ab.form && ab.form.key)) return false;   // already in this form
-      if (ab.stormCall && m.storm && m.storm.rounds >= 3 && m.storm.dice >= (ab.stormDice || 3)) return false;   // a storm that size already rides the sky — don't burn a slot renewing it (v3.37.144)
+      if (ab.stormCall && m.storm && m.storm.rounds >= 3 && m.storm.dice >= (ab.stormDice || 3)) return false;
+      if (ab.effect === 'wall' && this.wall && this.wall.rounds > 0) return false;   // one wall per room already stands (v3.37.146)   // a storm that size already rides the sky — don't burn a slot renewing it (v3.37.144)
       if (ab.cost === 'pool') return (m.spellPool || 0) > 0;
       if (ab.cost === 'slot') return ((m.slots && m.slots[ab.slvl]) || 0) > 0;   // spontaneous: a slot of that level
       if (ab.cost === 'room') return ((m.abilityUses && m.abilityUses[ab.key]) || 0) > 0;
@@ -470,6 +471,17 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       if (_bigField && Math.random() < 0.8) {   // v3.37.141 (Toby): haste-first 'should weigh heavily' with 'a little rng' — 4 rounds in 5 the speed race wins; the 5th, another opening (summon, dispel) gets its day. Re-rolls every round until speed is up
         const _h0 = avail.find(a => a.effect === 'haste');
         if (_h0 && !this.livingParty().some(p => p.hasted > 0)) return { slot: slot(_h0), payload: {} };
+      }
+    }
+    // 0d10) THE WALL (v3.37.146 — Toby: 'six goblin rogues attack; you put up a wall so only
+    //       two may attack the same target per turn'): against a melee-heavy field with no
+    //       wall standing, raise the biggest one — after the speed race, before the summons,
+    //       with a little rng (Toby) so it is a tendency, not a script.
+    if (!this.wall) {
+      const _meleeFoes = targets.filter(e => !e.ranged && !e.flying).length;
+      if (_meleeFoes >= 4 && Math.random() < 0.7) {
+        const _w0 = avail.filter(a => a.effect === 'wall').sort((a, b) => (b.slvl || 0) - (a.slvl || 0))[0];
+        if (_w0) return { slot: slot(_w0), payload: {} };
       }
     }
     // 0e) SUMMONER OPENER (generic — Draymus's UNDEAD, Jason's DEVILS): if this caster has

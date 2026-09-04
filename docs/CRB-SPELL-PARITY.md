@@ -80,10 +80,27 @@ Exhaustion, Wish, Word-of-Chaos-family→partial.
    turn ("Fall!"). Mind-affecting, language-dependent: mindless undead and
    constructs ignore it.
 
+## Batch 2 — walls & zones (v3.37.146) ✅
+
+Toby's mechanic (2026-08-31): while a wall or zone stands, melee foes can reach
+at most TWO per target each round, the party cannot be flanked or sneak-attacked,
+and each wall adds its own rider on the foes that press through. One wall per
+room, level rounds (max 10), never carries between rooms. Flyers cross it,
+archers shoot over it, ghosts drift through it.
+
+1. **Wall of Fire** (Wiz/Sor 4, Drd 5) ✅ — presses through: 2d6 + CL fire.
+2. **Wall of Ice** (Wiz/Sor 4) ✅ — breaks through: 1d6 + CL cold.
+3. **Wall of Force** (Wiz/Sor 5) ✅ — impassable: cap ONE per target, no rider.
+4. **Web** (Wiz/Sor 2) ✅ — Reflex or stuck fast (turn lost).
+5. **Solid Fog** (Wiz/Sor 4) ✅ — foes inside swing at −2 to hit and damage.
+
+Deviation (documented): PF1 walls are geometry (length, height, line of
+effect); ours is the attacker cap + the rider, which is what the geometry buys
+you in practice. Web's 10 min/level would be dungeon-long under the duration
+rule, but a wall is bound to a room's geometry — room-scoped on purpose.
+
 ## Queued (batches of 5, in priority order)
 
-- **Batch 2 — walls & zones:** Wall of Fire, Wall of Ice, Wall of Force, Web,
-  Solid Fog.
 - **Batch 3 — fear & the mind:** Cause Fear, Fear, Scare, Confusion,
   Feeblemind.
 - **Batch 4 — divine staples:** Death Ward, Silence… (moved to 1) → Deeper

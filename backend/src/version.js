@@ -2074,9 +2074,22 @@
 //                     −2 (−1 each); Ray of Exhaustion gets its Fortitude partial (fatigued);
 //                     Waves of Fatigue (CRB 5th) joins wizard/sorcerer; chips for both tiers.
 //                     Tests 226+; CLIENT_BUILD 33826 (blindMode.js + client.js stamp).
-const VERSION = '3.37.145';
+//  3.37.146 2026-09-04 CRB BATCH 2 — WALLS & ZONES (Toby's ruling 2026-08-31: 'six goblin rogues
+//                     attack; you put up a wall so only 2 may attack the same target per turn';
+//                     a standing wall also denies flanking and sneak attacks). Wall of Fire, Wall
+//                     of Ice, Wall of Force, Web and Solid Fog on the PF1 lists (Web wiz/sorc 2;
+//                     Fire/Ice/Fog 4, Fire druid 5; Force 5). ONE wall per room, level rounds
+//                     (max 10), never carries between rooms. Melee foes are capped at 2 per
+//                     target per round (Force: 1); a capped-out foe finds another gap or is held
+//                     back; flyers cross, archers shoot over, ghosts drift through. Riders on the
+//                     foes that press through: Fire 2d6+level, Ice 1d6+level, Web Reflex-or-lose-
+//                     the-turn, Fog −2 to hit and damage. Enemy sneak attacks are denied while a
+//                     wall stands. Bot casters raise a wall vs a melee-heavy field (≥4 grounded
+//                     melee foes, 7-in-10) after the speed race; loadout priorities carry them.
+//                     Tests 228+; CLIENT_BUILD unchanged.
+const VERSION = '3.37.146';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "Your storm and your spirits now speak as part of your turn and sound on their own channel — no more silent bolts; and exhaustion is a real condition per the book, with Waves of Fatigue new on the arcane lists.";
+const HEADLINE = "Walls and zones arrive — Wall of Fire, Wall of Ice, Wall of Force, Web and Solid Fog: while one stands, only two melee foes can reach the same target each round, no one can be flanked or sneak-attacked, and the foes that press through pay the wall's price.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

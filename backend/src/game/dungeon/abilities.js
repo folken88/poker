@@ -366,6 +366,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       gloriouschallenge: () => this._abGloriousChallenge(m, ab, payload),
       masscharm:   () => this._abMassCharm(m, ab, payload),
       exhaust:     () => this._abExhaust(m, ab, payload),
+      wall:        () => this._abWall(m, ab, payload),
       prismatic:   () => this._abPrismatic(m, ab, payload),
       grease:      () => this._abGrease(m, ab, payload),
       fascinate:   () => this._abFascinate(m, ab, payload),
@@ -2308,6 +2309,47 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} (Will DC ${dc}) — ${got} charmed${held ? `, ${held} resisted` : ''}.`, ab.sound);
     this._echoToTable(ab.sound);
+  },
+  // ── CRB BATCH 2: WALLS & ZONES (v3.37.146 — Toby, 2026-08-31: 'i attack you with 6
+  // goblin rogues, you put up a wall so only 2 goblins may attack the same target per
+  // turn'; a standing wall also keeps the party from being flanked or sneak-attacked).
+  // ONE wall stands per room (a new cast replaces it); it lasts level rounds (max 10)
+  // and never carries between rooms (fresh geometry). Flyers cross over it, archers
+  // shoot over it, ghosts drift through it; every other melee foe is counted against
+  // the per-target cap in _enemyAct and pays the wall's rider in _wallRider.
+  _abWall(m, ab, payload) {
+    const rounds = Math.max(3, Math.min(10, m.level || 1)), old = this.wall, lvl = m.level || 1;
+    this.wall = { key: ab.key, name: ab.name, icon: ab.icon, rounds, caster: m.playerId, cap: ab.wallCap || 2, rider: ab.wallRider || 'none', dc: this._spellDC(m, ab), level: lvl };
+    const w = this.wall;
+    const riderText = { fire: `any melee foe pressing through burns for 2d6+${lvl} fire`, cold: `breaking through costs 1d6+${lvl} cold`, web: `a foe pressing through must save (Reflex DC ${w.dc}) or stick fast and lose its turn`, fog: 'foes wading through swing at −2 to hit and damage', none: 'nothing burns or breaks it' }[w.rider];
+    this._note(`${ab.icon} ${m.nickname} raises a ${ab.name}${old ? ` — it replaces the ${old.name}` : ''}: melee foes can reach at most ${w.cap} of them per target each round, no one can be flanked or sneak-attacked, and ${riderText}. Flyers cross it; archers shoot over it. (${rounds} rounds)`, ab.sound);
+    this._echoToTable(ab.sound);
+  },
+  // One melee foe pressing through the wall this round (once per foe per round).
+  // Returns true when the crossing ENDS the foe's turn (webbed, or burned to death).
+  _wallRider(e, target) {
+    const w = this.wall; if (!w || e._wallRound === this.round) return false;
+    e._wallRound = this.round;
+    if (w.rider === 'fire' || w.rider === 'cold') {
+      const dmg = (w.rider === 'fire' ? dRollN(2, 6) : dRoll(6)) + w.level;
+      this._dmgE(e, dmg, w.rider);
+      this._note(`${w.icon} ${e.name} presses through the ${w.name} — ${dmg} ${w.rider}.${this._afterEnemyHit(e)}`, null, { side: 'enemy' });
+      return e.hp <= 0;
+    }
+    if (w.rider === 'web') {
+      const sv = this._saveVs(this._enemySave(e, 'reflex'), w.dc);
+      if (!sv.saved) { this._note(`${w.icon} ${e.name} blunders into the ${w.name} and sticks fast — its turn is lost tearing free. [Reflex ${sv.total} vs DC ${w.dc}]`, null, { side: 'enemy' }); return true; }
+      this._note(`${w.icon} ${e.name} picks its way through the ${w.name}. [Reflex ${sv.total} vs DC ${w.dc}]`, null, { side: 'enemy' });
+      return false;
+    }
+    if (w.rider === 'fog') e._fogRound = this.round;   // −2 to hit and damage this round (_monsterSwing)
+    return false;
+  },
+  // End of round: the wall burns down a round and the per-target press count resets.
+  _wallTick() {
+    this._wallPress = {};
+    const w = this.wall; if (!w) return;
+    if (--w.rounds <= 0) { this.wall = null; this._note(`${w.icon} The ${w.name} ${({ fire: 'gutters out', cold: 'melts away', web: 'frays to nothing', fog: 'thins and lifts' })[w.rider] || 'winks out'} — the field is open again.`); }
   },
   // Waves of Exhaustion (7th) / Ray of Exhaustion (3rd) / Waves of Fatigue (5th) —
   // the PF1 tiers (v3.37.145, Josh: 'there is a spell waves of exhaustion so what

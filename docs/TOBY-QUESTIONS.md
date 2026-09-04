@@ -57,7 +57,7 @@ Ruled section with the version that implemented it.
   Web, Solid Fog): a standing wall prevents the party from being flanked or
   sneak-attacked and caps melee attackers at TWO per target per turn ("six
   goblin rogues attack; you put up a wall; only 2 may attack the same
-  target"). Batch 2 builds on this — queued next.
+  target"). SHIPPED as CRB batch 2 — v3.37.146.
 - **Divine Favor + Divine Power don't stack** (both luck) — v3.37.135.
 - **Martial casters get PF1 spell lists on the PF1 ladder** — v3.37.136;
   Holy Sword (book paladin 4) added v3.37.140.

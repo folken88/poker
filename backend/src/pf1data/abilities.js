@@ -285,6 +285,14 @@ const SPELL = {
   flamestrike:    { key: 'flamestrike',    name: 'Flame Strike',      icon: '🔥', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'fire', slvl: 5, sounds: FIREBALL_SFX, desc: 'A column of divine fire scours up to 4 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
   slayliving:     { key: 'slayliving',     name: 'Slay Living',       icon: '☠️', effect: 'savedie', target: 'enemy', save: 'fort', slvl: 5, sound: S.umbral, desc: 'A death-touch stops one living heart (no effect on undead/constructs) — Fortitude save or DIE; a made save still takes heavy damage.' },
   healspell:      { key: 'healspell',      name: 'Heal',              icon: '💖', effect: 'heal', heal: 'single', healDice: 15, healCap: 25, target: 'ally', slvl: 6, sound: '/audio/spell_cure.mp3', desc: 'A torrent of positive energy knits the most-hurt ally — 15d8 + caster level (max +25).' },
+  // ── CRB BATCH 2: WALLS & ZONES (v3.37.146 — Toby's ruling 2026-08-31: a standing wall
+  // keeps the party from being flanked or sneak-attacked and caps melee attackers at TWO
+  // per target per round; each wall adds its own rider on the foes that press through).
+  wallfire:  { key: 'wallfire',  name: 'Wall of Fire',  icon: '🔥', effect: 'wall', target: 'self', slvl: 4, wallCap: 2, wallRider: 'fire', sound: '/audio/spell_fireball.mp3',  desc: 'A curtain of flame across the field. While it stands, melee foes can reach at most 2 of them per target each round, no one can be flanked or sneak-attacked, and any melee foe pressing through it burns for 2d6 + caster level fire. Flyers cross over it; archers shoot over it. Lasts the room (level rounds, max 10); a new wall replaces the old.' },
+  wallice:   { key: 'wallice',   name: 'Wall of Ice',   icon: '🧊', effect: 'wall', target: 'self', slvl: 4, wallCap: 2, wallRider: 'cold', sound: '/audio/spell_frost_ray.mp3', desc: 'A sheet of solid ice across the field. Melee foes can reach at most 2 of them per target each round, no one can be flanked or sneak-attacked, and a melee foe breaking through it takes 1d6 + caster level cold. Flyers cross over it; archers shoot over it. Lasts the room (level rounds, max 10).' },
+  wallforce: { key: 'wallforce', name: 'Wall of Force', icon: '🟦', effect: 'wall', target: 'self', slvl: 5, wallCap: 1, wallRider: 'none', sound: S.invoke,                       desc: 'An invisible, impassable pane of force. Nothing burns or breaks it: only ONE melee foe per target can find a way around it each round, and no one can be flanked or sneak-attacked. Flyers cross over it; archers shoot over it. Lasts the room (level rounds, max 10).' },
+  web:       { key: 'web',       name: 'Web',           icon: '🕸️', effect: 'wall', target: 'self', slvl: 2, wallCap: 2, wallRider: 'web',  save: 'reflex', sound: '/audio/spell_umbral_bolt.mp3', desc: 'Sticky strands fill the field. Melee foes can reach at most 2 of them per target each round, no one can be flanked or sneak-attacked, and a melee foe pressing through must save (Reflex) or stick fast and lose its turn. Flyers cross over it; archers shoot over it. Lasts the room (level rounds, max 10).' },
+  solidfog:  { key: 'solidfog',  name: 'Solid Fog',     icon: '🌫️', effect: 'wall', target: 'self', slvl: 4, wallCap: 2, wallRider: 'fog',  sound: S.invoke,                       desc: 'A bank of thick, clinging vapor. Melee foes can reach at most 2 of them per target each round, no one can be flanked or sneak-attacked, and foes wading through it swing at −2 to hit and damage (PF1). Flyers cross over it; archers shoot over it. Lasts the room (level rounds, max 10).' },
   bladebarrier:   { key: 'bladebarrier',   name: 'Blade Barrier',     icon: '🌪️', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, slvl: 6, sound: '/audio/spell_holysmite.mp3', desc: 'A whirling wall of blades slices through up to 4 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
   firestorm:      { key: 'firestorm',      name: 'Fire Storm',        icon: '🌋', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'fire', slvl: 8, sounds: FIREBALL_SFX, desc: 'Sheets of divine flame roar over up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
   massheal:       { key: 'massheal',       name: 'Mass Heal',         icon: '💗', effect: 'heal', heal: 'party', massHeal: true, healDice: 15, healCap: 25, target: 'ally', slvl: 9, sound: '/audio/spell_channel_charge.mp3', desc: 'A tidal wave of positive energy — the WHOLE party heals 15d8 + caster level (max +25).' },
@@ -1210,6 +1218,19 @@ _injectKitSpell('sorcerer', spontaneousSpell(SPELL.rayofexhaustion, 6));
 _injectKitSpell('wizard',   preparedSpell(SPELL.wavesfatigue, 9));
 _injectKitSpell('sorcerer', spontaneousSpell(SPELL.wavesfatigue, 10));
 for (const _k of Object.values(KITS)) for (const _a of _k.abilities) if (_a.key === 'waveexhaustion' || _a.key === 'rayofexhaustion') { _a.desc = SPELL[_a.key].desc; if (_a.key === 'rayofexhaustion') _a.fortPartial = true; }
+// CRB BATCH 2 — WALLS & ZONES (v3.37.146): the PF1 lists — Web (wiz/sorc 2); Wall of Fire
+// (wiz/sorc 4, druid 5); Wall of Ice, Solid Fog (wiz/sorc 4); Wall of Force (wiz/sorc 5).
+_injectKitSpell('wizard',   preparedSpell(SPELL.web, 3));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.web, 4));
+_injectKitSpell('wizard',   preparedSpell(SPELL.wallfire, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.wallfire, 8));
+_injectKitSpell('druid',    preparedSpell({ ...SPELL.wallfire, slvl: 5 }, 9));
+_injectKitSpell('wizard',   preparedSpell(SPELL.wallice, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.wallice, 8));
+_injectKitSpell('wizard',   preparedSpell(SPELL.solidfog, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.solidfog, 8));
+_injectKitSpell('wizard',   preparedSpell(SPELL.wallforce, 9));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.wallforce, 10));
 _injectKitSpell('cleric',   preparedSpell(SPELL.bestowcurse, 5));
 _injectKitSpell('oracle',   spontaneousSpell(SPELL.bestowcurse, 5));
 _injectKitSpell('wizard',   preparedSpell({ ...SPELL.bestowcurse, slvl: 4 }, 7));

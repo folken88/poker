@@ -288,6 +288,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         label: (db.GEAR_BY_KEY[l.slot]?.label || l.slot),
         hockValue: db.gearHockValue(l.slot, l.tier),
       })),
+      wall: this.wall ? { key: this.wall.key, name: this.wall.name, icon: this.wall.icon, rounds: this.wall.rounds, cap: this.wall.cap } : null,   // the standing wall/zone (v3.37.146)
       log: this.log.slice(-60),
     };
   },

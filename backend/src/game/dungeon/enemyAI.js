@@ -38,7 +38,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
     const tire = e.exhausted > 0 ? 3 : (e.fatigued > 0 ? 1 : 0);   // PF1 exhausted/fatigued: Str/Dex −6/−2 → −3/−1 to hit and damage (v3.37.145)
-    const toHit = e.toHit - sick - pray - tire + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.hasted > 0 ? 1 : 0) - (e.cursed ? 4 : 0);   // Fight Defensively: −4; Blaze of Glory: +4; Haste (v3.37.126): +1; Bestow Curse (v3.37.129): −4
+    const fog = (this.wall && this.wall.rider === 'fog' && e._fogRound === this.round) ? 2 : 0;   // Solid Fog: −2 to hit and damage while wading through (v3.37.146)
+    const toHit = e.toHit - sick - pray - tire - fog + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.hasted > 0 ? 1 : 0) - (e.cursed ? 4 : 0);   // Fight Defensively: −4; Blaze of Glory: +4; Haste (v3.37.126): +1; Bestow Curse (v3.37.129): −4
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
@@ -58,7 +59,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // GLORIOUS CHALLENGE (Order of the Flame): +2 melee damage per CONSECUTIVE glorious
     // challenge this room — a kill-streak morale bonus that compounds (see _enemyMelee).
     const glory = e.gloriousChallenge ? 2 * (e.gloriousN || 0) : 0;
-    let dmg = e.dmgBonus - sick - pray + glory - (e.ranged ? 0 : tire);
+    let dmg = e.dmgBonus - sick - pray + glory - (e.ranged ? 0 : tire) - fog;
     for (let i = 0; i < (e.dmgCount || 1); i++) dmg += dRoll(e.dmgDie);   // e.g. golem slam = 2d10+9
     if (crit) dmg *= 2;   // ×2 crit (the standard shortcut: total doubled)
     return { hit: true, crit, damage: Math.max(1, dmg), roll, toHit, total, ac: targetAC, sound: this._foeHitSound(e) };
@@ -249,6 +250,21 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         const prev = living.find(m => m.playerId === e._lastAtkTarget) || reachFodder.find(s => s.uid === e._lastAtkTarget);
         target = helpless.length ? (helpless.find(m => m.playerId === e._lastAtkTarget) || pick(helpless)) : (prev || pick([...living, ...reachFodder]));
       }
+      // THE WALL (v3.37.146 — Toby's ruling): a standing wall/zone caps MELEE attackers at
+      // wall.cap per target per round and denies sneak attacks (_enemyMelee). Flyers cross
+      // it, archers shoot over it, ghosts drift through. A capped-out foe looks for another
+      // gap; if every reachable body is already pressed, it is held back this round.
+      if (this.wall && !e.ranged && !e.flying && !(e.incorporeal || e.ghost)) {
+        const wp = this._wallPress || (this._wallPress = {});
+        const idOf = (t) => t.playerId || t.uid;
+        if ((wp[idOf(target)] || 0) >= this.wall.cap) {
+          const alt = [...living, ...reachFodder].find(t => t !== target && (wp[idOf(t)] || 0) < this.wall.cap);
+          if (!alt) { this._note(`${this.wall.icon} ${e.glyph} ${e.name} is held back by the ${this.wall.name} — every gap is already pressed this round.`, null, { side: 'enemy' }); this._echoToTable(); this._broadcast(); return; }
+          target = alt;
+        }
+        wp[idOf(target)] = (wp[idOf(target)] || 0) + 1;
+        if (this._wallRider(e, target)) { this._echoToTable(); this._broadcast(); return; }
+      }
       const tgtId = target.playerId || target.uid;
       // A SUMMON target: simple enemy-vs-summon blows (the fodder soaks) — no parry /
       // maneuver / close-the-distance, just swings. Reuses the enemy-vs-enemy path
@@ -391,7 +407,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       let dmg = r.damage, sneakTag = '';
       // Enemy Sneak Attack (goblin/kobold rogues): +Xd6 vs a hero who's denied
       // their defenses — flat-footed (hasn't acted yet) or HELD by a shaman.
-      if (e.sneakDice && (target.paralyzed > 0 || target.flatFooted)) {
+      if (e.sneakDice && !this.wall && (target.paralyzed > 0 || target.flatFooted)) {   // a standing wall denies sneak attacks (v3.37.146, Toby)
         const sn = dRollN(e.sneakDice, 6); dmg += sn; sneakTag = ` 🗡️+${sn} sneak!`;
       }
       let drTag = ''; [dmg, drTag] = this._physDR(target, dmg);   // Stoneskin soaks physical blows

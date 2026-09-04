@@ -643,7 +643,7 @@ class Dungeon {
     this._preDoorBuffs();   // AI casters put up run-long buffs (Mage Armor/Bless/Fly) before the fight
     this.depth += 1;
     this._spawnRoom();
-    this.blackTentacles = null;   // the tentacle field doesn't carry between rooms
+    this.blackTentacles = null; this.wall = null; this._wallPress = {};   // the tentacle field / a standing wall (v3.37.146) don't carry between rooms
     this.invisPurged = false;     // an Invisibility Purge burns for its ROOM only — the next room can hide again (see _abInvisPurge)
     this._twkShare = null;        // Tactician's shared teamwork feat lapses between rooms (v3.37.92)
     for (const m of this.present()) { this._computeCastable(m); this._resetAbilities(m); m.flatFooted = !(fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy || (this._isFlameCavalier(m) && (m.level || 1) >= 2) || this._twkActive(m, 'lookout') || m.foresight); }   // LOOKOUT (teamwork): a paired watch is never surprised  // re-read the spell LOADOUT (Spellbook picker edits land at the door) + refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy — and Order of the Flame's FOOLHARDY RUSH at L2 — are never caught flat-footed)
@@ -1186,7 +1186,7 @@ class Dungeon {
     this.turnIdx += 1;
     // Initiative is rolled ONCE per combat (per room, in openDoor) — Pathfinder
     // keeps the same order each round; we just wrap back to the top.
-    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; this._endOfRoundRaise(); }   // the fallen are raised between rounds (Black Tentacles re-grab on the CASTER'S turn, not at round-top)
+    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; this._wallTick(); this._endOfRoundRaise(); }   // the fallen are raised between rounds (Black Tentacles re-grab on the CASTER'S turn, not at round-top)
     this._advanceToActor();
   }
   _armAfkTimer(m) {
