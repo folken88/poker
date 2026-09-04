@@ -1441,7 +1441,7 @@
   // Lets a blind player follow and play the dungeon entirely by ear + voice.
   // Narration fires from onDungeonState (wired in client.js); voice commands
   // are dispatched from processCommand's dungeon branch above.
-  const _dun = { depth: -1, logT: 0, turnKey: '', status: '', lootKey: '' };
+  const _dun = { depth: -1, logT: 0, turnKey: '', status: '', lootKey: '', preTurn: [] };   // preTurn: my free start-of-turn lines (storm bolt / spirit strike) held for the 'Your turn' prompt (v3.37.145)
 
   function _stripGlyphs(s) {
     // Drop bracketed roll math ([d20 14 +3 = 17 vs AC 15]) and emoji so the
@@ -1539,7 +1539,14 @@
         const enemyCount = (st.enemies || []).filter(e => e.alive && !e.summoned).length;   // ally summons don't make a room "big"
         const meM = (st.party || []).find(m => m.playerId === meId) || {};
         const myNick = String(meM.trueNick || meM.nickname || '').toLowerCase();
-        const live = fresh.filter(e => !e.voiced);
+        // v3.37.145 (Josh, spicy-dumpling: 'on my turn there was no voice report that the
+        // storm had just cast a bolt'): a free start-of-turn action of MINE (storm bolt,
+        // spirit strike - server-flagged turnStart) is NOT read in the combat flood, where
+        // the 8-line cap or the S key could eat it. It is held and folded INTO the
+        // 'Your turn' prompt itself, so it can never be skipped or capped away.
+        const isMineTS = (e) => !!e.turnStart && !!myNick && _stripGlyphs(e.text).toLowerCase().includes(myNick);
+        for (const e of fresh) if (isMineTS(e) && !e.voiced) _dun.preTurn.push(_stripGlyphs(e.text));
+        const live = fresh.filter(e => !e.voiced && !isMineTS(e));
         if (enemyCount >= 6 && live.length > 6) {
           const isMine = (e) => e.side !== 'enemy' || (myNick && _stripGlyphs(e.text).toLowerCase().includes(myNick));
           const mine = live.filter(isMine);
@@ -1573,7 +1580,9 @@
     const turnKey = st.turn ? `${st.turn.kind}:${st.turn.id}:${st.round}` : `${st.status}`;
     if (turnKey !== _dun.turnKey) {
       _dun.turnKey = turnKey;
-      if (st.status === 'combat' && st.turn && st.turn.kind === 'party' && st.turn.id === meId) {
+      const _myTurn = !!(st.status === 'combat' && st.turn && st.turn.kind === 'party' && st.turn.id === meId);
+      if (!_myTurn) _dun.preTurn.length = 0;   // a held line only ever belongs to MY next prompt (v3.37.145)
+      if (_myTurn) {
         const me = (st.party||[]).find(m => m.playerId === meId) || {};
         earcon('turn');   // immediate audible cue (three pulses) so he knows his turn is up…
         // …but the SPOKEN prompt is 'event', NOT 'urgent' — urgent calls TTS.cancel()
@@ -1587,8 +1596,9 @@
         // NOTHING wrong (it was just cleared), and think the turn "randomly skipped"
         // (run cozy-otter: Gabriel Held by Hold Monster over and over, cleared fast).
         const _incap = (me.conditions || []).map(c => String((c && c.label) || '').toLowerCase()).find(l => /held|paralyz|stunned|asleep/.test(l));
-        if (_incap) speak(`Your turn — but you are ${_incap} and lose it this round. It clears on its own or with a dispel.`, 'event');
-        else speak('Your turn. ' + _dunEnemyPhrase(st), 'event');
+        const pre = _dun.preTurn.splice(0).join(' ');   // my storm bolt / spirit strike, spoken as PART of the prompt (v3.37.145)
+        if (_incap) speak(`${pre ? pre + ' ' : ''}Your turn — but you are ${_incap} and lose it this round. It clears on its own or with a dispel.`, 'event');
+        else speak(`Your turn. ${pre ? pre + ' ' : ''}${_dunEnemyPhrase(st)}`, 'event');
       } else if (st.status === 'exploring' && _dun.status === 'combat') {
         earcon('clear');   // audible "room cleared" cue so a blind player knows the end-of-room report is coming (Josh)
         // Only give the "open the next door / bail" prompt NOW if there's no loot to

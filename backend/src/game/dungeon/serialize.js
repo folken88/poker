@@ -96,6 +96,8 @@ module.exports = ({ fighterFeats, titleCase }) => ({
       ? { key: 'held',      label: 'Held',      desc: 'helpless — re-saves each turn (the attempt costs the turn)', icon: `${I}paralyzed.webp` }
       : { key: 'paralyzed', label: 'Paralyzed', desc: 'frozen — loses turns; easy to hit', icon: `${I}paralyzed.webp` });
     if (o.slowed > 0)    c.push({ key: 'slowed',    label: 'Slowed',    desc: 'STAGGERED — one single action a turn: move OR attack, never both, never a full attack; −1 AC', icon: `${I}slowed.webp` });
+    if (o.exhausted > 0) c.push({ key: 'exhausted', label: 'Exhausted', desc: 'Str/Dex −6 (PF1): −3 to hit, damage, AC and Reflex; half speed stood in for by STAGGERED — one action a turn', icon: `${I}slowed.webp` });
+    if (o.fatigued > 0)  c.push({ key: 'fatigued',  label: 'Fatigued',  desc: 'Str/Dex −2 (PF1): −1 to hit, damage, AC and Reflex', icon: `${I}sickened.webp` });
     if (o.grappled)      c.push({ key: 'grappled',  label: 'Grappled',  desc: 'chained — −2 to hit, easier to strike; crushed each turn (Dispel or Grease frees you)', icon: `${I}grappled.webp` });
     if (o.prayed > 0)    c.push({ key: 'prayed',     label: 'Prayer',    desc: `−${o.prayed} to hit, damage & saves (cleric Prayer covers the battlefield)`, icon: `${I}shaken.webp` });
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });

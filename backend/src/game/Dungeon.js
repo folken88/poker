@@ -341,7 +341,7 @@ class Dungeon {
     // so the blind narrator's stop key can skip just the section now reading instead
     // of the whole end-of-room report (Josh's segmented silence, 2026-07-03).
     const phase = meta.phase || this._notePhase || (this.lootRoll ? 'loot' : (this.status === 'combat' ? 'combat' : null));
-    this.log.push({ t: ++this._logSeq, text, sound: sound || null, side, kind, voiced: !!meta.voiced, phase });
+    this.log.push({ t: ++this._logSeq, text, sound: sound || null, side, kind, voiced: !!meta.voiced, phase, turnStart: !!meta.turnStart });   // turnStart: a free start-of-turn action (storm bolt / spirit strike) — the blind narrator folds it into the 'Your turn' prompt (v3.37.145)
     if (this.log.length > 150) this.log.shift();
     if (sound) { try { recordSound('dungeon', sound, text); } catch (_) {} }
     // GROUND TRUTH (v3.37.70): persist EVERY narration line to dungeon.jsonl, stamped
@@ -973,7 +973,7 @@ class Dungeon {
         this._note(`🟢 Acid keeps sizzling on ${e.name} — ${dealt} acid${this._resistTag(e, 'acid')}.${this._afterEnemyHit(e)}`, null, { side: 'enemy' });
         if (e.hp <= 0) { this._broadcast(); return this._nextTurn(); }
       }
-      if (e.blinded > 0 && --e.blinded === 0) this._note(`👁️ ${e.name} blinks the light back into its eyes — no longer blind.`, null, { side: 'enemy' });   // blindness wears off (doesn't cost the turn — 50% miss / denied Dex while it lasts, v3.37.144)
+      if (e.exhausted > 0) e.exhausted -= 1; if (e.fatigued > 0) e.fatigued -= 1; if (e.blinded > 0 && --e.blinded === 0) this._note(`👁️ ${e.name} blinks the light back into its eyes — no longer blind.`, null, { side: 'enemy' });   // exhaustion/fatigue tick (v3.37.145); blindness wears off (doesn't cost the turn — 50% miss / denied Dex while it lasts, v3.37.144)
       if (e.fascinated) { this._note(`${e.glyph} ${e.name} ${e.asleep ? 'sleeps soundly' : 'stands fascinated'} — does nothing.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       // DOMINATED (hero magic): the foe fights FOR the party this turn — it turns
       // on its own allies. A fresh Will save each of its turns can shake the hold;

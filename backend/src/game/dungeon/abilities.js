@@ -1023,7 +1023,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // GLORIOUS CHALLENGE (Order of the Flame): a cavalier on a kill-streak fights ever more
     // recklessly — −2 AC per consecutive glorious challenge this room (stacks; see _enemyMelee).
     const glory = e.gloriousChallenge ? 2 * (e.gloriousN || 0) : 0;
-    return base - glory - (e.stunned > 0 ? 2 : 0) + (e.prone ? (rangedAtk ? 4 : -4) : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) + (e.flying ? HIGH_GROUND_AC : 0) + (e.fdOn ? 2 : 0);   // Fight Defensively: +2 dodge AC
+    return base - glory - (e.stunned > 0 ? 2 : 0) + (e.prone ? (rangedAtk ? 4 : -4) : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) - (e.exhausted > 0 ? 3 : (e.fatigued > 0 ? 1 : 0)) + (e.flying ? HIGH_GROUND_AC : 0) + (e.fdOn ? 2 : 0);   // Fight Defensively: +2 dodge AC; exhausted/fatigued: Dex −6/−2 (v3.37.145)
   },
   // Energy-resistance multiplier for a damage type (see RESIST_BY_KEY): 0 immune,
   // 0.5 resistant, 1.5 vulnerable, 1 (default) unchanged. Physical/untyped (no
@@ -1077,7 +1077,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _enemySave(e, which) {
     const pray = (e.prayed || 0) + (e.sickened > 0 ? SICKENED_PENALTY : 0);   // Prayer −1 + sickened −2 (PF1): both drag every save
     if (which === 'fort') return (e.fort || 0) - pray;
-    if (which === 'reflex') return (e.reflex || 0) - pray - (e.slowed > 0 ? 1 : 0);   // Slow: −1 Reflex (PF1)
+    if (which === 'reflex') return (e.reflex || 0) - pray - (e.slowed > 0 ? 1 : 0) - (e.exhausted > 0 ? 3 : (e.fatigued > 0 ? 1 : 0));   // Slow: −1 Reflex (PF1); exhausted/fatigued: Dex −6/−2 (v3.37.145)
     return Math.floor(((e.fort || 0) + (e.reflex || 0)) / 2) - pray;   // will (approx)
   },
   // A bare attack roll (to-hit only, no damage) using the member's weapon.
@@ -1551,10 +1551,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const dmg = sv.saved ? Math.floor(raw / 2) : raw;
       this._dmgE(e, dmg, 'electricity');
       const snd = pick(SND.lightning);
-      this._note(`🌩️ ${m.nickname}'s storm hurls a bolt at ${e.name} — ${dmg} electricity${sv.saved ? ' (saved for half)' : ''}.${this._afterEnemyHit(e)} (${st.rounds} rd left)`, snd);
-      this._echoToTable(snd);
-    } else if (st.rounds > 0) this._note(`🌩️ ${m.nickname}'s storm crackles overhead but finds nothing ${m.nickname} can see to strike. (${st.rounds} rd left)`);   // v3.37.144: a silent round read as "did nothing" to a blind player
-    if (st.rounds <= 0) { m.storm = null; this._note(`⛈️ ${m.nickname}'s storm rumbles itself out.`); }
+      // v3.37.145 (Josh: 'on my turn, no sound, no voice report'): the bolt is a
+      // turnStart line — the blind narrator folds it into the 'Your turn' prompt — and
+      // its sound goes out on the dedicated dungeon:sfx channel, because the state
+      // broadcast plays only the first THREE fresh sounds (oldest first) and after a
+      // big enemy phase the bolt's lightning was never among them.
+      this._note(`🌩️ ${m.nickname}'s storm hurls a bolt at ${e.name} — ${dmg} electricity${sv.saved ? ' (saved for half)' : ''}.${this._afterEnemyHit(e)} (${st.rounds} rd left)`, null, { turnStart: true });
+      this._emitChainSfx([snd]);
+    } else if (st.rounds > 0) this._note(`🌩️ ${m.nickname}'s storm crackles overhead but finds nothing ${m.nickname} can see to strike. (${st.rounds} rd left)`, null, { turnStart: true });   // v3.37.144: a silent round read as "did nothing" to a blind player
+    if (st.rounds <= 0) { m.storm = null; this._note(`⛈️ ${m.nickname}'s storm rumbles itself out.`, null, { turnStart: true }); }
     this._broadcast();
   },
   // Disintegrate (PF1e): a ranged TOUCH ATTACK; on a hit, 2d6 per caster level
@@ -2304,16 +2309,31 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} (Will DC ${dc}) — ${got} charmed${held ? `, ${held} resisted` : ''}.`, ab.sound);
     this._echoToTable(ab.sound);
   },
-  // Waves of Exhaustion (7th, necromancy) — NO SAVE: living foes in the wave are
-  // EXHAUSTED, modelled as the slowed/staggered condition (one action a turn,
-  // −1 to hit, −1 AC). Undead and constructs (no living body) are untouched.
+  // Waves of Exhaustion (7th) / Ray of Exhaustion (3rd) / Waves of Fatigue (5th) —
+  // the PF1 tiers (v3.37.145, Josh: 'there is a spell waves of exhaustion so what
+  // condition does that put on the foe?'): EXHAUSTED = Str/Dex −6 → −3 to hit, damage,
+  // AC and Reflex; FATIGUED = Str/Dex −2 → −1 each. PF1's other exhausted rider is
+  // HALF SPEED, which our format has no dimension for — it is stood in for by the
+  // staggered condition (one action a turn) on the exhausted tier only (documented
+  // adaptation). Waves: NO save. Ray: Fortitude partial — fatigued instead.
+  // Undead and constructs (no living body) are untouched.
   _abExhaust(m, ab, payload) {
     const chosen = this._enemyTargets(payload, ab.maxTargets || 6).filter(e => e.hp > 0);
     const living = chosen.filter(e => !(e.type === 'undead' || e.type === 'construct'));
     if (!living.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — nothing there lives to tire.`); this._echoToTable(); return; }
     const dur = Math.max(3, Math.min(8, Math.floor((m.level || 1) / 2)));
-    for (const e of living) e.slowed = Math.max(e.slowed || 0, dur);
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — a wave of crushing fatigue, NO save: ${living.length} foe${living.length === 1 ? '' : 's'} EXHAUSTED (one action a turn, ${dur} rounds).`, ab.sound);
+    const dc = ab.fortPartial ? this._spellDC(m, ab) : null;
+    let exN = 0, fatN = 0;
+    for (const e of living) {
+      let tier = ab.fatigue ? 'fatigued' : 'exhausted';
+      if (dc != null && tier === 'exhausted' && this._saveVs(this._enemySave(e, 'fort'), dc).saved) tier = 'fatigued';
+      if (tier === 'exhausted') { e.exhausted = Math.max(e.exhausted || 0, dur); e.slowed = Math.max(e.slowed || 0, dur); exN++; }
+      else { e.fatigued = Math.max(e.fatigued || 0, dur); fatN++; }
+    }
+    const parts = [];
+    if (exN) parts.push(`${exN} EXHAUSTED (−3 to hit, damage, AC and Reflex; one action a turn)`);
+    if (fatN) parts.push(`${fatN} FATIGUED (−1 to hit, damage, AC and Reflex)`);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name}${dc != null ? ` (Fort DC ${dc}, partial)` : ' — NO save'}: ${parts.join(', ')} — ${dur} rounds.`, ab.sound);
     this._echoToTable(ab.sound);
   },
   // Prismatic Spray (7th) — every foe in the fan takes a RANDOM ray: one of the
@@ -3373,7 +3393,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     let e = this.enemies.find(x => x.uid === sw.targetUid && x.hp > 0);
     if (!e) {
       e = this._spiritTarget(m);
-      if (e) { sw.targetUid = e.uid; this._note(`${tag} ${m.nickname}'s ${label} seeks a new mark — ${e.name}${e.flying ? ' on the wing' : ''}!`); }
+      if (e) { sw.targetUid = e.uid; this._note(`${tag} ${m.nickname}'s ${label} seeks a new mark — ${e.name}${e.flying ? ' on the wing' : ''}!`, null, { turnStart: true }); }
     }
     if (e) {
       m.weapon = weaponOf(ally ? {} : m.gear, ally ? 'longsword' : this._spiritWeaponKey(m));   // the god's weapon rides the caster's enhancement; the angel bears its own blade
@@ -3385,11 +3405,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         if (r.hit) { this._dmgE(e, r.damage); parts.push(`${r.crit ? 'CRIT ' : ''}${r.damage}`); }
         else parts.push('miss');
       }
-      this._note(`${tag} ${m.nickname}'s ${label} strikes ${e.name} — ${parts.join(', ')}.${this._afterEnemyHit(e)} (${sw.rounds} rd left)`, snd);
-      this._echoToTable(snd);
+      this._note(`${tag} ${m.nickname}'s ${label} strikes ${e.name} — ${parts.join(', ')}.${this._afterEnemyHit(e)} (${sw.rounds} rd left)`, null, { turnStart: true });   // turnStart + own sfx channel (v3.37.145) — see _stormStrike
+      this._emitChainSfx([snd]);
       if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     }
-    if (sw.rounds <= 0) { m[field] = null; this._note(ally ? `👼 ${m.nickname}'s guardian angel bows and ascends in a column of light.` : `🗡️✨ ${m.nickname}'s Spiritual Weapon dissolves into motes of light.`); }
+    if (sw.rounds <= 0) { m[field] = null; this._note(ally ? `👼 ${m.nickname}'s guardian angel bows and ascends in a column of light.` : `🗡️✨ ${m.nickname}'s Spiritual Weapon dissolves into motes of light.`, null, { turnStart: true }); }
     this._broadcast();
   },
   // Cleave: hit the target; then swing at a second foe (−2). A barbarian's

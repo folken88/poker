@@ -20,11 +20,15 @@ Ruled section with the version that implemented it.
    our format a turn spent on a 3d6 bolt is strictly worse than attacking,
    so RAW-strict would make the lingering storm dead weight. Veto or bless.
 
-4. **Fatigued / exhausted / pinned** (Josh's debuff audit, 2026-09-03) — none
-   are modeled: nothing imported inflicts fatigue or exhaustion yet (Waves of
-   Fatigue / Exhaustion, the rage crash), and our grapple already renders a
-   seized foe helpless (closer to PF1 "pinned" than "grappled"). Import the
-   fatigue pair with CRB batch 2, or leave them out of this format?
+4. **Farrah's concept** (Josh, 2026-09-03) — the bench sorcerer has NO concept on
+   file: characterBuilds carries only `race: human, flex: cha`, so she runs the
+   generic sorcerer loadout (whose priority list includes Summon Monster IV/VI/VIII
+   — hence the summoning Josh noticed). Olbryn and Gabriel have real concepts;
+   should Farrah get one (bloodline, signature spells, weapon), and what is it?
+
+5. **Pinned** (Josh's debuff audit) — our grapple renders a seized foe helpless,
+   which is closer to PF1 "pinned" than "grappled." Keep the single tier, or split
+   grappled (−2 hit/AC, no Dex) from pinned (helpless) at a second CMB check?
 
 ## Standing policy (Toby)
 
@@ -37,6 +41,10 @@ Ruled section with the version that implemented it.
 
 ## Ruled
 
+- **Fatigue tiers per PF1** (no ruling needed — PF1-first): exhausted = Str/Dex −6
+  (−3 hit/damage/AC/Reflex) with STAGGERED standing in for the half-speed rider our
+  format lacks; fatigued = −2 (−1 each); Ray of Exhaustion Fortitude-partial; Waves
+  of Fatigue imported — v3.37.145.
 - **Buff sounds delivered** (2026-08-31): Toby's invoker set — Divine Favor =
   invoke.mp3, Divine Power = Invoker_Alacrity.mp3, Greater Invisibility =
   invoker_ghost_walk.mp3 — v3.37.141.

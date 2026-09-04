@@ -2059,9 +2059,24 @@
 //                     The bestiary now ships to its canonical path, the orphan is deleted, the test
 //                     is repointed, and a guard test fails the build if the orphan ever returns.
 //                     Tests 222+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.144';
+//  3.37.145 2026-09-03 THE STORM YOU COULDN'T HEAR + THE FATIGUE TIERS (Josh's v144 replies).
+//                     (1) Josh was right twice over: the server fired a bolt on every one of his
+//                     turns, but the BLIND CLIENT never delivered it — the dungeon plays only the
+//                     first THREE distinct fresh sounds per broadcast, oldest first, so after a
+//                     nine-monster enemy phase the bolt's lightning (newest) was cut; and the
+//                     spoken line rode the combat section, where the 8-line cap or the S key ate
+//                     it. Fix: storm bolts and spirit strikes now sound through the dedicated
+//                     dungeon:sfx channel (like chain cleaves) and carry a turnStart flag the
+//                     narrator folds INTO the 'Your turn' prompt — unskippable, uncappable.
+//                     (2) Correcting v144's answer: Waves/Ray of Exhaustion WERE imported (as
+//                     staggered). Now the PF1 tiers are real: exhausted = Str/Dex −6 (−3 to hit,
+//                     damage, AC and Reflex, + staggered as the half-speed stand-in), fatigued =
+//                     −2 (−1 each); Ray of Exhaustion gets its Fortitude partial (fatigued);
+//                     Waves of Fatigue (CRB 5th) joins wizard/sorcerer; chips for both tiers.
+//                     Tests 226+; CLIENT_BUILD 33826 (blindMode.js + client.js stamp).
+const VERSION = '3.37.145';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33825;
-const HEADLINE = "Blinded foes now swing at the dark — a 50% miss on every attack, per the book; a storm keeps its sky (a lesser Call Lightning can no longer overwrite a greater one); and the bestiary's good-alignment flags are finally live — Smite Good has teeth.";
+const CLIENT_BUILD = 33826;
+const HEADLINE = "Your storm and your spirits now speak as part of your turn and sound on their own channel — no more silent bolts; and exhaustion is a real condition per the book, with Waves of Fatigue new on the arcane lists.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
