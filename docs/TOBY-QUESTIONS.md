@@ -30,6 +30,12 @@ Ruled section with the version that implemented it.
    which is closer to PF1 "pinned" than "grappled." Keep the single tier, or split
    grappled (−2 hit/AC, no Dex) from pinned (helpless) at a second CMB check?
 
+6. **The high-CR bestiary is thin** (Josh's monotony report, 2026-09-05) — the
+   non-boss spawn pool holds 6 monsters in CR 14-18 and only 2 in CR 16-20 (one
+   undead, one devil). v3.37.147 works around it (flat anchor, no-encore, band
+   widening), but at level 19-20 variety needs more CR 16-20 monsters — a Foundry
+   import job (which families: dragons? giants? the Boali way?).
+
 ## Standing policy (Toby)
 
 - **Bonus typing** (2026-08-30): same-type bonuses never stack; categorize
