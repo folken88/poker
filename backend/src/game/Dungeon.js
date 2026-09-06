@@ -698,8 +698,7 @@ class Dungeon {
   _pickBoss(capCR) {
     const cand = Object.keys(MON).filter(k => MON[k].crNum <= capCR);
     if (!cand.length) return bossKeyFor(this.depth);
-    const top = cand.sort((a, b) => MON[b].crNum - MON[a].crNum).slice(0, 3);
-    return pick(top);
+    const top = cand.sort((a, b) => MON[b].crNum - MON[a].crNum).slice(0, 5).filter(k => k !== this._lastBoss), bk = pick(top.length ? top : cand.slice(0, 3)); this._lastBoss = bk; return bk;   // NO ENCORE (v3.37.147): top FIVE, never the boss you just fought
   }
   // A spawnable creature that fits the remaining XP budget. Biased HARD toward
   // CHEAP foes (weight ∝ 1/xp) so a room fills up with lots of shitty mooks —
@@ -714,7 +713,8 @@ class Dungeon {
     if (!cand.length) cand = SPAWNABLE.filter(k => inGang(k) && MON[k].crNum <= capCR && rawXpForCR(MON[k].crNum) <= budget);
     if (!cand.length) cand = SPAWNABLE.filter(k => MON[k].crNum <= capCR && rawXpForCR(MON[k].crNum) <= budget);
     if (!cand.length) return null;
-    const weights = cand.map(k => 1 / Math.max(1, rawXpForCR(MON[k].crNum)));
+    if (gang === undefined) { const fam = (c) => new Set(c.flatMap(k => MON_GANGS[k] || ['solo'])).size; if (fam(cand) < 3) { const wide = SPAWNABLE.filter(k => MON[k].crNum >= floorCR - 2 && MON[k].crNum <= capCR && rawXpForCR(MON[k].crNum) <= budget); if (fam(wide) > fam(cand)) cand = wide; } if (this._recentGangs && this._recentGangs.length) { const fresh = cand.filter(k => { const g = MON_GANGS[k]; return !g || g.some(x => !this._recentGangs.includes(x)); }); if (fresh.length) cand = fresh; } }   // NO ENCORE (v3.37.147 — Josh: 'room after room of nameless horrors'): the room's ANCHOR pick (a) widens the band two CR when it holds fewer than three families (the CR 16-20 band has TWO monsters), and (b) avoids the last two rooms' families whenever the band offers another
+    const weights = cand.map(k => gang === undefined ? 1 : 1 / Math.max(1, rawXpForCR(MON[k].crNum)));   // the ANCHOR is drawn flat (the 1/xp mook bias made the cheapest monster in the band anchor nearly every room); fills keep the swarm bias
     const tot = weights.reduce((a, b) => a + b, 0);
     let r = Math.random() * tot;
     for (let i = 0; i < cand.length; i++) { r -= weights[i]; if (r <= 0) return cand[i]; }
@@ -911,7 +911,7 @@ class Dungeon {
       const elite = !isBoss && !pairBoss && (encCR - MON[k].crNum >= 1.5) && dRoll(4) === 1 ? 1 + dRoll(3) : 0;
       this.enemies.push(this._makeEnemy(MON[k], isBoss || pairBoss, elite));
     });
-    this._log('encounter', { depth: this.depth, minLevel: this._minLevel(), encCR, partyN, count: keys.length, gang: roomGang || 'mixed' });
+    this._recentGangs = [roomGang || 'mixed', ...(this._recentGangs || [])].slice(0, 2); this._log('encounter', { depth: this.depth, minLevel: this._minLevel(), encCR, partyN, count: keys.length, gang: roomGang || 'mixed' });   // NO ENCORE memory (v3.37.147)
   }
   _enemySummary() {
     const counts = {};

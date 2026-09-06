@@ -2087,9 +2087,21 @@
 //                     wall stands. Bot casters raise a wall vs a melee-heavy field (≥4 grounded
 //                     melee foes, 7-in-10) after the speed race; loadout priorities carry them.
 //                     Tests 228+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.146';
+//  3.37.147 2026-09-05 NO ENCORE (Josh: 'room after room after room of nameless horrors... once I
+//                     start a dungeon run, that's my dungeon run'). He was right and it was NOT by
+//                     design: the per-ROOM gang lock is intended (one family per room), but the
+//                     room's ANCHOR pick used the same 1/xp mook weighting as the fills, so the
+//                     cheapest monster in the CR band anchored nearly every room and dragged its
+//                     family in behind it (brave-noodle: 9 undead rooms of 11; salty-harpy: 4 devil
+//                     rooms in a row). Fix: the anchor is drawn FLAT and avoids the last two rooms'
+//                     families whenever the band offers another, and widens its band by two CR
+//                     when it holds fewer than three families (the CR 16-20 band has TWO monsters —
+//                     the deeper cause at Josh's level); boss rooms draw from the top FIVE
+//                     and never repeat the boss you just fought. Fills keep the swarm bias.
+//                     Tests 233+; CLIENT_BUILD unchanged.
+const VERSION = '3.37.147';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "Walls and zones arrive — Wall of Fire, Wall of Ice, Wall of Force, Web and Solid Fog: while one stands, only two melee foes can reach the same target each round, no one can be flanked or sneak-attacked, and the foes that press through pay the wall's price.";
+const HEADLINE = "No encore: a dungeon no longer serves the same monster family room after room — each room's anchor avoids the last two rooms' families, and boss rooms never repeat the boss you just fought.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
