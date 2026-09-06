@@ -36,6 +36,13 @@ Ruled section with the version that implemented it.
    widening), but at level 19-20 variety needs more CR 16-20 monsters — a Foundry
    import job (which families: dragons? giants? the Boali way?).
 
+7. **Play styles for the rest of the roster** (Josh, 2026-09-06) — v3.37.149 gave
+   characterBuilds a `style` the bot brain reads: 'summoner' (Jason, Draymus),
+   'guardian' (Dinvaya), 'storm' (Olbryn). Josh's point: "I want Gaspar to play
+   like Gaspar whether I'm running him or the AI is." Which of your characters
+   (Taboon, Ramos, Gaspar, the rest) get a style, and what is it? New styles are
+   cheap to add if a concept needs one (e.g. 'blaster', 'controller', 'necromancer').
+
 ## Standing policy (Toby)
 
 - **Bonus typing** (2026-08-30): same-type bonuses never stack; categorize
