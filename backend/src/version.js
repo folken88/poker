@@ -2099,9 +2099,27 @@
 //                     the deeper cause at Josh's level); boss rooms draw from the top FIVE
 //                     and never repeat the boss you just fought. Fills keep the swarm bias.
 //                     Tests 233+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.147';
+//  3.37.148 2026-09-06 THE CASTER BRAIN (Josh's lucky-gecko / shielded-osprey batch). (1) RAYS OBEY
+//                     ILLUSIONS: Disintegrate, the ray spells and the touch spells never checked
+//                     mirror images or concealment — a straight touch roll (Josh: 'make sure
+//                     disintegrate isn't bypassing illusion magic' — it was). Now the figment
+//                     bursts 1-in-(N+1) and the unseen foe has 50% concealment; True Seeing /
+//                     blindsense pierce. (2) THE SEER: a bot with True Seeing casts it on the
+//                     party's best melee striker (touch, PF1) when a foe is imaged or invisible and
+//                     nobody sees true — never once cast before. (3) LIBERATION: Freedom of Movement
+//                     goes onto a grappled ally, or a squishy caster on a field of hook-grapplers.
+//                     (4) GET OFF THE GROUND: a caster whose flight was stripped re-flies before
+//                     any dispel duel; a stripped Overland Flight / Fly now clears its run-buff
+//                     flag so the pre-door pass recasts it (Olbryn never re-flew). (5) THE SMITER
+//                     FIRST: a divine melee caster casts Divine Power, then a spirit spell, before
+//                     the summon opener; the opener fires ONCE per room (Dinvaya: 16 summons, 0
+//                     Divine Power across two runs). (6) Every foe-dispel counts toward the two-
+//                     per-foe cap (Olbryn stripped the lich's Fly five times as it re-flew).
+//                     (7) Greater Dispel Magic joins cleric, wizard, sorcerer and bard (PF1).
+//                     Tests 236+; CLIENT_BUILD unchanged.
+const VERSION = '3.37.148';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "No encore: a dungeon no longer serves the same monster family room after room — each room's anchor avoids the last two rooms' families, and boss rooms never repeat the boss you just fought.";
+const HEADLINE = "The caster brain: rays now obey mirror images and concealment like a sword does; bot casters cast True Seeing on the striker, Freedom of Movement on the grappled, re-fly before they duel, and a divine smiter raises Divine Power before calling a bear — once a room.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

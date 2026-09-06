@@ -893,7 +893,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         rip(tgt.images > 0, 'Mirror Image', () => { tgt.images = 0; });
         rip(tgt.displaced, 'Displacement', () => { tgt.displaced = false; if (tgt.buffApplied) { delete tgt.buffApplied.displacement; delete tgt.buffApplied.ext_displace; } });
         rip(tgt.invisible && !tgt.greaterInvis, 'Invisibility', () => { tgt.invisible = false; });
-        rip(tgt.flying && !tgt.innateFly && !tgt.ghost, 'flight', () => { tgt.flying = false; tgt.overlandFlight = false; if (!tgt.form) tgt.canHitFlyers = false; ripRun('airwalk'); });
+        rip(tgt.flying && !tgt.innateFly && !tgt.ghost, 'flight', () => { tgt.flying = false; tgt.overlandFlight = false; if (!tgt.form) tgt.canHitFlyers = false; ripRun('airwalk', 'overlandflight', 'fly'); });   // v3.37.148: Overland Flight / Fly flags rip too, so the pre-door pass and the bot RECAST them (Josh: Olbryn never re-flew)
         rip(tgt.dr > 0, 'Stoneskin', () => { tgt.dr = 0; ripRun('stoneskin', 'stoneskincomm', 'ext_stoneskin'); });
         rip(tgt.mageArmor, 'Mage Armor', () => { tgt.mageArmor = false; });
         rip(tgt.protectFire > 0, 'Fire Ward', () => { tgt.protectFire = 0; ripRun('protectfire'); });

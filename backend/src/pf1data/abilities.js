@@ -1231,6 +1231,12 @@ _injectKitSpell('wizard',   preparedSpell(SPELL.solidfog, 7));
 _injectKitSpell('sorcerer', spontaneousSpell(SPELL.solidfog, 8));
 _injectKitSpell('wizard',   preparedSpell(SPELL.wallforce, 9));
 _injectKitSpell('sorcerer', spontaneousSpell(SPELL.wallforce, 10));
+// GREATER DISPEL MAGIC ON THE LISTS (v3.37.148 — Josh: 'it's a wizard sorcerer and cleric spell,
+// not just druid'): PF1 — Clr 6, Sor/Wiz 6, Brd 5 (the inquisitor already carries it).
+_injectKitSpell('cleric',   preparedSpell(SPELL.dispelmagicgreater, 11));
+_injectKitSpell('wizard',   preparedSpell(SPELL.dispelmagicgreater, 11));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.dispelmagicgreater, 12));
+_injectKitSpell('bard',     spontaneousSpell({ ...SPELL.dispelmagicgreater, slvl: 5 }, 13));
 _injectKitSpell('cleric',   preparedSpell(SPELL.bestowcurse, 5));
 _injectKitSpell('oracle',   spontaneousSpell(SPELL.bestowcurse, 5));
 _injectKitSpell('wizard',   preparedSpell({ ...SPELL.bestowcurse, slvl: 4 }, 7));

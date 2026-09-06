@@ -1566,6 +1566,18 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // Disintegrate (PF1e): a ranged TOUCH ATTACK; on a hit, 2d6 per caster level
   // (cap 40d6 at CL20). Fortitude PARTIAL — a made save still takes 5d6 (NOT
   // half). Anything reduced to 0 HP is disintegrated into fine dust.
+  // RAYS AND ILLUSIONS (v3.37.148 — Josh: 'make sure disintegrate isn't some cool badass
+  // thing that bypasses illusion magic'): an attack-roll spell obeys the same PF1 rules as a
+  // sword. An unseen foe has TOTAL CONCEALMENT (50% miss unless the caster sees the unseen);
+  // a mirror-imaged foe takes the ray on a figment 1-in-(N+1) times — the figment bursts.
+  // True Seeing / blindsense pierce the illusion; See Invisibility beats only the concealment.
+  // Used by Disintegrate, the ray spells and the touch spells. He was right: none of them checked.
+  _rayEvades(m, e, ab) {
+    const pierceInvis = m.trueSeeing || m.seeInvis || (m.blindsense > 0), pierceIllusion = m.trueSeeing || (m.blindsense > 0);
+    if (e.invisible && !pierceInvis && dRoll(2) === 1) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} streaks through where ${e.name} is NOT — the unseen foe's total concealment foils it.`); return true; }
+    if (e.images > 0 && !pierceIllusion && dRoll(e.images + 1) !== 1) { e.images -= 1; this._note(`🪞 ${m.nickname}'s ${ab.name} bursts a mirror image of ${e.name} — ${e.images} decoy${e.images === 1 ? '' : 's'} left.`); return true; }
+    return false;
+  },
   _abDisintegrate(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     const sound = ab.sound || pick(SND.lightning);
@@ -1576,6 +1588,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       this._note(`${ab.icon} ${m.nickname}'s ${ab.name} ray streaks wide of ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound);
       this._echoToTable(sound); return;
     }
+    if (this._rayEvades(m, e, ab)) { this._echoToTable(sound); return; }   // v3.37.148: images / concealment (PF1)
     const ndice = 2 * Math.min(20, m.level || 1);          // 2d6 / level, max 40d6
     const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'fort'), dc);
@@ -1623,7 +1636,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (!e) break;                                            // nothing left to burn
       const rec = tally.get(e.uid) || { name: e.name, dmg: 0, hits: 0 };
       const roll = dRoll(20);
-      if (roll === 20 || (roll !== 1 && roll + toHit >= this._enemyAC(e, { touch: true }))) {
+      if ((roll === 20 || (roll !== 1 && roll + toHit >= this._enemyAC(e, { touch: true }))) && !this._rayEvades(m, e, ab)) {   // v3.37.148: each ray can burst a figment / miss the unseen
         const d = this._dmgE(e, dRollN(ab.dice || 4, ab.die || 6), ab.dtype);
         rec.dmg += d; rec.hits++; anyHit = true;
         if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
@@ -1920,12 +1933,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const foe = (tFoe && foeScore(tFoe) > 0) ? tFoe
               : (!explicit ? this._targetableEnemies().filter(e => foeScore(e) > 0).sort((x, y) => foeScore(y) - foeScore(x))[0] : null);
     if (foe) {
+      { const _led = this._ccLedger(m); _led['dispel:' + foe.uid] = (_led['dispel:' + foe.uid] || 0) + 1; }   // v3.37.148: EVERY foe-dispel counts toward the per-foe cap (Josh: the lich re-flew and Olbryn re-stripped it five times — a duel that never ends)
       const dc = this._dispelCheck(m, this._enemyCL(foe), ab.greater);   // DC = 11 + the foe's caster level (PF1), not depth
       if (!dc.ok) {   // its enchantment HOLDS
         // FUTILITY tally (v3.37.84): two of these vs the same foe and the bot's
         // dispel branch stops feeding it turns (Femmik at +18 vs the Pit Fiend's
         // DC 32, four failed casts in a row — run clever-ferret).
-        const _led = this._ccLedger(m); _led['dispel:' + foe.uid] = (_led['dispel:' + foe.uid] || 0) + 1;
         this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${foe.name} — but its enchantment HOLDS! [dispel d20 ${dc.roll} +${dc.cl} = ${dc.total} vs DC ${dc.dc}]`, FAIL_SOUND);
         this._echoToTable(FAIL_SOUND); return;
       }
@@ -2595,6 +2608,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const roll = dRoll(20), total = roll + toHit;
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
+    if (this._rayEvades(m, e, ab)) { this._echoToTable(sound); return; }   // v3.37.148: images / concealment (PF1)
     // SEARING LIGHT (ab.searing) — PF1's per-target-type damage table:
     //   • normal creature        : 1d8 per 2 levels (max 5d8)  [the ab.die/dice default]
     //   • undead                 : 1d6 per level     (max 10d6)

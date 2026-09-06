@@ -495,7 +495,20 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     //     minions drop, limited by the ability's own uses.
     {
       const summonAb = avail.filter(a => a.effect === 'summon').sort((a, b) => (b.slvl || 0) - (a.slvl || 0))[0];
-      if (summonAb && targets.length && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {
+      // THE SMITER FIRST (v3.37.148 — Josh: 'she is built to smash ass... why summon when she can
+      // cast Divine Power'): a divine melee caster raises its own hammer — Divine Power, then a
+      // spirit spell — before it thinks about calling help. Dinvaya cast Summon Monster 16 times
+      // across two runs with Divine Power, Spiritual Weapon and Spiritual Ally prepared and unspent.
+      if (/cleric|oracle|inquisitor|warpriest|paladin/.test((m.cls || '').toLowerCase()) && !this._isRanged(m) && targets.length) {
+        const _dp = avail.find(a => a.key === 'divinepower');
+        if (_dp && !(m.buffApplied && m.buffApplied.divinepower)) return { slot: slot(_dp), payload: {} };
+        const _sp = avail.find(a => (a.effect === 'spiritally' && !(m.spiritAlly && m.spiritAlly.rounds > 0)) || (a.effect === 'spiritweapon' && !(m.spiritWeapon && m.spiritWeapon.rounds > 0)));
+        if (_sp) { const tough = targets.slice().sort((a, b) => b.maxHp - a.maxHp)[0]; return { slot: slot(_sp), payload: { targetUid: tough.uid } }; }
+      }
+      // ONE call per room (v3.37.148): the opener re-fired every time the bear died — 'a room
+      // full of bears' while the caster's real spells sat unspent. Bots summon once a room.
+      if (summonAb && targets.length && m._summonDepth !== this.depth && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {
+        m._summonDepth = this.depth;
         return { slot: slot(summonAb), payload: {} };
       }
     }
@@ -624,6 +637,40 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       const def = ['invisgreater', 'displacement', 'mirrorimage', 'stoneskin', 'fireshield']
         .map(k => avail.find(a => a.key === k)).find(Boolean);
       if (def) { m._selfDefDepth = this.depth; return { slot: slot(def), payload: def.target === 'ally' ? { allyUid: m.playerId } : {} }; }
+    }
+    // 1a1) THE SEER (v3.37.148 — Josh: 'both my casters have True Seeing... I have never seen
+    //      an AI cast it'): a mirror-imaged or invisible foe on the field and NO party member
+    //      seeing true → cast True Seeing on the party's best melee striker (touch, PF1), or on
+    //      yourself if no striker stands. A trump card beats a dispel gamble. Once per room.
+    if (m._seerDepth !== this.depth) {
+      const _ts = avail.find(a => a.trueSeeing && a.effect === 'buff');
+      const _fooled = this.enemies.some(e => e.hp > 0 && (e.images > 0 || e.invisible));
+      if (_ts && _fooled && !this.livingParty().some(p => p.trueSeeing)) {
+        const striker = this.livingParty().filter(a => !this._isRanged(a) && !/wizard|sorcerer|cleric|oracle|druid|bard|witch|summoner|alchemist/.test((a.cls || '').toLowerCase())).sort((a, b) => (b.level || 1) - (a.level || 1))[0] || m;
+        m._seerDepth = this.depth;
+        return { slot: slot(_ts), payload: { allyUid: striker.playerId } };
+      }
+    }
+    // 1a2) LIBERATION (v3.37.148 — Josh: 'if your spellcaster is getting the shit kicked out of
+    //      them by grapple then you get Freedom of Movement on them as quick as you can'): an
+    //      ally in a grapple, or a squishy ally on a field of hook-grapplers, gets it now.
+    {
+      const _fom = avail.find(a => a.effect === 'freedommove');
+      if (_fom) {
+        const _held = this.livingParty().find(a => a.grappled && !this._freedomOfMovement(a));
+        const _hookers = targets.some(e => e.hook || e.grapple);
+        const _squishy = _hookers ? this.livingParty().filter(a => !this._freedomOfMovement(a) && this._isSquishy(a)).sort((a, b) => a.hp - b.hp)[0] : null;
+        const _who = _held || _squishy;
+        if (_who) return { slot: slot(_fom), payload: { allyUid: _who.playerId } };
+      }
+    }
+    // 1a3) GET OFF THE GROUND (v3.37.148 — Josh: 'a wizard getting their ass handed to them
+    //      should know: if I get off the ground I have a better chance of surviving'): a caster
+    //      whose flight was stripped, with grounded melee foes on the field, re-flies BEFORE it
+    //      thinks about dispel duels. (A grappled caster can't — the grapple must break first.)
+    if (!m.flying && !m.grappled && targets.some(e => !e.ranged && !e.flying)) {
+      const _up = avail.find(a => a.effect === 'overlandflight') || avail.find(a => a.key === 'airwalk') || avail.find(a => a.effect === 'buff' && a.fly);
+      if (_up) return { slot: slot(_up), payload: _up.target === 'ally' ? { allyUid: m.playerId } : {} };
     }
     // 1b) Dispel Magic — free a SPELL-debuffed ally, or strip a foe buff that's
     //     genuinely WORTH the turn (Tobias: bards over-dispelled — grounding
