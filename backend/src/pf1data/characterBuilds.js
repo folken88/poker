@@ -7,6 +7,11 @@
  *   race   — a key from pf1data/races.js (default 'none' = no mods when absent)
  *   flex   — for a FLEX race (human/half-elf/half-orc), the ability that takes
  *            the floating +2 (e.g. 'str'). Omit to auto-pick the highest stat.
+ *   style  — OPTIONAL play style the bot brain reads (v3.37.149, Josh: 'Jason is a
+ *            summoner... Dinvaya will do whatever she can to make sure her party is
+ *            in good shape'): 'summoner' (calls help freely, no smiter-first),
+ *            'guardian' (heals at 70% instead of 55%, never summons), 'storm'
+ *            (prefers electricity blasts). Absent = the generic class doctrine.
  *   scores — OPTIONAL hand-authored 25-pt base array {str,dex,con,int,wis,cha}
  *            that OVERRIDES the class template (seedScores). Templates remain
  *            the fallback for anyone without `scores`.
@@ -56,7 +61,7 @@ const BUILDS = {
   'Elodie':                  { race: 'gnome' },
   'Mr. Brow':                { race: 'gnome' },
   'Gabriel':                 { race: 'aasimar' },
-  'Dinvaya':                 { race: 'aasimar' },   // this version (canon she was a half-elf)
+  'Dinvaya':                 { race: 'aasimar', style: 'guardian' },   // this version (canon she was a half-elf)
   'Fera':                    { race: 'halfling' },
   'Kovira':                  { race: 'tiefling' },
   'Taelys':                  { race: 'tiefling' },
@@ -66,7 +71,7 @@ const BUILDS = {
   'Ser Toche':               { race: 'tengu' },
   'Rissa':                   { race: 'leshy' },     // plant person
   'Bujon, Storm of Cheliax': { race: 'iku_turso' },   // eel-like aberration; Blindsense 30 ft (invisibility never works on him)
-  'Olbryn':                  { race: 'drow' },     // Josh's Drow storm-sorcerer (Iron Gods) — Dex+2/Cha+2/Con−2, darkvision 120, SR, light blindness
+  'Olbryn':                  { race: 'drow', style: 'storm' },     // Josh's Drow storm-sorcerer (Iron Gods) — Dex+2/Cha+2/Con−2, darkvision 120, SR, light blindness
   'Casandalee':              { race: 'android' },
   'Meyanda':                 { race: 'android' },
   'Vorkstag':                { race: 'skinwalker' },
@@ -76,12 +81,12 @@ const BUILDS = {
   'Femmik Embersword':       { race: 'ifrit' },      // Dervish Dancer bard (DEX/CHA); Ifrit +2 Dex/+2 Cha/−2 Wis matches his real WIS 7
   'Freya Kusanagi':          { race: 'half_elf', flex: 'str' },   // Samurai/Hellknight — STR 26 bruiser; floating +2 into STR
   "J'Mal":                   { race: 'hobgoblin' },  // Red Mantis Assassin / Rogue — DEX finesse dual-saber + sneak
-  'Jason':                   { race: 'tiefling' },   // Divine Scion / Cleric of Asmodeus — WIS caster (tiefling darkvision + resist)
+  'Jason':                   { race: 'tiefling', style: 'summoner' },   // Divine Scion / Cleric of Asmodeus — WIS caster (tiefling darkvision + resist)
   // Reese — Strix Eldritch-Archer magus. DEX-focused 25-pt build (his bow rides DEX,
   // not the magus template's default STR); INT for his spellstrike. Strix +2 Dex → 19.
   'Reese':                   { race: 'strix', scores: { str: 10, dex: 17, con: 14, int: 14, wis: 11, cha: 11 } },
   'Savage':                  { race: 'tiefling' },   // tiefling bloodrager — STR brute (class template handles the STR primary)
-  'Draymus':                 { race: 'dhampir' },    // dhampir necromancer — INT caster (wizard template makes INT primary)
+  'Draymus':                 { race: 'dhampir', style: 'summoner' },    // dhampir necromancer — INT caster (wizard template makes INT primary)
   'Azwraith':                { race: 'human' },       // human FIGHTER — STR bruiser (class template makes STR primary); reach fauchard trip-lord
   // Lord Gweyir — elf DEX cavalier duelist. Explicit scores so DEX (not the cavalier
   // template's default STR) is his attack stat; his finesse estoc rides Dex 18 (16 + elf +2).

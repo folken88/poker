@@ -2117,9 +2117,27 @@
 //                     per-foe cap (Olbryn stripped the lich's Fly five times as it re-flew).
 //                     (7) Greater Dispel Magic joins cleric, wizard, sorcerer and bard (PF1).
 //                     Tests 236+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.148';
+//  3.37.149 2026-09-06 PLAY STYLES + THE LIST AUDIT (Josh's spicy-lantern replies). (1) THE DOOR PASS
+//                     NO-OP: an ally-buff (Heroism, Stoneskin) cast at the door defaulted to the
+//                     caster himself, so Olbryn re-cast Heroism on HIMSELF at every door — a no-op
+//                     that burned a 3rd-level slot each room (what Josh heard as '3rd-level Fly';
+//                     he cast zero Fly). The door pass now sends it to the first ally who lacks it.
+//                     (2) THE KNIFE IN THE DARK: an arcane caster wraps the party's sneak-attacker
+//                     in Greater Invisibility (touch), once per rogue per room, 7-in-10 — it never
+//                     existed (sunny-noodle was Josh at the keys). (3) PLAY STYLES: characterBuilds
+//                     gains `style` — Jason/Draymus 'summoner' (call help whenever it falls, no
+//                     smiter-first), Dinvaya 'guardian' (heals at 70%, never summons), Olbryn
+//                     'storm' (electricity blasts weighed 1.5x, coverage × power — 12 fireballs,
+//                     0 Chain Lightning in spicy-lantern; the lightning staff counts too).
+//                     (4) THE PF1 LIST AUDIT: every SPELL walked against the CRB class lists —
+//                     37 missing class entries added (Burning Hands/Cat's Grace/Displacement/
+//                     Fire Shield/Greater Heroism/GMW on the arcanists, Darkness/Banishment/Storm
+//                     of Vengeance on the cleric, Flame Strike/Stoneskin/Heal on the druid, the
+//                     bard's Invisibility pair, Dimension Door, Freedom of Movement…).
+//                     Tests 239+; CLIENT_BUILD unchanged.
+const VERSION = '3.37.149';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "The caster brain: rays now obey mirror images and concealment like a sword does; bot casters cast True Seeing on the striker, Freedom of Movement on the grappled, re-fly before they duel, and a divine smiter raises Divine Power before calling a bear — once a room.";
+const HEADLINE = "Play styles: Jason summons, Dinvaya guards, Olbryn calls the lightning; the rogue gets Greater Invisibility; the door pass stops re-casting Heroism on the caster himself; and 37 missing class entries from the PF1 list audit are in.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

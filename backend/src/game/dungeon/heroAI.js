@@ -18,6 +18,7 @@ const { babFor } = require('../../pf1data/classes');
 const { kitFor } = require('../../pf1data/abilities');
 const { attackProfile } = require('../character');
 const { crToNum } = require('../../pf1data/monsters');
+let BUILDS = {}; try { BUILDS = require('../../pf1data/characterBuilds').BUILDS || {}; } catch (_) {}   // per-character play STYLE (v3.37.149) — guarded: PGM may not ship the file
 const { fighterFeats } = require('../../pf1data/feats');
 
 // v3.37.107: the classes whose basic attack is a CANTRIP, not a weapon — the
@@ -412,7 +413,8 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       return null;
     }
     const allies = this.livingParty();
-    const someoneHurt = allies.some(a => !a.undead && a.hp < a.maxHp * 0.55);   // the undead don't count — positive energy can't help them anyway
+    const _style = ((BUILDS[m.nickname] || {}).style) || '';   // v3.37.149 (Josh): 'summoner' | 'guardian' | 'storm' | '' — see characterBuilds
+    const someoneHurt = allies.some(a => !a.undead && a.hp < a.maxHp * (_style === 'guardian' ? 0.7 : 0.55));   // a GUARDIAN cleric heals earlier (Dinvaya)   // the undead don't count — positive energy can't help them anyway
     const weakestFoe = targets.slice().sort((a, b) => a.hp - b.hp)[0];
     const anyDowned = this.party.some(a => !a.dead && !a.left && a.downed);
     const topCR = Math.max(0, ...targets.map(e => crToNum(e.cr) || 0));
@@ -425,8 +427,14 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         const n = typeof a.dice === 'number' ? a.dice : (a.dice === 'halflevel' ? Math.ceil(lvl / 2) : lvl);
         return Math.min(n, a.dcap || n) * (a.die || 6);
       };
+      // THE STORM CALLER (v3.37.149 — Josh: 'Olbryn would prioritize electric spells... the
+      // crackling staff'): a caster with a lightning staff (lightningCL) or the 'storm' style
+      // weighs electricity blasts at 1.5x and scores coverage × power, so Chain Lightning
+      // outranks a Delayed Blast Fireball (spicy-lantern: 12 fireballs, 0 chain lightning).
+      const _stormy = (m.lightningCL > 0) || _style === 'storm';
+      const pw = (a) => pow(a) * ((_stormy && a.dtype === 'electricity') ? 1.5 : 1);
       const blast = avail.filter(a => DMG.includes(a.effect) && (a.dice || a.die))
-                         .sort((x, y) => (cov(y) - cov(x)) || (pow(y) - pow(x)))[0];
+                         .sort((x, y) => _stormy ? (cov(y) * pw(y) - cov(x) * pw(x)) : ((cov(y) - cov(x)) || (pow(y) - pow(x))))[0];
       if (!blast) return null;
       const weakFirst = targets.slice().sort((a, b) => a.hp - b.hp);
       const cap = blast.maxTargets || 1;
@@ -499,7 +507,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       // cast Divine Power'): a divine melee caster raises its own hammer — Divine Power, then a
       // spirit spell — before it thinks about calling help. Dinvaya cast Summon Monster 16 times
       // across two runs with Divine Power, Spiritual Weapon and Spiritual Ally prepared and unspent.
-      if (/cleric|oracle|inquisitor|warpriest|paladin/.test((m.cls || '').toLowerCase()) && !this._isRanged(m) && targets.length) {
+      if (_style !== 'summoner' && /cleric|oracle|inquisitor|warpriest|paladin/.test((m.cls || '').toLowerCase()) && !this._isRanged(m) && targets.length) {   // a SUMMONER (Jason) skips smiter-first (v3.37.149)
         const _dp = avail.find(a => a.key === 'divinepower');
         if (_dp && !(m.buffApplied && m.buffApplied.divinepower)) return { slot: slot(_dp), payload: {} };
         const _sp = avail.find(a => (a.effect === 'spiritally' && !(m.spiritAlly && m.spiritAlly.rounds > 0)) || (a.effect === 'spiritweapon' && !(m.spiritWeapon && m.spiritWeapon.rounds > 0)));
@@ -507,7 +515,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       }
       // ONE call per room (v3.37.148): the opener re-fired every time the bear died — 'a room
       // full of bears' while the caster's real spells sat unspent. Bots summon once a room.
-      if (summonAb && targets.length && m._summonDepth !== this.depth && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {
+      if (summonAb && targets.length && _style !== 'guardian' && (_style === 'summoner' || m._summonDepth !== this.depth) && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {   // v3.37.149: a SUMMONER calls help every time it falls (Jason, Draymus); a GUARDIAN never summons (Dinvaya)
         m._summonDepth = this.depth;
         return { slot: slot(summonAb), payload: {} };
       }
@@ -671,6 +679,18 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (!m.flying && !m.grappled && targets.some(e => !e.ranged && !e.flying)) {
       const _up = avail.find(a => a.effect === 'overlandflight') || avail.find(a => a.key === 'airwalk') || avail.find(a => a.effect === 'buff' && a.fly);
       if (_up) return { slot: slot(_up), payload: _up.target === 'ally' ? { allyUid: m.playerId } : {} };
+    }
+    // 1a4) THE KNIFE IN THE DARK (v3.37.149 — Josh: 'I have yet to see a wizard or sorcerer
+    //      cast Greater Invisibility on the rogue... rogues do a lot more damage when they get
+    //      all their sneak attack'): with two or more foes up, an arcane caster wraps the party's
+    //      sneak-attacker in Greater Invisibility (touch, PF1) — once per rogue per room, with a
+    //      little rng so it is a tendency, not a script. Below haste and survival, above dispel.
+    {
+      const _gi = avail.find(a => a.key === 'invisgreater' && a.target === 'ally');
+      if (_gi && targets.length >= 2 && Math.random() < 0.7) {
+        const _knife = this.livingParty().find(a => a.playerId !== m.playerId && a.hp > 0 && !a.invisible && !a.greaterInvis && a._giDepth !== this.depth && (a.sneakDice > 0 || /rogue|ninja|slayer|swashbuckler/.test((a.cls || '').toLowerCase())));
+        if (_knife) { _knife._giDepth = this.depth; return { slot: slot(_gi), payload: { allyUid: _knife.playerId, targetUid: _knife.playerId } }; }
+      }
     }
     // 1b) Dispel Magic — free a SPELL-debuffed ally, or strip a foe buff that's
     //     genuinely WORTH the turn (Tobias: bards over-dispelled — grounding

@@ -576,7 +576,7 @@ class Dungeon {
           const flag = ab.persist ? 'runBuffApplied' : 'buffApplied', eqk = (ab.key === 'stoneskin' || ab.key === 'stoneskincomm') ? ['stoneskin', 'stoneskincomm'] : [ab.key];   // v3.37.126: the two Stoneskins are ONE ward
           if ((ab.target === 'ally' || ab.party) ? this.livingParty().every(a => eqk.some(k => (a.buffApplied && a.buffApplied[k]) || (a.runBuffApplied && a.runBuffApplied[k]))) : eqk.some(k => m[flag] && m[flag][k])) return;   // already up — ally/party buffs re-cast each door to SPREAD across the party until everyone carries them (v3.37.123)
           if (ab.cost === 'run' && !((m.runAbilityUses || {})[ab.key] > 0)) return; // none left
-          const r = this._useAbility(m, slot, {});
+          const _need = (ab.target === 'ally' && !ab.party) ? this.livingParty().find(a => !eqk.some(k => (a.buffApplied && a.buffApplied[k]) || (a.runBuffApplied && a.runBuffApplied[k]))) : null; const r = this._useAbility(m, slot, _need ? { allyUid: _need.playerId, targetUid: _need.playerId } : {});   // v3.37.149: an ally-buff goes to the first ally who lacks it (Olbryn re-cast Heroism on HIMSELF at every door — a no-op that burned a 3rd-level slot each room; Josh heard '3rd-level Fly')
           if (r && r.ok) cast.push(`${m.nickname} — ${ab.name}`);
         });
       }

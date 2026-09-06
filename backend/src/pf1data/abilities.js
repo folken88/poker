@@ -1237,6 +1237,47 @@ _injectKitSpell('cleric',   preparedSpell(SPELL.dispelmagicgreater, 11));
 _injectKitSpell('wizard',   preparedSpell(SPELL.dispelmagicgreater, 11));
 _injectKitSpell('sorcerer', spontaneousSpell(SPELL.dispelmagicgreater, 12));
 _injectKitSpell('bard',     spontaneousSpell({ ...SPELL.dispelmagicgreater, slvl: 5 }, 13));
+// THE PF1 LIST AUDIT (v3.37.149 — Josh: 'go through all of your spells and look up their
+// descriptions and see what classes they are available to'): every SPELL was walked against
+// the CRB class lists; these are the entries that were missing. Home additions beyond the
+// book (druid Chain Lightning, wizard Slay Living, oracle Fireball) were left in place.
+_injectKitSpell('wizard',   preparedSpell(SPELL.burninghands, 1));
+_injectKitSpell('wizard',   preparedSpell(SPELL.charmperson, 1));
+_injectKitSpell('wizard',   preparedSpell(SPELL.catsgrace, 3));
+_injectKitSpell('wizard',   preparedSpell(SPELL.gustofwind, 3));
+_injectKitSpell('wizard',   preparedSpell({ ...SPELL.displacement, slvl: 3 }, 5));
+_injectKitSpell('wizard',   preparedSpell({ ...SPELL.greatermagicweapon, slvl: 3 }, 5));
+_injectKitSpell('wizard',   preparedSpell(SPELL.fireshield, 7));
+_injectKitSpell('wizard',   preparedSpell(SPELL.dominateperson, 9));
+_injectKitSpell('wizard',   preparedSpell({ ...SPELL.heroismgreater, slvl: 6 }, 11));
+_injectKitSpell('wizard',   preparedSpell({ ...SPELL.banishment, slvl: 7 }, 13));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.charmperson, 2));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.chilltouch, 2));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.grease, 2));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.invisibility, 4));
+_injectKitSpell('sorcerer', spontaneousSpell({ ...SPELL.displacement, slvl: 3 }, 6));
+_injectKitSpell('sorcerer', spontaneousSpell({ ...SPELL.greatermagicweapon, slvl: 3 }, 6));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.sleetstorm, 6));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.enervation, 8));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.fireshield, 8));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.dominateperson, 10));
+_injectKitSpell('sorcerer', spontaneousSpell({ ...SPELL.heroismgreater, slvl: 6 }, 12));
+_injectKitSpell('sorcerer', spontaneousSpell({ ...SPELL.banishment, slvl: 7 }, 14));
+_injectKitSpell('cleric',   preparedSpell(SPELL.darkness, 3));
+_injectKitSpell('cleric',   preparedSpell({ ...SPELL.banishment, slvl: 6 }, 11));
+_injectKitSpell('cleric',   preparedSpell(SPELL.stormofvengeance, 17));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.darkness, 4));
+_injectKitSpell('oracle',   spontaneousSpell({ ...SPELL.banishment, slvl: 6 }, 12));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.stormofvengeance, 18));
+_injectKitSpell('druid',    preparedSpell(SPELL.gustofwind, 3));
+_injectKitSpell('druid',    preparedSpell({ ...SPELL.flamestrike, slvl: 4 }, 7));
+_injectKitSpell('druid',    preparedSpell({ ...SPELL.stoneskin, slvl: 5 }, 9));
+_injectKitSpell('druid',    preparedSpell({ ...SPELL.healspell, slvl: 7 }, 13));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.darkness, 4));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.invisibility, 4));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.dimensiondoor, 10));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.freedommove, 10));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.invisgreater, 10));
 _injectKitSpell('cleric',   preparedSpell(SPELL.bestowcurse, 5));
 _injectKitSpell('oracle',   spontaneousSpell(SPELL.bestowcurse, 5));
 _injectKitSpell('wizard',   preparedSpell({ ...SPELL.bestowcurse, slvl: 4 }, 7));
