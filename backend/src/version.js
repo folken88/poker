@@ -2135,9 +2135,19 @@
 //                     of Vengeance on the cleric, Flame Strike/Stoneskin/Heal on the druid, the
 //                     bard's Invisibility pair, Dimension Door, Freedom of Movement…).
 //                     Tests 239+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.149';
+//  3.37.150 2026-09-07 OVERLAND FLIGHT IS A SPELL (Josh was right and v149's answer was wrong: the raw
+//                     log has 'Olbryn casts Fly on Olbryn' three times in spicy-lantern and once in
+//                     merry-sparrow — my probe cut its output at 70 lines and the casts fell below
+//                     the cut). Cause: every kit copy of Overland Flight was cost 'run', uses 1 —
+//                     ONE cast per dungeon. After the first enemy dispel grounded him it was spent,
+//                     and the re-fly rule's only wings left were 3rd-level Fly — room-long, so re-
+//                     cast at every door. PF1: it is a 5th-level spell cast as often as you have
+//                     slots. Now it costs like any other 5th (slot / room casting) and is a
+//                     standard action; the re-fly rule and the door pass reach for it first.
+//                     Tests 241+; CLIENT_BUILD unchanged.
+const VERSION = '3.37.150';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "Play styles: Jason summons, Dinvaya guards, Olbryn calls the lightning; the rogue gets Greater Invisibility; the door pass stops re-casting Heroism on the caster himself; and 37 missing class entries from the PF1 list audit are in.";
+const HEADLINE = "Overland Flight is a real 5th-level spell now — cast it as often as you have slots — so a grounded caster re-flies with it instead of falling back to 3rd-level Fly every room.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

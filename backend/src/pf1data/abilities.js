@@ -1278,6 +1278,17 @@ _injectKitSpell('bard',     spontaneousSpell(SPELL.invisibility, 4));
 _injectKitSpell('bard',     spontaneousSpell(SPELL.dimensiondoor, 10));
 _injectKitSpell('bard',     spontaneousSpell(SPELL.freedommove, 10));
 _injectKitSpell('bard',     spontaneousSpell(SPELL.invisgreater, 10));
+// OVERLAND FLIGHT IS A SPELL (v3.37.150 — Josh, spicy-lantern / merry-sparrow: 'why is he casting
+// third-level Fly on himself again and again when he has fifth-level Overland Flight?'): every
+// kit copy carried cost 'run', uses 1 — ONE cast per dungeon. The moment an enemy dispel (or a
+// hook) grounded the caster, Overland Flight was spent for the run and the re-fly rule's only
+// wings left were 3rd-level Fly — room-long, so re-cast at every door. PF1: it is a 5th-level
+// spell you cast as often as you have slots. Now it costs like any other 5th (slot for the
+// spontaneous, a room casting for the prepared), a standard action like every other spell.
+for (const [_cls, _k] of Object.entries(KITS)) for (const _a of (_k && _k.abilities) || []) if (_a && _a.key === 'overlandflight') {
+  if (isSpontaneous(_cls)) { _a.cost = 'slot'; delete _a.uses; } else { _a.cost = 'room'; _a.uses = 1; }
+  delete _a.freeAction;
+}
 _injectKitSpell('cleric',   preparedSpell(SPELL.bestowcurse, 5));
 _injectKitSpell('oracle',   spontaneousSpell(SPELL.bestowcurse, 5));
 _injectKitSpell('wizard',   preparedSpell({ ...SPELL.bestowcurse, slvl: 4 }, 7));
