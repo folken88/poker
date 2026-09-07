@@ -899,16 +899,52 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // feat AND a SURPLUS higher slot to spend (never cannibalises its single top slot).
   // Bots skip Quicken (action economy) and Intensify (marginal). Returns a one-shot
   // metamagic set for the cast, or null. Announces its choice.
+  // Expected damage of a dice spell under a metamagic set — PF1 math: Intensify lifts
+  // the dice cap by 5; Empower ×1.5; Maximize = all dice max; Maximize + Empower =
+  // max + half of an average roll (they stack, RAW). The Staff of Lightning's +2 CL
+  // and the caster's level feed the dice count exactly as _spellDice does.
+  _mmExpected(m, ab, mm) {
+    const eab = (mm.intensify && ab.dcap) ? { ...ab, dcap: ab.dcap + 5 } : ab;
+    const clBonus = (m.lightningCL && ab.dtype === 'electricity') ? m.lightningCL : 0;
+    const n = diceCount(eab, (m.level || 1) + clBonus), die = ab.die || 6, avg = n * (die + 1) / 2;
+    return mm.maximize ? n * die + (mm.empower ? avg / 2 : 0) : avg * (mm.empower ? 1.5 : 1);
+  },
+  // THE METAMAGIC CALCULUS (v3.37.151 — Josh: 'intensify + empowered gets more damage than
+  // maximize... that's better DPS for the same slot cost' / 'he ain't using quicken'): a
+  // spontaneous bot no longer reaches for Maximize by reflex. It prices every affordable
+  // combination (Intensify +1, Empower +2, Maximize +3, and their stacks) by EXPECTED
+  // damage per PF1 and takes the best for the slot it can spare — a capped Fireball at
+  // CL 18 comes out Intensified + Empowered (15d6 × 1.5 ≈ 79) over Maximized (60), while
+  // a Chain Lightning already at its 20-dice cap comes out Maximized (120) over Empowered
+  // (105). Then QUICKEN (+4): if the swift action is free and the caster can spare the
+  // higher slot, the spell is quickened and the bot ACTS AGAIN this turn (heroAI). Never
+  // cannibalises its single top slot. Announces its choice.
   _botPickMetamagic(m, ab) {
     if (!ab || ab.cost !== 'slot' || !isSpontaneous(m.cls)) return null;
     if (!['bolt', 'aoe', 'touch', 'rays', 'disintegrate'].includes(ab.effect) || !ab.dice) return null;
     const ff = fighterFeats(m.cls, m.level, this._isRanged(m));
     const slots = m.slots || {}, base = ab.slvl || 1;
-    const surplus = (adj) => { const L = base + adj; return L <= 9 && (slots[L] || 0) > 0 && ((slots[L] || 0) >= 2 || Object.keys(slots).some(k => +k > L && slots[k] > 0)); };
-    let mm = null, word = '';
-    if (ff.maximize && surplus(3))     { mm = { maximize: true }; word = 'MAXIMIZED'; }
-    else if (ff.empower && surplus(2)) { mm = { empower: true };  word = 'EMPOWERED'; }
-    if (mm) this._note(`✨ ${m.nickname} channels a ${word} ${ab.name}!`);
+    const surplus = (adj) => { const L = base + adj; return adj === 0 || (L <= 9 && (slots[L] || 0) > 0 && ((slots[L] || 0) >= 2 || Object.keys(slots).some(k => +k > L && slots[k] > 0))); };
+    const canQ = !!ff.quicken && !m._swiftUsed;
+    const combos = [];
+    for (const Q of [false, true]) for (const I of [false, true]) for (const E of [false, true]) for (const X of [false, true]) {
+      if ((Q && !canQ) || (I && !(ff.intensify && ab.dcap)) || (E && !ff.empower) || (X && !ff.maximize)) continue;
+      const mm = { intensify: I, empower: E, maximize: X, quicken: Q }, adj = (I ? 1 : 0) + (E ? 2 : 0) + (X ? 3 : 0) + (Q ? 4 : 0);
+      if (base + adj > 9 || !surplus(adj)) continue;
+      const dmg = this._mmExpected(m, ab, mm);
+      if (adj > 0 && !Q && dmg <= this._mmExpected(m, ab, {}) * 1.05) continue;   // a 5% gain is not worth a higher slot
+      combos.push({ mm, adj, dmg });
+    }
+    // A QUICKENED cast is a swift action and the bot acts AGAIN — worth more than any single
+    // damage upgrade — so any affordable quickened combo outranks every plain one; within a
+    // tier the best expected damage wins, and the cheaper slot breaks ties.
+    combos.sort((a, b) => ((b.mm.quicken ? 1 : 0) - (a.mm.quicken ? 1 : 0)) || (b.dmg - a.dmg) || (a.adj - b.adj));
+    const best = combos[0];
+    if (!best || best.adj === 0) return null;
+    const mm = best.mm;
+    if (mm.quicken) m._botQuickened = true;
+    const words = [mm.quicken && 'QUICKENED', mm.intensify && 'INTENSIFIED', mm.empower && 'EMPOWERED', mm.maximize && 'MAXIMIZED'].filter(Boolean).join(' ');
+    this._note(`✨ ${m.nickname} channels ${/^[AEIOU]/.test(words) ? 'an' : 'a'} ${words} ${ab.name}!`);
     return mm;
   },
   // Spell damage dice — INTENSIFIED SPELL raises a level-scaled spell's dice cap by +5

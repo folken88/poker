@@ -177,7 +177,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       // lock a bruiser (Hold Monster), blast a cluster (Fireball/Cone/Chain),
       // delete the toughest (Disintegrate/Finger of Death), finish the wounded
       // (Magic Missile), or freeze one with its dread gaze.
-      if (e.arcane && this._targetableParty().length) return this._lichCast(e);
+      if (e.arcane && this._targetableParty().length) { this._lichCast(e); if (e._quickTurn !== this.round || e.hp <= 0) return; e._quickTurn = null; this._note(`⚡ ${e.glyph} ${e.name}'s quickened spell leaves it free to act — it presses on!`, null, { side: 'enemy' }); }   // v3.37.151: a QUICKENED blast is a swift action — the caster keeps its turn
       // Skeletal Champion: a bone-rattling shout — 1d8 + save-or-stunned.
       if (e.shout && e.shoutsLeft > 0 && dRoll(2) === 1) {
         // Undead heroes are immune to the stun (and to fear) — shout at the living.
@@ -987,6 +987,10 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   // MAXIMIZE (all dice max) a blast or nuke. Spell DC is unchanged (PF1 metamagic
   // never raises the DC), and the roll happens in _enemyBlast/_enemyNuke via cfg.meta.
   _enemyMeta(e, cl, cfg) {
+    // QUICKEN parity (v3.37.151 — Josh: 'we both should be using Quicken'): a CL17+ caster may
+    // quicken a blast of 5th level or lower once per room (a swift action, +4 levels — the
+    // 9th slot) and then press its NORMAL action too (_enemyAct continues past _lichCast).
+    if (cl >= 17 && (cfg.slvl || 9) <= 5 && !e._quickUsed && dRoll(3) === 1) { e._quickUsed = true; cfg.quick = true; e._quickTurn = this.round; cfg.verb = cfg.verb.replace(/\b(?=[A-Z]{3,})/, 'QUICKENED '); }
     if (cl >= 16 && !e._maxUsed && dRoll(3) === 1) { e._maxUsed = true; cfg.meta = 'MAXIMIZED'; }
     else if (cl >= 12 && !e._empUsed && dRoll(3) <= 2) { e._empUsed = true; cfg.meta = 'EMPOWERED'; }
     if (cfg.meta) cfg.verb = cfg.verb.replace(/\b(?=[A-Z]{3,})/, `${cfg.meta} `).replace(/\ba (EMPOWERED)/, 'an $1');

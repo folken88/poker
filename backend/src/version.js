@@ -2145,9 +2145,22 @@
 //                     slots. Now it costs like any other 5th (slot / room casting) and is a
 //                     standard action; the re-fly rule and the door pass reach for it first.
 //                     Tests 241+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.150';
+//  3.37.151 2026-09-07 THE METAMAGIC CALCULUS (Josh: 'intensify + empowered gets more damage than
+//                     maximize for the same slot cost... he ain't using quicken... we both should').
+//                     (1) A spontaneous bot no longer reaches for Maximize by reflex: it prices every
+//                     affordable Intensify/Empower/Maximize combination by EXPECTED damage per PF1
+//                     (max + half-roll when they stack) and takes the best for the slot it can spare
+//                     — a capped Fireball at CL 18 is Intensified + Empowered (~79) over Maximized
+//                     (60); a Chain Lightning at its 20-dice cap is Maximized (120) over Empowered
+//                     (105). merry-sparrow: 14 of 14 Chain Lightnings were Maximized by reflex.
+//                     (2) QUICKEN, both sides: a bot with the feat and a spare slot quickens a blast
+//                     (swift, +4 levels) and ACTS AGAIN — picks and casts its real spell; a CL17+
+//                     enemy caster quickens a 5th-or-lower blast once per room and keeps its turn.
+//                     (3) The guardian style heals at 60% (Josh: '55 to 60% seems reasonable').
+//                     Tests 242+; CLIENT_BUILD unchanged.
+const VERSION = '3.37.151';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "Overland Flight is a real 5th-level spell now — cast it as often as you have slots — so a grounded caster re-flies with it instead of falling back to 3rd-level Fly every room.";
+const HEADLINE = "The metamagic calculus: bot casters price Intensify, Empower and Maximize by real expected damage instead of grabbing Maximize by reflex, and Quicken is finally used — by your casters and the enemy's.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

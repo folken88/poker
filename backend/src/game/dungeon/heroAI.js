@@ -198,11 +198,17 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }   // free action (judgement) → keep acting
       // Curator: after a quickened (swift) buff, immediately try ONE more support
       // action — a second buff — before falling through to a melee strike.
-      if (r && r.ok && r.freeAction && this._wieldsCurator(m)) {
+      // v3.37.151: a metamagic QUICKENED cast (the swift action, per PF1) earns the same
+      // second act — the bot picks again and casts its real spell (Josh: 'he ain't using
+      // quicken... it is built to be badass and we should be using it, on both sides').
+      const _quick = !!m._botQuickened; m._botQuickened = false;
+      if (r && r.ok && r.freeAction && (this._wieldsCurator(m) || _quick)) {
         const c2 = this._botAbility(m);
         if (c2) {
-          const ab2 = kitFor(m.cls).abilities[c2.slot];
+          const ab2 = this._abilitiesFor(m)[c2.slot];
+          if (_quick) m._botMM = this._botPickMetamagic(m, ab2);
           const r2 = this._useAbility(m, c2.slot, c2.payload);
+          m._botMM = null; m._botQuickened = false;
           if (r2 && r2.ok && ab2) m._lastAbilityKey = ab2.key;
           if (r2 && r2.ok && !r2.freeAction) { this._hasteBonus(m); return; }
         }
@@ -414,7 +420,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     }
     const allies = this.livingParty();
     const _style = ((BUILDS[m.nickname] || {}).style) || '';   // v3.37.149 (Josh): 'summoner' | 'guardian' | 'storm' | '' — see characterBuilds
-    const someoneHurt = allies.some(a => !a.undead && a.hp < a.maxHp * (_style === 'guardian' ? 0.7 : 0.55));   // a GUARDIAN cleric heals earlier (Dinvaya)   // the undead don't count — positive energy can't help them anyway
+    const someoneHurt = allies.some(a => !a.undead && a.hp < a.maxHp * (_style === 'guardian' ? 0.6 : 0.55));   // a GUARDIAN cleric heals a touch earlier (Dinvaya — Josh: '55 to 60% seems reasonable'; v3.37.151)   // the undead don't count — positive energy can't help them anyway
     const weakestFoe = targets.slice().sort((a, b) => a.hp - b.hp)[0];
     const anyDowned = this.party.some(a => !a.dead && !a.left && a.downed);
     const topCR = Math.max(0, ...targets.map(e => crToNum(e.cr) || 0));
