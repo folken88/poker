@@ -2158,9 +2158,13 @@
 //                     enemy caster quickens a 5th-or-lower blast once per room and keeps its turn.
 //                     (3) The guardian style heals at 60% (Josh: '55 to 60% seems reasonable').
 //                     Tests 242+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.151';
+//  3.37.152 2026-09-09 SEMANTICS (Josh: 'Olbryn would not and can not channel anything — that is a
+//                     cleric's feature'): a metamagic'd spell is announced as SHAPED ('Olbryn shapes
+//                     an INTENSIFIED EMPOWERED Chain Lightning!'), never 'channeled' — the verb is
+//                     the cleric's alone. Test 245; CLIENT_BUILD unchanged.
+const VERSION = '3.37.152';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "The metamagic calculus: bot casters price Intensify, Empower and Maximize by real expected damage instead of grabbing Maximize by reflex, and Quicken is finally used — by your casters and the enemy's.";
+const HEADLINE = "A metamagic spell is shaped, never channeled — channeling belongs to the clerics.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
