@@ -944,7 +944,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const mm = best.mm;
     if (mm.quicken) m._botQuickened = true;
     const words = [mm.quicken && 'QUICKENED', mm.intensify && 'INTENSIFIED', mm.empower && 'EMPOWERED', mm.maximize && 'MAXIMIZED'].filter(Boolean).join(' ');
-    this._note(`✨ ${m.nickname} channels ${/^[AEIOU]/.test(words) ? 'an' : 'a'} ${words} ${ab.name}!`);
+    this._note(`✨ ${m.nickname} shapes ${/^[AEIOU]/.test(words) ? 'an' : 'a'} ${words} ${ab.name}!`);   // v3.37.152 (Josh: 'Olbryn cannot channel anything — that is a cleric feature'): a metamagic'd spell is SHAPED, never channeled
     return mm;
   },
   // Spell damage dice — INTENSIFIED SPELL raises a level-scaled spell's dice cap by +5
