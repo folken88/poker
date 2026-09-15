@@ -300,6 +300,12 @@ const SPELL = {
   fear:       { key: 'fear',       name: 'Fear',        icon: '😨', effect: 'save_debuff', debuff: 'panicked', save: 'will', mindAffect: true, shakenOnSave: true, target: 'enemy', maxTargets: 6, slvl: 4, sound: '/audio/enemy_lich_gaze.mp3', desc: 'A cone of dread — up to 6 foes, any size: Will save or each is PANICKED for one round per caster level (max 10) — it flees and loses its turns; a made save leaves it shaken for one round. Mind-affecting. (Adaptation: the cone is the field, no grid.)' },
   confusion:  { key: 'confusion',  name: 'Confusion',   icon: '🤪', effect: 'save_debuff', debuff: 'confused', save: 'will', mindAffect: true, target: 'enemy', maxTargets: 4, slvl: 4, sound: '/audio/spell_umbral_bolt.mp3', desc: 'Up to 4 foes: Will save or CONFUSED for one round per caster level (max 10) — each turn it rolls the book\'s table: 25% acts normally, 25% babbles, 25% hurts itself (1d8 + Str), 25% attacks its nearest ally. Mind-affecting.' },
   feeblemind: { key: 'feeblemind', name: 'Feeblemind',  icon: '🧠', effect: 'save_debuff', debuff: 'feebleminded', save: 'will', mindAffect: true, target: 'enemy', slvl: 5, sound: '/audio/spell_umbral_bolt.mp3', desc: 'One foe: Will save (arcane casters take −4) or its Intelligence and Charisma drop to 1 for the rest of the room — it cannot cast spells at all. The anti-caster hammer. Mind-affecting.' },
+  // ── CRB BATCH 4: DIVINE STAPLES (v3.37.154) ──
+  deeperdarkness: { key: 'deeperdarkness', name: 'Deeper Darkness', icon: '🌑', effect: 'darkness', deep: true, target: 'aoe', randBase: 2, randDie: 4, rounds: 3, slvl: 3, sound: S.umbral, desc: 'Supernatural darkness swallows a RANDOM 1d4+2 foes for 3 rounds: they cannot act and cannot be hit. Unlike Darkness, ordinary darkvision does NOT pierce it — only True Seeing or blindsense can find them. Snuffs a Daylight in the room (equal level, PF1).' },
+  daylight:       { key: 'daylight',       name: 'Daylight',        icon: '🌞', effect: 'daylight', target: 'self', slvl: 3, sound: S.invoke, desc: 'Brilliant light fills the room: every magical darkness on the field (Darkness, Obscuring Mist) is dispelled, and no lesser darkness can form here for the rest of the room. Not true sunlight — it does not burn the undead (PF1). (Adaptation: the room is the area; no foe casts darkness today, so this is the counter waiting for its foe.)' },
+  removeparalysis:{ key: 'removeparalysis',name: 'Remove Paralysis', icon: '🩹', effect: 'cleanse', target: 'ally', slvl: 2, sound: S.cure, desc: 'Free an ally from paralysis or slow — ANY source, even a ghoul’s touch, no check needed (PF1).' },
+  removeblindness:{ key: 'removeblindness',name: 'Remove Blindness/Deafness', icon: '👁️', effect: 'cleanse', removeBlind: true, target: 'ally', slvl: 3, sound: S.cure, desc: 'Cure an ally of blindness — any source, no check needed (PF1). Deafness has no surface in this dungeon.' },
+  harm:           { key: 'harm',           name: 'Harm',            icon: '🖤', effect: 'touch', harm: true, dtype: 'negative', save: 'will', target: 'enemy', slvl: 6, sound: S.umbral, desc: 'A touch that charges a living foe with negative energy: 10 damage per caster level (max 150), Will save for half. The undead are HEALED by it instead — never aim it at them (PF1).' },
   bladebarrier:   { key: 'bladebarrier',   name: 'Blade Barrier',     icon: '🌪️', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, slvl: 6, sound: '/audio/spell_holysmite.mp3', desc: 'A whirling wall of blades slices through up to 4 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
   firestorm:      { key: 'firestorm',      name: 'Fire Storm',        icon: '🌋', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'fire', slvl: 8, sounds: FIREBALL_SFX, desc: 'Sheets of divine flame roar over up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
   massheal:       { key: 'massheal',       name: 'Mass Heal',         icon: '💗', effect: 'heal', heal: 'party', massHeal: true, healDice: 15, healCap: 25, target: 'ally', slvl: 9, sound: '/audio/spell_channel_charge.mp3', desc: 'A tidal wave of positive energy — the WHOLE party heals 15d8 + caster level (max +25).' },
@@ -1303,6 +1309,28 @@ _injectKitSpell('wizard',   preparedSpell(SPELL.confusion, 7));
 _injectKitSpell('sorcerer', spontaneousSpell(SPELL.confusion, 8));
 _injectKitSpell('wizard',   preparedSpell(SPELL.feeblemind, 9));
 _injectKitSpell('sorcerer', spontaneousSpell(SPELL.feeblemind, 10));
+// CRB BATCH 4 — DIVINE STAPLES (v3.37.154): Deeper Darkness (Clr/Sor/Wiz 3), Daylight (Brd/Clr/Drd/
+// Sor/Wiz 3), Remove Blindness/Deafness (Clr 3, Pal 3), Remove Paralysis owed to the paladin (Pal 2),
+// Harm (Clr 6). Neutralize Poison is deferred — the engine has no poison condition to cure.
+_injectKitSpell('cleric',   preparedSpell(SPELL.deeperdarkness, 5));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.deeperdarkness, 6));
+_injectKitSpell('wizard',   preparedSpell(SPELL.deeperdarkness, 5));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.deeperdarkness, 6));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.daylight, 7));
+_injectKitSpell('cleric',   preparedSpell(SPELL.daylight, 5));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.daylight, 6));
+_injectKitSpell('druid',    preparedSpell(SPELL.daylight, 5));
+_injectKitSpell('wizard',   preparedSpell(SPELL.daylight, 5));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.daylight, 6));
+_injectKitSpell('cleric',   preparedSpell(SPELL.removeblindness, 5));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.removeblindness, 6));
+_injectKitSpell('paladin',  preparedSpell(SPELL.removeblindness, 10));
+_injectKitSpell('cleric',   preparedSpell(SPELL.removeparalysis, 3));    // Clr 2 — the old kit literal was baked over by kits.generated (v3.37.154 audit)
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.removeparalysis, 4));
+_injectKitSpell('paladin',  preparedSpell(SPELL.removeparalysis, 7));    // Pal 2
+_injectKitSpell('cleric',   preparedSpell(SPELL.harm, 11));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.harm, 12));
+// (end batch 4)
 // OVERLAND FLIGHT IS A SPELL (v3.37.150 — Josh, spicy-lantern / merry-sparrow: 'why is he casting
 // third-level Fly on himself again and again when he has fifth-level Overland Flight?'): every
 // kit copy carried cost 'run', uses 1 — ONE cast per dungeon. The moment an enemy dispel (or a

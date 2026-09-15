@@ -2174,9 +2174,18 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.153';
+//  3.37.154 2026-09-15 CRB BATCH 4 — DIVINE STAPLES. Deeper Darkness (Clr/Sor/Wiz 3: 1d4+2 foes, 3
+//                     rounds, ordinary darkvision does NOT pierce it — True Seeing / blindsense only;
+//                     snuffs a Daylight), Daylight (Brd/Clr/Drd/Sor/Wiz 3: lifts every magical
+//                     darkness and blocks lesser darkness for the room), Remove Blindness/Deafness
+//                     (Clr 3, Pal 3: cures blindness, no check — and Remove Paralysis never needed
+//                     one either; the paladin gets his Remove Paralysis at 2nd), Harm (Clr 6: 10/
+//                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
+//                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
+//                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
+const VERSION = '3.37.154';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "CRB batch 3 — fear and the mind: Cause Fear, Scare, Fear, Confusion and Feeblemind, with frightened, confused and feebleminded foes that flee, babble, savage their own allies, or lose their spells.";
+const HEADLINE = "CRB batch 4 — divine staples: Deeper Darkness, Daylight, Remove Blindness, Harm, and the paladin's Remove Paralysis.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

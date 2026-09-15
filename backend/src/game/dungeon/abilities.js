@@ -373,6 +373,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       sleep:       () => this._abSleep(m, ab, payload),
       slow:        () => this._abSlow(m, ab, payload),
       darkness:    () => this._abDarkness(m, ab),
+      daylight:    () => this._abDaylight(m, ab),
       rapidshot:   () => this._abRapidShot(m, ab, payload),
       bullseye:    () => this._abBullseye(m, ab, payload),
       stunfist:    () => this._abStunningFist(m, ab, payload),
@@ -1926,9 +1927,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // PHYSICAL and stay (struggle, Grease, or heal them instead). REMOVE
     // PARALYSIS is the exception spell: it frees paralysis of ANY source —
     // even a ghoul's Su touch, which Dispel can't reach — plus Slow (PF1).
-    const isRemovePara = ab.key === 'removeparalysis';
+    const isRemovePara = ab.key === 'removeparalysis', isRemoveBlind = !!ab.removeBlind;   // Remove Blindness/Deafness (v3.37.154, CRB batch 4)
     const sev = isRemovePara
       ? (a) => (a.paralyzed > 0 ? 5 : 0) + (a.slowed > 0 ? 2 : 0)
+      : isRemoveBlind ? (a) => (a.blinded > 0 ? 3 : 0)
       : (a) => ((a.paralyzed > 0 && a.heldDC != null) ? 5 : 0) + (a.slowed > 0 ? 2 : 0) + (a.blinded > 0 ? 2 : 0);
     // EXPLICIT pick (human party-card / enemy selection) — honor it. Invalid
     // explicit targets were already refused in _useAbility with a told-to-the-
@@ -1944,15 +1946,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
                : (!explicit ? this.livingParty().filter(a => sev(a) > 0).sort((x, y) => sev(y) - sev(x))[0] : null);
     if (hurt) {
       const effectCL = this._dispellableCL(hurt);   // DC = 11 + the EFFECT's caster level (PF1), not depth
-      const dc = this._dispelCheck(m, effectCL, ab.greater);
+      const dc = (isRemovePara || isRemoveBlind) ? { ok: true, roll: '—', cl: 0, total: 'auto', dc: '—' } : this._dispelCheck(m, effectCL, ab.greater);   // the Remove spells need no check (PF1) — v3.37.154
       if (!dc.ok) {   // the weave HOLDS
         this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — but the hostile magic HOLDS! [dispel d20 ${dc.roll} +${dc.cl} = ${dc.total} vs DC ${dc.dc}]`, FAIL_SOUND);
         this._echoToTable(FAIL_SOUND); return;
       }
       const cleared = [];
       // Spell effects only (see the ruling above) — grapple/stun/sickness/nausea stay.
-      if (hurt.paralyzed > 0 && (isRemovePara || hurt.heldDC != null)) { hurt.paralyzed = 0; hurt.heldDC = null; cleared.push('paralysis'); }
-      if (hurt.slowed > 0)    { hurt.slowed = 0; hurt._slowTick = 0; cleared.push('slow'); }
+      if (hurt.paralyzed > 0 && (isRemovePara || (!isRemoveBlind && hurt.heldDC != null))) { hurt.paralyzed = 0; hurt.heldDC = null; cleared.push('paralysis'); }
+      if (!isRemoveBlind && hurt.slowed > 0)    { hurt.slowed = 0; hurt._slowTick = 0; cleared.push('slow'); }
       if (!isRemovePara && hurt.blinded > 0) { hurt.blinded = 0; cleared.push('blindness'); }
       // Name what dispel CAN'T touch that's still on them (v3.37.81 — Josh, run
       // proud-waffle: heard "clears paralysis" then still lost his turn to a
@@ -2673,6 +2675,14 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const sound = ab.sound || pick(SND.lightning);
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
     if (this._rayEvades(m, e, ab)) { this._echoToTable(sound); return; }   // v3.37.148: images / concealment (PF1)
+    if (ab.harm) {   // HARM (v3.37.154, CRB batch 4): 10 per caster level (max 150) negative energy, Will half; the undead are HEALED (PF1)
+      const lvl = Math.max(1, m.level || 1), amt = Math.min(150, 10 * lvl);
+      if (e.type === 'undead') { const before = e.hp; e.hp = Math.min(e.maxHp || e.hp, e.hp + amt); this._note(`${ab.icon} ${m.nickname}'s ${ab.name} pours negative energy into ${e.name} — the undead thing MENDS ${e.hp - before} HP!`, sound); this._echoToTable(sound); return; }
+      const dc = this._spellDC(m, ab), sv = this._saveVs(this._enemySave(e, 'will'), dc);
+      const dealt = this._dmgE(e, sv.saved ? Math.floor(amt / 2) : amt, 'negative');
+      this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} — ${dealt} negative energy${sv.saved ? ` (Will ${sv.total} vs DC ${dc}: halved)` : ` [Will ${sv.total} vs DC ${dc}]`}.${this._afterEnemyHit(e)}`, sound);
+      this._echoToTable(sound); return;
+    }
     // SEARING LIGHT (ab.searing) — PF1's per-target-type damage table:
     //   • normal creature        : 1d8 per 2 levels (max 5d8)  [the ab.die/dice default]
     //   • undead                 : 1d6 per level     (max 10d6)
@@ -2789,15 +2799,29 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // Fascinate: up to maxTargets foes stand enthralled, losing turns until struck.
   // Darkness (wizard/sorcerer): shroud a RANDOM 1d3 foes — they can't act AND can't
   // be targeted for 2 of their turns (see _advanceToActor decrement + _targetableEnemies).
+  // DAYLIGHT (v3.37.154, CRB batch 4): brilliant light fills the room — every magical darkness
+  // on the field lifts, and no LESSER darkness (Darkness 2nd, Obscuring Mist) can form here for
+  // the rest of the room. Deeper Darkness (equal level) snuffs it instead (PF1's level duel).
+  _abDaylight(m, ab) {
+    const lifted = this.enemies.filter(e => e.hp > 0 && e.darkened > 0);
+    for (const e of lifted) { e.darkened = 0; e.darkenedDeep = false; }
+    this._daylightDepth = this.depth;
+    const sound = ab.sound || pick(SND.stink);
+    this._note(`${ab.icon} ${m.nickname} calls DAYLIGHT into the room — ${lifted.length ? `the darkness lifts from ${lifted.map(e => e.name).join(', ')}` : 'no darkness to burn away'}; no lesser darkness can form here for the rest of the room.`, sound);
+    this._echoToTable(sound);
+  },
   _abDarkness(m, ab) {
+    if (this._daylightDepth === this.depth && !ab.deep) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} cannot take hold — the DAYLIGHT burns it away before it forms.`); this._echoToTable(); return; }   // v3.37.154
+    if (this._daylightDepth === this.depth && ab.deep) { this._daylightDepth = null; this._note(`${ab.icon} ${m.nickname}'s ${ab.name} SNUFFS the Daylight — the room goes dark again.`); }
     const living = this._targetableEnemies().slice();   // don't re-darken already-shrouded foes
     for (let i = living.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [living[i], living[j]] = [living[j], living[i]]; }
     const n = (ab.randBase || 0) + dRoll(ab.randDie || ab.randFoes || 3);   // Darkness: 1d4+1 foes
     const chosen = living.slice(0, n);
     if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} conjures ${ab.name}, but there's no one to shroud.`); this._echoToTable(); return; }
-    for (const e of chosen) { e.darkened = 2; e.flatFooted = true; }
+    const rounds = ab.rounds || 2;   // Deeper Darkness (v3.37.154): 3 rounds, and ordinary darkvision does not pierce it (darkenedDeep)
+    for (const e of chosen) { e.darkened = rounds; e.darkenedDeep = !!ab.deep; e.flatFooted = true; }
     const sound = ab.sound || pick(SND.stink);
-    this._note(`${ab.icon} ${m.nickname} drowns ${chosen.map(e => e.name).join(', ')} in DARKNESS — gone for 2 rounds (can't act, can't be hit).`, sound);
+    this._note(`${ab.icon} ${m.nickname} drowns ${chosen.map(e => e.name).join(', ')} in ${ab.deep ? 'DEEPER DARKNESS' : 'DARKNESS'} — gone for ${rounds} rounds (can't act, can't be hit${ab.deep ? '; only True Seeing or blindsense finds them' : ''}).`, sound);
     this._echoToTable(sound);
   },
   _abFascinate(m, ab, payload) {

@@ -572,7 +572,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       //     Wind, mass Hold): now there's TIME to dispel a buffed foe / free a debuffed
       //     ally, or debuff a foe still standing.
       if (controlled) {
-        const cleanse = avail.find(a => a.effect === 'cleanse');
+        const cleanse = (allies.some(a => a.blinded > 0) && avail.find(a => a.removeBlind)) || (allies.some(a => a.paralyzed > 0) && avail.find(a => a.key === 'removeparalysis')) || avail.find(a => a.effect === 'cleanse' && !a.removeBlind && a.key !== 'removeparalysis') || avail.find(a => a.effect === 'cleanse');   // v3.37.154: the right cleanse for the affliction (Remove Blindness for the blind, Remove Paralysis for the held, Dispel for the rest)
         if (cleanse) {
           const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0);   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
           // Foe-side dispel ECONOMICS (Tobias: bards over-dispelled): grounding
@@ -702,7 +702,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     //     genuinely WORTH the turn (Tobias: bards over-dispelled — grounding
     //     spell-flight yes, peeling a Shield ward no; otherwise fall through to
     //     fight/buff/debuff/heal like a real bard).
-    const cleanse = avail.find(a => a.effect === 'cleanse');
+    const cleanse = (allies.some(a => a.blinded > 0) && avail.find(a => a.removeBlind)) || (allies.some(a => a.paralyzed > 0) && avail.find(a => a.key === 'removeparalysis')) || avail.find(a => a.effect === 'cleanse' && !a.removeBlind && a.key !== 'removeparalysis') || avail.find(a => a.effect === 'cleanse');   // v3.37.154: the right cleanse for the affliction (Remove Blindness for the blind, Remove Paralysis for the held, Dispel for the rest)
     if (cleanse) {
       const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0);   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
       // FUTILITY: two failed dispels against this foe this room (its effective CL

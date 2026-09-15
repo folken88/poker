@@ -118,13 +118,32 @@ mind-affecting: the undead and constructs are immune.
    the room; "permanent" collapses to the room, and the skill/language loss
    has no surface here.
 
+## Batch 4 — divine staples (v3.37.154)
+
+1. **Deeper Darkness** (Clr/Sor/Wiz 3) 🔧 — rides the darkness system: 1d4+2
+   random foes, 3 rounds, and ordinary darkvision does NOT pierce it (True
+   Seeing / blindsense only). Snuffs a Daylight in the room (PF1's level duel).
+2. **Daylight** (Brd/Clr/Drd/Sor/Wiz 3) 🔧 — lifts every magical darkness on
+   the field and blocks lesser darkness for the room. Not sunlight (no undead
+   burn, RAW). Honest note: no foe casts darkness today, so it is a counter
+   waiting for its foe.
+3. **Neutralize Poison** (Brd 4/Clr 4/Drd 3/Pal 4/Rgr 3) 🚫 — the engine has
+   no poison condition to cure (poison exists only as a damage type the undead
+   ignore). Revisit with the first poisoning monster.
+4. **Remove Blindness/Deafness** (Clr 3, Pal 3) 🔧 — cures blindness, any
+   source, no check (PF1). Deafness has no surface here. (Remove Paralysis was
+   found living ONLY on the druid — the cleric's copy was a dead kit literal —
+   so it now has a real entry on cleric 2, oracle and paladin 2, and needs no
+   check, RAW. The druid's home copy stays.)
+5. **Harm** (Clr 6) ✅ — touch, 10/level negative energy (max 150), Will half;
+   the undead are healed by it, and the bots know never to aim it at them.
+
+Death Ward moved to batch 5 (wards).
+
 ## Queued (batches of 5, in priority order)
 
-- **Batch 4 — divine staples:** Death Ward, Silence… (moved to 1) → Deeper
-  Darkness, Daylight, Neutralize Poison, Remove Blindness/Paralysis (cleanse
-  pass), Harm.
 - **Batch 5 — condition removal & wards:** Restoration (+Lesser), Remove
-  Curse, Remove Fear, Spell Resistance, Globe of Invulnerability.
+  Curse, Remove Fear, Spell Resistance, Globe of Invulnerability, Death Ward.
 - **Batch 6 — blasts & rays:** Acid Fog, Incendiary Cloud, Phantasmal Killer,
   Weird, Contagion.
 - **Batch 7 — summon fill:** Summon Monster I–III/V/VII/IX + Nature's Ally
