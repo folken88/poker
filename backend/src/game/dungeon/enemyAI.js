@@ -74,12 +74,35 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     if (t === 'animal' || t === 'magical beast' || t === 'vermin' || t === 'dragon' || t === 'ooze' || e.natural) return pick(SND.hitBeast);
     return pick(SND.hitBlade);   // humanoids / outsiders / fey / default — weapon impacts
   },
+  // ── CRB BATCH 3: FEAR & THE MIND (v3.37.153) ── a FRIGHTENED / PANICKED foe flees: it loses
+  // its turn (and is shaken — the −2 rides on sickened). A CONFUSED foe rolls the book's
+  // table each turn: 1-25 acts normally, 26-50 babbles, 51-75 hurts itself (1d8 + Str), 76-100
+  // attacks the nearest creature — its own ally. Returns true when the condition ate the turn.
+  _ccTurn(e) {
+    if (e.frightened > 0) { e.frightened--; this._note(`😱 ${e.glyph} ${e.name} FLEES in terror — does nothing this round${e.frightened ? ` (${e.frightened} rd of panic left)` : ', then steadies itself'}.`, null, { side: 'enemy' }); return true; }
+    if (e.confused > 0) {
+      e.confused--;
+      const r = dRoll(100);
+      if (r <= 25) { this._note(`🤪 ${e.glyph} ${e.name}, confused, finds a moment of clarity — and acts.`, null, { side: 'enemy' }); return false; }
+      if (r <= 50) { this._note(`🤪 ${e.glyph} ${e.name} babbles incoherently — does nothing.`, null, { side: 'enemy' }); return true; }
+      if (r <= 75) { const dmg = dRoll(8) + Math.max(0, e.dmgBonus || 0); this._dmgE(e, dmg); this._note(`🤪 ${e.glyph} ${e.name}, confused, claws at ITSELF for ${dmg}.${this._afterEnemyHit(e)}`, null, { side: 'enemy' }); return true; }
+      const kin = this.livingEnemies().filter(x => x.uid !== e.uid && x.hp > 0 && !x.summoned);
+      if (!kin.length) { this._note(`🤪 ${e.glyph} ${e.name} swings at shadows — no ally near to strike.`, null, { side: 'enemy' }); return true; }
+      const prey = kin.slice().sort((a, b) => b.maxHp - a.maxHp)[0];
+      const rr = this._monsterSwing(e, this._enemyAC(prey));
+      if (rr.hit) { this._dmgE(prey, rr.damage); this._note(`🤪 ${e.glyph} ${e.name}, CONFUSED, savages its ally ${prey.name} for ${rr.damage}!${prey.hp <= 0 ? ' ☠️ Slain!' : ''}`, null, { side: 'enemy' }); }
+      else this._note(`🤪 ${e.glyph} ${e.name}, CONFUSED, claws at its ally ${prey.name} — and misses.`, null, { side: 'enemy' });
+      return true;
+    }
+    return false;
+  },
   _enemyAct(e) {
     e.flatFooted = false;   // acting ends flat-footed
     // MAZE (v3.37.124): lost in the labyrinth — no turn, untargetable, back when the counter runs out.
     if (e.mazed > 0) { e.mazed--; this._note(`🌀 ${e.glyph} ${e.name} wanders the extradimensional maze${e.mazed ? ' — lost to the fight' : ' — and FINDS THE EXIT! It returns, furious'}.`, null, { side: 'enemy' }); this._echoToTable(); return; }
     if (e.hasted > 0) e.hasted--;   // enemy Haste (v3.37.126) burns down one round per turn
     if (e.silenced > 0) e.silenced--;   // Silence (v3.37.129) fades one round per turn — the cast gates below check what's left
+    if (this._ccTurn(e)) { this._echoToTable(); this._broadcast(); return; }   // v3.37.153: fear / confusion consumed the turn
     // PF1: standing up from prone is a MOVE ACTION. A slowed (staggered) creature's
     // single action is spent entirely on standing; everyone else stands and has
     // only their STANDARD left (one attack on the same target, or spend it closing
@@ -101,7 +124,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // damage path). Overrides a taunt (a charmed foe won't be goaded into swinging).
     if (e.charmed) {
       e.taunted = null;
-      if (e.healer && e.healsLeft > 0) {
+      if (e.healer && e.healsLeft > 0 && !e.feebleminded) {   // Feeblemind (v3.37.153): no divine casting either
         // A CONSTRUCT's repair works ONLY on machines — it can't mend organic allies
         // (living OR dead). See the canMend note in the main healer branch below.
         const wounded = this.livingEnemies().filter(x => x !== e && x.hp > 0 && x.hp <= x.maxHp * 0.5 && (e.type !== 'construct' || x.type === 'construct'))
@@ -127,7 +150,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       // Enemy CLERICS tend their own: a priestly foe with healing left mends the
       // most-wounded living ally (itself included) once anyone drops below half —
       // but never wastes the prayer when the line is still healthy.
-      if (e.healer && e.healsLeft > 0) {
+      if (e.healer && e.healsLeft > 0 && !e.feebleminded) {   // Feeblemind (v3.37.153): no divine casting either
         // SELECTIVE CHANNELING (Tobias 2026-07-03 — every channeler takes it): an
         // UNDEAD priest with 2+ wounded undead allies bursts negative energy over
         // ALL of them at once — and the feat keeps its LIVING allies out of the
@@ -166,7 +189,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       // the rite is spent — so the party feels the horde swell. See _enemySummon.
       if (e.summon && e.summonLeft > 0 && (this.round <= 2 || dRoll(2) === 1)) return this._enemySummon(e);
       // Kobold shaman: cast Hold Person on an unheld target before resorting to melee.
-      if (e.caster === 'holdperson' && e.castsLeft > 0 && !(e.silenced > 0)) {   // Silence (v3.37.129): a muted shaman can't shape the hold
+      if (e.caster === 'holdperson' && e.castsLeft > 0 && !(e.silenced > 0) && !e.feebleminded) {   // Silence (v3.37.129): a muted shaman can't shape the hold
         // Smart caster: never Hold an UNDEAD hero — no mind to seize (same
         // knowledge the hero bots use; Tobias: "enemies play smart").
         const free = this._targetableParty().filter(m => !(m.paralyzed > 0) && !m.undead);
@@ -809,9 +832,9 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     if (!heroes.length) return;
     // SILENCE (v3.37.129, CRB batch 1): a silenced caster cannot shape a spell —
     // it snarls into the muffling dome and falls back on bare steel.
-    if (e.silenced > 0) {
+    if (e.silenced > 0 || e.feebleminded) {   // Feeblemind (v3.37.153): a feebleminded caster cannot cast for the room
       const t = pick(heroes);
-      this._note(`🤫 ${e.glyph} ${e.name} mouths arcane words into the SILENCE — nothing comes. It falls on ${t ? t.nickname : 'the party'} with steel instead.`, null, { side: 'enemy' });
+      this._note(`${e.feebleminded ? '🧠' : '🤫'} ${e.glyph} ${e.name} ${e.feebleminded ? 'gropes for arcane words its FEEBLE mind can no longer hold' : 'mouths arcane words into the SILENCE'} — nothing comes. It falls on ${t ? t.nickname : 'the party'} with steel instead.`, null, { side: 'enemy' });
       if (t) this._enemyMelee(e, t);
       this._echoToTable(); return;
     }

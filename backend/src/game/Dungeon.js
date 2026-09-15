@@ -1834,7 +1834,7 @@ class Dungeon {
     if (eff === 'exhaust' && (t.type === 'undead' || t.type === 'construct')) return false;   // no living body to tire
     if (ab.onlyOutsiders && !(t.type === 'outsider' || /demon|devil|daemon|fiend/i.test(t.name || ''))) return false;   // Banishment
     if (ab.onlyHumanoids && !this._isHumanoid(t)) return false;   // Hold Person (PF1 RAW)
-    if (eff === 'save_debuff' && ab.debuff === 'paralyzed' && mindImmune(t)) return false;
+    if (eff === 'save_debuff' && (((ab.debuff === 'paralyzed' || ab.mindAffect) && mindImmune(t)) || (ab.hdCap && (crToNum(t.cr) || 0) > ab.hdCap))) return false;   // v3.37.153: fear is mind-affecting; Cause Fear / Scare only bite ≤5 HD
     // Death effects (Suffocation / Slay Living / Finger of Death / Implosion /
     // Wail) need a living, breathing body — mirror _abSaveDie's immune set.
     if (eff === 'savedie' && (t.type === 'undead' || t.type === 'construct'

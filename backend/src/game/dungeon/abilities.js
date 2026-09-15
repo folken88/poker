@@ -2596,29 +2596,57 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._echoToTable(sound); this._broadcast();
   },
   // Save-or-be-disabled (Hold Person): Will save or paralyzed.
+  // ONE place a save-or-suffer outcome lands (v3.37.153 — CRB batch 3 needed it for the mass
+  // versions: Scare, Fear and Confusion hit several foes). Returns true when it took hold.
+  // A made save still SHAKES the target for a round when the spell says so (Cause Fear /
+  // Scare / Fear — PF1's partial). Rounds scale with caster level (2..12) unless the book
+  // says otherwise: frightened 1d4, panicked level (max 10), confused level (max 10).
+  _applyDebuff(m, ab, e, sv) {
+    const lvl = Math.max(1, m.level || 1), rounds = Math.max(2, Math.min(12, lvl));
+    if (sv.saved) { if (ab.shakenOnSave) e.sickened = Math.max(e.sickened || 0, 1); return false; }
+    switch (ab.debuff) {
+      case 'paralyzed':    e.paralyzed = rounds; e.heldDC = this._spellDC(m, ab); break;
+      case 'sickened':     e.nauseated = SICKENED_ROUNDS; break;
+      case 'shaken':       e.sickened = Math.max(e.sickened || 0, SICKENED_ROUNDS); break;
+      case 'blinded':      e.blinded = Math.max(e.blinded || 0, rounds); break;
+      case 'dazed':        e.stunned = Math.max(e.stunned || 0, ab.danceRounds ? dRoll(4) + 1 : 1); break;
+      case 'silenced':     e.silenced = Math.max(e.silenced || 0, rounds); break;
+      case 'cursed':       e.cursed = true; break;
+      case 'commanded':    e.stunned = Math.max(e.stunned || 0, 1); e.prone = true; break;
+      case 'frightened':   { const r = dRoll(4); e.frightened = Math.max(e.frightened || 0, r); e.sickened = Math.max(e.sickened || 0, r); break; }
+      case 'panicked':     { const r = Math.min(10, lvl); e.frightened = Math.max(e.frightened || 0, r); e.sickened = Math.max(e.sickened || 0, r); break; }
+      case 'confused':     e.confused = Math.max(e.confused || 0, Math.min(10, lvl)); break;
+      case 'feebleminded': e.feebleminded = true; break;
+      default: return false;
+    }
+    return true;
+  },
   _abSaveDebuff(m, ab, payload) {
     // MASS versions (v3.37.124: Hold Person/Monster, Mass) — the same save-or-held
     // logic per foe, one summary line. Mind-immune and non-humanoid foes are
     // filtered out rather than refused (a mass spell washes over the whole field).
     if ((ab.maxTargets || 1) > 1) {
-      const picked = this._enemyTargets(payload, ab.maxTargets)
-        .filter(e => !(ab.debuff === 'paralyzed' && !ab.physicalHold && mindImmune(e)) && !(ab.onlyHumanoids && !this._isHumanoid(e)));
+      const maxN = ab.perLevels ? Math.max(1, Math.min(ab.maxTargets, Math.floor((m.level || 1) / ab.perLevels))) : ab.maxTargets;   // Scare: one foe per 3 levels (v3.37.153)
+      const picked = this._enemyTargets(payload, maxN)
+        .filter(e => !((ab.debuff === 'paralyzed' && !ab.physicalHold || ab.mindAffect) && mindImmune(e)) && !(ab.onlyHumanoids && !this._isHumanoid(e)) && !(ab.hdCap && (crToNum(e.cr) || 0) > ab.hdCap));
       if (!picked.length) { this._note(`${ab.icon} ${ab.name} finds no valid target on this field.`); this._echoToTable(); return; }
       const dc = this._spellDC(m, ab); const held = [], resisted = [];
       for (const e of picked) {
-        const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
-        if (!sv.saved) { e.paralyzed = Math.max(2, Math.min(12, m.level || 1)); e.heldDC = dc; held.push(e.name); }
-        else resisted.push(e.name);
+        const sv = this._saveVs(this._enemySave(e, ab.save || 'will') - (ab.debuff === 'feebleminded' && (e.arcane || e.spellstrike) ? 4 : 0), dc);
+        if (this._applyDebuff(m, ab, e, sv)) held.push(e.name); else resisted.push(e.name);
       }
       const sound = ab.sound || pick(SND.stink);
-      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — DC ${dc}: ${held.length ? `HELD: ${held.join(', ')}` : 'nobody held'}${resisted.length ? `; resisted: ${resisted.join(', ')}` : ''}.`, sound);
+      const word = ab.debuff === 'paralyzed' ? 'HELD' : String(ab.debuff).toUpperCase();
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — DC ${dc}: ${held.length ? `${word}: ${held.join(', ')}` : `nobody ${word.toLowerCase()}`}${resisted.length ? `; resisted: ${resisted.join(', ')}${ab.shakenOnSave ? ' (shaken a round)' : ''}` : ''}.`, sound);
       this._echoToTable(sound); return;
     }
     const e = this._oneEnemy(payload); if (!e) return;
     if ((ab.debuff === 'paralyzed' && !ab.physicalHold || ab.mindAffect) && mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
+    if (ab.hdCap && (crToNum(e.cr) || 0) > ab.hdCap) { this._note(`${ab.icon} ${e.name} is too mighty for ${ab.name} — it only frightens creatures of ${ab.hdCap} HD or less.`); this._echoToTable(); return; }
     const dc = this._spellDC(m, ab);
-    const sv = ab.noSave ? { saved: false, total: null } : this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
+    const sv = ab.noSave ? { saved: false, total: null } : this._saveVs(this._enemySave(e, ab.save || 'will') - (ab.debuff === 'feebleminded' && (e.arcane || e.spellstrike) ? 4 : 0), dc);   // Feeblemind: arcane casters save at −4 (PF1)
     const sound = ab.sound || pick(SND.stink);
+    this._applyDebuff(m, ab, e, sv);   // v3.37.153: every outcome lands through one applier (the legacy branches below are kept for their comments; they re-apply the same values)
     // Hold Person / Hideous Laughter: HELD for up to 1 round per caster level,
     // but a NEW Will save each of the foe's turns can end it early (the re-save
     // costs its turn either way) — see the heldDC handling in _advanceToActor.
@@ -2633,7 +2661,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     else if (!sv.saved && ab.debuff === 'silenced') e.silenced = Math.max(e.silenced || 0, Math.max(2, Math.min(12, m.level || 1)));   // Silence: no casts while it holds (enemy caster AI falls back to steel)
     else if (!sv.saved && ab.debuff === 'cursed')  e.cursed = true;   // Bestow Curse: −4 on its attacks for the room (the enemyAI swing math)
     else if (!sv.saved && ab.debuff === 'commanded') { e.stunned = Math.max(e.stunned || 0, 1); e.prone = true; }   // Command: "FALL!" — prone + turn lost
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — ${ab.noSave ? `NO save (PF1): ${ab.danceRounds ? `it DANCES helplessly (${e.stunned} turns)!` : `${String(ab.debuff).toUpperCase()}!`}` : `save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${(ab.debuff === 'sickened' ? 'NAUSEATED' : ab.debuff === 'commanded' ? 'it FALLS PRONE — turn lost' : String(ab.debuff).toUpperCase())}!`}`}`, sound);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — ${ab.noSave ? `NO save (PF1): ${ab.danceRounds ? `it DANCES helplessly (${e.stunned} turns)!` : `${String(ab.debuff).toUpperCase()}!`}` : `save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${(ab.debuff === 'sickened' ? 'NAUSEATED' : ab.debuff === 'commanded' ? 'it FALLS PRONE — turn lost' : String(ab.debuff).toUpperCase())}!`}`}${sv.saved && ab.shakenOnSave ? ' — but the dread lingers: SHAKEN for a round' : ''}`, sound);
     this._echoToTable(sound);
   },
   // Touch spell (Shocking Grasp): a ranged touch attack for level d6.

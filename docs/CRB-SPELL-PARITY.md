@@ -99,10 +99,27 @@ effect); ours is the attacker cap + the rider, which is what the geometry buys
 you in practice. Web's 10 min/level would be dungeon-long under the duration
 rule, but a wall is bound to a room's geometry — room-scoped on purpose.
 
+## Batch 3 — fear & the mind (v3.37.153) ✅
+
+New conditions per PF1: FRIGHTENED / PANICKED (the foe flees — it loses its turns
+while the panic holds — and is shaken, −2), CONFUSED (the book's d100 table each
+turn: 1-25 acts, 26-50 babbles, 51-75 hurts itself 1d8 + Str, 76-100 attacks its
+nearest ally), FEEBLEMINDED (Int/Cha 1 — no casting for the room). All are
+mind-affecting: the undead and constructs are immune.
+
+1. **Cause Fear** (Brd/Clr/Sor/Wiz 1) ✅ — one foe of 5 HD or less (CR ≤ 5
+   here), Will or frightened 1d4 rounds; a made save shakes it a round.
+2. **Scare** (Brd/Sor/Wiz 2) ✅ — one foe per three levels (max 6), same effect.
+3. **Fear** (Brd 3, Sor/Wiz 4) 🔧 — the cone is the field (no grid): up to six
+   foes, Will or panicked one round per level (max 10); a made save shakes.
+4. **Confusion** (Brd 3, Sor/Wiz 4) 🔧 — the burst is up to four foes, Will or
+   confused one round per level (max 10); the table is RAW.
+5. **Feeblemind** (Sor/Wiz 5) 🔧 — Will (arcane casters −4) or no casting for
+   the room; "permanent" collapses to the room, and the skill/language loss
+   has no surface here.
+
 ## Queued (batches of 5, in priority order)
 
-- **Batch 3 — fear & the mind:** Cause Fear, Fear, Scare, Confusion,
-  Feeblemind.
 - **Batch 4 — divine staples:** Death Ward, Silence… (moved to 1) → Deeper
   Darkness, Daylight, Neutralize Poison, Remove Blindness/Paralysis (cleanse
   pass), Harm.

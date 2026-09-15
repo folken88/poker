@@ -101,6 +101,9 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (o.grappled)      c.push({ key: 'grappled',  label: 'Grappled',  desc: 'chained — −2 to hit, easier to strike; crushed each turn (Dispel or Grease frees you)', icon: `${I}grappled.webp` });
     if (o.prayed > 0)    c.push({ key: 'prayed',     label: 'Prayer',    desc: `−${o.prayed} to hit, damage & saves (cleric Prayer covers the battlefield)`, icon: `${I}shaken.webp` });
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
+    if (o.frightened > 0) c.push({ key: 'frightened', label: 'Frightened', desc: 'FLEES in terror — loses its turns while the panic holds, and is shaken (−2)', icon: `${I}stunned.webp` });
+    if (o.confused > 0)   c.push({ key: 'confused',   label: 'Confused',   desc: 'each turn: 25% acts, 25% babbles, 25% hurts itself, 25% attacks its own ally', icon: `${I}stunned.webp` });
+    if (o.feebleminded)   c.push({ key: 'feebleminded', label: 'Feebleminded', desc: 'Int and Cha 1 — it cannot cast for the rest of the room', icon: `${I}sickened.webp` });
     if (o.asleep)        c.push({ key: 'asleep',     label: 'Asleep',     desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });
     // Undead/ghost PARTY members — so everyone can see why the cures skip them.
     if (o.undead)        c.push({ key: 'undeadhero', label: 'Undead',     desc: 'positive energy does NOTHING (cures, channel, potions) — mend with Infernal Healing or Channel Negative', icon: `${I}markedevil.webp` });

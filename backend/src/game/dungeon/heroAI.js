@@ -1108,7 +1108,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         const pick = (a.effect === 'savedie' || a.effect === 'charm' || a.effect === 'dominate')
           ? el.slice().sort((x, y) => y.maxHp - x.maxHp)[0]
           : (el.includes(weakestFoe) ? weakestFoe : el.slice().sort((x, y) => x.hp - y.hp)[0]);
-        offense.push({ ab: a, payload: { targetUid: pick.uid } });
+        offense.push({ ab: a, payload: (a.maxTargets || 1) > 1 ? { targetUid: pick.uid, targetUids: el.slice().sort((x, y) => y.hp - x.hp).slice(0, a.maxTargets).map(t => t.uid) } : { targetUid: pick.uid } });   // v3.37.153: Scare / Fear / Confusion sweep the field, biggest first
       }
       // Spiritual Weapon — conjure it onto the TOUGHEST foe (sustained damage) and
       // never re-cast while one is already fighting; the cleric then does other things.

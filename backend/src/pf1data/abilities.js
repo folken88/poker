@@ -293,6 +293,13 @@ const SPELL = {
   wallforce: { key: 'wallforce', name: 'Wall of Force', icon: '🟦', effect: 'wall', target: 'self', slvl: 5, wallCap: 1, wallRider: 'none', sound: S.invoke,                       desc: 'An invisible, impassable pane of force. Nothing burns or breaks it: only ONE melee foe per target can find a way around it each round, and no one can be flanked or sneak-attacked. Flyers cross over it; archers shoot over it. Lasts the room (level rounds, max 10).' },
   web:       { key: 'web',       name: 'Web',           icon: '🕸️', effect: 'wall', target: 'self', slvl: 2, wallCap: 2, wallRider: 'web',  save: 'reflex', sound: '/audio/spell_umbral_bolt.mp3', desc: 'Sticky strands fill the field. Melee foes can reach at most 2 of them per target each round, no one can be flanked or sneak-attacked, and a melee foe pressing through must save (Reflex) or stick fast and lose its turn. Flyers cross over it; archers shoot over it. Lasts the room (level rounds, max 10).' },
   solidfog:  { key: 'solidfog',  name: 'Solid Fog',     icon: '🌫️', effect: 'wall', target: 'self', slvl: 4, wallCap: 2, wallRider: 'fog',  sound: S.invoke,                       desc: 'A bank of thick, clinging vapor. Melee foes can reach at most 2 of them per target each round, no one can be flanked or sneak-attacked, and foes wading through it swing at −2 to hit and damage (PF1). Flyers cross over it; archers shoot over it. Lasts the room (level rounds, max 10).' },
+  // ── CRB BATCH 3: FEAR & THE MIND (v3.37.153) — fear is mind-affecting (undead/constructs
+  // immune); Cause Fear and Scare only bite creatures of 5 HD or less (CR ≤ 5 here).
+  causefear:  { key: 'causefear',  name: 'Cause Fear',  icon: '😱', effect: 'save_debuff', debuff: 'frightened', save: 'will', mindAffect: true, hdCap: 5, shakenOnSave: true, target: 'enemy', slvl: 1, sound: '/audio/enemy_lich_gaze.mp3', desc: 'One living foe of 5 HD or less: Will save or it FLEES in terror for 1d4 rounds (loses its turns, and is shaken); a made save leaves it shaken for one round. Mind-affecting: the undead and constructs are immune.' },
+  scare:      { key: 'scare',      name: 'Scare',       icon: '👻', effect: 'save_debuff', debuff: 'frightened', save: 'will', mindAffect: true, hdCap: 5, shakenOnSave: true, target: 'enemy', maxTargets: 6, perLevels: 3, slvl: 2, sound: '/audio/enemy_lich_gaze.mp3', desc: 'Up to one foe per three caster levels (max 6), each of 5 HD or less: Will save or it FLEES in terror for 1d4 rounds; a made save leaves it shaken for one round. Mind-affecting.' },
+  fear:       { key: 'fear',       name: 'Fear',        icon: '😨', effect: 'save_debuff', debuff: 'panicked', save: 'will', mindAffect: true, shakenOnSave: true, target: 'enemy', maxTargets: 6, slvl: 4, sound: '/audio/enemy_lich_gaze.mp3', desc: 'A cone of dread — up to 6 foes, any size: Will save or each is PANICKED for one round per caster level (max 10) — it flees and loses its turns; a made save leaves it shaken for one round. Mind-affecting. (Adaptation: the cone is the field, no grid.)' },
+  confusion:  { key: 'confusion',  name: 'Confusion',   icon: '🤪', effect: 'save_debuff', debuff: 'confused', save: 'will', mindAffect: true, target: 'enemy', maxTargets: 4, slvl: 4, sound: '/audio/spell_umbral_bolt.mp3', desc: 'Up to 4 foes: Will save or CONFUSED for one round per caster level (max 10) — each turn it rolls the book\'s table: 25% acts normally, 25% babbles, 25% hurts itself (1d8 + Str), 25% attacks its nearest ally. Mind-affecting.' },
+  feeblemind: { key: 'feeblemind', name: 'Feeblemind',  icon: '🧠', effect: 'save_debuff', debuff: 'feebleminded', save: 'will', mindAffect: true, target: 'enemy', slvl: 5, sound: '/audio/spell_umbral_bolt.mp3', desc: 'One foe: Will save (arcane casters take −4) or its Intelligence and Charisma drop to 1 for the rest of the room — it cannot cast spells at all. The anti-caster hammer. Mind-affecting.' },
   bladebarrier:   { key: 'bladebarrier',   name: 'Blade Barrier',     icon: '🌪️', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, slvl: 6, sound: '/audio/spell_holysmite.mp3', desc: 'A whirling wall of blades slices through up to 4 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
   firestorm:      { key: 'firestorm',      name: 'Fire Storm',        icon: '🌋', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'fire', slvl: 8, sounds: FIREBALL_SFX, desc: 'Sheets of divine flame roar over up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
   massheal:       { key: 'massheal',       name: 'Mass Heal',         icon: '💗', effect: 'heal', heal: 'party', massHeal: true, healDice: 15, healCap: 25, target: 'ally', slvl: 9, sound: '/audio/spell_channel_charge.mp3', desc: 'A tidal wave of positive energy — the WHOLE party heals 15d8 + caster level (max +25).' },
@@ -1278,6 +1285,24 @@ _injectKitSpell('bard',     spontaneousSpell(SPELL.invisibility, 4));
 _injectKitSpell('bard',     spontaneousSpell(SPELL.dimensiondoor, 10));
 _injectKitSpell('bard',     spontaneousSpell(SPELL.freedommove, 10));
 _injectKitSpell('bard',     spontaneousSpell(SPELL.invisgreater, 10));
+// CRB BATCH 3 — FEAR & THE MIND (v3.37.153): Cause Fear (Brd/Clr/Sor/Wiz 1), Scare (Brd/Sor/Wiz 2),
+// Fear (Brd 3, Sor/Wiz 4), Confusion (Brd 3, Sor/Wiz 4), Feeblemind (Sor/Wiz 5).
+_injectKitSpell('bard',     spontaneousSpell(SPELL.causefear, 1));
+_injectKitSpell('cleric',   preparedSpell(SPELL.causefear, 1));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.causefear, 2));
+_injectKitSpell('wizard',   preparedSpell(SPELL.causefear, 1));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.causefear, 2));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.scare, 4));
+_injectKitSpell('wizard',   preparedSpell(SPELL.scare, 3));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.scare, 4));
+_injectKitSpell('bard',     spontaneousSpell({ ...SPELL.fear, slvl: 3 }, 7));
+_injectKitSpell('wizard',   preparedSpell(SPELL.fear, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.fear, 8));
+_injectKitSpell('bard',     spontaneousSpell({ ...SPELL.confusion, slvl: 3 }, 7));
+_injectKitSpell('wizard',   preparedSpell(SPELL.confusion, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.confusion, 8));
+_injectKitSpell('wizard',   preparedSpell(SPELL.feeblemind, 9));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.feeblemind, 10));
 // OVERLAND FLIGHT IS A SPELL (v3.37.150 — Josh, spicy-lantern / merry-sparrow: 'why is he casting
 // third-level Fly on himself again and again when he has fifth-level Overland Flight?'): every
 // kit copy carried cost 'run', uses 1 — ONE cast per dungeon. The moment an enemy dispel (or a

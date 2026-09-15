@@ -2162,9 +2162,21 @@
 //                     cleric's feature'): a metamagic'd spell is announced as SHAPED ('Olbryn shapes
 //                     an INTENSIFIED EMPOWERED Chain Lightning!'), never 'channeled' — the verb is
 //                     the cleric's alone. Test 245; CLIENT_BUILD unchanged.
-const VERSION = '3.37.152';
+//  3.37.153 2026-09-15 CRB BATCH 3 — FEAR & THE MIND (Toby: 'continue importing spells from the CRB
+//                     until all CRB spells are available to the proper classes'). Cause Fear (Brd/
+//                     Clr/Sor/Wiz 1), Scare (Brd/Sor/Wiz 2, one foe per 3 levels), Fear (Brd 3, Sor/
+//                     Wiz 4, a cone of up to 6), Confusion (Brd 3, Sor/Wiz 4, up to 4) and
+//                     Feeblemind (Sor/Wiz 5). New conditions per PF1: FRIGHTENED / PANICKED (the foe
+//                     flees — loses its turns — and is shaken; a made save still shakes it a
+//                     round), CONFUSED (the book's d100 table each turn: act / babble / hurt itself
+//                     / attack its own ally), FEEBLEMINDED (no casting for the room; arcane casters
+//                     save at −4). Cause Fear / Scare bite only ≤5 HD (CR ≤ 5). Fear is mind-
+//                     affecting (undead/constructs immune). One applier now lands every save-or-
+//                     suffer outcome (single and mass); bots sweep the field with the mass ones.
+//                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+const VERSION = '3.37.153';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "A metamagic spell is shaped, never channeled — channeling belongs to the clerics.";
+const HEADLINE = "CRB batch 3 — fear and the mind: Cause Fear, Scare, Fear, Confusion and Feeblemind, with frightened, confused and feebleminded foes that flee, babble, savage their own allies, or lose their spells.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
