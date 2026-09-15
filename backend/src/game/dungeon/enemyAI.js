@@ -100,6 +100,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     e.flatFooted = false;   // acting ends flat-footed
     // MAZE (v3.37.124): lost in the labyrinth — no turn, untargetable, back when the counter runs out.
     if (e.mazed > 0) { e.mazed--; this._note(`🌀 ${e.glyph} ${e.name} wanders the extradimensional maze${e.mazed ? ' — lost to the fight' : ' — and FINDS THE EXIT! It returns, furious'}.`, null, { side: 'enemy' }); this._echoToTable(); return; }
+    // FORCECAGE (v3.37.159): sealed in a windowless cell — no turn, untargetable, free when the counter runs out.
+    if (e.caged > 0) { e.caged--; this._note(`🔲 ${e.glyph} ${e.name} ${e.caged ? 'batters at the walls of the FORCECAGE — sealed away from the fight' : 'watches the FORCECAGE wink out — it is free, and furious'}.`, null, { side: 'enemy' }); this._broadcast(); return; }
     if (e.hasted > 0) e.hasted--;   // enemy Haste (v3.37.126) burns down one round per turn
     if (e.silenced > 0) e.silenced--;   // Silence (v3.37.129) fades one round per turn — the cast gates below check what's left
     if (this._ccTurn(e)) { this._echoToTable(); this._broadcast(); return; }   // v3.37.153: fear / confusion consumed the turn

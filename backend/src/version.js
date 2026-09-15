@@ -2174,6 +2174,13 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.159 2026-09-15 CRB BATCH 9 — CAGES & WORDS. Forcecage (Sor/Wiz 7: the windowless cell — no
+//                     save, no SR, one foe sealed and untargetable for 1 round/level, bosses too), Holy
+//                     Word / Blasphemy / Dictum / Word of Chaos (Clr 7: every foe not of the word's
+//                     alignment reels, no save, SR applies — slain / paralyzed / blinded / rattled by
+//                     HD vs caster level per the PF1 ladder; CR stands in for HD, deafness rattles),
+//                     Earthquake (Clr/Drd 8: up to 8 foes, 8d6 Reflex half, a failed save throws a
+//                     grounded foe prone). Binding and the Symbols are deferred. Tests 265-267.
 //  3.37.158 2026-09-15 CRB BATCH 8 — TRICKS & SAVE-OR-SUFFER. Blink (Brd/Sor/Wiz 3: 50% of attacks
 //                     on you miss, 20% of yours flicker away; True Seeing pierces it), Repulsion (Clr 7,
 //                     Sor/Wiz 6: up to 8 foes, Will negates, or melee-only foes cannot close for 1 round/
@@ -2217,9 +2224,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.158';
+const VERSION = '3.37.159';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "CRB batch 8 — tricks & save-or-suffer: Blink, Repulsion, Insanity, Baleful Polymorph.";
+const HEADLINE = "CRB batch 9 — cages & words: Forcecage, Holy Word, Blasphemy, Dictum, Word of Chaos, Earthquake.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

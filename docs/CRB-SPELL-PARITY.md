@@ -244,12 +244,32 @@ which PF1 allows) and no elemental or eagle; the rungs use what exists.
    plane-shifts today, so there is nothing for the anchor to stop. Revisit
    with the first teleporting foe (a bone devil's teleport would be the one).
 
+## Batch 9 — cages & words (v3.37.159)
+
+1. **Forcecage** (Sor/Wiz 7) 🔧 — PF1's windowless-cell option: no save, no
+   SR, one foe (a boss too) sealed for 1 round/level — untargetable and turn-
+   less, like Maze, then free and furious. The barred-cage option (attacks
+   through the bars) has no surface. Bots don't cast it yet, like Maze.
+2. **Holy Word / Blasphemy / Dictum / Word of Chaos** (Clr 7) 🔧 — every foe
+   NOT of the word's alignment reels, no save, SR applies, on the PF1 ladder by
+   HD vs caster level: above CL untouched; equal → deafened; ≤ CL−1 → blinded
+   2d4; ≤ CL−5 → paralyzed (10 rounds); ≤ CL−10 → slain (a boss loses half
+   its max HP instead — the standing rule). Adaptations: CR stands in for HD;
+   deafness has no surface, so that tier RATTLES (sickened 1d4); heroes carry
+   no alignment, so any cleric may speak any of the four (PF1 would forbid a
+   good cleric Blasphemy). The banishment clause has no extraplanar surface.
+3. **Earthquake** (Clr 8, Drd 8) 🔧 — up to 8 foes, 8d6 (PF1's cavern result),
+   Reflex half, and a failed save throws a grounded foe PRONE. Adaptation: the
+   caster shapes the quake around the party; fissures/collapse are the 8d6.
+4. **Binding** (Sor/Wiz 8) 🚫 — a days-long ritual of permanent imprisonment
+   with no combat surface.
+5. **Symbol family** (Symbol of Death/Fear/Insanity/Pain/Persuasion/Sleep/
+   Stunning/Weakness) 🚫 — glyphs left for later intruders; the dungeon has
+   no "later" and no intruders but the party. Revisit only if rooms ever get
+   a trap-setting phase.
+
 ## Queued (batches of 5, in priority order)
 
-- **Batch 9 — cages & sigils:** Forcecage, Binding, the Symbol family (as
-  room-trap casts?) — likely mostly 🚫.
-- **Batch 10 — the holy words:** Holy Word, Blasphemy, Dictum, Word of Chaos,
-  Earthquake.
 - Then a sweep of stragglers until the ledger shows no 📋.
 
 ## Impractical (🚫) — and why

@@ -337,6 +337,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       savedie:     () => this._abSaveDie(m, ab, payload),
       powerword:   () => this._abPowerWord(m, ab, payload),
       maze:        () => this._abMaze(m, ab, payload),
+      forcecage:   () => this._abForcecage(m, ab, payload),   // v3.37.159
+      holyword:    () => this._abHolyWord(m, ab, payload),    // v3.37.159: Holy Word / Blasphemy / Dictum / Word of Chaos
       timestop:    () => this._abTimeStop(m, ab),
       wish:        () => this._abWish(m, ab, payload),
       judgment:    () => this._abJudgment(m, ab),
@@ -1534,7 +1536,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // then a TALLY of how many failed / saved / were slain — NOT a per-enemy list.
     // Keeps mid-combat narration fast; the blind player inspects enemies (E) on their
     // own turn for exactly who's left and how hurt.
-    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0, searedN = 0;
+    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0, searedN = 0, proneN = 0;
     for (const e of chosen) {
       if (this._srBlocks(m, e, ab, true)) { srN++; continue; }   // PF1 SR: checked per target, tallied (counts-only for Josh)
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
@@ -1552,10 +1554,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       this._dmgE(e, raw, ab.dtype);
       // SUNBURST-style rider: a failed save also BLINDS (3 rounds, like Glitterdust).
       if (ab.blindRider && !sv.saved && e.hp > 0) { e.blinded = Math.max(e.blinded || 0, 3); blindN++; }
+      if (ab.proneRider && !sv.saved && e.hp > 0 && !e.flying) { e.prone = true; proneN++; }   // Earthquake (v3.37.159): a failed save throws a grounded foe PRONE
       if (sv.saved) savedN++; else failN++;
       if (e.hp <= 0) slainN++;
     }
-    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${searedN ? `, ${searedN} undead SEARED by true daylight` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${slainN ? `, ${slainN} slain` : ''}`;
+    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${proneN ? ` (${proneN} knocked PRONE)` : ''}${searedN ? `, ${searedN} undead SEARED by true daylight` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${slainN ? `, ${slainN} slain` : ''}`;
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${saveLbl} DC ${dc} (${full} ${ab.dtype || ''}): ${tally}.`, sound);
     this._echoToTable(sound);
     // THE STORM LINGERS (v3.37.143 — Josh: 'they keep going after you cast... you
@@ -2232,6 +2235,54 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       e.blinded = Math.max(e.blinded || 0, Math.max(2, Math.min(12, m.level || 1)));
       this._note(`${ab.icon} ${m.nickname} speaks the WORD OF BLINDNESS — ${e.name}'s eyes go DARK (−4 to hit, denied its Dex). No save.`, sound);
     }
+    this._echoToTable(sound);
+  },
+  // FORCECAGE (v3.37.159, CRB batch 9): PF1's windowless cell — no save, no SR; the foe
+  // is sealed for 1 round/level: untargetable (Dungeon._targetableEnemies) and its turns
+  // are spent battering the walls (_enemyAct decrements e.caged and skips). Bosses too.
+  _abForcecage(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    if (e.caged > 0 || e.mazed > 0) { this._note(`${ab.icon} ${e.name} is already sealed away.`); this._echoToTable(); return; }
+    e.caged = Math.max(2, Math.min(12, m.level || 1));
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — walls of force slam shut around ${e.name}: sealed from the fight, untouchable and unable to act, for ${e.caged} rounds. No save, no spell resistance.`, ab.sound);
+    this._broadcast();
+  },
+  // HOLY WORD / BLASPHEMY / DICTUM / WORD OF CHAOS (v3.37.159, CRB batch 9): every foe NOT of
+  // the word's alignment reels — no save (PF1), SR applies. The PF1 ladder by HD vs caster
+  // level: above CL untouched; equal → deafened; ≤ CL−1 → blinded 2d4; ≤ CL−5 → paralyzed
+  // (1d10 min → 10 rounds here); ≤ CL−10 → slain. Adaptations: CR stands in for HD; deafness
+  // has no surface, so the deafened tier RATTLES (sickened 1d4); a boss is never slain
+  // outright (half its max HP — the standing save-or-lose boss rule).
+  _abHolyWord(m, ab, payload) {
+    const cl = m.level || 1, sound = ab.sound;
+    const isA = (e, a) => a === 'good' ? !!(e.good || /G$/.test(e.align || '')) : a === 'evil' ? !!(e.evil || /E$/.test(e.align || '')) : a === 'lawful' ? /^L/.test(e.align || '') : /^C/.test(e.align || '');
+    const non = { good: 'nongood', evil: 'nonevil', lawful: 'nonlawful', chaotic: 'nonchaotic' }[ab.wordVs] || 'opposed';
+    const hit = this._targetableEnemies().filter(e => e.hp > 0 && !isA(e, ab.wordVs));
+    if (!hit.length) { this._note(`${ab.icon} ${m.nickname} speaks ${ab.name} — but no ${non} foe stands here; the word finds no one to judge.`, sound); this._echoToTable(sound); return; }
+    const slain = [], held = [], blind = [], rattled = [], spared = []; let srN = 0;
+    for (const e of hit) {
+      if (this._srBlocks(m, e, ab, true)) { srN++; continue; }
+      const hd = crToNum(e.cr) || 1;
+      if (hd > cl) { spared.push(e.name); continue; }
+      e.sickened = Math.max(e.sickened || 0, dRoll(4));
+      if (hd <= cl - 1) e.blinded = Math.max(e.blinded || 0, dRollN(2, 4));
+      if (hd <= cl - 5) e.paralyzed = Math.max(e.paralyzed || 0, 10);
+      if (hd <= cl - 10) {
+        if (e.boss) { this._dmgE(e, Math.max(6, Math.floor((e.maxHp || 20) / 2))); held.push(`${e.name} (too mighty to slay — half its life torn away)`); }
+        else { this._dmgE(e, e.hp + 20); slain.push(e.name); }
+      }
+      else if (hd <= cl - 5) held.push(e.name);
+      else if (hd <= cl - 1) blind.push(e.name);
+      else rattled.push(e.name);
+    }
+    const parts = [];
+    if (slain.length) parts.push(`SLAIN: ${slain.join(', ')} ☠️`);
+    if (held.length) parts.push(`PARALYZED, blinded and rattled: ${held.join(', ')}`);
+    if (blind.length) parts.push(`BLINDED and rattled: ${blind.join(', ')}`);
+    if (rattled.length) parts.push(`rattled (sickened): ${rattled.join(', ')}`);
+    if (spared.length) parts.push(`above your level, untouched: ${spared.join(', ')}`);
+    if (srN) parts.push(`${srN} spell-resisted`);
+    this._note(`${ab.icon} ${m.nickname} speaks ${ab.name} — the ${non} reel (no save; CL ${cl} vs their HD): ${parts.join('; ')}.`, sound);
     this._echoToTable(sound);
   },
   // MAZE (v3.37.124, CRB): no save — the foe is banished into an extradimensional
