@@ -17,7 +17,7 @@ const { weaponOf, pick } = require('../combat');
 const { babFor } = require('../../pf1data/classes');
 const { kitFor } = require('../../pf1data/abilities');
 const { attackProfile } = require('../character');
-const { crToNum } = require('../../pf1data/monsters');
+const { crToNum, MON } = require('../../pf1data/monsters');
 let BUILDS = {}; try { BUILDS = require('../../pf1data/characterBuilds').BUILDS || {}; } catch (_) {}   // per-character play STYLE (v3.37.149) — guarded: PGM may not ship the file
 const { fighterFeats } = require('../../pf1data/feats');
 
@@ -521,7 +521,11 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       }
       // ONE call per room (v3.37.148): the opener re-fired every time the bear died — 'a room
       // full of bears' while the caster's real spells sat unspent. Bots summon once a room.
-      if (summonAb && targets.length && _style !== 'guardian' && (_style === 'summoner' || m._summonDepth !== this.depth) && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {   // v3.37.149: a SUMMONER calls help every time it falls (Jason, Draymus); a GUARDIAN never summons (Dinvaya)
+      // v3.37.157: with every rung on the ladder, a puny summon (Summon Monster I's rat at level 10)
+      // must not outrank a heal — the opener needs a pool CR worth a THIRD of the toughest foe.
+      // Summoner-style casters (Jason's devils, Draymus's undead) call help regardless — it's their game.
+      const _summonWorth = (a) => { const poolCR = Math.max(0, ...(((a.summon && a.summon.pool) || []).map(k => (MON && MON[k] && MON[k].crNum) || 0))); return poolCR * 3 >= topCR; };
+      if (summonAb && targets.length && _style !== 'guardian' && (_style === 'summoner' || m._summonDepth !== this.depth) && (_style === 'summoner' || _summonWorth(summonAb)) && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {   // v3.37.149: a SUMMONER calls help every time it falls (Jason, Draymus); a GUARDIAN never summons (Dinvaya)
         m._summonDepth = this.depth;
         return { slot: slot(summonAb), payload: {} };
       }

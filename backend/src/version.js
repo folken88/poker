@@ -2174,6 +2174,14 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.157 2026-09-15 CRB BATCH 7 — THE SUMMON LADDER. Summon Monster I/II/III/V/VII/IX (bard I-VI,
+//                     cleric/oracle/sorcerer/wizard I-IX) and Summon Nature's Ally I/II/III/V/VII/IX
+//                     (druid I-IX, ranger I-IV) — pool data only, the bestiary's own beasts (rats,
+//                     centipedes, spiders, apes, basilisks, lionesses, bears, chimeras, Ikualo'a, a
+//                     movanic deva). SM IV/VI/VIII gain a hound archon / bralani / erelim. The summon-
+//                     turn log names celestials and beasts instead of calling every summon undead.
+//                     Bots: a puny summon (pool CR under a third of the toughest foe) no longer
+//                     outranks a heal — summoner-style casters exempt. Tests 260-261.
 //  3.37.156 2026-09-15 CRB BATCH 6 — CLOUDS & PHANTASMS. Acid Fog (Sor/Wiz 6: a Solid Fog that eats
 //                     2d6 acid into every foe each round), Incendiary Cloud (Sor/Wiz 8: 4d6 fire a
 //                     round, Reflex half), Phantasmal Killer (Sor/Wiz 4: Will to disbelieve, then Fort
@@ -2202,9 +2210,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.156';
+const VERSION = '3.37.157';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "CRB batch 6 — clouds & phantasms: Acid Fog, Incendiary Cloud, Phantasmal Killer, Weird, Contagion.";
+const HEADLINE = "CRB batch 7 — the summon ladder: Summon Monster and Nature's Ally I through IX, every rung.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

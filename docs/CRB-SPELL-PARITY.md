@@ -194,10 +194,32 @@ Death Ward moved to batch 5 (wards).
    Adaptation: PF1's diseases deal ability damage over days; here the onset is
    immediate and the effect is the two conditions the engine already tracks.
 
+## Batch 7 — the summon ladder (v3.37.157)
+
+Pool data only, on the standing rule (Toby, v3.37.125): the bestiary's own
+beasts, celestial-touched or wild, never evil. Every rung now exists.
+
+1. **Summon Monster I / II / III / V / VII / IX** (Brd I–VI; Clr/Orc/Sor/Wiz
+   I–IX) ✅ — I: one dire rat / giant centipede / giant spider; II: 1d3 of one
+   kind; III: a dire ape; V: a basilisk or a lioness; VII: a dire bear or a
+   chimera; IX: a movanic deva or Ikualo'a. IV/VI/VIII gain a hound archon, a
+   bralani azata and an erelim angel (PF1's outsiders on those rungs).
+2. **Summon Nature's Ally I / II / III / V / VII / IX** (Drd I–IX; Rgr I–IV
+   from level 4) ✅ — the same beasts, wild-flavored, no outsiders; IX is
+   Ikualo'a itself.
+3. Fixed in passing: the summon-turn log called every non-devil summon "your
+   undead" — a celestial lioness rending a foe now reads as "your celestial",
+   a wild beast as "your beast", and they fade rather than crumble to dust.
+
+4. Bot rule that came with the rungs: a puny summon (SM I's rat at level 10) must
+   not outrank a heal — the opener now needs a pool CR worth a third of the
+   toughest foe. Summoner-style casters (Jason, Draymus) call help regardless.
+
+Honest gaps: the bestiary has no CR-2 beast (SM II is 1d3 of the CR-1 tier,
+which PF1 allows) and no elemental or eagle; the rungs use what exists.
+
 ## Queued (batches of 5, in priority order)
 
-- **Batch 7 — summon fill:** Summon Monster I–III/V/VII/IX + Nature's Ally
-  gaps (pool data only).
 - **Batch 8 — movement & tricks:** Blink, Gaseous Form, Spider Climb,
   Dimensional Anchor, Repulsion.
 - **Batch 9 — save-or-suffer:** Baleful Polymorph, Insanity, Symbol family
