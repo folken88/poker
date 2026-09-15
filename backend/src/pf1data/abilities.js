@@ -203,7 +203,7 @@ const SPELL = {
   slow:          { key: 'slow',          name: 'Slow',           icon: '🐌', cost: 'pool', effect: 'slow',   target: 'aoe', randN: 2, randDie: 4, maxTargets: 8, save: 'will', minLevel: 5, slvl: 3, sound: S.slow, desc: 'Time drags for a RANDOM 2d4 foes — Will save or be SLOWED (PF1 staggered): one single action a turn — move OR attack, never both, never a full attack — and −1 AC.' },
   gustofwind:    { key: 'gustofwind',    name: 'Gust of Wind',   icon: '🌪️', cost: 'pool', effect: 'grease', target: 'aoe', randFoes: 3, save: 'fort', minLevel: 4, slvl: 2, sound: S.gust, desc: 'A roaring gale blasts a RANDOM 1d3 foes — Fort save or be knocked prone.' },
   invisibility:  { key: 'invisibility',  name: 'Invisibility',   icon: '👻', img: '/dungeon/buffs/invisible.webp', cost: 'pool', effect: 'invisible', target: 'self', minLevel: 3, slvl: 2, sound: S.invis, desc: "Vanish from sight — enemies can't target you until you attack." },
-  charmperson:   { key: 'charmperson',   name: 'Charm Person',    icon: '💞', cost: 'pool', effect: 'charm', target: 'enemy', save: 'will', minLevel: 1, slvl: 1, sound: S.fascinate, desc: 'A living foe, Will save or CHARMED — it regards your party as friends and WON\'T attack you (it only tends its own side). A hit from your party snaps it out. No effect on the mindless (undead / constructs).' },
+  charmperson:   { key: 'charmperson',   name: 'Charm Person',    icon: '💞', cost: 'pool', effect: 'charm', target: 'enemy', save: 'will', onlyHumanoids: true, minLevel: 1, slvl: 1, sound: S.fascinate, desc: 'A living HUMANOID (PF1 RAW — Charm Monster reaches the rest), Will save or CHARMED — it regards your party as friends and WON\'T attack you (it only tends its own side). A hit from your party snaps it out. No effect on the mindless (undead / constructs).' },
   shield:        { key: 'shield',        name: 'Shield',         icon: '🛡️', cost: 'pool', effect: 'buff', target: 'self', buff: { ac: 4 }, slvl: 1, sticky: true, sound: S.invoke, desc: 'A wall of force — +4 shield AC for the rest of the room.' },
   catsgrace:     { key: 'catsgrace',     name: "Cat's Grace",    icon: '🐈', cost: 'pool', effect: 'buff', target: 'ally', buff: { ac: 2, toHit: 1, dexMod: 1 }, slvl: 2, sticky: true, sound: S.invoke, desc: 'Feline-quick — one ally gets +2 AC and +1 ranged to-hit (Dex) for the rest of the room.' },
   fly:           { key: 'fly',           name: 'Fly',            icon: '🪽', cost: 'pool', effect: 'buff', target: 'ally', fly: true, canHitFlyers: true, slvl: 3, sticky: true, sound: S.invis, desc: 'Take to the air, or send an ALLY aloft (Fly is a touch spell — Josh). Grounded foes cannot reach the flyer, and the flyer CAN close with airborne enemies — cast it on Freya or J\'Mal to send them up after the flying angels. Lasts the room.' },
@@ -344,6 +344,50 @@ const SPELL = {
   dictum:         { key: 'dictum',         name: 'Dictum',          icon: '⚖️', effect: 'holyword', wordVs: 'lawful', target: 'aoe', slvl: 7, sound: S.holy, desc: 'A word of pure law: every NONLAWFUL foe reels, no save (SR applies) — slain / paralyzed / blinded / rattled by how far below your level it is, as Holy Word. (Adaptation: CR stands in for HD.)' },
   wordofchaos:    { key: 'wordofchaos',    name: 'Word of Chaos',   icon: '🌪️', effect: 'holyword', wordVs: 'chaotic', target: 'aoe', slvl: 7, sound: S.umbral, desc: 'A word of pure chaos: every NONCHAOTIC foe reels, no save (SR applies) — slain / paralyzed / blinded / rattled by how far below your level it is, as Holy Word. (Adaptation: CR stands in for HD.)' },
   earthquake:     { key: 'earthquake',     name: 'Earthquake',      icon: '🌋', effect: 'aoe', target: 'aoe', maxTargets: 8, save: 'reflex', die: 6, dice: 8, proneRider: true, slvl: 8, sound: '/audio/spell_fireball.mp3', desc: 'The dungeon floor heaves: up to 8 foes take 8d6 from the collapsing stone (PF1’s cavern result), Reflex half, and a failed save also throws a grounded foe PRONE — its next turn is spent standing. (Adaptation: the caster shapes the quake around the party.)' },
+  // ── CRB BATCH 10: CLONES & STAPLES (v3.37.160) ──
+  inflictlight:    { key: 'inflictlight', name: 'Inflict Light Wounds', icon: '🖤', effect: 'touch', harm: true, healDice: 1, healCap: 5, dtype: 'negative', save: 'will', target: 'enemy', slvl: 1, sound: S.umbral, desc: 'A touch of negative energy: 1d8 + caster level (max +5) to a living foe, Will half. The undead are HEALED by it instead (PF1).' },
+  inflictmoderate: { key: 'inflictmoderate', name: 'Inflict Moderate Wounds', icon: '🖤', effect: 'touch', harm: true, healDice: 2, healCap: 10, dtype: 'negative', save: 'will', target: 'enemy', slvl: 2, sound: S.umbral, desc: 'A touch of negative energy: 2d8 + caster level (max +10) to a living foe, Will half. The undead are HEALED by it instead (PF1).' },
+  inflictserious:  { key: 'inflictserious', name: 'Inflict Serious Wounds', icon: '🖤', effect: 'touch', harm: true, healDice: 3, healCap: 15, dtype: 'negative', save: 'will', target: 'enemy', slvl: 3, sound: S.umbral, desc: 'A touch of negative energy: 3d8 + caster level (max +15) to a living foe, Will half. The undead are HEALED by it instead (PF1).' },
+  inflictcritical: { key: 'inflictcritical', name: 'Inflict Critical Wounds', icon: '🖤', effect: 'touch', harm: true, healDice: 4, healCap: 20, dtype: 'negative', save: 'will', target: 'enemy', slvl: 4, sound: S.umbral, desc: 'A touch of negative energy: 4d8 + caster level (max +20) to a living foe, Will half. The undead are HEALED by it instead (PF1).' },
+  massinflictlight: { key: 'massinflictlight', name: 'Mass Inflict Light Wounds', icon: '🖤', effect: 'inflictmass', healDice: 1, healCap: 25, dtype: 'negative', save: 'will', target: 'aoe', maxTargets: 6, slvl: 5, sound: S.umbral, desc: 'Negative energy washes over up to 6 foes: 1d8 + caster level (max +25) each, Will half; undead among them are HEALED instead (PF1).' },
+  massinflictmoderate: { key: 'massinflictmoderate', name: 'Mass Inflict Moderate Wounds', icon: '🖤', effect: 'inflictmass', healDice: 2, healCap: 30, dtype: 'negative', save: 'will', target: 'aoe', maxTargets: 6, slvl: 6, sound: S.umbral, desc: 'Negative energy washes over up to 6 foes: 2d8 + caster level (max +30) each, Will half; undead among them are HEALED instead (PF1).' },
+  massinflictserious: { key: 'massinflictserious', name: 'Mass Inflict Serious Wounds', icon: '🖤', effect: 'inflictmass', healDice: 3, healCap: 35, dtype: 'negative', save: 'will', target: 'aoe', maxTargets: 6, slvl: 7, sound: S.umbral, desc: 'Negative energy washes over up to 6 foes: 3d8 + caster level (max +35) each, Will half; undead among them are HEALED instead (PF1).' },
+  massinflictcritical: { key: 'massinflictcritical', name: 'Mass Inflict Critical Wounds', icon: '🖤', effect: 'inflictmass', healDice: 4, healCap: 40, dtype: 'negative', save: 'will', target: 'aoe', maxTargets: 6, slvl: 8, sound: S.umbral, desc: 'Negative energy washes over up to 6 foes: 4d8 + caster level (max +40) each, Will half; undead among them are HEALED instead (PF1).' },
+  magicweapon:    { key: 'magicweapon',    name: 'Magic Weapon',    icon: '🗡️', effect: 'buff', target: 'ally', sticky: true, gmw: true, gmwFlat: 1, buff: {}, slvl: 1, sound: S.invoke, desc: 'One ally’s weapon gains a +1 enhancement bonus (+1 to hit and damage) for the room. An enhancement bonus never stacks — a Greater Magic Weapon or Greater Magic Fang already up makes this a wasted slot (PF1).' },
+  greatermagicfang:{ key: 'greatermagicfang', name: 'Greater Magic Fang', icon: '🐾', effect: 'buff', target: 'ally', persist: true, sticky: true, gmw: true, buff: {}, slvl: 3, sound: S.invoke, desc: 'Bless an ally’s natural weapons — +1 enhancement per 4 caster levels (max +5) to hit and damage for the rest of the dungeon (PF1: 1 hour/level). Cast it on the druid in wild shape or a claw-fighting ally; it does not stack with Greater Magic Weapon.' },
+  charmmonster:   { key: 'charmmonster',   name: 'Charm Monster',   icon: '💞', effect: 'charm', target: 'enemy', save: 'will', slvl: 4, sound: S.fascinate, desc: 'ANY living creature, Will save or CHARMED — it regards your party as friends and will not attack you (it only tends its own side); a hit snaps it out. No effect on the mindless.' },
+  masscharmmonster:{ key: 'masscharmmonster', name: 'Mass Charm Monster', icon: '💞', effect: 'masscharm', target: 'aoe', maxTargets: 6, save: 'will', slvl: 8, sound: S.fascinate, desc: 'Up to 6 living creatures, Will save or CHARMED — they stop attacking the party; a hit snaps each out. No effect on the mindless.' },
+  deepslumber:    { key: 'deepslumber',    name: 'Deep Slumber',    icon: '💤', effect: 'sleep', target: 'aoe', maxTargets: 5, save: 'will', slvl: 3, sound: S.sleep, desc: 'Up to 5 foes must save or fall ASLEEP — helpless, losing turns until struck (PF1: 10 HD of creatures; here the count stands in for the HD).' },
+  suggestion:     { key: 'suggestion',     name: 'Suggestion',      icon: '🗣️', effect: 'charm', target: 'enemy', save: 'will', slvl: 3, sound: S.fascinate, desc: 'A reasonable-sounding course of action: one foe, Will save or it stops attacking the party until struck (the charm mechanics stand in for the suggestion). No effect on the mindless.' },
+  dismissal:      { key: 'dismissal',      name: 'Dismissal',       icon: '🚪', effect: 'savedie', target: 'enemy', save: 'will', onlyOutsiders: true, slvl: 4, sound: '/audio/spell_dimensional_anchor.mp3', desc: 'Send ONE outsider back to its home plane — Will save or GONE; a made save still wracks it. Only works on outsiders (demons, devils, fiends). Banishment is the greater version.' },
+  commandgreater: { key: 'commandgreater', name: 'Greater Command', icon: '🗣️', effect: 'save_debuff', target: 'aoe', maxTargets: 5, save: 'will', debuff: 'commanded', mindAffect: true, slvl: 5, sound: S.anchor, desc: '"FALL!" — up to 5 foes, Will save or each drops PRONE and loses its next turn. Mind-affecting and language-driven: the mindless dead and constructs don’t listen.' },
+  confusionlesser:{ key: 'confusionlesser',name: 'Lesser Confusion', icon: '🤪', effect: 'save_debuff', debuff: 'confused', oneRound: true, mindAffect: true, save: 'will', target: 'enemy', slvl: 1, sound: '/audio/spell_umbral_bolt.mp3', desc: 'One foe, Will save or CONFUSED for a single round — it rolls the confusion table once. No effect on the mindless.' },
+  shoutgreater:   { key: 'shoutgreater',   name: 'Greater Shout',   icon: '📢', effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'fort', die: 6, dice: 10, dtype: 'sonic', stunRider: true, slvl: 8, sound: '/audio/draugr_shout03_burning.mp3', desc: 'A devastating sonic BOOM staggers up to 3 foes — 10d6 SONIC, Fortitude for half, and a failed save also STUNS for a round (PF1).' },
+  trueresurrection:{ key: 'trueresurrection', name: 'True Resurrection', icon: '✨', effect: 'revive', raiseDead: true, full: true, target: 'ally', slvl: 9, sound: S.revive, desc: 'Fully resurrect a SLAIN ally — back in the run at FULL health. (As Resurrection: the no-body, any-age clause has no surface here.)' },
+  regenerate:     { key: 'regenerate',     name: 'Regenerate',      icon: '🌿', effect: 'heal', heal: 'single', healDice: 4, healCap: 35, target: 'ally', slvl: 7, sound: S.cure, desc: 'Regrow what was lost: heal an ally 4d8 + caster level (max +35). (The severed-limb clause has no surface here.)' },
+  faeriefire:     { key: 'faeriefire',     name: 'Faerie Fire',     icon: '🔥', effect: 'glitterdust', revealOnly: true, target: 'aoe', slvl: 1, sound: S.glitter, desc: 'Pale light limns every foe: any INVISIBLE foe is revealed for the room, no save. (PF1: it also negates blur and displacement — no foe here has either.)' },
+  hypnotism:      { key: 'hypnotism',      name: 'Hypnotism',       icon: '🌀', effect: 'fascinate', target: 'aoe', maxTargets: 1, save: 'will', slvl: 1, sound: S.fascinate, desc: 'One foe, Will save or it stands FASCINATED — losing its turns until something hits it. (PF1: 2d4 HD; here one foe.) No effect on the mindless.' },
+  hypnoticpattern:{ key: 'hypnoticpattern',name: 'Hypnotic Pattern', icon: '🌀', effect: 'fascinate', target: 'aoe', maxTargets: 3, save: 'will', slvl: 2, sound: S.fascinate, desc: 'Up to 3 foes, Will save or FASCINATED — losing their turns until something hits them. (PF1: 2d4 + CL HD; here three foes.) No effect on the mindless.' },
+  rainbowpattern: { key: 'rainbowpattern', name: 'Rainbow Pattern', icon: '🌈', effect: 'fascinate', target: 'aoe', maxTargets: 5, save: 'will', slvl: 4, sound: S.fascinate, desc: 'Up to 5 foes, Will save or FASCINATED — losing their turns until something hits them. (PF1: 24 HD; here five foes.) No effect on the mindless.' },
+  invisibilitysphere: { key: 'invisibilitysphere', name: 'Invisibility Sphere', icon: '👻', effect: 'invisible', party: true, target: 'self', slvl: 3, sound: S.invis, desc: 'The whole party fades from sight — each ally unseen until they strike.' },
+  massinvisibility: { key: 'massinvisibility', name: 'Mass Invisibility', icon: '👻', effect: 'invisible', party: true, target: 'self', slvl: 7, sound: S.invis, desc: 'The whole party fades from sight — each ally unseen until they strike. (As Invisibility Sphere; PF1’s wider area has no surface here.)' },
+  massenlarge:     { key: 'massenlarge', name: "Mass Enlarge Person", icon: '🦣', effect: 'buff', target: 'self', party: true, sticky: true, buff: { dmg: 2 }, slvl: 4, sound: S.invoke, desc: 'Every ally grows a size category — heavier blows (+2 damage) for the rest of the room.' },
+  eaglessplendor:  { key: 'eaglessplendor', name: "Eagle’s Splendor", icon: '🦅', effect: 'buff', target: 'ally', sticky: true, buff: { castMod: 2, castStat: 'cha' }, slvl: 2, sound: S.invoke, desc: '+4 Charisma: a CHARISMA caster (sorcerer, bard, oracle, paladin) gets +2 to spell DCs and spell attacks for the room. On anyone else it only shines (adaptation: no other Charisma surface here).' },
+  foxscunning:     { key: 'foxscunning', name: "Fox’s Cunning", icon: '🦊', effect: 'buff', target: 'ally', sticky: true, buff: { castMod: 2, castStat: 'int' }, slvl: 2, sound: S.invoke, desc: '+4 Intelligence: an INTELLIGENCE caster (wizard, magus, witch) gets +2 to spell DCs and spell attacks for the room. On anyone else it only sharpens wit (adaptation: no other Intelligence surface here).' },
+  owlswisdom:      { key: 'owlswisdom', name: "Owl’s Wisdom", icon: '🦉', effect: 'buff', target: 'ally', sticky: true, buff: { castMod: 2, castStat: 'wis' }, slvl: 2, sound: S.invoke, desc: '+4 Wisdom: a WISDOM caster (cleric, druid, ranger, inquisitor) gets +2 to spell DCs and spell attacks for the room. On anyone else it only steadies (adaptation: no other Wisdom surface here).' },
+  masseagles:      { key: 'masseagles', name: "Mass Eagle’s Splendor", icon: '🦅', effect: 'buff', target: 'self', party: true, sticky: true, buff: { castMod: 2, castStat: 'cha' }, slvl: 6, sound: S.invoke, desc: 'Eagle’s Splendor on the whole party: every Charisma caster gets +2 to spell DCs and spell attacks for the room.' },
+  massfoxes:       { key: 'massfoxes', name: "Mass Fox’s Cunning", icon: '🦊', effect: 'buff', target: 'self', party: true, sticky: true, buff: { castMod: 2, castStat: 'int' }, slvl: 6, sound: S.invoke, desc: 'Fox’s Cunning on the whole party: every Intelligence caster gets +2 to spell DCs and spell attacks for the room.' },
+  massowls:        { key: 'massowls', name: "Mass Owl’s Wisdom", icon: '🦉', effect: 'buff', target: 'self', party: true, sticky: true, buff: { castMod: 2, castStat: 'wis' }, slvl: 6, sound: S.invoke, desc: 'Owl’s Wisdom on the whole party: every Wisdom caster gets +2 to spell DCs and spell attacks for the room.' },
+  massbears:       { key: 'massbears', name: "Mass Bear’s Endurance", icon: '🐻', effect: 'buff', target: 'self', party: true, sticky: true, buff: { conHp: 2 }, slvl: 6, sound: S.invoke, desc: 'Bear-hardy, all of you — every ally gains temporary HP (+2 per level) for the rest of the room.' },
+  massbulls:       { key: 'massbulls', name: "Mass Bull’s Strength", icon: '💪', effect: 'buff', target: 'self', party: true, sticky: true, buff: { toHit: 2, dmg: 2 }, slvl: 6, sound: S.invoke, desc: 'Every ally gets +2 to hit and +2 melee damage for the rest of the room.' },
+  masscats:        { key: 'masscats', name: "Mass Cat’s Grace", icon: '🐈', effect: 'buff', target: 'self', party: true, sticky: true, buff: { ac: 2, toHit: 1, dexMod: 1 }, slvl: 6, sound: S.invoke, desc: 'Feline-quick, all of you — every ally gets +2 AC and +1 ranged to-hit (Dex) for the rest of the room.' },
+  energydrain:    { key: 'energydrain',    name: 'Energy Drain',    icon: '🩸', effect: 'touch', target: 'enemy', die: 4, dice: 'level', dcap: 16, dtype: 'negative', slvl: 9, sound: S.umbral, desc: 'A black ray that drinks the soul — ranged touch, 1d4 per caster level (max 16d4) negative energy (PF1’s 2d4 negative levels have no surface — the drain is damage here). No effect on undead.' },
+  chaoshammer:    { key: 'chaoshammer',    name: 'Chaos Hammer',    icon: '🔨', effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'will', die: 8, dice: 'halflevel', dcap: 5, vsAlign: 'lawful', slowRider: true, slvl: 4, sound: S.umbral, desc: 'Anarchic energy batters up to 3 foes — 1d8 per 2 levels (max 5d8), Will half: LAWFUL foes take it all and a failed save also SLOWS them 1d6 rounds; neutral foes take half; chaotic foes are untouched (PF1).' },
+  orderswrath:    { key: 'orderswrath',    name: 'Order’s Wrath',   icon: '⚖️', effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'will', die: 8, dice: 'halflevel', dcap: 5, vsAlign: 'chaotic', stunRider: true, slvl: 4, sound: S.holy, desc: 'Axiomatic energy hammers up to 3 foes — 1d8 per 2 levels (max 5d8), Will half: CHAOTIC foes take it all and a failed save also DAZES them a round; neutral foes take half; lawful foes are untouched (PF1).' },
+  bane:           { key: 'bane',           name: 'Bane',            icon: '🕯️', effect: 'save_debuff', debuff: 'baned', mindAffect: true, save: 'will', target: 'aoe', maxTargets: 8, slvl: 1, sound: S.umbral, desc: 'Dread saps the enemy line: up to 8 foes, Will negates, or −1 to hit, damage and saves for the room (PF1: −1 attacks and −1 on saves vs fear; it rides the Prayer penalty here). Mind-affecting.' },
+  aid:            { key: 'aid',            name: 'Aid',             icon: '🛡️', effect: 'buff', target: 'ally', sticky: true, buff: { toHit: 1, save: 1, tempHp: 1 }, slvl: 2, sound: S.invoke, desc: 'One ally takes heart: +1 to hit, +1 on saves and 1d8 + caster level (max +10) temporary HP for the room (PF1: the +1 saves is vs fear only).' },
+  ragespell:      { key: 'ragespell',      name: 'Rage',            icon: '😤', effect: 'buff', target: 'self', party: true, sticky: true, buff: { toHit: 1, dmg: 1, save: 1, acPen: 2, conHp: 1 }, slvl: 3, sound: S.invoke, desc: 'The whole party flies into a rage: +2 Str and Con (+1 to hit and damage, +1 HP per level), +1 on Will saves, −2 AC for the room (PF1).' },
+  limitedwish:    { key: 'limitedwish',    name: 'Limited Wish',    icon: '🌠', effect: 'wish', limited: true, target: 'enemy', slvl: 7, sound: S.invoke, desc: 'Bend reality a little. The magic reads your need: ONE fallen ally is called back; else a badly-hurt party is mended (10d8 + caster level, max +15, to everyone); else it tears at your chosen foe — Will save for a lighter wound (it cannot unmake anyone: that is Wish).' },
   bladebarrier:   { key: 'bladebarrier',   name: 'Blade Barrier',     icon: '🌪️', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, slvl: 6, sound: '/audio/spell_holysmite.mp3', desc: 'A whirling wall of blades slices through up to 4 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
   firestorm:      { key: 'firestorm',      name: 'Fire Storm',        icon: '🌋', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'fire', slvl: 8, sounds: FIREBALL_SFX, desc: 'Sheets of divine flame roar over up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
   massheal:       { key: 'massheal',       name: 'Mass Heal',         icon: '💗', effect: 'heal', heal: 'party', massHeal: true, healDice: 15, healCap: 25, target: 'ally', slvl: 9, sound: '/audio/spell_channel_charge.mp3', desc: 'A tidal wave of positive energy — the WHOLE party heals 15d8 + caster level (max +25).' },
@@ -1448,6 +1492,90 @@ _injectKitSpell('cleric',   preparedSpell(SPELL.earthquake, 15));
 _injectKitSpell('oracle',   spontaneousSpell(SPELL.earthquake, 16));
 _injectKitSpell('druid',    preparedSpell(SPELL.earthquake, 15));
 // (end batch 9)
+// CRB BATCH 10 — CLONES & STAPLES (v3.37.160): the Inflict line (Clr 1-4, Mass 5-8), Magic Weapon (Clr/
+// Pal/Sor-Wiz 1), Greater Magic Fang (Drd/Rgr 3), Charm Monster (Brd 3, Sor/Wiz 4), Mass Charm Monster
+// (Sor/Wiz 8), Deep Slumber (Brd/Sor-Wiz 3), Suggestion (Brd 2, Sor/Wiz 3), Dismissal (Clr 4, Sor/Wiz 5),
+// Greater Command (Clr 5), Lesser Confusion (Brd 1), Greater Shout (Brd 6, Sor/Wiz 8), True Resurrection
+// (Clr 9), Regenerate (Clr 7, Drd 9), Fog Cloud (Drd/Sor-Wiz 2), Faerie Fire (Drd 1), Hypnotism / Hypnotic
+// Pattern / Rainbow Pattern (Brd 1/2/4, Sor-Wiz 1/2/4), Invisibility Sphere (Brd/Sor-Wiz 3), Mass
+// Invisibility (Sor/Wiz 7), Mass Enlarge Person (Sor/Wiz 4), Eagle's Splendor / Fox's Cunning / Owl's
+// Wisdom (+ Mass, 2nd/6th on their PF1 lists), Mass Bear's/Bull's/Cat's (6th), Energy Drain (Clr/Sor-Wiz
+// 9), Chaos Hammer / Order's Wrath (Clr 4), Bane (Clr 1), Aid (Clr 2), Rage (Brd 2, Sor/Wiz 3), Limited
+// Wish (Sor/Wiz 7). Protection from Chaos/Good/Law and the four Magic Circles are FOLDED into
+// Protection from Evil (Communal) — one ward covers every alignment here (ledger).
+const _FOG = { ...SPELL.darkness, key: 'fogcloud', name: 'Fog Cloud', icon: '🌫️', slvl: 2, desc: 'A bank of fog swallows the enemy line — shrouded foes stumble blindly (losing turns, your blows landing easier) until it disperses. Rides the magical-darkness rules, like Obscuring Mist.' };
+for (const [k, l] of [['inflictlight', 1], ['inflictmoderate', 3], ['inflictserious', 5], ['inflictcritical', 7], ['massinflictlight', 9], ['massinflictmoderate', 11], ['massinflictserious', 13], ['massinflictcritical', 15]]) { _injectKitSpell('cleric', preparedSpell(SPELL[k], l)); _injectKitSpell('oracle', spontaneousSpell(SPELL[k], l === 1 ? 1 : l + 1)); }
+_injectKitSpell('cleric',   preparedSpell(SPELL.magicweapon, 1));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.magicweapon, 1));
+_injectKitSpell('paladin',  preparedSpell(SPELL.magicweapon, 4));
+_injectKitSpell('wizard',   preparedSpell(SPELL.magicweapon, 1));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.magicweapon, 1));
+_injectKitSpell('druid',    preparedSpell(SPELL.greatermagicfang, 5));
+_injectKitSpell('ranger',   preparedSpell(SPELL.greatermagicfang, 10));
+_injectKitSpell('bard',     spontaneousSpell({ ...SPELL.charmmonster, slvl: 3 }, 7));
+_injectKitSpell('wizard',   preparedSpell(SPELL.charmmonster, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.charmmonster, 8));
+_injectKitSpell('wizard',   preparedSpell(SPELL.masscharmmonster, 15));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.masscharmmonster, 16));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.deepslumber, 7));
+_injectKitSpell('wizard',   preparedSpell(SPELL.deepslumber, 5));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.deepslumber, 6));
+_injectKitSpell('bard',     spontaneousSpell({ ...SPELL.suggestion, slvl: 2 }, 4));
+_injectKitSpell('wizard',   preparedSpell(SPELL.suggestion, 5));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.suggestion, 6));
+_injectKitSpell('cleric',   preparedSpell(SPELL.dismissal, 7));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.dismissal, 8));
+_injectKitSpell('wizard',   preparedSpell({ ...SPELL.dismissal, slvl: 5 }, 9));
+_injectKitSpell('sorcerer', spontaneousSpell({ ...SPELL.dismissal, slvl: 5 }, 10));
+_injectKitSpell('cleric',   preparedSpell(SPELL.commandgreater, 9));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.commandgreater, 10));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.confusionlesser, 1));
+_injectKitSpell('bard',     spontaneousSpell({ ...SPELL.shoutgreater, slvl: 6 }, 16));
+_injectKitSpell('wizard',   preparedSpell(SPELL.shoutgreater, 15));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.shoutgreater, 16));
+_injectKitSpell('cleric',   preparedSpell(SPELL.trueresurrection, 17));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.trueresurrection, 18));
+_injectKitSpell('cleric',   preparedSpell(SPELL.regenerate, 13));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.regenerate, 14));
+_injectKitSpell('druid',    preparedSpell({ ...SPELL.regenerate, slvl: 9 }, 17));
+_injectKitSpell('druid',    preparedSpell(_FOG, 3));
+_injectKitSpell('wizard',   preparedSpell(_FOG, 3));
+_injectKitSpell('sorcerer', spontaneousSpell(_FOG, 4));
+_injectKitSpell('druid',    preparedSpell(SPELL.faeriefire, 1));
+for (const [k, bl, wl, sl] of [['hypnotism', 1, 1, 1], ['hypnoticpattern', 4, 3, 4], ['rainbowpattern', 10, 7, 8]]) { _injectKitSpell('bard', spontaneousSpell(SPELL[k], bl)); _injectKitSpell('wizard', preparedSpell(SPELL[k], wl)); _injectKitSpell('sorcerer', spontaneousSpell(SPELL[k], sl)); }
+_injectKitSpell('bard',     spontaneousSpell(SPELL.invisibilitysphere, 7));
+_injectKitSpell('wizard',   preparedSpell(SPELL.invisibilitysphere, 5));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.invisibilitysphere, 6));
+_injectKitSpell('wizard',   preparedSpell(SPELL.massinvisibility, 13));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.massinvisibility, 14));
+_injectKitSpell('wizard',   preparedSpell(SPELL.massenlarge, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.massenlarge, 8));
+for (const [k, cls, l] of [['eaglessplendor', 'bard', 4], ['eaglessplendor', 'cleric', 3], ['eaglessplendor', 'oracle', 4], ['eaglessplendor', 'paladin', 7], ['eaglessplendor', 'wizard', 3], ['eaglessplendor', 'sorcerer', 4],
+                          ['foxscunning', 'bard', 4], ['foxscunning', 'wizard', 3], ['foxscunning', 'sorcerer', 4],
+                          ['owlswisdom', 'cleric', 3], ['owlswisdom', 'oracle', 4], ['owlswisdom', 'druid', 3], ['owlswisdom', 'paladin', 7], ['owlswisdom', 'ranger', 7], ['owlswisdom', 'wizard', 3], ['owlswisdom', 'sorcerer', 4],
+                          ['masseagles', 'bard', 16], ['masseagles', 'cleric', 11], ['masseagles', 'oracle', 12], ['masseagles', 'wizard', 11], ['masseagles', 'sorcerer', 12],
+                          ['massfoxes', 'bard', 16], ['massfoxes', 'wizard', 11], ['massfoxes', 'sorcerer', 12],
+                          ['massowls', 'cleric', 11], ['massowls', 'oracle', 12], ['massowls', 'druid', 11], ['massowls', 'wizard', 11], ['massowls', 'sorcerer', 12],
+                          ['massbears', 'cleric', 11], ['massbears', 'oracle', 12], ['massbears', 'druid', 11], ['massbears', 'wizard', 11], ['massbears', 'sorcerer', 12],
+                          ['massbulls', 'cleric', 11], ['massbulls', 'oracle', 12], ['massbulls', 'druid', 11], ['massbulls', 'wizard', 11], ['massbulls', 'sorcerer', 12],
+                          ['masscats', 'bard', 16], ['masscats', 'druid', 11], ['masscats', 'wizard', 11], ['masscats', 'sorcerer', 12]]) {
+  _injectKitSpell(cls, isSpontaneous(cls) ? spontaneousSpell(SPELL[k], l) : preparedSpell(SPELL[k], l));
+}
+_injectKitSpell('cleric',   preparedSpell(SPELL.energydrain, 17));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.energydrain, 18));
+_injectKitSpell('wizard',   preparedSpell(SPELL.energydrain, 17));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.energydrain, 18));
+for (const k of ['chaoshammer', 'orderswrath']) { _injectKitSpell('cleric', preparedSpell(SPELL[k], 7)); _injectKitSpell('oracle', spontaneousSpell(SPELL[k], 8)); }
+_injectKitSpell('cleric',   preparedSpell(SPELL.bane, 1));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.bane, 1));
+_injectKitSpell('cleric',   preparedSpell(SPELL.aid, 3));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.aid, 4));
+_injectKitSpell('bard',     spontaneousSpell({ ...SPELL.ragespell, slvl: 2 }, 4));
+_injectKitSpell('wizard',   preparedSpell(SPELL.ragespell, 5));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.ragespell, 6));
+_injectKitSpell('wizard',   preparedSpell(SPELL.limitedwish, 13));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.limitedwish, 14));
+// (end batch 10)
 // OVERLAND FLIGHT IS A SPELL (v3.37.150 — Josh, spicy-lantern / merry-sparrow: 'why is he casting
 // third-level Fly on himself again and again when he has fifth-level Overland Flight?'): every
 // kit copy carried cost 'run', uses 1 — ONE cast per dungeon. The moment an enemy dispel (or a

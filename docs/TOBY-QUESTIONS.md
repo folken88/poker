@@ -43,6 +43,12 @@ Ruled section with the version that implemented it.
    (Taboon, Ramos, Gaspar, the rest) get a style, and what is it? New styles are
    cheap to add if a concept needs one (e.g. 'blaster', 'controller', 'necromancer').
 
+8. **Holy Smite / Unholy Blight and the alignment table** (v3.37.160). Chaos Hammer and
+   Order's Wrath now follow PF1: opposed foes take full, neutral half, same-aligned nothing.
+   Holy Smite and Unholy Blight predate that and still hit every foe for full. RAW they
+   should follow the same table (Unholy Blight would then do nothing to the evil foes that
+   fill most rooms — Draymus's bot casts it). Keep them as-is for fun, or go RAW?
+
 ## Standing policy (Toby)
 
 - **Bonus typing** (2026-08-30): same-type bonuses never stack; categorize

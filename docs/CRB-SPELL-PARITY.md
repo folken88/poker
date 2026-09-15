@@ -268,9 +268,79 @@ which PF1 allows) and no elemental or eagle; the rungs use what exists.
    no "later" and no intruders but the party. Revisit only if rooms ever get
    a trap-setting phase.
 
+## Batch 10 — clones & staples (v3.37.160)
+
+The straggler sweep, part 1: 43 spells that ride effects the engine already
+had. Every entry is on its PF1 class list at its PF1 level.
+
+1. **Inflict Light/Moderate/Serious/Critical Wounds** (Clr 1-4) ✅ and **Mass
+   Inflict** (Clr 5-8) ✅ — negative energy, Nd8 + CL (capped), Will half,
+   SR applies; the undead are healed by it. (Inflict on an undead ALLY as a
+   heal has no cast path yet — the touch line targets foes; noted.)
+2. **Magic Weapon** (Clr/Pal/Sor-Wiz 1) ✅ — a flat +1 enhancement; never
+   stacks with Greater Magic Weapon / Greater Magic Fang (same bonus type).
+   **Greater Magic Fang** (Drd/Rgr 3) ✅ — run-long, +1 per 4 CL (max +5).
+3. **Charm Monster** (Brd 3, Sor/Wiz 4) ✅, **Mass Charm Monster** (Sor/Wiz
+   8) ✅, **Suggestion** (Brd 2, Sor/Wiz 3) 🔧 (the charm mechanics stand in
+   for the suggestion). RAW fix in passing: **Charm Person** now reaches
+   HUMANOIDS only — it reached every living creature before.
+4. **Deep Slumber** (Brd/Sor-Wiz 3) 🔧 — up to 5 foes (the count stands in
+   for the HD budget). **Dismissal** (Clr 4, Sor/Wiz 5) ✅ — one outsider.
+   **Greater Command** (Clr 5) ✅ — up to 5. **Lesser Confusion** (Brd 1) ✅ —
+   one round. **Greater Shout** (Brd 6, Sor/Wiz 8) ✅ — 10d6 + stun on a
+   failed save. **True Resurrection** (Clr 9) 🔧 (as Resurrection; the
+   no-body clause has no surface). **Regenerate** (Clr 7, Drd 9) 🔧 (4d8 + CL
+   heal; limbs have no surface).
+5. **Fog Cloud** (Drd/Sor-Wiz 2) 🔧 — rides the darkness rules like
+   Obscuring Mist. **Faerie Fire** (Drd 1) 🔧 — reveals the invisible, no
+   save (no foe has blur/displacement to negate).
+6. **Hypnotism / Hypnotic Pattern / Rainbow Pattern** (Brd 1/2/4, Sor-Wiz
+   1/2/4) 🔧 — fascinate with a Will save; 1 / 3 / 5 foes stand in for the
+   HD budgets.
+7. **Invisibility Sphere** (Brd/Sor-Wiz 3) ✅ and **Mass Invisibility** (Sor/
+   Wiz 7) 🔧 — the whole party, each unseen until they strike (the area
+   difference has no surface).
+8. **Mass Enlarge Person** (Sor/Wiz 4) ✅, **Mass Bear's / Bull's / Cat's**
+   (6th on their lists) ✅. **Eagle's Splendor / Fox's Cunning / Owl's
+   Wisdom** (2nd) and the **Mass** versions (6th) 🔧 — +4 to the stat is
+   modeled as +2 to spell DCs and spell attacks for casters of THAT stat; on
+   anyone else it has no surface (no skill checks here).
+9. **Energy Drain** (Clr/Sor-Wiz 9) 🔧 — 1d4/level (max 16d4) negative
+   energy; PF1's negative levels have no surface (Enervation's precedent).
+10. **Chaos Hammer / Order's Wrath** (Clr 4) ✅ — the PF1 alignment table:
+    opposed foes take it all (+ slowed 1d6 / dazed a round on a failed save),
+    neutral half, same-aligned untouched; the bot gate skips the same-aligned.
+    OPEN for Toby: Holy Smite and Unholy Blight predate this table and still
+    hit everyone — see TOBY-QUESTIONS #8.
+11. **Bane** (Clr 1) 🔧 — Will negates, or −1 to hit, damage and saves for
+    the room (rides the Prayer penalty; PF1's is −1 attacks and −1 vs fear).
+    **Aid** (Clr 2) 🔧 — +1 hit, +1 saves (PF1: vs fear), 1d8+CL temp HP.
+    **Rage** (Brd 2, Sor/Wiz 3) ✅ — party morale rage. **Limited Wish** (Sor/
+    Wiz 7) 🔧 — one ally back / 10d8+15 mending / a lighter wound, never an
+    unmaking.
+12. **Protection from Chaos / Good / Law** (1st) and the four **Magic Circles**
+    (3rd) 🔧 — FOLDED into Protection from Evil (Communal): the ward here is
+    +2 AC / +2 saves against everything, so four alignment copies would only
+    stack the same bonus; one entry covers them all (named in its desc later).
+
 ## Queued (batches of 5, in priority order)
 
-- Then a sweep of stragglers until the ledger shows no 📋.
+- **Batch 11 — wards (new hero-side mechanics):** Blur, Entropic Shield,
+  Protection from Arrows, Wind Wall, Sanctuary, True Strike, Keen Edge, Bless
+  Weapon, Resist Energy / Protection from Energy (cold, acid, electricity,
+  sonic), Shield Other, Spell Turning, the Cloak of Chaos / Holy Aura / Shield
+  of Law / Unholy Aura family, Transformation, Antilife Shell.
+- **Batch 12 — offense (new mechanics):** Color Spray, Scintillating Pattern,
+  Crushing Despair, Mind Fog, Ghoul Touch, Halt Undead, Resilient Sphere,
+  Circle of Death, Song of Discord, Eyebite, Mage's Sword, Flaming Sphere,
+  Produce Flame, Wall of Thorns, Spike Stones, Prismatic Wall, Mage's
+  Disjunction, Poison, Rusting Grasp, Shatter, Telekinesis, Whirlwind, Death
+  Knell, Break Enchantment, Animate Dead, Control Undead.
+- Then the last 🚫 pass (self-polymorphs, Gate, Elemental Swarm, Summon
+  Swarm, Insect Plague, Fire Seeds, Stone to Flesh, Spell Immunity, Touch of
+  Idiocy, Moment of Prescience, Hide from Undead, Calm Emotions, the Shadow
+  family, Reduce Person, Expeditious Retreat, Shillelagh, Magic Stone, Blight,
+  Animal Growth) with reasons.
 
 ## Impractical (🚫) — and why
 

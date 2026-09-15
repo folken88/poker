@@ -2174,6 +2174,18 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.160 2026-09-15 CRB BATCH 10 — CLONES & STAPLES (43 spells, all riding existing effects). The
+//                     Inflict line + Mass Inflict (negative energy, Will half, undead mended), Magic
+//                     Weapon (+1, never stacks with a greater enhancement), Greater Magic Fang, Charm
+//                     Monster + Mass, Deep Slumber, Suggestion, Dismissal, Greater Command, Lesser
+//                     Confusion, Greater Shout (10d6 + stun), True Resurrection, Regenerate, Fog Cloud,
+//                     Faerie Fire (reveals the invisible), Hypnotism / Hypnotic Pattern / Rainbow Pattern
+//                     (fascinate with a Will save), Invisibility Sphere / Mass Invisibility (party),
+//                     Mass Enlarge Person, Eagle's/Fox's/Owl's (+Mass: +2 spell DC & spell attack for
+//                     casters of that stat), Mass Bear's/Bull's/Cat's, Energy Drain, Chaos Hammer /
+//                     Order's Wrath (opposed full, neutral half, same-aligned immune + slow/daze), Bane,
+//                     Aid, Rage, Limited Wish. RAW fix: Charm Person reaches HUMANOIDS only. Protection
+//                     from Chaos/Good/Law + the Magic Circles fold into Prot. from Evil (Communal). Tests 268-270.
 //  3.37.159 2026-09-15 CRB BATCH 9 — CAGES & WORDS. Forcecage (Sor/Wiz 7: the windowless cell — no
 //                     save, no SR, one foe sealed and untargetable for 1 round/level, bosses too), Holy
 //                     Word / Blasphemy / Dictum / Word of Chaos (Clr 7: every foe not of the word's
@@ -2224,9 +2236,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.159';
+const VERSION = '3.37.160';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "CRB batch 9 — cages & words: Forcecage, Holy Word, Blasphemy, Dictum, Word of Chaos, Earthquake.";
+const HEADLINE = "CRB batch 10 — clones & staples: 43 spells from Inflict Wounds to Limited Wish, every one on its PF1 list.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

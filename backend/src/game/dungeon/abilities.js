@@ -339,6 +339,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       maze:        () => this._abMaze(m, ab, payload),
       forcecage:   () => this._abForcecage(m, ab, payload),   // v3.37.159
       holyword:    () => this._abHolyWord(m, ab, payload),    // v3.37.159: Holy Word / Blasphemy / Dictum / Word of Chaos
+      inflictmass: () => this._abInflictMass(m, ab, payload), // v3.37.160: the Mass Inflict line
       timestop:    () => this._abTimeStop(m, ab),
       wish:        () => this._abWish(m, ab, payload),
       judgment:    () => this._abJudgment(m, ab),
@@ -820,7 +821,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const stat = (ab && ab.dcStat === 'best' && m.mods) ? Math.max(m.mods.int || 0, m.mods.wis || 0)   // dual-list spell — his better discipline
                : (ab && ab.dcStat && m.mods && m.mods[ab.dcStat] != null) ? m.mods[ab.dcStat]
                : (m.castingMod != null ? m.castingMod : CAST_MOD);
-    return 10 + base + stat + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0) + (m._synthActive ? 4 : 0);   // Spell Synthesis: −4 to targets' saves == +4 to the DC
+    return 10 + base + stat + (fighterFeats(m.cls, m.level, this._isRanged(m)).spellDC || 0) + (m._synthActive ? 4 : 0) + ((m.buffs && m.buffs.castMod) || 0);   // Spell Synthesis: −4 to targets' saves == +4 to the DC; castMod: Eagle's/Fox's/Owl's (v3.37.160)
   },
   // ── PF1 SPELL RESISTANCE ──────────────────────────────────────────────────
   // A creature with SR shrugs off SPELLS unless the caster wins a caster-level
@@ -856,7 +857,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // SPELL stat, not Dex — so a wizard's ray lands as reliably as he casts. BAB +
   // casting-stat mod (NOT the legacy Dex-ish ABILITY_MOD). Cantrips already do this
   // (see _abCantrip); the magus's weapon-delivered Spellstrike keeps its weapon stat.
-  _spellToHit(m) { return babFor(m.cls || 'fighter', m.level || 1) + (m.castingMod != null ? m.castingMod : CAST_MOD); },
+  _spellToHit(m) { return babFor(m.cls || 'fighter', m.level || 1) + (m.castingMod != null ? m.castingMod : CAST_MOD) + ((m.buffs && m.buffs.castMod) || 0); },   // castMod: Eagle's/Fox's/Owl's (v3.37.160)
   // ── METAMAGIC (PF1) ─────────────────────────────────────────────────────────
   // Two paths, mirroring the two spell systems:
   //   • SPONTANEOUS casters (sorcerer/bard/oracle/inquisitor) carry live TOGGLES in
@@ -1536,9 +1537,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // then a TALLY of how many failed / saved / were slain — NOT a per-enemy list.
     // Keeps mid-combat narration fast; the blind player inspects enemies (E) on their
     // own turn for exactly who's left and how hurt.
-    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0, searedN = 0, proneN = 0;
+    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0, searedN = 0, proneN = 0, slowN = 0, stunN = 0, immuneN = 0;
     for (const e of chosen) {
       if (this._srBlocks(m, e, ab, true)) { srN++; continue; }   // PF1 SR: checked per target, tallied (counts-only for Josh)
+      const _am = ab.vsAlign ? (this._alignIs(e, ab.vsAlign) ? 1 : this._alignIs(e, { lawful: 'chaotic', chaotic: 'lawful', good: 'evil', evil: 'good' }[ab.vsAlign]) ? 0 : 0.5) : 1;   // Chaos Hammer / Order's Wrath (v3.37.160): opposed full, neutral half, same-aligned immune (PF1)
+      if (_am === 0) { immuneN++; continue; }
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
       const evaded = sv.saved && saveStat === 'reflex' && e.evasion;
       // SUNLIGHT spells (Sunbeam/Sunburst, v3.37.143 — Josh: 'is it affecting undead
@@ -1550,15 +1553,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         const lightVuln = e.lightVuln || /vampire/i.test(e.name || '');
         if (lightVuln || e.type === 'undead') { tFull = this._rollSpell(m, Math.min(15, Math.max(1, m.level || 1)), lightVuln ? 8 : 6, ab); searedN++; }
       }
-      const raw = sv.saved ? (evaded ? 0 : Math.floor(tFull / 2)) : tFull;
+      const raw = Math.floor((sv.saved ? (evaded ? 0 : Math.floor(tFull / 2)) : tFull) * _am);
       this._dmgE(e, raw, ab.dtype);
       // SUNBURST-style rider: a failed save also BLINDS (3 rounds, like Glitterdust).
       if (ab.blindRider && !sv.saved && e.hp > 0) { e.blinded = Math.max(e.blinded || 0, 3); blindN++; }
       if (ab.proneRider && !sv.saved && e.hp > 0 && !e.flying) { e.prone = true; proneN++; }   // Earthquake (v3.37.159): a failed save throws a grounded foe PRONE
+      if (ab.slowRider && !sv.saved && e.hp > 0 && _am === 1) { e.slowed = Math.max(e.slowed || 0, dRoll(6)); slowN++; }   // Chaos Hammer (v3.37.160): lawful foes that fail are SLOWED 1d6
+      if (ab.stunRider && !sv.saved && e.hp > 0 && _am === 1) { e.stunned = Math.max(e.stunned || 0, 1); stunN++; }   // Greater Shout / Order's Wrath (v3.37.160): a failed save also STUNS a round
       if (sv.saved) savedN++; else failN++;
       if (e.hp <= 0) slainN++;
     }
-    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${proneN ? ` (${proneN} knocked PRONE)` : ''}${searedN ? `, ${searedN} undead SEARED by true daylight` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${slainN ? `, ${slainN} slain` : ''}`;
+    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${proneN ? ` (${proneN} knocked PRONE)` : ''}${slowN ? ` (${slowN} SLOWED)` : ''}${stunN ? ` (${stunN} STUNNED)` : ''}${searedN ? `, ${searedN} undead SEARED by true daylight` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${immuneN ? `, ${immuneN} same-aligned untouched` : ''}${slainN ? `, ${slainN} slain` : ''}`;
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${saveLbl} DC ${dc} (${full} ${ab.dtype || ''}): ${tally}.`, sound);
     this._echoToTable(sound);
     // THE STORM LINGERS (v3.37.143 — Josh: 'they keep going after you cast... you
@@ -1761,6 +1766,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // Blinded = −4 to its own attacks, denied Dex (easier to hit, Sneak-Attackable).
   _abGlitterdust(m, ab, payload) {
     const sound = ab.sound;
+    if (ab.revealOnly) {   // Faerie Fire (v3.37.160): no save — every invisible foe is limned and REVEALED for the room
+      const seen = this.livingEnemies().filter(e => e.invisible && !e.summoned);
+      for (const e of seen) e.invisible = false;
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — pale light limns every foe${seen.length ? `: ${seen.map(e => e.name).join(', ')} stand${seen.length === 1 ? 's' : ''} REVEALED` : ' (nothing was hidden)'}.`, sound);
+      this._echoToTable(sound); return;
+    }
     const dc = this._spellDC(m, ab);
     const n = (ab.randBase || 1) + dRoll(ab.randDie || 4);
     const pool = this._targetableEnemies().slice();
@@ -2041,6 +2052,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     // The caster's CHOSEN ally (Josh: hide Vaughn, not always Nomkath), else the
     // MOST-HURT ally (least current HP) — not necessarily the caster.
+    if (ab.party) {   // Invisibility Sphere / Mass Invisibility (v3.37.160): the whole party, each unseen until they strike
+      for (const a of this.livingParty()) a.invisible = true;
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — the whole party fades from sight, each unseen until they strike.`, ab.sound);
+      this._echoToTable(ab.sound); return;
+    }
     const target = this._pickedAlly(payload, { alive: true }) || this.livingParty().slice().sort((a, b) => a.hp - b.hp)[0] || m;
     target.invisible = true;
     const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
@@ -2196,19 +2212,19 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (anyDead) {
       this._note(`${ab.icon} ${m.nickname} speaks a ${ab.name.toUpperCase()} — reality bends: the fallen are CALLED BACK!`, ab.sound);
       let guard = 0;
-      while (this.party.some(a => a.dead && !a.left) && guard++ < 12) this._abRevive(m, { ...ab, effect: 'revive', raiseDead: true, full: true }, {});
+      while (this.party.some(a => a.dead && !a.left) && guard++ < 12) { this._abRevive(m, { ...ab, effect: 'revive', raiseDead: true, full: true }, {}); if (ab.limited) break; }   // Limited Wish (v3.37.160): ONE ally
       this._broadcast(); return;
     }
     const battered = this.livingParty().filter(a => a.hp < a.maxHp * 0.6).length >= 2;
     if (battered) {
       this._note(`${ab.icon} ${m.nickname} speaks a ${ab.name.toUpperCase()} — the party is MADE WHOLE!`, ab.sound);
-      this._abHeal(m, { ...ab, effect: 'heal', heal: 'party', massHeal: true, healDice: 15, healCap: 25 }, {});
+      this._abHeal(m, { ...ab, effect: 'heal', heal: 'party', massHeal: true, healDice: ab.limited ? 10 : 15, healCap: ab.limited ? 15 : 25 }, {});   // Limited Wish (v3.37.160): 10d8 + CL (max +15)
       return;
     }
     const e = this._oneEnemy(payload); if (!e) return;
     const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, 'will'), dc);
-    if (!sv.saved && !e.boss) {
+    if (!sv.saved && !e.boss && !ab.limited) {   // Limited Wish (v3.37.160) cannot unmake anyone
       this._dmgE(e, e.hp + 20, 'force');
       this._note(`${ab.icon} ${m.nickname} speaks a ${ab.name.toUpperCase()} — reality forgets ${e.name} ever existed. [Will ${sv.total} vs ${dc}] ☠️`, ab.sound);
     } else {
@@ -2237,6 +2253,25 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     this._echoToTable(sound);
   },
+  // MASS INFLICT X WOUNDS (v3.37.160, CRB batch 10): Nd8 + CL (capped) negative energy to up to
+  // 6 foes, Will half, SR applies; undead among them are HEALED (PF1). Counts-only report.
+  _abInflictMass(m, ab, payload) {
+    const lvl = Math.max(1, m.level || 1), dc = this._spellDC(m, ab), sound = ab.sound;
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 6);
+    if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — nothing there to wither.`, sound); this._echoToTable(sound); return; }
+    let hurtN = 0, savedN = 0, mendN = 0, srN = 0, slainN = 0, total = 0;
+    for (const e of chosen) {
+      if (this._srBlocks(m, e, ab, true)) { srN++; continue; }
+      const amt = dRollN(ab.healDice || 1, 8) + Math.min(ab.healCap || lvl, lvl);
+      if (e.type === 'undead') { e.hp = Math.min(e.maxHp || e.hp, e.hp + amt); mendN++; continue; }
+      const sv = this._saveVs(this._enemySave(e, 'will'), dc);
+      total += this._dmgE(e, sv.saved ? Math.floor(amt / 2) : amt, 'negative');
+      if (sv.saved) savedN++; else hurtN++;
+      if (e.hp <= 0) slainN++;
+    }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — Will DC ${dc}: ${hurtN} withered${savedN ? `, ${savedN} saved for half` : ''}${mendN ? `, ${mendN} undead MENDED by it` : ''}${srN ? `, ${srN} spell-resisted` : ''}${slainN ? `, ${slainN} slain ☠️` : ''} (${total} negative energy in all).`, sound);
+    this._echoToTable(sound);
+  },
   // FORCECAGE (v3.37.159, CRB batch 9): PF1's windowless cell — no save, no SR; the foe
   // is sealed for 1 round/level: untargetable (Dungeon._targetableEnemies) and its turns
   // are spent battering the walls (_enemyAct decrements e.caged and skips). Bosses too.
@@ -2253,9 +2288,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // (1d10 min → 10 rounds here); ≤ CL−10 → slain. Adaptations: CR stands in for HD; deafness
   // has no surface, so the deafened tier RATTLES (sickened 1d4); a boss is never slain
   // outright (half its max HP — the standing save-or-lose boss rule).
+  _alignIs(e, a) { const al = (e && e.align) || ''; return a === 'good' ? !!(e.good || /G$/.test(al)) : a === 'evil' ? !!(e.evil || /E$/.test(al)) : a === 'lawful' ? /^L/.test(al) : a === 'chaotic' ? /^C/.test(al) : false; },   // v3.37.160: one alignment reader for the words and the aligned blasts
   _abHolyWord(m, ab, payload) {
     const cl = m.level || 1, sound = ab.sound;
-    const isA = (e, a) => a === 'good' ? !!(e.good || /G$/.test(e.align || '')) : a === 'evil' ? !!(e.evil || /E$/.test(e.align || '')) : a === 'lawful' ? /^L/.test(e.align || '') : /^C/.test(e.align || '');
+    const isA = (e, a) => this._alignIs(e, a);
     const non = { good: 'nongood', evil: 'nonevil', lawful: 'nonlawful', chaotic: 'nonchaotic' }[ab.wordVs] || 'opposed';
     const hit = this._targetableEnemies().filter(e => e.hp > 0 && !isA(e, ab.wordVs));
     if (!hit.length) { this._note(`${ab.icon} ${m.nickname} speaks ${ab.name} — but no ${non} foe stands here; the word finds no one to judge.`, sound); this._echoToTable(sound); return; }
@@ -2684,6 +2720,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abCharm(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
+    if (ab.onlyHumanoids && !this._isHumanoid(e)) { this._note(`${ab.icon} ${e.name} is no humanoid — ${ab.name} cannot reach it (PF1: Charm Monster does).`); this._echoToTable(); return; }   // v3.37.160 RAW
     if (e.charmed) { this._note(`${ab.icon} ${e.name} is already charmed.`); return; }
     const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, ab.save || 'will'), dc);
@@ -2712,7 +2749,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       case 'commanded':    e.stunned = Math.max(e.stunned || 0, 1); e.prone = true; break;
       case 'frightened':   { const r = dRoll(4); e.frightened = Math.max(e.frightened || 0, r); e.sickened = Math.max(e.sickened || 0, r); break; }
       case 'panicked':     { const r = Math.min(10, lvl); e.frightened = Math.max(e.frightened || 0, r); e.sickened = Math.max(e.sickened || 0, r); break; }
-      case 'confused':     e.confused = Math.max(e.confused || 0, ab.permanent ? 99 : Math.min(10, lvl)); break;   // Insanity (v3.37.158): permanent = the room
+      case 'confused':     e.confused = Math.max(e.confused || 0, ab.permanent ? 99 : ab.oneRound ? 1 : Math.min(10, lvl)); break;   // Insanity (v3.37.158): permanent = the room; Lesser Confusion (v3.37.160): one round
+      case 'baned':        e.prayed = Math.max(e.prayed || 0, 1); break;   // Bane (v3.37.160): −1 to hit, damage and saves — rides the Prayer penalty
       case 'repulsed':     e.repulsed = Math.max(e.repulsed || 0, rounds); break;   // Repulsion (v3.37.158): melee foes cannot close (enemyAI gate)
       case 'polymorphed': {   // Baleful Polymorph (v3.37.158): a harmless rabbit for the room — HP stay, everything else goes; bosses are immune (gated upstream)
         if (e.boss || e.polymorphed) return false;
@@ -2781,7 +2819,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} misses ${e.name}. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
     if (this._rayEvades(m, e, ab)) { this._echoToTable(sound); return; }   // v3.37.148: images / concealment (PF1)
     if (ab.harm) {   // HARM (v3.37.154, CRB batch 4): 10 per caster level (max 150) negative energy, Will half; the undead are HEALED (PF1)
-      const lvl = Math.max(1, m.level || 1), amt = Math.min(150, 10 * lvl);
+      const lvl = Math.max(1, m.level || 1), amt = ab.healDice ? dRollN(ab.healDice, 8) + Math.min(ab.healCap || lvl, lvl) : Math.min(150, 10 * lvl);   // Inflict X Wounds (v3.37.160): Nd8 + CL (capped); Harm: 10/level
       if (e.type === 'undead') { const before = e.hp; e.hp = Math.min(e.maxHp || e.hp, e.hp + amt); this._note(`${ab.icon} ${m.nickname}'s ${ab.name} pours negative energy into ${e.name} — the undead thing MENDS ${e.hp - before} HP!`, sound); this._echoToTable(sound); return; }
       const dc = this._spellDC(m, ab), sv = this._saveVs(this._enemySave(e, 'will'), dc);
       const dealt = this._dmgE(e, sv.saved ? Math.floor(amt / 2) : amt, 'negative');
@@ -2932,9 +2970,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abFascinate(m, ab, payload) {
     const chosen = this._enemyTargets(payload, ab.maxTargets || 3).filter(e => !ccd(e) && !mindImmune(e));   // skip already-CC'd foes + mind-immune (undead/construct)
     if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} begins ${ab.name}, but those foes are immune or already entranced.`); return; }
-    for (const e of chosen) e.fascinated = true;
+    const dc = ab.save ? this._spellDC(m, ab) : null;   // Hypnotism / Hypnotic Pattern / Rainbow Pattern (v3.37.160): Will negates
+    const held = dc == null ? chosen : chosen.filter(e => !this._saveVs(this._enemySave(e, 'will'), dc).saved);
+    for (const e of held) e.fascinated = true;
     const sound = ab.sound || pick(SND.flesh);
-    this._note(`${ab.icon} ${m.nickname} performs ${ab.name} — ${chosen.length} foe${chosen.length === 1 ? '' : 's'} stand${chosen.length === 1 ? 's' : ''} fascinated (until struck).`, sound);   // COUNT, not a per-foe roll call (Josh 2026-07-08 — same as channel/AoE reports)
+    if (!held.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — but every foe shrugs off the pattern. [Will DC ${dc}]`, sound); this._echoToTable(sound); return; }
+    this._note(`${ab.icon} ${m.nickname} ${dc == null ? 'performs' : 'casts'} ${ab.name} — ${held.length} foe${held.length === 1 ? '' : 's'} stand${held.length === 1 ? 's' : ''} fascinated (until struck)${dc != null ? ` [Will DC ${dc}${chosen.length > held.length ? `, ${chosen.length - held.length} resist` : ''}]` : ''}.`, sound);   // COUNT, not a per-foe roll call (Josh 2026-07-08 — same as channel/AoE reports)
     this._echoToTable(sound);
   },
   // Heal: 'party' (channel) heals all living allies; 'channel' (lay on hands)
@@ -3246,10 +3287,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // Inspire Courage scales with BARD level, PF1-style: +1, rising to +2/+3/+4
     // at caster level 5 / 11 / 17. (`lvl` is the caster's level.)
     const inspMod = lvl >= 17 ? 4 : lvl >= 11 ? 3 : lvl >= 5 ? 2 : 1;
-    const gmwMod = Math.min(5, Math.floor(lvl / 4));   // Greater Magic Weapon: +1 enhancement per 4 caster levels (max +5)
+    const gmwMod = ab.gmwFlat || Math.min(5, Math.floor(lvl / 4));   // Greater Magic Weapon: +1 enhancement per 4 caster levels (max +5); Magic Weapon (v3.37.160): a flat +1
     const apply = (who) => {
       who.buffApplied = who.buffApplied || {};
       if (ab.sticky && who.buffApplied[ab.key]) return;   // already active this room — don't stack
+      if (ab.gmwFlat && who.runBuffApplied && (who.runBuffApplied.greatermagicweapon || who.runBuffApplied.greatermagicfang)) return;   // Magic Weapon (v3.37.160): an enhancement bonus never stacks with a greater one (PF1)
       if (ab.sticky) who.buffApplied[ab.key] = true;
       if (ab.persist) {   // Bless / Inspire / Magic Vestment / the 10-min-per-level tier: run-long, survives room resets
         who.runBuffApplied = who.runBuffApplied || {};
@@ -3308,6 +3350,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       who.buffs.cmd = (who.buffs.cmd || 0) + ((ab.buff && ab.buff.cmd) || 0);   // Righteous Might: Large size + Str — feeds _heroCMD vs grapples/trips/bull rushes
       who.buffs.dexMod = (who.buffs.dexMod || 0) + ((ab.buff && ab.buff.dexMod) || 0);   // Cat's Grace: +Dex modifier — feeds the reach-weapon AoO count (Combat Reflexes)
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
+      if (ab.buff && ab.buff.tempHp) this._grantTempHp(who, dRollN(ab.buff.tempHp, 8) + Math.min(10, lvl));   // Aid (v3.37.160): 1d8 + CL (max +10) temporary HP
+      if (ab.buff && ab.buff.castMod && ({ cha: ['sorcerer', 'bard', 'oracle', 'paladin', 'antipaladin', 'bloodrager', 'summoner'], int: ['wizard', 'magus', 'alchemist', 'investigator', 'witch', 'arcanist'], wis: ['cleric', 'druid', 'ranger', 'inquisitor', 'shaman', 'warpriest', 'hunter'] }[ab.buff.castStat] || []).includes(who.cls)) who.buffs.castMod = (who.buffs.castMod || 0) + ab.buff.castMod;   // Eagle's/Fox's/Owl's (v3.37.160): +2 spell DC & spell attack for casters of THAT stat
       if (ab.dr) who.dr = Math.max(who.dr || 0, ab.dr);   // Stoneskin — DR vs physical blows
       if (ab.protectFire) who.protectFire = Math.min(120, 12 * (m.level || 1));   // PF1 Protection from Energy: an absorption pool — 12 per caster level, max 120
       if (ab.darkvision) who.darkvision = true;   // Darkvision (Communal): the party can target foes shrouded in magical darkness
