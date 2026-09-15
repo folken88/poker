@@ -140,10 +140,38 @@ mind-affecting: the undead and constructs are immune.
 
 Death Ward moved to batch 5 (wards).
 
+## Batch 5 — condition removal & wards (v3.37.155)
+
+1. **Remove Curse** (Brd 3/Clr 3/Pal 3/Sor-Wiz 4) ✅ — lifts a curse, no check
+   (PF1). To give it a curse to lift, CL5+ enemy casters now cast **Bestow
+   Curse** once a room (3rd, Will negates): a failed save is −4 to hit and on
+   saves and CLINGS from room to room until Remove Curse — Dispel cannot touch
+   it (RAW). Bots cast Remove Curse for a cursed ally; the Remove spells never
+   aim at a foe.
+2. **Remove Fear** (Brd 1/Clr 1) 🔧 — lifts fear-born shakenness (Daunting
+   Success is the only hero sickening) and wards the party for the run: immune
+   to Daunting Success, +4 on saves vs fear gazes. Adaptation: the whole party,
+   not one creature per four levels.
+3. **Spell Resistance** (Clr 5) ✅ — SR 12 + CL on an ally for the room; every
+   enemy SPELL (blast, nuke, missiles, hold, curse) rolls d20 + CL against it.
+   Racial SR and the spell take the higher (SR never stacks). Hold Person now
+   tests SR too — it never did.
+4. **Lesser Globe of Invulnerability** (Sor/Wiz 4) / **Globe of
+   Invulnerability** (Sor/Wiz 6) 🔧 — enemy spells of 3rd / 4th level or lower
+   cannot reach anyone inside for the room: Fireball, Magic Missile, Hold
+   Person, Bestow Curse, plain Dispel Magic. Cone of Cold, Chain Lightning,
+   Hold Monster, Greater Dispel, Disintegrate and Finger of Death pass. The
+   lich stops throwing fireballs at a globed party and reaches for the nuke.
+   Adaptation: the whole party huddles inside (PF1: a 10-ft emanation).
+5. **Death Ward** (Clr 4/Drd 5/Pal 4) ✅ — a Finger of Death fails outright; a
+   vampire's draining touch lands only its weapon part and drinks nothing.
+6. **Restoration / Lesser Restoration** (Clr 4/2, Drd 5/3, Pal 4/1) 🚫 — heroes
+   never suffer fatigue, exhaustion, ability damage or negative levels (only
+   FOES are fatigued, by Waves of Fatigue), so there is nothing to restore.
+   Revisit with the first energy-draining monster.
+
 ## Queued (batches of 5, in priority order)
 
-- **Batch 5 — condition removal & wards:** Restoration (+Lesser), Remove
-  Curse, Remove Fear, Spell Resistance, Globe of Invulnerability, Death Ward.
 - **Batch 6 — blasts & rays:** Acid Fog, Incendiary Cloud, Phantasmal Killer,
   Weird, Contagion.
 - **Batch 7 — summon fill:** Summon Monster I–III/V/VII/IX + Nature's Ally

@@ -2174,6 +2174,18 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.155 2026-09-15 CRB BATCH 5 — CONDITION REMOVAL & WARDS. Remove Curse (Brd/Clr/Pal 3, Sor/Wiz
+//                     4: lifts a curse, no check), Remove Fear (Brd/Clr 1: lifts fear-born shakenness,
+//                     party immune to Daunting Success and +4 vs fear for the run), Spell Resistance
+//                     (Clr 5: SR 12+CL on an ally for the room — enemy spells must beat it), Lesser
+//                     Globe / Globe of Invulnerability (Sor/Wiz 4/6: enemy spells of 3rd/4th level or
+//                     lower cannot reach the party — fireball, magic missile, hold person, bestow
+//                     curse, plain dispel), Death Ward (Clr/Pal 4, Drd 5: Finger of Death fails, a
+//                     vampire's drain finds no life). ENEMY BESTOW CURSE: CL5+ casters lay a curse
+//                     (Will negates) that follows the hero room to room (−4 to hit and on saves)
+//                     until Remove Curse. Hold Person now tests SR. Bots: the wards answer the field,
+//                     Remove Curse for the cursed, and the Remove spells never aim at a foe.
+//                     Restoration/Lesser Restoration deferred (no hero fatigue/drain to cure). Tests 253-256.
 //  3.37.154 2026-09-15 CRB BATCH 4 — DIVINE STAPLES. Deeper Darkness (Clr/Sor/Wiz 3: 1d4+2 foes, 3
 //                     rounds, ordinary darkvision does NOT pierce it — True Seeing / blindsense only;
 //                     snuffs a Daylight), Daylight (Brd/Clr/Drd/Sor/Wiz 3: lifts every magical
@@ -2183,9 +2195,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.154';
+const VERSION = '3.37.155';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "CRB batch 4 — divine staples: Deeper Darkness, Daylight, Remove Blindness, Harm, and the paladin's Remove Paralysis.";
+const HEADLINE = "CRB batch 5 — condition removal & wards: Remove Curse, Remove Fear, Spell Resistance, Globe of Invulnerability, Death Ward — and enemy casters now bestow curses.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

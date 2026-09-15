@@ -306,6 +306,13 @@ const SPELL = {
   removeparalysis:{ key: 'removeparalysis',name: 'Remove Paralysis', icon: '🩹', effect: 'cleanse', target: 'ally', slvl: 2, sound: S.cure, desc: 'Free an ally from paralysis or slow — ANY source, even a ghoul’s touch, no check needed (PF1).' },
   removeblindness:{ key: 'removeblindness',name: 'Remove Blindness/Deafness', icon: '👁️', effect: 'cleanse', removeBlind: true, target: 'ally', slvl: 3, sound: S.cure, desc: 'Cure an ally of blindness — any source, no check needed (PF1). Deafness has no surface in this dungeon.' },
   harm:           { key: 'harm',           name: 'Harm',            icon: '🖤', effect: 'touch', harm: true, dtype: 'negative', save: 'will', target: 'enemy', slvl: 6, sound: S.umbral, desc: 'A touch that charges a living foe with negative energy: 10 damage per caster level (max 150), Will save for half. The undead are HEALED by it instead — never aim it at them (PF1).' },
+  // ── CRB BATCH 5: CONDITION REMOVAL & WARDS (v3.37.155) ──
+  removecurse:    { key: 'removecurse',    name: 'Remove Curse',    icon: '🧿', effect: 'cleanse', removeCurse: true, target: 'ally', slvl: 3, sound: S.cure, desc: 'Lift a curse from an ally — no check needed (PF1). A Bestow Curse (−4 to hit and on saves) otherwise clings from room to room for the whole dungeon; Dispel Magic cannot touch it.' },
+  removefear:     { key: 'removefear',     name: 'Remove Fear',     icon: '🦁', effect: 'buff', target: 'self', party: true, persist: true, sticky: true, fearWard: true, buff: {}, slvl: 1, sound: S.invoke, desc: 'Steady the party’s nerve: any fear-born shakenness lifts at once, and for the rest of the dungeon each ally shrugs off Daunting Success and takes +4 on saves against fear. (Adaptation: the whole party, not one creature per four levels.)' },
+  spellresistance:{ key: 'spellresistance',name: 'Spell Resistance',icon: '🛡️', effect: 'buff', target: 'ally', sticky: true, spellResist: true, buff: {}, slvl: 5, sound: S.invoke, desc: 'Grant an ally spell resistance 12 + your caster level for the room: every enemy SPELL (fireball, hold, magic missile, bestow curse, finger of death…) must beat it or fail. Friendly magic passes freely (harmless spells, PF1).' },
+  globelesser:    { key: 'globelesser',    name: 'Lesser Globe of Invulnerability', icon: '🔮', effect: 'buff', target: 'self', party: true, sticky: true, globe: 3, buff: {}, slvl: 4, sound: S.invoke, desc: 'A shimmering globe around the party: enemy spells of 3rd level or lower (fireball, hold person, magic missile, bestow curse, dispel magic) cannot reach anyone inside for the room. Your own spells pass out freely (PF1). (Adaptation: the whole party huddles inside.)' },
+  globeofinvuln:  { key: 'globeofinvuln',  name: 'Globe of Invulnerability', icon: '🔮', effect: 'buff', target: 'self', party: true, sticky: true, globe: 4, buff: {}, slvl: 6, sound: S.invoke, desc: 'As the lesser globe, but it turns aside enemy spells of 4th level or lower for the room; Cone of Cold, Hold Monster, Chain Lightning, Disintegrate and Finger of Death still get through (PF1).' },
+  deathward:      { key: 'deathward',      name: 'Death Ward',      icon: '⚰️', effect: 'buff', target: 'ally', sticky: true, deathWard: true, buff: {}, slvl: 4, sound: S.invoke, desc: 'Shield an ally from death magic and negative energy for the room: a Finger of Death fails outright and a vampire’s draining touch finds no life to drink (PF1).' },
   bladebarrier:   { key: 'bladebarrier',   name: 'Blade Barrier',     icon: '🌪️', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, slvl: 6, sound: '/audio/spell_holysmite.mp3', desc: 'A whirling wall of blades slices through up to 4 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
   firestorm:      { key: 'firestorm',      name: 'Fire Storm',        icon: '🌋', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'fire', slvl: 8, sounds: FIREBALL_SFX, desc: 'Sheets of divine flame roar over up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
   massheal:       { key: 'massheal',       name: 'Mass Heal',         icon: '💗', effect: 'heal', heal: 'party', massHeal: true, healDice: 15, healCap: 25, target: 'ally', slvl: 9, sound: '/audio/spell_channel_charge.mp3', desc: 'A tidal wave of positive energy — the WHOLE party heals 15d8 + caster level (max +25).' },
@@ -1331,6 +1338,30 @@ _injectKitSpell('paladin',  preparedSpell(SPELL.removeparalysis, 7));    // Pal 
 _injectKitSpell('cleric',   preparedSpell(SPELL.harm, 11));
 _injectKitSpell('oracle',   spontaneousSpell(SPELL.harm, 12));
 // (end batch 4)
+// CRB BATCH 5 — CONDITION REMOVAL & WARDS (v3.37.155): Remove Curse (Brd 3/Clr 3/Pal 3/Sor-Wiz 4),
+// Remove Fear (Brd 1/Clr 1), Spell Resistance (Clr 5), Lesser Globe of Invulnerability (Sor/Wiz 4),
+// Globe of Invulnerability (Sor/Wiz 6), Death Ward (Clr 4/Drd 5/Pal 4). Restoration and Lesser
+// Restoration are deferred — heroes have no fatigue, ability damage or negative levels to cure.
+_injectKitSpell('bard',     spontaneousSpell(SPELL.removecurse, 7));
+_injectKitSpell('cleric',   preparedSpell(SPELL.removecurse, 5));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.removecurse, 6));
+_injectKitSpell('paladin',  preparedSpell(SPELL.removecurse, 10));
+_injectKitSpell('wizard',   preparedSpell(SPELL.removecurse, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.removecurse, 8));
+_injectKitSpell('bard',     spontaneousSpell(SPELL.removefear, 1));
+_injectKitSpell('cleric',   preparedSpell(SPELL.removefear, 1));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.removefear, 1));
+_injectKitSpell('cleric',   preparedSpell(SPELL.spellresistance, 9));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.spellresistance, 10));
+_injectKitSpell('wizard',   preparedSpell(SPELL.globelesser, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.globelesser, 8));
+_injectKitSpell('wizard',   preparedSpell(SPELL.globeofinvuln, 11));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.globeofinvuln, 12));
+_injectKitSpell('cleric',   preparedSpell(SPELL.deathward, 7));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.deathward, 8));
+_injectKitSpell('druid',    preparedSpell(SPELL.deathward, 9));
+_injectKitSpell('paladin',  preparedSpell(SPELL.deathward, 13));
+// (end batch 5)
 // OVERLAND FLIGHT IS A SPELL (v3.37.150 — Josh, spicy-lantern / merry-sparrow: 'why is he casting
 // third-level Fly on himself again and again when he has fifth-level Overland Flight?'): every
 // kit copy carried cost 'run', uses 1 — ONE cast per dungeon. The moment an enemy dispel (or a

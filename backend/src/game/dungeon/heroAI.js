@@ -572,15 +572,15 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       //     Wind, mass Hold): now there's TIME to dispel a buffed foe / free a debuffed
       //     ally, or debuff a foe still standing.
       if (controlled) {
-        const cleanse = (allies.some(a => a.blinded > 0) && avail.find(a => a.removeBlind)) || (allies.some(a => a.paralyzed > 0) && avail.find(a => a.key === 'removeparalysis')) || avail.find(a => a.effect === 'cleanse' && !a.removeBlind && a.key !== 'removeparalysis') || avail.find(a => a.effect === 'cleanse');   // v3.37.154: the right cleanse for the affliction (Remove Blindness for the blind, Remove Paralysis for the held, Dispel for the rest)
+        const cleanse = (allies.some(a => a.cursed) && avail.find(a => a.removeCurse)) || (allies.some(a => a.blinded > 0) && avail.find(a => a.removeBlind)) || (allies.some(a => a.paralyzed > 0) && avail.find(a => a.key === 'removeparalysis')) || avail.find(a => a.effect === 'cleanse' && !a.removeBlind && !a.removeCurse && a.key !== 'removeparalysis') || avail.find(a => a.effect === 'cleanse');   // v3.37.154: the right cleanse for the affliction (Remove Blindness for the blind, Remove Paralysis for the held, Dispel for the rest)
         if (cleanse) {
-          const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0);   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
+          const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0 || (cleanse.removeCurse && a.cursed));   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
           // Foe-side dispel ECONOMICS (Tobias: bards over-dispelled): grounding
           // SPELL-flight, unveiling Invisibility or stripping Haste is worth the
           // turn; a static AC ward (Shield/Mage Armor) is NOT — fall through to
           // fighting/buffing/debuffing/healing instead.
           const worthy0 = this._dispelWorthyFoe();   // FUTILITY: 2 failed dispels vs this foe this room → stop (v3.37.84)
-          const worthy = (worthy0 && (this._ccLedger(m)['dispel:' + worthy0.uid] || 0) < 2) ? worthy0 : null;
+          const worthy = (worthy0 && !cleanse.removeBlind && !cleanse.removeCurse && cleanse.key !== 'removeparalysis' && (this._ccLedger(m)['dispel:' + worthy0.uid] || 0) < 2) ? worthy0 : null;   // v3.37.155: the Remove spells cure — they never aim at a foe
           if (allyDebuffed || worthy) return { slot: slot(cleanse), payload: (worthy && !allyDebuffed) ? { targetUid: worthy.uid } : {} };
         }
         const active = targets.filter(e => !(e.grappled || e.prone || e.paralyzed > 0 || e.fascinated || e.asleep));
@@ -702,13 +702,13 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     //     genuinely WORTH the turn (Tobias: bards over-dispelled — grounding
     //     spell-flight yes, peeling a Shield ward no; otherwise fall through to
     //     fight/buff/debuff/heal like a real bard).
-    const cleanse = (allies.some(a => a.blinded > 0) && avail.find(a => a.removeBlind)) || (allies.some(a => a.paralyzed > 0) && avail.find(a => a.key === 'removeparalysis')) || avail.find(a => a.effect === 'cleanse' && !a.removeBlind && a.key !== 'removeparalysis') || avail.find(a => a.effect === 'cleanse');   // v3.37.154: the right cleanse for the affliction (Remove Blindness for the blind, Remove Paralysis for the held, Dispel for the rest)
+    const cleanse = (allies.some(a => a.cursed) && avail.find(a => a.removeCurse)) || (allies.some(a => a.blinded > 0) && avail.find(a => a.removeBlind)) || (allies.some(a => a.paralyzed > 0) && avail.find(a => a.key === 'removeparalysis')) || avail.find(a => a.effect === 'cleanse' && !a.removeBlind && !a.removeCurse && a.key !== 'removeparalysis') || avail.find(a => a.effect === 'cleanse');   // v3.37.154: the right cleanse for the affliction (Remove Blindness for the blind, Remove Paralysis for the held, Dispel for the rest)
     if (cleanse) {
-      const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0);   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
+      const allyDebuffed = allies.some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0 || (cleanse.removeCurse && a.cursed));   // SPELL effects only — dispel can't touch grapple/stun/sickness (PF1, Tobias 2026-07-03)
       // FUTILITY: two failed dispels against this foe this room (its effective CL
       // outclasses ours — Femmik at +18 vs DC 32) → stop feeding it turns.
       const worthy0 = this._dispelWorthyFoe();
-      const worthy = (worthy0 && (this._ccLedger(m)['dispel:' + worthy0.uid] || 0) < 2) ? worthy0 : null;
+      const worthy = (worthy0 && !cleanse.removeBlind && !cleanse.removeCurse && cleanse.key !== 'removeparalysis' && (this._ccLedger(m)['dispel:' + worthy0.uid] || 0) < 2) ? worthy0 : null;   // v3.37.155: the Remove spells cure — they never aim at a foe
       if (allyDebuffed || worthy) return { slot: slot(cleanse), payload: (worthy && !allyDebuffed) ? { targetUid: worthy.uid } : {} };
     }
     // 1c) Druid WILD SHAPE — most druids fight shapeshifted. If not already in a
@@ -882,6 +882,24 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       const _eq = (a.key === 'stoneskin' || a.key === 'stoneskincomm') ? ['stoneskin', 'stoneskincomm'] : [a.key];
       return recips.every(w => w && _eq.some(k => (w.buffApplied && w.buffApplied[k]) || (w.runBuffApplied && w.runBuffApplied[k])));
     };
+    // CRB BATCH 5 WARDS (v3.37.155) — reactive, like Protection from Fire below: they answer the
+    // battlefield, so they are deliberately NOT gated by buffAppetite/potentEnough. Remove Fear
+    // when a Daunting/fear-gaze foe stands (or an ally is already shaken); a Globe against any
+    // caster; Death Ward on self + one caster ally against a lich-grade nuker or a life-drinker;
+    // Spell Resistance on self + one caster ally against casters (the lich nukes casters first).
+    const _castersUp = foes.some(e => e.arcane || e.caster);
+    const _deathFoes = foes.some(e => (e.arcane && this._enemyCL(e) >= 13) || (e.spellstrike && e.spellstrike.lifesteal) || /vampire|lich|wraith|wight|spectre|shadow|mummy/i.test(e.name || ''));
+    const _fearFoes = foes.some(e => e.gloriousChallenge || (e.shout && e.shout.fear));
+    const _CASTERISH = new Set(['cleric', 'oracle', 'wizard', 'sorcerer', 'druid', 'bard', 'witch']);
+    const _wardNeed = (flag) => this.livingParty().find(p => !p[flag] && (p.playerId === m.playerId || _CASTERISH.has(p.cls)));
+    const removeFear = avail.find(a => a.fearWard);
+    if (removeFear && (_fearFoes || this.livingParty().some(p => p.sickened > 0)) && this.livingParty().some(p => !p.fearWard)) return { slot: slot(removeFear), payload: {} };
+    const globe = avail.filter(a => a.globe).sort((x, y) => y.globe - x.globe)[0];
+    if (globe && _castersUp && (m.globeLvl || 0) < globe.globe) return { slot: slot(globe), payload: {} };
+    const deathWard = avail.find(a => a.deathWard), _dwWho = deathWard && _deathFoes ? _wardNeed('deathWard') : null;
+    if (_dwWho) return { slot: slot(deathWard), payload: { allyUid: _dwWho.playerId } };
+    const srSpell = avail.find(a => a.spellResist), _srWho = srSpell && _castersUp ? _wardNeed('spellResist') : null;
+    if (_srWho) return { slot: slot(srSpell), payload: { allyUid: _srWho.playerId } };
     // Protection from Fire — only worth a slot when fiery foes are on the field.
     const fireFoes = foes.some(e => e.detonate || e.hellfire || /fire|flame|magma|salamander|phoenix/i.test(e.name));
     const protect = avail.find(a => a.protectFire);

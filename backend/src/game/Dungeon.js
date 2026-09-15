@@ -494,7 +494,7 @@ class Dungeon {
       cls,                                     // PF1e class → drives BAB + Hit Die
       weaponKey: player.weapon || 'dagger',    // chosen base weapon (dropdown)
       hp: maxHp, maxHp,
-      sickened: 0, paralyzed: 0, flatFooted: true,
+      sickened: 0, paralyzed: 0, cursed: false, flatFooted: true,   // cursed (v3.37.155): Bestow Curse — run-long until Remove Curse
       abilityUses: {}, buffs: null, smiteActive: false, acPenRound: -1, acPenAmt: 0,
       // Per-RUN state (persists across rooms, NOT refreshed by _resetAbilities):
       //   runAbilityUses — 'run'-cost abilities (Bless: once per whole dungeon)
@@ -1492,7 +1492,7 @@ class Dungeon {
   // stack with itself and ends exactly when Haste does. (Engine saves are generic,
   // so the Reflex bonus reads as +1 to all saves — a small, benign approximation.)
   _hasteMod(m) { return (m && m.hasted > 0 && m.hasteFull) ? 1 : 0; }
-  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.slowed > 0 && tags && tags.includes('reflex') ? 1 : 0) + (m._domWardRounds > 0 ? 2 : 0) + this._shakeItOff(m); }
+  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.cursed ? 4 : 0) + ((m.fearWard && tags && tags.includes('fear')) ? 4 : 0) - (m.slowed > 0 && tags && tags.includes('reflex') ? 1 : 0) + (m._domWardRounds > 0 ? 2 : 0) + this._shakeItOff(m); }
    // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged; Slow drags Reflex −1 — PF1; Resistant Touch (Protection domain) +2 while warded)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).

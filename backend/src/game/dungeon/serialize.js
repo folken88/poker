@@ -58,6 +58,12 @@ const BUFF_META = {
   firebrand:     { label: 'Firebrand',       desc: '+1d6 fire on every weapon hit (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   mindblank:     { label: 'Mind Blank',      desc: 'immune to holds, fear and mind-magic (this dungeon)', icon: '/dungeon/buffs/fly.webp' },
   foresight:     { label: 'Foresight',       desc: 'never flat-footed, +2 AC & saves (this dungeon)', icon: '/dungeon/buffs/fly.webp' },
+  // v3.37.155 (CRB batch 5 — condition removal & wards)
+  removefear:    { label: 'Remove Fear',     desc: 'fearless — Daunting Success finds no purchase, +4 on saves vs fear (this dungeon)', icon: '/dungeon/buffs/protevil.webp' },
+  spellresistance: { label: 'Spell Resistance', desc: 'SR 12 + caster level — enemy spells must beat it or fail (this room)', icon: '/dungeon/buffs/protevil.webp' },
+  globelesser:   { label: 'Lesser Globe of Invulnerability', desc: 'enemy spells of 3rd level or lower cannot reach you (this room)', icon: '/dungeon/buffs/protevil.webp' },
+  globeofinvuln: { label: 'Globe of Invulnerability', desc: 'enemy spells of 4th level or lower cannot reach you (this room)', icon: '/dungeon/buffs/protevil.webp' },
+  deathward:     { label: 'Death Ward',      desc: 'immune to death magic and negative energy — Finger of Death fails, no life to drain (this room)', icon: '/dungeon/buffs/protevil.webp' },
   ext_shield:    { label: 'Extract: Shield', desc: '+4 AC, immune to Magic Missile (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   ext_seeinvis:  { label: 'Extract: See Invisibility', desc: 'sees the unseen (this dungeon)', icon: '/dungeon/buffs/fly.webp' },
   ext_heroism:   { label: 'Extract: Heroism', desc: '+2 to hit & +2 on saves (this dungeon)', icon: '/dungeon/buffs/bullsstrength.webp' },
@@ -91,6 +97,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
   _condList(o) {
     const I = '/dungeon/conditions/', c = [];
     if (o.sickened > 0)  c.push({ key: 'sickened',  label: 'Sickened',  desc: '−2 to attacks & damage', icon: `${I}sickened.webp` });
+    if (o.cursed && o.playerId) c.push({ key: 'cursed', label: 'Cursed', desc: '−4 to hit and on saves until a Remove Curse lifts it — it follows you from room to room (Bestow Curse)', icon: `${I}shaken.webp` });   // heroes only (v3.37.155) — a cursed FOE shows in its dispellable list below
     if (o.blinded > 0)   c.push({ key: 'blinded',   label: 'Blinded',   desc: '−4 to hit, denied Dex (easier to hit, Sneak-Attackable)', icon: `${I}sickened.webp` });
     if (o.paralyzed > 0) c.push(o.heldDC
       ? { key: 'held',      label: 'Held',      desc: 'helpless — re-saves each turn (the attempt costs the turn)', icon: `${I}paralyzed.webp` }

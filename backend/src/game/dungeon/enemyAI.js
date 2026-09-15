@@ -443,7 +443,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       if (r.crit && e.gloriousChallenge && !e._dauntedRoom) {
         e._dauntedRoom = true;
         let n = 0;
-        for (const m of this.livingParty()) { if (!m.undead && !m.elemBody && !m.mindBlank) { m.sickened = Math.max(m.sickened || 0, SICKENED_ROUNDS); n++; } }   // elemental bodies can't be shaken (v3.37.86)
+        for (const m of this.livingParty()) { if (!m.undead && !m.elemBody && !m.mindBlank && !m.fearWard) { m.sickened = Math.max(m.sickened || 0, SICKENED_ROUNDS); n++; } }   // elemental bodies can't be shaken (v3.37.86)
         if (n) this._note(`😱 ${e.glyph} ${e.name}'s GLORIOUS critical DAUNTS the party — ${n} hero${n > 1 ? 's' : ''} shaken (−2 to hit, damage & saves)! (Daunting Success)`, '/audio/draugr_shout03_burning.mp3', { side: 'enemy' });
       }
       // Domain parity (Death — Bleeding Touch): a death-priest foe's first landed
@@ -647,6 +647,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     if (target.undead) { this._note(`🪄 ${e.glyph} ${e.name} casts Hold Person on ${target.nickname} — but the undead have no mind to seize. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
     // Elemental Body: immune to paralysis — Hold slides off (v3.37.86, PF1).
     if (target.elemBody) { this._note(`🌪️ ${e.glyph} ${e.name} casts Hold Person on ${target.nickname} — but a body of raw element cannot be paralyzed. No effect.`, null, { side: 'enemy' }); this._broadcast(); return; }
+    if ((target.globeLvl || 0) >= 3) { this._note(`🔮 ${e.glyph} ${e.name} casts Hold Person at ${target.nickname} — the GLOBE OF INVULNERABILITY swallows it.`, null, { side: 'enemy' }); this._broadcast(); return; }   // v3.37.155: a 3rd-level spell never reaches inside
+    if (this._srBlocksHero(e, target, 'Hold Person')) { this._broadcast(); return; }   // v3.37.155: Hold Person tests SR like every other spell (PF1)
     const dc = e.spellDC || 13;
     const sm = this._partySaveMod(target, ['enchantment', 'spell']), sroll = dRoll(20), stot = sroll + sm;   // Hold (compulsion spell)
     const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
@@ -898,7 +900,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       const _runHas = (m, ...ks) => ks.some(k => m.runBuffApplied && m.runBuffApplied[k]);
       const _dScore = (m) => (m.hasted > 0 ? 1 : 0) + (m.images > 0 ? 1 : 0) + (m.displaced ? 1 : 0) + ((m.flying && !m.innateFly && !m.ghost) ? 1 : 0) + ((m.invisible && !m.greaterInvis) ? 1 : 0) + (m.dr > 0 ? 1 : 0) + (m.mageArmor ? 1 : 0) + (m.protectFire > 0 ? 1 : 0) + (m.seeInvis ? 1 : 0) + (m.trueSeeing ? 1 : 0) + (_runHas(m, 'magicvestment', 'greatermagicweapon', 'heroism', 'ext_heroism') ? 1 : 0);
       const tgt = heroes.slice().sort((a, b) => _dScore(b) - _dScore(a))[0];
-      if (tgt && _dScore(tgt) >= 3) {
+      if (tgt && _dScore(tgt) >= 3 && !(cl < 13 && (tgt.globeLvl || 0) >= 3)) {   // v3.37.155: plain Dispel Magic (3rd) cannot breach a Globe of Invulnerability; Greater (6th) can
         e._dispelCast = true;
         const stripped = [], cap = cl >= 13 ? 10 : dRoll(3);
         const ripRun = (...keys) => { for (const kk of keys) {
@@ -981,6 +983,14 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     if (cl >= 9 && bruiser && !heroes.some(m => m.paralyzed > 0)) return this._enemyHoldHero(e, bruiser, dc(5), 'Hold Monster');
     // 2) Finish a badly-wounded hero with auto-hitting Magic Missile (1st).
     if (weakest.hp <= weakest.maxHp * 0.28) return this._enemyMissiles(e, weakest, Math.min(5, Math.floor((cl + 1) / 2)));
+    // 2b) BESTOW CURSE (3rd, v3.37.155 — CRB batch 5): once a room, a CL5+ caster lays a curse on
+    //     the highest-level unhexed hero — Will negates; a failed save CLINGS from room to room
+    //     (−4 to hit and on saves) until a Remove Curse lifts it (PF1: it cannot be dispelled).
+    //     Not mind-affecting (Mind Blank and undeath are no shield); SR and a Globe turn it aside.
+    if (cl >= 5 && !e._curseUsed && dRoll(3) === 1) {
+      const mark = heroes.filter(m => !m.cursed && !(m.paralyzed > 0)).sort((a, b) => (b.level || 0) - (a.level || 0))[0];
+      if (mark) { e._curseUsed = true; return this._enemyCurseHero(e, mark, dc(3)); }
+    }
     // 3) A cluster of foes → a rotating elemental blast. With 3+ heroes up the
     //    blast is ALWAYS the right spend (max coverage); at 2 it's a strong lean.
     if (heroes.length >= 2 && (heroes.length >= 3 || dRoll(5) <= 3)) {
@@ -990,9 +1000,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       // Smart blaster: a party wrapped in fire wards (Protection from Fire) eats
       // fireballs for free — reach for cold/lightning instead when it can.
       const unwarded = heroes.some(m => !m.protectFire);
-      const pool = blasts.filter(b => b.dtype !== 'fire' || unwarded);
-      const b = pick(pool.length ? pool : blasts);
-      return this._enemyBlast(e, this._enemyMeta(e, cl, { ...b, die: 6, dc: dc(b.slvl) }));
+      const pool = blasts.filter(b => (b.dtype !== 'fire' || unwarded) && heroes.some(m => (m.globeLvl || 0) < b.slvl));   // v3.37.155: a blast the whole party's Globe would swallow is never chosen — with nothing that reaches, fall through to the nuke
+      if (pool.length || !heroes.every(m => (m.globeLvl || 0) >= 3)) { const b = pick(pool.length ? pool : blasts); return this._enemyBlast(e, this._enemyMeta(e, cl, { ...b, die: 6, dc: dc(b.slvl) })); }
     }
     // 4) Delete the most VALUABLE hero with a big single-target nuke — a lich
     //    knows to kill the CASTER first (the party's healing and blasting engine);
@@ -1029,8 +1038,9 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     for (let i = live.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [live[i], live[j]] = [live[j], live[i]]; }
     const hit = live.slice(0, Math.max(1, cfg.count ? cfg.count() : dRoll(3) + 1));
     const full = this._metaDmg(cfg, dRollN(cfg.dice, cfg.die || 6));   // Empower/Maximize (see _enemyMeta)
-    let hitN = 0, savedN = 0, downedN = 0, srN = 0;
+    let hitN = 0, savedN = 0, downedN = 0, srN = 0, globeN = 0;
     for (const t of hit) {
+      if ((t.globeLvl || 0) >= (cfg.slvl || 9)) { globeN++; continue; }   // Globe of Invulnerability (v3.37.155): a blast of the globe's level or lower never reaches inside
       if (this._srBlocksHero(e, t, 'the blast')) { srN++; continue; }   // PF1 SR (drow heroes)
       const sm = this._partySaveMod(t, ['reflex']), sroll = dRoll(20), stot = sroll + sm;   // blast = Reflex save (Slow −1 applies)
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= cfg.dc;
@@ -1041,7 +1051,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       if (t.hp <= 0) downedN++;
     }
     // COUNTS-ONLY (Josh): DC + burst damage + hit/saved/downed tally, no per-target list.
-    const tally = `${hitN} hit${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${downedN ? `, ${downedN} down` : ''}`;
+    const tally = `${hitN} hit${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${globeN ? `, ${globeN} inside the globe` : ''}${downedN ? `, ${downedN} down` : ''}`;
     this._note(`${cfg.icon} ${e.glyph} ${e.name} ${cfg.verb} — Ref DC ${cfg.dc} (${full} ${cfg.dtype}): ${tally}!`, cfg.sound, { side: 'enemy' });
     this._echoToTable(cfg.sound); this._broadcast();
   },
@@ -1050,6 +1060,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemyNuke(e, target, cfg) {
     // PF1 SR: a drow hero's spell resistance can turn the whole nuke aside.
     if (this._srBlocksHero(e, target, cfg.verb ? `the ${(cfg.verb.match(/[A-Z][A-Z ]+[A-Z]/) || ['spell'])[0]}` : 'the spell')) { this._echoToTable(); this._broadcast(); return; }
+    if (cfg.dtype === 'negative' && target.deathWard) { this._note(`⚰️ ${target.nickname}'s DEATH WARD turns ${e.name}'s death magic aside — nothing happens.`, null, { side: 'enemy' }); this._echoToTable(); this._broadcast(); return; }   // Death Ward (v3.37.155): a Finger of Death fails outright (PF1)
     const full = this._metaDmg(cfg, dRollN(cfg.dice, cfg.die || 6));   // Empower/Maximize (see _enemyMeta)
     let dmg = full, tag = '';
     const sm = this._partySaveMod(target), sroll = dRoll(20), stot = sroll + sm;
@@ -1085,6 +1096,19 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     }
     this._broadcast();
   },
+  // Bestow Curse on a hero (v3.37.155): Will negates; a failed save marks them −4 to hit and
+  // on saves for the REST OF THE DUNGEON — only Remove Curse lifts it (PF1: it cannot be
+  // dispelled). SR applies; a Globe of Invulnerability (3rd) keeps it out.
+  _enemyCurseHero(e, target, dc) {
+    if ((target.globeLvl || 0) >= 3) { this._note(`🧿 ${e.glyph} ${e.name} casts BESTOW CURSE at ${target.nickname} — the GLOBE OF INVULNERABILITY swallows it.`, null, { side: 'enemy' }); this._broadcast(); return; }
+    if (this._srBlocksHero(e, target, 'the curse')) { this._broadcast(); return; }
+    const sm = this._partySaveMod(target, ['spell']), sroll = dRoll(20), stot = sroll + sm;
+    const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
+    const roll = `[Will d20 ${sroll} ${this._fmtBonus(sm)} = ${stot} vs DC ${dc}]`;
+    if (!saved) { target.cursed = true; this._note(`🧿 ${e.glyph} ${e.name} casts BESTOW CURSE on ${target.nickname} — CURSED! −4 to hit and on saves until a Remove Curse lifts it; it will follow them from room to room. ${roll}`, '/audio/spell_umbral_bolt.mp3', { side: 'enemy' }); this._echoToTable('/audio/spell_umbral_bolt.mp3'); }
+    else this._note(`🧿 ${e.glyph} ${e.name} casts BESTOW CURSE on ${target.nickname}, who shrugs it off. ${roll}`, null, { side: 'enemy' });
+    this._broadcast();
+  },
   // Lich Magic Missile — N unerring bolts (no save, no attack roll), 1d4+1 each.
   _enemyMissiles(e, target, n) {
     // PF1: you must SEE a target to Magic Missile it — an invisible hero can't be picked
@@ -1095,6 +1119,10 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     }
     // PF1: SR applies even to Magic Missile's unerring bolts.
     if (this._srBlocksHero(e, target, 'the missiles')) { this._echoToTable(); this._broadcast(); return; }
+    if ((target.globeLvl || 0) >= 1) {   // Globe of Invulnerability (v3.37.155): a 1st-level spell never reaches inside
+      this._note(`🔮 ${e.glyph} ${e.name}'s ${n} Magic Missile${n > 1 ? 's' : ''} splash against ${target.nickname}'s GLOBE OF INVULNERABILITY and fade.`, '/audio/spell_magicmissile.mp3', { side: 'enemy' });
+      this._echoToTable('/audio/spell_magicmissile.mp3'); this._broadcast(); return;
+    }
     // PF1: the SHIELD spell stops Magic Missile COLD — no save, no damage. The HERO
     // side has always honoured this in reverse (a hero's Magic Missile bounces off a
     // shielded foe — abilities.js `e.shieldUp`), but the enemy→hero path never checked,
@@ -1135,6 +1163,11 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} ${r.crit ? 'CRITICALLY strikes' : 'strikes'} ${target.nickname} for ${phys}${drTag} — but the negative energy washes over the undead harmlessly. ${this._atkStr(r)}`, cfg.sound || null, { side: 'enemy' });
       }
       this._echoToTable(cfg.sound || null); this._broadcast(); return;
+    }
+    if (target.deathWard) {   // Death Ward (v3.37.155): the negative energy fails and there is no life to drink — the weapon part still lands
+      this._dmgToMember(target, phys);
+      this._note(`🩸 ${e.glyph} ${e.name}'s ${SS} ${r.crit ? 'CRITICALLY strikes' : 'strikes'} ${target.nickname} for ${phys}${drTag} — but DEATH WARD turns the negative energy aside; nothing to drink. ${this._atkStr(r)}`, snd, { side: 'enemy' });
+      this._echoToTable(snd); this._broadcast(); return;
     }
     const bonus = dRollN(cfg.dice || 4, cfg.die || 6) + (cfg.bonus || 0);       // negative energy ignores DR (flat bonus = +CL on inflicts)
     const total = phys + bonus;

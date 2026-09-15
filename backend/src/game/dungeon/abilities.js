@@ -739,7 +739,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m._dpSwing = false; m._luck = 0; m.stunned = 0;   // transient round effects clear each room (Divine Power's extra swing + the shared luck channel ride their room-length buffs)
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.spiritAlly = null; m.storm = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; m.spellResist = 0; m.deathWard = false; m.globeLvl = 0; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.spiritAlly = null; m.storm = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
     m.queuedAction = null;   // pre-loaded actions never carry into a new room (stale targets)
@@ -841,7 +841,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // check is d20 + the foe's caster level vs the hero's SR. Supernatural
   // abilities (gazes, shouts, breath) never test SR — only their spells do.
   _srBlocksHero(e, m, label) {
-    const sr = RACES.raceSR(m.race, m.level);
+    const sr = Math.max(RACES.raceSR(m.race, m.level) || 0, m.spellResist || 0);   // v3.37.155: the Spell Resistance spell (12 + CL, this room) — the higher of racial/spell SR stands (PF1: SR never stacks)
     if (!(sr > 0)) return false;
     const cl = this._enemyCL(e);
     const roll = dRoll(20), total = roll + cl;
@@ -1125,7 +1125,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
     const lvl = m.level || 1, cls = m.cls || 'fighter';
     const notProf = weaponProficient(cls, w) ? 0 : NON_PROFICIENT_PENALTY;   // PF1 proficiency — uniform, no AI exemption
-    const toHit = babFor(cls, lvl) + ABILITY_MOD + (w.toHit || 0) + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m) + notProf - (m.sickened > 0 ? SICKENED_PENALTY : 0);
+    const toHit = babFor(cls, lvl) + ABILITY_MOD + (w.toHit || 0) + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m) + notProf - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.cursed ? 4 : 0);   // Bestow Curse (v3.37.155): −4 to hit until a Remove Curse lifts it
     const roll = dRoll(20), total = roll + toHit;
     return { hit: roll === 20 || (roll !== 1 && total >= this._enemyAC(e) + (extraDef || 0)), roll, total, toHit, weapon: w };
   },
@@ -1927,10 +1927,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // PHYSICAL and stay (struggle, Grease, or heal them instead). REMOVE
     // PARALYSIS is the exception spell: it frees paralysis of ANY source —
     // even a ghoul's Su touch, which Dispel can't reach — plus Slow (PF1).
-    const isRemovePara = ab.key === 'removeparalysis', isRemoveBlind = !!ab.removeBlind;   // Remove Blindness/Deafness (v3.37.154, CRB batch 4)
+    const isRemovePara = ab.key === 'removeparalysis', isRemoveBlind = !!ab.removeBlind, isRemoveCurse = !!ab.removeCurse;   // Remove Blindness/Deafness (v3.37.154, CRB batch 4)
     const sev = isRemovePara
       ? (a) => (a.paralyzed > 0 ? 5 : 0) + (a.slowed > 0 ? 2 : 0)
       : isRemoveBlind ? (a) => (a.blinded > 0 ? 3 : 0)
+      : isRemoveCurse ? (a) => (a.cursed ? 4 : 0)   // Remove Curse (v3.37.155, CRB batch 5)
       : (a) => ((a.paralyzed > 0 && a.heldDC != null) ? 5 : 0) + (a.slowed > 0 ? 2 : 0) + (a.blinded > 0 ? 2 : 0);
     // EXPLICIT pick (human party-card / enemy selection) — honor it. Invalid
     // explicit targets were already refused in _useAbility with a told-to-the-
@@ -1946,16 +1947,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
                : (!explicit ? this.livingParty().filter(a => sev(a) > 0).sort((x, y) => sev(y) - sev(x))[0] : null);
     if (hurt) {
       const effectCL = this._dispellableCL(hurt);   // DC = 11 + the EFFECT's caster level (PF1), not depth
-      const dc = (isRemovePara || isRemoveBlind) ? { ok: true, roll: '—', cl: 0, total: 'auto', dc: '—' } : this._dispelCheck(m, effectCL, ab.greater);   // the Remove spells need no check (PF1) — v3.37.154
+      const dc = (isRemovePara || isRemoveBlind || isRemoveCurse) ? { ok: true, roll: '—', cl: 0, total: 'auto', dc: '—' } : this._dispelCheck(m, effectCL, ab.greater);   // the Remove spells need no check (PF1) — v3.37.154
       if (!dc.ok) {   // the weave HOLDS
         this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — but the hostile magic HOLDS! [dispel d20 ${dc.roll} +${dc.cl} = ${dc.total} vs DC ${dc.dc}]`, FAIL_SOUND);
         this._echoToTable(FAIL_SOUND); return;
       }
       const cleared = [];
       // Spell effects only (see the ruling above) — grapple/stun/sickness/nausea stay.
-      if (hurt.paralyzed > 0 && (isRemovePara || (!isRemoveBlind && hurt.heldDC != null))) { hurt.paralyzed = 0; hurt.heldDC = null; cleared.push('paralysis'); }
-      if (!isRemoveBlind && hurt.slowed > 0)    { hurt.slowed = 0; hurt._slowTick = 0; cleared.push('slow'); }
-      if (!isRemovePara && hurt.blinded > 0) { hurt.blinded = 0; cleared.push('blindness'); }
+      if (hurt.paralyzed > 0 && (isRemovePara || (!isRemoveBlind && !isRemoveCurse && hurt.heldDC != null))) { hurt.paralyzed = 0; hurt.heldDC = null; cleared.push('paralysis'); }
+      if (!isRemoveBlind && !isRemoveCurse && hurt.slowed > 0)    { hurt.slowed = 0; hurt._slowTick = 0; cleared.push('slow'); }
+      if (!isRemovePara && !isRemoveCurse && hurt.blinded > 0) { hurt.blinded = 0; cleared.push('blindness'); }
+      if (isRemoveCurse && hurt.cursed) { hurt.cursed = false; cleared.push('the curse'); }   // v3.37.155: only Remove Curse lifts a Bestow Curse (PF1: it cannot be dispelled)
       // Name what dispel CAN'T touch that's still on them (v3.37.81 — Josh, run
       // proud-waffle: heard "clears paralysis" then still lost his turn to a
       // SEPARATE stun. The clear line now says what remains, so a cleared hold
@@ -1964,6 +1966,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${hurt.nickname} — clears ${cleared.join(', ')}!${_still.length ? ` (but they are STILL ${_still.join(' and ')} — that's physical, beyond dispel)` : ''} [dispel ${dc.total} vs DC ${dc.dc}]`, sound);
       this._echoToTable(sound); return;
     }
+    // The Remove spells cure — they never dispel a foe (v3.37.155: Remove Curse/Blindness/Paralysis aimed at a foe, or with nobody afflicted, find nothing to cure).
+    if (isRemovePara || isRemoveBlind || isRemoveCurse) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — but nobody here is ${isRemoveCurse ? 'cursed' : isRemoveBlind ? 'blinded' : 'held or slowed'}; the spell finds nothing to cure.`, sound); this._echoToTable(sound); return; }
     // 2) No ally debuff → strip the strongest buff off a foe (dispel check vs ITS CL).
     //    Boss PRE-CAST wards (mage armor / shield / stoneskin / fire ward / fly /
     //    shield of faith) count — plain Dispel peels ONE, Greater sweeps them all.
@@ -3109,6 +3113,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (snap.displace) who.displaced = true;
     if (snap.mindBlank) who.mindBlank = true;   // Mind Blank (v3.37.124): immune to holds/fear/charms — see the enemyAI guards
     if (snap.foresight) who.foresight = true;   // Foresight (v3.37.124): never flat-footed — see the room-open assignment
+    if (snap.fearWard) who.fearWard = true;     // Remove Fear (v3.37.155): Daunting Success finds no purchase; +4 on saves vs fear
   },
   _abBuff(m, ab, payload) {
     const sound = ab.sound || pick(SND.flesh);
@@ -3168,6 +3173,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
           darkvision: !!ab.darkvision, fly: !!ab.fly, canHitFlyers: !!ab.canHitFlyers,
           seeInvis: !!ab.seeInvis, trueSeeing: !!ab.trueSeeing, displace: !!ab.displace,
           mindBlank: !!ab.mindBlank, foresight: !!ab.foresight,   // v3.37.124: Mind Blank / Foresight — run-long flags
+          fearWard: !!ab.fearWard,   // v3.37.155: Remove Fear — run-long
         };
         who.runBuffPayloads = who.runBuffPayloads || {};
         who.runBuffPayloads[ab.key] = snap;
@@ -3212,7 +3218,20 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (ab.elemBody) who.elemBody = true;         // Elemental Body — crit + CC immunity
       if (ab.trueSeeing) who.trueSeeing = true;     // True Seeing — pierce darkness/illusion/invisibility
       if (ab.seeInvis) who.seeInvis = true;         // See Invisibility — find/strike the INVISIBLE (but NOT mirror image / displacement)
+      if (ab.spellResist) who.spellResist = Math.max(who.spellResist || 0, 12 + (m.level || 1));   // Spell Resistance (v3.37.155): SR 12 + CL vs enemy spells (this room)
+      if (ab.deathWard) who.deathWard = true;       // Death Ward (v3.37.155): death magic and negative energy fail (this room)
+      if (ab.globe) who.globeLvl = Math.max(who.globeLvl || 0, ab.globe);   // Globe of Invulnerability (v3.37.155): enemy spells of this level or lower cannot reach in (this room)
     };
+    if (ab.fearWard) {   // Remove Fear (v3.37.155): lifts fear-born shakenness now (Daunting Success is the only hero sickening), wards vs fear for the run
+      let n = 0; for (const a of this.livingParty()) { apply(a); if (a.sickened > 0) { a.sickened = 0; n++; } }
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — the party’s nerve is steel: ${n ? `${n} hero${n > 1 ? 's' : ''} shake off their fear, and ` : ''}Daunting Success and fear gazes find no purchase (+4 vs fear) for the rest of the dungeon.`, sound);
+      this._echoToTable(sound); return;
+    }
+    if (ab.globe) {   // Globe of Invulnerability (v3.37.155): the whole party huddles inside
+      for (const a of this.livingParty()) apply(a);
+      this._note(`${ab.icon} ${m.nickname} raises ${ab.name} — a shimmering globe swallows the party; enemy spells of ${ab.globe === 3 ? '3rd' : '4th'} level or lower cannot reach inside this room.`, sound);
+      this._echoToTable(sound); return;
+    }
     if (ab.party) {
       for (const a of this.livingParty()) apply(a);
       // Prayer floods the WHOLE battlefield — allies up, enemies down (−1 to hit,
