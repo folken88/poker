@@ -63,6 +63,7 @@ const BUFF_META = {
   spellresistance: { label: 'Spell Resistance', desc: 'SR 12 + caster level — enemy spells must beat it or fail (this room)', icon: '/dungeon/buffs/protevil.webp' },
   globelesser:   { label: 'Lesser Globe of Invulnerability', desc: 'enemy spells of 3rd level or lower cannot reach you (this room)', icon: '/dungeon/buffs/protevil.webp' },
   globeofinvuln: { label: 'Globe of Invulnerability', desc: 'enemy spells of 4th level or lower cannot reach you (this room)', icon: '/dungeon/buffs/protevil.webp' },
+  blinkspell:    { label: 'Blink',           desc: 'flickering between planes — 50% of attacks on you miss, 20% of yours flicker away (this room)', icon: '/dungeon/buffs/fly.webp' },
   deathward:     { label: 'Death Ward',      desc: 'immune to death magic and negative energy — Finger of Death fails, no life to drain (this room)', icon: '/dungeon/buffs/protevil.webp' },
   ext_shield:    { label: 'Extract: Shield', desc: '+4 AC, immune to Magic Missile (this room)', icon: '/dungeon/buffs/bullsstrength.webp' },
   ext_seeinvis:  { label: 'Extract: See Invisibility', desc: 'sees the unseen (this dungeon)', icon: '/dungeon/buffs/fly.webp' },
@@ -110,6 +111,8 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
     if (o.frightened > 0) c.push({ key: 'frightened', label: 'Frightened', desc: 'FLEES in terror — loses its turns while the panic holds, and is shaken (−2)', icon: `${I}stunned.webp` });
     if (o.confused > 0)   c.push({ key: 'confused',   label: 'Confused',   desc: 'each turn: 25% acts, 25% babbles, 25% hurts itself, 25% attacks its own ally', icon: `${I}stunned.webp` });
+    if (o.repulsed > 0)   c.push({ key: 'repulsed',     label: 'Repulsed',     desc: `held at bay by Repulsion — cannot close to melee (${o.repulsed} more round${o.repulsed === 1 ? '' : 's'})`, icon: `${I}slowed.webp` });
+    if (o.polymorphed)    c.push({ key: 'polymorphed',  label: 'Polymorphed',  desc: 'a harmless rabbit for the rest of the room — AC 12, a 1d3 nibble, no spells, no flight (Baleful Polymorph)', icon: `${I}sickened.webp` });
     if (o.diseased)       c.push({ key: 'diseased',     label: 'Diseased',     desc: 'Contagion — sickened and fatigued for the rest of the room', icon: `${I}sickened.webp` });
     if (o.feebleminded)   c.push({ key: 'feebleminded', label: 'Feebleminded', desc: 'Int and Cha 1 — it cannot cast for the rest of the room', icon: `${I}sickened.webp` });
     if (o.asleep)        c.push({ key: 'asleep',     label: 'Asleep',     desc: 'helpless — loses turns until struck', icon: `${I}sleep.webp` });

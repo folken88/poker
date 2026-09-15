@@ -332,6 +332,11 @@ const SPELL = {
   summonnature5:  { key: 'summonnature5',  name: "Summon Nature's Ally V",   icon: '🦎', effect: 'summon', target: 'self', slvl: 5, summon: { pool: ['basilisk', 'silvermane'], count: 1, flavor: 'nature' }, sound: S.invoke, desc: 'The wild answers — a basilisk or a lioness stalks in to fight for the party (~1 round per level).' },
   summonnature7:  { key: 'summonnature7',  name: "Summon Nature's Ally VII", icon: '🐻', effect: 'summon', target: 'self', slvl: 7, summon: { pool: ['dire_bear', 'chimera'], count: 1, flavor: 'nature' }, sound: S.invoke, desc: 'The wild answers — a dire bear or a chimera thunders in to fight for the party (~1 round per level).' },
   summonnature9:  { key: 'summonnature9',  name: "Summon Nature's Ally IX",  icon: '🦖', effect: 'summon', target: 'self', slvl: 9, summon: { pool: ['ikualoa'], count: 1, flavor: 'nature' }, sound: S.invoke, desc: 'The wild answers with its greatest — Ikualo’a itself shakes the ground to fight for the party (~1 round per level).' },
+  // ── CRB BATCH 8: TRICKS & SAVE-OR-SUFFER (v3.37.158) ──
+  blinkspell:      { key: 'blinkspell',      name: 'Blink',             icon: '✨', effect: 'buff', target: 'self', sticky: true, blink: true, buff: {}, slvl: 3, sound: S.invis, desc: 'You flicker between the Material and Ethereal planes for the room: half of the attacks that would hit you pass through nothing, and one in five of your own attacks flickers away (PF1: 50% / 20%). (Adaptation: True Seeing pierces it like Displacement; the ethereal side has no other surface here.)' },
+  repulsion:       { key: 'repulsion',       name: 'Repulsion',         icon: '🚫', effect: 'save_debuff', debuff: 'repulsed', save: 'will', target: 'aoe', maxTargets: 8, slvl: 6, sound: S.invoke, desc: 'An invisible field holds the enemy at bay: up to 8 foes, Will negates, or for 1 round per level they cannot close to melee — archers and casters still shoot and cast over it (PF1).' },
+  insanity:        { key: 'insanity',        name: 'Insanity',          icon: '🌀', effect: 'save_debuff', debuff: 'confused', permanent: true, mindAffect: true, save: 'will', target: 'enemy', slvl: 7, sound: '/audio/spell_umbral_bolt.mp3', desc: 'A foe’s mind shatters — Will negates, or it is CONFUSED for the rest of the room (permanent, PF1): each turn it acts, babbles, hurts itself or savages its own ally. No effect on the mindless.' },
+  balefulpolymorph:{ key: 'balefulpolymorph',name: 'Baleful Polymorph', icon: '🐇', effect: 'save_debuff', debuff: 'polymorphed', save: 'fort', target: 'enemy', slvl: 5, sound: S.invoke, desc: 'Fortitude negates, or the foe becomes a harmless rabbit for the rest of the room: AC 12, a 1d3 nibble, no spells, no flight, no bow — its hit points stay. A boss is too mighty to unmake (the standing save-or-lose boss rule).' },
   bladebarrier:   { key: 'bladebarrier',   name: 'Blade Barrier',     icon: '🌪️', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, slvl: 6, sound: '/audio/spell_holysmite.mp3', desc: 'A whirling wall of blades slices through up to 4 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
   firestorm:      { key: 'firestorm',      name: 'Fire Storm',        icon: '🌋', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'fire', slvl: 8, sounds: FIREBALL_SFX, desc: 'Sheets of divine flame roar over up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
   massheal:       { key: 'massheal',       name: 'Mass Heal',         icon: '💗', effect: 'heal', heal: 'party', massHeal: true, healDice: 15, healCap: 25, target: 'ally', slvl: 9, sound: '/audio/spell_channel_charge.mp3', desc: 'A tidal wave of positive energy — the WHOLE party heals 15d8 + caster level (max +25).' },
@@ -1411,6 +1416,22 @@ for (const [n, wl, sl, cl, ol] of [[1, 1, 1, 1, 1], [2, 3, 4, 3, 4], [3, 5, 6, 5
 for (const [n, l] of [[1, 1], [2, 4], [3, 7], [4, 10], [5, 13], [6, 16]]) _injectKitSpell('bard', spontaneousSpell(_SM(n), l));   // PF1: the bard's ladder stops at VI
 for (const [n, l] of [[1, 4], [2, 7], [3, 10], [4, 13]]) _injectKitSpell('ranger', preparedSpell(_SN(n), l));               // PF1: the ranger's stops at IV
 // (end batch 7)
+// CRB BATCH 8 — TRICKS & SAVE-OR-SUFFER (v3.37.158): Blink (Brd/Sor/Wiz 3), Repulsion (Clr 7, Sor/Wiz 6),
+// Insanity (Sor/Wiz 7), Baleful Polymorph (Drd 5, Sor/Wiz 5). Deferred with reasons in the ledger:
+// Gaseous Form, Spider Climb, Dimensional Anchor.
+_injectKitSpell('bard',     spontaneousSpell(SPELL.blinkspell, 7));
+_injectKitSpell('wizard',   preparedSpell(SPELL.blinkspell, 5));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.blinkspell, 6));
+_injectKitSpell('cleric',   preparedSpell({ ...SPELL.repulsion, slvl: 7 }, 13));    // PF1: Repulsion is CLERIC 7
+_injectKitSpell('oracle',   spontaneousSpell({ ...SPELL.repulsion, slvl: 7 }, 14));
+_injectKitSpell('wizard',   preparedSpell(SPELL.repulsion, 11));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.repulsion, 12));
+_injectKitSpell('wizard',   preparedSpell(SPELL.insanity, 13));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.insanity, 14));
+_injectKitSpell('druid',    preparedSpell(SPELL.balefulpolymorph, 9));
+_injectKitSpell('wizard',   preparedSpell(SPELL.balefulpolymorph, 9));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.balefulpolymorph, 10));
+// (end batch 8)
 // OVERLAND FLIGHT IS A SPELL (v3.37.150 — Josh, spicy-lantern / merry-sparrow: 'why is he casting
 // third-level Fly on himself again and again when he has fifth-level Overland Flight?'): every
 // kit copy carried cost 'run', uses 1 — ONE cast per dungeon. The moment an enemy dispel (or a

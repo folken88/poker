@@ -1541,7 +1541,7 @@ class Dungeon {
     // "[40 vs AC 19]" as if the math failed — say what actually stopped it (Tobias:
     // "the calculation does not make sense"). Mirror image / concealment, not a miss.
     if (r && r.image)   return '— a mirror-image decoy soaks the hit (not the real foe).';
-    if (r && r.conceal) return '— the foe is UNSEEN: 50% concealment foils it (True Seeing / blindsense pierces it).';
+    if (r && r.conceal) return r.blink ? '— you BLINK out of phase mid-swing: the attack flickers away (Blink, 20%).' : '— the foe is UNSEEN: 50% concealment foils it (True Seeing / blindsense pierces it).';
     return `[d20 ${r.roll} ${this._fmtBonus(r.toHit)} = ${r.total} vs AC ${r.ac}]`;
   }
   // FLANK bookkeeping (Tobias 2026-07-04): record this MELEE hero on the foe and
@@ -1705,8 +1705,8 @@ class Dungeon {
     if (target) {
       const _pierceInvis    = attacker.trueSeeing || attacker.seeInvis || (attacker.blindsense > 0);
       const _pierceIllusion = attacker.trueSeeing || (attacker.blindsense > 0);
-      if (target.invisible && !_pierceInvis && dRoll(2) === 1) {   // total concealment vs an unseen foe → 50% miss
-        return { hit: false, conceal: true, roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
+      if ((target.invisible && !_pierceInvis && dRoll(2) === 1) || (attacker.blinking && dRoll(5) === 1)) {   // total concealment vs an unseen foe → 50% miss; Blink (v3.37.158): 20% of your own attacks flicker away
+        return { hit: false, conceal: true, blink: !!attacker.blinking && !(target.invisible && !_pierceInvis), roll, toHit, total, ac, sound: weapon.isDagger ? SND.whiffDagger : pick(SND.whiffSword) };
       }
       // PF1 MIRROR IMAGE: the blow HIT the AC — now roll which of (real + N figments)
       // it lands on. 1/(N+1) chance it's the REAL foe (fall through to normal damage;
@@ -1834,7 +1834,7 @@ class Dungeon {
     if (eff === 'exhaust' && (t.type === 'undead' || t.type === 'construct')) return false;   // no living body to tire
     if (ab.onlyOutsiders && !(t.type === 'outsider' || /demon|devil|daemon|fiend/i.test(t.name || ''))) return false;   // Banishment
     if (ab.onlyHumanoids && !this._isHumanoid(t)) return false;   // Hold Person (PF1 RAW)
-    if (eff === 'save_debuff' && (((ab.debuff === 'paralyzed' || ab.mindAffect) && mindImmune(t)) || (ab.debuff === 'diseased' && (t.type === 'undead' || t.type === 'construct')) || (ab.hdCap && (crToNum(t.cr) || 0) > ab.hdCap))) return false;   // v3.37.153: fear is mind-affecting; Cause Fear / Scare only bite ≤5 HD
+    if (eff === 'save_debuff' && (((ab.debuff === 'paralyzed' || ab.mindAffect) && mindImmune(t)) || (ab.debuff === 'diseased' && (t.type === 'undead' || t.type === 'construct')) || (ab.debuff === 'polymorphed' && (t.boss || t.polymorphed)) || (ab.hdCap && (crToNum(t.cr) || 0) > ab.hdCap))) return false;   // v3.37.153: fear is mind-affecting; Cause Fear / Scare only bite ≤5 HD
     // Death effects (Suffocation / Slay Living / Finger of Death / Implosion /
     // Wail) need a living, breathing body — mirror _abSaveDie's immune set.
     if (eff === 'savedie' && ((ab.mindAffect && mindImmune(t)) || t.type === 'undead' || t.type === 'construct'
@@ -1879,7 +1879,7 @@ class Dungeon {
     // image or a displaced/blurred form. (It still can't touch a truly INCORPOREAL ghost
     // below — that's physical, not an illusion.) One reveal line per room per foe.
     const pierces = !!(attacker && attacker.trueSeeing);
-    if (pierces && (target.images > 0 || target.displaced) && attacker._sawThrough !== this.round) {
+    if (pierces && (target.images > 0 || target.displaced || target.blinking) && attacker._sawThrough !== this.round) {
       attacker._sawThrough = this.round;
       this._note(`👁️ ${attacker.name}'s TRUE SEEING picks the real ${target.nickname} out of the illusions.`, null, { side: 'enemy' });
     }
@@ -1888,8 +1888,8 @@ class Dungeon {
       this._note(`🪞 the blow strikes a mirror image of ${target.nickname} — it pops! (${target.images} left)`, null);
       return true;
     }
-    if (!pierces && target.displaced && dRoll(2) === 1) {
-      this._note(`🌫️ ${target.nickname} is displaced — the attack passes through empty air!`, null);
+    if (!pierces && (target.displaced || target.blinking) && dRoll(2) === 1) {   // Blink (v3.37.158) shares Displacement's 50%
+      this._note(`🌫️ ${target.nickname} ${target.blinking && !target.displaced ? 'blinks out of phase' : 'is displaced'} — the attack passes through empty air!`, null);
       return true;
     }
     // INCORPOREAL — Vesorianna is a ghost: half of all physical blows pass clean

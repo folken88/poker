@@ -746,7 +746,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.infernalHeal = 0;   // Infernal Healing fast-healing ends between rooms
     // Magus per-room effects clear: mirror images, displacement, fire shield,
     // elemental body, true seeing, touch strikes, blur, blindness, melee-flight.
-    m.images = 0; m.displaced = false; m.fireShield = null; m.elemBody = false; m.trueSeeing = false; m.seeInvis = false;
+    m.images = 0; m.displaced = false; m.blinking = false; m.fireShield = null; m.elemBody = false; m.trueSeeing = false; m.seeInvis = false;
     m.touchStrike = 0; m.untargetable = false; m.blinded = 0; m.canHitFlyers = false;
     if (m.overlandFlight) { m.flying = true; m.canHitFlyers = true; }   // Overland Flight is RUN-long — re-assert flight + airborne reach
     if (m.ghost) { m.flying = true; m.canHitFlyers = true; }            // Vesorianna never lands — a ghost drifts over every room
@@ -2661,7 +2661,14 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       case 'commanded':    e.stunned = Math.max(e.stunned || 0, 1); e.prone = true; break;
       case 'frightened':   { const r = dRoll(4); e.frightened = Math.max(e.frightened || 0, r); e.sickened = Math.max(e.sickened || 0, r); break; }
       case 'panicked':     { const r = Math.min(10, lvl); e.frightened = Math.max(e.frightened || 0, r); e.sickened = Math.max(e.sickened || 0, r); break; }
-      case 'confused':     e.confused = Math.max(e.confused || 0, Math.min(10, lvl)); break;
+      case 'confused':     e.confused = Math.max(e.confused || 0, ab.permanent ? 99 : Math.min(10, lvl)); break;   // Insanity (v3.37.158): permanent = the room
+      case 'repulsed':     e.repulsed = Math.max(e.repulsed || 0, rounds); break;   // Repulsion (v3.37.158): melee foes cannot close (enemyAI gate)
+      case 'polymorphed': {   // Baleful Polymorph (v3.37.158): a harmless rabbit for the room — HP stay, everything else goes; bosses are immune (gated upstream)
+        if (e.boss || e.polymorphed) return false;
+        e._poly = { name: e.name, glyph: e.glyph, toHit: e.toHit, dmgDie: e.dmgDie, dmgCount: e.dmgCount, dmgBonus: e.dmgBonus, ac: e.ac, touchAC: e.touchAC, ranged: e.ranged, arcane: e.arcane, caster: e.caster, healer: e.healer, spellstrike: e.spellstrike, flying: e.flying };
+        e.polymorphed = true; e.name = `${e.name} (a rabbit)`; e.glyph = '🐇'; e.toHit = 1; e.dmgDie = 3; e.dmgCount = 1; e.dmgBonus = 0; e.ac = 12; if (e.touchAC != null) e.touchAC = 12;
+        e.ranged = false; e.arcane = false; e.caster = null; e.healer = false; e.spellstrike = null; e.flying = false; break;
+      }
       case 'feebleminded': e.feebleminded = true; break;
       case 'diseased':     e.diseased = true; e.sickened = Math.max(e.sickened || 0, 99); e.fatigued = Math.max(e.fatigued || 0, 99); break;   // Contagion (v3.37.156): sickened + fatigued for the room
       default: return false;
@@ -2689,6 +2696,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     const e = this._oneEnemy(payload); if (!e) return;
     if ((ab.debuff === 'paralyzed' && !ab.physicalHold || ab.mindAffect) && mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
+    if (ab.debuff === 'polymorphed' && (e.boss || e.polymorphed)) { this._note(`${ab.icon} ${e.name} ${e.polymorphed ? 'is already a rabbit' : `is too mighty for ${ab.name} — a boss cannot be unmade (the save-or-lose boss rule)`}.`); this._echoToTable(); return; }   // v3.37.158
     if (ab.debuff === 'diseased' && (e.type === 'undead' || e.type === 'construct')) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — it has no living body to sicken (PF1).`); this._echoToTable(); return; }   // Contagion (v3.37.156)
     if (ab.hdCap && (crToNum(e.cr) || 0) > ab.hdCap) { this._note(`${ab.icon} ${e.name} is too mighty for ${ab.name} — it only frightens creatures of ${ab.hdCap} HD or less.`); this._echoToTable(); return; }
     const dc = this._spellDC(m, ab);
@@ -3255,6 +3263,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (ab.fly) who.flying = true;                // Fly — grounded foes can't melee them
       if (ab.canHitFlyers) who.canHitFlyers = true; // Magus Fly/Overland Flight — can melee airborne foes
       if (ab.displace) who.displaced = true;        // Displacement — 50% incoming-miss (this room)
+      if (ab.blink) who.blinking = true;            // Blink (v3.37.158) — 50% incoming-miss, 20% of your own attacks flicker away (this room)
       if (ab.fireShield) who.fireShield = { die: 6, bonus: who.level || 1 };   // Fire Shield — retaliate on melee hit
       if (ab.holySword) who._holySword = 2;                                     // Holy Sword — +2d6 HOLY vs evil/marked foes on every hit (v3.37.140)
       if (ab.elemBody) who.elemBody = true;         // Elemental Body — crit + CC immunity

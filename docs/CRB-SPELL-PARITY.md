@@ -218,12 +218,36 @@ beasts, celestial-touched or wild, never evil. Every rung now exists.
 Honest gaps: the bestiary has no CR-2 beast (SM II is 1d3 of the CR-1 tier,
 which PF1 allows) and no elemental or eagle; the rungs use what exists.
 
+## Batch 8 — tricks & save-or-suffer (v3.37.158)
+
+1. **Blink** (Brd/Sor/Wiz 3) 🔧 — self, room: 50% of attacks that would hit
+   you miss (it shares Displacement's gate, so True Seeing pierces it — the
+   adaptation) and 20% of your own attacks flicker away (RAW). An enemy Dispel
+   can rip it. The ethereal side (walls, incorporeal touch) has no surface.
+2. **Repulsion** (Clr 7, Sor/Wiz 6) ✅ — up to 8 foes, Will negates, or for
+   1 round/level a melee-only foe cannot close: its turn is spent straining at
+   the field. Archers and casters shoot and cast over it (RAW: it stops
+   bodies, not spells).
+3. **Insanity** (Sor/Wiz 7) ✅ — Will negates, or CONFUSED for the rest of the
+   room (PF1 permanent). Rides the v3.37.153 confusion table. Mind-affecting.
+4. **Baleful Polymorph** (Drd/Sor/Wiz 5) 🔧 — Fortitude negates, or the foe is
+   a harmless rabbit for the room: AC 12, a 1d3 nibble, no spells, no flight,
+   no bow; HP stay (PF1's Con swap has no surface). The original block is kept
+   on the foe for the log. A boss is too mighty to unmake (the standing
+   save-or-lose boss rule); the bot gate knows.
+5. **Gaseous Form** (Brd 3/Sor-Wiz 3) 🚫 — a hero who cannot attack or cast
+   has no turn to take in this format; PF1's uses (slipping through cracks,
+   scouting) have no surface. Revisit if a "retreat/regroup" verb ever exists.
+6. **Spider Climb** (Drd 2/Sor-Wiz 2) 🚫 — no walls or ceilings to climb; it
+   would be a cheaper Fly. The engine's only "height" is flying.
+7. **Dimensional Anchor** (Clr 4/Sor-Wiz 4) 🚫 — no enemy teleports, blinks or
+   plane-shifts today, so there is nothing for the anchor to stop. Revisit
+   with the first teleporting foe (a bone devil's teleport would be the one).
+
 ## Queued (batches of 5, in priority order)
 
-- **Batch 8 — movement & tricks:** Blink, Gaseous Form, Spider Climb,
-  Dimensional Anchor, Repulsion.
-- **Batch 9 — save-or-suffer:** Baleful Polymorph, Insanity, Symbol family
-  (as room-trap casts?), Forcecage, Binding→likely 🚫.
+- **Batch 9 — cages & sigils:** Forcecage, Binding, the Symbol family (as
+  room-trap casts?) — likely mostly 🚫.
 - **Batch 10 — the holy words:** Holy Word, Blasphemy, Dictum, Word of Chaos,
   Earthquake.
 - Then a sweep of stragglers until the ledger shows no 📋.

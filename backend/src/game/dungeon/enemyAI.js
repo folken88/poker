@@ -103,6 +103,9 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     if (e.hasted > 0) e.hasted--;   // enemy Haste (v3.37.126) burns down one round per turn
     if (e.silenced > 0) e.silenced--;   // Silence (v3.37.129) fades one round per turn — the cast gates below check what's left
     if (this._ccTurn(e)) { this._echoToTable(); this._broadcast(); return; }   // v3.37.153: fear / confusion consumed the turn
+    // REPULSION (v3.37.158, CRB batch 8): a melee-only foe cannot close — its turn is spent straining
+    // at the field. Archers and casters shoot and cast over it (PF1: the field stops bodies, not spells).
+    if (e.repulsed > 0) { e.repulsed--; if (!e.ranged && !e.arcane && !e.caster && !e.healer && !e.spellstrike) { this._note(`🚫 ${e.glyph} ${e.name} strains against the REPULSION — it cannot close to melee${e.repulsed > 0 ? ` (${e.repulsed} more round${e.repulsed === 1 ? '' : 's'})` : ' — and the field fades'}.`, null, { side: 'enemy' }); this._echoToTable(); this._broadcast(); return; } }
     // PF1: standing up from prone is a MOVE ACTION. A slowed (staggered) creature's
     // single action is spent entirely on standing; everyone else stands and has
     // only their STANDARD left (one attack on the same target, or spend it closing
@@ -898,7 +901,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // run-buffs (Vestment, GMW, Heroism, False Life, Bless) are strippable too.
     if (cl >= 9 && !e._dispelCast && dRoll(4) === 1) {
       const _runHas = (m, ...ks) => ks.some(k => m.runBuffApplied && m.runBuffApplied[k]);
-      const _dScore = (m) => (m.hasted > 0 ? 1 : 0) + (m.images > 0 ? 1 : 0) + (m.displaced ? 1 : 0) + ((m.flying && !m.innateFly && !m.ghost) ? 1 : 0) + ((m.invisible && !m.greaterInvis) ? 1 : 0) + (m.dr > 0 ? 1 : 0) + (m.mageArmor ? 1 : 0) + (m.protectFire > 0 ? 1 : 0) + (m.seeInvis ? 1 : 0) + (m.trueSeeing ? 1 : 0) + (_runHas(m, 'magicvestment', 'greatermagicweapon', 'heroism', 'ext_heroism') ? 1 : 0);
+      const _dScore = (m) => (m.hasted > 0 ? 1 : 0) + (m.images > 0 ? 1 : 0) + (m.displaced ? 1 : 0) + (m.blinking ? 1 : 0) + ((m.flying && !m.innateFly && !m.ghost) ? 1 : 0) + ((m.invisible && !m.greaterInvis) ? 1 : 0) + (m.dr > 0 ? 1 : 0) + (m.mageArmor ? 1 : 0) + (m.protectFire > 0 ? 1 : 0) + (m.seeInvis ? 1 : 0) + (m.trueSeeing ? 1 : 0) + (_runHas(m, 'magicvestment', 'greatermagicweapon', 'heroism', 'ext_heroism') ? 1 : 0);
       const tgt = heroes.slice().sort((a, b) => _dScore(b) - _dScore(a))[0];
       if (tgt && _dScore(tgt) >= 3 && !(cl < 13 && (tgt.globeLvl || 0) >= 3)) {   // v3.37.155: plain Dispel Magic (3rd) cannot breach a Globe of Invulnerability; Greater (6th) can
         e._dispelCast = true;
@@ -917,6 +920,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         rip(tgt.hasted > 0, 'Haste', () => { tgt.hasted = 0; tgt.hasteFull = false; });
         rip(tgt.images > 0, 'Mirror Image', () => { tgt.images = 0; });
         rip(tgt.displaced, 'Displacement', () => { tgt.displaced = false; if (tgt.buffApplied) { delete tgt.buffApplied.displacement; delete tgt.buffApplied.ext_displace; } });
+        rip(tgt.blinking, 'Blink', () => { tgt.blinking = false; if (tgt.buffApplied) delete tgt.buffApplied.blinkspell; });   // v3.37.158
         rip(tgt.invisible && !tgt.greaterInvis, 'Invisibility', () => { tgt.invisible = false; });
         rip(tgt.flying && !tgt.innateFly && !tgt.ghost, 'flight', () => { tgt.flying = false; tgt.overlandFlight = false; if (!tgt.form) tgt.canHitFlyers = false; ripRun('airwalk', 'overlandflight', 'fly'); });   // v3.37.148: Overland Flight / Fly flags rip too, so the pre-door pass and the bot RECAST them (Josh: Olbryn never re-flew)
         rip(tgt.dr > 0, 'Stoneskin', () => { tgt.dr = 0; ripRun('stoneskin', 'stoneskincomm', 'ext_stoneskin'); });

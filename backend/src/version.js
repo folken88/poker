@@ -2174,6 +2174,13 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.158 2026-09-15 CRB BATCH 8 — TRICKS & SAVE-OR-SUFFER. Blink (Brd/Sor/Wiz 3: 50% of attacks
+//                     on you miss, 20% of yours flicker away; True Seeing pierces it), Repulsion (Clr 7,
+//                     Sor/Wiz 6: up to 8 foes, Will negates, or melee-only foes cannot close for 1 round/
+//                     level — archers and casters still act), Insanity (Sor/Wiz 7: Will or CONFUSED for
+//                     the room), Baleful Polymorph (Drd/Sor/Wiz 5: Fort or a harmless rabbit — AC 12, 1d3
+//                     nibble, no spells/flight/bow, HP stay; bosses immune). Enemy Dispel can rip Blink.
+//                     Deferred with reasons: Gaseous Form, Spider Climb, Dimensional Anchor. Tests 262-264.
 //  3.37.157 2026-09-15 CRB BATCH 7 — THE SUMMON LADDER. Summon Monster I/II/III/V/VII/IX (bard I-VI,
 //                     cleric/oracle/sorcerer/wizard I-IX) and Summon Nature's Ally I/II/III/V/VII/IX
 //                     (druid I-IX, ranger I-IV) — pool data only, the bestiary's own beasts (rats,
@@ -2210,9 +2217,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.157';
+const VERSION = '3.37.158';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "CRB batch 7 — the summon ladder: Summon Monster and Nature's Ally I through IX, every rung.";
+const HEADLINE = "CRB batch 8 — tricks & save-or-suffer: Blink, Repulsion, Insanity, Baleful Polymorph.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
