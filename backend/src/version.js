@@ -2174,6 +2174,13 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.156 2026-09-15 CRB BATCH 6 — CLOUDS & PHANTASMS. Acid Fog (Sor/Wiz 6: a Solid Fog that eats
+//                     2d6 acid into every foe each round), Incendiary Cloud (Sor/Wiz 8: 4d6 fire a
+//                     round, Reflex half), Phantasmal Killer (Sor/Wiz 4: Will to disbelieve, then Fort
+//                     or DIE; a made Fort takes 3d6), Weird (Sor/Wiz 9: the same on up to 6 foes, a
+//                     made Fort also stuns a round), Contagion (Clr/Drd 3, Sor/Wiz 4: Fort or DISEASED
+//                     — sickened + fatigued for the room; undead/constructs immune). A cloud that
+//                     clears the room ends the fight at round-top. Tests 257-259.
 //  3.37.155 2026-09-15 CRB BATCH 5 — CONDITION REMOVAL & WARDS. Remove Curse (Brd/Clr/Pal 3, Sor/Wiz
 //                     4: lifts a curse, no check), Remove Fear (Brd/Clr 1: lifts fear-born shakenness,
 //                     party immune to Daunting Success and +4 vs fear for the run), Spell Resistance
@@ -2195,9 +2202,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.155';
+const VERSION = '3.37.156';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "CRB batch 5 — condition removal & wards: Remove Curse, Remove Fear, Spell Resistance, Globe of Invulnerability, Death Ward — and enemy casters now bestow curses.";
+const HEADLINE = "CRB batch 6 — clouds & phantasms: Acid Fog, Incendiary Cloud, Phantasmal Killer, Weird, Contagion.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

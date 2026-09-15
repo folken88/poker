@@ -1186,7 +1186,7 @@ class Dungeon {
     this.turnIdx += 1;
     // Initiative is rolled ONCE per combat (per room, in openDoor) — Pathfinder
     // keeps the same order each round; we just wrap back to the top.
-    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; this._wallTick(); this._endOfRoundRaise(); }   // the fallen are raised between rounds (Black Tentacles re-grab on the CASTER'S turn, not at round-top)
+    if (this.turnIdx >= this.turnOrder.length) { this.turnIdx = 0; this.round += 1; this._wallTick(); if (this._endIfResolved()) return; this._endOfRoundRaise(); }   // the fallen are raised between rounds (Black Tentacles re-grab on the CASTER'S turn, not at round-top)
     this._advanceToActor();
   }
   _armAfkTimer(m) {
@@ -1834,10 +1834,10 @@ class Dungeon {
     if (eff === 'exhaust' && (t.type === 'undead' || t.type === 'construct')) return false;   // no living body to tire
     if (ab.onlyOutsiders && !(t.type === 'outsider' || /demon|devil|daemon|fiend/i.test(t.name || ''))) return false;   // Banishment
     if (ab.onlyHumanoids && !this._isHumanoid(t)) return false;   // Hold Person (PF1 RAW)
-    if (eff === 'save_debuff' && (((ab.debuff === 'paralyzed' || ab.mindAffect) && mindImmune(t)) || (ab.hdCap && (crToNum(t.cr) || 0) > ab.hdCap))) return false;   // v3.37.153: fear is mind-affecting; Cause Fear / Scare only bite ≤5 HD
+    if (eff === 'save_debuff' && (((ab.debuff === 'paralyzed' || ab.mindAffect) && mindImmune(t)) || (ab.debuff === 'diseased' && (t.type === 'undead' || t.type === 'construct')) || (ab.hdCap && (crToNum(t.cr) || 0) > ab.hdCap))) return false;   // v3.37.153: fear is mind-affecting; Cause Fear / Scare only bite ≤5 HD
     // Death effects (Suffocation / Slay Living / Finger of Death / Implosion /
     // Wail) need a living, breathing body — mirror _abSaveDie's immune set.
-    if (eff === 'savedie' && (t.type === 'undead' || t.type === 'construct'
+    if (eff === 'savedie' && ((ab.mindAffect && mindImmune(t)) || t.type === 'undead' || t.type === 'construct'
       || /golem|skelet|zombie|wraith|ghost|lich|vampire|wight|ghoul|ghast|shadow|ooze|elemental|construct|undead/i.test(t.name || ''))) return false;
     // NEGATIVE ENERGY HEALS THE UNDEAD (PF1, Tobias 2026-07-04): an antipaladin's
     // Touch of Corruption / Vampiric Touch on a vampire would MEND it — never a

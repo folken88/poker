@@ -38,7 +38,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const pray = e.prayed || 0;   // Prayer: −1 to the enemy's attacks & damage
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
     const tire = e.exhausted > 0 ? 3 : (e.fatigued > 0 ? 1 : 0);   // PF1 exhausted/fatigued: Str/Dex −6/−2 → −3/−1 to hit and damage (v3.37.145)
-    const fog = (this.wall && this.wall.rider === 'fog' && e._fogRound === this.round) ? 2 : 0;   // Solid Fog: −2 to hit and damage while wading through (v3.37.146)
+    const fog = (this.wall && (this.wall.rider === 'fog' || this.wall.rider === 'acidfog' || this.wall.rider === 'firecloud') && e._fogRound === this.round) ? 2 : 0;   // Solid Fog: −2 to hit and damage while wading through (v3.37.146)
     const toHit = e.toHit - sick - pray - tire - fog + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.hasted > 0 ? 1 : 0) - (e.cursed ? 4 : 0);   // Fight Defensively: −4; Blaze of Glory: +4; Haste (v3.37.126): +1; Bestow Curse (v3.37.129): −4
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };

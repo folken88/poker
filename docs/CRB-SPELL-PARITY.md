@@ -170,10 +170,32 @@ Death Ward moved to batch 5 (wards).
    FOES are fatigued, by Waves of Fatigue), so there is nothing to restore.
    Revisit with the first energy-draining monster.
 
+## Batch 6 — clouds & phantasms (v3.37.156)
+
+1. **Acid Fog** (Sor/Wiz 6) 🔧 — rides the wall system as a Solid Fog with a
+   bite: melee cap 2, no flanking, foes wading through swing at −2, and every
+   round-top it eats 2d6 acid into every foe on the field. Adaptation: the fog
+   covers the whole field (PF1: a 20-ft spread).
+2. **Incendiary Cloud** (Sor/Wiz 8) 🔧 — the same frame with smoke: 4d6 fire
+   to every foe each round, Reflex half (the wall's DC). A cloud that clears
+   the room ends the fight at round-top (Dungeon.js round-top now checks
+   `_endIfResolved` after the wall tick).
+3. **Phantasmal Killer** (Sor/Wiz 4) ✅ — Will to disbelieve (no effect), then
+   Fortitude or DIE of fright; a made Fortitude save still takes 3d6. Mind-
+   affecting + death effect: the mindless and the unliving are immune (the bot
+   gate `_spellWorksOn` knows). A boss never drops outright — a failed Fort is
+   half its max HP, the standing savedie boss rule.
+4. **Weird** (Sor/Wiz 9) 🔧 — Phantasmal Killer on up to 6 foes; a made
+   Fortitude save takes 3d6 and STUNS a round (PF1's 1 Str damage has no
+   surface here).
+5. **Contagion** (Clr 3/Drd 3/Sor-Wiz 4) 🔧 — Fortitude negates, or the foe is
+   DISEASED for the rest of the room: sickened + fatigued (−3 to hit and
+   damage, −1 AC and Reflex, −2 on saves). Undead and constructs do not sicken.
+   Adaptation: PF1's diseases deal ability damage over days; here the onset is
+   immediate and the effect is the two conditions the engine already tracks.
+
 ## Queued (batches of 5, in priority order)
 
-- **Batch 6 — blasts & rays:** Acid Fog, Incendiary Cloud, Phantasmal Killer,
-  Weird, Contagion.
 - **Batch 7 — summon fill:** Summon Monster I–III/V/VII/IX + Nature's Ally
   gaps (pool data only).
 - **Batch 8 — movement & tricks:** Blink, Gaseous Form, Spider Climb,

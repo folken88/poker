@@ -2099,7 +2099,37 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   // Suffocation — single living target (not undead/constructs): Fort save or DIE.
   // A made save (or a boss too tough to fell outright) still takes heavy damage.
+  // Phantasmal Killer / Weird (v3.37.156, CRB batch 6): a nightmare only a MIND can see —
+  // Will to disbelieve (no effect), then Fortitude or DIE of fright; a made Fortitude
+  // save still takes 3d6 (Weird: and STUNS a round — PF1's 1 Str damage has no surface
+  // here). Mind-affecting fear + death effect: the mindless and the unliving are immune.
+  // A boss never drops outright (the savedie boss rule): a failed Fort is half its max HP.
+  _abPhantasm(m, ab, payload) {
+    const sound = ab.sound || pick(SND.lightning);
+    const DEAD = /golem|skelet|zombie|wraith|ghost|lich|vampire|wight|ghoul|ghast|shadow|ooze|elemental|construct|undead/i;
+    const all = ab.target === 'aoe' ? this._enemyTargets(payload, ab.maxTargets || 6) : [this._oneEnemy(payload)].filter(Boolean);
+    const immuneOf = (e) => mindImmune(e) || e.type === 'undead' || e.type === 'construct' || DEAD.test(e.name || '');
+    const picked = all.filter(e => !immuneOf(e));
+    if (!picked.length) { const e0 = all[0]; this._note(`${ab.icon} ${m.nickname} casts ${ab.name}${e0 ? ` on ${e0.name}` : ''} — but ${e0 ? (mindImmune(e0) ? this._mindImmuneWhy(e0) : 'nothing there lives to be frightened to death') : 'nothing there has a mind to frighten'}. No effect.`, sound); this._echoToTable(sound); return; }
+    const dc = this._spellDC(m, ab); const died = [], shrugged = [], wracked = [];
+    for (const e of picked) {
+      const will = this._saveVs(this._enemySave(e, 'will'), dc);
+      if (will.saved) { shrugged.push(`${e.name} [Will ${will.total}]`); continue; }
+      const fort = this._saveVs(this._enemySave(e, 'fort'), dc);
+      if (!fort.saved && !e.boss) { this._dmgE(e, e.hp + 20, ab.dtype); died.push(`${e.name} [Fort ${fort.total}]`); continue; }
+      const dmg = this._dmgE(e, !fort.saved ? Math.max(6, Math.floor((e.maxHp || 20) * 0.5)) : dRollN(3, 6), ab.dtype);
+      if (fort.saved && ab.target === 'aoe') e.stunned = Math.max(e.stunned || 0, 1);   // Weird: a made save still staggers (PF1: stunned 1 round)
+      wracked.push(`${e.name} ${dmg}${e.hp <= 0 ? ' ☠️' : ''}${fort.saved && ab.target === 'aoe' ? ' (stunned)' : ''} [Fort ${fort.total}]`);
+    }
+    const parts = [];
+    if (died.length) parts.push(`DIES OF FRIGHT: ${died.join(', ')} ☠️`);
+    if (wracked.length) parts.push(`wracked: ${wracked.join(', ')}`);
+    if (shrugged.length) parts.push(`disbelieves it: ${shrugged.join(', ')}`);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — DC ${dc}: ${parts.join('; ')}.`, sound);
+    this._echoToTable(sound);
+  },
   _abSaveDie(m, ab, payload) {
+    if (ab.phantasm) return this._abPhantasm(m, ab, payload);   // Phantasmal Killer / Weird (v3.37.156)
     const e = this._oneEnemy(payload); if (!e) return;
     const sound = ab.sound || pick(SND.lightning);
     // Only living, breathing creatures answer a death effect — undead, constructs,
@@ -2376,7 +2406,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const rounds = Math.max(3, Math.min(10, m.level || 1)), old = this.wall, lvl = m.level || 1;
     this.wall = { key: ab.key, name: ab.name, icon: ab.icon, rounds, caster: m.playerId, cap: ab.wallCap || 2, rider: ab.wallRider || 'none', dc: this._spellDC(m, ab), level: lvl };
     const w = this.wall;
-    const riderText = { fire: `any melee foe pressing through burns for 2d6+${lvl} fire`, cold: `breaking through costs 1d6+${lvl} cold`, web: `a foe pressing through must save (Reflex DC ${w.dc}) or stick fast and lose its turn`, fog: 'foes wading through swing at −2 to hit and damage', none: 'nothing burns or breaks it' }[w.rider];
+    const riderText = { fire: `any melee foe pressing through burns for 2d6+${lvl} fire`, cold: `breaking through costs 1d6+${lvl} cold`, web: `a foe pressing through must save (Reflex DC ${w.dc}) or stick fast and lose its turn`, fog: 'foes wading through swing at −2 to hit and damage', acidfog: 'foes wading through swing at −2 to hit and damage while the vapor eats 2d6 acid into every foe in it each round', firecloud: `foes wading through swing at −2 to hit and damage while the embers burn every foe in it for 4d6 fire each round (Reflex DC ${w.dc} half)`, none: 'nothing burns or breaks it' }[w.rider];
     this._note(`${ab.icon} ${m.nickname} raises a ${ab.name}${old ? ` — it replaces the ${old.name}` : ''}: melee foes can reach at most ${w.cap} of them per target each round, no one can be flanked or sneak-attacked, and ${riderText}. Flyers cross it; archers shoot over it. (${rounds} rounds)`, ab.sound);
     this._echoToTable(ab.sound);
   },
@@ -2397,14 +2427,24 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       this._note(`${w.icon} ${e.name} picks its way through the ${w.name}. [Reflex ${sv.total} vs DC ${w.dc}]`, null, { side: 'enemy' });
       return false;
     }
-    if (w.rider === 'fog') e._fogRound = this.round;   // −2 to hit and damage this round (_monsterSwing)
+    if (w.rider === 'fog' || w.rider === 'acidfog' || w.rider === 'firecloud') e._fogRound = this.round;   // −2 to hit and damage this round (_monsterSwing); the clouds obscure like a fog (v3.37.156)
     return false;
   },
   // End of round: the wall burns down a round and the per-target press count resets.
   _wallTick() {
     this._wallPress = {};
     const w = this.wall; if (!w) return;
-    if (--w.rounds <= 0) { this.wall = null; this._note(`${w.icon} The ${w.name} ${({ fire: 'gutters out', cold: 'melts away', web: 'frays to nothing', fog: 'thins and lifts' })[w.rider] || 'winks out'} — the field is open again.`); }
+    if (w.rider === 'acidfog' || w.rider === 'firecloud') {   // Acid Fog / Incendiary Cloud (v3.37.156): the cloud bites every round it stands
+      const hurt = [];
+      for (const e of this.livingEnemies()) {
+        let dmg = w.rider === 'acidfog' ? dRollN(2, 6) : dRollN(4, 6), tag = '';
+        if (w.rider === 'firecloud') { const sv = this._saveVs(this._enemySave(e, 'reflex'), w.dc); if (sv.saved) { dmg = Math.floor(dmg / 2); tag = ' (saved)'; } }
+        dmg = this._dmgE(e, dmg, w.rider === 'acidfog' ? 'acid' : 'fire');
+        hurt.push(`${e.name} ${dmg}${tag}${e.hp <= 0 ? ' ☠️' : ''}`);
+      }
+      if (hurt.length) this._note(`${w.icon} The ${w.name} ${w.rider === 'acidfog' ? 'eats at' : 'sears'} everything in it — ${hurt.join(', ')}.`);
+    }
+    if (--w.rounds <= 0) { this.wall = null; this._note(`${w.icon} The ${w.name} ${({ fire: 'gutters out', cold: 'melts away', web: 'frays to nothing', fog: 'thins and lifts', acidfog: 'thins and lifts', firecloud: 'burns itself out' })[w.rider] || 'winks out'} — the field is open again.`); }
   },
   // Waves of Exhaustion (7th) / Ray of Exhaustion (3rd) / Waves of Fatigue (5th) —
   // the PF1 tiers (v3.37.145, Josh: 'there is a spell waves of exhaustion so what
@@ -2623,6 +2663,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       case 'panicked':     { const r = Math.min(10, lvl); e.frightened = Math.max(e.frightened || 0, r); e.sickened = Math.max(e.sickened || 0, r); break; }
       case 'confused':     e.confused = Math.max(e.confused || 0, Math.min(10, lvl)); break;
       case 'feebleminded': e.feebleminded = true; break;
+      case 'diseased':     e.diseased = true; e.sickened = Math.max(e.sickened || 0, 99); e.fatigued = Math.max(e.fatigued || 0, 99); break;   // Contagion (v3.37.156): sickened + fatigued for the room
       default: return false;
     }
     return true;
@@ -2648,6 +2689,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     const e = this._oneEnemy(payload); if (!e) return;
     if ((ab.debuff === 'paralyzed' && !ab.physicalHold || ab.mindAffect) && mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
+    if (ab.debuff === 'diseased' && (e.type === 'undead' || e.type === 'construct')) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — it has no living body to sicken (PF1).`); this._echoToTable(); return; }   // Contagion (v3.37.156)
     if (ab.hdCap && (crToNum(e.cr) || 0) > ab.hdCap) { this._note(`${ab.icon} ${e.name} is too mighty for ${ab.name} — it only frightens creatures of ${ab.hdCap} HD or less.`); this._echoToTable(); return; }
     const dc = this._spellDC(m, ab);
     const sv = ab.noSave ? { saved: false, total: null } : this._saveVs(this._enemySave(e, ab.save || 'will') - (ab.debuff === 'feebleminded' && (e.arcane || e.spellstrike) ? 4 : 0), dc);   // Feeblemind: arcane casters save at −4 (PF1)

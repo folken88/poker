@@ -313,6 +313,12 @@ const SPELL = {
   globelesser:    { key: 'globelesser',    name: 'Lesser Globe of Invulnerability', icon: '🔮', effect: 'buff', target: 'self', party: true, sticky: true, globe: 3, buff: {}, slvl: 4, sound: S.invoke, desc: 'A shimmering globe around the party: enemy spells of 3rd level or lower (fireball, hold person, magic missile, bestow curse, dispel magic) cannot reach anyone inside for the room. Your own spells pass out freely (PF1). (Adaptation: the whole party huddles inside.)' },
   globeofinvuln:  { key: 'globeofinvuln',  name: 'Globe of Invulnerability', icon: '🔮', effect: 'buff', target: 'self', party: true, sticky: true, globe: 4, buff: {}, slvl: 6, sound: S.invoke, desc: 'As the lesser globe, but it turns aside enemy spells of 4th level or lower for the room; Cone of Cold, Hold Monster, Chain Lightning, Disintegrate and Finger of Death still get through (PF1).' },
   deathward:      { key: 'deathward',      name: 'Death Ward',      icon: '⚰️', effect: 'buff', target: 'ally', sticky: true, deathWard: true, buff: {}, slvl: 4, sound: S.invoke, desc: 'Shield an ally from death magic and negative energy for the room: a Finger of Death fails outright and a vampire’s draining touch finds no life to drink (PF1).' },
+  // ── CRB BATCH 6: CLOUDS & PHANTASMS (v3.37.156) ──
+  acidfog:        { key: 'acidfog',        name: 'Acid Fog',        icon: '🧪', effect: 'wall', target: 'self', slvl: 6, wallCap: 2, wallRider: 'acidfog', sound: S.acid, desc: 'A bank of caustic vapor fills the field: it clings like Solid Fog (melee foes reach at most 2 of them per target each round, no flanking or sneak attacks, foes wading through swing at −2), and every round it eats 2d6 acid into each foe standing in it (PF1). (Adaptation: the fog covers the whole field.)' },
+  incendiarycloud:{ key: 'incendiarycloud',name: 'Incendiary Cloud', icon: '🌋', effect: 'wall', target: 'self', slvl: 8, wallCap: 2, wallRider: 'firecloud', save: 'reflex', sound: '/audio/spell_fireball.mp3', desc: 'A roiling cloud of smoke and embers fills the field: it obscures like a fog (melee foes reach at most 2 of them per target each round, no flanking or sneak attacks, foes wading through swing at −2), and every round it burns each foe in it for 4d6 fire, Reflex half (PF1). (Adaptation: the cloud covers the whole field.)' },
+  phantasmalkiller:{ key: 'phantasmalkiller', name: 'Phantasmal Killer', icon: '👻', effect: 'savedie', phantasm: true, mindAffect: true, target: 'enemy', save: 'fort', slvl: 4, sound: S.umbral, desc: 'One foe sees its worst nightmare made flesh: Will to disbelieve, then Fortitude or DIE of fright; a made Fortitude save still takes 3d6. Mind-affecting fear and a death effect — the mindless and the unliving are immune (PF1).' },
+  weird:          { key: 'weird',          name: 'Weird',           icon: '💀', effect: 'savedie', phantasm: true, mindAffect: true, target: 'aoe', maxTargets: 6, save: 'fort', slvl: 9, sound: S.umbral, desc: 'Phantasmal Killer for the whole field: up to 6 foes each face their nightmare — Will to disbelieve, then Fortitude or DIE; a made Fortitude save still takes 3d6 and leaves them STUNNED a round (PF1; the Strength damage has no surface here).' },
+  contagion:      { key: 'contagion',      name: 'Contagion',       icon: '🦠', effect: 'save_debuff', debuff: 'diseased', save: 'fort', target: 'enemy', slvl: 3, sound: S.acid, desc: 'A touch of disease: Fortitude negates, or the foe is DISEASED for the rest of the room — sickened and fatigued (−3 to hit and damage, −1 AC and Reflex, −2 on saves). Undead and constructs do not sicken. (Adaptation: PF1’s diseases deal ability damage over days; here the onset is immediate.)' },
   bladebarrier:   { key: 'bladebarrier',   name: 'Blade Barrier',     icon: '🌪️', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 'level', dcap: 15, slvl: 6, sound: '/audio/spell_holysmite.mp3', desc: 'A whirling wall of blades slices through up to 4 foes — 1d6 per caster level (max 15d6), Reflex for half.' },
   firestorm:      { key: 'firestorm',      name: 'Fire Storm',        icon: '🌋', effect: 'aoe', target: 'aoe', maxTargets: 6, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: 'fire', slvl: 8, sounds: FIREBALL_SFX, desc: 'Sheets of divine flame roar over up to 6 foes — 1d6 per caster level (max 20d6), Reflex for half.' },
   massheal:       { key: 'massheal',       name: 'Mass Heal',         icon: '💗', effect: 'heal', heal: 'party', massHeal: true, healDice: 15, healCap: 25, target: 'ally', slvl: 9, sound: '/audio/spell_channel_charge.mp3', desc: 'A tidal wave of positive energy — the WHOLE party heals 15d8 + caster level (max +25).' },
@@ -1362,6 +1368,22 @@ _injectKitSpell('oracle',   spontaneousSpell(SPELL.deathward, 8));
 _injectKitSpell('druid',    preparedSpell(SPELL.deathward, 9));
 _injectKitSpell('paladin',  preparedSpell(SPELL.deathward, 13));
 // (end batch 5)
+// CRB BATCH 6 — CLOUDS & PHANTASMS (v3.37.156): Acid Fog (Sor/Wiz 6), Incendiary Cloud (Sor/Wiz 8),
+// Phantasmal Killer (Sor/Wiz 4), Weird (Sor/Wiz 9), Contagion (Clr 3/Drd 3/Sor-Wiz 4).
+_injectKitSpell('wizard',   preparedSpell(SPELL.acidfog, 11));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.acidfog, 12));
+_injectKitSpell('wizard',   preparedSpell(SPELL.incendiarycloud, 15));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.incendiarycloud, 16));
+_injectKitSpell('wizard',   preparedSpell(SPELL.phantasmalkiller, 7));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.phantasmalkiller, 8));
+_injectKitSpell('wizard',   preparedSpell(SPELL.weird, 17));
+_injectKitSpell('sorcerer', spontaneousSpell(SPELL.weird, 18));
+_injectKitSpell('cleric',   preparedSpell(SPELL.contagion, 5));
+_injectKitSpell('oracle',   spontaneousSpell(SPELL.contagion, 6));
+_injectKitSpell('druid',    preparedSpell(SPELL.contagion, 5));
+_injectKitSpell('wizard',   preparedSpell({ ...SPELL.contagion, slvl: 4 }, 7));    // PF1: Contagion is Sor/Wiz 4
+_injectKitSpell('sorcerer', spontaneousSpell({ ...SPELL.contagion, slvl: 4 }, 8));
+// (end batch 6)
 // OVERLAND FLIGHT IS A SPELL (v3.37.150 — Josh, spicy-lantern / merry-sparrow: 'why is he casting
 // third-level Fly on himself again and again when he has fifth-level Overland Flight?'): every
 // kit copy carried cost 'run', uses 1 — ONE cast per dungeon. The moment an enemy dispel (or a
