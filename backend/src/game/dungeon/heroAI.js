@@ -403,7 +403,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       }
     }
     const slot = (ab) => allAbs.indexOf(ab);
-    const avail = allAbs.filter(usable);
+    const avail = allAbs.filter(a => usable(a) && !(a && a.botAvoid));   // botAvoid (v3.37.161): Transformation would mute a bot caster
     if (!avail.length) {
       // v3.37.107 SAVE YOURSELF, the DRY case (sneaky-dumpling d4: this very
       // early-out is where slot-dry Celeb's brain gave up every round while a

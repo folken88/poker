@@ -131,7 +131,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   //              crossbow / signature sidearm for a melee martial.
   //   no mode  → the old smart auto (blind A key, queues, bots, AFK swings).
   _useAtwill(m, payload) {
-    if (!m.greaterInvis) m.invisible = false;   // attacking breaks Invisibility — but NOT Greater Invisibility
+    if (!m.greaterInvis) m.invisible = false; m.sanctuary = false;   // attacking breaks Invisibility — but NOT Greater Invisibility
     const mode = payload && payload.mode;
     if (mode === 'melee') {
       const w = weaponOf(m.gear, m.weaponKey);
@@ -176,6 +176,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (!this._loadoutAllows(ab, m)) return { ok: false, error: `${ab.name} isn't prepared` };   // PHASE C: prepared/known loadout gate
     const lvl = m.level || 1;
     if (ab.minLevel && lvl < ab.minLevel) return { ok: false, error: `${ab.name} needs level ${ab.minLevel}` };
+    if (m.transformed && ab.slvl >= 1) return { ok: false, error: 'Transformation has made you a warrior — no spells until the room ends (PF1).' };   // v3.37.161
     // Raise Dead / Resurrection are powerful rituals — only between rooms (out of
     // combat), EXCEPT the between-rounds ritual window (_endOfRoundRaise).
     if (ab.raiseDead && this.status === 'combat' && !this._roundRaise) return { ok: false, error: `${ab.name} can only be cast between rooms or as a round turns, not mid-round.` };
@@ -370,6 +371,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       masscharm:   () => this._abMassCharm(m, ab, payload),
       exhaust:     () => this._abExhaust(m, ab, payload),
       wall:        () => this._abWall(m, ab, payload),
+      windwall:    () => this._abWindWall(m, ab),   // v3.37.161
       prismatic:   () => this._abPrismatic(m, ab, payload),
       grease:      () => this._abGrease(m, ab, payload),
       fascinate:   () => this._abFascinate(m, ab, payload),
@@ -421,7 +423,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     else if (ab.cost === 'slot') { const _L = this._slotLevelFor(m, ab); this._spendSlot(m, ab, _L); }   // metamagic draws from the HIGHER slot; theurge draws from the arcane/divine half
     else if (ab.cost === 'room' && !formOff) m.abilityUses[ab.key] = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 0) - 1);
     else if (ab.cost === 'run') m.runAbilityUses[ab.key] = Math.max(0, ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) - 1);
-    if ((ab.target === 'enemy' || ab.target === 'aoe') && !m.greaterInvis) m.invisible = false;   // attacking breaks Invisibility (Greater persists)
+    if (ab.target === 'enemy' || ab.target === 'aoe') { m.sanctuary = false; if (!m.greaterInvis) m.invisible = false; }   // attacking breaks Invisibility (Greater persists) and Sanctuary (v3.37.161)
     // A blaster (Elfrip the flame oracle) sometimes whoops "BOOM!" when a big
     // fire spell lands. Throttled like all dungeon banter (≤1/round, a chance).
     if (m.isBot && (ab.key === 'fireball' || ab.key === 'firesnake')) {
@@ -742,7 +744,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m.hasted = 0; m.hasteFull = false; m._justHasted = false; m._dpSwing = false; m._luck = 0; m.stunned = 0;   // transient round effects clear each room (Divine Power's extra swing + the shared luck channel ride their room-length buffs)
     m._lastAtkTarget = null;   // full-attack (same-target iterative) chain resets each room
     m.paralyzed = 0; m.heldDC = null; m.slowed = 0; m._slowTick = 0; m.sickened = 0; m.nauseated = 0;   // hold / slow / sicken / nausea wear off between rooms
-    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; m.spellResist = 0; m.deathWard = false; m.globeLvl = 0; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.spiritAlly = null; m.storm = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
+    m.tauntedBy = null; m.grappled = false; m.grappledBy = null; m.grappleRounds = 0; m.prone = false; m.protectFire = false; m.spellResist = 0; m.deathWard = false; m.globeLvl = 0; m.blurred = false; m.entropic = false; m.protArrows = 0; m.sanctuary = false; m._trueStrike = false; m.keenEdge = false; m.blessWeapon = false; m.energyResist = null; m.energyWard = null; m.shieldOtherBy = null; m.spellTurning = 0; m.transformed = false; m.antilife = false; m._aura8 = false; if (!m.innateFly) m.flying = false; m.dr = 0; m.spiritWeapon = null; m.spiritAlly = null; m.storm = null; m.darkvision = false; m._bleeding = false;   // taunt / grapple / prone / fire ward / flight (real WINGS persist — Strix) / stoneskin / spiritual weapon / darkvision / bleeding clear between rooms
     if (m.form) { m.weaponKey = m._baseWeaponKey || m.weaponKey; m._baseWeaponKey = null; m.form = null; m.weapon = null; }   // Wild Shape drops between rooms (re-cast next room)
     m.invisible = false; m.greaterInvis = false; m.judgment = null;   // invisibility (incl. Greater) ends; judgement re-declared per encounter
     m.queuedAction = null;   // pre-loaded actions never carry into a new room (stale targets)
@@ -844,6 +846,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // check is d20 + the foe's caster level vs the hero's SR. Supernatural
   // abilities (gazes, shouts, breath) never test SR — only their spells do.
   _srBlocksHero(e, m, label) {
+    if (m.spellTurning > 0) { m.spellTurning--; this._note(`🔁 ${m.nickname}'s SPELL TURNING throws ${label || 'the spell'} back — it fizzles against its caster${m.spellTurning > 0 ? ` (${m.spellTurning} more)` : ' — the turning is spent'}.`); return true; }   // Spell Turning (v3.37.161)
     const sr = Math.max(RACES.raceSR(m.race, m.level) || 0, m.spellResist || 0);   // v3.37.155: the Spell Resistance spell (12 + CL, this room) — the higher of racial/spell SR stands (PF1: SR never stacks)
     if (!(sr > 0)) return false;
     const cl = this._enemyCL(e);
@@ -2518,8 +2521,17 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     return false;
   },
   // End of round: the wall burns down a round and the per-target press count resets.
+  // WIND WALL (v3.37.161): a field effect of its own — enemy ranged attacks are flung aside
+  // while it stands (enemyAI _enemyMelee); it gusts down one round per round-top.
+  _abWindWall(m, ab) {
+    const rounds = Math.max(3, Math.min(10, m.level || 1));
+    this._windWall = Math.max(this._windWall || 0, rounds);
+    this._note(`${ab.icon} ${m.nickname} raises a ${ab.name} — every enemy arrow, bolt and thrown weapon is flung aside for ${rounds} rounds; spells and melee pass.`, ab.sound);
+    this._echoToTable(ab.sound);
+  },
   _wallTick() {
     this._wallPress = {};
+    if (this._windWall > 0 && --this._windWall === 0) this._note('🌬️ The Wind Wall gusts itself out — arrows fly true again.');   // v3.37.161
     const w = this.wall; if (!w) return;
     if (w.rider === 'acidfog' || w.rider === 'firecloud') {   // Acid Fog / Incendiary Cloud (v3.37.156): the cloud bites every round it stands
       const hurt = [];
@@ -3291,6 +3303,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const apply = (who) => {
       who.buffApplied = who.buffApplied || {};
       if (ab.sticky && who.buffApplied[ab.key]) return;   // already active this room — don't stack
+      if (ab.stackGroup) { if (who['_' + ab.stackGroup]) return; who['_' + ab.stackGroup] = true; }   // v3.37.161: the four 8th-level auras share one slot
       if (ab.gmwFlat && who.runBuffApplied && (who.runBuffApplied.greatermagicweapon || who.runBuffApplied.greatermagicfang)) return;   // Magic Weapon (v3.37.160): an enhancement bonus never stacks with a greater one (PF1)
       if (ab.sticky) who.buffApplied[ab.key] = true;
       if (ab.persist) {   // Bless / Inspire / Magic Vestment / the 10-min-per-level tier: run-long, survives room resets
@@ -3367,6 +3380,20 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (ab.spellResist) who.spellResist = Math.max(who.spellResist || 0, 12 + (m.level || 1));   // Spell Resistance (v3.37.155): SR 12 + CL vs enemy spells (this room)
       if (ab.deathWard) who.deathWard = true;       // Death Ward (v3.37.155): death magic and negative energy fail (this room)
       if (ab.globe) who.globeLvl = Math.max(who.globeLvl || 0, ab.globe);   // Globe of Invulnerability (v3.37.155): enemy spells of this level or lower cannot reach in (this room)
+      // ── CRB batch 11 wards (v3.37.161) ──
+      if (ab.blur) who.blurred = true;                 // Blur: 20% incoming-miss (this room)
+      if (ab.entropic) who.entropic = true;            // Entropic Shield: enemy ranged attacks miss you 20%
+      if (ab.protArrows) who.protArrows = Math.max(who.protArrows || 0, Math.min(100, 10 * lvl));   // Protection from Arrows: DR 10 vs ranged from a 10/CL pool (max 100)
+      if (ab.sanctuary) who.sanctuary = true;          // Sanctuary: untargetable until you attack
+      if (ab.trueStrike) who._trueStrike = true;       // True Strike: +20 on the next attack roll
+      if (ab.keenEdge) who.keenEdge = true;            // Keen Edge: doubled threat range
+      if (ab.blessWeapon) who.blessWeapon = true;      // Bless Weapon: crits vs evil auto-confirm
+      if (ab.resistType) { who.energyResist = who.energyResist || {}; who.energyResist[ab.resistType] = Math.max(who.energyResist[ab.resistType] || 0, lvl >= 11 ? 30 : lvl >= 7 ? 20 : 10); }   // Resist Energy: 10/20/30 per hit by CL
+      if (ab.wardType) { who.energyWard = who.energyWard || {}; who.energyWard[ab.wardType] = Math.max(who.energyWard[ab.wardType] || 0, Math.min(120, 12 * lvl)); }   // Protection from Energy: a 12/CL absorption pool (max 120)
+      if (ab.shieldOther) who.shieldOtherBy = m.playerId;   // Shield Other: half of this ally's wounds land on the caster
+      if (ab.spellTurning) who.spellTurning = Math.max(who.spellTurning || 0, 3);   // Spell Turning: the next 3 enemy spells aimed at you are turned aside
+      if (ab.transform) who.transformed = true;        // Transformation: no spells this room (_useAbility gate)
+      if (ab.antilife) who.antilife = true;            // Antilife Shell: living melee foes cannot close on you
     };
     if (ab.fearWard) {   // Remove Fear (v3.37.155): lifts fear-born shakenness now (Daunting Success is the only hero sickening), wards vs fear for the run
       let n = 0; for (const a of this.livingParty()) { apply(a); if (a.sickened > 0) { a.sickened = 0; n++; } }
@@ -3895,7 +3922,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _playerAttack(m, targetUid, quiet = false, opts = {}) {
     m.flatFooted = false;   // acting ends flat-footed
     if (!quiet) m._offDef = false;   // Offensive Defense lasts until the rogue next acts
-    if (!m.greaterInvis) m.invisible = false;    // attacking breaks Invisibility (Greater persists)
+    if (!m.greaterInvis) m.invisible = false; m.sanctuary = false;    // attacking breaks Invisibility (Greater persists)
     let e = this.enemies.find(x => x.uid === targetUid && x.hp > 0) || this.livingEnemies()[0];
     if (!e) return;
     m.weapon = weaponOf(m.gear, m.weaponKey);

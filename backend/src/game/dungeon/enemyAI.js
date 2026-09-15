@@ -395,6 +395,11 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     return dRoll(2) === 1;   // 50%
   },
   _enemyMelee(e, target) {
+    if (target && target.antilife && !e.ranged && e.type !== 'undead' && e.type !== 'construct') {   // Antilife Shell (v3.37.161): the living cannot close on the caster
+      const alt = this._targetableParty(e).filter(x => x !== target && !x.antilife);
+      if (!alt.length) { this._note(`⭕ ${e.glyph} ${e.name} strains against ${target.nickname}'s ANTILIFE SHELL — no living thing can cross it.`, null, { side: 'enemy' }); this._echoToTable(); return; }
+      const t2 = pick(alt); this._note(`⭕ ${e.glyph} ${e.name} is held off by ${target.nickname}'s ANTILIFE SHELL and turns on ${t2.nickname} instead.`, null, { side: 'enemy' }); target = t2;
+    }
     // A foe that MOVES to engage provokes: reach heroes get an AoO before it strikes (see above).
     if (target && e._lastMeleeTargetId !== target.playerId) { e._lastMeleeTargetId = target.playerId; this._provokeReachAoO(e); if (e.hp <= 0) return; }
     e.invisible = false;   // striking in melee breaks Invisibility (same rule as heroes)
@@ -409,6 +414,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const effAC = this._foeTargetAC(e, target);   // helpless / stunned / slowed / rage / reckless / cleave / challenge-exposed: easier to hit (S1b chokepoint)
     // Roll + sound + ranged/melee verb all come from the _foeSwing chokepoint (seam
     // S1a) — one set of rules for every target kind. See the chokepoint's comment.
+    if (e.ranged && this._windWall > 0) { this._note(`🌬️ ${e.glyph} ${e.name}'s shot is flung aside by the WIND WALL.`, null, { side: 'enemy' }); this._echoToTable(); return; }   // Wind Wall (v3.37.161)
+    if (e.ranged && target.entropic && dRoll(5) === 1) { this._note(`🌀 ${e.glyph} ${e.name}'s shot bends away from ${target.nickname}'s ENTROPIC SHIELD.`, null, { side: 'enemy' }); this._echoToTable(); return; }   // Entropic Shield (v3.37.161): 20% miss vs ranged
     const r = this._foeSwing(e, effAC, { critImmune: !!target.elemBody });
     const _rHit = r.crit ? 'CRITS' : r.verbHit;
     if (r.hit) {
@@ -439,6 +446,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         const sn = dRollN(e.sneakDice, 6); dmg += sn; sneakTag = ` 🗡️+${sn} sneak!`;
       }
       let drTag = ''; [dmg, drTag] = this._physDR(target, dmg);   // Stoneskin soaks physical blows
+      if (e.ranged && target.protArrows > 0 && dmg > 0) { const _pa = Math.min(10, target.protArrows, dmg); target.protArrows -= _pa; dmg -= _pa; drTag += ` 🏹🛡−${_pa}${target.protArrows <= 0 ? ' (ward spent)' : ''}`; }   // Protection from Arrows (v3.37.161): DR 10 vs ranged from a 10/CL pool
       target.hp -= dmg;
       this._note(`${e.glyph} ${e.name} ${_rHit} ${target.nickname} for ${dmg}.${sneakTag}${drTag} ${this._atkStr(r)}`, r.sound);
       // DAUNTING SUCCESS (Order of the Flame — enemy parity, mirror of Lord Gweyir's L8 deed): a
@@ -796,11 +804,16 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   // PF1 Protection from Energy (fire): the ward is an ABSORPTION POOL (12 per
   // caster level, max 120) — incoming fire damage (after saves/resistance) eats
   // the pool until it's spent; the remainder burns through. Mutates t.protectFire.
-  _fireSoak(t, dmg) {
-    if (!(t.protectFire > 0) || dmg <= 0) return { dmg, tag: '' };
+  // v3.37.161: one energy soak for every type — Resist Energy (flat per hit) first, then the
+  // Protection from Energy pools (typed, 12/CL) and the legacy Protection from Fire pool.
+  _fireSoak(t, dmg, dtype = 'fire') {
+    let tag = '';
+    if (dmg > 0 && t.energyResist && t.energyResist[dtype] > 0) { const r = Math.min(t.energyResist[dtype], dmg); dmg -= r; tag += ` 🧊resists ${r}`; }
+    if (dmg > 0 && t.energyWard && t.energyWard[dtype] > 0) { const w = Math.min(t.energyWard[dtype], dmg); t.energyWard[dtype] -= w; dmg -= w; tag += ` 🛡absorbs ${w}${t.energyWard[dtype] <= 0 ? ' — ward SPENT' : ''}`; }
+    if (dtype !== 'fire' || !(t.protectFire > 0) || dmg <= 0) return { dmg, tag };
     const soak = Math.min(t.protectFire, dmg);
     t.protectFire -= soak;
-    return { dmg: dmg - soak, tag: ` 🔥🛡absorbs ${soak}${t.protectFire <= 0 ? ' — ward SPENT' : ''}` };
+    return { dmg: dmg - soak, tag: tag + ` 🔥🛡absorbs ${soak}${t.protectFire <= 0 ? ' — ward SPENT' : ''}` };
   },
   _enemyHellfire(e) {
     e.hellfireLeft -= 1;
@@ -814,7 +827,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       const sm = this._partySaveMod(t), sroll = dRoll(20), stot = sroll + sm;
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= dc;
       let dmg = saved ? Math.floor(full / 2) : full;
-      if ((cfg.dtype || 'fire') === 'fire') ({ dmg } = this._fireSoak(t, dmg));   // fire ward absorbs FIRE only
+      ({ dmg } = this._fireSoak(t, dmg, cfg.dtype || 'fire'));   // typed wards (v3.37.161): fire pool, Resist/Protection from Energy by type
       this._dmgToMember(t, dmg);
       if (saved) savedN++; else hitN++;
       if (t.hp <= 0) downedN++;
@@ -923,6 +936,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         rip(tgt.images > 0, 'Mirror Image', () => { tgt.images = 0; });
         rip(tgt.displaced, 'Displacement', () => { tgt.displaced = false; if (tgt.buffApplied) { delete tgt.buffApplied.displacement; delete tgt.buffApplied.ext_displace; } });
         rip(tgt.blinking, 'Blink', () => { tgt.blinking = false; if (tgt.buffApplied) delete tgt.buffApplied.blinkspell; });   // v3.37.158
+        rip(tgt.blurred, 'Blur', () => { tgt.blurred = false; if (tgt.buffApplied) delete tgt.buffApplied.blur; });   // v3.37.161
         rip(tgt.invisible && !tgt.greaterInvis, 'Invisibility', () => { tgt.invisible = false; });
         rip(tgt.flying && !tgt.innateFly && !tgt.ghost, 'flight', () => { tgt.flying = false; tgt.overlandFlight = false; if (!tgt.form) tgt.canHitFlyers = false; ripRun('airwalk', 'overlandflight', 'fly'); });   // v3.37.148: Overland Flight / Fly flags rip too, so the pre-door pass and the bot RECAST them (Josh: Olbryn never re-flew)
         rip(tgt.dr > 0, 'Stoneskin', () => { tgt.dr = 0; ripRun('stoneskin', 'stoneskincomm', 'ext_stoneskin'); });
@@ -1051,7 +1065,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       const sm = this._partySaveMod(t, ['reflex']), sroll = dRoll(20), stot = sroll + sm;   // blast = Reflex save (Slow −1 applies)
       const saved = sroll === 20 ? true : sroll === 1 ? false : stot >= cfg.dc;
       let dmg = (saved && t.evasion) ? 0 : saved ? Math.floor(full / 2) : full;   // Evasion: no damage on a made save
-      if (cfg.dtype === 'fire') ({ dmg } = this._fireSoak(t, dmg));   // PF1 ward: absorption pool, not a halving
+      ({ dmg } = this._fireSoak(t, dmg, cfg.dtype));   // PF1 ward: absorption pool, not a halving — typed since v3.37.161
       this._dmgToMember(t, dmg);
       if (saved) savedN++; else hitN++;
       if (t.hp <= 0) downedN++;

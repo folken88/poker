@@ -2174,6 +2174,16 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.161 2026-09-15 CRB BATCH 11 — WARDS (28 spells, new hero-side mechanics). Blur (20% miss),
+//                     Entropic Shield (ranged miss 20%), Protection from Arrows (DR 10 vs ranged, a
+//                     10/CL pool), Wind Wall (enemy arrows flung aside 1 rd/level), Sanctuary (untarget-
+//                     able until you attack), True Strike (+20 next attack), Keen Edge (doubled threat),
+//                     Bless Weapon (crits vs evil auto-confirm), Resist Energy ×5 (10/20/30 per hit) and
+//                     Protection from Energy ×4 (typed 12/CL pools — one energy soak for every type),
+//                     Shield Other (half an ally's wounds land on the caster), Spell Turning (the next
+//                     3 enemy spells at you fizzle), the four 8th-level auras (+4 AC/saves + SR, one slot),
+//                     Transformation (a warrior, no spells — bots never cast it), Antilife Shell (living
+//                     melee foes cannot close). Tests 271-273.
 //  3.37.160 2026-09-15 CRB BATCH 10 — CLONES & STAPLES (43 spells, all riding existing effects). The
 //                     Inflict line + Mass Inflict (negative energy, Will half, undead mended), Magic
 //                     Weapon (+1, never stacks with a greater enhancement), Greater Magic Fang, Charm
@@ -2236,9 +2246,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.160';
+const VERSION = '3.37.161';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "CRB batch 10 — clones & staples: 43 spells from Inflict Wounds to Limited Wish, every one on its PF1 list.";
+const HEADLINE = "CRB batch 11 — wards: Blur, Wind Wall, Sanctuary, True Strike, Keen Edge, Resist Energy, Shield Other, Spell Turning, the auras, and more.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

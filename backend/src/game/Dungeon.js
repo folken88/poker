@@ -376,7 +376,7 @@ class Dungeon {
   livingParty() { return this.alivePresent(); }
   // Heroes the enemy can actually target — invisible ones are unseen (until they
   // attack). If EVERY living hero is invisible, fall back so combat can resolve.
-  _targetableParty(seer) { const live = this.alivePresent(); const sees = !!(seer && seer.trueSeeing); const seen = live.filter(m => (sees || !m.invisible) && !m.untargetable && !m.blinkedBy); return seen.length ? seen : live; }   // blinkedBy: teleported — untouchable until the caster's next turn. A TRUE-SEEING foe (Erinyes) also sees the INVISIBLE.
+  _targetableParty(seer) { const live = this.alivePresent(); const sees = !!(seer && seer.trueSeeing); const seen = live.filter(m => (sees || !m.invisible) && !m.untargetable && !m.blinkedBy && !m.sanctuary); return seen.length ? seen : live; }   // blinkedBy: teleported — untouchable until the caster's next turn. A TRUE-SEEING foe (Erinyes) also sees the INVISIBLE.
   livingEnemies() { return this.enemies.filter(e => e.hp > 0); }
   // Foes a hero can actually hit — excludes those shrouded in DARKNESS (can't be
   // attacked for 2 rounds). They're still "alive" (room stays active until it lifts).
@@ -643,7 +643,7 @@ class Dungeon {
     this._preDoorBuffs();   // AI casters put up run-long buffs (Mage Armor/Bless/Fly) before the fight
     this.depth += 1;
     this._spawnRoom();
-    this.blackTentacles = null; this.wall = null; this._wallPress = {};   // the tentacle field / a standing wall (v3.37.146) don't carry between rooms
+    this.blackTentacles = null; this.wall = null; this._wallPress = {}; this._windWall = 0;   // the tentacle field / a standing wall (v3.37.146) don't carry between rooms
     this.invisPurged = false;     // an Invisibility Purge burns for its ROOM only — the next room can hide again (see _abInvisPurge)
     this._twkShare = null;        // Tactician's shared teamwork feat lapses between rooms (v3.37.92)
     for (const m of this.present()) { this._computeCastable(m); this._resetAbilities(m); m.flatFooted = !(fighterFeats(m.cls, m.level, this._isRanged(m)).supremacy || (this._isFlameCavalier(m) && (m.level || 1) >= 2) || this._twkActive(m, 'lookout') || m.foresight); }   // LOOKOUT (teamwork): a paired watch is never surprised  // re-read the spell LOADOUT (Spellbook picker edits land at the door) + refresh per-room spells/channels + flat-footed until they act (Weapon Supremacy — and Order of the Flame's FOOLHARDY RUSH at L2 — are never caught flat-footed)
@@ -1570,7 +1570,7 @@ class Dungeon {
     // is always treated as wielding at least this grade): +1@1, +2@5, keen@6,
     // flaming@8, +3@9, flaming burst@11, +4@13, +5@17. The real weapon's enchant
     // wins if it's higher; keen/flaming layer on top.
-    let arcEnhDelta = 0, arcKeen = false, arcFlame = 0, arcFlameBurst = false, arcHoly = 0, arcUnholy = 0, arcShock = 0, arcFrost = 0, arcFrostBurst = false;
+    let arcEnhDelta = 0, arcKeen = !!attacker.keenEdge, arcFlame = 0, arcFlameBurst = false, arcHoly = 0, arcUnholy = 0, arcShock = 0, arcFrost = 0, arcFrostBurst = false;
     if (cls === 'magus') {
       const arcEnh = lvl >= 17 ? 5 : lvl >= 13 ? 4 : lvl >= 9 ? 3 : lvl >= 5 ? 2 : 1;
       arcEnhDelta = Math.max(0, arcEnh - (weapon.dmgBonus || 0));   // only the part above the real enchant
@@ -1682,7 +1682,7 @@ class Dungeon {
     const _aimX = (weapon && !weapon.ranged && attacker.buffApplied && attacker.buffApplied.deadlyaim) ? { hit: 2, dmg: -(attacker._aimBonus || 0) } : { hit: 0, dmg: 0 };
     const _stanceHit = _paX.hit + _aimX.hit, _stanceDmg = _paX.dmg + _aimX.dmg;
     const toHit = bab + _ap.toHitMod + (weapon.toHit || 0) + arcEnhDelta + smiteHit + baneHit + (buff.toHit || 0) + _stanceHit + pbs + flankHit + studiedN + extraToHit + notProf - sick - (attacker.grappled ? 2 : 0) - (attacker.slowed > 0 ? 1 : 0) - (attacker.prone && !(weapon && weapon.ranged) ? 4 : 0) + _dStrike + ff.hit + swashWF;   // (v3.37.92: Tactician reworked to RAW feat-SHARING — the old +2-vs-quarry term is gone; v3.37.90: glorious grants DAMAGE only, per the match-PF1 mandate)   // PF1: a prone attacker takes −4 on MELEE attacks (ranged unaffected here — crossbow rule simplified); Strength Surge (domain) rides this one swing
-    const roll = dRoll(20), total = roll + toHit;
+    const roll = dRoll(20), total = roll + toHit + (attacker._trueStrike ? 20 : 0); if (attacker._trueStrike) { attacker._trueStrike = false; this._note(`🎯 ${attacker.nickname}'s TRUE STRIKE guides the blow (+20).`); }   // True Strike (v3.37.161)
     // Luck domain — GOOD FORTUNE: the next missed swing (fumble included) is
     // rerolled once, keep the better outcome. Consumed on the reroll.
     const _fortune = () => {
@@ -1746,7 +1746,7 @@ class Dungeon {
     const impCrit = ff.impCrit || (weapon.impCritAt && lvl >= weapon.impCritAt) || (swashFin && lvl >= 5) || arcKeen;   // fighter / swashbuckler / magus arcane-pool keen / weapon-borne (Bastard's Blade at 9) — don't stack
     const effCritRange = impCrit ? (2 * weapon.critRange - 21) : weapon.critRange;
     const critFocus = ((ff.critFocus || (weapon && weapon.critFocus)) ? 4 : 0) + (ff.critMastery ? 4 : 0);   // Critical Focus +4 (fighter feat OR weapon-borne — Lammas / Sawtooth Sabers), Critical Mastery +4 more (+8 confirm)
-    if (roll >= effCritRange) { const conf = dRoll(20) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + _stanceHit + pbs + flankHit + studiedN + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
+    if (roll >= effCritRange) { const conf = ((attacker.blessWeapon && target && (target.evil || target.markedEvil)) ? 40 : dRoll(20)) + bab + _ap.toHitMod + (weapon.toHit || 0) + smiteHit + baneHit + (buff.toHit || 0) + _stanceHit + pbs + flankHit + studiedN + extraToHit + notProf + ff.hit + swashWF + critFocus; if (conf === 20 || conf >= ac) { crit = true; for (let i = 1; i < weapon.critMult; i++) dmg += rollDmg(); } }
     // Precision (sneak / swashbuckler Precise Strike), smite, and bane dice ride on
     // top — NOT multiplied by a crit.
     let sneakDmg = 0;
@@ -1867,7 +1867,7 @@ class Dungeon {
   // Apply non-melee damage to a member (shouts, hazards) with the same down/dead
   // thresholds as a weapon hit.
   _dmgToMember(m, dmg) {
-    m.hp -= dmg;
+    if (m.shieldOtherBy && m.shieldOtherBy !== m.playerId && dmg > 1) { const _c = this.party.find(a => a.playerId === m.shieldOtherBy && !a.dead && !a.left && a.hp > 0); if (_c) { const _h = Math.floor(dmg / 2); dmg -= _h; this._note(`🛡️ ${_c.nickname}'s SHIELD OTHER takes ${_h} of ${m.nickname}'s wound.`); this._dmgToMember(_c, _h); } } m.hp -= dmg;   // Shield Other (v3.37.161) shares the wound first
     if (m.hp <= -10) return this._memberDown(m);
     if (m.hp <= 0) return this._downMember(m);
   }
@@ -1888,8 +1888,8 @@ class Dungeon {
       this._note(`🪞 the blow strikes a mirror image of ${target.nickname} — it pops! (${target.images} left)`, null);
       return true;
     }
-    if (!pierces && (target.displaced || target.blinking) && dRoll(2) === 1) {   // Blink (v3.37.158) shares Displacement's 50%
-      this._note(`🌫️ ${target.nickname} ${target.blinking && !target.displaced ? 'blinks out of phase' : 'is displaced'} — the attack passes through empty air!`, null);
+    if (!pierces && (((target.displaced || target.blinking) && dRoll(2) === 1) || (target.blurred && dRoll(5) === 1))) {   // Blink (v3.37.158) shares Displacement's 50%; Blur (v3.37.161) is 20%
+      this._note(`🌫️ ${target.nickname} ${target.blinking && !target.displaced ? 'blinks out of phase' : target.displaced ? 'is displaced' : 'is blurred'} — the attack passes through empty air!`, null);
       return true;
     }
     // INCORPOREAL — Vesorianna is a ghost: half of all physical blows pass clean

@@ -323,13 +323,47 @@ had. Every entry is on its PF1 class list at its PF1 level.
     +2 AC / +2 saves against everything, so four alignment copies would only
     stack the same bonus; one entry covers them all (named in its desc later).
 
+## Batch 11 — wards (v3.37.161)
+
+The straggler sweep, part 2: 28 hero-side wards, each a new mechanic.
+
+1. **Blur** (Brd/Sor-Wiz 2) ✅ — 20% incoming miss through Displacement's
+   gate (True Seeing pierces it; an enemy Dispel rips it).
+2. **Entropic Shield** (Clr 1) ✅ — enemy ranged attacks miss you 20%.
+3. **Protection from Arrows** (Sor/Wiz 2) ✅ — DR 10 vs ranged weapons from a
+   10/CL pool (max 100), PF1's DR 10/magic (no foe here fires magic arrows).
+4. **Wind Wall** (Clr 3, Drd 2, Rgr 2, Sor/Wiz 3) ✅ — a field effect of its
+   own: enemy arrows, bolts and thrown weapons are flung aside for 1 round/
+   level (max 10); spells and melee pass. It coexists with a standing wall.
+5. **Sanctuary** (Clr 1) 🔧 — untargetable until you attack or cast at a foe.
+   PF1 gives each attacker a Will save; here the ward simply holds.
+6. **True Strike** (Sor/Wiz 1, Magus 1) ✅ — +20 on the next attack roll.
+7. **Keen Edge** (Sor/Wiz 3, Magus 3) ✅ — doubled threat range, rides the
+   magus keen flag (no stacking with Improved Critical).
+8. **Bless Weapon** (Pal 1) 🔧 — crits vs evil auto-confirm; the DR/good clause
+   has no surface (no foe carries DR/good).
+9. **Resist Energy** (Clr/Drd/Pal/Sor-Wiz 2, Rgr 1) ✅ ×5 — one entry per
+   energy type (fire, cold, acid, electricity, sonic): 10/20/30 per hit by
+   CL. **Protection from Energy** (Clr/Drd/Sor-Wiz 3, Rgr 2) ✅ ×4 — typed
+   12/CL pools (fire already existed as Protection from Fire). One energy
+   soak now serves every type (resistance first, then the pools).
+10. **Shield Other** (Clr/Pal 2) 🔧 — half of an ally's wounds land on the
+    caster for the room (PF1: 1 hour/level, +1 AC/saves — the share is what
+    matters here).
+11. **Spell Turning** (Sor/Wiz 7) 🔧 — the next 3 enemy spells aimed at you
+    fizzle (PF1 reflects 1d4+6 spell levels at the caster; the reflection has
+    no surface).
+12. **Cloak of Chaos / Holy Aura / Shield of Law / Unholy Aura** (Clr 8) 🔧 —
+    party +4 AC, +4 saves and SR 12+CL for the room; PF1 keys them to the
+    opposed alignment and adds a blinding/mind-shield rider (no surface). The
+    four share one stack slot.
+13. **Transformation** (Sor/Wiz 6) ✅ — +2 hit/damage, +4 AC, +2 HP/level, and
+    no spells until the room ends; bots never cast it (botAvoid).
+14. **Antilife Shell** (Clr/Drd 6) ✅ — living melee foes cannot close on the
+    caster: they turn on another ally or strain at the shell.
+
 ## Queued (batches of 5, in priority order)
 
-- **Batch 11 — wards (new hero-side mechanics):** Blur, Entropic Shield,
-  Protection from Arrows, Wind Wall, Sanctuary, True Strike, Keen Edge, Bless
-  Weapon, Resist Energy / Protection from Energy (cold, acid, electricity,
-  sonic), Shield Other, Spell Turning, the Cloak of Chaos / Holy Aura / Shield
-  of Law / Unholy Aura family, Transformation, Antilife Shell.
 - **Batch 12 — offense (new mechanics):** Color Spray, Scintillating Pattern,
   Crushing Despair, Mind Fog, Ghoul Touch, Halt Undead, Resilient Sphere,
   Circle of Death, Song of Discord, Eyebite, Mage's Sword, Flaming Sphere,
