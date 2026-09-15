@@ -973,7 +973,7 @@ class Dungeon {
         this._note(`🟢 Acid keeps sizzling on ${e.name} — ${dealt} acid${this._resistTag(e, 'acid')}.${this._afterEnemyHit(e)}`, null, { side: 'enemy' });
         if (e.hp <= 0) { this._broadcast(); return this._nextTurn(); }
       }
-      if (e.exhausted > 0) e.exhausted -= 1; if (e.fatigued > 0) e.fatigued -= 1; if (e.blinded > 0 && --e.blinded === 0) this._note(`👁️ ${e.name} blinks the light back into its eyes — no longer blind.`, null, { side: 'enemy' });   // exhaustion/fatigue tick (v3.37.145); blindness wears off (doesn't cost the turn — 50% miss / denied Dex while it lasts, v3.37.144)
+      if (e.poisoned > 0) { e.poisoned--; const _pd = this._dmgE(e, dRoll(6), 'poison'); if (_pd > 0) this._note(`☠️ ${e.name} shudders with poison — ${_pd}.${e.hp <= 0 ? ' ☠️' : ''}`, null, { side: 'enemy' }); if (e.hp <= 0) { this._broadcast(); return this._nextTurn(); } }   /* Poison (v3.37.162) */ if (e.exhausted > 0) e.exhausted -= 1; if (e.fatigued > 0) e.fatigued -= 1; if (e.blinded > 0 && --e.blinded === 0) this._note(`👁️ ${e.name} blinks the light back into its eyes — no longer blind.`, null, { side: 'enemy' });   // exhaustion/fatigue tick (v3.37.145); blindness wears off (doesn't cost the turn — 50% miss / denied Dex while it lasts, v3.37.144)
       if (e.fascinated) { this._note(`${e.glyph} ${e.name} ${e.asleep ? 'sleeps soundly' : 'stands fascinated'} — does nothing.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       // DOMINATED (hero magic): the foe fights FOR the party this turn — it turns
       // on its own allies. A fresh Will save each of its turns can shake the hold;
@@ -1830,11 +1830,11 @@ class Dungeon {
     const eff = ab.effect;
     // Mind-affecting: charm / sleep / fascinate + the mind-seizing debuffs
     // (Hold Person, Hideous Laughter) — undead & constructs have no mind.
-    if ((eff === 'charm' || eff === 'dominate' || eff === 'masscharm' || eff === 'sleep' || eff === 'fascinate') && mindImmune(t)) return false;
+    if ((eff === 'charm' || eff === 'dominate' || eff === 'masscharm' || eff === 'sleep' || eff === 'fascinate' || (eff === 'hdladder' && ab.mindAffect)) && mindImmune(t) && !(ab.onlyType === 'undead' && t.type === 'undead')) return false;   // v3.37.162: the HD ladders are mind-affecting; Control Undead reaches the mindless dead
     if (eff === 'exhaust' && (t.type === 'undead' || t.type === 'construct')) return false;   // no living body to tire
     if (ab.onlyOutsiders && !(t.type === 'outsider' || /demon|devil|daemon|fiend/i.test(t.name || ''))) return false;   // Banishment
-    if ((ab.onlyHumanoids && !this._isHumanoid(t)) || (ab.vsAlign && this._alignIs(t, { lawful: 'chaotic', chaotic: 'lawful', good: 'evil', evil: 'good' }[ab.vsAlign]))) return false;   // Hold Person / Charm Person (PF1 RAW); Chaos Hammer / Order's Wrath skip the same-aligned (v3.37.160)
-    if (eff === 'save_debuff' && (((ab.debuff === 'paralyzed' || ab.mindAffect) && mindImmune(t)) || (ab.debuff === 'diseased' && (t.type === 'undead' || t.type === 'construct')) || (ab.debuff === 'polymorphed' && (t.boss || t.polymorphed)) || (ab.hdCap && (crToNum(t.cr) || 0) > ab.hdCap))) return false;   // v3.37.153: fear is mind-affecting; Cause Fear / Scare only bite ≤5 HD
+    if ((ab.onlyHumanoids && !this._isHumanoid(t)) || (ab.onlyType && t.type !== ab.onlyType) || (ab.vsAlign && this._alignIs(t, { lawful: 'chaotic', chaotic: 'lawful', good: 'evil', evil: 'good' }[ab.vsAlign]))) return false;   // Hold Person / Charm Person (PF1 RAW); Chaos Hammer / Order's Wrath skip the same-aligned (v3.37.160)
+    if (eff === 'save_debuff' && ((((ab.debuff === 'paralyzed' && !ab.physicalHold) || ab.mindAffect) && mindImmune(t)) || ((ab.debuff === 'diseased' || ab.debuff === 'poisoned') && (t.type === 'undead' || t.type === 'construct')) || (ab.debuff === 'polymorphed' && (t.boss || t.polymorphed)) || (ab.hdCap && (crToNum(t.cr) || 0) > ab.hdCap))) return false;   // v3.37.153: fear is mind-affecting; Cause Fear / Scare only bite ≤5 HD
     // Death effects (Suffocation / Slay Living / Finger of Death / Implosion /
     // Wail) need a living, breathing body — mirror _abSaveDie's immune set.
     if (eff === 'savedie' && ((ab.mindAffect && mindImmune(t)) || t.type === 'undead' || t.type === 'construct'

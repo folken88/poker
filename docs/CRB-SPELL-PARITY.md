@@ -362,19 +362,95 @@ The straggler sweep, part 2: 28 hero-side wards, each a new mechanic.
 14. **Antilife Shell** (Clr/Drd 6) ✅ — living melee foes cannot close on the
     caster: they turn on another ally or strain at the shell.
 
+## Batch 12 — offense (v3.37.162)
+
+The straggler sweep, part 3 and last: 26 offensive spells.
+
+1. **Color Spray** (Sor/Wiz 1) 🔧, **Scintillating Pattern** (Sor/Wiz 8) 🔧,
+   **Eyebite** (Brd/Sor-Wiz 6) 🔧 — one HD-ladder engine: the effect depends
+   on the foe's HD (CR stands in). Color Spray: Will negates, up to 4 foes;
+   Scintillating Pattern: no save, up to 6; Eyebite: Fort negates, one foe per
+   cast (PF1: one per round). A boss is never put out cold (stunned instead).
+2. **Crushing Despair** (Brd 3, Sor/Wiz 4) ✅ — mass −2 for the room.
+   **Mind Fog** (Brd/Sor-Wiz 5) ✅ — −10 on the foes' Will saves for the room.
+   **Song of Discord** (Brd 5) 🔧 — the confusion table stands in for "50%
+   attack the nearest ally".
+3. **Ghoul Touch** (Sor/Wiz 2) 🔧 — Fort or paralyzed (the touch is assumed
+   to land; the foe may still shake free on its turns, the engine's hold
+   rule). **Halt Undead** (Sor/Wiz 3) ✅ — up to 3 undead, Will negates, a
+   physical hold the mindless cannot ignore.
+4. **Resilient Sphere** (Sor/Wiz 4) ✅ — Forcecage's cell with Reflex negates.
+   **Circle of Death** (Clr/Sor-Wiz 6) ✅ — 4d4 HD of the living, weakest
+   first, none above 9 HD, Fort negates or dies (a boss loses half).
+5. **Mage's Sword** (Sor/Wiz 7) 🔧 — the spirit-weapon engine with +4 to hit
+   and +6 damage (PF1's 4d6+3 force blade). **Flaming Sphere** (Drd/Sor-Wiz
+   2) 🔧 — a fire storm on the lingering-storm engine: 3d6 a turn, Reflex
+   negates. **Produce Flame** (Drd 1) 🔧 — one ranged touch per cast.
+6. **Wall of Thorns** (Drd 5) 🔧, **Spike Stones** (Drd 4) 🔧, **Prismatic
+   Wall** (Sor/Wiz 8) 🔧 — wall riders: 2d6+CL on crossing; 1d8 + Reflex or
+   slowed; one random prismatic ray per crossing (violet: Fort or unmade,
+   bosses and the unliving excepted).
+7. **Mage's Disjunction** (Sor/Wiz 9) 🔧 — a Greater Dispel against every foe
+   (each still gets its dispel check; the item clause has no surface).
+8. **Poison** (Clr 4, Drd 3) 🔧 — Fort negates, or 1d6 poison at the start of
+   each of 6 turns plus sickened (PF1's Con damage stands in). Undead and
+   constructs immune. **Rusting Grasp** (Drd 4) 🔧 and **Shatter** (Brd/Clr/
+   Sor-Wiz 2) 🔧 — constructs only; the gear clauses have no surface.
+9. **Telekinesis** (Sor/Wiz 5) 🔧 — the violent thrust as a force push (free
+   attacks from melee allies); thrown objects have no surface. **Whirlwind**
+   (Drd 8) 🔧 — 3d6 Reflex half + stunned a round on a failed save.
+10. **Break Enchantment** (Brd/Pal 4, Clr/Sor-Wiz 5) ✅ — every lasting
+    enchantment on an ally (curse, paralysis, slow, blindness) with one
+    caster-level check; never dispels a foe.
+11. **Animate Dead** (Clr 3, Sor/Wiz 4) 🔧 — 1d4+1 skeletons or ghouls on the
+    summon engine (they crumble when the summoning ends). **Control Undead**
+    (Sor/Wiz 7) ✅ — dominate, undead only, the mindless dead answer it.
+12. **Death Knell** (Clr 2) 🚫 — needs a dying foe (−1 to −9 HP); foes here
+    die at 0. Nothing to knell.
+
+## The last 🚫 pass (v3.37.162) — and why
+
+With this the queue is EMPTY: every CRB spell is either on its lists or below
+with a reason. Revisit any of these when the surface it needs appears.
+
+- **Self-polymorphs — Alter Self, Polymorph (+Greater), Form of the Dragon
+  I–III, Giant Form I–II, Beast Shape I–IV, Elemental Body (the arcane
+  ladder), Shapechange, Animal Growth, Reduce Person (+Mass), Enlarge Animal:**
+  the druid's Wild Shape is the only form engine, and it is druid-shaped;
+  a generic "become a dragon" needs its own stat swap. (Elemental Body exists
+  as the magus's version.)
+- **Gate, Elemental Swarm, Summon Swarm, Insect Plague, Creeping Doom:** the
+  bestiary has no elementals, swarms or planar hosts to call.
+- **Fire Seeds, Magic Stone, Shillelagh, Spiritual Weapon's cousins as
+  items:** thrown/held objects have no surface; Flame Blade and the spirit
+  spells already cover "a magic weapon in hand".
+- **Stone to Flesh, Remove Disease, Neutralize Poison, Restoration (+Lesser,
+  +Greater), Heal's condition riders:** heroes are never petrified,
+  diseased, poisoned, drained or fatigued — there is nothing to cure. (Foes
+  ARE, since batch 6/12: Contagion and Poison are hero spells.)
+- **Spell Immunity (+Greater), Touch of Idiocy, Moment of Prescience,
+  Hide from Undead, Calm Emotions, Sanctuary's Will-per-attacker, Zone of
+  Silence:** the effect keys to a rule the engine does not track (a named
+  spell, ability scores, a single reroll, undead perception, emotion
+  effects).
+- **Shadow Conjuration / Evocation (+Greater), Shades, Mirage Arcana,
+  Persistent/Programmed/Major/Silent/Minor Image, Phantasmal Web (APG),
+  Simulacrum, Project Image, Mislead's double:** "a lesser copy of another
+  spell, disbelievable" needs a whole illusion layer; Phantasmal Killer /
+  Weird carry the fear side.
+- **Expeditious Retreat, Longstrider, Jump, Feather Fall, Levitate, Spider
+  Climb, Air Walk's cousins, Water Walk/Breathing, Freedom (9th), Passwall,
+  Phase Door, Dimension Door's siblings:** movement and terrain have no
+  surface beyond "flying" and "the door".
+- **Blight, Diminish/Plant Growth, Warp Wood, Wood Shape, Repel Wood/Metal/
+  Vermin, Command Plants, Liveoak, Changestaff, Tree Shape/Stride, Transport
+  via Plants:** no plants, wood or terrain to work.
+- **The divination, travel, social, downtime and crafting families** listed
+  under the original Impractical section remain there unchanged.
+
 ## Queued (batches of 5, in priority order)
 
-- **Batch 12 — offense (new mechanics):** Color Spray, Scintillating Pattern,
-  Crushing Despair, Mind Fog, Ghoul Touch, Halt Undead, Resilient Sphere,
-  Circle of Death, Song of Discord, Eyebite, Mage's Sword, Flaming Sphere,
-  Produce Flame, Wall of Thorns, Spike Stones, Prismatic Wall, Mage's
-  Disjunction, Poison, Rusting Grasp, Shatter, Telekinesis, Whirlwind, Death
-  Knell, Break Enchantment, Animate Dead, Control Undead.
-- Then the last 🚫 pass (self-polymorphs, Gate, Elemental Swarm, Summon
-  Swarm, Insect Plague, Fire Seeds, Stone to Flesh, Spell Immunity, Touch of
-  Idiocy, Moment of Prescience, Hide from Undead, Calm Emotions, the Shadow
-  family, Reduce Person, Expeditious Retreat, Shillelagh, Magic Stone, Blight,
-  Animal Growth) with reasons.
+- (empty — v3.37.162. Every CRB spell is on its lists or documented under 🚫.)
 
 ## Impractical (🚫) — and why
 

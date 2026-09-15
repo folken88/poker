@@ -341,6 +341,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       forcecage:   () => this._abForcecage(m, ab, payload),   // v3.37.159
       holyword:    () => this._abHolyWord(m, ab, payload),    // v3.37.159: Holy Word / Blasphemy / Dictum / Word of Chaos
       inflictmass: () => this._abInflictMass(m, ab, payload), // v3.37.160: the Mass Inflict line
+      hdladder:    () => this._abHdLadder(m, ab, payload),    // v3.37.162: Color Spray / Scintillating Pattern / Eyebite
+      circleofdeath: () => this._abCircleOfDeath(m, ab, payload),   // v3.37.162
+      disjunction: () => this._abDisjunction(m, ab, payload), // v3.37.162
       timestop:    () => this._abTimeStop(m, ab),
       wish:        () => this._abWish(m, ab, payload),
       judgment:    () => this._abJudgment(m, ab),
@@ -1122,7 +1125,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const pray = (e.prayed || 0) + (e.sickened > 0 ? SICKENED_PENALTY : 0);   // Prayer −1 + sickened −2 (PF1): both drag every save
     if (which === 'fort') return (e.fort || 0) - pray;
     if (which === 'reflex') return (e.reflex || 0) - pray - (e.slowed > 0 ? 1 : 0) - (e.exhausted > 0 ? 3 : (e.fatigued > 0 ? 1 : 0));   // Slow: −1 Reflex (PF1); exhausted/fatigued: Dex −6/−2 (v3.37.145)
-    return Math.floor(((e.fort || 0) + (e.reflex || 0)) / 2) - pray;   // will (approx)
+    return Math.floor(((e.fort || 0) + (e.reflex || 0)) / 2) - pray - (e.mindFog ? 10 : 0);   // will (approx); Mind Fog (v3.37.162): −10
   },
   // A bare attack roll (to-hit only, no damage) using the member's weapon.
   // `extraDef` raises the foe's effective defense for this one roll (e.g. the PF1
@@ -1540,11 +1543,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // then a TALLY of how many failed / saved / were slain — NOT a per-enemy list.
     // Keeps mid-combat narration fast; the blind player inspects enemies (E) on their
     // own turn for exactly who's left and how hurt.
-    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0, searedN = 0, proneN = 0, slowN = 0, stunN = 0, immuneN = 0;
+    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0, searedN = 0, proneN = 0, slowN = 0, stunN = 0, immuneN = 0, typeN = 0;
     for (const e of chosen) {
       if (this._srBlocks(m, e, ab, true)) { srN++; continue; }   // PF1 SR: checked per target, tallied (counts-only for Josh)
       const _am = ab.vsAlign ? (this._alignIs(e, ab.vsAlign) ? 1 : this._alignIs(e, { lawful: 'chaotic', chaotic: 'lawful', good: 'evil', evil: 'good' }[ab.vsAlign]) ? 0 : 0.5) : 1;   // Chaos Hammer / Order's Wrath (v3.37.160): opposed full, neutral half, same-aligned immune (PF1)
       if (_am === 0) { immuneN++; continue; }
+      if (ab.onlyType && e.type !== ab.onlyType) { typeN++; continue; }   // Shatter (v3.37.162): constructs only
       const sv = this._saveVs(this._enemySave(e, saveStat), dc);
       const evaded = sv.saved && saveStat === 'reflex' && e.evasion;
       // SUNLIGHT spells (Sunbeam/Sunburst, v3.37.143 — Josh: 'is it affecting undead
@@ -1566,7 +1570,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (sv.saved) savedN++; else failN++;
       if (e.hp <= 0) slainN++;
     }
-    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${proneN ? ` (${proneN} knocked PRONE)` : ''}${slowN ? ` (${slowN} SLOWED)` : ''}${stunN ? ` (${stunN} STUNNED)` : ''}${searedN ? `, ${searedN} undead SEARED by true daylight` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${immuneN ? `, ${immuneN} same-aligned untouched` : ''}${slainN ? `, ${slainN} slain` : ''}`;
+    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${proneN ? ` (${proneN} knocked PRONE)` : ''}${slowN ? ` (${slowN} SLOWED)` : ''}${stunN ? ` (${stunN} STUNNED)` : ''}${searedN ? `, ${searedN} undead SEARED by true daylight` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${immuneN ? `, ${immuneN} same-aligned untouched` : ''}${typeN ? `, ${typeN} not ${ab.onlyType} — untouched` : ''}${slainN ? `, ${slainN} slain` : ''}`;
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${saveLbl} DC ${dc} (${full} ${ab.dtype || ''}): ${tally}.`, sound);
     this._echoToTable(sound);
     // THE STORM LINGERS (v3.37.143 — Josh: 'they keep going after you cast... you
@@ -1583,7 +1587,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const dice = ab.stormDice || 3, rounds = Math.min(10, Math.max(1, m.level || 1)), old = m.storm;
       if (old && old.dice > dice) this._note(`⛈️ ${m.nickname}'s greater storm (${old.dice}d6, ${old.rounds} rd left) still rules the sky — the lesser storm is swallowed into it.`);
       else {
-        m.storm = { rounds, dice, dc, name: ab.name };
+        m.storm = { rounds, dice, dc, name: ab.name, dtype: ab.stormType || 'electricity', negates: !!ab.stormNegates };   // Flaming Sphere (v3.37.162): a fire storm, Reflex negates
         this._note(`⛈️ ${old ? (old.dice === dice ? 'The storm is RENEWED' : `The new storm swallows the old ${old.dice}d6 one`) : 'The storm LINGERS over the field'} — a free ${dice}d6 bolt on each of ${m.nickname}'s turns (${rounds} rounds).`);
       }
     }
@@ -1597,15 +1601,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (e) {
       const sv = this._saveVs(this._enemySave(e, 'reflex'), st.dc);
       const raw = Math.max(1, this._rollSpell(m, st.dice, 6, {}));
-      const dmg = sv.saved ? Math.floor(raw / 2) : raw;
-      this._dmgE(e, dmg, 'electricity');
+      const dmg = sv.saved ? (st.negates ? 0 : Math.floor(raw / 2)) : raw;
+      this._dmgE(e, dmg, st.dtype || 'electricity');
       const snd = pick(SND.lightning);
       // v3.37.145 (Josh: 'on my turn, no sound, no voice report'): the bolt is a
       // turnStart line — the blind narrator folds it into the 'Your turn' prompt — and
       // its sound goes out on the dedicated dungeon:sfx channel, because the state
       // broadcast plays only the first THREE fresh sounds (oldest first) and after a
       // big enemy phase the bolt's lightning was never among them.
-      this._note(`🌩️ ${m.nickname}'s storm hurls a bolt at ${e.name} — ${dmg} electricity${sv.saved ? ' (saved for half)' : ''}.${this._afterEnemyHit(e)} (${st.rounds} rd left)`, null, { turnStart: true });
+      this._note(`${st.dtype === 'fire' ? `🔥 ${m.nickname}'s ${st.name} rolls over ${e.name}` : `🌩️ ${m.nickname}'s storm hurls a bolt at ${e.name}`} — ${dmg} ${st.dtype || 'electricity'}${sv.saved ? (st.negates ? ' (saved — it rolls past)' : ' (saved for half)') : ''}.${this._afterEnemyHit(e)} (${st.rounds} rd left)`, null, { turnStart: true });
       this._emitChainSfx([snd]);
     } else if (st.rounds > 0) this._note(`🌩️ ${m.nickname}'s storm crackles overhead but finds nothing ${m.nickname} can see to strike. (${st.rounds} rd left)`, null, { turnStart: true });   // v3.37.144: a silent round read as "did nothing" to a blind player
     if (st.rounds <= 0) { m.storm = null; this._note(`⛈️ ${m.nickname}'s storm rumbles itself out.`, null, { turnStart: true }); }
@@ -1944,11 +1948,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // PHYSICAL and stay (struggle, Grease, or heal them instead). REMOVE
     // PARALYSIS is the exception spell: it frees paralysis of ANY source —
     // even a ghoul's Su touch, which Dispel can't reach — plus Slow (PF1).
-    const isRemovePara = ab.key === 'removeparalysis', isRemoveBlind = !!ab.removeBlind, isRemoveCurse = !!ab.removeCurse;   // Remove Blindness/Deafness (v3.37.154, CRB batch 4)
+    const isRemovePara = ab.key === 'removeparalysis', isRemoveBlind = !!ab.removeBlind, isRemoveCurse = !!ab.removeCurse, isBreak = !!ab.breakEnchant;   // Remove Blindness/Deafness (v3.37.154, CRB batch 4)
     const sev = isRemovePara
       ? (a) => (a.paralyzed > 0 ? 5 : 0) + (a.slowed > 0 ? 2 : 0)
       : isRemoveBlind ? (a) => (a.blinded > 0 ? 3 : 0)
       : isRemoveCurse ? (a) => (a.cursed ? 4 : 0)   // Remove Curse (v3.37.155, CRB batch 5)
+      : isBreak ? (a) => (a.paralyzed > 0 ? 5 : 0) + (a.cursed ? 4 : 0) + (a.slowed > 0 ? 2 : 0) + (a.blinded > 0 ? 2 : 0)   // Break Enchantment (v3.37.162): everything lasting, with a check
       : (a) => ((a.paralyzed > 0 && a.heldDC != null) ? 5 : 0) + (a.slowed > 0 ? 2 : 0) + (a.blinded > 0 ? 2 : 0);
     // EXPLICIT pick (human party-card / enemy selection) — honor it. Invalid
     // explicit targets were already refused in _useAbility with a told-to-the-
@@ -1971,10 +1976,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       }
       const cleared = [];
       // Spell effects only (see the ruling above) — grapple/stun/sickness/nausea stay.
-      if (hurt.paralyzed > 0 && (isRemovePara || (!isRemoveBlind && !isRemoveCurse && hurt.heldDC != null))) { hurt.paralyzed = 0; hurt.heldDC = null; cleared.push('paralysis'); }
+      if (hurt.paralyzed > 0 && (isRemovePara || isBreak || (!isRemoveBlind && !isRemoveCurse && hurt.heldDC != null))) { hurt.paralyzed = 0; hurt.heldDC = null; cleared.push('paralysis'); }
       if (!isRemoveBlind && !isRemoveCurse && hurt.slowed > 0)    { hurt.slowed = 0; hurt._slowTick = 0; cleared.push('slow'); }
       if (!isRemovePara && !isRemoveCurse && hurt.blinded > 0) { hurt.blinded = 0; cleared.push('blindness'); }
-      if (isRemoveCurse && hurt.cursed) { hurt.cursed = false; cleared.push('the curse'); }   // v3.37.155: only Remove Curse lifts a Bestow Curse (PF1: it cannot be dispelled)
+      if ((isRemoveCurse || isBreak) && hurt.cursed) { hurt.cursed = false; cleared.push('the curse'); }   // v3.37.155: only Remove Curse lifts a Bestow Curse (PF1: it cannot be dispelled)
       // Name what dispel CAN'T touch that's still on them (v3.37.81 — Josh, run
       // proud-waffle: heard "clears paralysis" then still lost his turn to a
       // SEPARATE stun. The clear line now says what remains, so a cleared hold
@@ -1984,7 +1989,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       this._echoToTable(sound); return;
     }
     // The Remove spells cure — they never dispel a foe (v3.37.155: Remove Curse/Blindness/Paralysis aimed at a foe, or with nobody afflicted, find nothing to cure).
-    if (isRemovePara || isRemoveBlind || isRemoveCurse) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — but nobody here is ${isRemoveCurse ? 'cursed' : isRemoveBlind ? 'blinded' : 'held or slowed'}; the spell finds nothing to cure.`, sound); this._echoToTable(sound); return; }
+    if (isRemovePara || isRemoveBlind || isRemoveCurse || isBreak) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — but nobody here is ${isRemoveCurse ? 'cursed' : isRemoveBlind ? 'blinded' : isBreak ? 'under a lasting enchantment' : 'held or slowed'}; the spell finds nothing to cure.`, sound); this._echoToTable(sound); return; }
     // 2) No ally debuff → strip the strongest buff off a foe (dispel check vs ITS CL).
     //    Boss PRE-CAST wards (mage armor / shield / stoneskin / fire ward / fly /
     //    shield of faith) count — plain Dispel peels ONE, Greater sweeps them all.
@@ -2256,6 +2261,66 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     this._echoToTable(sound);
   },
+  // HD-LADDER spells (v3.37.162, CRB batch 12): the effect depends on the foe's HD (CR stands in).
+  // Color Spray (Will negates), Scintillating Pattern (no save), Eyebite (Fort negates). `tiers` runs
+  // weakest-first: the first tier whose hd bound the foe fits under applies. A boss is never put
+  // out cold (it is stunned a round instead — the standing save-or-lose boss rule).
+  _abHdLadder(m, ab, payload) {
+    const lvl = m.level || 1, dc = ab.save ? this._spellDC(m, ab) : null, sound = ab.sound;
+    const chosen = this._enemyTargets(payload, ab.maxTargets || 1).filter(e => e.hp > 0 && !(ab.mindAffect && mindImmune(e)));
+    if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — nothing here has a mind to reach.`, sound); this._echoToTable(sound); return; }
+    const out = [];
+    for (const e of chosen) {
+      if (this._srBlocks(m, e, ab, true)) { out.push(`${e.name} spell-resists`); continue; }
+      if (dc != null) { const sv = this._saveVs(this._enemySave(e, ab.save), dc); if (sv.saved) { out.push(`${e.name} resists [${sv.total}]`); continue; } }
+      const hd = crToNum(e.cr) || 1, tier = ab.tiers.find(t => hd <= t.hd) || ab.tiers[ab.tiers.length - 1], fx = [];
+      for (const f of tier.fx) {
+        if (f === 'asleep') { if (!e.boss) { e.fascinated = true; e.asleep = true; e.flatFooted = true; fx.push('UNCONSCIOUS'); } else { e.stunned = Math.max(e.stunned || 0, 1); fx.push('stunned (a boss cannot be put out)'); } }
+        else if (f === 'blinded') { e.blinded = Math.max(e.blinded || 0, dRoll(4)); fx.push('blinded'); }
+        else if (f === 'stunned') { e.stunned = Math.max(e.stunned || 0, 1); fx.push('stunned'); }
+        else if (f === 'stunned1d4') { e.stunned = Math.max(e.stunned || 0, dRoll(4)); fx.push('stunned'); }
+        else if (f === 'confused') { e.confused = Math.max(e.confused || 0, dRoll(4)); fx.push('confused'); }
+        else if (f === 'panicked') { const r = Math.min(10, lvl); e.frightened = Math.max(e.frightened || 0, r); e.sickened = Math.max(e.sickened || 0, r); fx.push('PANICKED'); }
+        else if (f === 'sickened') { e.sickened = Math.max(e.sickened || 0, 99); fx.push('sickened'); }
+      }
+      out.push(`${e.name} (${hd} HD): ${fx.join(', ')}`);
+    }
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name}${dc != null ? ` — ${ab.save === 'fort' ? 'Fort' : 'Will'} DC ${dc}` : ' — no save'}: ${out.join('; ')}.`, sound);
+    this._echoToTable(sound);
+  },
+  // CIRCLE OF DEATH (v3.37.162): 4d4 HD of living creatures, weakest first, none above 9 HD —
+  // Fortitude negates or dies (a boss loses half its max HP). CR stands in for HD; SR applies.
+  _abCircleOfDeath(m, ab, payload) {
+    const dc = this._spellDC(m, ab), sound = ab.sound; let budget = dRollN(4, 4);
+    const DEAD = /golem|skelet|zombie|wraith|ghost|lich|vampire|wight|ghoul|ghast|shadow|ooze|elemental|construct|undead/i;
+    const pool = this._targetableEnemies().filter(e => e.hp > 0 && e.type !== 'undead' && e.type !== 'construct' && !DEAD.test(e.name || '') && (crToNum(e.cr) || 1) <= 9).sort((a, b) => (crToNum(a.cr) || 1) - (crToNum(b.cr) || 1));
+    if (!pool.length) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — nothing here lives small enough to die of it.`, sound); this._echoToTable(sound); return; }
+    const slain = [], saved = [], skipped = []; let srN = 0;
+    for (const e of pool) {
+      const hd = crToNum(e.cr) || 1;
+      if (hd > budget) { skipped.push(e.name); continue; }
+      budget -= hd;
+      if (this._srBlocks(m, e, ab, true)) { srN++; continue; }
+      const sv = this._saveVs(this._enemySave(e, 'fort'), dc);
+      if (sv.saved) { saved.push(`${e.name} [${sv.total}]`); continue; }
+      if (e.boss) { this._dmgE(e, Math.max(6, Math.floor((e.maxHp || 20) / 2))); slain.push(`${e.name} (too mighty to slay — half its life torn away)`); }
+      else { this._dmgE(e, e.hp + 20, 'negative'); slain.push(e.name); }
+    }
+    const parts = [];
+    if (slain.length) parts.push(`DIES: ${slain.join(', ')} ☠️`);
+    if (saved.length) parts.push(`endures: ${saved.join(', ')}`);
+    if (srN) parts.push(`${srN} spell-resisted`);
+    if (skipped.length) parts.push(`beyond the circle's reach: ${skipped.join(', ')}`);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — Fort DC ${dc}, ${budget + pool.filter(e => !skipped.includes(e.name)).reduce((a, e) => a + (crToNum(e.cr) || 1), 0)} HD of death: ${parts.join('; ')}.`, sound);
+    this._echoToTable(sound);
+  },
+  // MAGE'S DISJUNCTION (v3.37.162): a Greater Dispel against every foe on the field.
+  _abDisjunction(m, ab, payload) {
+    const foes = this._targetableEnemies().filter(e => e.hp > 0);
+    this._note(`${ab.icon} ${m.nickname} speaks ${ab.name} — every enchantment on the field strains and TEARS.`, ab.sound);
+    for (const e of foes) this._abCleanse(m, { ...ab, effect: 'cleanse', greater: true, icon: '💥' }, { targetUid: e.uid });
+    this._echoToTable(ab.sound);
+  },
   // MASS INFLICT X WOUNDS (v3.37.160, CRB batch 10): Nd8 + CL (capped) negative energy to up to
   // 6 foes, Will half, SR applies; undead among them are HEALED (PF1). Counts-only report.
   _abInflictMass(m, ab, payload) {
@@ -2281,7 +2346,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abForcecage(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     if (e.caged > 0 || e.mazed > 0) { this._note(`${ab.icon} ${e.name} is already sealed away.`); this._echoToTable(); return; }
-    e.caged = Math.max(2, Math.min(12, m.level || 1));
+    if (ab.save) { const dc = this._spellDC(m, ab), sv = this._saveVs(this._enemySave(e, ab.save), dc); if (sv.saved) { this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${e.name} leaps clear before it closes. [Reflex ${sv.total} vs DC ${dc}]`, ab.sound); this._echoToTable(ab.sound); return; } }   // Resilient Sphere (v3.37.162): Reflex negates
+    e.caged = Math.max(2, Math.min(12, m.level || 1)); e.cagedBy = ab.name.toUpperCase();
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — walls of force slam shut around ${e.name}: sealed from the fight, untouchable and unable to act, for ${e.caged} rounds. No save, no spell resistance.`, ab.sound);
     this._broadcast();
   },
@@ -2496,7 +2562,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const rounds = Math.max(3, Math.min(10, m.level || 1)), old = this.wall, lvl = m.level || 1;
     this.wall = { key: ab.key, name: ab.name, icon: ab.icon, rounds, caster: m.playerId, cap: ab.wallCap || 2, rider: ab.wallRider || 'none', dc: this._spellDC(m, ab), level: lvl };
     const w = this.wall;
-    const riderText = { fire: `any melee foe pressing through burns for 2d6+${lvl} fire`, cold: `breaking through costs 1d6+${lvl} cold`, web: `a foe pressing through must save (Reflex DC ${w.dc}) or stick fast and lose its turn`, fog: 'foes wading through swing at −2 to hit and damage', acidfog: 'foes wading through swing at −2 to hit and damage while the vapor eats 2d6 acid into every foe in it each round', firecloud: `foes wading through swing at −2 to hit and damage while the embers burn every foe in it for 4d6 fire each round (Reflex DC ${w.dc} half)`, none: 'nothing burns or breaks it' }[w.rider];
+    const riderText = { fire: `any melee foe pressing through burns for 2d6+${lvl} fire`, cold: `breaking through costs 1d6+${lvl} cold`, web: `a foe pressing through must save (Reflex DC ${w.dc}) or stick fast and lose its turn`, fog: 'foes wading through swing at −2 to hit and damage', acidfog: 'foes wading through swing at −2 to hit and damage while the vapor eats 2d6 acid into every foe in it each round', firecloud: `foes wading through swing at −2 to hit and damage while the embers burn every foe in it for 4d6 fire each round (Reflex DC ${w.dc} half)`, thorns: `any foe pressing through is torn for 2d6+${lvl}`, spikes: `a foe pressing through takes 1d8 and must save (Reflex DC ${w.dc}) or be slowed`, prismatic: `a foe pressing through eats a ray — 4d6 of a random energy (Reflex DC ${w.dc} half), or the violet ray (Fort DC ${w.dc} or unmade)`, none: 'nothing burns or breaks it' }[w.rider];
     this._note(`${ab.icon} ${m.nickname} raises a ${ab.name}${old ? ` — it replaces the ${old.name}` : ''}: melee foes can reach at most ${w.cap} of them per target each round, no one can be flanked or sneak-attacked, and ${riderText}. Flyers cross it; archers shoot over it. (${rounds} rounds)`, ab.sound);
     this._echoToTable(ab.sound);
   },
@@ -2516,6 +2582,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (!sv.saved) { this._note(`${w.icon} ${e.name} blunders into the ${w.name} and sticks fast — its turn is lost tearing free. [Reflex ${sv.total} vs DC ${w.dc}]`, null, { side: 'enemy' }); return true; }
       this._note(`${w.icon} ${e.name} picks its way through the ${w.name}. [Reflex ${sv.total} vs DC ${w.dc}]`, null, { side: 'enemy' });
       return false;
+    }
+    if (w.rider === 'thorns') { const dmg = dRollN(2, 6) + w.level; this._dmgE(e, dmg, 'piercing'); this._note(`${w.icon} ${e.name} tears through the ${w.name} — ${dmg} from the thorns.${this._afterEnemyHit(e)}`, null, { side: 'enemy' }); return e.hp <= 0; }   // v3.37.162
+    if (w.rider === 'spikes') { const dmg = this._dmgE(e, dRoll(8)); const sv = this._saveVs(this._enemySave(e, 'reflex'), w.dc); if (!sv.saved) e.slowed = Math.max(e.slowed || 0, dRoll(4)); this._note(`${w.icon} ${e.name} picks across the ${w.name} — ${dmg}${sv.saved ? '' : ' and its feet are torn: SLOWED'}. [Reflex ${sv.total} vs DC ${w.dc}]${this._afterEnemyHit(e)}`, null, { side: 'enemy' }); return false; }   // v3.37.162
+    if (w.rider === 'prismatic') {   // v3.37.162: one crossing eats one ray
+      if (dRoll(8) === 8 && !(e.type === 'undead' || e.type === 'construct') && !e.boss) { const sv = this._saveVs(this._enemySave(e, 'fort'), w.dc); if (!sv.saved) { this._dmgE(e, e.hp + 10, 'force'); this._note(`${w.icon} ${e.name} steps into the VIOLET band of the ${w.name} — and is UNMADE. [Fort ${sv.total} vs DC ${w.dc}] ☠️`, null, { side: 'enemy' }); return true; } }
+      const dt = pick(['fire', 'cold', 'electricity', 'acid']), sv = this._saveVs(this._enemySave(e, 'reflex'), w.dc), full = dRollN(4, 6), dmg = this._dmgE(e, sv.saved ? Math.floor(full / 2) : full, dt);
+      this._note(`${w.icon} ${e.name} pushes through the ${w.name} — a ${dt} ray for ${dmg}${sv.saved ? ' (saved for half)' : ''}.${this._afterEnemyHit(e)}`, null, { side: 'enemy' }); return e.hp <= 0;
     }
     if (w.rider === 'fog' || w.rider === 'acidfog' || w.rider === 'firecloud') e._fogRound = this.round;   // −2 to hit and damage this round (_monsterSwing); the clouds obscure like a fog (v3.37.156)
     return false;
@@ -2543,7 +2616,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       }
       if (hurt.length) this._note(`${w.icon} The ${w.name} ${w.rider === 'acidfog' ? 'eats at' : 'sears'} everything in it — ${hurt.join(', ')}.`);
     }
-    if (--w.rounds <= 0) { this.wall = null; this._note(`${w.icon} The ${w.name} ${({ fire: 'gutters out', cold: 'melts away', web: 'frays to nothing', fog: 'thins and lifts', acidfog: 'thins and lifts', firecloud: 'burns itself out' })[w.rider] || 'winks out'} — the field is open again.`); }
+    if (--w.rounds <= 0) { this.wall = null; this._note(`${w.icon} The ${w.name} ${({ fire: 'gutters out', cold: 'melts away', web: 'frays to nothing', fog: 'thins and lifts', acidfog: 'thins and lifts', firecloud: 'burns itself out', thorns: 'withers to dust', spikes: 'sink back into the floor', prismatic: 'fades color by color' })[w.rider] || 'winks out'} — the field is open again.`); }
   },
   // Waves of Exhaustion (7th) / Ray of Exhaustion (3rd) / Waves of Fatigue (5th) —
   // the PF1 tiers (v3.37.145, Josh: 'there is a spell waves of exhaustion so what
@@ -2605,7 +2678,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // the victim's card across the battlefield; for now the 💫 narration carries it.)
   _abDominate(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
-    if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
+    if (ab.onlyType && e.type !== ab.onlyType) { this._note(`${ab.icon} ${ab.name} commands only the ${ab.onlyType} — ${e.name} is untouched.`); this._echoToTable(); return; }   // Control Undead (v3.37.162)
+    if (mindImmune(e) && !(ab.onlyType === 'undead' && e.type === 'undead')) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
     if (e.dominated > 0) { this._note(`${ab.icon} ${e.name} is already dominated.`); return; }
     const dc = this._spellDC(m, ab);
     const sv = this._saveVs(this._enemySave(e, 'will'), dc);
@@ -2753,7 +2827,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     switch (ab.debuff) {
       case 'paralyzed':    e.paralyzed = rounds; e.heldDC = this._spellDC(m, ab); break;
       case 'sickened':     e.nauseated = SICKENED_ROUNDS; break;
-      case 'shaken':       e.sickened = Math.max(e.sickened || 0, SICKENED_ROUNDS); break;
+      case 'shaken':       e.sickened = Math.max(e.sickened || 0, ab.longShaken ? 99 : SICKENED_ROUNDS); break;   // Crushing Despair (v3.37.162): the room
+      case 'mindfogged':   e.mindFog = true; break;   // Mind Fog (v3.37.162): −10 on its Will saves (_enemySave)
+      case 'poisoned':     e.poisoned = Math.max(e.poisoned || 0, 6); e.sickened = Math.max(e.sickened || 0, 99); break;   // Poison (v3.37.162): 1d6 a turn for 6 turns + sickened
       case 'blinded':      e.blinded = Math.max(e.blinded || 0, rounds); break;
       case 'dazed':        e.stunned = Math.max(e.stunned || 0, ab.danceRounds ? dRoll(4) + 1 : 1); break;
       case 'silenced':     e.silenced = Math.max(e.silenced || 0, rounds); break;
@@ -2783,7 +2859,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if ((ab.maxTargets || 1) > 1) {
       const maxN = ab.perLevels ? Math.max(1, Math.min(ab.maxTargets, Math.floor((m.level || 1) / ab.perLevels))) : ab.maxTargets;   // Scare: one foe per 3 levels (v3.37.153)
       const picked = this._enemyTargets(payload, maxN)
-        .filter(e => !((ab.debuff === 'paralyzed' && !ab.physicalHold || ab.mindAffect) && mindImmune(e)) && !(ab.onlyHumanoids && !this._isHumanoid(e)) && !(ab.hdCap && (crToNum(e.cr) || 0) > ab.hdCap));
+        .filter(e => !((ab.debuff === 'paralyzed' && !ab.physicalHold || ab.mindAffect) && mindImmune(e)) && !(ab.onlyHumanoids && !this._isHumanoid(e)) && !(ab.hdCap && (crToNum(e.cr) || 0) > ab.hdCap) && !(ab.onlyType && e.type !== ab.onlyType));   // onlyType: Halt Undead (v3.37.162)
       if (!picked.length) { this._note(`${ab.icon} ${ab.name} finds no valid target on this field.`); this._echoToTable(); return; }
       const dc = this._spellDC(m, ab); const held = [], resisted = [];
       for (const e of picked) {
@@ -2798,7 +2874,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const e = this._oneEnemy(payload); if (!e) return;
     if ((ab.debuff === 'paralyzed' && !ab.physicalHold || ab.mindAffect) && mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
     if (ab.debuff === 'polymorphed' && (e.boss || e.polymorphed)) { this._note(`${ab.icon} ${e.name} ${e.polymorphed ? 'is already a rabbit' : `is too mighty for ${ab.name} — a boss cannot be unmade (the save-or-lose boss rule)`}.`); this._echoToTable(); return; }   // v3.37.158
-    if (ab.debuff === 'diseased' && (e.type === 'undead' || e.type === 'construct')) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — it has no living body to sicken (PF1).`); this._echoToTable(); return; }   // Contagion (v3.37.156)
+    if (ab.onlyType && e.type !== ab.onlyType) { this._note(`${ab.icon} ${ab.name} touches only the ${ab.onlyType} — ${e.name} is untouched.`); this._echoToTable(); return; }   // Halt Undead (v3.37.162)
+    if ((ab.debuff === 'diseased' || ab.debuff === 'poisoned') && (e.type === 'undead' || e.type === 'construct')) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — it has no living body to sicken (PF1).`); this._echoToTable(); return; }   // Contagion (v3.37.156)
     if (ab.hdCap && (crToNum(e.cr) || 0) > ab.hdCap) { this._note(`${ab.icon} ${e.name} is too mighty for ${ab.name} — it only frightens creatures of ${ab.hdCap} HD or less.`); this._echoToTable(); return; }
     const dc = this._spellDC(m, ab);
     const sv = ab.noSave ? { saved: false, total: null } : this._saveVs(this._enemySave(e, ab.save || 'will') - (ab.debuff === 'feebleminded' && (e.arcane || e.spellstrike) ? 4 : 0), dc);   // Feeblemind: arcane casters save at −4 (PF1)
@@ -2824,6 +2901,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // Touch spell (Shocking Grasp): a ranged touch attack for level d6.
   _abTouch(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
+    if (ab.onlyType && e.type !== ab.onlyType) { this._note(`${ab.icon} ${ab.name} bites only the ${ab.onlyType} — ${e.name} is no ${ab.onlyType}.`); this._echoToTable(); return; }   // Rusting Grasp (v3.37.162)
     const touchAC = this._enemyAC(e, { touch: true });
     const toHit = this._spellToHit(m) + ((m.buffs && m.buffs.toHit) || 0);   // casting-stat mod (house rule), + any combat buffs (e.g. magus melee touch)
     const roll = dRoll(20), total = roll + toHit;
@@ -2854,7 +2932,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     } else {
       dice = this._spellDice(ab, m); die = ab.die || 6;
     }
-    const raw = Math.max(1, this._rollSpell(m, dice, die, ab));
+    const raw = Math.max(1, this._rollSpell(m, dice, die, ab)) + (ab.flatCL ? Math.min(ab.flatCL, m.level || 1) : 0);   // flatCL (v3.37.162): + caster level, capped (Produce Flame, Rusting Grasp)
     const dmg = this._dmgE(e, raw, ab.dtype);
     // Lifesteal rider (antipaladin Vampiric Touch) — heal the caster by the
     // energy actually dealt, same as the magus spellstrike version.
@@ -3674,7 +3752,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _abSpiritWeapon(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     const rounds = Math.max(1, (m.level || 1));   // v3.37.119: 1 round per CASTER LEVEL - PF1 RAW (was a half-level house nerf; Josh caught it at cleric 2: 'went one round and disappeared')
-    m.spiritWeapon = { targetUid: e.uid, rounds };
+    m.spiritWeapon = { targetUid: e.uid, rounds, bonusHit: (ab.spiritBonus && ab.spiritBonus.hit) || 0, bonusDmg: (ab.spiritBonus && ab.spiritBonus.dmg) || 0, label: ab.spiritBonus ? ab.name : null };   // Mage's Sword (v3.37.162) rides the spirit engine with its own edge
     const shape = weaponOf({}, this._spiritWeaponKey(m)).name.replace(/^Masterwork /, '');
     this._note(`🗡️✨ ${m.nickname} conjures a SPIRITUAL ${shape.toUpperCase()} over ${e.name} — it will strike on every turn for ${rounds} rounds!`, ab.sound || '/audio/spell_holy_smite.mp3');
     this._echoToTable(ab.sound || '/audio/spell_holy_smite.mp3');
@@ -3737,8 +3815,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const snd = '/audio/spell_holy_smite.mp3';    // its own ringing note
       const parts = [];
       for (let i = 0; i < swings && e.hp > 0; i++) {
-        const r = this._swingVsAC(m, this._enemyAC(e), e);   // the caster's full math — Toby's home rule: active buffs (Divine Favor, Prayer) ride BOTH spirit spells
-        if (r.hit) { this._dmgE(e, r.damage); parts.push(`${r.crit ? 'CRIT ' : ''}${r.damage}`); }
+        const r = this._swingVsAC(m, this._enemyAC(e), e, sw.bonusHit || 0);   // the caster's full math — Toby's home rule: active buffs (Divine Favor, Prayer) ride BOTH spirit spells; Mage's Sword adds its edge (v3.37.162)
+        if (r.hit) { const _d = r.damage + (sw.bonusDmg || 0); this._dmgE(e, _d); parts.push(`${r.crit ? 'CRIT ' : ''}${_d}`); }
         else parts.push('miss');
       }
       this._note(`${tag} ${m.nickname}'s ${label} strikes ${e.name} — ${parts.join(', ')}.${this._afterEnemyHit(e)} (${sw.rounds} rd left)`, null, { turnStart: true });   // turnStart + own sfx channel (v3.37.145) — see _stormStrike

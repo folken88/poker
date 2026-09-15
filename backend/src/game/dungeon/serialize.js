@@ -151,6 +151,8 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (o.frightened > 0) c.push({ key: 'frightened', label: 'Frightened', desc: 'FLEES in terror — loses its turns while the panic holds, and is shaken (−2)', icon: `${I}stunned.webp` });
     if (o.confused > 0)   c.push({ key: 'confused',   label: 'Confused',   desc: 'each turn: 25% acts, 25% babbles, 25% hurts itself, 25% attacks its own ally', icon: `${I}stunned.webp` });
     if (o.caged > 0)      c.push({ key: 'caged',        label: 'Forcecaged',   desc: `sealed in a windowless cell of force — cannot act or be targeted (${o.caged} more round${o.caged === 1 ? '' : 's'})`, icon: `${I}paralyzed.webp` });
+    if (o.mindFog)        c.push({ key: 'mindfogged',   label: 'Mind Fog',     desc: '−10 on its Will saves (Mind Fog, this room)', icon: `${I}sickened.webp` });
+    if (o.poisoned > 0)   c.push({ key: 'poisoned',     label: 'Poisoned',     desc: `1d6 poison at the start of each turn (${o.poisoned} more) and sickened for the room`, icon: `${I}sickened.webp` });
     if (o.repulsed > 0)   c.push({ key: 'repulsed',     label: 'Repulsed',     desc: `held at bay by Repulsion — cannot close to melee (${o.repulsed} more round${o.repulsed === 1 ? '' : 's'})`, icon: `${I}slowed.webp` });
     if (o.polymorphed)    c.push({ key: 'polymorphed',  label: 'Polymorphed',  desc: 'a harmless rabbit for the rest of the room — AC 12, a 1d3 nibble, no spells, no flight (Baleful Polymorph)', icon: `${I}sickened.webp` });
     if (o.diseased)       c.push({ key: 'diseased',     label: 'Diseased',     desc: 'Contagion — sickened and fatigued for the rest of the room', icon: `${I}sickened.webp` });

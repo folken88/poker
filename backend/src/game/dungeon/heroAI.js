@@ -1094,7 +1094,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       }
     }
     if (weakestFoe) {
-      for (const a of avail) if (['bolt', 'missile', 'touch', 'rays', 'spellstrike', 'save_debuff', 'savedie', 'charm', 'dominate'].includes(a.effect)) {
+      for (const a of avail) if (['bolt', 'missile', 'touch', 'rays', 'spellstrike', 'save_debuff', 'savedie', 'charm', 'dominate', 'hdladder'].includes(a.effect)) {   // hdladder (v3.37.162): Color Spray & co.
         // Immunity-aware single-target pick: the BARD's Hideous Laughter skips the
         // undead (no mind to tickle); death spells skip the unliving; element
         // blasts skip the immune. Death/charm spend on the BIGGEST eligible threat
@@ -1102,7 +1102,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         // FUTILITY (v3.37.84): don't offer a CC pick at a foe who has already
         // shrugged this effect twice this room (golden-panda: the charm/dominate
         // loop at the Pit Fiend — huge Will + SR, attempt after attempt).
-        const _ccFx = a.effect === 'save_debuff' || a.effect === 'savedie' || a.effect === 'charm' || a.effect === 'dominate';
+        const _ccFx = a.effect === 'save_debuff' || a.effect === 'savedie' || a.effect === 'charm' || a.effect === 'dominate' || a.effect === 'hdladder';
         // v3.37.99 MIND-CONTROL SANITY (Josh, plucky-gecko d5: Femmik charmed the
         // boss — Will +17 vs DC 20 — with almost nobody left to turn it on):
         // (1) never charm/dominate the LAST standing foe — its whole value is
@@ -1226,7 +1226,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       const choice = offense.find(o => o.ab.key !== m._lastAbilityKey) || offense[0];
       // FUTILITY tally (v3.37.84): count only the CC pick actually TAKEN — success
       // makes the foe ineligible next time anyway, so attempts ≈ failures.
-      if (['save_debuff', 'savedie', 'charm', 'dominate'].includes(choice.ab.effect) && choice.payload && choice.payload.targetUid) {
+      if (['save_debuff', 'savedie', 'charm', 'dominate', 'hdladder'].includes(choice.ab.effect) && choice.payload && choice.payload.targetUid) {
         const led = this._ccLedger(m), k = choice.ab.effect + ':' + choice.payload.targetUid;
         led[k] = (led[k] || 0) + 1;
       }

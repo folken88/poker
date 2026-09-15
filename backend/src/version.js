@@ -2174,6 +2174,17 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.162 2026-09-15 CRB BATCH 12 — OFFENSE (26 spells, the last straggler sweep). Color Spray /
+//                     Scintillating Pattern / Eyebite (HD ladders — CR stands in), Crushing Despair, Mind
+//                     Fog (−10 Will), Ghoul Touch, Halt Undead, Resilient Sphere (Reflex negates), Circle
+//                     of Death (4d4 HD, weakest first), Song of Discord, Mage's Sword (spirit engine +4/+6),
+//                     Flaming Sphere (a fire storm, Reflex negates), Produce Flame, Wall of Thorns / Spike
+//                     Stones / Prismatic Wall (wall riders), Mage's Disjunction (Greater Dispel on every
+//                     foe), Poison (1d6/turn ×6 + sickened), Rusting Grasp and Shatter (constructs only),
+//                     Telekinesis (force push), Whirlwind, Break Enchantment (every lasting enchantment,
+//                     one check), Animate Dead (summon undead), Control Undead (dominate the dead). The
+//                     CRB parity ledger's queue is now EMPTY — every remaining spell is a documented 🚫.
+//                     Tests 274-276.
 //  3.37.161 2026-09-15 CRB BATCH 11 — WARDS (28 spells, new hero-side mechanics). Blur (20% miss),
 //                     Entropic Shield (ranged miss 20%), Protection from Arrows (DR 10 vs ranged, a
 //                     10/CL pool), Wind Wall (enemy arrows flung aside 1 rd/level), Sanctuary (untarget-
@@ -2246,9 +2257,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.161';
+const VERSION = '3.37.162';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33826;
-const HEADLINE = "CRB batch 11 — wards: Blur, Wind Wall, Sanctuary, True Strike, Keen Edge, Resist Energy, Shield Other, Spell Turning, the auras, and more.";
+const HEADLINE = "CRB batch 12 — offense: Color Spray, Circle of Death, Mind Fog, Mage's Sword, Flaming Sphere, Prismatic Wall, Poison and 19 more. The Core Rulebook import is complete.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
