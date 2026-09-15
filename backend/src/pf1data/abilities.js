@@ -2105,7 +2105,21 @@ function kitFor(classKey) { return KITS[classKey] || DEFAULT_KIT; }
 const isPoolClass = (cls) => POOL_CLASSES.has(cls);
 const isCaster    = (cls) => CASTER_CLASSES.has(cls);
 
+// ── RACIAL SPELL-LIKE ABILITIES (v3.37.163 — Josh: 'I also have a racial feature where they can cast
+// darkness once per day'). Once per DUNGEON here (PF1: 1/day). Not spellbook entries — no slot, no
+// prep: `sla: true` bypasses the loadout gate; `slaLevel` keeps the PF1 spell level for the DC and SR.
+// (race sla start)
+const _sla = (base, patch) => { const o = { ...base, ...patch, sla: true, cost: 'run', uses: 1, slaLevel: base.slvl }; delete o.slvl; delete o.minLevel; return o; };
+const RACE_SLA = {
+  drow:     [_sla(SPELL.darkness,     { key: 'sla_darkness',     name: 'Darkness (drow blood)',      desc: 'Your drow blood calls down Darkness once per dungeon (PF1: 1/day) — a RANDOM 1d4+1 foes are swallowed for two rounds, unable to act or be hit. Foes with darkvision see through it; your own darkvision does too.' }),
+             _sla(SPELL.faeriefire,   { key: 'sla_faeriefire',   name: 'Faerie Fire (drow blood)',   desc: 'Your drow blood limns every foe in pale light once per dungeon (PF1: 1/day) — any INVISIBLE foe is revealed for the room, no save.' })],
+  tiefling: [_sla(SPELL.darkness,     { key: 'sla_darkness',     name: 'Darkness (tiefling blood)',  desc: 'Your fiendish blood calls down Darkness once per dungeon (PF1: 1/day) — a RANDOM 1d4+1 foes are swallowed for two rounds, unable to act or be hit. Foes with darkvision see through it; so do you.' })],
+  aasimar:  [_sla(SPELL.daylight,     { key: 'sla_daylight',     name: 'Daylight (aasimar blood)',   desc: 'Your celestial blood calls up Daylight once per dungeon (PF1: 1/day): every magical darkness on the field lifts, and no lesser darkness can form here for the rest of the room.' })],
+  ifrit:    [_sla(SPELL.burninghands, { key: 'sla_burninghands', name: 'Burning Hands (ifrit blood)', desc: 'Your elemental blood breathes a fan of flame once per dungeon (PF1: 1/day) — Burning Hands at your level.' })],
+};
+// (end race sla)
 module.exports = {
+  RACE_SLA,
   KITS, SPELL, DEFAULT_KIT, SELECTABLE_CLASSES, CASTER_CLASSES, SPONTANEOUS_CLASSES, SLVL_BY_KEY,
   CANTRIPS, CANTRIP_BY_KEY,
   kitFor, isPoolClass, isCaster, isSpontaneous, imgFor,

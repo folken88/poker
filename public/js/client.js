@@ -1011,7 +1011,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33826;
+  const CLIENT_BUILD = 33863;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -5684,9 +5684,10 @@
       return { key: c.key, label: c.name + (lvl != null ? ` · Lv ${lvl}` : '') };
     }), cur);
     buildWeaponSelect($('#meWeapon'), cur, p.weapon || 'dagger');
+    fillSelect($('#meRace'), (meta.races || []).map(r => ({ key: r.key, label: r.name })), p.race || 'none');   // v3.37.163: the race picker
   }
   (function wireClassWeaponDropdowns() {
-    const csel = $('#meClass'), wsel = $('#meWeapon');
+    const csel = $('#meClass'), wsel = $('#meWeapon'), rsel = $('#meRace');
     socket.emit('lobby:pf1meta', null, (resp) => {
       if (!resp?.ok) return;
       state.pf1meta = resp;
@@ -5706,6 +5707,16 @@
           const name = state.pf1meta?.classes?.find(c => c.key === resp.cls)?.name || resp.cls;
           window.BlindMode.speak(`You are now a level ${lvl} ${name}.`, 'urgent');
         }
+      });
+    });
+    // v3.37.163: RACE — saved like class/weapon; it applies to the NEXT dungeon run (a live run keeps its entry snapshot).
+    rsel?.addEventListener('change', (e) => {
+      socket.emit('lobby:setRace', { race: e.target.value }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not save race', true); return; }
+        if (state.me) state.me.race = resp.race;
+        const r = state.pf1meta?.races?.find(x => x.key === resp.race);
+        toast(`Race saved: ${r?.name || resp.race} — it applies to your next dungeon run.`);
+        if (window.BlindMode?.isOn?.()) window.BlindMode.speak(`You are now ${/^[aeiou]/i.test(r?.name || '') ? 'an' : 'a'} ${r?.name || resp.race}. ${(resp.traits || []).join('. ')}. It applies to your next dungeon run.`, 'urgent');
       });
     });
     wsel?.addEventListener('change', (e) => {

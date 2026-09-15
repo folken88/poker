@@ -18,7 +18,7 @@
  */
 const db = require('../../persistence/db');
 const { weaponOf, SND, dRoll, dRollN, pick } = require('../combat');
-const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, slotsFor, diceCount, CANTRIPS, CANTRIP_BY_KEY } = require('../../pf1data/abilities');
+const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, slotsFor, diceCount, CANTRIPS, CANTRIP_BY_KEY, RACE_SLA } = require('../../pf1data/abilities');   // RACE_SLA (v3.37.163) — guarded below: PGM's pf1core may lag
 const { babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../../pf1data/classes');
 const { crToNum, SIZE_RANK, SIZE_NAME, MONK_SFX } = require('../../pf1data/monsters');
 const RACES = require('../../pf1data/races');
@@ -542,7 +542,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     } catch (_) { m.castableKeys = null; }
   },
   _loadoutAllows(ab, m) {
-    if (!ab || ab.slvl == null || ab.slvl < 1) return true;   // cantrips + class features: always castable
+    if (!ab || ab.sla || ab.slvl == null || ab.slvl < 1) return true;   // cantrips + class features + racial SLAs (v3.37.163): always castable
     if (!m || !m.castableKeys) return true;                   // non-caster / gating disabled
     return m.castableKeys.has(ab.key);
   },
@@ -651,6 +651,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // Pulled from the ranger kit so they stay in sync; a melee magus skips them.
       if (rng) list = list.concat(kitFor('ranger').abilities.filter(a => a.key === 'rapidshot' || a.key === 'bullseye'));
     }
+    const _rs = (RACE_SLA && typeof RACE_SLA === 'object') ? RACE_SLA[m.race] : null;   // v3.37.163: racial spell-like abilities (drow Darkness / Faerie Fire, tiefling Darkness, aasimar Daylight, ifrit Burning Hands)
+    if (_rs && _rs.length) list = list.concat(_rs);
     return list;
   },
   // DOMAINS Phase B — re-read the picks (they may change between rooms), rebuild
@@ -820,7 +822,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // in). Class features with no slvl (Stunning Fist, gaze-likes) use PF1's
   // ability-DC shape instead: 10 + ½ level + casting mod.
   _spellDC(m, ab) {
-    const base = (ab && ab.slvl >= 1) ? ab.slvl : Math.floor((m.level || 1) / 2);
+    const base = (ab && ab.slvl >= 1) ? ab.slvl : (ab && ab.slaLevel >= 1) ? ab.slaLevel : Math.floor((m.level || 1) / 2);   // slaLevel (v3.37.163): a racial SLA keeps its spell level for the DC
     // THEURGE dual-stat DCs: an ability tagged dcStat ('int' arcane / 'wis' divine)
     // keys off THAT ability mod; everything else uses the class casting stat.
     const stat = (ab && ab.dcStat === 'best' && m.mods) ? Math.max(m.mods.int || 0, m.mods.wis || 0)   // dual-list spell — his better discipline
@@ -837,7 +839,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // the slot and the action — the spell was cast, it just fails to bite.
   // `quiet` suppresses the per-target note (AoE handlers tally counts instead).
   _srBlocks(m, e, ab, quiet = false) {
-    if (!e || !(e.sr > 0) || !ab || ab.slvl == null) return false;
+    if (!e || !(e.sr > 0) || !ab || (ab.slvl == null && ab.slaLevel == null)) return false;   // racial SLAs test SR too (v3.37.163)
     const pen = fighterFeats(m.cls, m.level, this._isRanged(m)).spellPen || 0;
     const bonus = (m.level || 1) + pen + (m._synthActive ? 4 : 0) + (this._twkActive(m, 'alliedspell') ? 2 : 0);   // Spell Synthesis: +4 CL vs SR; ALLIED SPELLCASTER (teamwork, v3.37.91): +2 more
     const roll = dRoll(20), total = roll + bonus;
@@ -1134,7 +1136,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const w = m.weapon || weaponOf(m.gear, m.weaponKey);
     const lvl = m.level || 1, cls = m.cls || 'fighter';
     const notProf = weaponProficient(cls, w) ? 0 : NON_PROFICIENT_PENALTY;   // PF1 proficiency — uniform, no AI exemption
-    const toHit = babFor(cls, lvl) + ABILITY_MOD + (w.toHit || 0) + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m) + notProf - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.cursed ? 4 : 0);   // Bestow Curse (v3.37.155): −4 to hit until a Remove Curse lifts it
+    const toHit = babFor(cls, lvl) + ABILITY_MOD + (w.toHit || 0) + ((m.buffs && m.buffs.toHit) || 0) + this._hasteMod(m) + notProf - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.cursed ? 4 : 0) - ((m.race === 'drow' && this._daylightDepth === this.depth) ? 1 : 0);   // Bestow Curse (v3.37.155): −4 to hit until a Remove Curse lifts it; drow LIGHT BLINDNESS (v3.37.163): dazzled −1 under a Daylight
     const roll = dRoll(20), total = roll + toHit;
     return { hit: roll === 20 || (roll !== 1 && total >= this._enemyAC(e) + (extraDef || 0)), roll, total, toHit, weapon: w };
   },
@@ -3043,18 +3045,34 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._note(`${ab.icon} ${m.nickname} calls DAYLIGHT into the room — ${lifted.length ? `the darkness lifts from ${lifted.map(e => e.name).join(', ')}` : 'no darkness to burn away'}; no lesser darkness can form here for the rest of the room.`, sound);
     this._echoToTable(sound);
   },
+  // Which foes SEE IN THE DARK (v3.37.163 — Josh: 'that matters who you cast on'). The bestiary
+  // carries no vision field, so PF1's type rules stand in: undead, outsiders, constructs,
+  // aberrations, giants, monstrous humanoids, vermin, dragons, oozes and magical beasts all have
+  // darkvision; animals have low-light only; humanoids by race — goblins, kobolds, orcs,
+  // hobgoblins, dwarves, drow, tieflings, dhampirs, sahuagin, charau-ka yes; humans, elves,
+  // halflings no. A bestiary entry may pin it with `darkvision: true/false`.
+  _hasDarkvision(e) {
+    if (!e) return false;
+    if (e.darkvision != null) return !!e.darkvision;
+    if (e.blindsense) return true;
+    if (['undead', 'outsider', 'construct', 'aberration', 'giant', 'monstrous humanoid', 'vermin', 'dragon', 'ooze', 'magical beast'].includes(e.type)) return true;
+    return /goblin|kobold|orc\b|hobgoblin|dwar|drow|tiefling|dhampir|duergar|derro|bugbear|troll|gnoll|sahuagin|charau/i.test(e.name || '');
+  },
   _abDarkness(m, ab) {
     if (this._daylightDepth === this.depth && !ab.deep) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} cannot take hold — the DAYLIGHT burns it away before it forms.`); this._echoToTable(); return; }   // v3.37.154
     if (this._daylightDepth === this.depth && ab.deep) { this._daylightDepth = null; this._note(`${ab.icon} ${m.nickname}'s ${ab.name} SNUFFS the Daylight — the room goes dark again.`); }
-    const living = this._targetableEnemies().slice();   // don't re-darken already-shrouded foes
+    const _all = this._targetableEnemies().slice();   // don't re-darken already-shrouded foes
+    const seers = ab.deep ? [] : _all.filter(e => this._hasDarkvision(e));   // v3.37.163 (PF1): DARKVISION sees through lesser Darkness — only Deeper Darkness blinds them
+    const living = _all.filter(e => ab.deep || !this._hasDarkvision(e));
     for (let i = living.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [living[i], living[j]] = [living[j], living[i]]; }
     const n = (ab.randBase || 0) + dRoll(ab.randDie || ab.randFoes || 3);   // Darkness: 1d4+1 foes
     const chosen = living.slice(0, n);
-    if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} conjures ${ab.name}, but there's no one to shroud.`); this._echoToTable(); return; }
+    if (!chosen.length) { this._note(`${ab.icon} ${m.nickname} conjures ${ab.name}, but ${seers.length ? `every foe here sees in the dark (darkvision) — it shrouds no one` : `there's no one to shroud`}.`); this._echoToTable(); return; }
     const rounds = ab.rounds || 2;   // Deeper Darkness (v3.37.154): 3 rounds, and ordinary darkvision does not pierce it (darkenedDeep)
     for (const e of chosen) { e.darkened = rounds; e.darkenedDeep = !!ab.deep; e.flatFooted = true; }
     const sound = ab.sound || pick(SND.stink);
     this._note(`${ab.icon} ${m.nickname} drowns ${chosen.map(e => e.name).join(', ')} in ${ab.deep ? 'DEEPER DARKNESS' : 'DARKNESS'} — gone for ${rounds} rounds (can't act, can't be hit${ab.deep ? '; only True Seeing or blindsense finds them' : ''}).`, sound);
+    if (seers.length) this._note(`👁️ ${seers.map(e => e.name).join(', ')} see${seers.length === 1 ? 's' : ''} through it — darkvision (PF1).`);
     this._echoToTable(sound);
   },
   _abFascinate(m, ab, payload) {

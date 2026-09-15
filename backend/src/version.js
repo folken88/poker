@@ -2174,6 +2174,18 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.163 2026-09-15 RACES THAT MATTER (Josh, batch-4 reply: 'are you making sure to bake in racial
+//                     traits such as darkvision where they matter… I've not seen anything related to
+//                     race'). (1) A hero's RACIAL darkvision now counts for targeting foes in lesser
+//                     magical darkness — it was set on the hero (vision) but the gate only read the
+//                     Darkvision spell flag, so Olbryn's drow eyes never mattered. (2) Lesser Darkness
+//                     no longer shrouds foes that see in the dark (PF1): undead, outsiders, constructs,
+//                     giants, goblins, kobolds, orcs, dwarves… — the cast names who sees through it;
+//                     Deeper Darkness still blinds them. (3) Racial spell-likes, once per dungeon:
+//                     drow Darkness + Faerie Fire, tiefling Darkness, aasimar Daylight, ifrit Burning
+//                     Hands. (4) Drow light blindness: −1 to hit under a Daylight. (5) A RACE PICKER
+//                     in the profile row (next to class/weapon) for every character — it applies to
+//                     the next run; a Darkvision / Low-Light chip on the hero card. Tests 277-278.
 //  3.37.162 2026-09-15 CRB BATCH 12 — OFFENSE (26 spells, the last straggler sweep). Color Spray /
 //                     Scintillating Pattern / Eyebite (HD ladders — CR stands in), Crushing Despair, Mind
 //                     Fog (−10 Will), Ghoul Touch, Halt Undead, Resilient Sphere (Reflex negates), Circle
@@ -2257,9 +2269,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.162';
+const VERSION = '3.37.163';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33826;
-const HEADLINE = "CRB batch 12 — offense: Color Spray, Circle of Death, Mind Fog, Mage's Sword, Flaming Sphere, Prismatic Wall, Poison and 19 more. The Core Rulebook import is complete.";
+const CLIENT_BUILD = 33863;   // v3.37.163: the race picker (index.html + client.js)
+const HEADLINE = "Races that matter: racial darkvision sees through Darkness, foes with darkvision ignore it, racial spell-likes once a dungeon, and a race picker in your profile.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

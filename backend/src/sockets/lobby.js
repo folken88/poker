@@ -35,6 +35,7 @@ function signatureNote(w) {
   return bits.join(' · ');
 }
 const { SELECTABLE_CLASSES } = require('../pf1data/abilities');
+const RACES = require('../pf1data/races');   // v3.37.163: the race picker (Josh: 'are we all forced to be some androgynous race')
 const { XP_TO_LEVEL } = require('../pf1data/xp');   // ship thresholds so the client can label per-class levels
 
 function tableFor(socket, tables) {
@@ -125,6 +126,22 @@ function registerLobbyHandlers(io, socket, { tables }) {
     ack?.({ ok: true, cls: refreshed.class });
   });
 
+  // v3.37.163: the player picks a PF1 RACE from the same profile row (Josh: no way to choose a
+  // race — 'are we all forced to be some androgynous race'). Validated against pf1data/races.js;
+  // ability mods, vision, save bonuses, SR, wings and racial spell-likes all key off it. A live
+  // run keeps its entry snapshot, so it applies to the NEXT dungeon. Signature characters keep
+  // their characterBuilds race (re-pinned on boot).
+  socket.on('lobby:setRace', ({ race, flex } = {}, ack) => {
+    const player = socket.data.player;
+    if (!player) return ack?.({ ok: false, error: 'choose a player first' });
+    if (!RACES.RACES[race]) return ack?.({ ok: false, error: 'invalid race' });
+    db.setRace(player.player_id, race, typeof flex === 'string' ? flex : undefined);
+    const refreshed = db.getPlayer(player.player_id);
+    socket.data.player = refreshed;
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+    ack?.({ ok: true, race: RACES.raceKey(refreshed.race), traits: RACES.raceTraits(RACES.raceKey(refreshed.race)) });
+  });
+
   // Reset the player's CURRENT class back to Level 1 (0 XP). Per-class: other
   // classes' progress, gear, and gold are untouched (XP is per-class — see
   // db.setXp / class_xp). Ability-score increases are level-derived, so dropping
@@ -168,7 +185,8 @@ function registerLobbyHandlers(io, socket, { tables }) {
       .map(w => ({ key: w.key, name: w.name, dmg: `${w.dmgCount}d${w.dmgDie}`, type: w.type, note: signatureNote(w) }));
     // Ship the proficiency map + penalty so the client can sort/colour the
     // weapon dropdown by the player's current class without a round-trip.
-    ack?.({ ok: true, classes, weapons, signatures, proficiency: PROFICIENCY, profPenalty: NON_PROFICIENT_PENALTY, xpToLevel: XP_TO_LEVEL });
+    const races = RACES.raceList().map(r => ({ ...r, traits: RACES.raceTraits(r.key) }));   // v3.37.163
+    ack?.({ ok: true, classes, races, weapons, signatures, proficiency: PROFICIENCY, profPenalty: NON_PROFICIENT_PENALTY, xpToLevel: XP_TO_LEVEL });
   });
 
   socket.on('lobby:setAvatar', ({ avatarId } = {}, ack) => {

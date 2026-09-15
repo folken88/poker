@@ -226,6 +226,8 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (m.untargetable) push('blur', 'Blurred', 'untargetable until your next turn (Bladed Dash)', '/dungeon/buffs/fly.webp');
     if (m.touchStrike > 0) push('dimblade', 'Dimensional Blade', 'your strikes hit on TOUCH this round', '/dungeon/buffs/magearmor.webp');
     if (m.protectFire > 0) push('protectfire', 'Fire Ward', `absorbs the next ${m.protectFire} fire damage (Protection from Fire)`);
+    if (/^darkvision/.test(m.vision || '')) push('racevision', 'Darkvision', `${m.vision === 'darkvision120' ? '120' : '60'} ft (race) — the party can target foes in lesser magical darkness; Deeper Darkness still blinds you`, '/dungeon/buffs/fly.webp');   // v3.37.163
+    else if (m.vision === 'low-light') push('racevision', 'Low-Light Vision', 'sees in dim light (race) — not through magical darkness', '/dungeon/buffs/fly.webp');
     if (m.judgment === 'destruction') push('judg_destruction', 'Judgement: Destruction', '+damage on your strikes');
     if (m.judgment === 'protection')  push('judg_protection', 'Judgement: Protection', '+AC');
     if (m.judgment === 'healing')     push('judg_healing', 'Judgement: Healing', 'regenerate HP each turn');

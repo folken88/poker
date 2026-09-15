@@ -390,7 +390,7 @@ class Dungeon {
     // Seeing the UNSEEN — darkvision/blindsense (Rhyarca's Communal Darkvision,
     // Bujon's blindsense) OR True Seeing — lets the party target foes shrouded in
     // darkness AND foes who've gone INVISIBLE (enemy casters can now vanish).
-    const dv = this.party.some(p => !p.left && p.hp > 0 && (p.darkvision || p.blindsense > 0 || p.trueSeeing || p.seeInvis)), dvDeep = this.party.some(p => !p.left && p.hp > 0 && (p.blindsense > 0 || p.trueSeeing));   // v3.37.154: DEEPER darkness yields only to True Seeing / blindsense
+    const dv = this.party.some(p => !p.left && p.hp > 0 && (p.darkvision || /^darkvision/.test(p.vision || '') || p.blindsense > 0 || p.trueSeeing || p.seeInvis)), dvDeep = this.party.some(p => !p.left && p.hp > 0 && (p.blindsense > 0 || p.trueSeeing));   // v3.37.154: DEEPER darkness yields only to True Seeing / blindsense
     // SUMMONED undead are the party's OWN allies — never a valid target for the party.
     let list = this.enemies.filter(e => e.hp > 0 && !e.summoned && !(e.caged > 0) && !(e.mazed > 0) && ((e.darkened > 0 && e.darkenedDeep) ? dvDeep : (dv || (!(e.darkened > 0) && !e.invisible))));   // mazed (v3.37.124): banished to the labyrinth — truly not there
     // If invisibility/darkness hid EVERY foe, the party can still flail into the dark
