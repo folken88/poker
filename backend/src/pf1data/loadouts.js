@@ -15,7 +15,7 @@
 //
 // Defaults are NOT persisted: db.js recomputes them for the character's CURRENT level,
 // so leveling up auto-grows the default. Only player CUSTOMIZATIONS get stored.
-const { KITS, slotsFor, SPONTANEOUS_CLASSES } = require('./abilities');
+const { KITS, slotsFor, SPONTANEOUS_CLASSES, knownCapsFor } = require('./abilities');
 
 // Best-first priority per class. Keys MUST exist in that class's kit; anything not in
 // the kit is ignored, and any kit spell NOT listed here is still usable — it just sorts
@@ -71,9 +71,15 @@ function buildDefaultPrepared(cls, level, castMod = 0) {
   return out;
 }
 
-/** SPONTANEOUS default: [spellKey, …] — the whole implemented kit, priority order. */
-function buildDefaultKnown(cls /* , level */) {
-  return orderedByPriority(cls, kitSpells(cls)).map((s) => s.key);
+/** SPONTANEOUS default: [spellKey, …] in priority order — capped per spell level by the PF1
+ *  SPELLS KNOWN table when a level is given (v3.37.164; it used to be the whole kit). */
+function buildDefaultKnown(cls, level) {
+  const all = orderedByPriority(cls, kitSpells(cls));
+  const caps = (level && typeof knownCapsFor === 'function') ? knownCapsFor(cls, level) : null;
+  if (!caps) return all.map((s) => s.key);
+  const n = {}, out = [];
+  for (const s of all) { if (s.minLevel && level < s.minLevel) continue; const c = caps[s.slvl] | 0; n[s.slvl] = n[s.slvl] || 0; if (n[s.slvl] < c) { n[s.slvl]++; out.push(s.key); } }
+  return out;
 }
 
 /** Convenience: the right default shape for either caster type (or null for non-casters). */

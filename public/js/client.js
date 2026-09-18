@@ -1011,7 +1011,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33863;
+  const CLIENT_BUILD = 33864;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -1077,15 +1077,15 @@
       for (const L of Object.keys(byLvl)) byLvl[L].sort((a, b) => String(a.name).localeCompare(String(b.name)));   // alphabetical, matching the blind menu's numbering
       const lvls = Object.keys(byLvl).map(Number).sort((a, b) => a - b);
       const picked = (s) => mdl.spont ? (mdl.known || []).includes(s.key) : (((mdl.prepared || {})[s.slvl]) || []).includes(s.key);
-      body = `<div class="dungeon__sb-head">${mdl.spont ? 'Known spells — toggle freely' : 'Prepared spells — fill each level\'s slots'} · lands at the next door</div>` +
+      body = `<div class="dungeon__sb-head">${mdl.spont ? 'Spells KNOWN — each level has a limit; forget one to learn another' : 'Prepared spells — fill each level\'s slots'} · lands at the next door</div>` +
         `<div class="dungeon__sb-scroll">` + lvls.map(L => {
           const cnt = byLvl[L].filter(picked).length;
-          const cap = mdl.spont ? null : (((mdl.caps || {})[L]) | 0);
+          const cap = (mdl.caps && mdl.caps[L] != null) ? (mdl.caps[L] | 0) : null;   // v3.37.164: spontaneous casters have a spells-KNOWN cap too
           // ICON-ONLY toggles (Tobias: full-width name buttons wasted space) — the
           // spell's name lives in the hover tooltip + aria-label; lit = in the loadout.
           // The popover lays children out as a stretched column, so each level's
           // icons sit in their own flex-wrap ROW and the buttons size to the icon.
-          return `<div class="dungeon__sb-head">Level ${L} — ${cnt}${cap != null ? ` of ${cap} prepared` : ' known'}</div>` +
+          return `<div class="dungeon__sb-head">Level ${L} — ${cnt}${cap != null ? ` of ${cap} ${mdl.spont ? 'known' : 'prepared'}` : ' known'}</div>` +
             `<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">` +
             byLvl[L].map(s =>
               `<button class="btn ${picked(s) ? 'btn--primary' : 'btn--ghost'} btn--sm" style="flex:0 0 auto;width:auto;min-width:0;padding:4px 9px;font-size:1.15em" data-dact="sbpick" data-sbkey="${escapeAttr(s.key)}" aria-pressed="${picked(s)}" aria-label="${escapeAttr(s.name)}${picked(s) ? ' — in your loadout' : ''}" title="${escapeAttr(s.name)} — ${picked(s) ? 'remove from' : 'add to'} your loadout (takes effect at the next door)">${s.icon || '✨'}</button>`
@@ -2325,17 +2325,17 @@
         const parts = _sbpLvls(mdl).map(L => {
           const at = _sbpAt(mdl, L);
           const picked = at.filter(s => _sbpPicked(mdl, s)).length;
-          const cap = mdl.spont ? null : (((mdl.caps || {})[L]) | 0);
-          return `level ${L}, ${picked}${cap != null ? ` of ${cap} prepared` : ' known'}`;
+          const cap = (mdl.caps && mdl.caps[L] != null) ? (mdl.caps[L] | 0) : null;   // v3.37.164: spontaneous casters have a spells-KNOWN cap too
+          return `level ${L}, ${picked}${cap != null ? ` of ${cap} ${mdl.spont ? 'known' : 'prepared'}` : ' known'}`;
         });
         const dom = (!mdl.spont && (mdl.domainSpells || []).length) ? ` Your domain spells are ALWAYS ready and never use a prepared slot: ${mdl.domainSpells.map(d => d.name).join(', ')}.` : '';
-        sayU(`Prepare spells: ${parts.join('; ')}.${dom} Each level's count is CASTINGS PER ROOM, shared across whatever you prepare — casting the same spell twice is automatic, no duplicate slots needed. Press a level number (or Tab through the levels), Escape to close.`);
+        sayU(`Prepare spells: ${parts.join('; ')}.${dom}${mdl.spont ? ` Those are the spells you may KNOW at each level — a hard limit: forget one to learn another. Your castings per room are separate: ${Object.keys(mdl.slots || {}).map(L => `level ${L}, ${mdl.slots[L]}`).join('; ')}.` : ` Each level's count is CASTINGS PER ROOM, shared across whatever you prepare — casting the same spell twice is automatic, no duplicate slots needed.`} Press a level number (or Tab through the levels), Escape to close.`);
       };
       const _sbpSpeakLevel = (L) => {
         const mdl = _sbpModel; if (!mdl) return;
         const at = _sbpAt(mdl, L);
-        const capL = mdl.spont ? null : (((mdl.caps || {})[L]) | 0);
-        sayU(`Level ${L}${capL != null ? ` — ${capL} castings per room, shared across your prepared picks` : ''}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + '. Number toggles; Tab or arrows step one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
+        const capL = (mdl.caps && mdl.caps[L] != null) ? (mdl.caps[L] | 0) : null;
+        sayU(`Level ${L}${capL != null ? (mdl.spont ? ` — you know ${at.filter(s => _sbpPicked(mdl, s)).length} of ${capL}` : ` — ${capL} castings per room, shared across your prepared picks`) : ''}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + '. Number toggles; Tab or arrows step one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
       };
       // One toggle path for BOTH the number keys and Tab+Enter (Josh 2026-07-16: "being
       // able to tab through and see what the possibilities are would be helpful... right

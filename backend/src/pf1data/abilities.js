@@ -2105,6 +2105,32 @@ function kitFor(classKey) { return KITS[classKey] || DEFAULT_KIT; }
 const isPoolClass = (cls) => POOL_CLASSES.has(cls);
 const isCaster    = (cls) => CASTER_CLASSES.has(cls);
 
+// ── SPELLS KNOWN (v3.37.164 — Josh: 'it lets me choose every spell in that level… I should get a hard
+// stop'). PF1 CRB Table 3-15 (sorcerer; the oracle shares it) and Table 3-4 (bard; the inquisitor
+// shares it) — spells KNOWN per spell level 1..9, cantrips excluded. A sorcerer's BLOODLINE spell
+// (one per spell level, gained at class level 2×slvl+1) and an oracle's MYSTERY spell (at 2×slvl)
+// are modeled as one extra free pick at that level — the engine has no bloodline/mystery lists.
+// (spells known start)
+const SORC_KNOWN_BY_LEVEL = {
+  1: [2], 2: [2], 3: [3], 4: [3, 1], 5: [4, 2], 6: [4, 2, 1], 7: [5, 3, 2], 8: [5, 3, 2, 1], 9: [5, 4, 3, 2], 10: [5, 4, 3, 2, 1],
+  11: [5, 5, 4, 3, 2], 12: [5, 5, 4, 3, 2, 1], 13: [5, 5, 4, 4, 3, 2], 14: [5, 5, 4, 4, 3, 2, 1], 15: [5, 5, 4, 4, 4, 3, 2],
+  16: [5, 5, 4, 4, 4, 3, 2, 1], 17: [5, 5, 4, 4, 4, 3, 3, 2], 18: [5, 5, 4, 4, 4, 3, 3, 2, 1], 19: [5, 5, 4, 4, 4, 3, 3, 3, 2], 20: [5, 5, 4, 4, 4, 3, 3, 3, 3],
+};
+const BARD_KNOWN_BY_LEVEL = {
+  1: [2], 2: [3], 3: [4], 4: [4, 2], 5: [4, 3], 6: [4, 4], 7: [5, 4, 2], 8: [5, 4, 3], 9: [5, 4, 4], 10: [5, 5, 4, 2],
+  11: [6, 5, 4, 3], 12: [6, 5, 4, 4], 13: [6, 5, 5, 4, 2], 14: [6, 6, 5, 4, 3], 15: [6, 6, 5, 4, 4],
+  16: [6, 6, 5, 5, 4, 2], 17: [6, 6, 6, 5, 4, 3], 18: [6, 6, 6, 5, 4, 4], 19: [6, 6, 6, 5, 5, 4], 20: [6, 6, 6, 6, 5, 5],
+};
+/** { <spellLevel>: spells KNOWN cap } for a spontaneous caster at a class level (null = not spontaneous). */
+function knownCapsFor(cls, level) {
+  if (!SPONTANEOUS_CLASSES.has(cls)) return null;
+  const lvl = Math.max(1, Math.min(20, level || 1));
+  const row = ((cls === 'bard' || cls === 'inquisitor') ? BARD_KNOWN_BY_LEVEL : SORC_KNOWN_BY_LEVEL)[lvl] || [];
+  const out = {};
+  row.forEach((n, i) => { const sl = i + 1; let cap = n; if (cls === 'sorcerer' && lvl >= 2 * sl + 1) cap += 1; if (cls === 'oracle' && lvl >= 2 * sl) cap += 1; out[sl] = cap; });
+  return out;
+}
+// (end spells known)
 // ── RACIAL SPELL-LIKE ABILITIES (v3.37.163 — Josh: 'I also have a racial feature where they can cast
 // darkness once per day'). Once per DUNGEON here (PF1: 1/day). Not spellbook entries — no slot, no
 // prep: `sla: true` bypasses the loadout gate; `slaLevel` keeps the PF1 spell level for the DC and SR.
@@ -2119,7 +2145,7 @@ const RACE_SLA = {
 };
 // (end race sla)
 module.exports = {
-  RACE_SLA,
+  RACE_SLA, knownCapsFor, SORC_KNOWN_BY_LEVEL, BARD_KNOWN_BY_LEVEL,
   KITS, SPELL, DEFAULT_KIT, SELECTABLE_CLASSES, CASTER_CLASSES, SPONTANEOUS_CLASSES, SLVL_BY_KEY,
   CANTRIPS, CANTRIP_BY_KEY,
   kitFor, isPoolClass, isCaster, isSpontaneous, imgFor,

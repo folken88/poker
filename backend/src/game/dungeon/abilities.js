@@ -18,7 +18,7 @@
  */
 const db = require('../../persistence/db');
 const { weaponOf, SND, dRoll, dRollN, pick } = require('../combat');
-const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, slotsFor, diceCount, CANTRIPS, CANTRIP_BY_KEY, RACE_SLA } = require('../../pf1data/abilities');   // RACE_SLA (v3.37.163) — guarded below: PGM's pf1core may lag
+const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, slotsFor, diceCount, CANTRIPS, CANTRIP_BY_KEY, RACE_SLA, knownCapsFor } = require('../../pf1data/abilities');   // RACE_SLA (v3.37.163) — guarded below: PGM's pf1core may lag
 const { babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../../pf1data/classes');
 const { crToNum, SIZE_RANK, SIZE_NAME, MONK_SFX } = require('../../pf1data/monsters');
 const RACES = require('../../pf1data/races');
@@ -513,7 +513,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _computeCastable(m) {
     try {
       if (!isCaster(m.cls)) { m.castableKeys = null; return; }
-      if (isSpontaneous(m.cls)) m.castableKeys = new Set(db.getKnownSpells(m.playerId, m.cls) || []);
+      if (isSpontaneous(m.cls)) m.castableKeys = new Set(this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []));   // v3.37.164: the PF1 spells-known cap binds what reaches the pad
       else {
         m.castableKeys = new Set(Object.values(db.getPreparedSpells(m.playerId, m.cls) || {}).flat());
         // DOMAINS Phase C: a cleric's chosen domains' SPELLS ride the +1 domain
@@ -1242,7 +1242,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       }
     }
     return spont
-      ? { spont, pool, caps, known: db.getKnownSpells(m.playerId, m.cls) || [] }
+      ? { spont, pool, caps: this._knownCaps(m), slots: (slotsFor(m.cls, m.level || 1, m.castingMod) || {}), known: this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []) }   // v3.37.164: caps = spells KNOWN per level; slots = castings per room
       : { spont, pool, caps, domainSpells, prepared: this._loadoutRebucket(m, db.getPreparedSpells(m.playerId, m.cls) || {}) };
   },
   // Self-heal a stored prepared map when a spell's slot LEVEL changes (e.g. the
@@ -1282,12 +1282,36 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     return out;
   },
+  // SPELLS KNOWN (v3.37.164 — Josh: 'I cannot be able to select more spells than I can know. I
+  // should get a hard stop'). PF1 tables via knownCapsFor. _knownTrim heals a saved list made
+  // before the cap existed (Olbryn's held 100+): saved order wins, ghosts drop (unknown key,
+  // another character's spell, above this level), each spell level keeps its first CAP picks.
+  _knownCaps(m) { return (typeof knownCapsFor === 'function' && knownCapsFor(m.cls, m.level || 1)) || {}; },
+  _knownTrim(m, list) {
+    const caps = this._knownCaps(m), byKey = {}, n = {}, out = [];
+    for (const sp of loadouts.kitSpells(m.cls)) byKey[sp.key] = sp;
+    for (const key of (Array.isArray(list) ? list : [])) {
+      const ab = byKey[key];
+      if (!ab || out.includes(key) || !this._charAllows(ab, m) || (m.level || 1) < (ab.minLevel || 1)) continue;
+      const sl = ab.slvl, cap = caps[sl] | 0;
+      n[sl] = n[sl] || 0;
+      if (n[sl] >= cap) continue;
+      n[sl]++; out.push(key);
+    }
+    return out;
+  },
   _loadoutToggle(m, key) {
     const ab = loadouts.kitSpells(m.cls).find(s => s.key === key && this._charAllows(s, m));
     if (!ab) return { ok: false, error: 'not a spell your class can learn' };
     if ((m.level || 1) < (ab.minLevel || 1)) return { ok: false, error: `${ab.name} needs level ${ab.minLevel}` };
     if (isSpontaneous(m.cls)) {
-      const known = db.getKnownSpells(m.playerId, m.cls) || [];
+      const known = this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []);   // heal an over-cap legacy list before toggling (v3.37.164)
+      if (!known.includes(key)) {
+        const sl = ab.slvl, cap = (this._knownCaps(m)[sl]) | 0;
+        const have = known.filter(k => { const x = loadouts.kitSpells(m.cls).find(sp => sp.key === k); return x && x.slvl === sl; }).length;
+        if (cap <= 0) return { ok: false, error: `you cannot know level-${sl} spells yet` };
+        if (have >= cap) return { ok: false, error: `level ${sl} is full — you know ${have} of ${cap}. Forget one first` };
+      }
       const next = known.includes(key) ? known.filter(k => k !== key) : [...known, key];
       if (!next.length) return { ok: false, error: 'you must know at least one spell' };
       db.setKnownSpells(m.playerId, m.cls, next);

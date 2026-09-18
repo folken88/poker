@@ -2174,6 +2174,14 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.164 2026-09-18 SPELLS KNOWN ARE A HARD LIMIT (Josh, on .163: 'it lets me choose every spell in
+//                     that level… I should get a hard stop'). Verified: spontaneous casters had NO
+//                     cap — Olbryn's saved known list held 100+ spells. Now the PF1 tables bind:
+//                     sorcerer/oracle (CRB 3-15, + one bloodline/mystery pick per spell level) and
+//                     bard/inquisitor (CRB 3-4). Learning past the cap is refused ('level 5 is full
+//                     — you know 5 of 5. Forget one first'); over-cap saved lists heal to their first
+//                     CAP picks per level; bots' default known lists obey it too. The menus say
+//                     'N of CAP known' and speak castings-per-room separately. Tests 279-280; CLIENT_BUILD 33864.
 //  3.37.163 2026-09-15 RACES THAT MATTER (Josh, batch-4 reply: 'are you making sure to bake in racial
 //                     traits such as darkvision where they matter… I've not seen anything related to
 //                     race'). (1) A hero's RACIAL darkvision now counts for targeting foes in lesser
@@ -2269,9 +2277,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.163';
+const VERSION = '3.37.164';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33863;   // v3.37.163: the race picker (index.html + client.js)
-const HEADLINE = "Races that matter: racial darkvision sees through Darkness, foes with darkvision ignore it, racial spell-likes once a dungeon, and a race picker in your profile.";
+const CLIENT_BUILD = 33864;   // v3.37.164: spells-known caps in the Prepare menus
+const HEADLINE = "Spells known are a hard limit now: sorcerers, oracles, bards and inquisitors know what the book says, and the Prepare menu tells you N of CAP.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
