@@ -2174,6 +2174,19 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.165 2026-09-21 JOSH'S SEPT 20-21 PASS. (1) THE SPELLBOOK KEY: v163's racial spell-likes were
+//                     pad FEATURES, so a drow antipaladin had 11 actions and the Spellbook fell past
+//                     key 9. Racial abilities now take ONE entry AFTER the Spellbook (a 'Racial
+//                     Abilities' submenu when there are two). (2) MIRROR IMAGE now ROLLS (PF1): a hit
+//                     picks at random among you + N figments (it always popped an image), a miss by
+//                     5 or less pops one, the log shows the roll, and the count uses CASTER level (a
+//                     4-level caster's is level−3). (3) Bots never summon ground-bound creatures at
+//                     an all-airborne field (Draymus). (4) Racial spell-likes refill every FIFTH room.
+//                     (5) THE CASTER-TABLE AUDIT: inquisitor + magus castings had drifted 1-2 over the
+//                     book at every level (now the bard table, per APG/UM); paladin/ranger/antipaladin
+//                     L14-20 were one step ahead of CRB 3-11. Cleric/druid/wizard, sorcerer/oracle and
+//                     bard match the book. (6) Bloodline Surge's text says what it is (a home stand-in).
+//                     Toby questions 9-12 queued. Tests 281-283; CLIENT_BUILD 33865.
 //  3.37.164 2026-09-18 SPELLS KNOWN ARE A HARD LIMIT (Josh, on .163: 'it lets me choose every spell in
 //                     that level… I should get a hard stop'). Verified: spontaneous casters had NO
 //                     cap — Olbryn's saved known list held 100+ spells. Now the PF1 tables bind:
@@ -2277,9 +2290,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.164';
+const VERSION = '3.37.165';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33864;   // v3.37.164: spells-known caps in the Prepare menus
-const HEADLINE = "Spells known are a hard limit now: sorcerers, oracles, bards and inquisitors know what the book says, and the Prepare menu tells you N of CAP.";
+const CLIENT_BUILD = 33865;   // v3.37.165: the Racial Abilities pad entry
+const HEADLINE = "The Spellbook key is back on the pad, Mirror Image rolls by the book, bots stop summoning at flyers, and the caster tables are audited.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

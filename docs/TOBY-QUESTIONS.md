@@ -49,6 +49,26 @@ Ruled section with the version that implemented it.
    should follow the same table (Unholy Blight would then do nothing to the evil foes that
    fill most rooms — Draymus's bot casts it). Keep them as-is for fun, or go RAW?
 
+9. **Gabriel's class** (Josh, 2026-09-21: 'Gabriel is a Bloodrager not a Paladin btw'). The roster
+   pins him as an aasimar PALADIN (the Redeemer, smite, lay on hands). Is Josh right about the
+   tabletop sheet? If yes, say so and he is re-pinned — but he loses the paladin kit the bot plays.
+
+10. **Celeb's default loadout** (Josh, run cozy-muffin: 'I ain't sure Celeb is loaded out right… ask
+   Toby what he should carry by default'). Facts: the theurge has NO prep sheet — every spell in his
+   dual kit is castable, gated only by level and the split arcane/divine slots. In that run he cast
+   Haste ×12, Slow ×9, Fly ×7, Dimension Door ×7, Grease ×5, Blessing of Fervor ×5 and one each of
+   ~20 others. Do you want a curated default list for him (and should he prepare like a wizard)?
+
+11. **Bloodline Surge** (Josh, 2026-09-21: 'I cannot find any reference to the bloodline surge power').
+   He is right — it is a home stand-in, not a book power: +1 hit / +3 damage / +2 AC, once a room,
+   from level 4. The book gives a bloodrager a BLOODLINE with its own powers at 1/4/8/12/16/20. The
+   desc now says so. Build real bloodlines (which ones first?) or keep the generic surge?
+
+12. **The bloodrager's spell model.** Book: spontaneous, Cha-based, its own spells-per-day table
+   from level 4 and a spells-known table. Engine: a fixed list, each spell once per room (your
+   2026-08-30 ruling for the martial 4-level casters; paladin/ranger have since moved to real slot
+   tables). Move the bloodrager to slots + spells known too?
+
 ## Standing policy (Toby)
 
 - **Bonus typing** (2026-08-30): same-type bonuses never stack; categorize

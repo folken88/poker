@@ -511,6 +511,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       if (target.hp > 0 && target.isBot) this._tryBanter(target, 'damage', { enemy: e.name, dmg: r.damage });
     } else {
       this._note(this._foeMissText(e, r, target.nickname, true), r.sound);
+      if (target.images > 0 && !e.trueSeeing && !r.blindMiss && r.total != null && r.ac != null && (r.ac - r.total) <= 5) { target.images -= 1; this._note(`🪞 …a near miss (by ${r.ac - r.total}) — the blow destroys one of ${target.nickname}'s mirror images instead. (${target.images} left)`, null); }   // v3.37.165: PF1 — a miss by 5 or less pops a figment
     }
     this._echoToTable(r.sound);
   },

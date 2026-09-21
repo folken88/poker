@@ -67,11 +67,14 @@ const BARD_SLOTS_BY_LEVEL = {
   13: [5, 5, 4, 3, 1], 14: [5, 5, 4, 4, 2], 15: [5, 5, 5, 4, 3], 16: [5, 5, 5, 4, 3, 1],
   17: [5, 5, 5, 4, 4, 2], 18: [5, 5, 5, 5, 4, 3], 19: [5, 5, 5, 5, 5, 4], 20: [5, 5, 5, 5, 5, 5],
 };
+// v3.37.165 (the caster-table audit Josh asked for): the inquisitor (APG Table 2-3) and the magus
+// (UM Table 1-1) cast on the SAME spells-per-day table as the bard. This table had drifted to a
+// garbled copy of the spells-KNOWN table — one to two extra castings at every level.
 const INQ_SLOTS_BY_LEVEL = {
-  1: [2], 2: [3], 3: [4], 4: [4, 2], 5: [4, 3], 6: [5, 3], 7: [5, 4, 2], 8: [5, 4, 3],
-  9: [5, 5, 3], 10: [5, 5, 4, 2], 11: [6, 5, 4, 3], 12: [6, 6, 5, 3],
-  13: [6, 6, 5, 4, 2], 14: [6, 6, 6, 4, 3], 15: [6, 6, 6, 5, 3], 16: [6, 6, 6, 5, 4, 2],
-  17: [6, 6, 6, 6, 4, 3], 18: [6, 6, 6, 6, 5, 3], 19: [6, 6, 6, 6, 5, 4], 20: [6, 6, 6, 6, 6, 5],
+  1: [1], 2: [2], 3: [3], 4: [3, 1], 5: [4, 2], 6: [4, 3], 7: [4, 3, 1], 8: [4, 4, 2],
+  9: [5, 4, 3], 10: [5, 4, 3, 1], 11: [5, 4, 4, 2], 12: [5, 5, 4, 3],
+  13: [5, 5, 4, 3, 1], 14: [5, 5, 4, 4, 2], 15: [5, 5, 5, 4, 3], 16: [5, 5, 5, 4, 3, 1],
+  17: [5, 5, 5, 4, 4, 2], 18: [5, 5, 5, 5, 4, 3], 19: [5, 5, 5, 5, 5, 4], 20: [5, 5, 5, 5, 5, 5],
 };
 // PF1 PALADIN / RANGER / ANTIPALADIN spells per day — 4th-level prepared casters:
 // no spells until L4, max 4th-level spells. Base values ('0' = a slot only the
@@ -80,8 +83,8 @@ const INQ_SLOTS_BY_LEVEL = {
 const PALADIN_SLOTS_BY_LEVEL = {
   1: [], 2: [], 3: [],
   4: [0], 5: [1], 6: [1], 7: [1, 0], 8: [1, 1], 9: [2, 1], 10: [2, 1, 0],
-  11: [2, 1, 1], 12: [2, 2, 1], 13: [3, 2, 1, 0], 14: [3, 2, 2, 1], 15: [3, 3, 2, 1],
-  16: [3, 3, 3, 2], 17: [4, 3, 3, 2], 18: [4, 4, 3, 3], 19: [4, 4, 4, 3], 20: [4, 4, 4, 4],
+  11: [2, 1, 1], 12: [2, 2, 1], 13: [3, 2, 1, 0], 14: [3, 2, 1, 1], 15: [3, 2, 2, 1],
+  16: [3, 3, 2, 1], 17: [4, 3, 2, 1], 18: [4, 3, 2, 2], 19: [4, 3, 3, 2], 20: [4, 4, 3, 3],   // v3.37.165 audit: L14-20 were one step ahead of CRB Table 3-11
 };
 function _tableSlots(table, level) {
   const arr = table[Math.max(1, Math.min(20, level || 1))] || table[1];
@@ -586,7 +589,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
   bloodrager: { atwill: ATTACK('⚔️'), abilities: [
     { key: 'cleave', name: 'Cleave', icon: '🪓', cost: 'free', effect: 'cleave', target: 'enemy', acPen: 2, desc: 'Hit your target and a second foe (−2) — every foe you DROP grants another swing, chaining until you stop felling them — but you drop your guard (−2 AC) this turn.' },
     { key: 'rage',   name: 'Bloodrage', icon: '🩸', cost: 'free', freeAction: true, effect: 'buff', target: 'self', buff: { toHit: 2, dmg: 2, acPen: 2, save: 1 }, sticky: true, sound: S.rage, desc: 'Fly into a BLOODRAGE for the rest of the room (FREE action — still attack this turn): +2 to hit & damage and +1 Will, but −2 AC.' },
-    { key: 'bloodlinesurge', name: 'Bloodline Surge', icon: '💥', cost: 'room', uses: 1, minLevel: 4, effect: 'buff', target: 'self', buff: { toHit: 1, dmg: 3, ac: 2 }, sticky: true, sound: S.invoke, desc: 'A bloodrager\'s slow-won magic surges into his own frame — +1 to hit, +3 damage, +2 AC for the rest of the room (self only; unlocks at level 4). Once per room.' },
+    { key: 'bloodlinesurge', name: 'Bloodline Surge', icon: '💥', cost: 'room', uses: 1, minLevel: 4, effect: 'buff', target: 'self', buff: { toHit: 1, dmg: 3, ac: 2 }, sticky: true, sound: S.invoke, desc: 'HOME ADAPTATION — not a book power. It stands in for your BLOODLINE POWERS (PF1 bloodragers pick a bloodline — aberrant, abyssal, arcane, celestial, draconic… — and each grants its own powers at 1st, 4th, 8th, 12th, 16th and 20th level). The dungeon has no bloodline choice yet, so one generic surge covers them: +1 to hit, +3 damage, +2 AC for the rest of the room, self only, once per room, from level 4.' },
     { key: 'taunt',  name: 'Taunt',  icon: '📢', cost: 'room', uses: 1, effect: 'taunt', target: 'aoe', save: 'will', sound: '/audio/taunt_predator.mp3', desc: 'A furious challenge — EVERY enemy must make a Will save or be forced to attack YOU on its next turn. Once per room.' },
   ] },
   ranger: { atwill: ATTACK('🏹'), abilities: [

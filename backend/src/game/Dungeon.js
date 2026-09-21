@@ -1883,11 +1883,11 @@ class Dungeon {
       attacker._sawThrough = this.round;
       this._note(`👁️ ${attacker.name}'s TRUE SEEING picks the real ${target.nickname} out of the illusions.`, null, { side: 'enemy' });
     }
-    if (!pierces && target.images > 0) {
-      target.images -= 1;
-      this._note(`🪞 the blow strikes a mirror image of ${target.nickname} — it pops! (${target.images} left)`, null);
-      return true;
-    }
+    const _ir = (!pierces && target.images > 0) ? dRoll(target.images + 1) : 0;   // v3.37.165 (Josh: 'I do not think it is rolling the images'): PF1 — a hit picks at random among you + your N figments; it used to ALWAYS pop an image
+    if (_ir === 1) this._note(`🪞 the blow picks the REAL ${target.nickname} out of ${target.images} mirror image${target.images === 1 ? '' : 's'} [image roll 1 of ${target.images + 1}] — it lands!`, null);
+    if (_ir > 1) { target.images -= 1; this._note(`🪞 the blow strikes a mirror image of ${target.nickname} — it pops! [image roll ${_ir} of ${target.images + 2}] (${target.images} left)`, null); return true; }
+    // (a near miss pops one too — enemyAI's miss branch)
+
     if (!pierces && (((target.displaced || target.blinking) && dRoll(2) === 1) || (target.blurred && dRoll(5) === 1))) {   // Blink (v3.37.158) shares Displacement's 50%; Blur (v3.37.161) is 20%
       this._note(`🌫️ ${target.nickname} ${target.blinking && !target.displaced ? 'blinks out of phase' : target.displaced ? 'is displaced' : 'is blurred'} — the attack passes through empty air!`, null);
       return true;

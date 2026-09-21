@@ -863,6 +863,8 @@
   let _dunImbuedMode = false;  // blind dungeon: magus Imbued Shots submenu open (numbers fire a shot) — Josh's Reese layout
   let _dunManeuvers = false;   // blind dungeon: Combat Maneuvers submenu open (v3.37.138, Josh's stable-pad design)
   let _dunMvIdx = -1;          // Tab/arrow cursor inside the maneuvers submenu
+  let _dunRacial = false;      // blind dungeon: Racial Abilities submenu open (v3.37.165)
+  let _dunRcIdx = -1;
   let _dunMmMenu = null;       // blind dungeon: metamagic toggle menu open ([{key,name,adj,on}] or null) — numbers toggle
   let _sbpOpen = false;        // caster "🧠 Prepare ▾" spell-LOADOUT picker popover open/closed (sighted)
   let _sbpModel = null;        // fetched loadout model { spont, pool, caps, prepared|known } — shared by sighted panel + blind S menu
@@ -1011,7 +1013,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33864;
+  const CLIENT_BUILD = 33865;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -1459,7 +1461,7 @@
     if (isMyTurn !== _dunPrevMyTurn) {
       _dunTarget = null; _dunAllyPick = null; _dunDispelPick = null; _dunModePick = null;
       _dunSbMode = false; _dunSbLevel = null; _dunSbIdx = -1;
-      _dunImbuedMode = false; _dunManeuvers = false; _dunMvIdx = -1;
+      _dunImbuedMode = false; _dunManeuvers = false; _dunMvIdx = -1; _dunRacial = false; _dunRcIdx = -1;
     }
     _dunPrevMyTurn = isMyTurn;
     const turnName = turnId ? ((d.party || []).find(m => m.playerId === turnId)?.nickname || 'someone') : null;
@@ -2627,9 +2629,11 @@
       const imbuedName = (ab) => String((ab && ab.name) || '').replace(/^\s*imbued\s*shot\s*[:\-–(]*\s*/i, '').replace(/\s*\)\s*$/, '').trim() || (ab && ab.name) || '';
       const naturalActions = [{ kind: 'attack', label: kit.atwill?.name || 'Attack' }];
       const feats = [];
+      const racial = [];   // v3.37.165: racial spell-likes (drow Darkness…) — they were pad FEATURES and pushed the Spellbook past key 9 (Josh's antipaladin)
       (kit.abilities || []).forEach((ab, i) => {   // class FEATURES only (spells → spellbook, imbued shots → their submenu)
         if (ab.slvl != null) return;
         if (ab.effect === 'spellstrike') return;   // Imbued Shots live in their own submenu (below)
+        if (ab.sla) { if (ab.available !== false) racial.push({ kind: 'ability', ab, slot: (ab.slot != null ? ab.slot : i), label: ab.name }); return; }   // racial abilities: one entry AFTER the Spellbook
         // LEVEL-LOCKED abilities don't eat numpad numbers (they still show in the sighted
         // bar greyed 🔒 and in the X progression). General win for every character.
         if (ab.available === false) return;
@@ -2649,6 +2653,7 @@
       if (maneuvers.length >= 2) naturalActions.push({ kind: 'maneuvers', label: 'Combat Maneuvers' });   // v3.37.138 (Josh's stable-pad design): trip/disarm/bull rush/grapple/feint live in ONE menu — the pad stops reflowing as classes grow
       if (imbued.length) naturalActions.push({ kind: 'imbued', label: 'Imbued Shots' });   // magus submenu — numpad opens it, then a number fires a shot
       if (hasSpellbook) naturalActions.push({ kind: 'spellbook', label: 'Spellbook' });
+      if (racial.length === 1) naturalActions.push(racial[0]); else if (racial.length > 1) naturalActions.push({ kind: 'racial', label: 'Racial Abilities' });   // v3.37.165: never ahead of the class's own keys
       // ── PAD MAP v2 (v3.37.95, Josh's own design): explicit slot assignments ──
       // kit.padMap = { "3": "gloriouschallenge", "7": "none", … } pins actions to
       // numpad slots. Resolution: explicit slots first (first claim wins; unknown
@@ -2693,6 +2698,7 @@
         if (naturalActions.some(it => it.kind === 'maneuvers')) ch.push({ id: 'maneuvers', label: 'Combat Maneuvers', desc: 'Trip, disarm, bull rush, grapple and feint — one menu, one key.' });
         if (naturalActions.some(it => it.kind === 'imbued')) ch.push({ id: 'imbued', label: 'Imbued Shots', desc: '' });
         if (naturalActions.some(it => it.kind === 'spellbook')) ch.push({ id: 'spellbook', label: 'Spellbook', desc: 'Opens your leveled spell list.' });
+        if (naturalActions.some(it => it.kind === 'racial')) ch.push({ id: 'racial', label: 'Racial Abilities', desc: 'Opens your racial spell-like abilities.' });
         ch.push({ id: 'none', label: 'Nothing — disable this key', desc: 'The key does nothing, so a stray press can never waste your turn.' });
         return ch;
       };
@@ -2925,6 +2931,28 @@
       //   (Shocking Grasp, Frigid Touch, …); Escape (or 0) backs out. castSpell handles
       //   the target prompt just like a spell. Only the shots you can USE are listed, so
       //   the numbering is short and stable — new ones slot in as Reese levels.
+      if (_dunRacial) {   // v3.37.165: Racial Abilities submenu — same keys as Combat Maneuvers
+        if (e.key === 'Escape' || k === '0') { e.preventDefault(); _dunRacial = false; _dunRcIdx = -1; sayU('Racial abilities closed.'); return; }
+        if (e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') {
+          e.preventDefault();
+          const n = racial.length; if (!n) { _dunRacial = false; return; }
+          if (e.key === 'Home') _dunRcIdx = 0; else if (e.key === 'End') _dunRcIdx = n - 1;
+          else _dunRcIdx = ((_dunRcIdx + ((e.shiftKey || e.key === 'ArrowUp') ? -1 : 1)) % n + n) % n;
+          const f = racial[_dunRcIdx];
+          sayU(`${_dunRcIdx + 1}, ${f.label}. ${(f.ab && f.ab.desc) || ''} Enter to use it.`);
+          return;
+        }
+        if (e.key === 'Enter' && _dunRcIdx >= 0) { e.preventDefault(); const f = racial[_dunRcIdx]; _dunRacial = false; _dunRcIdx = -1; castSpell(f.ab); return; }
+        if (/^[1-9]$/.test(k)) {
+          e.preventDefault();
+          const f = racial[parseInt(k, 10) - 1];
+          if (!f) { sayU(`No racial ability ${k}.`); return; }
+          _dunRacial = false; _dunRcIdx = -1;
+          castSpell(f.ab);
+          return;
+        }
+        e.preventDefault(); return;
+      }
       if (_dunManeuvers) {
         if (e.key === 'Escape' || k === '0') { e.preventDefault(); _dunManeuvers = false; _dunMvIdx = -1; sayU('Combat maneuvers closed.'); return; }
         if (e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') {
@@ -3271,6 +3299,12 @@
           if (!maneuvers.length) { sayU('No combat maneuvers available.'); return; }
           _dunManeuvers = true; _dunMvIdx = -1;
           sayU('Combat maneuvers: ' + maneuvers.map((f, i) => `${i + 1} ${f.label}`).join(', ') + '. Press a number to use one, Tab or arrows to hear what each does, Escape to close.');
+          return;
+        }
+        if (act.kind === 'racial') {   // v3.37.165: Racial Abilities submenu
+          if (!racial.length) { sayU('No racial abilities available.'); return; }
+          _dunRacial = true; _dunRcIdx = -1;
+          sayU('Racial abilities: ' + racial.map((f, i) => `${i + 1} ${f.label}${f.ab && f.ab.usesLeft === 0 ? ', spent' : ''}`).join(', ') + '. Press a number to use one, Tab or arrows to hear what each does, Escape to close. They refill every fifth room.');
           return;
         }
         if (act.kind === 'imbued') {   // magus Imbued Shots submenu (Josh's Reese layout)

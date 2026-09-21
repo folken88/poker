@@ -524,8 +524,12 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       // v3.37.157: with every rung on the ladder, a puny summon (Summon Monster I's rat at level 10)
       // must not outrank a heal — the opener needs a pool CR worth a THIRD of the toughest foe.
       // Summoner-style casters (Jason's devils, Draymus's undead) call help regardless — it's their game.
+      // v3.37.165 (Josh, Draymus vs three flying casters: 'an utterly amazing waste of a turn'): a summon
+      // must be able to REACH something — if every foe left is airborne, only a pool with a flyer or a
+      // shooter is worth the cast. Applies to everyone, summoner style included.
+      const _summonReach = (a) => targets.some(e => !e.flying) || (((a.summon && a.summon.pool) || []).some(k => MON && MON[k] && (MON[k].flying || MON[k].ranged)));
       const _summonWorth = (a) => { const poolCR = Math.max(0, ...(((a.summon && a.summon.pool) || []).map(k => (MON && MON[k] && MON[k].crNum) || 0))); return poolCR * 3 >= topCR; };
-      if (summonAb && targets.length && _style !== 'guardian' && (_style === 'summoner' || m._summonDepth !== this.depth) && (_style === 'summoner' || _summonWorth(summonAb)) && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {   // v3.37.149: a SUMMONER calls help every time it falls (Jason, Draymus); a GUARDIAN never summons (Dinvaya)
+      if (summonAb && targets.length && _style !== 'guardian' && (_style === 'summoner' || m._summonDepth !== this.depth) && (_style === 'summoner' || _summonWorth(summonAb)) && _summonReach(summonAb) && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {   // v3.37.149: a SUMMONER calls help every time it falls (Jason, Draymus); a GUARDIAN never summons (Dinvaya)
         m._summonDepth = this.depth;
         return { slot: slot(summonAb), payload: {} };
       }

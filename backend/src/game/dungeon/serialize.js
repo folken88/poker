@@ -475,7 +475,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         // or DEFENSIVELY (heal the party) — the client prompts and sends payload.mode.
         const modePick = ab.effect === 'heal' && ab.heal === 'party';
         return {
-        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
+        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, sla: !!ab.sla, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
         slot: abs.indexOf(ab),   // stable index into kit+domain abilities (the action payload `slot`) — SAME array as above so magus spellstrikes resolve (were -1)
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null, aimAoe: !!ab.aimAoe,   // v3.37.143: Sunbeam is a BEAM — the client prompts for its primary target

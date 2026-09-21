@@ -766,6 +766,16 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // per-room clears above just wiped the AC/DR/wards/sight/flight they grant).
     for (const _snap of Object.values(m.runBuffPayloads || {})) this._applyRunBuffSnap(m, _snap);
     m.acPenRound = -1; m.acPenAmt = 0;
+    this._slaRecharge(m);
+  },
+  // RACIAL SPELL-LIKES RECHARGE (v3.37.165 — Josh: 'once per day… maybe once every five rooms'): a
+  // dungeon has no days, so the blood refills every FIFTH room (rooms 6, 11, 16…). Spoken once.
+  _slaRecharge(m) {
+    if (!(this.depth > 1) || (this.depth - 1) % 5 !== 0 || m._slaDepth === this.depth) return;
+    m._slaDepth = this.depth;
+    const names = [];
+    for (const ab of this._abilitiesFor(m)) if (ab.sla && ab.cost === 'run') { const max = (typeof ab.uses === 'function' ? ab.uses(m.level || 1) : (ab.uses || 1)); if (((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) < max) { m.runAbilityUses = m.runAbilityUses || {}; m.runAbilityUses[ab.key] = max; names.push(ab.name); } }
+    if (names.length) this._note(`🩸 ${m.nickname}'s blood stirs — ${names.join(' and ')} ${names.length === 1 ? 'is' : 'are'} ready again (racial spell-likes refill every fifth room).`);
   },
   // Inspire Courage is a passive bard AURA — it costs the bard NO action and is
   // simply ALWAYS up while a bard is in the party. Fold its run-long +1/+1 into
@@ -1852,7 +1862,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // Mirror Image — shimmering decoys soak incoming attacks (1d4 + 1 per 3 levels, max 8).
   _abMirrorImage(m, ab) {
     const lvl = m.level || 1;
-    m.images = Math.min(8, dRoll(4) + Math.floor(lvl / 3));
+    const cl = ['paladin', 'ranger', 'antipaladin', 'bloodrager'].includes(m.cls) ? Math.max(1, lvl - 3) : lvl;   // v3.37.165: a 4-level caster's CASTER LEVEL is class level − 3 (PF1) — Josh's L9 bloodrager was conjuring 7 images
+    m.images = Math.min(8, dRoll(4) + Math.floor(cl / 3));   // PF1: 1d4 + 1 per three caster levels, max 8
     this._note(`${ab.icon} ${m.nickname} conjures ${m.images} mirror image${m.images > 1 ? 's' : ''} — decoys to soak incoming attacks!`, ab.sound);
     this._echoToTable(ab.sound);
   },
