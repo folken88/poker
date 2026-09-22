@@ -2174,6 +2174,13 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.166 2026-09-22 JOSH'S SEPT 22 NOTES. (1) A SELF buff now says what it did and that it is self-only
+//                     ('uses Bloodline Surge — +1 to hit, +3 damage, +2 AC, on yourself only, for the rest
+//                     of the room') — he pressed it and heard nothing he could use. (2) The extra-strike
+//                     line names its source: Blessing of Fervor no longer narrates as 'Haste' every strike
+//                     ('did Celeb cast haste multiple times?' — he cast Fervor once). Verified, no change:
+//                     Greater Rage arrives at 11 for the bloodrager as for the barbarian (his log shows it
+//                     in every room of shielded-puffin). Test 284.
 //  3.37.165 2026-09-21 JOSH'S SEPT 20-21 PASS. (1) THE SPELLBOOK KEY: v163's racial spell-likes were
 //                     pad FEATURES, so a drow antipaladin had 11 actions and the Spellbook fell past
 //                     key 9. Racial abilities now take ONE entry AFTER the Spellbook (a 'Racial
@@ -2290,9 +2297,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.165';
+const VERSION = '3.37.166';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33865;   // v3.37.165: the Racial Abilities pad entry
-const HEADLINE = "The Spellbook key is back on the pad, Mirror Image rolls by the book, bots stop summoning at flyers, and the caster tables are audited.";
+const HEADLINE = "Self buffs say what they did, and Blessing of Fervor no longer narrates as Haste.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

@@ -2493,7 +2493,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const foes = this._targetableEnemies();   // the bonus swing hits a REAL foe, never a summoned ally
     if (!foes.length) return;
     const tgt = (forced && foes.includes(forced)) ? forced : (this._preferredFoe(m, foes) || foes[0]);
-    this._note(`💨 ${m.nickname} blurs with Haste — an extra strike!`);
+    this._note(`💨 ${m.nickname} blurs with ${m.hasteFull ? 'Haste' : 'Blessing of Fervor'} — an extra strike!`);   // v3.37.166 (Josh: 'did Celeb cast haste multiple times?' — no: ONE Fervor, and this line fired every strike as 'Haste')
     this._playerAttack(m, tgt.uid, true);   // quiet: don't clobber the turn's main-action sound
   },
   // Breath of Life (revive a DYING ally + big heal) / Raise Dead + Resurrection
@@ -3548,7 +3548,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // Elemental Body SPEAKS its protections (v3.37.86 — Josh, run dapper-moose: cast it
     // twice, heard only "uses Elemental Body!" and had no idea what it granted).
     else if (ab.elemBody) { apply(m); this._note(`${ab.icon} ${m.nickname} becomes a being of raw element — IMMUNE to critical hits, paralysis and hold, stun, sickening and blinding for the rest of the room!`, sound); }
-    else { apply(m); this._note(`${ab.icon} ${m.nickname} uses ${ab.name}!`, sound); }
+    else {   // v3.37.166 (Josh, Bloodline Surge: 'I cannot aim it… it just does something'): a SELF buff says what it did and that it is self-only
+      apply(m);
+      const _b = ab.buff || {}, _bw = [];
+      if (_b.toHit) _bw.push(`${_b.toHit > 0 ? '+' : ''}${_b.toHit} to hit`); if (_b.dmg) _bw.push(`${_b.dmg > 0 ? '+' : ''}${_b.dmg} damage`); if (_b.ac) _bw.push(`${_b.ac > 0 ? '+' : ''}${_b.ac} AC`); if (_b.acPen) _bw.push(`−${_b.acPen} AC`); if (_b.save) _bw.push(`${_b.save > 0 ? '+' : ''}${_b.save} on saves`); if (_b.conHp) _bw.push(`+${_b.conHp * lvl} temporary HP`);
+      this._note(`${ab.icon} ${m.nickname} uses ${ab.name}${_bw.length ? ` — ${_bw.join(', ')}, on yourself only, for the rest of the room` : '!'}`, sound);
+    }
     this._echoToTable(sound);
   },
   // Taunt (barbarian): a roaring challenge — every enemy makes a Will save or is
