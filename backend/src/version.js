@@ -2174,6 +2174,15 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.168 2026-09-23 READ THE ROOM (Tobias: 'bots should intelligently read the room and choose their
+//                     strategy based on the challenges in front of them'; Josh, proud-compass: 'we were all
+//                     flying, so it really made no sense'). When no living foe can reach any hero — the whole
+//                     party airborne and not held/grappled, and no foe flies, shoots, casts, shouts, hooks,
+//                     summons or hurls hellfire — a bot skips every buff, ward, Haste/Fervor and lockdown
+//                     (Slow, Black Tentacles, Hold, Sleep, Grease…) and spends the turn on damage. Said once
+//                     per room. proud-compass: foes swung at empty air 94 times in rooms 4-10, never touched
+//                     the party, while Celeb cast Slow x6, Tentacles x5 and Mass Eagle's Splendor. Test 287.
+//                     Backend only; CLIENT_BUILD stays 33865.
 //  3.37.167 2026-09-23 JOSH'S SEPT 22-23 NOTES. (1) BLOODLINE SURGE IS A SWIFT ACTION — his plucky-devil
 //                     turns show Rage (free), Surge, then only the Fervor extra strike: Surge was eating the
 //                     standard action. It now shares the one-swift-a-turn budget with Quicken / Curator (first
@@ -2309,9 +2318,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.167';
+const VERSION = '3.37.168';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33865;   // v3.37.165: the Racial Abilities pad entry
-const HEADLINE = "Bloodline Surge is a swift action, and bot casters stop wasting slots on stat buffs nobody gains from.";
+const HEADLINE = "Bots read the room: out of every foe's reach, they skip buffs and lockdowns and go straight to damage.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

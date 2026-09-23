@@ -340,6 +340,20 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (!m._ccT || m._ccT.depth !== this.depth) m._ccT = { depth: this.depth, tries: {} };
     return m._ccT.tries;
   },
+  /** v3.37.168 (Tobias, 2026-09-23: 'bots should intelligently read the room'; Josh, proud-compass:
+   *  'we were all flying, so it really made no sense'): TRUE when NO living foe can reach ANY living
+   *  hero — every hero is airborne (and not held or grappled down), and no foe flies, shoots, casts,
+   *  shouts, hooks, summons or hurls hellfire. Mirrors enemyAI's reach rule. In such a room every
+   *  buff, ward and lockdown is a wasted turn: only damage moves the room, so the bot skips them.
+   *  (proud-compass: foes swung at empty air 94 times across rooms 4-10 and never touched the party,
+   *  while Celeb spent those rooms on Slow, Black Tentacles and Mass Eagle's Splendor.) */
+  _partyUntouchable(foes) {
+    const party = this.livingParty();
+    if (!party.length || !foes || !foes.length) return false;
+    const grounded = (m) => !m.flying || (!(m.incorporeal || m.ghost) && ((m.paralyzed > 0) || m.grappled));
+    if (party.some(grounded)) return false;
+    return !foes.some(e => e.flying || e.ranged || e.arcane || e.caster || e.shout || e.hook || e.hellfire || e.summon || e.spellstrike || e.detonate);
+  },
   _botAbility(m) {
     // v3.37.95: guard on the EFFECTIVE ability list, not the raw class kit.
     // KITS.theurge carries an empty abilities[] (its spells come from theurgeKit
@@ -358,6 +372,10 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (isSneakClass(m.cls) && foes.some(e => e.flatFooted || e.prone || e.sickened > 0 || e.paralyzed > 0 || e.fascinated)) return null;
     const awake = foes.filter(e => !e.fascinated);
     const targets = awake.length ? awake : foes;          // don't wake sleepers
+    // v3.37.168 READ THE ROOM: out of every foe's reach → no buffs, wards or lockdowns this room; damage only.
+    const _untouch = this._partyUntouchable(foes);
+    const UNTOUCH_SKIP = new Set(['save_debuff', 'grease', 'sleep', 'slow', 'fascinate', 'blacktentacles', 'exhaust', 'masscharm', 'glitterdust', 'mirrorimage', 'invisible', 'smite']);
+    if (_untouch && this._untouchSaid !== this.depth) { this._untouchSaid = this.depth; this._note(`🦅 Nothing down there can reach the party — ${m.nickname} reads the room: no buffs, no lockdowns, straight to damage.`); }
     const usable = (ab) => {
       if (!ab || lvl < (ab.minLevel || 1)) return false;
       // Spell Synthesis pairs ONE arcane + ONE divine LEVELED spell (Tobias 2026-07-08: "must use 1
@@ -403,7 +421,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       }
     }
     const slot = (ab) => allAbs.indexOf(ab);
-    const avail = allAbs.filter(a => usable(a) && !(a && a.botAvoid));   // botAvoid (v3.37.161): Transformation would mute a bot caster
+    const avail = allAbs.filter(a => usable(a) && !(a && a.botAvoid) && !(_untouch && UNTOUCH_SKIP.has(a.effect)));   // botAvoid (v3.37.161): Transformation would mute a bot caster; v3.37.168: lockdowns are wasted on foes that cannot reach us
     if (!avail.length) {
       // v3.37.107 SAVE YOURSELF, the DRY case (sneaky-dumpling d4: this very
       // early-out is where slot-dry Celeb's brain gave up every round while a
@@ -941,10 +959,10 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     const buffCands = avail.filter(a => buffAppetite && potentEnough(a)
       && a.effect === 'buff' && a.sticky && !a.protectFire
       && !a.powerattack && !a.deadlyaim && !a.fightdefensively && !buffFullyUp(a)   // v3.37.126: FD is a STANCE managed by _botStance — the generic picker grabbing it made Danger flip it on every round (Josh: rapid-shotting at −6)
-      && (a.target !== 'ally' || (m.level || 1) < 7 || (a.slvl || 0) >= 4)
+      && !_untouch && (a.target !== 'ally' || (m.level || 1) < 7 || (a.slvl || 0) >= 4)   // v3.37.168: no buff turns when nothing can reach us
       && !(a.buff && a.buff.castMod && !this._castModRecipients(a).length));   // v3.37.167 (Josh, proud-compass): a casting-stat buff needs a PRIMARY caster of that stat to land on — Mass Eagle's Splendor for two bloodragers was a wasted 6th
     const fervor = avail.find(a => a.effect === 'haste');
-    if (fervor && buffAppetite && !this.livingParty().some(p => p.hasted > 0)) buffCands.push(fervor);   // Haste/Fervor ranks by its own spell level
+    if (fervor && buffAppetite && !_untouch && !this.livingParty().some(p => p.hasted > 0)) buffCands.push(fervor);   // Haste/Fervor ranks by its own spell level; v3.37.168: not in an untouchable room — the extra strike is worth less than a blast
     buffCands.sort((x, y) => (y.slvl || 0) - (x.slvl || 0) || ((y.party ? 1 : 0) - (x.party ? 1 : 0)) || (((x.buff && x.buff.castMod) ? 1 : 0) - ((y.buff && y.buff.castMod) ? 1 : 0)));   // v3.37.167: at equal level a to-hit / AC / HP buff for EVERYONE (Mass Bull's, Cat's, Bear's) outranks a casting-stat buff for a few
     if (buffCands.length) return { slot: slot(buffCands[0]), payload: {} };
     // Invisibility — shields the most-hurt ally (it lands on the lowest-HP ally in
