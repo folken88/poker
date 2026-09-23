@@ -61,6 +61,12 @@ const DOMAIN_POWERS = {
 // may now pick theurge) — NOT char-gated, so it works for every theurge.
 // Metamagic auto-variants and martial feat-buffs are filtered out.
 const THEURGE_SKIP = new Set(['channel', 'deadlyaim', 'powerattack', 'magicmissile_quick', 'fireball_int', 'fireball_emp', 'scorch_emp', 'cone_max', 'disint_max']);   // no channel (he isn't a cleric); drop metamagic auto-variants + martial feat-buffs
+// v3.37.167 (Josh, proud-compass: Celeb spent a 6th-level slot on Mass Eagle's Splendor for a party of two
+// bloodragers, a cleric and himself — 'we don't need a higher will save… it really made no sense'): the
+// PRIMARY casters of each casting stat. The 4-level casters (paladin, antipaladin, ranger, bloodrager)
+// cast self-buffs — +2 to a save DC they never roll is nothing — so they don't count; the theurge
+// counts for Int and Wis.
+const CAST_STAT_PRIMARY = { cha: ['sorcerer', 'bard', 'oracle', 'summoner'], int: ['wizard', 'magus', 'alchemist', 'investigator', 'witch', 'arcanist', 'theurge'], wis: ['cleric', 'druid', 'inquisitor', 'shaman', 'warpriest', 'hunter', 'theurge'] };
 let _theurgeKit = null;
 function theurgeKit() {
   if (_theurgeKit) return _theurgeKit;
@@ -481,6 +487,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         return { ok: true, freeAction: true };
       }
     }
+    // SWIFT-ACTION FEATURES (v3.37.167 — Josh, plucky-devil: 'bloodline surge is it a swift action or what?
+    // cause its acting like a full round action'). ONE swift action a turn (PF1), the same budget
+    // Quicken / Curator / Quicken Channel draw on: the first swift keeps the turn, a second costs it.
+    if (ab.swift) {
+      if (m._swiftUsed) this._note(`⚡ ${m.nickname}'s ${ab.name} lands — but their swift action is already spent this turn, so the turn is used.`);
+      else { m._swiftUsed = true; this._note(`⚡ ${ab.name} is a SWIFT action — ${m.nickname} keeps the turn (strike or cast now).`); this._broadcast(); return { ok: true, freeAction: true }; }
+    }
     if (ab.effect === 'judgment' || ab.freeAction) return { ok: true, freeAction: true };   // judgement switch / barbarian Rage cost no action
     return { ok: true };
   },
@@ -489,7 +502,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   /** A real BUFF SPELL (not a free combat toggle like Power Attack / Rage / Deadly
    *  Aim, and not a 0-cost trick) — what Curator's swift-cast applies to. */
   _isBuffSpell(ab) {
-    if (!ab || ab.freeAction || ab.cost === 'free') return false;
+    if (!ab || ab.freeAction || ab.cost === 'free' || ab.swift) return false;   // v3.37.167: a swift-action feature (Bloodline Surge) is not a spell
     return ab.effect === 'buff' || ab.effect === 'haste';
   },
   /** Per-character ability gating: `char` restricts an ability to one named hero
@@ -3280,6 +3293,16 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (opts.alive && (a.dead || a.hp <= 0)) return null;
     return a;
   },
+  /** v3.37.167: the living allies who would actually GAIN from a casting-stat buff (Eagle's / Fox's /
+   *  Owl's, single or Mass) — primary casters of that stat who don't already wear it. Any other buff:
+   *  the whole living party. The bot refuses a casting-stat buff nobody gains from. */
+  _castModRecipients(ab) {
+    const stat = ab && ab.buff && ab.buff.castStat;
+    if (!stat) return this.livingParty();
+    const prim = CAST_STAT_PRIMARY[stat] || [];
+    const has = (a) => (a.buffApplied && a.buffApplied[ab.key]) || (a.runBuffApplied && a.runBuffApplied[ab.key]);
+    return this.livingParty().filter(a => prim.includes(a.cls) && !has(a));
+  },
   _buffTarget(m, ab, payload) {
     const allies = this.livingParty();
     // Explicit pick first: allyUid is the party-card selection; targetUid is kept
@@ -3309,6 +3332,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (ab.key === 'catsgrace')      return pool.find(a => a.cls === 'ranger' || isSneakClass(a.cls)) || pool.find(a => MARTIAL.includes(a.cls)) || m;
     if (ab.key === 'bullsstrength')  return pool.find(a => MARTIAL.includes(a.cls) && a.playerId !== m.playerId) || pool.find(a => MARTIAL.includes(a.cls)) || m;
     if (ab.key === 'stoneskin')      return pool.filter(a => !a.dr).slice().sort((a, b) => a.hp - b.hp)[0] || pool.slice().sort((a, b) => a.hp - b.hp)[0] || m;   // least-HP ally without it
+    if (ab.buff && ab.buff.castMod) { const rc = this._castModRecipients(ab); return rc.find(a => a.playerId !== m.playerId) || rc[0] || m; }   // v3.37.167: Eagle's/Fox's/Owl's go to a PRIMARY caster of that stat, never the fighter
     return m;
   },
   // ── STANCE TOGGLES (Power Attack / Deadly Aim) ──────────────────────────────
@@ -3495,7 +3519,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       who.buffs.dexMod = (who.buffs.dexMod || 0) + ((ab.buff && ab.buff.dexMod) || 0);   // Cat's Grace: +Dex modifier — feeds the reach-weapon AoO count (Combat Reflexes)
       if (ab.buff && ab.buff.conHp) this._grantTempHp(who, ab.buff.conHp * (who.level || 1));   // Bear's Endurance
       if (ab.buff && ab.buff.tempHp) this._grantTempHp(who, dRollN(ab.buff.tempHp, 8) + Math.min(10, lvl));   // Aid (v3.37.160): 1d8 + CL (max +10) temporary HP
-      if (ab.buff && ab.buff.castMod && ({ cha: ['sorcerer', 'bard', 'oracle', 'paladin', 'antipaladin', 'bloodrager', 'summoner'], int: ['wizard', 'magus', 'alchemist', 'investigator', 'witch', 'arcanist'], wis: ['cleric', 'druid', 'ranger', 'inquisitor', 'shaman', 'warpriest', 'hunter'] }[ab.buff.castStat] || []).includes(who.cls)) who.buffs.castMod = (who.buffs.castMod || 0) + ab.buff.castMod;   // Eagle's/Fox's/Owl's (v3.37.160): +2 spell DC & spell attack for casters of THAT stat
+      if (ab.buff && ab.buff.castMod && ({ cha: ['sorcerer', 'bard', 'oracle', 'paladin', 'antipaladin', 'bloodrager', 'summoner'], int: ['wizard', 'magus', 'alchemist', 'investigator', 'witch', 'arcanist', 'theurge'], wis: ['cleric', 'druid', 'ranger', 'inquisitor', 'shaman', 'warpriest', 'hunter', 'theurge'] }[ab.buff.castStat] || []).includes(who.cls)) who.buffs.castMod = (who.buffs.castMod || 0) + ab.buff.castMod;   // Eagle's/Fox's/Owl's (v3.37.160): +2 spell DC & spell attack for casters of THAT stat
       if (ab.dr) who.dr = Math.max(who.dr || 0, ab.dr);   // Stoneskin — DR vs physical blows
       if (ab.protectFire) who.protectFire = Math.min(120, 12 * (m.level || 1));   // PF1 Protection from Energy: an absorption pool — 12 per caster level, max 120
       if (ab.darkvision) who.darkvision = true;   // Darkvision (Communal): the party can target foes shrouded in magical darkness

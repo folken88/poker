@@ -2174,6 +2174,18 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.167 2026-09-23 JOSH'S SEPT 22-23 NOTES. (1) BLOODLINE SURGE IS A SWIFT ACTION — his plucky-devil
+//                     turns show Rage (free), Surge, then only the Fervor extra strike: Surge was eating the
+//                     standard action. It now shares the one-swift-a-turn budget with Quicken / Curator (first
+//                     swift keeps the turn, a second costs it); bots chain a free/swift feature into a real
+//                     action the same turn. (2) THE WASTED 6TH — proud-compass room 7: Celeb cast Mass Eagle's
+//                     Splendor (+2 spell DC for CHARISMA casters) on a party of two bloodragers, a cleric and
+//                     himself, and Mass Owl's Wisdom twice before it. The bot now refuses a casting-stat buff
+//                     (Eagle's/Fox's/Owl's, single or Mass) unless a PRIMARY caster of that stat would gain
+//                     (4-level casters don't count), ranks a to-hit/AC/HP mass buff above a casting-stat one at
+//                     equal level, and aims the single ones at a caster of that stat. The theurge now counts as
+//                     an Int and a Wis caster for Fox's/Owl's (he got nothing from his own Owl's). Toby question
+//                     13 (standing orders for the bot casters). Tests 285-286. Backend only; CLIENT_BUILD stays 33865.
 //  3.37.166 2026-09-22 JOSH'S SEPT 22 NOTES. (1) A SELF buff now says what it did and that it is self-only
 //                     ('uses Bloodline Surge — +1 to hit, +3 damage, +2 AC, on yourself only, for the rest
 //                     of the room') — he pressed it and heard nothing he could use. (2) The extra-strike
@@ -2297,9 +2309,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.166';
+const VERSION = '3.37.167';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33865;   // v3.37.165: the Racial Abilities pad entry
-const HEADLINE = "Self buffs say what they did, and Blessing of Fervor no longer narrates as Haste.";
+const HEADLINE = "Bloodline Surge is a swift action, and bot casters stop wasting slots on stat buffs nobody gains from.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

@@ -69,6 +69,17 @@ Ruled section with the version that implemented it.
    2026-08-30 ruling for the martial 4-level casters; paladin/ranger have since moved to real slot
    tables). Move the bloodrager to slots + spells known too?
 
+13. **Standing orders for the bot casters** (Josh, 2026-09-22/23) — proud-compass
+   room 7: Celeb spent a 6th-level slot on Mass Eagle's Splendor for a party of two
+   bloodragers, a cleric and himself. v3.37.167 adds a generic rule (a casting-stat
+   buff needs a primary caster of that stat to gain from it; at equal level a mass
+   to-hit/AC/HP buff outranks it). Josh's wider point: "some of the npc characters
+   need a little guidance from toby." Do you want PER-CHARACTER standing orders on
+   top of the generic rules — e.g. Celeb: 6th-level slots are for Slow / Black
+   Tentacles / Heal, never a stat buff; Casandalee: Plague Storm first — the way
+   characterBuilds already carries a `style`? Name the character and the order and
+   it is a one-line addition each.
+
 ## Standing policy (Toby)
 
 - **Bonus typing** (2026-08-30): same-type bonuses never stack; categorize

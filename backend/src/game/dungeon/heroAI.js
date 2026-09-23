@@ -202,7 +202,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       // second act — the bot picks again and casts its real spell (Josh: 'he ain't using
       // quicken... it is built to be badass and we should be using it, on both sides').
       const _quick = !!m._botQuickened; m._botQuickened = false;
-      if (r && r.ok && r.freeAction && (this._wieldsCurator(m) || _quick)) {
+      if (r && r.ok && r.freeAction && (this._wieldsCurator(m) || _quick || (ab && (ab.swift || ab.freeAction)))) {   // v3.37.167: a free / swift FEATURE (Rage, Bloodline Surge, Judgement) leaves the turn — the bot acts again, like a player would
         const c2 = this._botAbility(m);
         if (c2) {
           const ab2 = this._abilitiesFor(m)[c2.slot];
@@ -941,10 +941,11 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     const buffCands = avail.filter(a => buffAppetite && potentEnough(a)
       && a.effect === 'buff' && a.sticky && !a.protectFire
       && !a.powerattack && !a.deadlyaim && !a.fightdefensively && !buffFullyUp(a)   // v3.37.126: FD is a STANCE managed by _botStance — the generic picker grabbing it made Danger flip it on every round (Josh: rapid-shotting at −6)
-      && (a.target !== 'ally' || (m.level || 1) < 7 || (a.slvl || 0) >= 4));
+      && (a.target !== 'ally' || (m.level || 1) < 7 || (a.slvl || 0) >= 4)
+      && !(a.buff && a.buff.castMod && !this._castModRecipients(a).length));   // v3.37.167 (Josh, proud-compass): a casting-stat buff needs a PRIMARY caster of that stat to land on — Mass Eagle's Splendor for two bloodragers was a wasted 6th
     const fervor = avail.find(a => a.effect === 'haste');
     if (fervor && buffAppetite && !this.livingParty().some(p => p.hasted > 0)) buffCands.push(fervor);   // Haste/Fervor ranks by its own spell level
-    buffCands.sort((x, y) => (y.slvl || 0) - (x.slvl || 0) || ((y.party ? 1 : 0) - (x.party ? 1 : 0)));
+    buffCands.sort((x, y) => (y.slvl || 0) - (x.slvl || 0) || ((y.party ? 1 : 0) - (x.party ? 1 : 0)) || (((x.buff && x.buff.castMod) ? 1 : 0) - ((y.buff && y.buff.castMod) ? 1 : 0)));   // v3.37.167: at equal level a to-hit / AC / HP buff for EVERYONE (Mass Bull's, Cat's, Bear's) outranks a casting-stat buff for a few
     if (buffCands.length) return { slot: slot(buffCands[0]), payload: {} };
     // Invisibility — shields the most-hurt ally (it lands on the lowest-HP ally in
     // _abInvisible). Cast when an ally is badly hurt and nobody's hidden yet.
