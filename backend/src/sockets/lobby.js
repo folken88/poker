@@ -36,6 +36,7 @@ function signatureNote(w) {
 }
 const { SELECTABLE_CLASSES } = require('../pf1data/abilities');
 const RACES = require('../pf1data/races');   // v3.37.163: the race picker (Josh: 'are we all forced to be some androgynous race')
+const BLOOD = require('../pf1data/bloodlines');   // v3.37.169: the sorcerer bloodline picker
 const { XP_TO_LEVEL } = require('../pf1data/xp');   // ship thresholds so the client can label per-class levels
 
 function tableFor(socket, tables) {
@@ -142,6 +143,21 @@ function registerLobbyHandlers(io, socket, { tables }) {
     ack?.({ ok: true, race: RACES.raceKey(refreshed.race), traits: RACES.raceTraits(RACES.raceKey(refreshed.race)) });
   });
 
+  // v3.37.169: a SORCERER picks a CRB BLOODLINE from the profile row (Tobias: 'start building in the
+  // sorcerer bloodlines'). Validated against pf1data/bloodlines.js ('none' allowed); powers and bonus
+  // spells key off it. A live run keeps its entry snapshot, so it applies to the NEXT dungeon.
+  socket.on('lobby:setBloodline', ({ bloodline } = {}, ack) => {
+    const player = socket.data.player;
+    if (!player) return ack?.({ ok: false, error: 'choose a player first' });
+    if (bloodline !== 'none' && !BLOOD.BLOODLINES[bloodline]) return ack?.({ ok: false, error: 'invalid bloodline' });
+    db.setBloodline(player.player_id, bloodline);
+    const refreshed = db.getPlayer(player.player_id);
+    socket.data.player = refreshed;
+    io.emit('roster', { players: db.listAll(), defaultStack: db.DEFAULT_STACK });
+    const b = BLOOD.BLOODLINES[BLOOD.bloodlineKey(refreshed.bloodline)];
+    ack?.({ ok: true, bloodline: BLOOD.bloodlineKey(refreshed.bloodline), name: BLOOD.bloodlineName(refreshed.bloodline), powers: b ? b.powers.map(p => `${p.level}: ${p.name}`) : [] });
+  });
+
   // Reset the player's CURRENT class back to Level 1 (0 XP). Per-class: other
   // classes' progress, gear, and gold are untouched (XP is per-class — see
   // db.setXp / class_xp). Ability-score increases are level-derived, so dropping
@@ -186,7 +202,7 @@ function registerLobbyHandlers(io, socket, { tables }) {
     // Ship the proficiency map + penalty so the client can sort/colour the
     // weapon dropdown by the player's current class without a round-trip.
     const races = RACES.raceList().map(r => ({ ...r, traits: RACES.raceTraits(r.key) }));   // v3.37.163
-    ack?.({ ok: true, classes, races, weapons, signatures, proficiency: PROFICIENCY, profPenalty: NON_PROFICIENT_PENALTY, xpToLevel: XP_TO_LEVEL });
+    ack?.({ ok: true, classes, races, bloodlines: BLOOD.bloodlineList(), bloodlineClasses: BLOOD.bloodlineClasses, weapons, signatures, proficiency: PROFICIENCY, profPenalty: NON_PROFICIENT_PENALTY, xpToLevel: XP_TO_LEVEL });   // v3.37.169: bloodlines
   });
 
   socket.on('lobby:setAvatar', ({ avatarId } = {}, ack) => {

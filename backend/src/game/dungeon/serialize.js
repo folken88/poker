@@ -15,6 +15,7 @@ const { weaponOf, acOf, pick } = require('../combat');
 const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, slotsFor, CANTRIP_BY_KEY } = require('../../pf1data/abilities');
 const { xpProgress } = require('../../pf1data/xp');
 const RACES = require('../../pf1data/races');
+const BLOOD = require('../../pf1data/bloodlines');   // v3.37.169
 const { maxDomainsFor } = require('../../pf1data/domains');
 const { TEAMWORK } = require('../../pf1data/feats');
 
@@ -284,7 +285,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         playerId: m.playerId, init: (_initOf['p:' + m.playerId] ?? null), nickname: m.nickname, avatarId: m.avatarId, isBot: m.isBot, crowned: !!m.crowned,
         cls: m.cls || 'fighter', weapon: m.weaponKey || 'dagger',
         gear: m.gear || null, weaponName: ((m.weapon || weaponOf(m.gear, m.weaponKey)) || {}).name || null,   // v3.37.127: the blind I-key inventory readout ('so I know if I have a +5 or +1 ring')
-        race: m.race || 'human', raceName: RACES.raceName(m.race), vision: m.vision || 'normal', blindsense: m.blindsense || 0,   // PF1 race + vision (+ blindsense ft); blind mode reads vision; non-human shows on the hero card
+        race: m.race || 'human', raceName: RACES.raceName(m.race), bloodline: m.bloodline || 'none', bloodlineName: BLOOD.bloodlineName(m.bloodline), vision: m.vision || 'normal', blindsense: m.blindsense || 0,   // PF1 race + vision (+ blindsense ft); blind mode reads vision; non-human shows on the hero card
         form: m.form ? { key: m.form.key, label: m.form.label, glyph: m.form.glyph, art: m.form.art } : null,   // active Wild Shape (drives the token swap on the hero card)
         level: m.level, ...this._xpInfo(m), ...this._heroACs(m), hp: Math.max(0, m.hp), maxHp: m.maxHp,
         abilityScores: m.abilityScores || null, abilityMods: m.mods || null, cantrip: this._cantripState(m),
@@ -475,7 +476,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         // or DEFENSIVELY (heal the party) — the client prompts and sends payload.mode.
         const modePick = ab.effect === 'heal' && ab.heal === 'party';
         return {
-        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, sla: !!ab.sla, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
+        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, sla: !!ab.sla, blood: !!ab.blood, bloodSpell: !!ab.bloodSpell, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
         slot: abs.indexOf(ab),   // stable index into kit+domain abilities (the action payload `slot`) — SAME array as above so magus spellstrikes resolve (were -1)
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null, aimAoe: !!ab.aimAoe,   // v3.37.143: Sunbeam is a BEAM — the client prompts for its primary target

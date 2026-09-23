@@ -71,7 +71,7 @@ const BUILDS = {
   'Ser Toche':               { race: 'tengu' },
   'Rissa':                   { race: 'leshy' },     // plant person
   'Bujon, Storm of Cheliax': { race: 'iku_turso' },   // eel-like aberration; Blindsense 30 ft (invisibility never works on him)
-  'Olbryn':                  { race: 'drow', style: 'storm' },     // Josh's Drow storm-sorcerer (Iron Gods) — Dex+2/Cha+2/Con−2, darkvision 120, SR, light blindness
+  'Olbryn':                  { race: 'drow', style: 'storm', bloodline: 'elemental' },   // v3.37.169: the storm-sorcerer's blood is air (electricity) — Josh can change it in the lobby     // Josh's Drow storm-sorcerer (Iron Gods) — Dex+2/Cha+2/Con−2, darkvision 120, SR, light blindness
   'Casandalee':              { race: 'android' },
   'Meyanda':                 { race: 'android' },
   'Vorkstag':                { race: 'skinwalker' },

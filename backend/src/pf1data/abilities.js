@@ -2125,12 +2125,12 @@ const BARD_KNOWN_BY_LEVEL = {
   16: [6, 6, 5, 5, 4, 2], 17: [6, 6, 6, 5, 4, 3], 18: [6, 6, 6, 5, 4, 4], 19: [6, 6, 6, 5, 5, 4], 20: [6, 6, 6, 6, 5, 5],
 };
 /** { <spellLevel>: spells KNOWN cap } for a spontaneous caster at a class level (null = not spontaneous). */
-function knownCapsFor(cls, level) {
+function knownCapsFor(cls, level, bloodline) {   // v3.37.169: bloodline = a real CRB bloodline is picked (its bonus spells replace the +1 free pick)
   if (!SPONTANEOUS_CLASSES.has(cls)) return null;
   const lvl = Math.max(1, Math.min(20, level || 1));
   const row = ((cls === 'bard' || cls === 'inquisitor') ? BARD_KNOWN_BY_LEVEL : SORC_KNOWN_BY_LEVEL)[lvl] || [];
   const out = {};
-  row.forEach((n, i) => { const sl = i + 1; let cap = n; if (cls === 'sorcerer' && lvl >= 2 * sl + 1) cap += 1; if (cls === 'oracle' && lvl >= 2 * sl) cap += 1; out[sl] = cap; });
+  row.forEach((n, i) => { const sl = i + 1; let cap = n; if (cls === 'sorcerer' && !bloodline && lvl >= 2 * sl + 1) cap += 1; if (cls === 'oracle' && lvl >= 2 * sl) cap += 1; out[sl] = cap; });
   return out;
 }
 // (end spells known)

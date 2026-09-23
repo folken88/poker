@@ -2174,6 +2174,21 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.169 2026-09-23 SORCERER BLOODLINES, PART 1 (Tobias: 'start building in the sorcerer bloodlines from the
+//                     core rule book and include their powers'). New pf1data/bloodlines.js: all ten CRB bloodlines
+//                     (aberrant, abyssal, arcane, celestial, destined, draconic, elemental, fey, infernal, undead)
+//                     with their bonus spells (always known, replacing the +1 free pick) and their 1/3/9/15/20
+//                     powers. In the engine now: the rays (Acidic / Elemental / Heavenly Fire), the shaken
+//                     touches, Claws (a room-long damage stand-in), the level-d6 blasts (Breath Weapon, Elemental
+//                     Blast, Hellfire, Grasp of the Dead), Wings of Heaven, Fleeting Glance, Conviction / It Was
+//                     Meant To Be (the Luck reroll), New Arcana, and every passive: resistances, immunities,
+//                     natural armor, Fated luck, Strength of the Abyss, Alien Resistance SR, DR, permanent wings.
+//                     Written down but NOT modelled (the info entry says so): Arcane Bond, Metamagic Adept,
+//                     School Power, Apotheosis, Long Limbs, Unusual Anatomy, Touch of Destiny, Within Reach,
+//                     Destiny Realized, Laughing Touch, Fey Magic, Incorporeal Form, Added Summonings, the
+//                     arcana and bonus feats. Picker: a lobby dropdown next to race (sorcerers only); Olbryn is
+//                     pinned elemental (air). Pad: bloodline powers share the Racial Abilities submenu ('Bloodline
+//                     Powers' / 'Blood & Racial Abilities'). docs/BLOODLINES.md. Tests 288-290. CLIENT_BUILD 33869.
 //  3.37.168 2026-09-23 READ THE ROOM (Tobias: 'bots should intelligently read the room and choose their
 //                     strategy based on the challenges in front of them'; Josh, proud-compass: 'we were all
 //                     flying, so it really made no sense'). When no living foe can reach any hero — the whole
@@ -2318,9 +2333,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.168';
+const VERSION = '3.37.169';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33865;   // v3.37.165: the Racial Abilities pad entry
-const HEADLINE = "Bots read the room: out of every foe's reach, they skip buffs and lockdowns and go straight to damage.";
+const CLIENT_BUILD = 33869;   // v3.37.165: the Racial Abilities pad entry
+const HEADLINE = "Sorcerer bloodlines from the Core Rulebook: pick one in the lobby for bonus spells and powers.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

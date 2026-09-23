@@ -809,6 +809,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   // Protection from Energy pools (typed, 12/CL) and the legacy Protection from Fire pool.
   _fireSoak(t, dmg, dtype = 'fire') {
     let tag = '';
+    if (dmg > 0 && t.bloodImmune && t.bloodImmune.includes(dtype)) { tag += ' 🩸immune (bloodline)'; dmg = 0; }   // v3.37.169
+    if (dmg > 0 && t.bloodResist && t.bloodResist[dtype] > 0) { const r = Math.min(t.bloodResist[dtype], dmg); dmg -= r; tag += ` 🩸blood resists ${r}`; }   // v3.37.169: bloodline resistance (stacks with nothing — the book takes the higher; here Resist Energy adds after it)
     if (dmg > 0 && t.energyResist && t.energyResist[dtype] > 0) { const r = Math.min(t.energyResist[dtype], dmg); dmg -= r; tag += ` 🧊resists ${r}`; }
     if (dmg > 0 && t.energyWard && t.energyWard[dtype] > 0) { const w = Math.min(t.energyWard[dtype], dmg); t.energyWard[dtype] -= w; dmg -= w; tag += ` 🛡absorbs ${w}${t.energyWard[dtype] <= 0 ? ' — ward SPENT' : ''}`; }
     if (dtype !== 'fire' || !(t.protectFire > 0) || dmg <= 0) return { dmg, tag };

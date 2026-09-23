@@ -18,6 +18,7 @@ const { STAPLE_BY_KEY, WEAPON_LOOKUP, DEFAULT_WEAPON } = require('../pf1data/sta
 const abilityProfiles = require('../pf1data/characterProfiles');
 const { validateBuild } = require('../pf1data/abilityScores');
 const RACES = require('../pf1data/races');
+const BLOOD = require('../pf1data/bloodlines');   // v3.37.169: sorcerer bloodlines
 const { BUILDS } = require('../pf1data/characterBuilds');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', '..', 'data');
@@ -98,6 +99,8 @@ ensureColumn('players', 'ability_scores', "TEXT NOT NULL DEFAULT '{}'");
 // vision, and save bonuses (see pf1data/races.js). Default 'human'; pinned per
 // character from pf1data/characterBuilds.js (BUILDS) and re-synced at boot.
 ensureColumn('players', 'race', "TEXT NOT NULL DEFAULT 'none'");
+// v3.37.169 SORCERER BLOODLINE — one per character (pf1data/bloodlines.js). 'none' = the old +1-free-pick model.
+ensureColumn('players', 'bloodline', "TEXT NOT NULL DEFAULT 'none'");
 // PF1 SPELL LOADOUTS — per-class, mirroring class_xp/ability_scores (see
 // SPELL-LOADOUTS-DESIGN.md). PREPARED casters (cleric/druid/wizard/paladin/ranger/
 // antipaladin) store which spells are readied into each slot LEVEL:
@@ -573,6 +576,7 @@ function seedRoster() {
     // stay the fallback for anyone with no custom scores). Builds are validated
     // against the 25-pt buy and warned (never blocked) so a typo can't break boot.
     const _setRaceTx   = db.prepare('UPDATE players SET race = ?, race_flex = ? WHERE player_id = ?');
+    const _setBloodTx  = db.prepare('UPDATE players SET bloodline = ? WHERE player_id = ?');   // v3.37.169
     const _setScoresTx = db.prepare('UPDATE players SET ability_scores = ? WHERE player_id = ?');
     const _getRowTx    = db.prepare('SELECT player_id, class, ability_scores FROM players WHERE player_id = ?');
     for (const [name, b] of Object.entries(BUILDS)) {
@@ -580,6 +584,7 @@ function seedRoster() {
       const row = _getRowTx.get(id);
       if (!row) continue;   // character not seeded → skip
       if (b.race) { _setRaceTx.run(RACES.raceKey(b.race), b.flex || '', id); builtRace++; }
+      if (b.bloodline) _setBloodTx.run(BLOOD.bloodlineKey(b.bloodline), id);   // v3.37.169: a pinned bloodline (Olbryn → elemental)
       if (b.scores) {
         const cls = row.class || 'fighter';
         const v = validateBuild(b.scores, {});
@@ -919,6 +924,18 @@ function getRaceFlex(playerId) {
   const p = stmts.getPlayer.get(playerId);
   return (p && p.race_flex) || '';
 }
+// ---- PF1 sorcerer bloodline (v3.37.169; see pf1data/bloodlines.js) ----
+const _setBloodStmt = db.prepare('UPDATE players SET bloodline = ? WHERE player_id = ?');
+/** A player's bloodline key ('none' when never picked); null when there is no such player. */
+function getBloodline(playerId) {
+  const p = stmts.getPlayer.get(playerId);
+  return p ? BLOOD.bloodlineKey(p.bloodline) : null;
+}
+function setBloodline(playerId, bloodline) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return;
+  _setBloodStmt.run(BLOOD.bloodlineKey(bloodline), playerId);
+}
 /** Pin a player's race (+ optional flex ability) — boot roster sync + future editor. */
 function setRace(playerId, race, flex) {
   const p = stmts.getPlayer.get(playerId);
@@ -1022,6 +1039,8 @@ module.exports = {
   getRace,
   getRaceFlex,
   setRace,
+  getBloodline,
+  setBloodline,
   defaultAbilityScores,
   getXp,
   setXp,

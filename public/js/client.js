@@ -1013,7 +1013,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33865;
+  const CLIENT_BUILD = 33869;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -2633,7 +2633,8 @@
       (kit.abilities || []).forEach((ab, i) => {   // class FEATURES only (spells → spellbook, imbued shots → their submenu)
         if (ab.slvl != null) return;
         if (ab.effect === 'spellstrike') return;   // Imbued Shots live in their own submenu (below)
-        if (ab.sla) { if (ab.available !== false) racial.push({ kind: 'ability', ab, slot: (ab.slot != null ? ab.slot : i), label: ab.name }); return; }   // racial abilities: one entry AFTER the Spellbook
+        if (ab.sla) { if (ab.available !== false) racial.push({ kind: 'ability', ab, slot: (ab.slot != null ? ab.slot : i), label: ab.name }); return; }   // racial abilities: one entry AFTER the
+        if (ab.blood) { if (ab.available !== false) racial.push({ kind: 'ability', ab, slot: (ab.slot != null ? ab.slot : i), label: ab.name }); return; }   // v3.37.169: bloodline powers share that entry (legacy test 283 pins the sla line above verbatim) Spellbook
         // LEVEL-LOCKED abilities don't eat numpad numbers (they still show in the sighted
         // bar greyed 🔒 and in the X progression). General win for every character.
         if (ab.available === false) return;
@@ -2653,7 +2654,9 @@
       if (maneuvers.length >= 2) naturalActions.push({ kind: 'maneuvers', label: 'Combat Maneuvers' });   // v3.37.138 (Josh's stable-pad design): trip/disarm/bull rush/grapple/feint live in ONE menu — the pad stops reflowing as classes grow
       if (imbued.length) naturalActions.push({ kind: 'imbued', label: 'Imbued Shots' });   // magus submenu — numpad opens it, then a number fires a shot
       if (hasSpellbook) naturalActions.push({ kind: 'spellbook', label: 'Spellbook' });
-      if (racial.length === 1) naturalActions.push(racial[0]); else if (racial.length > 1) naturalActions.push({ kind: 'racial', label: 'Racial Abilities' });   // v3.37.165: never ahead of the class's own keys
+      if (racial.length === 1) naturalActions.push(racial[0]);
+      else if (racial.length > 1 && racial.some(f => f.ab && f.ab.blood)) naturalActions.push({ kind: 'racial', label: racial.some(f => f.ab && f.ab.sla) ? 'Blood & Racial Abilities' : 'Bloodline Powers' });   // v3.37.169: bloodline powers share the submenu
+      else if (racial.length > 1) naturalActions.push({ kind: 'racial', label: 'Racial Abilities' });   // v3.37.165: never ahead of the class's own keys
       // ── PAD MAP v2 (v3.37.95, Josh's own design): explicit slot assignments ──
       // kit.padMap = { "3": "gloriouschallenge", "7": "none", … } pins actions to
       // numpad slots. Resolution: explicit slots first (first claim wins; unknown
@@ -3304,7 +3307,7 @@
         if (act.kind === 'racial') {   // v3.37.165: Racial Abilities submenu
           if (!racial.length) { sayU('No racial abilities available.'); return; }
           _dunRacial = true; _dunRcIdx = -1;
-          sayU('Racial abilities: ' + racial.map((f, i) => `${i + 1} ${f.label}${f.ab && f.ab.usesLeft === 0 ? ', spent' : ''}`).join(', ') + '. Press a number to use one, Tab or arrows to hear what each does, Escape to close. They refill every fifth room.');
+          sayU((racial.some(f => f.ab && f.ab.blood) ? 'Bloodline and racial abilities: ' : 'Racial abilities: ') + racial.map((f, i) => `${i + 1} ${f.label}${f.ab && f.ab.usesLeft === 0 ? ', spent' : ''}`).join(', ') + '. Press a number to use one, Tab or arrows to hear what each does, Escape to close. They refill every fifth room.');
           return;
         }
         if (act.kind === 'imbued') {   // magus Imbued Shots submenu (Josh's Reese layout)
@@ -5719,9 +5722,11 @@
     }), cur);
     buildWeaponSelect($('#meWeapon'), cur, p.weapon || 'dagger');
     fillSelect($('#meRace'), (meta.races || []).map(r => ({ key: r.key, label: r.name })), p.race || 'none');   // v3.37.163: the race picker
+    fillSelect($('#meBloodline'), (meta.bloodlines || []).map(b => ({ key: b.key, label: b.key === 'none' ? 'No bloodline' : `${b.icon} ${b.name}` })), p.bloodline || 'none');   // v3.37.169: the sorcerer bloodline picker
+    { const _bs = $('#meBloodline'); if (_bs) _bs.style.display = (meta.bloodlineClasses || ['sorcerer']).includes(cur) ? '' : 'none'; }
   }
   (function wireClassWeaponDropdowns() {
-    const csel = $('#meClass'), wsel = $('#meWeapon'), rsel = $('#meRace');
+    const csel = $('#meClass'), wsel = $('#meWeapon'), rsel = $('#meRace'), bsel = $('#meBloodline');
     socket.emit('lobby:pf1meta', null, (resp) => {
       if (!resp?.ok) return;
       state.pf1meta = resp;
@@ -5731,6 +5736,7 @@
       socket.emit('lobby:setClass', { cls: e.target.value }, (resp) => {
         if (!resp?.ok) { toast(resp?.error || 'Could not save class', true); return; }
         if (state.me) state.me.class = resp.cls;
+        if (bsel) bsel.style.display = (state.pf1meta?.bloodlineClasses || ['sorcerer']).includes(resp.cls) ? '' : 'none';   // v3.37.169: the bloodline picker shows for sorcerers only
         // Re-sort/re-colour the weapon list for the new class' proficiencies.
         if (state.me) buildWeaponSelect($('#meWeapon'), resp.cls, state.me.weapon || 'dagger');
         // Blind hint: confirm the switch + your level in that class (XP is per-class,
@@ -5751,6 +5757,15 @@
         const r = state.pf1meta?.races?.find(x => x.key === resp.race);
         toast(`Race saved: ${r?.name || resp.race} — it applies to your next dungeon run.`);
         if (window.BlindMode?.isOn?.()) window.BlindMode.speak(`You are now ${/^[aeiou]/i.test(r?.name || '') ? 'an' : 'a'} ${r?.name || resp.race}. ${(resp.traits || []).join('. ')}. It applies to your next dungeon run.`, 'urgent');
+      });
+    });
+    // v3.37.169: BLOODLINE — saved like race; it applies to the NEXT dungeon run.
+    bsel?.addEventListener('change', (e) => {
+      socket.emit('lobby:setBloodline', { bloodline: e.target.value }, (resp) => {
+        if (!resp?.ok) { toast(resp?.error || 'Could not save bloodline', true); return; }
+        if (state.me) state.me.bloodline = resp.bloodline;
+        toast(`Bloodline saved: ${resp.name} — it applies to your next dungeon run.`);
+        if (window.BlindMode?.isOn?.()) window.BlindMode.speak(`Bloodline ${resp.name}. Powers: ${(resp.powers || []).join('; ') || 'none'}. It applies to your next dungeon run.`, 'urgent');
       });
     });
     wsel?.addEventListener('change', (e) => {

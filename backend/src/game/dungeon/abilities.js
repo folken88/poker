@@ -23,6 +23,8 @@ const { babFor, weaponProficient, NON_PROFICIENT_PENALTY } = require('../../pf1d
 const { crToNum, SIZE_RANK, SIZE_NAME, MONK_SFX } = require('../../pf1data/monsters');
 const RACES = require('../../pf1data/races');
 const { DOMAINS, maxDomainsFor } = require('../../pf1data/domains');
+const BLOOD = require('../../pf1data/bloodlines');   // v3.37.169: sorcerer bloodlines (CRB)
+const { SPELL: _SPELL } = require('../../pf1data/abilities');
 const { fighterFeats, teamworkGrants, TEAMWORK } = require('../../pf1data/feats');
 const loadouts = require('../../pf1data/loadouts');
 const banter = require('../../bot/banter');
@@ -400,6 +402,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       tpstrike:    () => this._abTpStrike(m, ab, payload),
       freedommove: () => this._abFreedomMove(m, ab, payload),
       dominfo:     () => this._abDomInfo(m, ab),
+      bloodinfo:   () => this._abBloodInfo(m, ab),   // v3.37.169
     }[ab.effect];
     if (!D) return { ok: false, error: 'unknown ability' };
     // NEGATIVE ENERGY MENDS THE UNDEAD (PF1, Tobias 2026-07-04): a Touch of
@@ -526,7 +529,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   _computeCastable(m) {
     try {
       if (!isCaster(m.cls)) { m.castableKeys = null; return; }
-      if (isSpontaneous(m.cls)) m.castableKeys = new Set(this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []));   // v3.37.164: the PF1 spells-known cap binds what reaches the pad
+      if (isSpontaneous(m.cls)) {
+        if (BLOOD.bloodlineClasses.includes(m.cls)) this._bloodlineSetup(m);   // v3.37.169: the bloodline binds the caps (no +1 free pick) and adds its bonus spells
+        m.castableKeys = new Set(this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []));   // v3.37.164: the PF1 spells-known cap binds what reaches the pad
+        for (const k of (m._bloodSpellKeys || [])) m.castableKeys.add(k);
+      }
       else {
         m.castableKeys = new Set(Object.values(db.getPreparedSpells(m.playerId, m.cls) || {}).flat());
         // DOMAINS Phase C: a cleric's chosen domains' SPELLS ride the +1 domain
@@ -555,7 +562,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     } catch (_) { m.castableKeys = null; }
   },
   _loadoutAllows(ab, m) {
-    if (!ab || ab.sla || ab.slvl == null || ab.slvl < 1) return true;   // cantrips + class features + racial SLAs (v3.37.163): always castable
+    if (!ab || ab.sla || ab.blood || ab.slvl == null || ab.slvl < 1) return true;   // cantrips + class features + racial SLAs (v3.37.163) + bloodline powers (v3.37.169): always castable
     if (!m || !m.castableKeys) return true;                   // non-caster / gating disabled
     return m.castableKeys.has(ab.key);
   },
@@ -639,6 +646,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m.cls === 'theurge') return theurgeKit();   // THEURGE: full arcane+divine union, no class kit / no domain powers
     const kit = kitFor(m.cls).abilities;
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
+    if (m._bloodPowers && m._bloodPowers.length) list = list.concat(m._bloodPowers, m._bloodSpells || []);   // v3.37.169: bloodline powers + off-list bonus spells
     if (m.cls === 'slayer') list = list.concat(STUDIED_TARGET);   // SLAYER: swift Studied Target mark (ACG)
     if (m.cls === 'cavalier') {
       list = list.concat(CHALLENGE, TACTICIAN, GLORIOUS_CHALLENGE, BLAZE_OF_GLORY);
@@ -667,6 +675,79 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const _rs = (RACE_SLA && typeof RACE_SLA === 'object') ? RACE_SLA[m.race] : null;   // v3.37.163: racial spell-like abilities (drow Darkness / Faerie Fire, tiefling Darkness, aasimar Daylight, ifrit Burning Hands)
     if (_rs && _rs.length) list = list.concat(_rs);
     return list;
+  },
+  // ── SORCERER BLOODLINES (v3.37.169 — Tobias: 'start building in the sorcerer bloodlines from the core
+  //    rule book and include their powers'). Data: pf1data/bloodlines.js. A power's `kind` picks a
+  //    template below; actives become room-cost abilities appended after the kit (like domain
+  //    powers), passives fold into m.bloodAC / bloodSave / bloodResist / bloodImmune / dr / flight
+  //    (applied at the END of _resetAbilities, after the per-room clears). Bonus spells are always
+  //    known (castableKeys) and, when not on the sorcerer list, appended as spontaneous entries. ──
+  _bloodlineSetup(m) {
+    m._bloodPowers = []; m._bloodSpells = []; m._bloodSpellKeys = []; m._bloodPassive = null; m._bloodMissing = [];
+    if (!BLOOD.bloodlineClasses.includes(m.cls)) { m.bloodline = 'none'; return; }
+    const stored = (db && typeof db.getBloodline === 'function') ? db.getBloodline(m.playerId) : null;   // null = no row (a test double, or PGM's shim) → keep whatever the member carries
+    const key = BLOOD.bloodlineKey(stored != null ? stored : m.bloodline);
+    m.bloodline = key;
+    const bl = BLOOD.BLOODLINES[key]; if (!bl) return;
+    const lvl = m.level || 1;
+    const ps = { ac: 0, save: 0, sr: 0, resist: {}, immune: [], dr: 0, fly: false, hit: 0, dmg: 0, names: [], todo: [] };
+    const chaUses = (l, mm) => 3 + Math.max(0, (mm && mm.mods && mm.mods.cha) || 0);
+    const blastUses = (l) => l >= 20 ? 3 : l >= 17 ? 2 : 1;
+    const base = (pw) => ({ key: 'bl_' + pw.key, name: pw.name, icon: bl.icon, blood: true, desc: `Bloodline (${bl.name}), level ${pw.level}: ${pw.desc}` });
+    const T = {
+      ray:       (pw) => ({ ...base(pw), cost: 'room', uses: chaUses, effect: 'touch', target: 'enemy', die: pw.die || 6, dice: 1, flatHalfCL: true, dtype: pw.dtype || 'acid', sound: '/audio/spell_buff_invoke.mp3' }),
+      touchfear: (pw) => ({ ...base(pw), cost: 'room', uses: chaUses, effect: 'save_debuff', debuff: 'shaken', save: 'will', target: 'enemy', sound: '/audio/spell_buff_invoke.mp3' }),
+      claws:     (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'buff', target: 'self', sticky: true, buff: { dmg: lvl >= 7 ? 3 : 2, bonusDice: lvl >= 11 ? 1 : 0 }, sound: '/audio/spell_buff_invoke.mp3' }),
+      blast:     (pw) => ({ ...base(pw), cost: 'room', uses: blastUses, effect: 'aoe', target: 'aoe', maxTargets: pw.maxTargets || 4, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: pw.dtype || 'fire', sound: '/audio/spell_buff_invoke.mp3' }),
+      wings:     (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'buff', target: 'self', sticky: true, fly: true, canHitFlyers: true, sound: '/audio/spell_buff_invoke.mp3' }),
+      invis:     (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'invisible', greater: true, selfOnly: true, target: 'self', sound: '/audio/spell_invisibility.mp3' }),
+      reroll:    (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'domfortune', target: 'self', sound: '/audio/spell_buff_invoke.mp3' }),
+    };
+    for (const pw of bl.powers) {
+      if (lvl < pw.level) continue;
+      if (pw.kind === 'todo') { ps.todo.push(pw.name); continue; }
+      if (pw.kind === 'passive') {
+        ps.names.push(pw.name);
+        if (pw.ac) ps.ac += pw.ac(lvl); if (pw.save) ps.save += pw.save(lvl); if (pw.sr) ps.sr = Math.max(ps.sr, pw.sr(lvl)); if (pw.dr) ps.dr = Math.max(ps.dr, pw.dr(lvl));
+        if (pw.hit) ps.hit += pw.hit(lvl); if (pw.dmg) ps.dmg += pw.dmg(lvl); if (pw.fly) ps.fly = true;
+        if (pw.resist) for (const [t, n] of Object.entries(pw.resist(lvl))) ps.resist[t] = Math.max(ps.resist[t] || 0, n);
+        if (pw.immune) for (const t of pw.immune) if (!ps.immune.includes(t)) ps.immune.push(t);
+        continue;
+      }
+      if (T[pw.kind]) m._bloodPowers.push(T[pw.kind](pw));
+    }
+    m._bloodPassive = ps;
+    // one free INFO entry (like the passive domains): press it and it speaks the always-on powers
+    m._bloodPowers.push({ key: 'bl_info', name: `Bloodline: ${bl.name}`, icon: bl.icon, blood: true, cost: 'free', freeAction: true, effect: 'bloodinfo', target: 'self', desc: `${bl.blurb} Press to hear what your blood grants right now.` });
+    // BONUS SPELLS — the first implemented candidate per level; not on the sorcerer list → appended
+    const kitKeys = new Set(kitFor(m.cls).abilities.map(a => a.key));
+    for (const [cl, cands] of Object.entries(bl.spells || {})) {
+      if (lvl < Number(cl)) continue;
+      const k = (cands || []).find(c => _SPELL && _SPELL[c]);
+      if (!k) { m._bloodMissing.push(cands[0]); continue; }
+      m._bloodSpellKeys.push(k);
+      if (!kitKeys.has(k)) m._bloodSpells.push({ ..._SPELL[k], cost: 'slot', minLevel: Number(cl), bloodSpell: true, desc: `Bloodline spell (${bl.name}). ${_SPELL[k].desc || ''}` });
+    }
+  },
+  /** The always-on part, applied AFTER the per-room clears (spellResist / flight / buffs). */
+  _bloodlineApply(m) {
+    const ps = m._bloodPassive;
+    m.bloodAC = 0; m.bloodSave = 0; m.bloodResist = null; m.bloodImmune = null;
+    if (!ps) return;
+    m.bloodAC = ps.ac; m.bloodSave = ps.save; m.bloodResist = ps.resist; m.bloodImmune = ps.immune.length ? ps.immune : null;
+    if (ps.sr) m.spellResist = Math.max(m.spellResist || 0, ps.sr);
+    if (ps.dr) m.dr = Math.max(m.dr || 0, ps.dr);
+    if (ps.fly) { m.flying = true; m.canHitFlyers = true; m.innateFly = true; }
+    if (ps.hit || ps.dmg) { m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 }; m.buffs.toHit += ps.hit; m.buffs.dmg += ps.dmg; }
+  },
+  _abBloodInfo(m, ab) {
+    const ps = m._bloodPassive || {}, bits = [];
+    if (ps.ac) bits.push(`+${ps.ac} AC`); if (ps.save) bits.push(`+${ps.save} on saves`); if (ps.sr) bits.push(`spell resistance ${ps.sr}`); if (ps.dr) bits.push(`DR ${ps.dr}`);
+    if (ps.hit || ps.dmg) bits.push(`+${ps.hit} to hit / +${ps.dmg} damage`); if (ps.fly) bits.push('you fly');
+    for (const [t, n] of Object.entries(ps.resist || {})) bits.push(`${t} resistance ${n}`); for (const t of (ps.immune || [])) bits.push(`immune to ${t}`);
+    const sp = (m._bloodSpellKeys || []).map(k => (_SPELL[k] || {}).name || k);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name}: ${bits.length ? bits.join(', ') : 'no always-on powers yet'}${sp.length ? `; bonus spells known: ${sp.join(', ')}` : ''}${(ps.todo || []).length ? `; not yet in the engine: ${ps.todo.join(', ')}` : ''}${(m._bloodMissing || []).length ? `; bonus spells the engine lacks: ${m._bloodMissing.join(', ')}` : ''}.`);
+    this._broadcast();
   },
   // DOMAINS Phase B — re-read the picks (they may change between rooms), rebuild
   // the injected powers, stock the Liberation pool, set the passive auras.
@@ -729,6 +810,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // abilities, and clear sticky room buffs. Called each room and on join.
   _resetAbilities(m) {
     this._domainSetup(m);   // domains first — the uses loop below stocks their pools
+    this._bloodlineSetup(m);   // v3.37.169: bloodline powers join the list before the uses loop stocks them
     m.spellPool = isPoolClass(m.cls) ? spellSlots(m.level || 1) : 0;
     m.slots = slotsFor(m.cls, m.level || 1, m.castingMod);   // per-spell-level slots (base + casting-stat bonus + domain/school)
     this._splitTheurgeSlots(m);   // Celeb (theurge): fork each level's pool into HALF arcane / HALF divine
@@ -779,6 +861,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // per-room clears above just wiped the AC/DR/wards/sight/flight they grant).
     for (const _snap of Object.values(m.runBuffPayloads || {})) this._applyRunBuffSnap(m, _snap);
     m.acPenRound = -1; m.acPenAmt = 0;
+    this._bloodlineApply(m);   // v3.37.169: the always-on bloodline powers, after every per-room clear above
     this._slaRecharge(m);
   },
   // RACIAL SPELL-LIKES RECHARGE (v3.37.165 — Josh: 'once per day… maybe once every five rooms'): a
@@ -1265,7 +1348,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       }
     }
     return spont
-      ? { spont, pool, caps: this._knownCaps(m), slots: (slotsFor(m.cls, m.level || 1, m.castingMod) || {}), known: this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []) }   // v3.37.164: caps = spells KNOWN per level; slots = castings per room
+      ? { spont, pool, caps: this._knownCaps(m), slots: (slotsFor(m.cls, m.level || 1, m.castingMod) || {}), known: this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []).concat(m._bloodSpellKeys || []), bloodline: m.bloodline || 'none' }   // v3.37.164; v3.37.169: bloodline spells are always known
       : { spont, pool, caps, domainSpells, prepared: this._loadoutRebucket(m, db.getPreparedSpells(m.playerId, m.cls) || {}) };
   },
   // Self-heal a stored prepared map when a spell's slot LEVEL changes (e.g. the
@@ -1309,7 +1392,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // should get a hard stop'). PF1 tables via knownCapsFor. _knownTrim heals a saved list made
   // before the cap existed (Olbryn's held 100+): saved order wins, ghosts drop (unknown key,
   // another character's spell, above this level), each spell level keeps its first CAP picks.
-  _knownCaps(m) { return (typeof knownCapsFor === 'function' && knownCapsFor(m.cls, m.level || 1)) || {}; },
+  _knownCaps(m) {
+    const bl = m.bloodline && m.bloodline !== 'none';
+    const caps = (typeof knownCapsFor === 'function' && knownCapsFor(m.cls, m.level || 1, bl)) || {};
+    if (m.bloodline === 'arcane') for (const [at, sl] of [[9, 4], [13, 6], [17, 8]]) if ((m.level || 1) >= at && caps[sl] != null) caps[sl] += 1;   // v3.37.169: New Arcana — one extra spell known at 9, 13, 17
+    return caps;
+  },
   _knownTrim(m, list) {
     const caps = this._knownCaps(m), byKey = {}, n = {}, out = [];
     for (const sp of loadouts.kitSpells(m.cls)) byKey[sp.key] = sp;
@@ -2100,7 +2188,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // Attack); else the caster.
       const party = this.livingParty();
       let target = this._pickedAlly(payload, { alive: true });
-      if (!target) target = party.find(a => isSneakClass(a.cls) && a.playerId !== m.playerId) || m;
+      if (!target) target = ab.selfOnly ? m : (party.find(a => isSneakClass(a.cls) && a.playerId !== m.playerId) || m);   // v3.37.169: Fleeting Glance (fey) is yourself only
       target.invisible = true; target.greaterInvis = true;
       const who = (target.playerId === m.playerId) ? 'themselves' : target.nickname;
       const bonus = isSneakClass(target.cls) ? ' — and every strike a Sneak Attack!' : '';
@@ -2982,7 +3070,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     } else {
       dice = this._spellDice(ab, m); die = ab.die || 6;
     }
-    const raw = Math.max(1, this._rollSpell(m, dice, die, ab)) + (ab.flatCL ? Math.min(ab.flatCL, m.level || 1) : 0);   // flatCL (v3.37.162): + caster level, capped (Produce Flame, Rusting Grasp)
+    const raw = Math.max(1, this._rollSpell(m, dice, die, ab)) + (ab.flatCL ? Math.min(ab.flatCL, m.level || 1) : 0) + (ab.flatHalfCL ? Math.floor((m.level || 1) / 2) : 0);   // flatCL (v3.37.162): + caster level, capped (Produce Flame, Rusting Grasp); flatHalfCL (v3.37.169): + ½ level (bloodline rays)
     const dmg = this._dmgE(e, raw, ab.dtype);
     // Lifesteal rider (antipaladin Vampiric Touch) — heal the caster by the
     // energy actually dealt, same as the magus spellstrike version.
