@@ -31,6 +31,14 @@ const STAPLE_DEFS = [
   ['rapier',       'Rapier',       'martial'],
   ['glaive',       'Glaive',       'martial'],  // representative polearm
   ['whip',         'Whip',         'exotic'],
+  // v3.37.170 FIREARMS (Josh: 'I started a gunslinger. There are no guns to choose as your weapon'): the
+  // gunslinger's trade. prof 'firearms' — only the gunslinger is trained (PF1); anyone else eats the −4.
+  // The engine's existing firearm rules apply to the group: they hit TOUCH AC and always full-attack.
+  ['pistol',       'Pistol',       'firearms'],
+  ['revolver',     'Revolver',     'firearms'],
+  ['musket',       'Musket',       'firearms'],
+  ['rifle',        'Rifle',        'firearms'],
+  ['shotgun',      'Shotgun',      'firearms'],
 ];
 
 const STAPLE_WEAPONS = STAPLE_DEFS.map(([key, name, prof]) => {

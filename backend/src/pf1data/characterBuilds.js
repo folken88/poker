@@ -60,7 +60,7 @@ const BUILDS = {
   'Lou Candlebean':          { race: 'gnome' },
   'Elodie':                  { race: 'gnome' },
   'Mr. Brow':                { race: 'gnome' },
-  'Gabriel':                 { race: 'aasimar' },
+  'Gabriel':                 { race: 'aasimar', bloodline: 'celestial' },   // v3.37.170: aasimar bloodrager — celestial blood (Josh can change it in the lobby)
   'Dinvaya':                 { race: 'aasimar', style: 'guardian' },   // this version (canon she was a half-elf)
   'Fera':                    { race: 'halfling' },
   'Kovira':                  { race: 'tiefling' },

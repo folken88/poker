@@ -2174,6 +2174,21 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.170 2026-09-23 TOBY'S RULINGS + JOSH'S SEPT 23 MAIL. (1) GUNS: the weapon picker offers Pistol, Revolver,
+//                     Musket, Rifle and Shotgun (staples, prof 'firearms'); the gunslinger is trained, everyone else
+//                     eats the −4; firearms hit touch AC and full-attack as before (Josh: 'no guns to choose').
+//                     (2) ALIGNMENT TABLE: Holy Smite (vs evil) and Unholy Blight (vs good) follow PF1 like Chaos
+//                     Hammer / Order's Wrath — opposed full, neutral half, same-aligned nothing; bots skip a cast
+//                     with no eligible target. (3) GABRIEL is a bloodrager (full levels until multiclassing), aasimar
+//                     with the celestial bloodline. (4) SPELLS FROM LEVEL 1 for paladin / antipaladin / ranger /
+//                     bloodrager: one 1st-level casting a room from L1 (table rows 1-4 = [1]), 1st-level list entries
+//                     minLevel 1; 2nd/3rd/4th keep the slow ladder (7/10/13). (5) THE BLOODRAGER LIST GROWS: the ACG
+//                     list, every implemented entry (Magic Missile, Shocking Grasp, Blur, Scorching Ray, Fireball,
+//                     Fly, Haste, Dimension Door, Fear…), once a room each. (6) BLOODRAGERS PICK BLOODLINES: same
+//                     picker, bonus spells once a room, the generic Surge disappears once a bloodline is picked.
+//                     Verified, no change: displacement on allies is announced and rolled only after a hit would
+//                     land; enemies full-attack a hero they stay on (62 such rounds in the last three runs). Toby
+//                     questions 8-13 ruled. Tests 291-293 (281 updated). Backend + data; CLIENT_BUILD stays 33869.
 //  3.37.169 2026-09-23 SORCERER BLOODLINES, PART 1 (Tobias: 'start building in the sorcerer bloodlines from the
 //                     core rule book and include their powers'). New pf1data/bloodlines.js: all ten CRB bloodlines
 //                     (aberrant, abyssal, arcane, celestial, destined, draconic, elemental, fey, infernal, undead)
@@ -2333,9 +2348,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.169';
+const VERSION = '3.37.170';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33869;   // v3.37.165: the Racial Abilities pad entry
-const HEADLINE = "Sorcerer bloodlines from the Core Rulebook: pick one in the lobby for bonus spells and powers.";
+const HEADLINE = "Guns for gunslingers, spells from level 1 for the slow casters, bloodragers pick bloodlines, and Holy Smite reads alignment.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

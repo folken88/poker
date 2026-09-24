@@ -81,8 +81,8 @@ const INQ_SLOTS_BY_LEVEL = {
 // 18-stat bonus grants); _tableSlots folds in the +1/level (1-4) bonus. Empty
 // arrays for L1-3 = cannot cast yet.
 const PALADIN_SLOTS_BY_LEVEL = {
-  1: [], 2: [], 3: [],
-  4: [0], 5: [1], 6: [1], 7: [1, 0], 8: [1, 1], 9: [2, 1], 10: [2, 1, 0],
+  1: [1], 2: [1], 3: [1],   // v3.37.170 (Tobias): 1st-level spells from level 1 — one casting a room until the PF1 table takes over
+  4: [1], 5: [1], 6: [1], 7: [1, 0], 8: [1, 1], 9: [2, 1], 10: [2, 1, 0],
   11: [2, 1, 1], 12: [2, 2, 1], 13: [3, 2, 1, 0], 14: [3, 2, 1, 1], 15: [3, 2, 2, 1],
   16: [3, 3, 2, 1], 17: [4, 3, 2, 1], 18: [4, 3, 2, 2], 19: [4, 3, 3, 2], 20: [4, 4, 3, 3],   // v3.37.165 audit: L14-20 were one step ahead of CRB Table 3-11
 };
@@ -104,7 +104,7 @@ function bonusSpells(spellLevel, mod) {
 function spontaneousSlots(level) { return _tableSlots(SORC_SLOTS_BY_LEVEL, level); }
 // Slot table for any per-level slot caster (null = not a slot caster).
 const FULL_PREPARED   = new Set(['cleric', 'druid', 'wizard', 'theurge']);          // full 9-level prepared casters (share the cleric/druid/wizard progression)
-const FOURTH_PREPARED = new Set(['paladin', 'ranger', 'antipaladin']);   // 4th-level prepared casters — no spells before L4
+const FOURTH_PREPARED = new Set(['paladin', 'ranger', 'antipaladin']);   // 4th-level prepared casters (v3.37.170: one 1st-level casting from L1 — Tobias)
 function slotsFor(cls, level, castMod = 0) {
   let base;
   if (FULL_PREPARED.has(cls))            base = _tableSlots(CLERIC_SLOTS_BY_LEVEL, level);
@@ -241,7 +241,7 @@ const SPELL = {
   divinepower:   { key: 'divinepower',   name: 'Divine Power',    icon: '⚡', effect: 'buff', target: 'self', buff: { toHit: 4, dmg: 4, conHp: 1 }, slvl: 4, sticky: true, sound: S.charge, desc: 'The caster channels their god\'s might — +1 to hit and damage per 3 caster levels (max +6), temporary HP equal to your level, and an EXTRA attack whenever you full attack (doesn\'t stack with Haste\'s). Lasts the room — the battle-cleric switch. (PF1)' },
   icestorm:      { key: 'icestorm',      name: 'Ice Storm',       icon: '🧊', effect: 'aoe', target: 'aoe', maxTargets: 4, save: 'reflex', die: 6, dice: 5, dtype: 'cold', slvl: 4, sound: S.coldcone, desc: 'Fist-sized hail hammers up to 4 foes — 5d6 COLD, Reflex for half.' },
   shout:         { key: 'shout',         name: 'Shout',           icon: '📢', effect: 'aoe', target: 'aoe', maxTargets: 3, save: 'fort', die: 6, dice: 5, dtype: 'sonic', slvl: 4, sound: '/audio/draugr_shout03_burning.mp3', desc: 'A devastating sonic BOOM staggers up to 3 foes — 5d6 SONIC, Fortitude for half.' },
-  unholyblight:  { key: 'unholyblight',  name: 'Unholy Blight',   icon: '☠️', effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'unholy', slvl: 4, sound: S.umbral, desc: 'A cold cloud of evil sears 2 foes — Will for half (½level d8). The dark mirror of Holy Smite; it bites hardest against the Heavenly Host.' },
+  unholyblight:  { key: 'unholyblight',  name: 'Unholy Blight',   icon: '☠️', effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'unholy', vsAlign: 'good', slvl: 4, sound: S.umbral, desc: 'A cold cloud of evil sears 2 foes — Will for half (½level d8). PF1 alignment table (v3.37.170, Toby): GOOD foes take it all, neutral foes half, EVIL foes nothing — in an all-evil room it has no target, and bots skip it.' },
   callstorm:     { key: 'callstorm',     name: 'Call Lightning Storm', icon: '⛈️', effect: 'aoe', target: 'aoe', maxTargets: 3, stormCall: true, stormDice: 5, save: 'reflex', die: 6, dice: 'level', dcap: 15, dtype: 'electricity', slvl: 5, sound: null, desc: 'The sky itself opens — bolts hammer up to 3 foes for level d6 ELECTRICITY (max 15d6), Reflex for half — and the STORM LINGERS: a free 5d6 bolt strikes on each of your turns for the rest of the room (the PF1 lingering storm, auto-called; v3.37.143).' },
   righteousmight:{ key: 'righteousmight',name: 'Righteous Might', icon: '💪', effect: 'buff', target: 'self', buff: { toHit: 2, dmg: 4, ac: 2, cmd: 2 }, slvl: 5, sticky: true, sound: S.charge, desc: 'The caster swells into a GIANT of the faith — +2 to hit, +4 damage, +2 AC, and Large size that anchors you against grabs: +2 CMD vs grapples, trips and bull rushes. Lasts the room.' },
   invisgreater:  { key: 'invisgreater',  name: 'Invisibility, Greater', icon: '🫥', img: '/dungeon/buffs/invisible.webp', effect: 'invisible', greater: true, target: 'ally', slvl: 4, sound: S.invis, desc: 'Total concealment for the whole fight — you STAY invisible even when you attack. Cast it on a rogue ally and they Sneak Attack every foe that cannot see them.' },
@@ -643,7 +643,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     { key: 'curecritical', name: 'Cure Critical Wounds', icon: '💚', cost: 'room', uses: 1, slvl: 4, minLevel: 7, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20). Once per room.' },
     { key: 'protectfire',  name: 'Protection from Fire',  icon: '🔥', cost: 'room', uses: 1, slvl: 4, minLevel: 7, effect: 'buff', target: 'self', party: true, protectFire: true, sticky: true, sound: S.invoke, desc: 'Ward the whole party against FIRE — each ally gains a ward that ABSORBS the next 12 fire damage per caster level (max 120), soaked before it burns, until spent. (PF1 Protection from Energy — cast it when fiery foes loom.)' },
     { key: 'blessingoffervor', name: 'Blessing of Fervor', icon: '💨', cost: 'room', uses: 1, slvl: 4, minLevel: 7, effect: 'haste', target: 'self', party: true, sounds: FERVOR_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (like Haste).' },
-    { key: 'holysmite',    name: 'Holy Smite',           icon: '🌟', cost: 'room', uses: 1, slvl: 4, minLevel: 7, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
+    { key: 'holysmite',    name: 'Holy Smite',           icon: '🌟', cost: 'room', uses: 1, slvl: 4, minLevel: 7, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', vsAlign: 'evil', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8). PF1 alignment table (v3.37.170, Toby): EVIL foes take it all, neutral foes half, GOOD foes nothing.' },
     // ── High-level prayers (revives), gated by level ──
     { key: 'breathoflife', name: 'Breath of Life',       icon: '🌬️', cost: 'room', uses: 1, slvl: 5, minLevel: 9,  effect: 'revive', reviveDice: 5, reviveCap: 25, target: 'ally', sound: S.revive, desc: 'Snatch a DYING ally back — revive & heal them 5d8 + caster level (max +25).' },
     { key: 'raisedead',    name: 'Raise Dead',           icon: '⚰️', cost: 'room', uses: 1, slvl: 5, minLevel: 9,  effect: 'revive', raiseDead: true, target: 'ally', sound: S.revive, desc: 'Call a SLAIN ally back into the run, restored to half health.' },
@@ -882,7 +882,7 @@ let KITS = {   // 'let' so the DB-generated kits can override it below (Phase 3)
     spontaneousSpell(SPELL.invisibilitypurge, 7),  // 3rd level — reveal the whole room + lock out re-vanishing
     // 4th level (slots from L10)
     { key: 'curecritical',  name: 'Cure Critical Wounds', icon: '💚', cost: 'slot', slvl: 4, minLevel: 10, effect: 'heal', heal: 'single', healDice: 4, healCap: 20, target: 'ally', sound: S.cure, desc: 'Heal the most-hurt ally — 4d8 + caster level (max +20).' },
-    { key: 'holysmite',     name: 'Holy Smite',           icon: '🌟', cost: 'slot', slvl: 4, minLevel: 10, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8).' },
+    { key: 'holysmite',     name: 'Holy Smite',           icon: '🌟', cost: 'slot', slvl: 4, minLevel: 10, effect: 'aoe', target: 'aoe', maxTargets: 2, save: 'will', die: 8, dice: 'halflevel', dcap: 5, dtype: 'holy', vsAlign: 'evil', sound: S.sunstrike, desc: 'Searing light scourges 2 foes — Will for half (½level d8). PF1 alignment table (v3.37.170, Toby): EVIL foes take it all, neutral foes half, GOOD foes nothing.' },
     { key: 'blessingoffervor', name: 'Blessing of Fervor', icon: '💨', cost: 'slot', slvl: 4, minLevel: 10, effect: 'haste', target: 'self', party: true, sounds: FERVOR_SFX, desc: 'The party surges with fervor — an EXTRA attack each turn for 1 turn per 5 levels (the haste choice).' },
     // ── AGU — assassin/spy of Norgorber: stealth + single-target disable (Hold Person
     //    is on the shared list above). char-gated to Agu via Dungeon._charAllows. ──
@@ -1925,11 +1925,15 @@ _injectKitSpell('inquisitor', spontaneousSpell({ ...SPELL.righteousmight, slvl: 
 // are cloned from the kits that already carry each spell (cures from the cleric,
 // woodcraft from the druid, Haste from the wizard) so mechanics stay identical.
 const _findKitAb = (cls, key) => ((KITS[cls] && KITS[cls].abilities) || []).find(a => a && a.key === key);
+// v3.37.170 (Tobias, 2026-09-23: 'I don't want any classes that normally wait until level X to get spells to
+// wait. Paladins, bloodragers etc. have access to at least their 1st-level spells from 1st level. Their
+// progression is still slow.'): 1st-level spells at level 1; 2nd at 7, 3rd at 10, 4th at 13 as before.
+const _mcMin = (slvl) => slvl === 1 ? 1 : 3 * slvl + 1;
 const _mcClone = (srcCls, key, slvl) => {
   const b = _findKitAb(srcCls, key);
-  return b ? { ...b, cost: 'room', uses: 1, slvl, minLevel: 3 * slvl + 1 } : null;
+  return b ? { ...b, cost: 'room', uses: 1, slvl, minLevel: _mcMin(slvl) } : null;
 };
-const _mcSpell = (spell, slvl) => ({ ...spell, cost: 'room', uses: 1, slvl, minLevel: 3 * slvl + 1 });
+const _mcSpell = (spell, slvl) => ({ ...spell, cost: 'room', uses: 1, slvl, minLevel: _mcMin(slvl) });
 const _MARTIAL_LISTS = {
   //          PF1 list source:  Pal = CRB paladin, Antipal = ARG/UM antipaladin, Rgr = CRB ranger, Br = ACG bloodrager
   paladin:     [_mcClone('cleric', 'divinefavor', 1), _mcClone('cleric', 'curelight', 1), _mcClone('cleric', 'curemoderate', 3), _mcClone('cleric', 'cureserious', 4)],   // v3.37.140: bearsendurance REMOVED — not on the paladin list (d20pfsrd; a v136 import error Josh's link caught). CMW is paladin THIRD per the book
@@ -1943,7 +1947,26 @@ for (const [_mcCls, _mcList] of Object.entries(_MARTIAL_LISTS)) {
 // The PALADIN's four baked spells move onto the same PF1 ladder (they sat on the
 // retired every-3-levels-from-1 home ladder: 1/4/7/10 → 4/7/10/13).
 for (const _a of ((KITS.paladin || {}).abilities || [])) {
-  if (_a && _a.slvl != null && ['shieldoffaith', 'bullsstrength', 'prayer', 'blessingoffervor'].includes(_a.key)) _a.minLevel = 3 * _a.slvl + 1;
+  if (_a && _a.slvl != null && ['shieldoffaith', 'bullsstrength', 'prayer', 'blessingoffervor'].includes(_a.key)) _a.minLevel = _mcMin(_a.slvl);
+}
+// v3.37.170 THE BLOODRAGER LIST GROWS (Tobias: 'the bloodrager spell table is dogshit. we will probably add some
+// more to it'; Josh: 'is it as limited as the bloodrager spell table is?'): the ACG bloodrager list, every entry
+// the engine already implements, on the same once-a-room model and the same ladder (1st at 1, 2nd at 7, 3rd at
+// 10, 4th at 13). Cloned from the kits that carry each spell so mechanics stay identical.
+const _mcAny = (key, slvl) => SPELL[key] ? _mcSpell(SPELL[key], slvl) : (_mcClone('wizard', key, slvl) || _mcClone('cleric', key, slvl) || _mcClone('sorcerer', key, slvl));
+const _BR_MORE = [['burninghands', 1], ['causefear', 1], ['chilltouch', 1], ['magicmissile', 1], ['rayenfeeble', 1], ['shockinggrasp', 1], ['truestrike', 1], ['protevil', 1], ['grease', 1], ['colorspray', 1],
+  ['blur', 2], ['bearsendurance', 2], ['catsgrace', 2], ['falselife', 2], ['glitterdust', 2], ['invisibility', 2], ['scorchingray', 2], ['seeinvisibility', 2], ['resistfire', 2], ['flamingsphere', 2],
+  ['fireball', 3], ['fly', 3], ['heroism', 3], ['keenedge', 3], ['lightningbolt', 3], ['slow', 3], ['stinkingcloud', 3], ['protectfire', 3],
+  ['blacktentacles', 4], ['dimensiondoor', 4], ['fear', 4], ['fireshield', 4], ['invisgreater', 4], ['enervation', 4], ['shout', 4], ['icestorm', 4], ['bestowcurse', 4]];
+const _brHas = new Set(((KITS.bloodrager || {}).abilities || []).map(a => a && a.key));
+for (const [_k, _sl] of _BR_MORE) { if (_brHas.has(_k)) continue; const _ab = _mcAny(_k, _sl); if (_ab && _ab.effect !== 'spellstrike') { _injectKitSpell('bloodrager', _ab); _brHas.add(_k); } }
+// v3.37.170 THE ALIGNMENT TABLE (Toby: 'alignment based damage spells should consider alignment as pf1 specifies'):
+// Holy Smite (vs evil) / Unholy Blight (vs good) join Chaos Hammer / Order's Wrath. Patched onto EVERY kit copy
+// here, AFTER the kits.generated override — the cleric's Holy Smite comes from the generated file, not the
+// hand-coded block above (the override trap).
+for (const _cls of Object.keys(KITS)) for (const _a of ((KITS[_cls] || {}).abilities || [])) {
+  if (_a && _a.key === 'holysmite') { _a.vsAlign = 'evil'; _a.desc = 'Searing light scourges 2 foes — Will for half (½level d8). PF1 alignment table (v3.37.170, Toby): EVIL foes take it all, neutral foes half, GOOD foes nothing.'; }
+  if (_a && _a.key === 'unholyblight') { _a.vsAlign = 'good'; _a.desc = SPELL.unholyblight.desc; }
 }
 // SPIRITUAL ALLY (APG; Toby: "it should be an angel of some type", and his home
 // rule stands — a caster's spiritual weapon AND ally both ride the caster's

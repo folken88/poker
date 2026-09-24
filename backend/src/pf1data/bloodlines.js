@@ -172,7 +172,9 @@ function bloodlineList() {
   return [{ key: 'none', name: 'None (no bloodline)', icon: '—', blurb: 'The engine’s old model: one extra free spell pick per spell level, no powers.' }]
     .concat(BLOODLINE_KEYS.map(k => { const b = BLOODLINES[k]; return { key: k, name: b.name, icon: b.icon, blurb: b.blurb, powers: b.powers.map(p => `${p.level}: ${p.name}${p.kind === 'todo' ? ' (not yet)' : ''}`) }; }));
 }
-/** Which classes pick a bloodline. (The bloodrager keeps its Bloodline Surge until Toby rules — question 11.) */
-const bloodlineClasses = ['sorcerer'];
+/** Which classes pick a bloodline. v3.37.170 (Tobias: 'bloodragers utilize them too'): the bloodrager picks from the
+ *  same list; the sorcerer's power ladder (1/3/9/15/20) stands in for the ACG bloodrager one (1/4/8/12/16/20) for now,
+ *  and a picked bloodline replaces the generic Bloodline Surge. */
+const bloodlineClasses = ['sorcerer', 'bloodrager'];
 
 module.exports = { BLOODLINES, BLOODLINE_KEYS, bloodlineKey, bloodlineName, bloodlineList, bloodlineClasses };

@@ -647,6 +647,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const kit = kitFor(m.cls).abilities;
     let list = (m._domPowers && m._domPowers.length) ? kit.concat(m._domPowers) : kit;
     if (m._bloodPowers && m._bloodPowers.length) list = list.concat(m._bloodPowers, m._bloodSpells || []);   // v3.37.169: bloodline powers + off-list bonus spells
+    if (m.cls === 'bloodrager' && m.bloodline && m.bloodline !== 'none') list = list.filter(a => a.key !== 'bloodlinesurge');   // v3.37.170: a real bloodline replaces the generic Surge stand-in
     if (m.cls === 'slayer') list = list.concat(STUDIED_TARGET);   // SLAYER: swift Studied Target mark (ACG)
     if (m.cls === 'cavalier') {
       list = list.concat(CHALLENGE, TACTICIAN, GLORIOUS_CHALLENGE, BLAZE_OF_GLORY);
@@ -726,7 +727,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const k = (cands || []).find(c => _SPELL && _SPELL[c]);
       if (!k) { m._bloodMissing.push(cands[0]); continue; }
       m._bloodSpellKeys.push(k);
-      if (!kitKeys.has(k)) m._bloodSpells.push({ ..._SPELL[k], cost: 'slot', minLevel: Number(cl), bloodSpell: true, desc: `Bloodline spell (${bl.name}). ${_SPELL[k].desc || ''}` });
+      if (!kitKeys.has(k)) m._bloodSpells.push({ ..._SPELL[k], ...(isSpontaneous(m.cls) ? { cost: 'slot' } : { cost: 'room', uses: 1 }), minLevel: Number(cl), bloodSpell: true, desc: `Bloodline spell (${bl.name}). ${_SPELL[k].desc || ''}` });   // v3.37.170: a bloodrager's bonus spells ride its once-a-room model
     }
   },
   /** The always-on part, applied AFTER the per-room clears (spellResist / flight / buffs). */

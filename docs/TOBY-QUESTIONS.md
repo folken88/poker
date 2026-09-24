@@ -43,42 +43,6 @@ Ruled section with the version that implemented it.
    (Taboon, Ramos, Gaspar, the rest) get a style, and what is it? New styles are
    cheap to add if a concept needs one (e.g. 'blaster', 'controller', 'necromancer').
 
-8. **Holy Smite / Unholy Blight and the alignment table** (v3.37.160). Chaos Hammer and
-   Order's Wrath now follow PF1: opposed foes take full, neutral half, same-aligned nothing.
-   Holy Smite and Unholy Blight predate that and still hit every foe for full. RAW they
-   should follow the same table (Unholy Blight would then do nothing to the evil foes that
-   fill most rooms — Draymus's bot casts it). Keep them as-is for fun, or go RAW?
-
-9. **Gabriel's class** (Josh, 2026-09-21: 'Gabriel is a Bloodrager not a Paladin btw'). The roster
-   pins him as an aasimar PALADIN (the Redeemer, smite, lay on hands). Is Josh right about the
-   tabletop sheet? If yes, say so and he is re-pinned — but he loses the paladin kit the bot plays.
-
-10. **Celeb's default loadout** (Josh, run cozy-muffin: 'I ain't sure Celeb is loaded out right… ask
-   Toby what he should carry by default'). Facts: the theurge has NO prep sheet — every spell in his
-   dual kit is castable, gated only by level and the split arcane/divine slots. In that run he cast
-   Haste ×12, Slow ×9, Fly ×7, Dimension Door ×7, Grease ×5, Blessing of Fervor ×5 and one each of
-   ~20 others. Do you want a curated default list for him (and should he prepare like a wizard)?
-
-11. **Bloodline Surge** (Josh, 2026-09-21: 'I cannot find any reference to the bloodline surge power').
-   He is right — it is a home stand-in, not a book power: +1 hit / +3 damage / +2 AC, once a room,
-   from level 4. The book gives a bloodrager a BLOODLINE with its own powers at 1/4/8/12/16/20. The
-   desc now says so. Build real bloodlines (which ones first?) or keep the generic surge?
-
-12. **The bloodrager's spell model.** Book: spontaneous, Cha-based, its own spells-per-day table
-   from level 4 and a spells-known table. Engine: a fixed list, each spell once per room (your
-   2026-08-30 ruling for the martial 4-level casters; paladin/ranger have since moved to real slot
-   tables). Move the bloodrager to slots + spells known too?
-
-13. **Standing orders for the bot casters** (Josh, 2026-09-22/23) — proud-compass
-   room 7: Celeb spent a 6th-level slot on Mass Eagle's Splendor for a party of two
-   bloodragers, a cleric and himself. v3.37.167 adds a generic rule (a casting-stat
-   buff needs a primary caster of that stat to gain from it; at equal level a mass
-   to-hit/AC/HP buff outranks it). Josh's wider point: "some of the npc characters
-   need a little guidance from toby." Do you want PER-CHARACTER standing orders on
-   top of the generic rules — e.g. Celeb: 6th-level slots are for Slow / Black
-   Tentacles / Heal, never a stat buff; Casandalee: Plague Storm first — the way
-   characterBuilds already carries a `style`? Name the character and the order and
-   it is a one-line addition each.
 
 ## Standing policy (Toby)
 
@@ -123,3 +87,14 @@ Ruled section with the version that implemented it.
 - **Time Stop 1d4+1 free castings; Wish defaults; summons = simpler versions
   of existing monsters; more druid forms** — v3.37.125.
 - **CRB parity ground rules** — 2026-08-26; ledger in docs/CRB-SPELL-PARITY.md.
+- **Holy Smite / Unholy Blight follow the PF1 alignment table** (opposed full, neutral half,
+  same-aligned nothing) — 2026-09-23, v3.37.170.
+- **Gabriel is a bloodrager** (multiclassed bloodrager/paladin on the sheet; full bloodrager
+  levels until multiclassing exists) — 2026-09-23, v3.37.170.
+- **The slow casters (paladin, antipaladin, ranger, bloodrager) cast 1st-level spells from
+  level 1; the rest of the ladder stays slow; the bloodrager list grows (ACG)** — 2026-09-23, v3.37.170.
+- **Bloodragers pick sorcerer bloodlines too** (the sorcerer ladder stands in for the ACG one; a
+  picked bloodline replaces the generic Surge) — 2026-09-23, v3.37.170.
+- **Bot doctrine = weighted RNG per role** (support caster ~40/30/30 buff/control/attack; fighter
+  100% attack; 70/30 attack/dispel for a Bujon type; Celeb prepares buffs + control + dispels + a
+  rare attack, best buff first, burns Spell Synthesis whenever it is up) — 2026-09-23, v3.37.171.

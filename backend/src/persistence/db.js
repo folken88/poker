@@ -238,7 +238,7 @@ const BOT_ROSTER = [
   { name: 'Kai Ginn',             avatar: '/tokens/kai-ginn-2.webp',             baseMode: 'standard', intelligence: 'average', gender: 'he' }, // user: avg intel + avg risk; new detective-slayer art
   { name: 'Ser Toche',            avatar: '/tokens/ser-toche.webp',              baseMode: 'standard', intelligence: 'average', gender: 'she' }, // tengu rogue — silent but deadly (elven curved blade, DEX 2H)
   { name: 'El Guapo',             avatar: '/tokens/el-guapo.webp',               baseMode: 'risky',    intelligence: 'high',    gender: 'he' },  // swashbuckler — brilliant gambler, fearless, funloving
-  { name: 'Gabriel',              avatar: '/tokens/gabriel.webp',                baseMode: 'cautious', intelligence: 'average', gender: 'he' },  // paladin — courageous, friendly, wise; careful with cards
+  { name: 'Gabriel',              avatar: '/tokens/gabriel.webp',                baseMode: 'cautious', intelligence: 'average', gender: 'he' },  // bloodrager (Toby 2026-09-23; was paladin) — courageous, friendly, wise; careful with cards
   { name: 'Crisp',                avatar: '/tokens/crisp.webp',                  baseMode: 'risky',    intelligence: 'low', gender: 'they'     }, // velociraptor — pure instinct, no thinking
   { name: 'Tamsin',               avatar: '/tokens/tamsin.webp',                 baseMode: 'cautious', intelligence: 'high', gender: 'she'    },
   { name: 'Toni',                 avatar: '/tokens/antoinette-borden.webp',      baseMode: 'risky',    intelligence: 'average', gender: 'she' },
@@ -467,7 +467,7 @@ const BOT_CLASSES = {
   'Agu': 'inquisitor', 'Chef': 'rogue', 'Crisp': 'rogue', 'Kai Ginn': 'slayer', 'Lirienne': 'ranger',   // Crisp = deinonychus: no real class, but rogue is closest (pounce + sneak); keeps his 'bite' natural multi-attack (3 attacks, no iteratives) via BOT_WEAPONS + _attackOffsets. Kai Ginn = the detective-SLAYER (ranger+rogue hybrid; DEX-finesse fauchard, sneak attack)
   'Rissa': 'druid', 'Taelys': 'gunslinger', 'Ulfred': 'cleric', 'Vaughan': 'magus', 'Duristan Silvio': 'gunslinger',   // Taelys + Duristan: PF1 gunslingers (rifles)
   'Holden': 'swashbuckler',
-  'Ser Toche': 'rogue', 'El Guapo': 'swashbuckler', 'Gabriel': 'paladin',
+  'Ser Toche': 'rogue', 'El Guapo': 'swashbuckler', 'Gabriel': 'bloodrager',   // v3.37.170 (Toby, 2026-09-23): a multiclassed bloodrager/paladin on the sheet — full bloodrager levels until multiclassing exists
   // Hell's Vengeance / Rebels PCs → AI-heroes (real Foundry builds):
   'Femmik Embersword': 'bard', 'Freya Kusanagi': 'cavalier', "J'Mal": 'rogue', 'Jason': 'cleric',
   'Reese': 'magus',   // Strix Eldritch-Archer magus — spellstrike through his bow (real build: Arcane Archer/Ranger/Wizard)
