@@ -163,6 +163,12 @@ const MON = {
   gearghost:         { name: 'Gearghost',         glyph: '👻', cr: '5',   hp: 60,  ac: 19, toHit: 9,  dmgDie: 10, dmgBonus: 6,  fort: 6,  reflex: 2,  gold: [42, 95], dr: { amount: 10, bypass: 'magic' }, healer: { dice: 2, uses: 2 }, shout: { fear: true, dc: 15, sound: '/audio/spell_shock.mp3' } },   // haunted HEAVY mech — a possessed war-chassis, NOT a flyer: one crushing spectral slam (1d10+6), spectral plating (DR 10/magic), a glitch-wail that spooks heroes, and poltergeist welds that mend its machine kin
   gearsman_gunslinger:{ name: 'Gearsman 5.0 Gunslinger', glyph: '🔫', cr: '6', hp: 60, ac: 20, toHit: 12, dmgDie: 8, dmgBonus: 6, fort: 4, reflex: 9, attacks: 2, gold: [55, 115], atkSound: '/audio/rifle_longue_carabine.mp3' },   // ronin chassis — fanning an integrated revolver
   gearsman_sniper:   { name: 'Gearsman 5.5 Sniper', glyph: '🎯', cr: '7', hp: 68,  ac: 20, toHit: 13, dmgDie: 8,  dmgBonus: 6,  fort: 4,  reflex: 10, attacks: 2, sneakDice: 4, evasion: true, gold: [70, 150], atkSound: '/audio/rifle_dvl_silenced.mp3' },   // Rogue 3/Gunslinger 7 — silenced shots to the vitals
+  // v3.37.172 (Tobias: 'give the bad guys these guns too') — from the Iron Gods sheets: the Silverhawk Shooter
+  // (Gunslinger 8, Bolty 1d12 ×4), the Torch City Guard (Slayer 5, Torch Rosco .357 + Rapid Shot) and the Drone 8.0
+  // Myrmidon (Plasma Rifle 1d8 fire + 1d8 electricity, three shots, hardness 10). All shoot at TOUCH AC (gun).
+  silverhawk_shooter:{ name: 'Silverhawk Shooter', glyph: '🔫', cr: '7', hp: 78, ac: 21, toHit: 14, dmgDie: 12, dmgBonus: 6, fort: 7, reflex: 9, attacks: 2, gold: [70, 150], atkSound: '/audio/rifle_sv98.mp3' },
+  torch_guard:       { name: 'Torch City Guard', glyph: '🔫', cr: '4', hp: 42, ac: 18, toHit: 9, dmgDie: 10, dmgBonus: 4, fort: 5, reflex: 6, attacks: 2, sneakDice: 2, gold: [30, 70], atkSound: '/audio/tarkov_revolver_357_shot.mp3' },
+  drone_myrmidon:    { name: 'Drone 8.0 Myrmidon', glyph: '🤖', cr: '14', hp: 180, ac: 27, toHit: 22, dmgDie: 8, dmgCount: 2, dmgBonus: 7, fort: 11, reflex: 12, attacks: 3, gold: [320, 600], dr: { amount: 10, bypass: 'adamantine' }, atkSound: '/audio/spell_lightning.mp3' },
   gearsman_riot:     { name: 'Gearsman 3.0 Riot Suppressor', glyph: '🛡️', cr: '8', hp: 95, ac: 22, toHit: 15, dmgDie: 8, dmgBonus: 9, fort: 6, reflex: 4, attacks: 2, gold: [95, 190], dr: { amount: 5, bypass: '—' }, taunt: { dc: 16, sound: '/audio/spell_shock.mp3' } },   // crowd-control frame — a COMPLIANCE bark taunts AI heroes onto its shield
   gearsman_harvester:{ name: 'Gearsman 6.0 Thought Harvester', glyph: '🧠', cr: '9', hp: 100, ac: 22, toHit: 14, dmgDie: 6, dmgBonus: 6, fort: 6, reflex: 6, attacks: 2, gold: [110, 220], caster: 'holdperson', spellDC: 19 },   // skull-drill chassis — neural clamp locks a hero rigid (Hold, Will DC 19), then it harvests
   gearsman_juggernaut:{ name: 'Gearsman 4.0 Juggernaut', glyph: '🤖', cr: '11', hp: 130, ac: 24, toHit: 17, dmgDie: 10, dmgCount: 2, dmgBonus: 10, fort: 8, reflex: 4, attacks: 2, gold: [260, 460], dr: { amount: 10, bypass: '—' } },   // HUGE siege frame — two 2d10+10 pistons; DR 10/— (adamantine plate)
@@ -379,6 +385,7 @@ const MON_GANGS = {
   drone_rhoomba: ['construct'], drone_collector: ['construct'], gearsman_mk1: ['construct'],
   drone_stinger: ['construct'], drone_repair: ['construct'], gearsman_pugilist: ['construct'],
   gearghost: ['construct', 'undead'], gearsman_gunslinger: ['construct'], gearsman_sniper: ['construct'],
+  silverhawk_shooter: ['construct'], torch_guard: ['construct'], drone_myrmidon: ['construct'],   // v3.37.172: Numeria's shooters run with the robots
   gearsman_riot: ['construct'], gearsman_harvester: ['construct'], gearsman_juggernaut: ['construct'],
   mecha_railgun: ['construct'], mecha_repeater: ['construct'], gearsman_scraper: ['construct'],
   mecha_warden: ['construct'], overlord: ['construct'],
@@ -485,6 +492,7 @@ const MON_ART = {
   drone_rhoomba: 'drone_rhoomba', drone_collector: 'drone_collector', gearsman_mk1: 'gearsman_mk1',
   drone_stinger: 'drone_stinger', drone_repair: 'drone_repair', gearsman_pugilist: 'gearsman_pugilist',
   gearghost: 'gearghost', gearsman_gunslinger: 'gearsman_gunslinger', gearsman_sniper: 'gearsman_sniper',
+  silverhawk_shooter: 'silverhawk_shooter', torch_guard: 'torch_guard', drone_myrmidon: 'drone_myrmidon',   // v3.37.172
   gearsman_riot: 'gearsman_riot', gearsman_harvester: 'gearsman_harvester', gearsman_juggernaut: 'gearsman_juggernaut',
   mecha_railgun: 'mecha_railgun', mecha_repeater: 'mecha_repeater', gearsman_scraper: 'gearsman_scraper',
   mecha_warden: 'mecha_warden', overlord: 'overlord',
@@ -527,6 +535,7 @@ const MON_TYPE = {
   drone_rhoomba: 'construct', drone_collector: 'construct', gearsman_mk1: 'construct',
   drone_stinger: 'construct', drone_repair: 'construct', gearsman_pugilist: 'construct',
   gearghost: 'construct', gearsman_gunslinger: 'construct', gearsman_sniper: 'construct',
+  silverhawk_shooter: 'humanoid', torch_guard: 'humanoid', drone_myrmidon: 'construct',   // v3.37.172
   gearsman_riot: 'construct', gearsman_harvester: 'construct', gearsman_juggernaut: 'construct',
   mecha_railgun: 'construct', mecha_repeater: 'construct', gearsman_scraper: 'construct',
   mecha_warden: 'construct', overlord: 'construct',
@@ -580,7 +589,8 @@ const RESIST_BY_KEY = {
 };
 // Iron Gods robot subtype: VULNERABLE to electricity (×1.5) — lightning casters
 // finally get a favored prey. (The Gearghost haunt shares its kin's weakness.)
-const ROBOT_KEYS = ['drone_rhoomba', 'drone_collector', 'gearsman_mk1', 'drone_stinger', 'drone_repair',
+const ROBOT_KEYS = ['drone_myrmidon',   // v3.37.172
+  'drone_rhoomba', 'drone_collector', 'gearsman_mk1', 'drone_stinger', 'drone_repair',
   'gearsman_pugilist', 'gearghost', 'gearsman_gunslinger', 'gearsman_sniper', 'gearsman_riot',
   'gearsman_harvester', 'gearsman_juggernaut', 'mecha_railgun', 'mecha_repeater', 'gearsman_scraper',
   'mecha_warden', 'overlord'];
@@ -610,6 +620,7 @@ const ALIGN_BY_KEY = {
   // are another story.
   drone_rhoomba: 'N', drone_collector: 'N', gearsman_mk1: 'N', drone_stinger: 'N', drone_repair: 'N',
   gearsman_pugilist: 'N', gearsman_gunslinger: 'N', gearsman_sniper: 'N', gearsman_riot: 'N',
+  silverhawk_shooter: 'CN', torch_guard: 'LN', drone_myrmidon: 'N',   // v3.37.172
   gearsman_juggernaut: 'N', mecha_railgun: 'N', mecha_repeater: 'N', gearsman_scraper: 'N', mecha_warden: 'N',
   gearsman_harvester: 'LE', gearghost: 'NE', overlord: 'LE',
   // the Shackles: freebooters run chaotic evil, the Chelish and the sea-devils
@@ -706,5 +717,8 @@ const RANGED_KEYS = ['medusa_archer', 'erinyes', 'bralani_azata', 'shackles_scal
   'blackout', 'aasimar_gunslinger', 'aasimar_shotgunner', 'sahuagin_ranger',
   'sword_knight_4th', 'holy_gun', 'sevestra'];   // Glorious Reclamation ranged: the inquisitor-archer, the holy MUSKET, Sevestra's holy bow
 for (const k of RANGED_KEYS) if (MON[k]) MON[k].ranged = true;
+// v3.37.172 (Tobias): every foe with a FIREARM shoots at TOUCH AC (enemyAI._foeTargetAC reads `gun`), like the heroes' guns.
+const GUN_KEYS = ['gearsman_gunslinger', 'gearsman_sniper', 'mecha_railgun', 'mecha_repeater', 'aasimar_gunslinger', 'aasimar_shotgunner', 'blackout', 'holy_gun', 'silverhawk_shooter', 'torch_guard', 'drone_myrmidon'];
+for (const k of GUN_KEYS) if (MON[k]) { MON[k].ranged = true; MON[k].gun = true; }
 
 module.exports = { MON, MON_GANGS, MON_BODY, MON_ART, MON_TYPE, RESIST_BY_KEY, ALIGN_BY_KEY, UNDEAD_KEYS, BOSS_KEYS, SPAWNABLE, SIZE_RANK, SIZE_NAME, crToNum, BRUCE_SFX, MONK_SFX };

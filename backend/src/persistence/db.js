@@ -101,6 +101,9 @@ ensureColumn('players', 'ability_scores', "TEXT NOT NULL DEFAULT '{}'");
 ensureColumn('players', 'race', "TEXT NOT NULL DEFAULT 'none'");
 // v3.37.169 SORCERER BLOODLINE — one per character (pf1data/bloodlines.js). 'none' = the old +1-free-pick model.
 ensureColumn('players', 'bloodline', "TEXT NOT NULL DEFAULT 'none'");
+// v3.37.172: the Paizo gun staples (pistol / musket / rifle / shotgun) were replaced by the Iron Gods guns — carry
+// anyone who had picked one over to the nearest new key so no row points at a weapon that no longer exists.
+try { db.prepare("UPDATE players SET weapon = CASE weapon WHEN 'pistol' THEN 'revolver' WHEN 'musket' THEN 'bolty' WHEN 'rifle' THEN 'dvl10' WHEN 'shotgun' THEN 'equivocator' END WHERE weapon IN ('pistol', 'musket', 'rifle', 'shotgun')").run(); } catch (_) {}
 // PF1 SPELL LOADOUTS — per-class, mirroring class_xp/ability_scores (see
 // SPELL-LOADOUTS-DESIGN.md). PREPARED casters (cleric/druid/wizard/paladin/ranger/
 // antipaladin) store which spells are readied into each slot LEVEL:

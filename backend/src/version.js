@@ -2174,6 +2174,21 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.172 2026-09-24 THE IRON GODS FIREARMS (Tobias, from his Foundry world via the MCP bridge: Gearsman 5.0 / 5.5,
+//                     Silverhawk Shooter, Torch City Guard, Taylor Blackwood, Dral-Mok, Isuma, Buran's deed list). His
+//                     rules: every firearm is MARTIAL, every shot hits TOUCH AC (first range increment assumed), no ammo
+//                     or reloads, Dex to damage (the house better-of-STR/DEX rule already gives it). The five Paizo
+//                     black-powder staples are gone; the picker offers Revolver 1d8 x4, FN Five-seveN 1d10 19-20/x4,
+//                     Equivocator 1d12 19-20/x4, Silverhawk Bolty 1d12 x4 (bolt), DVL-10 Saboteur 3d6 x3 (bolt), Zero
+//                     Rifle 1d6 +1d6 cold 19-20/x3, Arc Pistol 1d4 +1d6 electricity x3, Laser Pistol 1d4 +1d6 fire x2;
+//                     saved rows on the old keys migrate. GRIT: Wis mod (min 1) a room, +1 on a firearm kill or crit.
+//                     DEEDS on the gunslinger pad: Up Close & Deadly (swift, 1 grit: +Nd6 on the next shot, a miss
+//                     grazes for half), Dead Shot (full round, 1 grit: pool the iteratives into one shot), Gunslinger's
+//                     Dodge (automatic, 1 grit: +2 AC against a ranged shot that would just hit); Deadeye is always on.
+//                     Bots spend grit (Dead Shot at a standout foe, else Up Close). ENEMY GUNS hit touch AC too (gun
+//                     flag: the Gearsmen, the mecha turrets, August, Nash, Blackout, the Holy Gun) and three Numerian
+//                     shooters join the bestiary: Silverhawk Shooter CR7, Torch City Guard CR4, Drone 8.0 Myrmidon CR14.
+//                     Tests 297-300 (291 rewritten). Backend + data + 3 token files; CLIENT_BUILD stays 33869.
 //  3.37.171 2026-09-23 THE DOCTRINE ROLL (Tobias: 'give them each a % chance between their possible actions…
 //                     40% buff, 30% control, 30% attack for a support caster. 100% attack for a fighter. 70/30
 //                     attack/dispel for characters like Bujon. Give them some randomness but make it make sense').
@@ -2360,9 +2375,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.171';
+const VERSION = '3.37.172';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33869;   // v3.37.165: the Racial Abilities pad entry
-const HEADLINE = "Bots roll their doctrine each turn: buff, control, dispel or attack by role, best buff first, reactive plays untouched.";
+const HEADLINE = "The Iron Gods firearms: eight real guns, grit and deeds for gunslingers, and every gun hits touch AC.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

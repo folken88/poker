@@ -1146,6 +1146,7 @@ for (const kit of Object.values(KITS)) {
 // if the generated file is ever missing. To change a spell/kit: edit the DB →
 // regenerate kits.generated.js → commit it. (Don't hand-edit the block above.)
 const _bloodragerKit = KITS.bloodrager;   // capture the (img-processed) hand-coded kit before the override swaps KITS
+const _gunslingerKit = KITS.gunslinger;   // v3.37.172: same insurance for the gunslinger (the deeds inject after the override)
 const _magusSpellstrikes = ((KITS.magus && KITS.magus.abilities) || []).filter(a => a.effect === 'spellstrike');   // v3.35.0: capture the CLEAN 5-strike list before the override (the generated kit still has the old 8)
 try {
   const _gen = require('./kits.generated');
@@ -1156,6 +1157,7 @@ try {
 // omits it — re-attach the hand-coded kit AFTER the override (same pattern as
 // Olbryn's storm spec below). TODO: migrate into kit_abilities on the next regen.
 if (_bloodragerKit && !KITS.bloodrager) KITS.bloodrager = _bloodragerKit;
+if (_gunslingerKit && !KITS.gunslinger) KITS.gunslinger = _gunslingerKit;   // v3.37.172
 
 // MANEUVERS re-injection (v3.37.96, Tobias's fighter-type ruling): the generated
 // kits carry maneuvers only for the classes that had them at generation time —
@@ -1968,6 +1970,15 @@ for (const _cls of Object.keys(KITS)) for (const _a of ((KITS[_cls] || {}).abili
   if (_a && _a.key === 'holysmite') { _a.vsAlign = 'evil'; _a.desc = 'Searing light scourges 2 foes — Will for half (½level d8). PF1 alignment table (v3.37.170, Toby): EVIL foes take it all, neutral foes half, GOOD foes nothing.'; }
   if (_a && _a.key === 'unholyblight') { _a.vsAlign = 'good'; _a.desc = SPELL.unholyblight.desc; }
 }
+// v3.37.172 GUNSLINGER DEEDS (Tobias, 2026-09-24, from the Iron Gods sheets — Buran's deed list, the Gearsman's Up
+// Close & Deadly). GRIT = Wis modifier (min 1) per room, +1 back on a firearm kill or critical (never above max).
+// Deadeye needs no deed here: every firearm shot already hits touch AC (his 'first range increment' rule).
+const _DEEDS = [
+  { key: 'deed_ucd',      name: 'Up Close & Deadly',  icon: '💥', cost: 'free', freeAction: true, effect: 'upclose',  target: 'self',  desc: 'DEED, 1 grit (swift): your next shot this turn deals +Nd6 (N = 1, +1 at 5, 9, 13 and 17); a MISS still grazes for half those dice. Needs a firearm in hand.' },
+  { key: 'deed_deadshot', name: 'Dead Shot',          icon: '🎯', cost: 'free', effect: 'deadshot', target: 'enemy', minLevel: 7, desc: 'DEED, 1 grit (full round): pool every iterative into ONE shot — roll each attack; if any hits the shot lands, and every extra hit adds the gun\u2019s base dice again. Needs a firearm and a second iterative (BAB 6).' },
+  { key: 'deed_dodge',    name: 'Gunslinger\u2019s Dodge', icon: '🤸', cost: 'free', freeAction: true, effect: 'deedinfo', target: 'self', desc: 'DEED, 1 grit (automatic): a ranged attack that would hit you by less than 2 is dodged (+2 AC, spent as it happens). Press to hear your grit.' },
+];
+for (const _d of _DEEDS) _injectKitSpell('gunslinger', _d);
 // SPIRITUAL ALLY (APG; Toby: "it should be an angel of some type", and his home
 // rule stands — a caster's spiritual weapon AND ally both ride the caster's
 // active buffs, which _spiritStrike already does via _swingVsAC. Weapon + Ally

@@ -417,6 +417,11 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     if (e.ranged && this._windWall > 0) { this._note(`🌬️ ${e.glyph} ${e.name}'s shot is flung aside by the WIND WALL.`, null, { side: 'enemy' }); this._echoToTable(); return; }   // Wind Wall (v3.37.161)
     if (e.ranged && target.entropic && dRoll(5) === 1) { this._note(`🌀 ${e.glyph} ${e.name}'s shot bends away from ${target.nickname}'s ENTROPIC SHIELD.`, null, { side: 'enemy' }); this._echoToTable(); return; }   // Entropic Shield (v3.37.161): 20% miss vs ranged
     const r = this._foeSwing(e, effAC, { critImmune: !!target.elemBody });
+    if (r.hit && !r.crit && r.roll !== 20 && e.ranged && target.cls === 'gunslinger' && (target.grit || 0) > 0 && (r.total - effAC) < 2) {   // v3.37.172 GUNSLINGER'S DODGE: 1 grit, +2 AC against a ranged shot that would just hit
+      target.grit--;
+      this._note(`🤸 ${target.nickname} spends a grit — GUNSLINGER'S DODGE: ${e.glyph} ${e.name}'s shot is turned aside [${r.total} vs ${effAC}+2]. ${target.grit}/${target.gritMax} grit left.`, null);
+      this._echoToTable(); return;
+    }
     const _rHit = r.crit ? 'CRITS' : r.verbHit;
     if (r.hit) {
       // Swashbuckler PARRY — the first melee attack against them each round can be
@@ -542,7 +547,8 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const challengePen = (target.challengedId != null && e && e.uid !== target.challengedId) ? 2 : 0;
     // v3.37.107 TOTAL DEFENSE: a dying, slot-dry bot caster that GUARDS instead
     // of plinking gets PF1's +4 dodge until it next acts (heroAI sets/clears).
-    return this._acOf(target).ac + this._acBonus(target) + (target._totalDefense ? 4 : 0)
+    const _gun = (e && e.gun) ? (this._acOf(target).physical + (target.mageArmor ? 4 : 0)) : 0;   // v3.37.172 (Tobias): FIREARMS hit TOUCH AC — armor, shield and Mage Armor fall away
+    return Math.max(10, this._acOf(target).ac + this._acBonus(target) - _gun) + (target._totalDefense ? 4 : 0)
       - (target.paralyzed > 0 ? 4 : 0) - (target.prone ? 4 : 0)
       - (target.stunned > 0 ? 2 : 0) - (target.slowed > 0 ? 1 : 0)
       - challengePen - this._acPenalty(target);

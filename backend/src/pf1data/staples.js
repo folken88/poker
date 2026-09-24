@@ -31,14 +31,22 @@ const STAPLE_DEFS = [
   ['rapier',       'Rapier',       'martial'],
   ['glaive',       'Glaive',       'martial'],  // representative polearm
   ['whip',         'Whip',         'exotic'],
-  // v3.37.170 FIREARMS (Josh: 'I started a gunslinger. There are no guns to choose as your weapon'): the
-  // gunslinger's trade. prof 'firearms' — only the gunslinger is trained (PF1); anyone else eats the −4.
-  // The engine's existing firearm rules apply to the group: they hit TOUCH AC and always full-attack.
-  ['pistol',       'Pistol',       'firearms'],
-  ['revolver',     'Revolver',     'firearms'],
-  ['musket',       'Musket',       'firearms'],
-  ['rifle',        'Rifle',        'firearms'],
-  ['shotgun',      'Shotgun',      'firearms'],
+];
+// v3.37.172 THE IRON GODS FIREARMS (Tobias, 2026-09-24): modelled from his Iron Gods world's sheets (Gearsman 5.0 /
+// 5.5, Silverhawk Shooter, Taylor Blackwood, Dral-Mok, Isuma, the FG item packs) — NOT Paizo's black powder. His
+// rules: every firearm is MARTIAL; every shot hits TOUCH AC (the first range increment is assumed); no ammo or
+// reloads; Dex to hit and damage (the house better-of-STR/DEX rule already covers it). Energy guns carry
+// their energy as a weapon rider (Zero Rifle +1d6 cold, Arc Pistol +1d6 electricity, Laser +1d6 fire).
+// boltAction: no Rapid Shot (the Bolty and the DVL-10 cycle by hand).
+const GUN_STAPLES = [
+  { key: 'revolver',    name: 'Revolver',         cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 8,  crit: 20, mult: 4, type: 'B/P', group: 'firearms', prof: 'martial', atkSound: '/audio/tarkov_revolver_357_shot.mp3' },   // the Gearsman's four-chamber sidearm
+  { key: 'fiveseven',   name: 'FN Five-seveN',    cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 10, crit: 19, mult: 4, type: 'P',   group: 'firearms', prof: 'martial', atkSound: '/audio/tarkov_revolver_357_shot.mp3' },   // Taylor Blackwood's 5.7x28 (19-20/x4)
+  { key: 'equivocator', name: 'Equivocator',      cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 12, crit: 19, mult: 4, type: 'B/P', group: 'firearms', prof: 'martial', atkSound: '/audio/tarkov_pistol_rsh12_empty_reload2.mp3' },   // Dral-Mok's ultra-heavy Numerian revolver
+  { key: 'bolty',       name: 'Silverhawk Bolty', cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 12, crit: 20, mult: 4, type: 'B/P', group: 'firearms', prof: 'martial', boltAction: true, atkSound: '/audio/rifle_sv98.mp3' },   // the scrappers' bolt-action rifle
+  { key: 'dvl10',       name: 'DVL-10 Saboteur',  cat: 'ranged', ranged: true, dmgCount: 3, dmgDie: 6,  crit: 20, mult: 3, type: 'P',   group: 'firearms', prof: 'martial', boltAction: true, atkSound: '/audio/rifle_dvl_silenced.mp3' },   // the silenced sniper (the Gearsman 5.5's, and Taelys's)
+  { key: 'zerorifle',   name: 'Zero Rifle',       cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 6,  crit: 19, mult: 3, type: 'P',   group: 'firearms', prof: 'martial', special: { frost: true }, atkSound: '/audio/tarkov_sr25_silenced_3shot_burst.mp3' },   // Isuma's: 1d6 + 1d6 cold
+  { key: 'arcpistol',   name: 'Arc Pistol',       cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 4,  crit: 20, mult: 3, type: 'B',   group: 'firearms', prof: 'martial', special: { shock: true }, atkSound: '/audio/spell_lightning.mp3' },   // 1d8 electricity in the book: 1d4 + 1d6 electricity here
+  { key: 'laserpistol', name: 'Laser Pistol',     cat: 'ranged', ranged: true, dmgCount: 1, dmgDie: 4,  crit: 20, mult: 2, type: 'B',   group: 'firearms', prof: 'martial', special: { flaming: true }, atkSound: '/audio/fight_lightning_2.mp3' },   // 1d8 fire in the book: 1d4 + 1d6 fire here
 ];
 
 const STAPLE_WEAPONS = STAPLE_DEFS.map(([key, name, prof]) => {
@@ -46,6 +54,7 @@ const STAPLE_WEAPONS = STAPLE_DEFS.map(([key, name, prof]) => {
   if (!w) throw new Error(`staple weapon not found: ${name}`);
   return { key, prof, ...w };
 });
+for (const g of GUN_STAPLES) STAPLE_WEAPONS.push(g);   // v3.37.172: the guns are raw entries (not in the Foundry weapons pack)
 const STAPLE_BY_KEY = Object.fromEntries(STAPLE_WEAPONS.map(w => [w.key, w]));
 // Per-staple signature attack sounds (override the generic blunt/swing report).
 const STAPLE_SOUNDS = { warhammer: '/audio/weapon_warhammer.mp3' };

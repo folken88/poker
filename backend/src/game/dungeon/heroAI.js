@@ -906,6 +906,15 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         }
       }
     }
+    // 1e) GUNSLINGER DEEDS (v3.37.172): with grit to spend and a gun in hand — Dead Shot at a standout foe when
+    //     there is a second iterative to pool, else Up Close & Deadly on the shot about to be fired (a swift, so the
+    //     bot shoots right after — the free-action chain).
+    if (m.cls === 'gunslinger' && (m.grit || 0) > 0 && this._gunInHand(m) && !_untouch) {
+      const _ds = avail.find(a => a.effect === 'deadshot'), _ucd = avail.find(a => a.effect === 'upclose');
+      const _byHp = targets.slice().sort((a, b) => b.maxHp - a.maxHp), _big = _byHp[0];
+      if (_ds && _big && m.grit >= 2 && (_big.boss || (_byHp.length >= 2 && _big.maxHp >= 1.5 * _byHp[1].maxHp)) && this._attackOffsets(m, _big).length >= 2) return { slot: slot(_ds), payload: { targetUid: _big.uid } };
+      if (_ucd && !m._ucdDice) return { slot: slot(_ucd), payload: {} };
+    }
     // 2) Put up buffs once — Smite, then sticky self/party buffs (rage, shield,
     //    bane, divine favor, inspire). Sticky guard stops re-casting.
     const smite = avail.find(a => a.effect === 'smite' && !a.smiteGood && !m.smiteActive);

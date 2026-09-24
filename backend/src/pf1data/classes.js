@@ -76,7 +76,7 @@ const PROFICIENCY = {
   fighter: { cats: _ALL }, ranger: { cats: _ALL }, paladin: { cats: _ALL },
   antipaladin: { cats: _MARTIAL }, barbarian: { cats: _MARTIAL }, cavalier: { cats: _MARTIAL },
   bloodrager: { cats: _MARTIAL }, brawler: { cats: _MARTIAL }, slayer: { cats: _MARTIAL },
-  gunslinger: { cats: ['simple', 'martial', 'firearms'] }, swashbuckler: { cats: _MARTIAL }, magus: { cats: _MARTIAL },   // v3.37.170: firearms are the gunslinger's (PF1 class proficiency)
+  gunslinger: { cats: _MARTIAL }, swashbuckler: { cats: _MARTIAL }, magus: { cats: _MARTIAL },   // v3.37.172 (Tobias): every firearm is MARTIAL — any martial class shoots proficiently
   skald: { cats: _MARTIAL }, hunter: { cats: _MARTIAL }, vigilante: { cats: _MARTIAL },
   medium: { cats: _MARTIAL }, warpriest: { cats: _MARTIAL },
   samurai: { cats: _MARTIAL, weapons: ['katana'] },

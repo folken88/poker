@@ -403,6 +403,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       freedommove: () => this._abFreedomMove(m, ab, payload),
       dominfo:     () => this._abDomInfo(m, ab),
       bloodinfo:   () => this._abBloodInfo(m, ab),   // v3.37.169
+      upclose:     () => this._abUpClose(m, ab),      // v3.37.172 gunslinger deeds
+      deadshot:    () => this._abDeadShot(m, ab, payload),
+      deedinfo:    () => this._abDeedInfo(m, ab),
     }[ab.effect];
     if (!D) return { ok: false, error: 'unknown ability' };
     // NEGATIVE ENERGY MENDS THE UNDEAD (PF1, Tobias 2026-07-04): a Touch of
@@ -673,6 +676,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // Pulled from the ranger kit so they stay in sync; a melee magus skips them.
       if (rng) list = list.concat(kitFor('ranger').abilities.filter(a => a.key === 'rapidshot' || a.key === 'bullseye'));
     }
+    if (m.cls === 'gunslinger') list = list.map(a => (a.effect === 'upclose' || a.effect === 'deadshot' || a.effect === 'deedinfo') ? { ...a, name: `${a.name} (grit ${m.grit || 0}/${m.gritMax || 1})` } : a);   // v3.37.172: the pad shows the grit left
     const _rs = (RACE_SLA && typeof RACE_SLA === 'object') ? RACE_SLA[m.race] : null;   // v3.37.163: racial spell-like abilities (drow Darkness / Faerie Fire, tiefling Darkness, aasimar Daylight, ifrit Burning Hands)
     if (_rs && _rs.length) list = list.concat(_rs);
     return list;
@@ -740,6 +744,39 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (ps.dr) m.dr = Math.max(m.dr || 0, ps.dr);
     if (ps.fly) { m.flying = true; m.canHitFlyers = true; m.innateFly = true; }
     if (ps.hit || ps.dmg) { m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 }; m.buffs.toHit += ps.hit; m.buffs.dmg += ps.dmg; }
+  },
+  // ── GUNSLINGER DEEDS (v3.37.172 — Tobias, from the Iron Gods sheets) ──────────────────────────────────
+  _gunInHand(m) { const w = m.weapon || weaponOf(m.gear, m.weaponKey); return !!(w && w.group === 'firearms'); },
+  _abUpClose(m, ab) {
+    if (!this._gunInHand(m)) { this._note(`${ab.icon} ${m.nickname} needs a firearm in hand for Up Close & Deadly.`); return; }
+    if ((m.grit || 0) < 1) { this._note(`${ab.icon} ${m.nickname} is out of grit — no Up Close & Deadly this room.`); return; }
+    if (m._ucdDice) { this._note(`${ab.icon} ${m.nickname} already has a deadly shot lined up — fire it first.`); return; }
+    m.grit--; m._ucdDice = 1 + Math.floor(((m.level || 1) - 1) / 4);
+    this._note(`${ab.icon} ${m.nickname} spends a grit — UP CLOSE & DEADLY: the next shot carries +${m._ucdDice}d6 (a miss grazes for half). ${m.grit}/${m.gritMax} grit left.`, ab.sound);
+    this._broadcast();
+  },
+  _abDeadShot(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    if (!this._gunInHand(m)) { this._note(`${ab.icon} ${m.nickname} needs a firearm in hand for Dead Shot.`); return; }
+    if ((m.grit || 0) < 1) { this._note(`${ab.icon} ${m.nickname} is out of grit — no Dead Shot this room.`); return; }
+    m.weapon = m.weapon || weaponOf(m.gear, m.weaponKey);
+    const offsets = this._attackOffsets(m, e);
+    if (offsets.length < 2) { this._note(`${ab.icon} Dead Shot needs a second iterative (BAB 6) — ${m.nickname} has only one shot to pool.`); return; }
+    m.grit--;
+    const w = m.weapon, ac = this._enemyAC(e, { touch: true, ranged: true });
+    let hits = 0, crit = false, first = null;
+    for (const o of offsets) { const r = this._swingVsAC(m, ac, e, o.off, o.oh); if (r.hit) { hits++; if (!first) first = r; if (r.crit) crit = true; } }
+    if (!hits) { this._note(`${ab.icon} ${m.nickname} takes careful aim — DEAD SHOT — but none of ${offsets.length} rolls finds ${e.name}. ${m.grit}/${m.gritMax} grit left.`, w.atkSound || ab.sound); this._echoToTable(); return; }
+    const extra = hits > 1 ? dRollN(w.dmgCount * (hits - 1), w.dmgDie) : 0;
+    const dmg = first.damage + extra;
+    this._dmgE(e, dmg);
+    this._note(`${ab.icon} ${m.nickname} takes careful aim — DEAD SHOT: ${hits} of ${offsets.length} rolls find ${e.name} — ${dmg} damage${extra ? ` (${first.damage} + ${extra} pooled)` : ''}${first.drTag || ''}${crit ? ' — a CRITICAL' : ''}.${this._afterEnemyHit(e)}${e.hp <= 0 ? ' ☠️ Slain!' : ''} ${m.grit}/${m.gritMax} grit left.`, w.atkSound || ab.sound);
+    if ((crit || e.hp <= 0) && m.grit < m.gritMax) { m.grit++; this._note(`🎲 ${m.nickname} regains 1 grit (${m.grit}/${m.gritMax}) — ${crit ? 'a critical hit' : 'a killing shot'}.`); }
+    this._echoToTable(w.atkSound || ab.sound);
+  },
+  _abDeedInfo(m, ab) {
+    this._note(`${ab.icon} ${m.nickname}: ${m.grit || 0}/${m.gritMax || 1} grit. Gunslinger's Dodge fires on its own (+2 AC against a ranged shot that would just hit); Deadeye is always on — firearms hit touch AC here.`);
+    this._broadcast();
   },
   _abBloodInfo(m, ab) {
     const ps = m._bloodPassive || {}, bits = [];
@@ -828,6 +865,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // their spellcasting from LEVEL 1, not 4 — still the slowest progression in the
     // game, just without the dead first three levels.
     m.heroDefiance = (m.cls === 'paladin' || m.cls === 'antipaladin') ? 1 : 0;
+    if (m.cls === 'gunslinger') { m.gritMax = Math.max(1, (m.mods && m.mods.wis) || 0); m.grit = m.gritMax; }   // v3.37.172 GRIT: Wis mod (min 1) a room
+    m._ucdDice = 0;
     if (m.tempHp) { m.maxHp -= m.tempHp; if (m.hp > m.maxHp) m.hp = m.maxHp; m.tempHp = 0; }   // rage / Bear's Endurance temp HP fades
     m.buffs = null;          // rage / divine favor / inspire clear
     m.bane = null;           // inquisitor Bane declaration clears between rooms
@@ -4256,16 +4295,22 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // now the line says so.
       const tag = (r.smite ? ' ⚔️Smite!' : '') + (r.sneakDice ? ` (+${r.sneakDmg} sneak)` : '')
         + ((r.hit && tgt.uid === m.challengedId && (m.challengeN || 0) > 0) ? ` (+${m.challengeN} challenge)` : '')
-        + ((r.hit && tgt.uid === m.studiedId && (m.studiedN || 0) > 0) ? ` (+${m.studiedN} studied)` : '');
+        + ((r.hit && tgt.uid === m.studiedId && (m.studiedN || 0) > 0) ? ` (+${m.studiedN} studied)` : '') + (r.ucdTag || '');   // v3.37.172: the deadly dice
       // Name the improvised weapon on the strike line (v3.37.95, Josh): the HASTE
       // bonus strike is `quiet`, so its crossbow swap was silent — he heard a bare
       // "Gabriel hits [flying foe]" and reasonably concluded a greatsword was
       // reaching into the sky. Now every backup-crossbow strike says so.
       const wTag = drewCrossbow ? ' with the crossbow' : '';
+      if (i === 0 && m._ucdDice && m.weapon && m.weapon.group === 'firearms') {   // v3.37.172 UP CLOSE & DEADLY: the lined-up shot
+        const _ucd = dRollN(m._ucdDice, 6); m._ucdDice = 0;
+        if (r.hit) { r.damage += _ucd; r.ucdTag = ` (+${_ucd} deadly)`; }
+        else if (!r.fumble) { const _g = Math.floor(_ucd / 2); if (_g > 0 && tgt.hp > 0) { this._dmgE(tgt, _g); r.grazeTag = _g; } }
+      }
       if (!multi) {
         if (r.fumble) this._note(`${m.nickname} fumbles the attack! ${this._atkStr(r)}`, r.sound);
         else if (r.hit) { this._dmgE(tgt, r.damage); this._note(`${m.nickname} ${r.crit ? 'CRITS' : 'hits'} ${tgt.name}${wTag} for ${r.damage}${r.drTag || ''}.${tag} ${this._atkStr(r)}${tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`, r.sound); }
         else this._note(`${m.nickname} misses ${tgt.name}${wTag}. ${this._atkStr(r)}`, r.sound);
+        if (r.grazeTag) this._note(`💥 …but the deadly shot GRAZES ${tgt.name} for ${r.grazeTag}.${tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`);   // v3.37.172
       } else {
         let g = groups[groups.length - 1];
         if (!g || g.tgt !== tgt) { g = { tgt, bits: [] }; groups.push(g); }
@@ -4275,7 +4320,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       }
       if (r.hit) {
         landed = true;
-        if (r.crit) this._dauntingSuccess(m);   // Order of the Flame (L8): a confirmed crit daunts the room
+        if (r.crit) this._dauntingSuccess(m);
+        if (m.cls === 'gunslinger' && m.weapon && m.weapon.group === 'firearms' && (r.crit || tgt.hp <= 0) && (m.grit || 0) < (m.gritMax || 1)) { m.grit++; this._note(`🎲 ${m.nickname} regains 1 grit (${m.grit}/${m.gritMax}) — ${r.crit ? 'a critical hit' : 'a killing shot'}.`); }   // v3.37.172   // Order of the Flame (L8): a confirmed crit daunts the room
         // OUTFLANK rider (teamwork, v3.37.91): a confirmed crit while flanking lets a
         // paired flanking ally seize the opening — one free strike at the same foe.
         if (r.crit && e.hp > 0 && this._twkActive(m, 'outflank')) {
