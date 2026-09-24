@@ -2174,6 +2174,18 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.171 2026-09-23 THE DOCTRINE ROLL (Tobias: 'give them each a % chance between their possible actions…
+//                     40% buff, 30% control, 30% attack for a support caster. 100% attack for a fighter. 70/30
+//                     attack/dispel for characters like Bujon. Give them some randomness but make it make sense').
+//                     Each turn a bot with more than one intent rolls one (weighted), takes the ladder's best
+//                     action of that kind, and falls through the other intents by weight when the roll has
+//                     nothing worth doing. Reactive play ignores the roll: heals, revives, wards, free/swift
+//                     features, a Dispel when an ally is spell-bound. First decision of a room = best buff; an
+//                     untouchable room = attack only. Mixes: theurge 35/30/20/15 buff/control/dispel/attack
+//                     (Celeb), support casters 40/30/0/30, arcane 15/35/10/40 (storm style 10/25/10/55), magus
+//                     and inquisitor 20/0/10/70, the four-level casters 25/0/0/75, everyone else 100% attack;
+//                     Bujon 70/30 attack/dispel (characterBuilds.MIX). Spell Synthesis rolls each half. The roll
+//                     is spoken ('🎲 Celeb rolls CONTROL'). Tests 294-296. Backend only; CLIENT_BUILD stays 33869.
 //  3.37.170 2026-09-23 TOBY'S RULINGS + JOSH'S SEPT 23 MAIL. (1) GUNS: the weapon picker offers Pistol, Revolver,
 //                     Musket, Rifle and Shotgun (staples, prof 'firearms'); the gunslinger is trained, everyone else
 //                     eats the −4; firearms hit touch AC and full-attack as before (Josh: 'no guns to choose').
@@ -2348,9 +2360,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.170';
+const VERSION = '3.37.171';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33869;   // v3.37.165: the Racial Abilities pad entry
-const HEADLINE = "Guns for gunslingers, spells from level 1 for the slow casters, bloodragers pick bloodlines, and Holy Smite reads alignment.";
+const HEADLINE = "Bots roll their doctrine each turn: buff, control, dispel or attack by role, best buff first, reactive plays untouched.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

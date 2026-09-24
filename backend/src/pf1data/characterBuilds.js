@@ -93,4 +93,10 @@ const BUILDS = {
   'Lord Gweyir':             { race: 'elf', scores: { str: 12, dex: 16, con: 12, int: 13, wis: 10, cha: 14 } },
 };
 
-module.exports = { BUILDS };
+// v3.37.171 DOCTRINE MIXES (Tobias, 2026-09-23) — per-character action weights the bot brain rolls each turn,
+// keyed by NICKNAME (what heroAI sees). Classes without an entry use the role table in heroAI._botMix.
+const MIX = {
+  'Celeb': { buff: 35, control: 30, dispel: 20, attack: 15 },   // 'a mix of buffs, enemy control, dispels, and a rare attack spell'; best buff first; Synthesis whenever it is up
+  'Bujon': { buff: 0, control: 0, dispel: 30, attack: 70 },     // '70/30 attack/dispel for characters like Bujon'
+};
+module.exports = { BUILDS, MIX };

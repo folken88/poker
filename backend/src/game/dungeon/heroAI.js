@@ -18,7 +18,13 @@ const { babFor } = require('../../pf1data/classes');
 const { kitFor } = require('../../pf1data/abilities');
 const { attackProfile } = require('../character');
 const { crToNum, MON } = require('../../pf1data/monsters');
-let BUILDS = {}; try { BUILDS = require('../../pf1data/characterBuilds').BUILDS || {}; } catch (_) {}   // per-character play STYLE (v3.37.149) — guarded: PGM may not ship the file
+let BUILDS = {}; try { BUILDS = require('../../pf1data/characterBuilds').BUILDS || {}; } catch (_) {}
+let MIX = {}; try { MIX = require('../../pf1data/characterBuilds').MIX || {}; } catch (_) {}   // v3.37.171: per-character doctrine mixes (Celeb, Bujon) — guarded the same way
+// v3.37.171 THE DOCTRINE ROLL — what counts as a BUFF, a CONTROL and an ATTACK cast. Anything not listed (heals,
+// revives, forms, maneuvers, feats, taunts, smites, judgements…) is reactive and allowed under every intent.
+const BUFF_FX = new Set(['buff', 'haste', 'mirrorimage', 'invisible', 'magearmor', 'overlandflight', 'spiritweapon', 'spiritally', 'windwall', 'daylight', 'timestop']);
+const CONTROL_FX = new Set(['save_debuff', 'grease', 'sleep', 'slow', 'fascinate', 'blacktentacles', 'exhaust', 'masscharm', 'glitterdust', 'wall', 'hdladder', 'charm', 'dominate', 'prismatic', 'forcecage', 'maze', 'darkness', 'forcepush', 'powerword', 'holyword', 'invispurge']);
+const ATTACK_FX = new Set(['aoe', 'bolt', 'missile', 'touch', 'rays', 'disintegrate', 'savedie', 'circleofdeath', 'inflictmass', 'spellstrike', 'summon', 'channelneg', 'dimensionalblade', 'bladelash', 'bladeddash', 'tpstrike', 'wish']);   // per-character play STYLE (v3.37.149) — guarded: PGM may not ship the file
 const { fighterFeats } = require('../../pf1data/feats');
 
 // v3.37.107: the classes whose basic attack is a CANTRIP, not a weapon — the
@@ -354,7 +360,63 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (party.some(grounded)) return false;
     return !foes.some(e => e.flying || e.ranged || e.arcane || e.caster || e.shout || e.hook || e.hellfire || e.summon || e.spellstrike || e.detonate);
   },
+  // ── THE DOCTRINE ROLL (v3.37.171 — Tobias, 2026-09-23: 'all these characters could use a little RNG in their
+  //    ai. instead of defaulting to buff 1, buff 2, buff 3 give them each a % chance between their possible
+  //    actions. something like 40% buff, 30% control, 30% attack for a support caster. 100% attack for a
+  //    fighter. 70/30 attack/dispel for characters like Bujon. Give them some randomness but make it make
+  //    sense.'). Each turn a bot with more than one intent ROLLS one (weighted), asks the ladder for the best
+  //    action of that kind, and falls through the other intents by weight when the roll has nothing worth
+  //    doing (so a roll never wastes a turn). Reactive play never waits on the roll: healing, revives, wards,
+  //    free/swift features, a Dispel when an ally is spell-bound. The FIRST decision of a room is the best
+  //    BUFF (Celeb: 'best buff first'); an untouchable room is attack-only (v3.37.168). Spell Synthesis asks
+  //    twice, so each half rolls on its own. The roll is spoken so the log explains the play. ──
+  _botMix(m) {
+    const own = MIX[m.nickname]; if (own) return own;
+    const style = ((BUILDS[m.nickname] || {}).style) || '';
+    const cls = m.cls || 'fighter';
+    if (cls === 'theurge') return { buff: 35, control: 30, dispel: 20, attack: 15 };   // Celeb: buffs, control, dispels, a rare attack
+    if (['cleric', 'oracle', 'druid', 'bard', 'shaman', 'warpriest', 'witch'].includes(cls)) return { buff: 40, control: 30, dispel: 0, attack: 30 };   // the support caster (Tobias's numbers)
+    if (['wizard', 'sorcerer', 'arcanist'].includes(cls)) return style === 'storm' ? { buff: 10, control: 25, dispel: 10, attack: 55 } : { buff: 15, control: 35, dispel: 10, attack: 40 };
+    if (cls === 'magus' || cls === 'inquisitor') return { buff: 20, control: 0, dispel: 10, attack: 70 };
+    if (['paladin', 'antipaladin', 'ranger', 'bloodrager'].includes(cls)) return { buff: 25, control: 0, dispel: 0, attack: 75 };
+    return { attack: 100 };   // fighters, rogues, monks, barbarians, gunslingers…: the old ladder, untouched
+  },
+  /** TRUE when ability `a` is off the table for this intent. */
+  _intentSkips(intent, a, dbfAlly) {
+    if (!a || a.cost === 'free' || a.freeAction || a.swift) return false;   // costs no action: Rage, Judgement, Bloodline Surge, stances
+    if (a.fearWard || a.globe || a.deathWard || a.spellResist || a.protectFire || a.key === 'shield') return false;   // reactive wards answer the battlefield
+    const fx = a.effect;
+    if (fx === 'cleanse') return !(intent === 'dispel' || dbfAlly);   // Dispel / Remove X: the dispel intent — or an ally to free, any turn
+    if (fx === 'disjunction') return intent !== 'dispel';
+    const B = BUFF_FX.has(fx), C = CONTROL_FX.has(fx), A = ATTACK_FX.has(fx);
+    if (!B && !C && !A) return false;
+    return intent === 'buff' ? !B : intent === 'control' ? !C : intent === 'attack' ? !A : true;
+  },
   _botAbility(m) {
+    const mix = this._botMix(m);
+    const intents = Object.keys(mix).filter(k => (mix[k] || 0) > 0);
+    if (intents.length <= 1) return this._botAbilityFor(m, null);
+    const foes = this._targetableEnemies();
+    const room = this.depth == null ? 0 : this.depth;
+    const first = m._doctrineDepth !== room; m._doctrineDepth = room;
+    let order;
+    if (this._partyUntouchable(foes)) order = ['attack'];
+    else {
+      order = []; const pool = intents.slice();
+      while (pool.length) {   // weighted draw without replacement: the roll, then the fall-through order
+        const total = pool.reduce((t, k) => t + mix[k], 0); let r = Math.random() * total; let pick = pool[pool.length - 1];
+        for (const k of pool) { r -= mix[k]; if (r < 0) { pick = k; break; } }
+        order.push(pick); pool.splice(pool.indexOf(pick), 1);
+      }
+      if (first && mix.buff > 0) order = ['buff'].concat(order.filter(k => k !== 'buff'));   // best buff first
+    }
+    for (const it of order) {
+      const c = this._botAbilityFor(m, it);
+      if (c) { this._note(`🎲 ${m.nickname} rolls ${it.toUpperCase()}${first ? ` (doctrine: ${intents.map(k => `${mix[k]}% ${k}`).join(', ')})` : ''}.`); return c; }
+    }
+    return null;   // nothing worth a cast under any intent → weapon
+  },
+  _botAbilityFor(m, _intent) {
     // v3.37.95: guard on the EFFECTIVE ability list, not the raw class kit.
     // KITS.theurge carries an empty abilities[] (its spells come from theurgeKit
     // via _abilitiesFor), so the old `kitFor(cls).abilities.length` early-out
@@ -374,6 +436,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     const targets = awake.length ? awake : foes;          // don't wake sleepers
     // v3.37.168 READ THE ROOM: out of every foe's reach → no buffs, wards or lockdowns this room; damage only.
     const _untouch = this._partyUntouchable(foes);
+    const _dbfAlly = this.livingParty().some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0 || a.cursed);   // v3.37.171: a spell-bound ally makes Dispel / Remove reactive under any intent
     const UNTOUCH_SKIP = new Set(['save_debuff', 'grease', 'sleep', 'slow', 'fascinate', 'blacktentacles', 'exhaust', 'masscharm', 'glitterdust', 'mirrorimage', 'invisible', 'smite']);
     if (_untouch && this._untouchSaid !== this.depth) { this._untouchSaid = this.depth; this._note(`🦅 Nothing down there can reach the party — ${m.nickname} reads the room: no buffs, no lockdowns, straight to damage.`); }
     const usable = (ab) => {
@@ -421,7 +484,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       }
     }
     const slot = (ab) => allAbs.indexOf(ab);
-    const avail = allAbs.filter(a => usable(a) && !(a && a.botAvoid) && !(_untouch && UNTOUCH_SKIP.has(a.effect)));   // botAvoid (v3.37.161): Transformation would mute a bot caster; v3.37.168: lockdowns are wasted on foes that cannot reach us
+    const avail = allAbs.filter(a => usable(a) && !(a && a.botAvoid) && !(_intent && this._intentSkips(_intent, a, _dbfAlly)) && !(_untouch && UNTOUCH_SKIP.has(a.effect)));   // botAvoid (v3.37.161): Transformation would mute a bot caster; v3.37.168: lockdowns are wasted on foes that cannot reach us
     if (!avail.length) {
       // v3.37.107 SAVE YOURSELF, the DRY case (sneaky-dumpling d4: this very
       // early-out is where slot-dry Celeb's brain gave up every round while a
