@@ -64,7 +64,7 @@ module.exports = {
     const at = ((this.turnIdx != null ? this.turnIdx : this.turnOrder.length - 1)) + 1;
     this.turnOrder.splice(at, 0, ...newTurns);
     const nm = MON[key].name;
-    const label = count > 1 ? `${count} ${nm}${/s$/.test(nm) ? '' : 's'}` : `a ${nm}`;
+    const label = count > 1 ? `${count} ${nm}${/s$/.test(nm) ? '' : 's'}` : `${/^[aeiou]/i.test(nm) ? 'an' : 'a'} ${nm}`;   // v3.37.173: 'an Ikualo\'a'
     this._note(`${ab.icon || '☠️'} ${m.nickname} ${fl.raise} — ${label} ${fl.join(count)}! (${rounds} rounds)`, ab.sound);
     this._echoToTable(ab.sound);
   },

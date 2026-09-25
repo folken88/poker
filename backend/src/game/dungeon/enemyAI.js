@@ -569,7 +569,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   },
   _enemyMnvCMB(e) { return dRoll(20) + (e.toHit || 0); },
   // Is this hero a soft, high-value backliner (a caster) — prime grapple bait?
-  _isSquishy(m) { return /wizard|sorcerer|cleric|oracle|druid|bard|witch|magus|inquisitor|summoner|alchemist/.test((m.cls || '').toLowerCase()); },
+  _isSquishy(m) { return /wizard|sorcerer|cleric|oracle|druid|bard|witch|magus|inquisitor|summoner|alchemist|theurge/.test((m.cls || '').toLowerCase()); },
   // Weighted random pick from [[key, weight], …].
   _weightedPick(menu) {
     const total = menu.reduce((s, [, w]) => s + w, 0);
@@ -756,9 +756,10 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const [hookDmg, hookDR] = this._physDR(target, r.damage);   // Stoneskin soaks the bite
     this._dmgToMember(target, hookDmg);
     const _fom = (!target.dead && target.hp > -10) ? this._fomSpend(target, 'the dragging hook') : false;
-    const _yankedDown = !_fom && !target.dead && target.hp > -10 && target.flying;   // a thrown chain-hook can snag a FLYER and drag it out of the sky — that's how a GROUNDED mech grabs an airborne hero (Josh's "how did the non-flying scraper grapple my flying Olbryn?"). The grapple then keeps them grounded (see the `grounded` check in _enemyAct).
+    const _already = !_fom && !target.dead && target.hp > -10 && !!target.grappled;   // v3.37.173: a SECOND chain on a hero already held (silver-gecko: eight Scrapers 'SNATCHED Celeb out of the air' in one round)
+    const _yankedDown = !_fom && !target.dead && target.hp > -10 && target.flying && !_already;   // a thrown chain-hook can snag a FLYER and drag it out of the sky — that's how a GROUNDED mech grabs an airborne hero (Josh's "how did the non-flying scraper grapple my flying Olbryn?"). The grapple then keeps them grounded (see the `grounded` check in _enemyAct).
     if (!target.dead && target.hp > -10 && !_fom) { target.grappled = true; target.grappledBy = e.uid; target.grappledCL = this._enemyCL(e); target.grappleCMB = e.toHit || 0; }   // stamp CMB for the cast-while-grappled concentration DC
-    this._note(`⛓️ ${e.glyph} ${e.name}'s hook ${r.crit ? 'CRITICALLY BITES' : 'BITES'} ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : `${_yankedDown ? ' — the chain SNATCHES them out of the air and drags them down' : ''} and drags them into a GRAPPLE! (Grease it or struggle free — no spell to dispel)`} ${this._atkStr(r)}`, snd, { side: 'enemy' });
+    this._note(`⛓️ ${e.glyph} ${e.name}'s hook ${r.crit ? 'CRITICALLY BITES' : 'BITES'} ${target.nickname} for ${hookDmg}${hookDR}${_fom ? ` — but Liberation's freedom of movement keeps them from being dragged into a grapple.` : _already ? ` — another chain winds around the already-held hero.` : `${_yankedDown ? ' — the chain SNATCHES them out of the air and drags them down' : ''} and drags them into a GRAPPLE! (Grease it or struggle free — no spell to dispel)`} ${this._atkStr(r)}`, snd, { side: 'enemy' });
     this._echoToTable(snd); this._broadcast();
   },
   // Crush a hero the devil is already grappling — automatic chain damage.

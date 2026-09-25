@@ -478,7 +478,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         return {
         key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, sla: !!ab.sla, blood: !!ab.blood, bloodSpell: !!ab.bloodSpell, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
         slot: abs.indexOf(ab),   // stable index into kit+domain abilities (the action payload `slot`) — SAME array as above so magus spellstrikes resolve (were -1)
-        active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : undefined,   // form currently shifted-into
+        active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : (ab.powerattack || ab.deadlyaim || ab.fightdefensively) ? !!(m.buffApplied && m.buffApplied[ab.key]) : undefined,   // form currently shifted-into; v3.37.173: a STANCE says whether it is ON (Josh pressed Power Attack at every door — it rode through silently, so his press eased it OFF, and he pressed again)
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null, aimAoe: !!ab.aimAoe,   // v3.37.143: Sunbeam is a BEAM — the client prompts for its primary target
         available: lvl >= (ab.minLevel || 1) && !(ab.needsRepeating && boltAction) && !(ab.cost === 'slot' && (slvlEff > 9 || !(maxSlots && maxSlots[slvlEff]))), desc: ab.desc || '',
         remaining: ab.cost === 'pool' ? (m.spellPool || 0) : ab.cost === 'slot' ? ((m.slots && m.slots[slvlEff]) || 0) : ab.cost === 'room' ? ((m.abilityUses && m.abilityUses[ab.key]) || 0) : ab.cost === 'run' ? ((m.runAbilityUses && m.runAbilityUses[ab.key]) || 0) : null,

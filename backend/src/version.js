@@ -2174,6 +2174,16 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.173 2026-09-24 THE STANCE THAT RODE THROUGH THE DOOR (log pass, runs stale-missile / silver-gecko — no mail
+//                     from Josh; the action log showed Power Attack pressed TWICE in round 1 of every new room,
+//                     1-4 s apart, OFF then ON). Power Attack / Deadly Aim / Fight Defensively ride through the
+//                     door silently, and the pad gave a blind player no on/off — so he switched his OFF and back
+//                     on every room. (1) The ability payload marks a stance `active` (sighted ✓ + 'ON — click to
+//                     switch it off'; the blind pad says 'Power Attack, on'). (2) A HUMAN hears which stances came
+//                     through the door (`_stanceDoorNote`, room-entry loop only). (3) The THEURGE is squishy: Celeb
+//                     (160 hp, the flyer every Scraper hooks) cast Freedom of Movement on Casandalee instead of
+//                     himself. (4) A second chain on an already-held hero no longer 'SNATCHES them out of the air'
+//                     (eight times in one round). (5) 'an Ikualo'a'. Tests 301-304; CLIENT_BUILD 33873.
 //  3.37.172 2026-09-24 THE IRON GODS FIREARMS (Tobias, from his Foundry world via the MCP bridge: Gearsman 5.0 / 5.5,
 //                     Silverhawk Shooter, Torch City Guard, Taylor Blackwood, Dral-Mok, Isuma, Buran's deed list). His
 //                     rules: every firearm is MARTIAL, every shot hits TOUCH AC (first range increment assumed), no ammo
@@ -2375,9 +2385,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.172';
+const VERSION = '3.37.173';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33869;   // v3.37.165: the Racial Abilities pad entry
+const CLIENT_BUILD = 33873;   // v3.37.173: stances say ON on the pad
 const HEADLINE = "The Iron Gods firearms: eight real guns, grit and deeds for gunslingers, and every gun hits touch AC.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

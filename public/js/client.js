@@ -1013,7 +1013,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33869;
+  const CLIENT_BUILD = 33873;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -1758,7 +1758,7 @@
           const tgt = ab.maxTargets > 1 ? ` <span class="dungeon__uses">×${ab.maxTargets}</span>` : '';
           const cls = ab.active ? 'btn btn--primary' : 'btn btn--ghost';
           const mark = ab.active ? '✓ ' : '';
-          let ttl = ab.active ? `${ab.desc || ''}\n(active — click to revert to normal)` : (ab.desc || '');
+          let ttl = ab.active ? `${ab.desc || ''}\n(${ab.effect === 'form' ? 'active — click to revert to normal' : 'ON — click to switch it off'})` : (ab.desc || '');   // v3.37.173: stances show ✓ too
           if (combat && !myTurn) ttl += '\n(⏳ not your turn — clicking QUEUES it to fire the moment your turn begins)';
           // CHANNEL — offensive vs defensive: two buttons sharing the slot + use pool
           // (Tobias). Heal mends the party; Sear blasts the undead instead.
@@ -2638,7 +2638,7 @@
         // LEVEL-LOCKED abilities don't eat numpad numbers (they still show in the sighted
         // bar greyed 🔒 and in the X progression). General win for every character.
         if (ab.available === false) return;
-        feats.push({ kind: 'ability', ab, slot: (ab.slot != null ? ab.slot : i), label: ab.name });
+        feats.push({ kind: 'ability', ab, slot: (ab.slot != null ? ab.slot : i), label: ab.name + (ab.active && (ab.key === 'powerattack' || ab.key === 'deadlyaim' || ab.key === 'fightdefensively') ? ', on' : '') });   // v3.37.173: a stance that is ON says so on the pad (Josh pressed Power Attack at every door and switched it OFF)
       });
       // BOW-FIRST ordering (Josh's Reese layout): Deadly Aim, then Rapid Shot, then Bullseye
       // Shot, then anything else — but ONLY when the hero has Imbued Shots (a magus), so no

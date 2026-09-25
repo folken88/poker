@@ -846,6 +846,16 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   // Per-room reset: refill the shared spell pool (full casters) + own-count
   // abilities, and clear sticky room buffs. Called each room and on join.
+  // v3.37.173 (Josh, runs stale-missile / silver-gecko — the action log shows Power Attack pressed
+  // TWICE in round 1 of every new room, 1-4 s apart: OFF then ON): the stances ride through the
+  // door silently (below), so a blind player had no way to know his was still on. A HUMAN now
+  // hears which stances came through; bots know already. Called from the room-entry loop only
+  // (not from the join or the level-up re-stock).
+  _stanceDoorNote(m) {
+    if (!m || m.isBot) return;
+    const _st = [m.paOn && 'Power Attack', m.aimOn && 'Deadly Aim', m.fdOn && 'Fight Defensively'].filter(Boolean);
+    if (_st.length) this._note(`💥 ${m.nickname}'s ${_st.join(' and ')} ${_st.length > 1 ? 'stay' : 'stays'} on through the door — no need to press ${_st.length > 1 ? 'them' : 'it'} again.`);
+  },
   _resetAbilities(m) {
     this._domainSetup(m);   // domains first — the uses loop below stocks their pools
     this._bloodlineSetup(m);   // v3.37.169: bloodline powers join the list before the uses loop stocks them
