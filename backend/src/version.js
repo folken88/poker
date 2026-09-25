@@ -2174,6 +2174,12 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.174 2026-09-25 THE ROLL GOES QUIET (Josh, run nimble-salmon: 'I don't need to hear the bot actually rolling what
+//                     it's going to do' — 140 spoken '🎲 Meyanda rolls BUFF (doctrine: 40% buff…)' lines in one run.
+//                     Tobias's ruling: the choice calculation of any AI happens behind the scenes). The doctrine roll
+//                     and the v168 'reads the room' call are now `_log('ai', …)` events in dungeon.jsonl only — no
+//                     note, so nothing on screen and nothing voiced. The bots' decisions are unchanged. Tests 296
+//                     rewritten to read the jsonl event, 305 added. Backend only; CLIENT_BUILD stays 33873.
 //  3.37.173 2026-09-24 THE STANCE THAT RODE THROUGH THE DOOR (log pass, runs stale-missile / silver-gecko — no mail
 //                     from Josh; the action log showed Power Attack pressed TWICE in round 1 of every new room,
 //                     1-4 s apart, OFF then ON). Power Attack / Deadly Aim / Fight Defensively ride through the
@@ -2385,7 +2391,7 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.173';
+const VERSION = '3.37.174';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33873;   // v3.37.173: stances say ON on the pad

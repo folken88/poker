@@ -412,7 +412,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     }
     for (const it of order) {
       const c = this._botAbilityFor(m, it);
-      if (c) { this._note(`🎲 ${m.nickname} rolls ${it.toUpperCase()}${first ? ` (doctrine: ${intents.map(k => `${mix[k]}% ${k}`).join(', ')})` : ''}.`); return c; }
+      if (c) { this._log('ai', { who: m.nickname, intent: it, ...(first ? { doctrine: mix } : {}) }); return c; }   // v3.37.174 (Josh, nimble-salmon: 140 spoken 'rolls BUFF' lines; Tobias: the choice calculation of any AI happens behind the scenes) — jsonl only, never a note
     }
     return null;   // nothing worth a cast under any intent → weapon
   },
@@ -438,7 +438,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     const _untouch = this._partyUntouchable(foes);
     const _dbfAlly = this.livingParty().some(a => (a.paralyzed > 0 && a.heldDC != null) || a.slowed > 0 || a.blinded > 0 || a.cursed);   // v3.37.171: a spell-bound ally makes Dispel / Remove reactive under any intent
     const UNTOUCH_SKIP = new Set(['save_debuff', 'grease', 'sleep', 'slow', 'fascinate', 'blacktentacles', 'exhaust', 'masscharm', 'glitterdust', 'mirrorimage', 'invisible', 'smite']);
-    if (_untouch && this._untouchSaid !== this.depth) { this._untouchSaid = this.depth; this._note(`🦅 Nothing down there can reach the party — ${m.nickname} reads the room: no buffs, no lockdowns, straight to damage.`); }
+    if (_untouch && this._untouchSaid !== this.depth) { this._untouchSaid = this.depth; this._log('ai', { who: m.nickname, event: 'untouchable' }); }   // v3.37.174: same rule — the read-the-room call is logged, not narrated
     const usable = (ab) => {
       if (!ab || lvl < (ab.minLevel || 1)) return false;
       // Spell Synthesis pairs ONE arcane + ONE divine LEVELED spell (Tobias 2026-07-08: "must use 1
