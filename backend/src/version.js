@@ -2174,6 +2174,16 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.175 2026-09-29 APG/UM BATCH A1 — THE OPENING FIVE (Tobias: 'start bringing in spells from APG and UM').
+//                     New ledger docs/APG-UM-SPELL-PARITY.md, same rules as the CRB one. Ear-Piercing Scream
+//                     (UM 1: ½-level d6 sonic + dazed→stunned, Fort partial), Frigid Touch (UM 2: 4d6 cold touch +
+//                     staggered→slowed, nat 20 = the room), Stone Call (APG 2: 2d6 bludgeoning, NO save, no SR), Sirocco
+//                     (APG 6: 4d6 fire + fatigued for the room, flyers torn from the sky until they stand), Cleanse (APG
+//                     5: 4d8+CL and ends blind/stun/sick/nausea/paralysis/slow). Engine: aoe noSave/noSR/fatigueRider/
+//                     groundRider, touch slowRider, heal cleanseRider, enemyAI re-flies a downed flyer on standing.
+//                     Also: the CRB ledger's 'queue empty' was wrong — a spot-check found ~24 CRB combat spells never
+//                     ported nor ruled out; recorded as batches 13-16 (queued). TOBY-QUESTIONS 14-16 (bloodline
+//                     translations, CRB leftovers, APG/UM scope). Tests 306-309. Backend + docs; CLIENT_BUILD stays 33873.
 //  3.37.174 2026-09-25 THE ROLL GOES QUIET (Josh, run nimble-salmon: 'I don't need to hear the bot actually rolling what
 //                     it's going to do' — 140 spoken '🎲 Meyanda rolls BUFF (doctrine: 40% buff…)' lines in one run.
 //                     Tobias's ruling: the choice calculation of any AI happens behind the scenes). The doctrine roll
@@ -2391,7 +2401,7 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.174';
+const VERSION = '3.37.175';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33873;   // v3.37.173: stances say ON on the pad

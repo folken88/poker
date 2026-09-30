@@ -115,6 +115,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     let stoodUp = false;
     if (e.prone) {
       e.prone = false;
+      if (e._downedFlyer) { e._downedFlyer = false; e.flying = true; }   // v3.37.175: Sirocco tore it from the sky — standing up puts it back on the wing
       if (e.slowed > 0) {
         this._note(`🐌 ${e.glyph} ${e.name}, slowed, struggles back to its feet — its single action spent standing.`, null, { side: 'enemy' });
         return;

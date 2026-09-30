@@ -44,6 +44,43 @@ Ruled section with the version that implemented it.
    cheap to add if a concept needs one (e.g. 'blaster', 'controller', 'necromancer').
 
 
+14. **Bloodline translations** (v3.37.169-170 shipped stand-ins; each power's desc names them). Bless or
+    redirect: (a) **Claws** (abyssal/draconic) — today +damage on your weapon strikes for the room; the
+    book gives two real 1d4/1d6 claw attacks. Real natural attacks instead? (b) **Corrupting Touch /
+    Grave Touch** (infernal/undead) — today a no-save touch that shakes; the book has no save either but
+    a touch ATTACK. Keep the auto-hit? (c) **Heavenly Fire** (celestial) — today a ray that damages any
+    foe; the book heals good creatures, damages evil, does nothing to neutral. Alignment-gate it? (d)
+    **Fated** (destined) — today an always-on luck bonus to AC/saves; the book gives it only in the
+    first round of combat (surprise rounds). Always-on OK? (e) **Touch of Destiny** (destined 1) and
+    **Laughing Touch** (fey 1) — no engine hook yet. Proposed: Touch of Destiny = one ally gets +½ level
+    on their next attack roll and save (a swift); Laughing Touch = one foe loses its next move/attack
+    (Will negates, mind-affecting) — i.e. a 1-round 'slowed'. (f) **Arcane bloodline** meta powers —
+    proposed: Arcane Bond = once a dungeon, recover one spent casting; Metamagic Adept = N free
+    Empower/Maximize applications a room (N = 1 at 3, +1 per 4 levels); School Power = +2 DC on one
+    spell school you pick in the lobby; Arcane Apotheosis (20) = metamagic never raises the slot. (g)
+    **Draconic colours** — one pick 'draconic' with an element dropdown (acid/cold/electricity/fire), or
+    ten separate bloodline entries? (h) **Farrah's bloodline** (ties to #4). (i) **Bloodrager ladder** —
+    bloodragers get powers at the sorcerer levels (1/3/9/15/20) as a stopgap; the ACG bloodrager ladder
+    is 1/4/8/12/16/20 with DIFFERENT powers. Keep the stopgap, or build the ACG bloodrager bloodlines
+    as their own table?
+
+15. **CRB leftovers** (found 2026-09-29 — the v3.37.162 'queue empty' was wrong; batches 13-16 are
+    queued in the CRB ledger). Three need a ruling: **Antimagic Field** (Clr 8, Sor/Wiz 6) — it would
+    strip the party's own buffs and summons too; ship it as 'no spells either side for the room' or
+    🚫? **Contingency** (Sor/Wiz 6) — 'when X happens, Y fires'; proposed 🚫 (no trigger surface) or a
+    single pre-set 'when I drop below half HP, a stored cure fires'. **Mage's Faithful Hound** (Sor/Wiz
+    5) — proposed 🚫, or a room-long summon that only bites foes attacking the caster and ignores
+    invisibility.
+
+16. **APG/UM scope** (batch A1 shipped in v3.37.175 — Ear-Piercing Scream, Frigid Touch, Stone Call,
+    Sirocco, Cleanse). (a) Priority: fill the THIN lists first (magus/UM, inquisitor and oracle/APG,
+    bloodrager/ACG) or the big Sor/Wiz blasts and controls? (b) Adaptations used in A1 — bless or veto:
+    dazed → the engine's stunned (turn lost); staggered → the engine's slowed (one action); Sirocco's
+    fatigue lasts the room; a Sirocco'd flyer is prone and reachable until it stands, then flies again.
+    (c) Is the ACG (Advanced Class Guide) list in scope too, or APG + UM only? (d) Heroes are never
+    fatigued, poisoned or drained, so the APG/UM cure spells for those stay 🚫 like their CRB cousins —
+    unless you want those conditions to start landing on heroes.
+
 ## Standing policy (Toby)
 
 - **Bonus typing** (2026-08-30): same-type bonuses never stack; categorize

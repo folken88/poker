@@ -450,7 +450,28 @@ with a reason. Revisit any of these when the surface it needs appears.
 
 ## Queued (batches of 5, in priority order)
 
-- (empty — v3.37.162. Every CRB spell is on its lists or documented under 🚫.)
+- **Correction (2026-09-29, v3.37.175):** the v3.37.162 claim was wrong. A spot-check of ~230 CRB spell
+  names against this ledger AND the data found ~24 combat spells that were neither ported nor ruled
+  out, plus ~40 utility spells that fall under the 🚫 families above but were never named. Queued:
+- **Batch 13 — walls & spheres:** Wall of Stone (Clr 5/Drd 6/Sor-Wiz 5), Wall of Iron (Sor/Wiz 6),
+  Prismatic Sphere (Sor/Wiz 9), Telekinetic Sphere (Sor/Wiz 8), Temporal Stasis (Sor/Wiz 8).
+- **Batch 14 — the Bigby hands:** Interposing Hand (5), Forceful Hand (6), Grasping Hand (7), Clenched
+  Fist (8), Crushing Hand (9) — the maneuver engine already does bull rush and grapple.
+- **Batch 15 — divine & druid:** Dispel Evil/Chaos/Good/Law (Clr 5, Pal 4 — one engine), Hold Animal
+  (Drd 2/Rgr 2), Dominate Animal (Drd 3), Command Undead (Sor/Wiz 2), Pyrotechnics (Brd 2/Sor-Wiz 2).
+- **Batch 16 — arcane self & misc:** Iron Body (Sor/Wiz 8), Flame Arrow (Sor/Wiz 3), Protection from
+  Spells (Sor/Wiz 8), Spectral Hand (Sor/Wiz 2), Mnemonic Enhancer (Wiz 4 — regain a spent casting).
+- **Awaiting Toby (TOBY-QUESTIONS 15):** Antimagic Field, Contingency, Mage's Faithful Hound.
+- **Utility spells never named here (all 🚫 by family):** Unseen Servant, Floating Disk, Hold Portal,
+  Endure Elements, Magic Aura, Disguise Self, Silent Image, Obscure Object, Rope Trick, Gentle Repose,
+  Sepia Snake Sigil, Tiny Hut, Water Breathing, Minor Creation, Detect Scrying, Locate Creature,
+  Mage's Faithful Hound (see above), Secret Chest, Telepathic Bond, Dream, Nightmare, Seeming, Transmute
+  Mud to Rock, Analyze Dweomer, Permanent Image, Programmed Image, Veil, Sequester, Greater Arcane
+  Sight, Nondetection, Misdirection, Arcane Sight, Clairaudience/Clairvoyance, Legend Lore, Meld into
+  Stone, Statue, Refuge, Planar Binding, Polymorph Any Object; cantrips Guidance, Virtue, Stabilize,
+  Bleed, Ghost Sound, Mage Hand, Open/Close, Prestidigitation, Disrupt Undead, Touch of Fatigue.
+- **Sister ledger:** docs/APG-UM-SPELL-PARITY.md carries the Advanced Player's Guide and Ultimate Magic
+  import (batch A1 shipped in v3.37.175).
 
 ## Impractical (🚫) — and why
 

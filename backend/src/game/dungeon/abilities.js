@@ -1730,13 +1730,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // then a TALLY of how many failed / saved / were slain — NOT a per-enemy list.
     // Keeps mid-combat narration fast; the blind player inspects enemies (E) on their
     // own turn for exactly who's left and how hurt.
-    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0, searedN = 0, proneN = 0, slowN = 0, stunN = 0, immuneN = 0, typeN = 0;
+    let failN = 0, savedN = 0, slainN = 0, blindN = 0, srN = 0, searedN = 0, proneN = 0, slowN = 0, stunN = 0, immuneN = 0, typeN = 0, fatN = 0, groundN = 0;
     for (const e of chosen) {
-      if (this._srBlocks(m, e, ab, true)) { srN++; continue; }   // PF1 SR: checked per target, tallied (counts-only for Josh)
+      if (!ab.noSR && this._srBlocks(m, e, ab, true)) { srN++; continue; }   // PF1 SR: checked per target, tallied (counts-only for Josh); noSR (v3.37.175): Stone Call is rubble, not magic on the target
       const _am = ab.vsAlign ? (this._alignIs(e, ab.vsAlign) ? 1 : this._alignIs(e, { lawful: 'chaotic', chaotic: 'lawful', good: 'evil', evil: 'good' }[ab.vsAlign]) ? 0 : 0.5) : 1;   // Chaos Hammer / Order's Wrath (v3.37.160): opposed full, neutral half, same-aligned immune (PF1)
       if (_am === 0) { immuneN++; continue; }
       if (ab.onlyType && e.type !== ab.onlyType) { typeN++; continue; }   // Shatter (v3.37.162): constructs only
-      const sv = this._saveVs(this._enemySave(e, saveStat), dc);
+      const sv = ab.noSave ? { saved: false, total: null } : this._saveVs(this._enemySave(e, saveStat), dc);   // noSave (v3.37.175): Stone Call
       const evaded = sv.saved && saveStat === 'reflex' && e.evasion;
       // SUNLIGHT spells (Sunbeam/Sunburst, v3.37.143 — Josh: 'is it affecting undead
       // to the effect that it needs to?'): the daylight table, per target — UNDEAD
@@ -1754,11 +1754,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (ab.proneRider && !sv.saved && e.hp > 0 && !e.flying) { e.prone = true; proneN++; }   // Earthquake (v3.37.159): a failed save throws a grounded foe PRONE
       if (ab.slowRider && !sv.saved && e.hp > 0 && _am === 1) { e.slowed = Math.max(e.slowed || 0, dRoll(6)); slowN++; }   // Chaos Hammer (v3.37.160): lawful foes that fail are SLOWED 1d6
       if (ab.stunRider && !sv.saved && e.hp > 0 && _am === 1) { e.stunned = Math.max(e.stunned || 0, 1); stunN++; }   // Greater Shout / Order's Wrath (v3.37.160): a failed save also STUNS a round
+      if (ab.fatigueRider && !sv.saved && e.hp > 0 && e.type !== 'undead' && e.type !== 'construct') { e.fatigued = Math.max(e.fatigued || 0, 99); fatN++; }   // Sirocco (v3.37.175, APG batch A1): FATIGUED for the room (the unliving do not tire)
+      if (ab.groundRider && !sv.saved && e.hp > 0 && e.flying) { e.flying = false; e.prone = true; e._downedFlyer = true; groundN++; }   // Sirocco: a flyer is torn from the sky — prone and reachable until it stands (enemyAI re-flies it then)
       if (sv.saved) savedN++; else failN++;
       if (e.hp <= 0) slainN++;
     }
-    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${proneN ? ` (${proneN} knocked PRONE)` : ''}${slowN ? ` (${slowN} SLOWED)` : ''}${stunN ? ` (${stunN} STUNNED)` : ''}${searedN ? `, ${searedN} undead SEARED by true daylight` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${immuneN ? `, ${immuneN} same-aligned untouched` : ''}${typeN ? `, ${typeN} not ${ab.onlyType} — untouched` : ''}${slainN ? `, ${slainN} slain` : ''}`;
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${saveLbl} DC ${dc} (${full} ${ab.dtype || ''}): ${tally}.`, sound);
+    const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${proneN ? ` (${proneN} knocked PRONE)` : ''}${slowN ? ` (${slowN} SLOWED)` : ''}${stunN ? ` (${stunN} STUNNED)` : ''}${fatN ? ` (${fatN} FATIGUED)` : ''}${groundN ? ` (${groundN} torn from the sky)` : ''}${searedN ? `, ${searedN} undead SEARED by true daylight` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${immuneN ? `, ${immuneN} same-aligned untouched` : ''}${typeN ? `, ${typeN} not ${ab.onlyType} — untouched` : ''}${slainN ? `, ${slainN} slain` : ''}`;
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${ab.noSave ? 'no save' : `${saveLbl} DC ${dc}`} (${full} ${ab.dtype || ''}): ${tally}.`, sound);
     this._echoToTable(sound);
     // THE STORM LINGERS (v3.37.143 — Josh: 'they keep going after you cast... you
     // can be doing other things but also causing damage'): Call Lightning (3d6
@@ -3122,6 +3124,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     }
     const raw = Math.max(1, this._rollSpell(m, dice, die, ab)) + (ab.flatCL ? Math.min(ab.flatCL, m.level || 1) : 0) + (ab.flatHalfCL ? Math.floor((m.level || 1) / 2) : 0);   // flatCL (v3.37.162): + caster level, capped (Produce Flame, Rusting Grasp); flatHalfCL (v3.37.169): + ½ level (bloodline rays)
     const dmg = this._dmgE(e, raw, ab.dtype);
+    let slowNote = '';
+    if (ab.slowRider && e.hp > 0 && dmg > 0) { const _rds = roll === 20 ? 10 : 1; e.slowed = Math.max(e.slowed || 0, _rds); slowNote = roll === 20 ? ' The cold CRITICALLY seizes it — STAGGERED for the room!' : ' It is STAGGERED — one action on its next turn.'; }   // Frigid Touch (v3.37.175, UM): staggered = the engine's slowed; a natural 20 holds for the room (PF1: 1 minute)
     // Lifesteal rider (antipaladin Vampiric Touch) — heal the caster by the
     // energy actually dealt, same as the magus spellstrike version.
     let stealNote = '';
@@ -3135,7 +3139,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       e.acid = { rounds, dice: Math.max(1, Math.floor(dice / 2)), die: ab.die || 6 };   // a fading burn (half the initial dice)
       dotNote = ` It clings and KEEPS BURNING (${rounds} more round${rounds > 1 ? 's' : ''}).`;
     }
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}${undeadTag}.${stealNote}${dotNote}${this._afterEnemyHit(e)}`, sound);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}${undeadTag}.${stealNote}${slowNote}${dotNote}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   },
@@ -3401,9 +3405,18 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const wasDown = target.hp <= 0;
       const h = cureAmt(); target.hp = Math.min(target.maxHp, target.hp + h);
       target._bleeding = false;   // magical healing staunches a Bleeding Touch wound
+      const _washed = [];   // Cleanse (v3.37.175, APG batch A1): the heal also ends the listed conditions on the target
+      if (ab.cleanseRider) {
+        if (target.blinded > 0)   { target.blinded = 0; _washed.push('blindness'); }
+        if (target.stunned > 0)   { target.stunned = 0; _washed.push('the stun'); }
+        if (target.sickened > 0)  { target.sickened = 0; _washed.push('sickness'); }
+        if (target.nauseated > 0) { target.nauseated = 0; _washed.push('nausea'); }
+        if (target.paralyzed > 0) { target.paralyzed = 0; target.heldDC = null; _washed.push('paralysis'); }
+        if (target.slowed > 0)    { target.slowed = 0; target._slowTick = 0; _washed.push('slow'); }
+      }
       const up = wasDown && target.hp > 0;
       if (up) target.downed = false;   // healed back to consciousness
-      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${target.nickname} heals ${h} (${target.hp}/${target.maxHp})${up ? ' ⤴up!' : ''}.`, sound);
+      this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${target.nickname} heals ${h} (${target.hp}/${target.maxHp})${up ? ' ⤴up!' : ''}${_washed.length ? ` and is washed clean of ${_washed.join(', ')}` : ''}.`, sound);
     }
     this._echoToTable(sound);
   },
