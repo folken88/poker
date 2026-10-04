@@ -49,10 +49,22 @@ function kitSpells(cls) {
 
 // Sort a spell list by curated priority (listed first = higher), then spell level, then
 // key — so unlisted kit spells fall to the back deterministically.
+// v3.37.177 — a kit spell's TIER, for the unlisted fallback below and the bots' per-run wildcards
+// (game/dungeon/abilities.js _computeCastable): 0 = attack/control, 1 = buff/heal/ward, 2 = the
+// situational copies (resist/protect energy variants, casting-stat buffs, summons), 3 = never by
+// default (metamagic copies, botAvoid, char-gated).
+const TIER0 = new Set(['aoe', 'savedie', 'save_debuff', 'touch', 'dominate', 'charm', 'masscharm', 'hdladder', 'holyword', 'inflictmass', 'circleofdeath', 'forcepush', 'exhaust', 'sleep', 'fascinate', 'powerword', 'rays', 'missile', 'disintegrate', 'wall', 'darkness', 'glitterdust', 'slow', 'blacktentacles', 'grease', 'prismatic', 'maze', 'forcecage', 'disjunction', 'tpstrike', 'bladelash', 'bladeddash', 'dimensionalblade', 'spiritweapon', 'spiritally', 'windwall', 'daylight', 'invispurge']);
+function spellTier(s) {
+  if (!s) return 3;
+  if (s.botAvoid || s.char || /_(emp|int|max|quick)$/.test(String(s.key))) return 3;
+  if (s.effect === 'summon' || /^(resist|protect)(fire|cold|acid|electricity|sonic)$/.test(String(s.key)) || (s.buff && s.buff.castStat)) return 2;
+  if (TIER0.has(s.effect)) return 0;
+  return 1;
+}
 function orderedByPriority(cls, spells) {
   const pri = PRIORITY[cls] || [];
-  const rank = (k) => { const i = pri.indexOf(k); return i < 0 ? 1e6 : i; };
-  return spells.slice().sort((a, b) => rank(a.key) - rank(b.key) || a.slvl - b.slvl || String(a.key).localeCompare(String(b.key)));
+  const rank = (sp) => { const i = pri.indexOf(sp.key); return i < 0 ? 1e6 + spellTier(sp) * 1e3 : i; };   // v3.37.177: unlisted spells fall back by TIER (attack/control, then buffs, then the situational copies), not alphabetically
+  return spells.slice().sort((a, b) => rank(a) - rank(b) || a.slvl - b.slvl || String(a.key).localeCompare(String(b.key)));
 }
 
 /** PREPARED default: { <slotLevel>: [spellKey, …] }, each level filled to its slot count.
@@ -90,4 +102,4 @@ function buildDefault(cls, level, castMod = 0) {
   return null;   // non-caster
 }
 
-module.exports = { PRIORITY, kitSpells, buildDefaultPrepared, buildDefaultKnown, buildDefault };
+module.exports = { PRIORITY, kitSpells, buildDefaultPrepared, buildDefaultKnown, buildDefault, spellTier, orderedByPriority };

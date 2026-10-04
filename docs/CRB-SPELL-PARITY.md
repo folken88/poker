@@ -26,7 +26,12 @@ Ground rules for every port (the standing spell-import checklist):
 - Duration decides persistence: rounds/min-per-level → room; ≥10 min/level →
   dungeon-long (Toby's tier ruling).
 - Wire all four points: SPELL def, per-class injection at the PF1 unlock level,
-  post-override normalization if a baked copy exists, PRIORITY so bots cast it.
+  post-override normalization if a baked copy exists, and the bots' reach. (v3.37.177
+  correction: PRIORITY appends never reached the table — at a spell level whose default
+  slots are full an unlisted spell is never prepared. Bots now draw one random tier-0/1
+  wildcard per spell level per run from what the default left out, so every batch spell
+  is castable by a hireling sooner or later; list a spell in PRIORITY only to make it a
+  STAPLE.)
 
 Status legend: ✅ in game · 🔧 adapted (note says how) · 📋 queued (batch #) ·
 🚫 impractical (reason).

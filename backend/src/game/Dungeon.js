@@ -2149,7 +2149,7 @@ class Dungeon {
         }
         const label = kind === 'attack' ? (payload.mode === 'ranged' ? 'ranged attack' : payload.mode === 'melee' ? 'melee attack' : 'attack')
           : ((this._abilitiesFor(m)[payload.slot | 0] || {}).name || 'ability');
-        m.queuedAction = { kind, payload, label };
+        const _qab = kind === 'ability' ? this._abilitiesFor(m)[payload.slot | 0] : null; if (_qab && (_qab.powerattack || _qab.deadlyaim || _qab.fightdefensively) && m.buffApplied && m.buffApplied[_qab.key]) return { ok: false, error: `${_qab.name} is already on — a queued press would only switch it OFF when your turn came. It stays on; press it on your turn if you really want it off.` }; m.queuedAction = { kind, payload, label };   // v3.37.177 (flying-pickle: a pre-loaded Deadly Aim fired at turn start and eased it OFF)
         this._broadcast();   // the ⏳ chip appears on their hero card
         return { ok: true, queued: true, label };
       }

@@ -2174,6 +2174,17 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.177 2026-10-04 THE IMPORTS REACH THE TABLE + THE QUEUED STANCE. Log pass over the ten runs since 09-30: not
+//                     one of the five A1 spells was ever cast by a bot. Cause: the loadout PRIORITY appends batch
+//                     spells at the back, and at every spell level whose default slots are full (wizard L1-L9,
+//                     cleric L1-L6, sorcerer everywhere) an unlisted spell is never prepared or known — true of most
+//                     of CRB batches 3-12 too, not just A1. (1) loadouts.js: `spellTier` (0 attack/control, 1 buff/
+//                     heal, 2 resist/stat/summon copies, 3 metamagic/botAvoid/char) and the unlisted fallback now
+//                     sorts by tier instead of alphabetically. (2) _computeCastable: a BOT caster prepares one extra
+//                     tier-0/1 spell per spell level per RUN, drawn at random from what its default left out (logged
+//                     as an 'ai' event); slots still cap casts; humans untouched. (3) Dungeon.js (same-line fold):
+//                     a queued press of a stance that is already ON is refused with a spoken reason — flying-pickle
+//                     had a pre-loaded Deadly Aim fire at turn start and ease it OFF. Tests 311-313; CLIENT_BUILD 33873.
 //  3.37.176 2026-10-04 STUNNING FIST SAYS ITS SAVE (Josh, run silver-gecko: 'it doesn't say if they have to make a
 //                     fort save… so i guess its just acting like a single attack?'). Verified: both Fists in that run
 //                     KILLED the target (41 on a Chelish Marine), so no save was rolled and the line said nothing about
@@ -2408,7 +2419,7 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.176';
+const VERSION = '3.37.177';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33873;   // v3.37.173: stances say ON on the pad

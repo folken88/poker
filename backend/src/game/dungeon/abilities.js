@@ -562,6 +562,23 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
           if (a.char && a.slvl != null && this._charAllows(a, m)) m.castableKeys.add(a.key);
         }
       }
+      // v3.37.177 BOT WILDCARDS (Tobias: 'a little rng'; the ledgers' 4th wiring point, which the
+      // APPEND-to-PRIORITY policy had quietly defeated — at any spell level whose default slots were
+      // already full a hireling never prepared a batch spell, so the imports never reached the table):
+      // a bot caster prepares ONE extra spell per spell level per RUN, drawn at random from the kit
+      // spells its default loadout left out (tiers 0-1 only: attack/control/buff — never the resist
+      // variants, stat buffs, summons, metamagic copies, char-gated or botAvoid). Slots still cap the
+      // casts per level; this only widens the MENU. Humans keep their own Spellbook picks.
+      if (m.isBot && m.castableKeys && m.cls !== 'theurge') {
+        if (!m._wildcards || m._wildcardsRun !== this.id) {
+          m._wildcardsRun = this.id; m._wildcards = [];
+          const _byL = {};
+          for (const sp of loadouts.kitSpells(m.cls)) if (!m.castableKeys.has(sp.key) && loadouts.spellTier(sp) <= 1 && (m.level || 1) >= (sp.minLevel || 1)) (_byL[sp.slvl] = _byL[sp.slvl] || []).push(sp.key);
+          for (const L of Object.keys(_byL)) { const _c = _byL[L]; m._wildcards.push(_c[Math.floor(Math.random() * _c.length)]); }
+          if (m._wildcards.length) this._log('ai', { who: m.nickname, wildcards: m._wildcards.slice() });
+        }
+        for (const k of m._wildcards) m.castableKeys.add(k);
+      }
     } catch (_) { m.castableKeys = null; }
   },
   _loadoutAllows(ab, m) {

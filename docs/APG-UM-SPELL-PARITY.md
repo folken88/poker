@@ -101,5 +101,11 @@ TOBY-QUESTIONS 16d). Named APG/UM examples as they are met go here.
 
 One batch per release alongside Josh's bugfixes; each batch updates this ledger
 in the same commit. Bots learn every spell through the doctrine sets (aoe/touch
-= attack, heal never waits); descriptions teach every adaptation; domtests pin
-each batch.
+= attack, heal never waits) and REACH it through the per-run wildcards (v3.37.177:
+one random tier-0/1 spell per spell level per run from what the default loadout
+left out — list a spell in PRIORITY only to make it a staple); descriptions teach
+every adaptation; domtests pin each batch.
+
+Magus note: the magus kit turns every `touch` spell into an Imbued Shot
+(spellstrike) — Frigid Touch sits in the magus's Imbued Shots submenu, not the
+Spellbook, and is not a loadout spell for it (minLevel 4 holds).
