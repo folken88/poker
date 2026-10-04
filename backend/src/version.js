@@ -2174,6 +2174,13 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.176 2026-10-04 STUNNING FIST SAYS ITS SAVE (Josh, run silver-gecko: 'it doesn't say if they have to make a
+//                     fort save… so i guess its just acting like a single attack?'). Verified: both Fists in that run
+//                     KILLED the target (41 on a Chelish Marine), so no save was rolled and the line said nothing about
+//                     one; the one survivor in stale-missile did get 'shakes off the stun [32 vs DC 23]'. The mechanic
+//                     was right; the line now always names the Fort save: 'slain outright, no Fort save needed (DC N)',
+//                     'no Fort save: immune', 'Fort save X vs DC N FAILS: STUNNED, it loses its next turn!', or
+//                     'Fort save X vs DC N: it shakes off the stun'. Test 310. Backend only; CLIENT_BUILD stays 33873.
 //  3.37.175 2026-09-29 APG/UM BATCH A1 — THE OPENING FIVE (Tobias: 'start bringing in spells from APG and UM').
 //                     New ledger docs/APG-UM-SPELL-PARITY.md, same rules as the CRB one. Ear-Piercing Scream
 //                     (UM 1: ½-level d6 sonic + dazed→stunned, Fort partial), Frigid Touch (UM 2: 4d6 cold touch +
@@ -2401,7 +2408,7 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.175';
+const VERSION = '3.37.176';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33873;   // v3.37.173: stances say ON on the pad

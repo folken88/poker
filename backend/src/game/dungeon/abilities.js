@@ -1944,15 +1944,18 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (!r.hit) { this._note(`${ab.icon} ${m.nickname}'s Stunning Fist misses ${e.name}. ${this._atkStr(r)}`, sound); this._echoToTable(sound); return; }
     this._dmgE(e, r.damage);
     const dc = 10 + Math.floor((m.level || 1) / 2) + ((m.mods && m.mods.wis) || 0);
+    // v3.37.176 (Josh, silver-gecko: 'stunning fist is not saying if it works or not… if they have to make a fort
+    // save'): both of his Fists that run KILLED the target, so no save was rolled and nothing was said. The line
+    // now always names the Fort save: slain outright (no save needed), immune, FAILS → stunned, or saves.
     let extra = '';
     if (e.hp > 0) {
-      if (mindImmune(e)) extra = ` — but ${e.name} is immune to stunning (no living body).`;   // PF1: undead & constructs ignore the stun (the strike still hurt)
+      if (mindImmune(e)) extra = ` — no Fort save: ${e.name} is immune to stunning (no living body).`;   // PF1: undead & constructs ignore the stun (the strike still hurt)
       else {
         const sv = this._saveVs(this._enemySave(e, 'fort'), dc);
-        if (!sv.saved) { e.loseTurn = true; extra = ` — STUNNED [${sv.total} vs DC ${dc}], it loses its turn!`; }
-        else extra = ` — it shakes off the stun [${sv.total} vs DC ${dc}].`;
+        if (!sv.saved) { e.loseTurn = true; extra = ` — Fort save ${sv.total} vs DC ${dc} FAILS: STUNNED, it loses its next turn!`; }
+        else extra = ` — Fort save ${sv.total} vs DC ${dc}: it shakes off the stun.`;
       }
-    }
+    } else extra = ` — slain outright, no Fort save needed (DC ${dc}).`;
     this._note(`${ab.icon} ${m.nickname}'s Stunning Fist ${r.crit ? 'CRITS' : 'strikes'} ${e.name} for ${r.damage}${r.drTag || ''}.${extra}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
