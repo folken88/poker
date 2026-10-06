@@ -985,7 +985,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // either); e._invisPurged is the per-foe belt-and-braces. Neither side can hide.
     if (cl >= 3 && !e.invisible && !e._invisPurged && !this.invisPurged && hurt && dRoll(3) === 1) {
       e.invisible = true;
-      this._note(`👻 ${e.glyph} ${e.name} winks out of sight — you'll need See Invisibility, True Seeing or blindsense to strike it!`, '/audio/spell_buff_invoke.mp3', { side: 'enemy' });
+      this._note(`👻 ${e.glyph} ${e.name} winks out of sight — your attacks on it now suffer 50% concealment (PF1: you can still strike where it stands); See Invisibility, True Seeing or blindsense pierces it, a Dispel strips it.`, '/audio/spell_buff_invoke.mp3', { side: 'enemy' });
       this._echoToTable('/audio/spell_buff_invoke.mp3'); this._broadcast(); return;
     }
     e.invisible = false;   // any other cast below is hostile → invisibility drops

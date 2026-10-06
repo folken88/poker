@@ -2174,6 +2174,15 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.178 2026-10-06 THE UNSEEN BOSS SAYS WHAT IT IS (Josh, crimson-mirror: 'I was able to shoot it. I thought he was
+//                     invisible… I shouldn't have been able to shoot him'). The engine was right — PF1 lets you strike
+//                     an invisible foe's square at 50% concealment, and his full attack went miss, FUMBLE, CRIT 105 —
+//                     but the 'winks out of sight' line said 'you'll need See Invisibility… to strike it', which is not
+//                     the rule, and the full-attack summary printed a concealment miss as a plain 'miss'. Both fixed:
+//                     the line states the 50% rule, the summary says 'unseen' (or 'blinked'). Log pass for his other
+//                     two mails (guns, stale enemies, enemy casters) found no engine bug — the numbers are in TOBY-
+//                     QUESTIONS 17-18 (553 enemy swings at the air in 7 runs; 5-8% enemy hit rate at L1-8 under +5 gear
+//                     on a level-1 character). Test 314. Backend only; CLIENT_BUILD stays 33873.
 //  3.37.177 2026-10-04 THE IMPORTS REACH THE TABLE + THE QUEUED STANCE. Log pass over the ten runs since 09-30: not
 //                     one of the five A1 spells was ever cast by a bot. Cause: the loadout PRIORITY appends batch
 //                     spells at the back, and at every spell level whose default slots are full (wizard L1-L9,
@@ -2419,7 +2428,7 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.177';
+const VERSION = '3.37.178';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33873;   // v3.37.173: stances say ON on the pad

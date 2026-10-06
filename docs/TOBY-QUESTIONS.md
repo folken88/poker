@@ -81,6 +81,28 @@ Ruled section with the version that implemented it.
     fatigued, poisoned or drained, so the APG/UM cure spells for those stay 🚫 like their CRB cousins —
     unless you want those conditions to start landing on heroes.
 
+17. **The flying party and the grounded dungeon** (Josh, 2026-10-05: 'do enemy casters not carry fly spells
+    or debuff spells? if my party all gets flying we can steamroll… is this by design?'). Numbers from his
+    seven runs of 10-04..10-06: **553 enemy swings at the air** (gentle-noodle 178 in 39 rounds, fuzzy-
+    penguin 215 in 56). The enemy repertoire today: Hold Person casters (shamans, the Thought Harvester);
+    arcane bosses by caster level — Mirror Image (CL4), Fly for THEMSELVES when melee-swarmed (CL5),
+    Invisibility (CL3), Bestow Curse (CL5, once a room), Dispel Magic (CL9, 1-in-4, once a room, only on a
+    hero wearing 3+ buffs), Fireball/Cone/Chain artillery; archers only via RANGED_KEYS; no melee monster
+    has a ranged fallback. Your 09-23 ruling was 'if their buffs trivialize a room, so be it'. Josh now asks
+    for danger back ('danger of being blown away is the fun bit'). Options, any mix: (a) humanoid melee
+    foes carry a sidearm — a javelin/sling/thrown-axe shot at −4 when nothing is in reach (PF1 stat blocks
+    nearly always list one); (b) anti-air doctrine for casters — when the whole party is airborne, Dispel
+    the flyer first (any CL that has the spell), or Glitterdust/Web the squishiest; (c) spawn weighting —
+    when the party enters a room flying, bias the band toward flying and ranged foes; (d) leave it.
+
+18. **+5 gear on a level-1 character** (Josh's 'are the bad boys being nerfed?', 2026-10-05). No nerfs in
+    the code. His gunslinger re-rolled at level 1 wearing the saved +5 weapon/armor/shield/cloak/ring
+    (gear persists across re-rolls and the level-the-field drop by design), so at L1-8 foes hit him and
+    the levelled-down allies **5-8%** of the time (merry-walrus 17 hits in 328 swings); by L13-16 it is
+    28-37%, which is close to PF1 norms. Guns themselves are by the book: touch AC in the first increment
+    → 97% hits; the 25-damage shots are 1d12 + Dex + 5 enhancement + Deadly Aim + Up Close dice. Keep gear
+    unbounded (his call to re-roll), or cap the usable enhancement by level (e.g. +1 per 3 levels)?
+
 ## Standing policy (Toby)
 
 - **Bonus typing** (2026-08-30): same-type bonuses never stack; categorize

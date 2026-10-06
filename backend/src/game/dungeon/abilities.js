@@ -4359,7 +4359,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         if (!g || g.tgt !== tgt) { g = { tgt, bits: [] }; groups.push(g); }
         if (r.fumble) g.bits.push('FUMBLE');
         else if (r.hit) { this._dmgE(tgt, r.damage); g.bits.push(`${r.crit ? 'CRIT ' : ''}${r.damage}${r.drTag || ''}${tag}`); }
-        else g.bits.push('miss');
+        else g.bits.push(r.conceal ? (r.blink ? 'blinked' : 'unseen') : 'miss');   // v3.37.178: a full-attack miss against an invisible foe says WHY (the single-swing line already did)
       }
       if (r.hit) {
         landed = true;
