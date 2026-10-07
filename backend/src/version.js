@@ -2174,6 +2174,14 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.179 2026-10-07 THE FREEZE THAT LEFT NO TRACE (Josh, run spicy-otter 00:08 local: 'Poker dungeon just locked up on
+//                     me mid run'). The log: room 7 cleared at 05:06:57Z, loot auto-passed, XP, Farrah L17, status
+//                     'exploring' — then nothing for 55 s until his socket dropped; no uncaughtException (server.js logs
+//                     them), no restart (RestartCount 0), the door-time routines re-run clean for a L13/16/17 sorcerer.
+//                     So the server waited for a door press that never came: a browser-side freeze with no evidence.
+//                     Now there will be: (1) the client reports window.onerror / unhandledrejection to the server
+//                     (throttled 6/min) → jsonl 'clienterr' rows against the live run; (2) a REFUSED dungeon action
+//                     (ok:false) and a handler exception are jsonl 'refused' / 'error' rows. Test 315. CLIENT_BUILD 33879.
 //  3.37.178 2026-10-06 THE UNSEEN BOSS SAYS WHAT IT IS (Josh, crimson-mirror: 'I was able to shoot it. I thought he was
 //                     invisible… I shouldn't have been able to shoot him'). The engine was right — PF1 lets you strike
 //                     an invisible foe's square at 50% concealment, and his full attack went miss, FUMBLE, CRIT 105 —
@@ -2428,9 +2436,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.178';
+const VERSION = '3.37.179';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33873;   // v3.37.173: stances say ON on the pad
+const CLIENT_BUILD = 33879;   // v3.37.179: the client error beacon
 const HEADLINE = "The Iron Gods firearms: eight real guns, grit and deeds for gunslingers, and every gun hits touch AC.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

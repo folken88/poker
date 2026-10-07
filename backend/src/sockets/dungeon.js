@@ -10,6 +10,7 @@
  * dungeon:echo carries muffled combat sounds to the poker table.
  */
 const db = require('../persistence/db');
+const { logDungeon } = require('../persistence/logger');   // v3.37.179: client errors + refused actions land in dungeon.jsonl
 const { Dungeon } = require('../game/Dungeon');
 const { levelFromXp } = require('../pf1data/xp');
 
@@ -108,7 +109,10 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     if (!d) return ack?.({ ok: false, error: 'no dungeon' });
     let res;
     try { res = d.action(me.player_id, kind, payload); }
-    catch (e) { res = { ok: false, error: e.message }; }
+    catch (e) { res = { ok: false, error: e.message }; try { logDungeon({ type: 'error', run: d.id, runName: d.runName, depth: d.depth, round: d.round, who: me.player_id, kind, msg: e.message, stack: String(e.stack || '').slice(0, 600) }); } catch (_) {} }
+    // v3.37.179 (Josh, spicy-otter: 'Poker dungeon just locked up on me mid run' — the server had cleared room 7 and sat in
+    // 'exploring' for 55 s with nothing logged, so the freeze left no trace): a REFUSED action is now a jsonl row too.
+    if (res && res.ok === false) { try { logDungeon({ type: 'refused', run: d.id, runName: d.runName, depth: d.depth, round: d.round, who: me.player_id, kind, error: res.error }); } catch (_) {} }
     ack?.(res || { ok: true });
   });
 
@@ -279,6 +283,14 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
   // run was bailed ("tab away to write notes and it cancels my run"). The party keeps
   // fighting via the AFK auto-attack meanwhile, so a longer hold costs nothing; if he
   // truly never returns, he still banks his gold at expiry.
+  // v3.37.179: the CLIENT's own errors (window.onerror / unhandledrejection, throttled client-side) are logged against the
+  // live run, so a frozen browser leaves evidence next to the server's rows. Data only — never acted on.
+  socket.on('client:error', (p) => {
+    try {
+      const me = meOf(); const d = dungeons.get(tableIdOf());
+      logDungeon({ type: 'clienterr', run: d ? d.id : null, runName: d ? d.runName : null, depth: d ? d.depth : null, round: d ? d.round : null, who: me ? me.player_id : null, build: p && p.build, msg: String((p && p.msg) || '').slice(0, 300), where: String((p && p.where) || '').slice(0, 200), stack: String((p && p.stack) || '').slice(0, 800) });
+    } catch (_) {}
+  });
   const DC_BAIL_GRACE_MS = 15 * 60_000;
   socket.on('disconnect', () => {
     const me = meOf();

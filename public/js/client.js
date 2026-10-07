@@ -1013,7 +1013,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33873;
+  const CLIENT_BUILD = 33879;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -6298,6 +6298,21 @@
     });
   })();
 
+  // ===== Error beacon (v3.37.179) =====
+  // Josh's 'locked up on me mid run' (spicy-otter) left nothing in the server log: the server had cleared the room and
+  // was waiting for the door. If the browser side throws, say so to the server (throttled: 6 a minute), so the next
+  // freeze is diagnosable. Wrapped so the beacon can never itself break the page.
+  (() => {
+    let _errN = 0, _errT = 0;
+    const beacon = (msg, where, stack) => {
+      try {
+        const now = Date.now(); if (now - _errT > 60000) { _errT = now; _errN = 0; } if (++_errN > 6) return;
+        if (socket && socket.connected) socket.emit('client:error', { build: CLIENT_BUILD, msg: String(msg || '').slice(0, 300), where: String(where || '').slice(0, 200), stack: String(stack || '').slice(0, 800) });
+      } catch (_) {}
+    };
+    try { window.addEventListener('error', (e) => beacon(e && e.message, `${(e && e.filename) || ''}:${(e && e.lineno) || 0}`, e && e.error && e.error.stack)); } catch (_) {}
+    try { window.addEventListener('unhandledrejection', (e) => { const r = e && e.reason; beacon((r && r.message) || String(r), 'promise', r && r.stack); }); } catch (_) {}
+  })();
   // ===== Boot =====
   socket.on('connect', () => {
     const savedId = (() => { try { return sessionStorage.getItem(PLAYER_KEY); } catch (_) { return null; } })();
