@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0d1b14" />
+  <meta name="author" content="Tobias Merriman (creator & designer); Josh Morrison (co-developer); Claude Code, Anthropic (engineering)" />
   <title>Folken Poker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -194,6 +195,7 @@
           <button class="btn btn--ghost btn--sm" id="cropArtBtn" title="Crop Station — reframe any card portrait (drag to pan, scroll to zoom, Save bakes it)">🖼 Crop art</button>
           <button class="btn btn--ghost btn--sm" id="sitOutBtn" title="Keep your seat but skip upcoming deals. Click Rejoin to come back.">Sit out</button>
           <button class="btn btn--ghost btn--sm" id="switchBtn"     title="Switch to a different player">Switch</button>
+          <button class="btn btn--ghost btn--sm" id="creditsBtn" title="Who made Folken Poker">Credits</button>
           <button class="btn btn--danger btn--sm" id="resetGameBtn" title="Reset EVERYONE's chips + cancel hand">Reset</button>
           <a class="btn btn--ghost btn--sm" id="testServerLink" href="http://192.168.1.200:32096" target="_blank" rel="noopener" title="Open the TEST server in a new tab — try changes before they reach this table">🧪 Test ↗</a>
         </div>
@@ -527,7 +529,7 @@
   <script src="/js/avatars.js?v=20260601-blindtop"></script>
   <script src="/js/cards.js?v=20260602-abadar"></script>
   <script src="/js/blindMode.js?v=33826"></script>
-  <script src="/js/client.js?v=33879"></script>
+  <script src="/js/client.js?v=33880"></script>
   <script>/* Point the Test-server link at whichever host serves this page (LAN IP, domain, Tailscale…), test backend lives on :32096. */(function(){var a=document.getElementById('testServerLink');if(a)a.href=location.protocol+'//'+location.hostname+':32096';})();</script>
 </body>
 </html>

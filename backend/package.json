@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "description": "Multiplayer Texas Hold'em server for folkengames.com",
   "main": "src/server.js",
+  "author": "Tobias Merriman (creator & designer)",
+  "contributors": [
+    "Josh Morrison (co-developer — blind-accessibility design, testing, rules and ideas)",
+    "Claude Code, Anthropic (engineering)"
+  ],
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js"

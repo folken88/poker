@@ -8,9 +8,13 @@ One persistent table. Whoever shows up sits down. A roster of named **AI bots** 
 
 - **Tobias Merriman** — creator & designer: the game, the art, the house rules, and the
   Pathfinder campaigns every character walked out of.
-- **Josh Morrison** — co-designer & quality assurance tester. The play-by-ear layer —
-  spoken menus, stable hotkeys, honest combat reports, the whole blind-accessibility
-  model — was designed with and proven by him, one report at a time.
+- **Josh Morrison** — co-developer. The play-by-ear layer — spoken menus, the stable
+  numpad, honest combat reports, the end-of-room narration, the whole blind-accessibility
+  model — was designed with him and proven by him, one report at a time. A large share of
+  the dungeon's rules work began as his bug reports, questions and ideas: the action
+  economy, the swing summaries, the doctrine rolls, the gunslinger and the guns, the stance
+  toggles, the invisible-foe rules, the hirelings' tactics. Every release that answers one
+  of his reports names him in the dev log (backend/src/version.js).
 - **Claude Code (Anthropic)** — engineering.
 
 ## Stack

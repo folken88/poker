@@ -1,3 +1,5 @@
+// Folken Poker — created and designed by Tobias Merriman; co-developed with Josh Morrison, whose testing, reports, questions and ideas shaped the dungeon, the bots and the whole play-by-ear layer; engineering by Claude Code (Anthropic).
+//
 // Folken Poker — the ONE app version (semver). The boot log, /api/health,
 // /api/version and the client topbar all read this. MANDATE (Tobias 2026-07-03):
 // bump MINOR for each feature batch, PATCH for fix-only batches, and note the
@@ -2174,6 +2176,10 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.180 2026-10-07 CREDITS (Tobias: 'ensure that poker includes Josh Morrison as co-developer — he has put in so
+//                     much work and thought and testing and ideas'). README credits, package.json contributors, this
+//                     header, a Credits entry in the table menu (toast + spoken in blind mode), <meta name=author>; PGM
+//                     carries the same in its manifest and version header. Test 316. CLIENT_BUILD 33880.
 //  3.37.179 2026-10-07 THE FREEZE THAT LEFT NO TRACE (Josh, run spicy-otter 00:08 local: 'Poker dungeon just locked up on
 //                     me mid run'). The log: room 7 cleared at 05:06:57Z, loot auto-passed, XP, Farrah L17, status
 //                     'exploring' — then nothing for 55 s until his socket dropped; no uncaughtException (server.js logs
@@ -2436,9 +2442,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.179';
+const VERSION = '3.37.180';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33879;   // v3.37.179: the client error beacon
+const CLIENT_BUILD = 33880;   // v3.37.180: the Credits menu entry
 const HEADLINE = "The Iron Gods firearms: eight real guns, grit and deeds for gunslingers, and every gun hits touch AC.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

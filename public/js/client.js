@@ -640,6 +640,11 @@
     topbarMenu.addEventListener('click', (e) => {
       if (e.target.closest('button')) closeMenu();
     });
+    // ── Credits (v3.37.180, Tobias: 'ensure that poker includes Josh Morrison as co-developer'). A toast for
+    //    sighted players; spoken in blind mode. Same text as the README and the version header.
+    const CREDITS = "Folken Poker — created and designed by Tobias Merriman; co-developed with Josh Morrison, whose testing, reports, questions and ideas shaped the dungeon, the bots and the whole play-by-ear layer; engineering by Claude Code (Anthropic).";
+    const creditsBtn = $('#creditsBtn');
+    if (creditsBtn) creditsBtn.addEventListener('click', () => { try { toast(CREDITS); } catch (_) {} try { if (window.BlindMode?.isOn?.()) window.BlindMode.speak(CREDITS, 'urgent'); } catch (_) {} });
     // Tap outside the menu (and not the toggle) → close.
     document.addEventListener('click', (e) => {
       if (topbarMenu.contains(e.target) || topbarMenuToggle.contains(e.target)) return;
@@ -1013,7 +1018,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33879;
+  const CLIENT_BUILD = 33880;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
