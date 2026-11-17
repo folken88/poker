@@ -103,6 +103,15 @@ Ruled section with the version that implemented it.
     → 97% hits; the 25-damage shots are 1d12 + Dex + 5 enhancement + Deadly Aim + Up Close dice. Keep gear
     unbounded (his call to re-roll), or cap the usable enhancement by level (e.g. +1 per 3 levels)?
 
+19. **Bots and summons** (Josh, 2026-11-17: 'every spellcaster is summoning monsters… I'm tired of that spell').
+    Shipped in v3.37.181 on his report, yours to veto: only a 'summoner' style (Jason, Draymus) opens a room with a
+    summon; every other bot summons in BOSS rooms only (it was once per room whenever the summon was worth a third of
+    the top CR — 59 summons in his last ten runs, Olbryn 13 in 15 rooms). Also shipped: a bot whose loadout a human
+    SAVED casts exactly that loadout (no v3.37.177 wildcards on top). Related, your call: (a) Olbryn's elemental
+    bloodline grants Summon Monster VIII at 17 by the book, so he always knows it — swap it for a storm spell (Call
+    Lightning Storm? Chain Lightning?) as a house rule, or keep RAW? (b) the DEFAULT cleric/oracle/wizard lists still
+    carry Summon Monster IV/VI/VIII as staples — drop them from the defaults so only summoners prepare them?
+
 ## Standing policy (Toby)
 
 - **Bonus typing** (2026-08-30): same-type bonuses never stack; categorize

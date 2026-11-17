@@ -829,6 +829,17 @@ function getKnownSpells(playerId, cls) {
   if (Array.isArray(map[klass]) && map[klass].length) return map[klass];
   return loadouts.buildDefaultKnown(klass, _classLevel(p, klass)) || [];
 }
+/** v3.37.181: has a human SAVED a loadout for this class (prepared or known)? A bot with a saved loadout casts
+ *  exactly that loadout — no per-run wildcard spells are added to it. */
+function hasSavedSpells(playerId, cls) {
+  const p = stmts.getPlayer.get(playerId);
+  if (!p) return false;
+  const klass = cls || p.class || 'fighter';
+  let a = {}, b = {};
+  try { a = JSON.parse(p.prepared_spells || '{}') || {}; } catch { a = {}; }
+  try { b = JSON.parse(p.known_spells || '{}') || {}; } catch { b = {}; }
+  return !!((a[klass] && typeof a[klass] === 'object' && Object.keys(a[klass]).length) || (Array.isArray(b[klass]) && b[klass].length));
+}
 /** Save a spells-known list for a class (the Spellbook UI's write path — Phase D). */
 function setKnownSpells(playerId, cls, known) {
   const p = stmts.getPlayer.get(playerId);
@@ -1032,6 +1043,7 @@ module.exports = {
   getPreparedSpells,
   setPreparedSpells,
   getKnownSpells,
+  hasSavedSpells,
   setKnownSpells,
   getDomains,
   setDomains,

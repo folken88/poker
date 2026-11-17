@@ -1018,7 +1018,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33880;
+  const CLIENT_BUILD = 33881;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -1085,6 +1085,7 @@
       const lvls = Object.keys(byLvl).map(Number).sort((a, b) => a - b);
       const picked = (s) => mdl.spont ? (mdl.known || []).includes(s.key) : (((mdl.prepared || {})[s.slvl]) || []).includes(s.key);
       body = `<div class="dungeon__sb-head">${mdl.spont ? 'Spells KNOWN — each level has a limit; forget one to learn another' : 'Prepared spells — fill each level\'s slots'} · lands at the next door</div>` +
+        (((mdl.bloodSpells || []).length) ? `<div class="dungeon__sb-head">🩸 Bloodline spells — always known, they use none of your picks: ${mdl.bloodSpells.map(b => escapeText(b.name)).join(', ')}</div>` : '') +   // v3.37.181
         `<div class="dungeon__sb-scroll">` + lvls.map(L => {
           const cnt = byLvl[L].filter(picked).length;
           const cap = (mdl.caps && mdl.caps[L] != null) ? (mdl.caps[L] | 0) : null;   // v3.37.164: spontaneous casters have a spells-KNOWN cap too
@@ -2335,14 +2336,15 @@
           const cap = (mdl.caps && mdl.caps[L] != null) ? (mdl.caps[L] | 0) : null;   // v3.37.164: spontaneous casters have a spells-KNOWN cap too
           return `level ${L}, ${picked}${cap != null ? ` of ${cap} ${mdl.spont ? 'known' : 'prepared'}` : ' known'}`;
         });
+        const blood = ((mdl.bloodSpells || []).length) ? ` Your bloodline spells are ALWAYS known, use none of your picks and cannot be forgotten: ${mdl.bloodSpells.map(b => b.name).join(', ')}.` : '';   // v3.37.181
         const dom = (!mdl.spont && (mdl.domainSpells || []).length) ? ` Your domain spells are ALWAYS ready and never use a prepared slot: ${mdl.domainSpells.map(d => d.name).join(', ')}.` : '';
-        sayU(`Prepare spells: ${parts.join('; ')}.${dom}${mdl.spont ? ` Those are the spells you may KNOW at each level — a hard limit: forget one to learn another. Your castings per room are separate: ${Object.keys(mdl.slots || {}).map(L => `level ${L}, ${mdl.slots[L]}`).join('; ')}.` : ` Each level's count is CASTINGS PER ROOM, shared across whatever you prepare — casting the same spell twice is automatic, no duplicate slots needed.`} Press a level number (or Tab through the levels), Escape to close.`);
+        sayU(`Prepare spells: ${parts.join('; ')}.${dom}${blood}${mdl.spont ? ` Those are the spells you may KNOW at each level — a hard limit: forget one to learn another. Your castings per room are separate: ${Object.keys(mdl.slots || {}).map(L => `level ${L}, ${mdl.slots[L]}`).join('; ')}.` : ` Each level's count is CASTINGS PER ROOM, shared across whatever you prepare — casting the same spell twice is automatic, no duplicate slots needed.`} Press a level number (or Tab through the levels), Escape to close.`);
       };
       const _sbpSpeakLevel = (L) => {
         const mdl = _sbpModel; if (!mdl) return;
         const at = _sbpAt(mdl, L);
         const capL = (mdl.caps && mdl.caps[L] != null) ? (mdl.caps[L] | 0) : null;
-        sayU(`Level ${L}${capL != null ? (mdl.spont ? ` — you know ${at.filter(s => _sbpPicked(mdl, s)).length} of ${capL}` : ` — ${capL} castings per room, shared across your prepared picks`) : ''}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + '. Number toggles; Tab or arrows step one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
+        sayU(`Level ${L}${capL != null ? (mdl.spont ? ` — you know ${at.filter(s => _sbpPicked(mdl, s)).length} of ${capL}` : ` — ${capL} castings per room, shared across your prepared picks`) : ''}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + (((mdl.bloodSpells || []).filter(b => b.slvl === L).length) ? `. Bloodline, always known and not counted: ${mdl.bloodSpells.filter(b => b.slvl === L).map(b => b.name).join(', ')}` : '') + '. Number toggles; Tab or arrows step one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
       };
       // One toggle path for BOTH the number keys and Tab+Enter (Josh 2026-07-16: "being
       // able to tab through and see what the possibilities are would be helpful... right
@@ -2809,7 +2811,7 @@
             // foes should sound the same everywhere). aliveE is already the targetable
             // set (no summons / no shrouded, deadliest-first), matching the F list.
             const list = aliveE.slice(0, 9).map((x, i) => `${i + 1}, ${x.name}${x.flying ? ', flying' : ''}, ${Math.round(100 * Math.max(0, x.hp | 0) / (x.maxHp || 1))}%`).join('; ');
-            sayU(`${ab.name} — select a target, deadliest first: ${list}.`);
+            sayU(`${ab.name} — select ${(ab.maxTargets || 1) > 1 ? `the lead target (it reaches up to ${ab.maxTargets} foes, your pick first)` : 'a target'}, deadliest first: ${list}.`);   // v3.37.181
             return;
           }
           const locked = _dunQueuedAttack && aliveE.find(x => x.uid === _dunQueuedAttack);
@@ -3366,7 +3368,7 @@
             const debs = (x.conditions || []).map(c => c.label).filter(Boolean);
             return `${i + 1}, ${x.name}, ${pct}%${x.flying ? ', flying' : ''}${debs.length ? ', ' + debs.join(', ') : ''}`;
           }).join('; ');
-          window.BlindMode.speak(`${label} — select a target, deadliest first: ${list}.`, 'urgent');
+          window.BlindMode.speak(`${label} — select ${(ab && (ab.maxTargets || 1) > 1) ? `the lead target (it reaches up to ${ab.maxTargets} foes, your pick first)` : 'a target'}, deadliest first: ${list}.`, 'urgent');   // v3.37.181
           return;
         }
         const targetUid = alive[0]?.uid;

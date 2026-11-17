@@ -608,9 +608,13 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       // v3.37.165 (Josh, Draymus vs three flying casters: 'an utterly amazing waste of a turn'): a summon
       // must be able to REACH something — if every foe left is airborne, only a pool with a flyer or a
       // shooter is worth the cast. Applies to everyone, summoner style included.
+      // v3.37.181 (Josh: 'every spellcaster is summoning monsters… it prevents them from healing, buffing or attacking a large
+      // field… I'm tired of that spell'): 59 summons in his last ten runs, Olbryn 13 in 15 rooms. Only a SUMMONER
+      // (Jason, Draymus) makes it the opener now; everyone else saves the call for a BOSS room.
+      const _bossRoom = (this.enemies || []).some(e => e.boss && e.hp > 0 && !e.summoned);
       const _summonReach = (a) => targets.some(e => !e.flying) || (((a.summon && a.summon.pool) || []).some(k => MON && MON[k] && (MON[k].flying || MON[k].ranged)));
       const _summonWorth = (a) => { const poolCR = Math.max(0, ...(((a.summon && a.summon.pool) || []).map(k => (MON && MON[k] && MON[k].crNum) || 0))); return poolCR * 3 >= topCR; };
-      if (summonAb && targets.length && _style !== 'guardian' && (_style === 'summoner' || m._summonDepth !== this.depth) && (_style === 'summoner' || _summonWorth(summonAb)) && _summonReach(summonAb) && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {   // v3.37.149: a SUMMONER calls help every time it falls (Jason, Draymus); a GUARDIAN never summons (Dinvaya)
+      if (summonAb && targets.length && _style !== 'guardian' && (_style === 'summoner' || m._summonDepth !== this.depth) && (_style === 'summoner' || _bossRoom) && (_style === 'summoner' || _summonWorth(summonAb)) && _summonReach(summonAb) && !this.enemies.some(e => e.summoned && e.summonedBy === m.playerId && e.hp > 0)) {   // v3.37.149: a SUMMONER calls help every time it falls (Jason, Draymus); a GUARDIAN never summons (Dinvaya)
         m._summonDepth = this.depth;
         return { slot: slot(summonAb), payload: {} };
       }

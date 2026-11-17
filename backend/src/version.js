@@ -2176,6 +2176,19 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.181 2026-11-17 JOSH'S CASTER PASS (three mails; run proud-sparrow, played as Olbryn). (1) MASS SPELLS HIT ONE FOE:
+//                     the blind target prompt sends one uid and the picks were the whole target list — his Mass Hold
+//                     Monster held 1 of 8, Confusion 1 of 12, one Mass Hold was wasted on a mind-immune pick. The picks
+//                     now LEAD and the field fills the reach (_enemyTargets; Magic Missile keeps exact picks); the mass
+//                     save path filters the invalid before counting; the prompt says 'lead target, reaches up to N'.
+//                     (2) 'CAN'T FORGET SUMMON MONSTER VIII / BURNING HANDS… FOUR OF THREE': they are Olbryn's ELEMENTAL
+//                     BLOODLINE spells — always known (PF1), but the Spellbook listed them as togglable and counted
+//                     them against the cap. They leave the pool for their own always-known list (like domain spells),
+//                     a toggle is refused with the reason, and a saved pick the bloodline already grants is dropped
+//                     (his 1st level gets a pick back). (3) EVERYONE SUMMONS: 59 bot summons in ten runs — only a
+//                     'summoner' style (Jason, Draymus) opens with it now; others summon in BOSS rooms only.
+//                     (4) A SAVED LOADOUT IS THE WHOLE LOADOUT: bots with a human-saved list get no wildcard spells
+//                     (db.hasSavedSpells). Tests 317-320. CLIENT_BUILD 33881. TOBY-QUESTIONS 19.
 //  3.37.180 2026-10-07 CREDITS (Tobias: 'ensure that poker includes Josh Morrison as co-developer — he has put in so
 //                     much work and thought and testing and ideas'). README credits, package.json contributors, this
 //                     header, a Credits entry in the table menu (toast + spoken in blind mode), <meta name=author>; PGM
@@ -2442,9 +2455,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.180';
+const VERSION = '3.37.181';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33880;   // v3.37.180: the Credits menu entry
+const CLIENT_BUILD = 33881;   // v3.37.181: bloodline spells in the Spellbook, the lead-target prompt
 const HEADLINE = "The Iron Gods firearms: eight real guns, grit and deeds for gunslingers, and every gun hits touch AC.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

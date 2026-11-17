@@ -569,7 +569,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // spells its default loadout left out (tiers 0-1 only: attack/control/buff — never the resist
       // variants, stat buffs, summons, metamagic copies, char-gated or botAvoid). Slots still cap the
       // casts per level; this only widens the MENU. Humans keep their own Spellbook picks.
-      if (m.isBot && m.castableKeys && m.cls !== 'theurge') {
+      if (m.isBot && m.castableKeys && m.cls !== 'theurge' && !(typeof db.hasSavedSpells === 'function' && db.hasSavedSpells(m.playerId, m.cls))) {   // v3.37.181 (Josh: 'if I alter Olbryn's loadout it persists… whether he is AI ran or not'): a saved loadout is the WHOLE loadout — wildcards are for bots still on the default list
         if (!m._wildcards || m._wildcardsRun !== this.id) {
           m._wildcardsRun = this.id; m._wildcards = [];
           const _byL = {};
@@ -1153,9 +1153,16 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (mm.empower) dmg += Math.floor((mm.maximize ? dRollN(dice, die) : dmg) * 0.5);
     return dmg;
   },
-  _enemyTargets(payload, max) {
-    let chosen = ((payload && payload.targetUids) || []).map(u => this.enemies.find(e => e.uid === u && e.hp > 0 && !(e.darkened > 0) && !e.summoned)).filter(Boolean);
+  // v3.37.181 (Josh, run proud-sparrow: 'mass spells are having to target one person' — his Mass Hold Monster held ONE
+  // foe in a room of eight, his Confusion confused one of twelve, and one Mass Hold was wasted outright on a single
+  // mind-immune pick): the blind target prompt sends ONE uid, and the picks used to be the WHOLE target list. Now the
+  // picks LEAD and the rest of the field fills the spell's remaining reach. opts.noFill keeps the old exact-picks
+  // rule for Magic Missile, where a player concentrates the darts on purpose.
+  _enemyTargets(payload, max, opts = {}) {
+    const ids = (payload && Array.isArray(payload.targetUids) && payload.targetUids.length) ? payload.targetUids : ((!opts.noFill && payload && payload.targetUid) ? [payload.targetUid] : []);
+    let chosen = ids.map(u => this.enemies.find(e => e.uid === u && e.hp > 0 && !(e.darkened > 0) && !e.summoned)).filter(Boolean);
     if (!chosen.length) chosen = this._targetableEnemies();   // Darkness-shrouded foes can't be hit
+    else if (!opts.noFill && (!max || chosen.length < max)) chosen = chosen.concat(this._targetableEnemies().filter(e => !chosen.includes(e)));
     return max ? chosen.slice(0, max) : chosen;
   },
   _oneEnemy(payload) {
@@ -1399,8 +1406,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // injected dual kit (theurgeKit) rather than kitSpells(cls) — otherwise the
     // Spellbook shows an empty list at every level.
     const src = (m.cls === 'theurge') ? theurgeKit().filter(ab => ab.slvl != null && ab.slvl >= 1) : loadouts.kitSpells(m.cls).filter(ab => this._charAllows(ab, m));
+    // v3.37.181 (Josh, Olbryn: 'it won't let me forget Summon Monster on level eight… and a fire spell on first… it says I
+    // know FOUR of THREE'): those two are his ELEMENTAL BLOODLINE's bonus spells — always known by PF1, so a toggle
+    // changed nothing — and the menu counted them against a cap that excludes them. They now leave the togglable pool
+    // and ride their own always-known list (bloodSpells), exactly like a cleric's domain spells.
+    const _bloodKeys = spont ? (m._bloodSpellKeys || []) : [];
+    const _kitAll = (m.cls === 'theurge') ? [] : loadouts.kitSpells(m.cls);
+    const bloodSpells = _bloodKeys.map(k => { const ab = _kitAll.find(a => a.key === k) || (m._bloodSpells || []).find(a => a.key === k) || {}; return { key: k, name: ab.name || k, slvl: ab.slvl || null }; });
     const pool = src
-      .filter(ab => (m.level || 1) >= (ab.minLevel || 1))   // only spells THIS character can cast at their level
+      .filter(ab => (m.level || 1) >= (ab.minLevel || 1) && !_bloodKeys.includes(ab.key))   // only spells THIS character can cast at their level; bloodline spells are listed apart
       .map(ab => ({ key: ab.key, name: ab.name, icon: ab.icon || '✨', slvl: ab.slvl }));
     const caps = spont ? null : (slotsFor(m.cls, m.level || 1, m.castingMod) || {});
     // v3.37.142: a cleric's DOMAIN spells are always castable without occupying a
@@ -1415,7 +1429,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       }
     }
     return spont
-      ? { spont, pool, caps: this._knownCaps(m), slots: (slotsFor(m.cls, m.level || 1, m.castingMod) || {}), known: this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []).concat(m._bloodSpellKeys || []), bloodline: m.bloodline || 'none' }   // v3.37.164; v3.37.169: bloodline spells are always known
+      ? { spont, pool, caps: this._knownCaps(m), slots: (slotsFor(m.cls, m.level || 1, m.castingMod) || {}), known: this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []), bloodSpells, bloodline: m.bloodline || 'none' }   // v3.37.164; v3.37.169: bloodline spells are always known
       : { spont, pool, caps, domainSpells, prepared: this._loadoutRebucket(m, db.getPreparedSpells(m.playerId, m.cls) || {}) };
   },
   // Self-heal a stored prepared map when a spell's slot LEVEL changes (e.g. the
@@ -1470,7 +1484,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     for (const sp of loadouts.kitSpells(m.cls)) byKey[sp.key] = sp;
     for (const key of (Array.isArray(list) ? list : [])) {
       const ab = byKey[key];
-      if (!ab || out.includes(key) || !this._charAllows(ab, m) || (m.level || 1) < (ab.minLevel || 1)) continue;
+      if (!ab || out.includes(key) || !this._charAllows(ab, m) || (m.level || 1) < (ab.minLevel || 1) || (m._bloodSpellKeys || []).includes(key)) continue;   // v3.37.181: a saved pick that the bloodline already grants is dropped — the pick comes back
       const sl = ab.slvl, cap = caps[sl] | 0;
       n[sl] = n[sl] || 0;
       if (n[sl] >= cap) continue;
@@ -1482,6 +1496,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const ab = loadouts.kitSpells(m.cls).find(s => s.key === key && this._charAllows(s, m));
     if (!ab) return { ok: false, error: 'not a spell your class can learn' };
     if ((m.level || 1) < (ab.minLevel || 1)) return { ok: false, error: `${ab.name} needs level ${ab.minLevel}` };
+    if (isSpontaneous(m.cls) && (m._bloodSpellKeys || []).includes(key)) return { ok: false, error: `${ab.name} is a bloodline spell — always known. It uses none of your picks and cannot be forgotten` };   // v3.37.181
     if (isSpontaneous(m.cls)) {
       const known = this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []);   // heal an over-cap legacy list before toggling (v3.37.164)
       if (!known.includes(key)) {
@@ -1861,7 +1876,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // max 5; each 1d4+1). Darts split across selected foes if more than one.
   _abMissile(m, ab, payload) {
     const darts = Math.min(5, 1 + Math.floor(((m.level || 1) - 1) / 2));   // L1:1 L3:2 L5:3 L7:4 L9:5
-    let targets = this._enemyTargets(payload, darts);
+    let targets = this._enemyTargets(payload, darts, { noFill: true });   // v3.37.181: the darts go exactly where they were aimed
     if (!targets.length) { const e = this._oneEnemy(payload); if (!e) return; targets = [e]; }
     const sound = ab.sound || pick(SND.lightning), parts = [];
     for (let i = 0; i < darts; i++) {
@@ -3068,8 +3083,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // filtered out rather than refused (a mass spell washes over the whole field).
     if ((ab.maxTargets || 1) > 1) {
       const maxN = ab.perLevels ? Math.max(1, Math.min(ab.maxTargets, Math.floor((m.level || 1) / ab.perLevels))) : ab.maxTargets;   // Scare: one foe per 3 levels (v3.37.153)
-      const picked = this._enemyTargets(payload, maxN)
-        .filter(e => !((ab.debuff === 'paralyzed' && !ab.physicalHold || ab.mindAffect) && mindImmune(e)) && !(ab.onlyHumanoids && !this._isHumanoid(e)) && !(ab.hdCap && (crToNum(e.cr) || 0) > ab.hdCap) && !(ab.onlyType && e.type !== ab.onlyType));   // onlyType: Halt Undead (v3.37.162)
+      const picked = this._enemyTargets(payload, 0)   // v3.37.181: every candidate (picks first), the invalid filtered BEFORE the reach is counted — a mind-immune pick no longer wastes the spell
+        .filter(e => !((ab.debuff === 'paralyzed' && !ab.physicalHold || ab.mindAffect) && mindImmune(e)) && !(ab.onlyHumanoids && !this._isHumanoid(e)) && !(ab.hdCap && (crToNum(e.cr) || 0) > ab.hdCap) && !(ab.onlyType && e.type !== ab.onlyType)).slice(0, maxN);   // onlyType: Halt Undead (v3.37.162)
       if (!picked.length) { this._note(`${ab.icon} ${ab.name} finds no valid target on this field.`); this._echoToTable(); return; }
       const dc = this._spellDC(m, ab); const held = [], resisted = [];
       for (const e of picked) {
