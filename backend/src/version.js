@@ -2176,6 +2176,29 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.183 2026-11-17 JOSH'S THIRD PASS (two mails after v182; run blessed-anvil, playing Olbryn the sorcerer to room 15).
+//                     (1) TELEPORT / DIMENSION DOOR COULD NOT BE AIMED: 'I cannot target somebody with teleport or
+//                     dimension door… this has been a bug for a while and has not been fixed.' Right — the server
+//                     always honored an ally pick and the sighted party card sent one, but the blind pad never
+//                     ASKED (allyPick left tpstrike out; v3.37.111 logged it as 'tracked' and it was never wired).
+//                     His one Teleport of the run landed on HIMSELF: with no pick the by-level sort put the level-20
+//                     caster ahead of the barbarian. Both spells now prompt 'on whom?', and with no pick a melee
+//                     ALLY goes first, the caster last. (2) 'HOW IS SPELL TURNING SUPPOSED TO WORK': three casts
+//                     each read only 'Olbryn uses Spell Turning!'. A ward whose whole effect is a flag now says
+//                     what it does (_buffSays: turning, displacement, blur, fire shield, resist/protection pools,
+//                     true seeing, stoneskin DR…), for a HUMAN caster only — the hirelings' buff lines stay short.
+//                     (3) THE V KEY (his idea): bloodline and domain spells are 'kept separate and out of your main
+//                     spell book'. A cleric's domain spells leave the K pool as bloodline spells did in v181 (a
+//                     saved pick a domain already grants is dropped and the pick comes back — Dinvaya gets four);
+//                     V reads a cleric's picked domains and granted spells first, and a sorcerer's bloodline and
+//                     its always-known spells; K carries one pointer line. (4) 'IT'S STILL UNKNOWN TO ME IF I
+//                     HAVE SEVEN SLOTS, IF I CAN PREPARE MORE THAN ONE SLOT OF THE SAME SPELL': the K menu now
+//                     leads with the rule (castings per room at a level = the most DIFFERENT spells you may
+//                     prepare there; any prepared spell can spend every casting; never prepare one twice), every
+//                     count reads 'N castings, M prepared', and the full-level refusal says the same. Also: the
+//                     area line lost its dangling space ('(46 )' for Sunburst); a refused cast logs the spell's
+//                     name and a successful Spellbook change is a jsonl row. Tests 325-328 (older wording pins
+//                     moved with the wording). CLIENT_BUILD 33883. TOBY-QUESTIONS 21.
 //  3.37.182 2026-11-17 JOSH'S SECOND PASS (two mails; runs invisible-pickle, golden-anvil, merry-mirror as his fighter).
 //                     (1) THE FIGHTER WHO COULD ONLY CLEAVE: 65 of his 78 actions read 'cleaves' and every plain Attack
 //                     was ONE swing — a carver's Attack was always the sweep, so a fighter from 9 and a barbarian never
@@ -2468,9 +2491,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.182';
+const VERSION = '3.37.183';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33882;   // v3.37.182: Spellbook changes say 'Ready now' between fights; domain spells labelled
+const CLIENT_BUILD = 33883;   // v3.37.183: Teleport/Dimension Door ask 'on whom?'; the V key reads domain and bloodline spells; the K menu leads with the rule
 const HEADLINE = "The Iron Gods firearms: eight real guns, grit and deeds for gunslingers, and every gun hits touch AC.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

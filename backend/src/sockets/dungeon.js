@@ -112,7 +112,8 @@ function registerDungeonHandlers(io, socket, { tables, dungeons }) {
     catch (e) { res = { ok: false, error: e.message }; try { logDungeon({ type: 'error', run: d.id, runName: d.runName, depth: d.depth, round: d.round, who: me.player_id, kind, msg: e.message, stack: String(e.stack || '').slice(0, 600) }); } catch (_) {} }
     // v3.37.179 (Josh, spicy-otter: 'Poker dungeon just locked up on me mid run' — the server had cleared room 7 and sat in
     // 'exploring' for 55 s with nothing logged, so the freeze left no trace): a REFUSED action is now a jsonl row too.
-    if (res && res.ok === false) { try { logDungeon({ type: 'refused', run: d.id, runName: d.runName, depth: d.depth, round: d.round, who: me.player_id, kind, error: res.error }); } catch (_) {} }
+    // v3.37.183: a refused CAST names the spell (six pre-door refusals in blessed-anvil could not be told apart).
+    if (res && res.ok === false) { let _abn; try { if (kind === 'ability' && payload && payload.slot != null) _abn = ((d._abilitiesFor(d.member(me.player_id)) || [])[payload.slot] || {}).name; } catch (_) {} try { logDungeon({ type: 'refused', run: d.id, runName: d.runName, depth: d.depth, round: d.round, who: me.player_id, kind, ab: _abn, error: res.error }); } catch (_) {} }
     ack?.(res || { ok: true });
   });
 

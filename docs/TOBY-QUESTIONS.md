@@ -119,6 +119,14 @@ Ruled section with the version that implemented it.
     martial already had. This raises the single-target damage of the bot carvers too (Tokala, the fighter
     hirelings). Keep it, or should carving stay their only swing?
 
+21. **The V key and the prepare menu** (Josh, 2026-11-17: 'is there any merit to moving bloodline spells to the V
+    key… and domain spells there too… and then this is your main spell loadout'). Shipped in v3.37.183 on his
+    suggestion, yours to veto: (a) a cleric's domain spells no longer appear in the K prepare list (blind) or the
+    Prepare popover (sighted, which shows them in a header line instead) — V reads them, and a sorcerer's V reads
+    the bloodline and its spells; (b) a saved prepared pick that a domain already grants is dropped and the pick is
+    handed back; (c) a HUMAN caster's flag-only ward (Spell Turning, Displacement, Protection from Energy…) now
+    says what it does, the hirelings' lines stay short. Keep all three, or change any?
+
 ## Standing policy (Toby)
 
 - **Bonus typing** (2026-08-30): same-type bonuses never stack; categorize

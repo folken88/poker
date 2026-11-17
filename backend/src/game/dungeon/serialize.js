@@ -465,6 +465,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
           (ab.effect === 'buff' && ab.target === 'ally' && !ab.party && !ab.powerattack && !ab.deadlyaim) ||
           (ab.effect === 'freedommove') ||   // v3.37.133 (Josh: 'why can i not cast this on someone else... I carry it to unfuck the spellcaster from grapple') — the effect isn't 'buff', so the ally prompt never offered; the server always honored allyUid
           (ab.effect === 'invisible') ||
+          (ab.effect === 'tpstrike') ||   // v3.37.183 (Josh, Olbryn: 'I cannot target somebody with teleport or dimension door… this has been a bug for a while'): the server always honored allyUid, the blind pad never ASKED — promised in v3.37.111, never wired
           (ab.effect === 'infernalheal') ||
           (ab.effect === 'domward') ||   // Protection domain's Resistant Touch aims at one ally (default self)
           (ab.effect === 'revive' && !ab.raiseDead);

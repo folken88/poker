@@ -1203,6 +1203,39 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // full attack on ANY enemy they choose (_canReach always true while the
   // strike-window is up), and (2) NOBODY can target them until the CASTER's
   // next turn comes around (blinkedBy, cleared in _advanceToActor).
+  // v3.37.183 (Josh, run blessed-anvil — three casts of Spell Turning that each read only 'Olbryn uses Spell Turning!':
+  // 'I'm not exactly sure how [it] is supposed to work as a spell… I'm just kind of ignorant on how to make it work'):
+  // a ward whose whole effect is a FLAG (no +hit / +AC number) told its caster nothing. What each flag does, in words;
+  // spoken for a HUMAN caster only, so the hirelings' buff lines stay as short as they were.
+  _buffSays(ab, lvl) {
+    const s = [], L = lvl || 1;
+    if (ab.spellTurning) s.push('the next 3 enemy spells aimed at them are turned aside and wasted');
+    if (ab.dr) s.push(`damage reduction ${ab.dr} against weapon blows`);
+    if (ab.fly) s.push('flying, so grounded foes cannot reach them in melee');
+    if (ab.canHitFlyers) s.push('their weapon reaches airborne foes');
+    if (ab.displace) s.push('half of all attacks on them miss');
+    if (ab.blink) s.push('half of all attacks on them miss, and one in five of their own flickers away');
+    if (ab.blur) s.push('one attack in five on them misses');
+    if (ab.entropic) s.push('one enemy ranged attack in five misses them');
+    if (ab.protArrows) s.push(`ranged hits lose 10 damage each, up to ${Math.min(100, 10 * L)} in all`);
+    if (ab.sanctuary) s.push('foes cannot target them until they attack');
+    if (ab.fireShield) s.push('any foe that hits them in melee is burned');
+    if (ab.spellResist) s.push(`spell resistance ${12 + L} against enemy spells`);
+    if (ab.deathWard) s.push('death magic and negative energy cannot touch them');
+    if (ab.resistType) s.push(`${ab.resistType} resistance ${L >= 11 ? 30 : L >= 7 ? 20 : 10} on every hit`);
+    if (ab.wardType) s.push(`the next ${Math.min(120, 12 * L)} ${ab.wardType} damage is absorbed`);
+    if (ab.protectFire) s.push(`the next ${Math.min(120, 12 * L)} fire damage is absorbed`);
+    if (ab.trueSeeing) s.push('they see through darkness, illusion and invisibility');
+    if (ab.seeInvis) s.push('they can find and strike invisible foes');
+    if (ab.darkvision) s.push('they can target foes hidden in magical darkness');
+    if (ab.trueStrike) s.push('+20 on their next attack roll');
+    if (ab.keenEdge) s.push("their weapon's critical threat range is doubled");
+    if (ab.blessWeapon) s.push('their critical threats against evil foes confirm on their own');
+    if (ab.holySword) s.push('+2d6 holy damage on every hit against an evil foe');
+    if (ab.antilife) s.push('living melee foes cannot close on them');
+    if (ab.transform) s.push('no spellcasting');
+    return s;
+  },
   _abTpStrike(m, ab, payload) {
     const pickedId = payload && (payload.allyUid || payload.targetUid);
     const explicit = pickedId ? this.livingParty().find(a => a.playerId === pickedId) : null;
@@ -1210,7 +1243,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // v3.37.123 (Toby): the ESCAPE mode — with no explicit pick, a GRAPPLED ally is
     // the most urgent passenger (any class, even a shooter); else the biggest blade.
     const seized = this.livingParty().find(x => x.hp > 0 && x.grappled && !x.blinkedBy);
-    const a = explicit || seized || melee.sort((x, y) => (y.level || 1) - (x.level || 1))[0];
+    // v3.37.183 (Josh, run blessed-anvil: his sorcerer's Teleport landed on HIMSELF — the level-20 caster headed the
+    // by-level sort, ahead of the barbarian it was meant for): with no pick the passenger is a melee ALLY first; the
+    // caster goes only when no one else can. An explicit pick (now prompted on the blind pad) is always honored.
+    const _byLvl = (x, y) => (y.level || 1) - (x.level || 1);
+    const a = explicit || seized || melee.filter(x => x.playerId !== m.playerId).sort(_byLvl)[0] || melee.sort(_byLvl)[0];
     if (!a) return { ok: false, error: 'no melee ally to send — everyone is already placed (or ranged)' };
     let freed = '';
     if (a.grappled) {   // Toby: "dimension door can help an ally escape a grapple" — nothing holds a body that isn't there
@@ -1425,8 +1462,15 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // combat the castable set is re-read NOW, so the pad shows the change at once. Mid-fight it still waits for the
       // door (PF1: you prepare between fights). `live` tells the client which sentence to speak.
       if (this.status !== 'combat') { this._computeCastable(m); this._broadcast(); }
+      try { if (typeof this._log === 'function') { const _k = String(payload.toggle), _md = this._loadoutModel(m); this._log('loadout', { who: m.playerId, cls: m.cls, toggle: _k, on: _md.spont ? (_md.known || []).includes(_k) : Object.values(_md.prepared || {}).flat().includes(_k), live: this.status !== 'combat' }); } } catch (_) {}   // v3.37.183: a successful Spellbook change is a jsonl row (only refusals were)
     }
     return { ok: true, live: this.status !== 'combat', ...this._loadoutModel(m) };
+  },
+  // The spell keys a cleric's chosen domains grant (always castable, never a prepared pick). Empty for everyone else.
+  _domainSpellKeys(m) {
+    const out = new Set();
+    if (m && m.cls === 'cleric') for (const dk of (db.getDomains(m.playerId, m.cls) || [])) { const d = DOMAINS[dk]; if (d && d.spells) for (const sk of Object.values(d.spells)) out.add(sk); }
+    return out;
   },
   _loadoutModel(m) {
     const spont = isSpontaneous(m.cls);
@@ -1441,8 +1485,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const _bloodKeys = spont ? (m._bloodSpellKeys || []) : [];
     const _kitAll = (m.cls === 'theurge') ? [] : loadouts.kitSpells(m.cls);
     const bloodSpells = _bloodKeys.map(k => { const ab = _kitAll.find(a => a.key === k) || (m._bloodSpells || []).find(a => a.key === k) || {}; return { key: k, name: ab.name || k, slvl: ab.slvl || null }; });
+    // v3.37.183 (Josh: 'is there any merit to moving bloodline spells to the V key… and domain spells there too. That
+    // would keep them separate and out of your main spell book… and then this is your main spell loadout'): a cleric's
+    // domain spells leave the togglable pool exactly as bloodline spells did in v181, and both are read by the V key.
+    const _domKeys = spont ? new Set() : this._domainSpellKeys(m);
     const pool = src
-      .filter(ab => (m.level || 1) >= (ab.minLevel || 1) && !_bloodKeys.includes(ab.key))   // only spells THIS character can cast at their level; bloodline spells are listed apart
+      .filter(ab => (m.level || 1) >= (ab.minLevel || 1) && !_bloodKeys.includes(ab.key) && !_domKeys.has(ab.key))   // only spells THIS character can cast at their level; bloodline and domain spells are listed apart (v3.37.183: on the V key)
       .map(ab => ({ key: ab.key, name: ab.name, icon: ab.icon || '✨', slvl: ab.slvl }));
     const caps = spont ? null : (slotsFor(m.cls, m.level || 1, m.castingMod) || {});
     // v3.37.142: a cleric's DOMAIN spells are always castable without occupying a
@@ -1453,11 +1501,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (m.cls === 'cleric') {
       for (const dk of (db.getDomains(m.playerId, m.cls) || [])) {
         const d = DOMAINS[dk];
-        if (d && d.spells) for (const sk of Object.values(d.spells)) { const ab = src.find(a => a.key === sk); domainSpells.push({ key: sk, name: (ab && ab.name) || sk, domain: d.name || dk }); }
+        if (d && d.spells) for (const sk of Object.values(d.spells)) { const ab = src.find(a => a.key === sk); if (ab && (m.level || 1) >= (ab.minLevel || 1) && !domainSpells.some(x => x.key === sk)) domainSpells.push({ key: sk, name: ab.name, slvl: ab.slvl || null, domain: d.name || dk }); }   // v3.37.183: only spells the engine has and this level reaches (an unbuilt key used to be read out raw)
       }
     }
     return spont
-      ? { spont, pool, caps: this._knownCaps(m), slots: (slotsFor(m.cls, m.level || 1, m.castingMod) || {}), known: this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []), bloodSpells, bloodline: m.bloodline || 'none' }   // v3.37.164; v3.37.169: bloodline spells are always known
+      ? { spont, pool, caps: this._knownCaps(m), slots: (slotsFor(m.cls, m.level || 1, m.castingMod) || {}), known: this._knownTrim(m, db.getKnownSpells(m.playerId, m.cls) || []), bloodSpells, bloodline: m.bloodline || 'none', bloodlineName: BLOOD.bloodlineName(m.bloodline), bloodlineClass: BLOOD.bloodlineClasses.includes(m.cls) }   // v3.37.164; v3.37.169: bloodline spells are always known
       : { spont, pool, caps, domainSpells, prepared: this._loadoutRebucket(m, db.getPreparedSpells(m.playerId, m.cls) || {}) };
   },
   // Self-heal a stored prepared map when a spell's slot LEVEL changes (e.g. the
@@ -1479,11 +1527,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const byKey = {};
     for (const s of kit) if (s.slvl != null) byKey[s.key] = s;
     const caps = slotsFor(m.cls, m.level || 1, m.castingMod) || {};
+    const _dom = this._domainSpellKeys(m);
     const out = {};
     for (const arr of Object.values(prep || {})) {
       for (const key of (Array.isArray(arr) ? arr : [])) {
         const ab = byKey[key];
         if (!ab) continue;                                   // spell no longer exists
+        if (_dom.has(key)) continue;                         // v3.37.183: a pick the domain already grants — dropped, the pick comes back (Dinvaya's Heal, Mass Heal, Dispel Magic, Greater Dispel Magic)
         if (!this._charAllows(ab, m)) continue;              // another character's signature spell — a ghost occupant
         if ((m.level || 1) < (ab.minLevel || 1)) continue;   // above this member's level — invisible in the menu, uncastable anyway
         const sl = String(ab.slvl);
@@ -1545,7 +1595,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         if (m.cls === 'cleric') { const _dk = (db.getDomains(m.playerId, m.cls) || []).find(dk => DOMAINS[dk] && Object.values(DOMAINS[dk].spells || {}).includes(key)); if (_dk) return { ok: false, error: `${ab.name} is a ${DOMAINS[_dk].name || _dk} domain spell — always ready, it needs no prepared slot` }; }   // v3.37.182: never spend a pick on a spell the domain already grants
         const cap = ((slotsFor(m.cls, m.level || 1, m.castingMod) || {})[sl]) | 0;
         if (cap <= 0) return { ok: false, error: `you have no level-${sl} slots yet` };
-        if (list.length >= cap) return { ok: false, error: `level ${sl} is full (${cap} slot${cap === 1 ? '' : 's'}) — unprepare something first` };
+        if (list.length >= cap) return { ok: false, error: `level ${sl} is full — ${cap} different spell${cap === 1 ? ' is' : 's are'} the most you can prepare there. Unprepare one first. Each prepared spell can already be cast again and again, up to ${cap} casting${cap === 1 ? '' : 's'} a room at that level` };   // v3.37.183 (Josh: 'it's still unknown to me if I have seven slots, if I can prepare more than one slot of the same spell')
         prep[sl] = [...list, key];
       }
       db.setPreparedSpells(m.playerId, m.cls, prep);
@@ -1706,9 +1756,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   _domainModel(m) {
     const picks = db.getDomains(m.playerId, m.cls) || [];
+    let spells = [];   // v3.37.183: the V key reads the spells the chosen domains grant (clerics; inquisitors get the power only)
+    try { if (m.cls === 'cleric') spells = (this._loadoutModel(m).domainSpells || []).slice().sort((a, b) => (a.slvl || 0) - (b.slvl || 0)); } catch (_) {}
     return {
       max: maxDomainsFor(m.cls),
-      picks,
+      picks, spells,
       domains: Object.values(DOMAINS).map(d => ({
         key: d.key, name: d.name, icon: d.icon, blurb: d.blurb,
         power: d.granted ? d.granted.name : null,
@@ -1821,7 +1873,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (e.hp <= 0) slainN++;
     }
     const tally = `${failN} hit${blindN ? ` (${blindN} BLINDED)` : ''}${proneN ? ` (${proneN} knocked PRONE)` : ''}${slowN ? ` (${slowN} SLOWED)` : ''}${stunN ? ` (${stunN} STUNNED)` : ''}${fatN ? ` (${fatN} FATIGUED)` : ''}${groundN ? ` (${groundN} torn from the sky)` : ''}${searedN ? `, ${searedN} undead SEARED by true daylight` : ''}${savedN ? `, ${savedN} saved` : ''}${srN ? `, ${srN} spell-resisted` : ''}${immuneN ? `, ${immuneN} same-aligned untouched` : ''}${typeN ? `, ${typeN} not ${ab.onlyType} — untouched` : ''}${slainN ? `, ${slainN} slain` : ''}`;
-    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${ab.noSave ? 'no save' : `${saveLbl} DC ${dc}`} (${full} ${ab.dtype || ''}): ${tally}.`, sound);
+    this._note(`${ab.icon} ${m.nickname} casts ${ab.name} — ${ab.noSave ? 'no save' : `${saveLbl} DC ${dc}`} (${full}${ab.dtype ? ` ${ab.dtype}` : ''}): ${tally}.`, sound);
     this._echoToTable(sound);
     // THE STORM LINGERS (v3.37.143 — Josh: 'they keep going after you cast... you
     // can be doing other things but also causing damage'): Call Lightning (3d6
@@ -3781,7 +3833,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // damage & saves for the room). See _monsterSwing / _enemySave.
       if (ab.enemyPenalty) for (const e of this.livingEnemies()) e.prayed = Math.max(e.prayed || 0, ab.enemyPenalty);
       const inspTag = ab.key === 'inspire' ? ` (+${inspMod} to hit & damage)` : ab.gmw ? ` (weapons +${gmwMod} to hit & damage)` : '';
-      this._note(`${ab.icon} ${m.nickname} ${ab.enemyPenalty ? `intones ${ab.name} — allies blessed, enemies cursed across the field` : ab.gmw ? `blesses the party's weapons with ${ab.name}` : `strikes up ${ab.name} — the party is emboldened`}${inspTag}!`, sound);
+      const _pw = (m.isBot || ab.enemyPenalty || ab.gmw || ab.key === 'inspire') ? [] : this._buffSays(ab, lvl);   // v3.37.183: a human's party ward says what it does
+      if (_pw.length) this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on the whole party — ${_pw.join('; ')}, ${ab.persist ? 'for the rest of the dungeon' : 'for the rest of the room'}.`, sound);
+      else this._note(`${ab.icon} ${m.nickname} ${ab.enemyPenalty ? `intones ${ab.name} — allies blessed, enemies cursed across the field` : ab.gmw ? `blesses the party's weapons with ${ab.name}` : `strikes up ${ab.name} — the party is emboldened`}${inspTag}!`, sound);
     }
     else if (ab.target === 'ally') { const t = this._buffTarget(m, ab, payload); apply(t); this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${t.nickname}.`, sound); }
     // Elemental Body SPEAKS its protections (v3.37.86 — Josh, run dapper-moose: cast it
@@ -3791,7 +3845,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       apply(m);
       const _b = ab.buff || {}, _bw = [];
       if (_b.toHit) _bw.push(`${_b.toHit > 0 ? '+' : ''}${_b.toHit} to hit`); if (_b.dmg) _bw.push(`${_b.dmg > 0 ? '+' : ''}${_b.dmg} damage`); if (_b.ac) _bw.push(`${_b.ac > 0 ? '+' : ''}${_b.ac} AC`); if (_b.acPen) _bw.push(`−${_b.acPen} AC`); if (_b.save) _bw.push(`${_b.save > 0 ? '+' : ''}${_b.save} on saves`); if (_b.conHp) _bw.push(`+${_b.conHp * lvl} temporary HP`);
-      this._note(`${ab.icon} ${m.nickname} uses ${ab.name}${_bw.length ? ` — ${_bw.join(', ')}, on yourself only, for the rest of the room` : '!'}`, sound);
+      const _fw = m.isBot ? [] : this._buffSays(ab, lvl);   // v3.37.183: Spell Turning, Displacement, Fire Shield… say what they do
+      this._note(`${ab.icon} ${m.nickname} uses ${ab.name}${_bw.length ? ` — ${_bw.concat(_fw).join(', ')}, on yourself only, for the rest of the room` : _fw.length ? ` — ${_fw.join('; ')}${ab.trueStrike ? '' : ab.persist ? ', for the rest of the dungeon' : ', for the rest of the room'}.` : '!'}`, sound);
     }
     this._echoToTable(sound);
   },

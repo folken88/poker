@@ -1018,7 +1018,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33882;
+  const CLIENT_BUILD = 33883;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -1041,6 +1041,7 @@
   // { toggle: key } → flip that spell and get the updated model back. Errors
   // toast + speak (slot caps: "level 3 is full…"); success stores the model,
   // calls `spoken(model)` for the blind menu's announcement, and re-renders.
+  let _sbpRuleSaid = false;   // v3.37.183: the K menu explains the prepared-caster rule in full once per page load, briefly after
   function sbpickSend(payload, spoken) {
     socket.emit('dungeon:action', { kind: 'loadout', ...(payload || {}) }, (resp) => {
       if (resp && resp.ok === false) {
@@ -1084,8 +1085,9 @@
       for (const L of Object.keys(byLvl)) byLvl[L].sort((a, b) => String(a.name).localeCompare(String(b.name)));   // alphabetical, matching the blind menu's numbering
       const lvls = Object.keys(byLvl).map(Number).sort((a, b) => a - b);
       const picked = (s) => mdl.spont ? (mdl.known || []).includes(s.key) : (((mdl.prepared || {})[s.slvl]) || []).includes(s.key);
-      body = `<div class="dungeon__sb-head">${mdl.spont ? 'Spells KNOWN — each level has a limit; forget one to learn another' : 'Prepared spells — fill each level\'s slots'} · ready at once between fights; mid-fight it lands at the next door</div>` +
+      body = `<div class="dungeon__sb-head">${mdl.spont ? 'Spells KNOWN — each level has a limit; forget one to learn another' : 'Prepared spells — a level\'s number is its castings per room AND the most different spells you may prepare there; any prepared spell can use any casting'} · ready at once between fights; mid-fight it lands at the next door</div>` +
         (((mdl.bloodSpells || []).length) ? `<div class="dungeon__sb-head">🩸 Bloodline spells — always known, they use none of your picks: ${mdl.bloodSpells.map(b => escapeText(b.name)).join(', ')}</div>` : '') +   // v3.37.181
+        (((!mdl.spont && (mdl.domainSpells || []).length)) ? `<div class="dungeon__sb-head">⛪ Domain spells — always ready, they need no prepared slot: ${mdl.domainSpells.map(d => escapeText(d.name)).join(', ')}</div>` : '') +   // v3.37.183
         `<div class="dungeon__sb-scroll">` + lvls.map(L => {
           const cnt = byLvl[L].filter(picked).length;
           const cap = (mdl.caps && mdl.caps[L] != null) ? (mdl.caps[L] | 0) : null;   // v3.37.164: spontaneous casters have a spells-KNOWN cap too
@@ -1093,7 +1095,7 @@
           // spell's name lives in the hover tooltip + aria-label; lit = in the loadout.
           // The popover lays children out as a stretched column, so each level's
           // icons sit in their own flex-wrap ROW and the buttons size to the icon.
-          return `<div class="dungeon__sb-head">Level ${L} — ${cnt}${cap != null ? ` of ${cap} ${mdl.spont ? 'known' : 'prepared'}` : ' known'}</div>` +
+          return `<div class="dungeon__sb-head">Level ${L} — ${cnt}${cap != null ? ` of ${cap} ${mdl.spont ? 'known' : `prepared · ${cap} castings a room`}` : ' known'}</div>` +
             `<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">` +
             byLvl[L].map(s =>
               `<button class="btn ${picked(s) ? 'btn--primary' : 'btn--ghost'} btn--sm" style="flex:0 0 auto;width:auto;min-width:0;padding:4px 9px;font-size:1.15em" data-dact="sbpick" data-sbkey="${escapeAttr(s.key)}" aria-pressed="${picked(s)}" aria-label="${escapeAttr(s.name)}${picked(s) ? ' — in your loadout' : ''}" title="${escapeAttr(s.name)} — ${picked(s) ? 'remove from' : 'add to'} your loadout (ready at once between fights; mid-fight, at the next door)">${s.icon || '✨'}</button>`
@@ -2334,17 +2336,26 @@
           const at = _sbpAt(mdl, L);
           const picked = at.filter(s => _sbpPicked(mdl, s)).length;
           const cap = (mdl.caps && mdl.caps[L] != null) ? (mdl.caps[L] | 0) : null;   // v3.37.164: spontaneous casters have a spells-KNOWN cap too
-          return `level ${L}, ${picked}${cap != null ? ` of ${cap} ${mdl.spont ? 'known' : 'prepared'}` : ' known'}`;
+          return mdl.spont ? `level ${L}, ${picked}${cap != null ? ` of ${cap} known` : ' known'}` : `level ${L}, ${cap != null ? `${cap} castings, ` : ''}${picked} prepared`;
         });
-        const blood = ((mdl.bloodSpells || []).length) ? ` Your bloodline spells are ALWAYS known, use none of your picks and cannot be forgotten: ${mdl.bloodSpells.map(b => b.name).join(', ')}.` : '';   // v3.37.181
-        const dom = (!mdl.spont && (mdl.domainSpells || []).length) ? ` Your domain spells are ALWAYS ready and never use a prepared slot: ${mdl.domainSpells.map(d => d.name).join(', ')}.` : '';
-        sayU(`Prepare spells: ${parts.join('; ')}.${dom}${blood}${mdl.spont ? ` Those are the spells you may KNOW at each level — a hard limit: forget one to learn another. Your castings per room are separate: ${Object.keys(mdl.slots || {}).map(L => `level ${L}, ${mdl.slots[L]}`).join('; ')}.` : ` Each level's count is CASTINGS PER ROOM, shared across whatever you prepare — casting the same spell twice is automatic, no duplicate slots needed.`} Press a level number (or Tab through the levels), Escape to close.`);
+        // v3.37.183 (Josh: 'is there any merit to moving bloodline spells to the V key… and domain spells there too… and
+        // then this is your main spell loadout'): the always-on spells are no longer read out here — one pointer to V.
+        const nD = mdl.spont ? 0 : (mdl.domainSpells || []).length, nB = (mdl.bloodSpells || []).length;
+        const apart = nD ? ` Your ${nD} domain spells are always ready and are kept out of this list — the V key reads them.` : nB ? ` Your ${nB} bloodline spells are always known and are kept out of this list — the V key reads them.` : '';
+        if (mdl.spont) { sayU(`Spells known: ${parts.join('; ')}. Those are the spells you may KNOW at each level — a hard limit: forget one to learn another. Your castings per room are separate: ${Object.keys(mdl.slots || {}).map(L => `level ${L}, ${mdl.slots[L]}`).join('; ')}.${apart} Press a level number (or Tab through the levels), Escape to close.`); return; }
+        // v3.37.183 (Josh: 'it's still rather confusing knowing what you're preparing. It's still unknown to me if I
+        // have seven slots, if I can prepare more than one slot of the same spell, or if I have to carry four spells'):
+        // the rule now comes FIRST, in plain words — in full the first time, in one line after that.
+        const rule = _sbpRuleSaid ? 'For each level: its castings per room, then how many different spells you have prepared there.' : 'How it works: every spell level gives you a number of castings per room. You may prepare up to that many DIFFERENT spells at the level — fewer is fine — and any prepared spell can be cast again and again until that level\'s castings run out. Never prepare the same spell twice; there is no need.';
+        _sbpRuleSaid = true;
+        sayU(`Prepare spells. ${rule} ${parts.join('; ')}.${apart} Press a level number (or Tab through the levels), Escape to close.`);
       };
       const _sbpSpeakLevel = (L) => {
         const mdl = _sbpModel; if (!mdl) return;
         const at = _sbpAt(mdl, L);
         const capL = (mdl.caps && mdl.caps[L] != null) ? (mdl.caps[L] | 0) : null;
-        sayU(`Level ${L}${capL != null ? (mdl.spont ? ` — you know ${at.filter(s => _sbpPicked(mdl, s)).length} of ${capL}` : ` — ${capL} castings per room, shared across your prepared picks`) : ''}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : ((mdl.domainSpells || []).some(d => d.key === s.key) ? 'always ready from your domain, needs no slot' : 'available')}`).join('; ') + (((mdl.bloodSpells || []).filter(b => b.slvl === L).length) ? `. Bloodline, always known and not counted: ${mdl.bloodSpells.filter(b => b.slvl === L).map(b => b.name).join(', ')}` : '') + '. Number toggles; Tab or arrows step one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
+        const nP = at.filter(s => _sbpPicked(mdl, s)).length;
+        sayU(`Level ${L}${capL != null ? (mdl.spont ? ` — you know ${nP} of ${capL}` : ` — ${capL} castings per room, and ${nP} of ${capL} different spells prepared`) : ''}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + '. Number toggles; Tab or arrows step one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
       };
       // One toggle path for BOTH the number keys and Tab+Enter (Josh 2026-07-16: "being
       // able to tab through and see what the possibilities are would be helpful... right
@@ -2355,8 +2366,8 @@
           const on = m2.spont ? (m2.known || []).includes(sp.key) : (((m2.prepared || {})[L]) || []).includes(sp.key);
           const at = _sbpAt(m2, L);
           const cnt = at.filter(s => m2.spont ? (m2.known || []).includes(s.key) : (((m2.prepared || {})[L]) || []).includes(s.key)).length;
-          const cap = m2.spont ? null : (((m2.caps || {})[L]) | 0);
-          sayU(`${sp.name} ${on ? (m2.spont ? 'known' : 'prepared') : 'removed'}. ${cnt}${cap != null ? ` of ${cap}` : ''} at level ${L}. ${m2.live ? 'Ready now.' : 'Takes effect at the next door.'}`);   // v3.37.182 (Josh: 'it says it'll take effect next room. That does not happen'): between fights the server applies it at once and says so
+          const cap = (m2.caps && m2.caps[L] != null) ? (m2.caps[L] | 0) : null;
+          sayU(`${sp.name} ${on ? (m2.spont ? 'known' : 'prepared') : 'removed'}. ${m2.spont ? `${cnt}${cap != null ? ` of ${cap}` : ''} known at level ${L}` : `Level ${L}: ${cnt} of ${cap} different spells prepared${cnt >= cap ? ', full' : `, room for ${cap - cnt} more`}`}. ${m2.live ? 'Ready now.' : 'Takes effect at the next door.'}`);   // v3.37.182 (Josh: 'it says it'll take effect next room. That does not happen'): between fights the server applies it at once and says so
         });
       };
       if (_dunSbp) {
@@ -2379,7 +2390,7 @@
           const atx = _sbpAt(mdl2, Lx);
           const pickedx = atx.filter(sp2 => _sbpPicked(mdl2, sp2)).length;
           const capx = mdl2.spont ? null : (((mdl2.caps || {})[Lx]) | 0);
-          sayU(`Level ${Lx}, ${pickedx}${capx != null ? ` of ${capx} prepared` : ' known'}. Enter to open it.`);
+          sayU(`Level ${Lx}, ${capx != null ? `${capx} castings, ${pickedx} prepared` : `${pickedx} known`}. Enter to open it.`);
           return;
         }
         if (e.key === 'Enter' && _dunSbp.lvl == null && _dunSbp.lidx != null && _dunSbp.lidx >= 0) {
@@ -2442,7 +2453,7 @@
       }
       if (k === 'k') {
         e.preventDefault();
-        if (_blindHelp) { sayU('K: prepare spells, your spell kit. Press a level number, then a number toggles a spell — or Tab steps through the level one spell at a time and Enter toggles the one you are on. Changes are ready at once between fights; in a fight they land at the next door.'); return; }
+        if (_blindHelp) { sayU('K: prepare spells, your spell kit. Press a level number, then a number toggles a spell — or Tab steps through the level one spell at a time and Enter toggles the one you are on. Changes are ready at once between fights; in a fight they land at the next door. If you prepare spells: each spell level gives you a number of castings per room, and you may prepare up to that many different spells there. Any prepared spell can be cast again and again until the castings run out, so never prepare one twice. Domain and bloodline spells are always ready and are read by the V key.'); return; }
         if (!kit.caster) { sayU('Your class has no spells to prepare.'); return; }
         if (_dunSbp) { _dunSbp = null; sayU('Prepare menu closed.'); return; }
         _dunSbp = { lvl: null, idx: -1 };
@@ -2467,7 +2478,9 @@
       const _dmpSpeak = () => {
         const mdl = _dmpModel; if (!mdl) { sayU('Still loading your domains.'); return; }
         const list = (mdl.domains || []).map((d, i) => `${i + 1} ${d.name}${d.picked ? ', picked' : ''}`).join('; ');
-        sayU(`Domains — choose ${mdl.max}, ${(mdl.picks || []).length} picked: ${list}. Numbers 1 through 9 toggle; Tab steps through them all, Enter toggles the one you are on; Escape closes. Changes take effect next room — your number pad keeps this room's domains until then.`);
+        const mine = (mdl.domains || []).filter(d => d.picked).map(d => d.name);   // v3.37.183: your picks and the spells they grant come FIRST
+        const spTxt = (mdl.spells || []).length ? ` Your domain spells — always ready, they need no prepared pick and are kept out of the K list: ${mdl.spells.map(x => `${x.name}${x.slvl ? `, level ${x.slvl}` : ''}`).join('; ')}.` : '';
+        sayU(`Domains — choose ${mdl.max}, ${mine.length} picked${mine.length ? `: ${mine.join(' and ')}` : ''}.${spTxt} All domains: ${list}. Numbers 1 through 9 toggle; Tab steps through them all, Enter toggles the one you are on; Escape closes. Changes take effect next room — your number pad keeps this room's domains until then.`);
       };
       const _dmpToggle = (d) => {
         dmpickSend({ toggle: d.key }, (m2) => {
@@ -2508,8 +2521,19 @@
       }
       if (k === 'v') {
         e.preventDefault();
-        if (_blindHelp) { sayU('V: domains. Clerics choose two domains, inquisitors one. Press V, then a number 1 through 9 toggles a domain; Tab steps through the full list and Enter toggles the one you are on. Changes land at the next room.'); return; }
-        if (!kit.domainsMax) { sayU('Your class has no domains.'); return; }
+        if (_blindHelp) { sayU('V: domains and bloodline. Clerics choose two domains, inquisitors one. Press V, then a number 1 through 9 toggles a domain; Tab steps through the full list and Enter toggles the one you are on. Changes land at the next room. V also reads the spells you always have without choosing them: a cleric\'s domain spells and a sorcerer\'s bloodline spells.'); return; }
+        if (!kit.domainsMax) {
+          // v3.37.183 (Josh: 'is there any merit to moving bloodline spells to the V key'): a sorcerer's V reads the
+          // bloodline and its always-known spells, which no longer crowd the K list.
+          if (!kit.caster) { sayU((kit.abilities || []).some(a => a.key === 'bl_info') ? 'Your bloodline is on your number pad: press its entry to hear what it grants.' : 'Your class has no domains or bloodline spells.'); return; }
+          sbpickSend({}, (mdl) => {
+            if (!mdl.bloodlineClass) { sayU('Your class has no domains or bloodline spells.'); return; }
+            if (!mdl.bloodline || mdl.bloodline === 'none') { sayU('You have no bloodline. Choose one with the bloodline picker beside your class in your profile; it applies to your next run.'); return; }
+            const bs = (mdl.bloodSpells || []).slice().sort((a, b) => (a.slvl || 0) - (b.slvl || 0));
+            sayU(`Bloodline: ${mdl.bloodlineName || mdl.bloodline}. ${bs.length ? `Bloodline spells — always known, they use none of your picks, cannot be forgotten and are kept out of the K list: ${bs.map(b => `${b.name}${b.slvl ? `, level ${b.slvl}` : ''}`).join('; ')}.` : 'No bloodline spells yet at your level.'} They are cast from your Spellbook like any other spell. Your bloodline powers are on your number pad. To change bloodline, use the picker beside your class in your profile; it applies to your next run.`);
+          });
+          return;
+        }
         if (_dunDmp) { _dunDmp = false; _dunDmpIdx = -1; sayU('Domain menu closed.'); return; }
         _dunDmp = true; _dunDmpIdx = -1;
         if (_dmpModel) _dmpSpeak();
