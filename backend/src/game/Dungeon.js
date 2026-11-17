@@ -331,7 +331,7 @@ class Dungeon {
 
   roomName() { return `dungeon:${this.id}`; }
   _note(text, sound, meta = {}) {
-    if (this._silentSfx) sound = null;   // pre-door buff pass: log the line, mute the SFX (no wall of sounds at once)
+    if (this._silentSfx) sound = null; if (this._mmPend) text = this._mmNoteFold(text);   // v3.37.182: a bot's metamagic rides its cast line; pre-door buff pass: log the line, mute the SFX (no wall of sounds at once)
     // Each entry carries `side` (which column it belongs in) and `kind` (its
     // colour tint) so the client can split the log hero-left / enemy-right and
     // gently colour heals (gold), deaths (red), buffs (blue), debuffs (purple).

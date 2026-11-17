@@ -112,6 +112,13 @@ Ruled section with the version that implemented it.
     Lightning Storm? Chain Lightning?) as a house rule, or keep RAW? (b) the DEFAULT cleric/oracle/wizard lists still
     carry Summon Monster IV/VI/VIII as staples — drop them from the defaults so only summoners prepare them?
 
+20. **Carvers get their full attack** (Josh, 2026-11-17: 'I can only cleave… I wanna beat the shit out of one guy').
+    Shipped in v3.37.182 on his report, yours to veto: a barbarian, a fighter from level 9 and Azwraith used to make
+    ONE swing on every plain Attack (the cleave sweep, by your 'carve through' spec) and so never rolled iteratives.
+    Now a NEW target is still the sweep, but staying on the SAME foe as last turn is the PF1 full attack every other
+    martial already had. This raises the single-target damage of the bot carvers too (Tokala, the fighter
+    hirelings). Keep it, or should carving stay their only swing?
+
 ## Standing policy (Toby)
 
 - **Bonus typing** (2026-08-30): same-type bonuses never stack; categorize

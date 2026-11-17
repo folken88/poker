@@ -170,6 +170,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // Cleave is a MELEE sweep — vs an airborne target fall through to the
       // normal attack path (which draws the backup crossbow); no carving at the sky.
       if (e && !this._canReach(m, e)) return this._playerAttack(m, targetUid);
+      // v3.37.182 (Josh, run merry-mirror, a level 19-20 fighter with a greataxe: 'I can only cleave… if I wanna really
+      // concentrate on a bad boy I don't wanna cleave, I wanna beat the shit out of one guy' — 65 of his 78 actions read
+      // 'cleaves', and every plain Attack was ONE swing): a carver's Attack was always the sweep, so a fighter from 9 and
+      // a barbarian NEVER got their iterative attacks. PF1: Cleave is a standard action, the full attack is its
+      // alternative. Staying on the SAME foe as last turn is now the full attack every other martial gets (iteratives,
+      // redirecting when the foe drops); a NEW target is still the sweep that carves on through a kill.
+      if (e && m._lastAtkTarget === e.uid) return this._playerAttack(m, e.uid);
       if (e) return this._cleaveSweep(m, e, { followThrough: false });
       return;
     }
@@ -1129,8 +1136,23 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const mm = best.mm;
     if (mm.quicken) m._botQuickened = true;
     const words = [mm.quicken && 'QUICKENED', mm.intensify && 'INTENSIFIED', mm.empower && 'EMPOWERED', mm.maximize && 'MAXIMIZED'].filter(Boolean).join(' ');
-    this._note(`✨ ${m.nickname} shapes ${/^[AEIOU]/.test(words) ? 'an' : 'a'} ${words} ${ab.name}!`);   // v3.37.152 (Josh: 'Olbryn cannot channel anything — that is a cleric feature'): a metamagic'd spell is SHAPED, never channeled
+    // v3.37.182 (Josh, Olbryn's Chain Lightning: 'it's saying he's casting it twice… it says shapes an empowered chain
+    // lightning, and then casts it. I don't need to hear that twice'): the choice is no longer its own line. It waits
+    // in _mmPend and _note folds it into the cast line itself — 'Olbryn casts an INTENSIFIED EMPOWERED Chain
+    // Lightning — Ref DC 27…'. _mmFlush speaks it once, after, only if no cast line carried it.
+    this._mmPend = { nick: m.nickname, name: ab.name, words, art: /^[AEIOU]/.test(words) ? 'an' : 'a' };
     return mm;
+  },
+  _mmNoteFold(text) {
+    const p = this._mmPend; if (!p || typeof text !== 'string') return text;
+    for (const [needle, out] of [[`${p.nick} casts ${p.name}`, `${p.nick} casts ${p.art} ${p.words} ${p.name}`], [`${p.nick}'s ${p.name}`, `${p.nick}'s ${p.words} ${p.name}`], [`the casting of ${p.name}`, `the casting of ${p.art} ${p.words} ${p.name}`]]) {
+      if (text.includes(needle)) { this._mmPend = null; return text.replace(needle, out); }
+    }
+    return text;
+  },
+  _mmFlush(m, cast) {
+    const p = this._mmPend; this._mmPend = null;
+    if (p && cast && m && p.nick === m.nickname) this._note(`✨ ${m.nickname} shapes ${p.art} ${p.words} ${p.name}!`);   // a metamagic'd spell is SHAPED, never channeled (v3.37.152)
   },
   // Spell damage dice — INTENSIFIED SPELL raises a level-scaled spell's dice cap by +5
   // (PF1), so Shocking Grasp keeps growing past 5d6 and Fireball past 10d6.
@@ -1388,8 +1410,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   // what's currently prepared/known, and the per-level slot caps. With
   // `toggle: key` → flip that spell in/out of the loadout (per-level cap
   // enforced for prepared casters) and return the updated model. Changes SAVE
-  // immediately (per class, like class_xp) but land at the NEXT DOOR — the
-  // castable set re-reads the DB in openDoor (PF1: you prepare between fights).
+  // immediately (per class, like class_xp). Out of combat they are castable at
+  // once (v3.37.182); mid-fight they land at the NEXT DOOR — the castable set
+  // re-reads the DB in openDoor (PF1: you prepare between fights).
   loadout(playerId, payload = {}) {
     const m = this.member(playerId);
     if (!m || m.left) return { ok: false, error: 'not in this run' };
@@ -1397,8 +1420,13 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (payload.toggle) {
       const r = this._loadoutToggle(m, String(payload.toggle));
       if (!r.ok) return r;
+      // v3.37.182 (Josh: 'when you change spells it says it'll take effect next room. That does not happen' — it did land
+      // at the door, but until then the pad kept the OLD list, even standing in the entry hall with no fight on): out of
+      // combat the castable set is re-read NOW, so the pad shows the change at once. Mid-fight it still waits for the
+      // door (PF1: you prepare between fights). `live` tells the client which sentence to speak.
+      if (this.status !== 'combat') { this._computeCastable(m); this._broadcast(); }
     }
-    return { ok: true, ...this._loadoutModel(m) };
+    return { ok: true, live: this.status !== 'combat', ...this._loadoutModel(m) };
   },
   _loadoutModel(m) {
     const spont = isSpontaneous(m.cls);
@@ -1514,6 +1542,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const list = Array.isArray(prep[sl]) ? [...prep[sl]] : [];
       if (list.includes(key)) prep[sl] = list.filter(k => k !== key);
       else {
+        if (m.cls === 'cleric') { const _dk = (db.getDomains(m.playerId, m.cls) || []).find(dk => DOMAINS[dk] && Object.values(DOMAINS[dk].spells || {}).includes(key)); if (_dk) return { ok: false, error: `${ab.name} is a ${DOMAINS[_dk].name || _dk} domain spell — always ready, it needs no prepared slot` }; }   // v3.37.182: never spend a pick on a spell the domain already grants
         const cap = ((slotsFor(m.cls, m.level || 1, m.castingMod) || {})[sl]) | 0;
         if (cap <= 0) return { ok: false, error: `you have no level-${sl} slots yet` };
         if (list.length >= cap) return { ok: false, error: `level ${sl} is full (${cap} slot${cap === 1 ? '' : 's'}) — unprepare something first` };
@@ -4136,6 +4165,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       if (!grounded.length) return this._playerAttack(m, firstTarget.uid);
       firstTarget = pick(grounded);
     }
+    m._lastAtkTarget = firstTarget.uid;   // v3.37.182: the sweep closes with its first target — attacking that same foe next turn is a FULL attack
     const baseSound = (m.cls === 'monk' && !m.weapon.atkSound) ? pick(MONK_SFX) : (m.weapon.atkSound || (m.weapon.dtype === 'B' ? '/audio/weapon_blunt.mp3' : null));   // monks alternate bruce/punisher/bamboo per swing (Tobias 2026-07-04)
     const struck = new Set();
     const sounds = [];
@@ -4169,7 +4199,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const pool = this.livingEnemies().filter(x => !x.summoned && !struck.has(x.uid) && this._canReach(m, x));   // chains sweep foes only, never summoned allies
       target = pool.length ? pick(pool) : null;
     }
-    if (bits.length) this._note(`🪓 ${m.nickname} cleaves — ${bits.join(', ')}.${kills >= 3 ? ` ${kills} foes felled in one furious sweep!` : ''}`, null);
+    if (bits.length) this._note(`🪓 ${m.nickname} ${(bits.length > 1 || opts.followThrough) ? 'cleaves' : 'strikes'} — ${bits.join(', ')}.${kills >= 3 ? ` ${kills} foes felled in one furious sweep!` : ''}`, null);
     this._emitChainSfx(sounds);
   },
   // Feint: an opposed roll. On success the foe is flat-footed → a free

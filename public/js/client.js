@@ -1018,7 +1018,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33881;
+  const CLIENT_BUILD = 33882;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -1084,7 +1084,7 @@
       for (const L of Object.keys(byLvl)) byLvl[L].sort((a, b) => String(a.name).localeCompare(String(b.name)));   // alphabetical, matching the blind menu's numbering
       const lvls = Object.keys(byLvl).map(Number).sort((a, b) => a - b);
       const picked = (s) => mdl.spont ? (mdl.known || []).includes(s.key) : (((mdl.prepared || {})[s.slvl]) || []).includes(s.key);
-      body = `<div class="dungeon__sb-head">${mdl.spont ? 'Spells KNOWN — each level has a limit; forget one to learn another' : 'Prepared spells — fill each level\'s slots'} · lands at the next door</div>` +
+      body = `<div class="dungeon__sb-head">${mdl.spont ? 'Spells KNOWN — each level has a limit; forget one to learn another' : 'Prepared spells — fill each level\'s slots'} · ready at once between fights; mid-fight it lands at the next door</div>` +
         (((mdl.bloodSpells || []).length) ? `<div class="dungeon__sb-head">🩸 Bloodline spells — always known, they use none of your picks: ${mdl.bloodSpells.map(b => escapeText(b.name)).join(', ')}</div>` : '') +   // v3.37.181
         `<div class="dungeon__sb-scroll">` + lvls.map(L => {
           const cnt = byLvl[L].filter(picked).length;
@@ -1096,12 +1096,12 @@
           return `<div class="dungeon__sb-head">Level ${L} — ${cnt}${cap != null ? ` of ${cap} ${mdl.spont ? 'known' : 'prepared'}` : ' known'}</div>` +
             `<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">` +
             byLvl[L].map(s =>
-              `<button class="btn ${picked(s) ? 'btn--primary' : 'btn--ghost'} btn--sm" style="flex:0 0 auto;width:auto;min-width:0;padding:4px 9px;font-size:1.15em" data-dact="sbpick" data-sbkey="${escapeAttr(s.key)}" aria-pressed="${picked(s)}" aria-label="${escapeAttr(s.name)}${picked(s) ? ' — in your loadout' : ''}" title="${escapeAttr(s.name)} — ${picked(s) ? 'remove from' : 'add to'} your loadout (takes effect at the next door)">${s.icon || '✨'}</button>`
+              `<button class="btn ${picked(s) ? 'btn--primary' : 'btn--ghost'} btn--sm" style="flex:0 0 auto;width:auto;min-width:0;padding:4px 9px;font-size:1.15em" data-dact="sbpick" data-sbkey="${escapeAttr(s.key)}" aria-pressed="${picked(s)}" aria-label="${escapeAttr(s.name)}${picked(s) ? ' — in your loadout' : ''}" title="${escapeAttr(s.name)} — ${picked(s) ? 'remove from' : 'add to'} your loadout (ready at once between fights; mid-fight, at the next door)">${s.icon || '✨'}</button>`
             ).join('') + `</div>`;
         }).join('') + `</div>`;
     }
     return `<span class="dungeon__sb-wrap dungeon__sbp-wrap">` +
-      `<button type="button" class="btn ${_sbpOpen ? 'btn--primary' : 'btn--ghost'}" data-sbp-toggle aria-expanded="${_sbpOpen}" title="Choose which spells you have prepared or known — changes land at the next door (blind: K key)">🧠 Prepare ▾</button>` +
+      `<button type="button" class="btn ${_sbpOpen ? 'btn--primary' : 'btn--ghost'}" data-sbp-toggle aria-expanded="${_sbpOpen}" title="Choose which spells you have prepared or known — changes are ready at once between fights, or at the next door mid-fight (blind: K key)">🧠 Prepare ▾</button>` +
       `<div class="dungeon__spellbook ${_sbpOpen ? 'is-open' : ''}">${body}</div>` +
     `</span>`;
   }
@@ -2344,7 +2344,7 @@
         const mdl = _sbpModel; if (!mdl) return;
         const at = _sbpAt(mdl, L);
         const capL = (mdl.caps && mdl.caps[L] != null) ? (mdl.caps[L] | 0) : null;
-        sayU(`Level ${L}${capL != null ? (mdl.spont ? ` — you know ${at.filter(s => _sbpPicked(mdl, s)).length} of ${capL}` : ` — ${capL} castings per room, shared across your prepared picks`) : ''}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : 'available'}`).join('; ') + (((mdl.bloodSpells || []).filter(b => b.slvl === L).length) ? `. Bloodline, always known and not counted: ${mdl.bloodSpells.filter(b => b.slvl === L).map(b => b.name).join(', ')}` : '') + '. Number toggles; Tab or arrows step one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
+        sayU(`Level ${L}${capL != null ? (mdl.spont ? ` — you know ${at.filter(s => _sbpPicked(mdl, s)).length} of ${capL}` : ` — ${capL} castings per room, shared across your prepared picks`) : ''}: ` + at.map((s, i) => `${i + 1} ${s.name}, ${_sbpPicked(mdl, s) ? (mdl.spont ? 'known' : 'prepared') : ((mdl.domainSpells || []).some(d => d.key === s.key) ? 'always ready from your domain, needs no slot' : 'available')}`).join('; ') + (((mdl.bloodSpells || []).filter(b => b.slvl === L).length) ? `. Bloodline, always known and not counted: ${mdl.bloodSpells.filter(b => b.slvl === L).map(b => b.name).join(', ')}` : '') + '. Number toggles; Tab or arrows step one at a time, Enter toggles the one you are on; 0 goes back, Escape closes.');
       };
       // One toggle path for BOTH the number keys and Tab+Enter (Josh 2026-07-16: "being
       // able to tab through and see what the possibilities are would be helpful... right
@@ -2356,7 +2356,7 @@
           const at = _sbpAt(m2, L);
           const cnt = at.filter(s => m2.spont ? (m2.known || []).includes(s.key) : (((m2.prepared || {})[L]) || []).includes(s.key)).length;
           const cap = m2.spont ? null : (((m2.caps || {})[L]) | 0);
-          sayU(`${sp.name} ${on ? (m2.spont ? 'known' : 'prepared') : 'removed'}. ${cnt}${cap != null ? ` of ${cap}` : ''} at level ${L}. Takes effect at the next door.`);
+          sayU(`${sp.name} ${on ? (m2.spont ? 'known' : 'prepared') : 'removed'}. ${cnt}${cap != null ? ` of ${cap}` : ''} at level ${L}. ${m2.live ? 'Ready now.' : 'Takes effect at the next door.'}`);   // v3.37.182 (Josh: 'it says it'll take effect next room. That does not happen'): between fights the server applies it at once and says so
         });
       };
       if (_dunSbp) {
@@ -2442,7 +2442,7 @@
       }
       if (k === 'k') {
         e.preventDefault();
-        if (_blindHelp) { sayU('K: prepare spells, your spell kit. Press a level number, then a number toggles a spell — or Tab steps through the level one spell at a time and Enter toggles the one you are on. Changes land at the next door.'); return; }
+        if (_blindHelp) { sayU('K: prepare spells, your spell kit. Press a level number, then a number toggles a spell — or Tab steps through the level one spell at a time and Enter toggles the one you are on. Changes are ready at once between fights; in a fight they land at the next door.'); return; }
         if (!kit.caster) { sayU('Your class has no spells to prepare.'); return; }
         if (_dunSbp) { _dunSbp = null; sayU('Prepare menu closed.'); return; }
         _dunSbp = { lvl: null, idx: -1 };

@@ -199,7 +199,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
       const ab = this._abilitiesFor(m)[choice.slot];
       m._botMM = this._botPickMetamagic(m, ab);   // spontaneous bot may empower/maximize a damage spell when flush on high slots
       const r = this._useAbility(m, choice.slot, choice.payload);
-      m._botMM = null;                            // one-shot — never leaks past the cast
+      m._botMM = null; this._mmFlush(m, r && r.ok);   // one-shot — never leaks past the cast (v3.37.182: a metamagic no cast line carried is spoken once, after; a refused cast says nothing)
       if (r && r.ok && ab) m._lastAbilityKey = ab.key;
       if (r && r.ok && !r.freeAction) { this._hasteBonus(m); return; }   // free action (judgement) → keep acting
       // Curator: after a quickened (swift) buff, immediately try ONE more support
@@ -214,7 +214,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
           const ab2 = this._abilitiesFor(m)[c2.slot];
           if (_quick) m._botMM = this._botPickMetamagic(m, ab2);
           const r2 = this._useAbility(m, c2.slot, c2.payload);
-          m._botMM = null; m._botQuickened = false;
+          m._botMM = null; m._botQuickened = false; this._mmFlush(m, r2 && r2.ok);
           if (r2 && r2.ok && ab2) m._lastAbilityKey = ab2.key;
           if (r2 && r2.ok && !r2.freeAction) { this._hasteBonus(m); return; }
         }

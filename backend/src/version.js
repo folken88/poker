@@ -2176,6 +2176,19 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.182 2026-11-17 JOSH'S SECOND PASS (two mails; runs invisible-pickle, golden-anvil, merry-mirror as his fighter).
+//                     (1) THE FIGHTER WHO COULD ONLY CLEAVE: 65 of his 78 actions read 'cleaves' and every plain Attack
+//                     was ONE swing — a carver's Attack was always the sweep, so a fighter from 9 and a barbarian never
+//                     got iteratives. Staying on the SAME foe is now the full attack (PF1: Cleave is a standard action,
+//                     the full attack its alternative); a new target is still the sweep; one foe struck reads
+//                     'strikes', not 'cleaves'. (2) THE SPELL 'CAST TWICE': a bot's metamagic no longer has its own
+//                     'shapes…' line — _note folds it into the cast line ('casts an INTENSIFIED EMPOWERED Chain
+//                     Lightning — Ref DC 27…'); _mmFlush speaks it once, after, only if no cast line carried it.
+//                     (3) 'IT SAYS NEXT ROOM, THAT DOES NOT HAPPEN': changes did land at the door (simulated), but the
+//                     pad kept the old list until then even with no fight on. Out of combat a Spellbook change is
+//                     castable AT ONCE and says 'Ready now'; mid-fight it still waits for the door. A cleric cannot
+//                     spend a pick on a spell the domain already grants. Tests 321-324 (243 updated).
+//                     CLIENT_BUILD 33882. TOBY-QUESTIONS 20.
 //  3.37.181 2026-11-17 JOSH'S CASTER PASS (three mails; run proud-sparrow, played as Olbryn). (1) MASS SPELLS HIT ONE FOE:
 //                     the blind target prompt sends one uid and the picks were the whole target list — his Mass Hold
 //                     Monster held 1 of 8, Confusion 1 of 12, one Mass Hold was wasted on a mind-immune pick. The picks
@@ -2455,9 +2468,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.181';
+const VERSION = '3.37.182';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33881;   // v3.37.181: bloodline spells in the Spellbook, the lead-target prompt
+const CLIENT_BUILD = 33882;   // v3.37.182: Spellbook changes say 'Ready now' between fights; domain spells labelled
 const HEADLINE = "The Iron Gods firearms: eight real guns, grit and deeds for gunslingers, and every gun hits touch AC.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };
