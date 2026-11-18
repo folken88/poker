@@ -6,108 +6,75 @@ Ruled section with the version that implemented it.
 
 ## Open
 
-1. **Sound round 3 tail** — mage armor and shield still need their own buff
-   sounds (Divine Favor / Divine Power / Greater Invisibility took the three
-   invoker assets, 2026-08-31). More picks from the effects library welcome.
+### Ruled 2026-11-18, still to build (the ruling is in; the work is queued)
 
-2. **Potion store port** — ruled yes earlier; Toby says "more on potion store
-   soon" (2026-08-31). Awaiting his details before building.
+- **Q19 Olbryn's bloodline spells.** Ruling: 'we generally replace Olbryn's weird bloodline spells with
+  electricity/time/teleport type spells. I like to give Josh some choices.' To build: a short menu per bloodline
+  spell level (lightning, time and teleport spells) that Josh picks from, replacing Burning Hands, Scorching Ray,
+  Elemental Body and Summon Monster VIII on Olbryn. Needs Josh's picks (or a picker in the lobby).
+- **Q14a Claws.** Ruling: 'claws as real claw attacks for bloodlines.' To build: abyssal / draconic Claws become two
+  natural attacks (1d4, 1d6 and magic at 7, +1d6 energy at 11) for 3 + Cha rounds, replacing the +damage stand-in.
+- **Q14g Draconic.** Ruling: 'draconic chooses a type of dragon and that dictates type of elemental damage and
+  resistance so its important.' To build: the ten dragon types as a lobby choice (the colour sets the breath shape,
+  the claw energy at 11 and the resistance).
+- **Q14i Bloodrager bloodlines.** Ruling: 'use the real acg when it makes sense for our format.' To build: the ACG
+  bloodrager ladder (1/4/8/12/16/20) with its own powers, replacing the sorcerer-ladder stopgap.
+- **Q15 Antimagic Field.** Ruling: 'antimagic field stops magic for anyone in it, and we don't have a placement
+  system really. I think if it's placed on a target they cannot use spells until they move at least 20' and it can
+  affect multiple targets.' To build: a multi-target spell; each target cannot cast (and its spell effects are
+  suppressed) until it spends a move to get clear.
+- **Q16 APG / UM / ACG.** Ruling: 'yes include advanced class guide, I don't care what order we go in.' The import
+  order is ours: thin lists first (magus, inquisitor, oracle, bloodrager), then the big Sor/Wiz lists.
+- **Q6 Monsters.** Ruling: 'we need more monsters, dragons and giants are good, there are others too.' To build: a
+  Foundry import of CR 12-20 dragons and giants first, then other families.
+- **Q2 Potions.** Ruling: 'I'd like players to be able to keep & use them at will. Perhaps assume everyone has a
+  "potion bandolier" they can pull from that stores potions for later use.' Details asked of Toby below (2).
+- **Q1 Sounds.** Toby will supply Mage Armor and Shield sounds and asked for the list of gaps — see
+  docs/SOUND-WISHLIST.md.
 
-4. **Farrah's concept** (Josh, 2026-09-03) — the bench sorcerer has NO concept on
-   file: characterBuilds carries only `race: human, flex: cha`, so she runs the
-   generic sorcerer loadout (whose priority list includes Summon Monster IV/VI/VIII
-   — hence the summoning Josh noticed). Olbryn and Gabriel have real concepts;
-   should Farrah get one (bloodline, signature spells, weapon), and what is it?
+### Still open (no answer yet, or a follow-up question)
 
-5. **Pinned** (Josh's debuff audit) — our grapple renders a seized foe helpless,
-   which is closer to PF1 "pinned" than "grappled." Keep the single tier, or split
-   grappled (−2 hit/AC, no Dex) from pinned (helpless) at a second CMB check?
+2. **Potion bandolier — the details.** (a) Which potions: cures only, or buff potions too (Haste, Fly, Barkskin,
+   Bull's Strength, Invisibility, Lesser Restoration)? (b) Where do they come from: drops only, or also a shop —
+   and if a shop, paid from the run's gold pool between rooms, or from chips in the lobby? (c) How many does a
+   bandolier hold (proposed: 6)? (d) Do they persist between dungeons (proposed: yes — 'keep')? (e) Drinking one is
+   a standard action by the book; a move action is the common house rule. Which? (f) Do the hirelings carry and
+   drink their own? (g) A dropped cure today is drunk at once by the most-hurt ally — should it go into a
+   bandolier instead (whose: a roll-off like gear)?
 
-6. **The high-CR bestiary is thin** (Josh's monotony report, 2026-09-05) — the
-   non-boss spawn pool holds 6 monsters in CR 14-18 and only 2 in CR 16-20 (one
-   undead, one devil). v3.37.147 works around it (flat anchor, no-encore, band
-   widening), but at level 19-20 variety needs more CR 16-20 monsters — a Foundry
-   import job (which families: dragons? giants? the Boali way?).
+5b. **Enemies grappling heroes.** v3.37.185 put the book's two tiers on every grapple a HERO or a hero's spell
+   makes. Enemy grapples on heroes were already the 'grappled' tier and are unchanged, with three kindnesses that
+   are not in the book: the hero's break-free roll is free at the start of their turn (book: a standard action),
+   the grip lapses by itself after two rounds, and enemies never pin. Bring those to the book too (a pinned hero
+   loses turns), or leave the hero side as it is?
 
-7. **Play styles for the rest of the roster** (Josh, 2026-09-06) — v3.37.149 gave
-   characterBuilds a `style` the bot brain reads: 'summoner' (Jason, Draymus),
-   'guardian' (Dinvaya), 'storm' (Olbryn). Josh's point: "I want Gaspar to play
-   like Gaspar whether I'm running him or the AI is." Which of your characters
-   (Taboon, Ramos, Gaspar, the rest) get a style, and what is it? New styles are
-   cheap to add if a concept needs one (e.g. 'blaster', 'controller', 'necromancer').
+7. **Play styles.** Gaspar has the new 'melee' style (v3.37.185). 'Taboon' and 'Ramos' were my mistake — no such
+   characters exist in the roster. Which other characters of yours should get a style? (Styles today: summoner,
+   guardian, storm, melee.)
 
+14. **Bloodlines, the parts not yet answered.** (d) **Fated** (destined) is an always-on luck bonus; the book gives
+    it only in surprise rounds, which this format does not have — keep always-on? (e) **Touch of Destiny** and
+    **Laughing Touch** have no engine hook; proposed: Touch of Destiny = one ally gets +½ level on their next
+    attack roll and save; Laughing Touch = one foe loses its next action (Will negates). (f) **Arcane bloodline**
+    powers; proposed: Arcane Bond = once a dungeon, recover one spent casting; Metamagic Adept = free
+    Empower/Maximize uses per room; School Power = +2 DC on one school; Arcane Apotheosis = metamagic never raises
+    the slot.
 
-14. **Bloodline translations** (v3.37.169-170 shipped stand-ins; each power's desc names them). Bless or
-    redirect: (a) **Claws** (abyssal/draconic) — today +damage on your weapon strikes for the room; the
-    book gives two real 1d4/1d6 claw attacks. Real natural attacks instead? (b) **Corrupting Touch /
-    Grave Touch** (infernal/undead) — today a no-save touch that shakes; the book has no save either but
-    a touch ATTACK. Keep the auto-hit? (c) **Heavenly Fire** (celestial) — today a ray that damages any
-    foe; the book heals good creatures, damages evil, does nothing to neutral. Alignment-gate it? (d)
-    **Fated** (destined) — today an always-on luck bonus to AC/saves; the book gives it only in the
-    first round of combat (surprise rounds). Always-on OK? (e) **Touch of Destiny** (destined 1) and
-    **Laughing Touch** (fey 1) — no engine hook yet. Proposed: Touch of Destiny = one ally gets +½ level
-    on their next attack roll and save (a swift); Laughing Touch = one foe loses its next move/attack
-    (Will negates, mind-affecting) — i.e. a 1-round 'slowed'. (f) **Arcane bloodline** meta powers —
-    proposed: Arcane Bond = once a dungeon, recover one spent casting; Metamagic Adept = N free
-    Empower/Maximize applications a room (N = 1 at 3, +1 per 4 levels); School Power = +2 DC on one
-    spell school you pick in the lobby; Arcane Apotheosis (20) = metamagic never raises the slot. (g)
-    **Draconic colours** — one pick 'draconic' with an element dropdown (acid/cold/electricity/fire), or
-    ten separate bloodline entries? (h) **Farrah's bloodline** (ties to #4). (i) **Bloodrager ladder** —
-    bloodragers get powers at the sorcerer levels (1/3/9/15/20) as a stopgap; the ACG bloodrager ladder
-    is 1/4/8/12/16/20 with DIFFERENT powers. Keep the stopgap, or build the ACG bloodrager bloodlines
-    as their own table?
+15. **Contingency and Mage's Faithful Hound.** Contingency: skip, or a single pre-set 'when I drop below half HP, a
+    stored cure fires'? Hound: skip, or a room-long guard summon that bites whoever attacks the caster?
 
-15. **CRB leftovers** (found 2026-09-29 — the v3.37.162 'queue empty' was wrong; batches 13-16 are
-    queued in the CRB ledger). Three need a ruling: **Antimagic Field** (Clr 8, Sor/Wiz 6) — it would
-    strip the party's own buffs and summons too; ship it as 'no spells either side for the room' or
-    🚫? **Contingency** (Sor/Wiz 6) — 'when X happens, Y fires'; proposed 🚫 (no trigger surface) or a
-    single pre-set 'when I drop below half HP, a stored cure fires'. **Mage's Faithful Hound** (Sor/Wiz
-    5) — proposed 🚫, or a room-long summon that only bites foes attacking the caster and ignores
-    invisibility.
+16. **APG/UM stand-ins.** (b) dazed = the engine's stunned, staggered = slowed, Sirocco's fatigue lasts the room —
+    bless or veto. (d) Heroes are never fatigued, poisoned or drained, so the cure spells for those stay out —
+    agreed?
 
-16. **APG/UM scope** (batch A1 shipped in v3.37.175 — Ear-Piercing Scream, Frigid Touch, Stone Call,
-    Sirocco, Cleanse). (a) Priority: fill the THIN lists first (magus/UM, inquisitor and oracle/APG,
-    bloodrager/ACG) or the big Sor/Wiz blasts and controls? (b) Adaptations used in A1 — bless or veto:
-    dazed → the engine's stunned (turn lost); staggered → the engine's slowed (one action); Sirocco's
-    fatigue lasts the room; a Sirocco'd flyer is prone and reachable until it stands, then flies again.
-    (c) Is the ACG (Advanced Class Guide) list in scope too, or APG + UM only? (d) Heroes are never
-    fatigued, poisoned or drained, so the APG/UM cure spells for those stay 🚫 like their CRB cousins —
-    unless you want those conditions to start landing on heroes.
+18. **Saved gear on a re-rolled character.** In plain words: magic gear is saved on the CHARACTER and survives a
+    re-roll back to level 1. Josh's gunslinger restarted at level 1 still wearing +5 armor, shield, cloak and ring,
+    so level-1 monsters hit him about one swing in fifteen. Nothing was nerfed — that is why his fights felt
+    toothless. Leave it (re-rolling with your gear is the player's choice), or limit how much of a saved bonus
+    works at low level (for example +1 per 3 character levels)?
 
-17. **The flying party and the grounded dungeon** (Josh, 2026-10-05: 'do enemy casters not carry fly spells
-    or debuff spells? if my party all gets flying we can steamroll… is this by design?'). Numbers from his
-    seven runs of 10-04..10-06: **553 enemy swings at the air** (gentle-noodle 178 in 39 rounds, fuzzy-
-    penguin 215 in 56). The enemy repertoire today: Hold Person casters (shamans, the Thought Harvester);
-    arcane bosses by caster level — Mirror Image (CL4), Fly for THEMSELVES when melee-swarmed (CL5),
-    Invisibility (CL3), Bestow Curse (CL5, once a room), Dispel Magic (CL9, 1-in-4, once a room, only on a
-    hero wearing 3+ buffs), Fireball/Cone/Chain artillery; archers only via RANGED_KEYS; no melee monster
-    has a ranged fallback. Your 09-23 ruling was 'if their buffs trivialize a room, so be it'. Josh now asks
-    for danger back ('danger of being blown away is the fun bit'). Options, any mix: (a) humanoid melee
-    foes carry a sidearm — a javelin/sling/thrown-axe shot at −4 when nothing is in reach (PF1 stat blocks
-    nearly always list one); (b) anti-air doctrine for casters — when the whole party is airborne, Dispel
-    the flyer first (any CL that has the spell), or Glitterdust/Web the squishiest; (c) spawn weighting —
-    when the party enters a room flying, bias the band toward flying and ranged foes; (d) leave it.
-
-18. **+5 gear on a level-1 character** (Josh's 'are the bad boys being nerfed?', 2026-10-05). No nerfs in
-    the code. His gunslinger re-rolled at level 1 wearing the saved +5 weapon/armor/shield/cloak/ring
-    (gear persists across re-rolls and the level-the-field drop by design), so at L1-8 foes hit him and
-    the levelled-down allies **5-8%** of the time (merry-walrus 17 hits in 328 swings); by L13-16 it is
-    28-37%, which is close to PF1 norms. Guns themselves are by the book: touch AC in the first increment
-    → 97% hits; the 25-damage shots are 1d12 + Dex + 5 enhancement + Deadly Aim + Up Close dice. Keep gear
-    unbounded (his call to re-roll), or cap the usable enhancement by level (e.g. +1 per 3 levels)?
-
-19. **Summon Monster on the non-summoners** (the bot change itself is blessed — see Ruled). Still open: (a)
-    Olbryn's elemental bloodline grants Summon Monster VIII at 17 by the book, so he always knows it — swap it for
-    a storm spell (Call Lightning Storm? Chain Lightning?) as a house rule, or keep RAW? (b) the DEFAULT
-    cleric/oracle/wizard lists still carry Summon Monster IV/VI/VIII as staples — drop them from the defaults so
-    only summoners prepare them?
-
-22. **Communal wards: the level** (the '(Communal)' names are blessed — see Ruled). Still open: (a) the book puts
-    Communal Protection from Energy ONE LEVEL ABOVE the single-target spell (Clr / Drd / Sor-Wiz 4, Rgr 3); ours
-    sit at the single-target level (3, ranger 2; the cleric's fire ward is already 4). Move them up, or keep? (b)
-    Greater Magic Weapon is one weapon in the book and there is no communal version; ours covers the party. Keep
-    the house version under the Communal name, or make it one ally? (c) Should the plain single-target Protection
-    from Energy exist beside the communal one, as Stoneskin does at 4 and 5?
+19b. **Summon Monster on the default lists.** The DEFAULT cleric / oracle / wizard prepared lists still carry Summon
+    Monster IV / VI / VIII — drop them from the defaults so only the summoner-style characters prepare them?
 
 ## Standing policy (Toby)
 
@@ -115,10 +82,27 @@ Ruled section with the version that implemented it.
   correctly instead (item = its crafting spell's type; racial stacks with
   enhancement).
 - **PF1 first:** "pf1 rules always to start with, then deviate when we have to."
+- **Buffs** (2026-11-18): 'in general it's ok to make buffs better and more worth casting.'
 - **Bot variety** (2026-08-31): strong tactical options (haste-first) should
   weigh heavily but carry "a little rng" when multiple good paths exist.
 
 ## Ruled
+
+- **Rulings of 2026-11-18, built in v3.37.185:**
+  - **Enemy sidearms** (was 17): 'most enemies would have some manner of ranged option but it would be less potent
+    than their melee.' A grounded melee foe under a flying party throws (javelin, dagger, sling, darts, a giant's
+    boulder): −4 to hit, one die + half its melee bonus, one shot or half its routine. Beasts and their like have none.
+  - **Grapple by the book** (was 5): two tiers — the grab GRAPPLES (no damage), a renewal PINS, a renewal on a pinned
+    foe crushes. Black Tentacles grapple and deal 1d6+4. The enemy-on-hero side is open as 5b.
+  - **Touch attacks roll** (was 14b): Corrupting Touch and Grave Touch are a melee touch attack, no save.
+  - **Heavenly Fire** (was 14c) follows the Holy Smite alignment table.
+  - **Gaspar** (was 7) is 'an inquisitor who is generally melee focused' — the 'melee' bot style.
+- **Rulings of 2026-11-18 that needed no build:**
+  - **Greater Magic Weapon covers the party** (was 22b): 'greater magic weapon sucks as written, lets let it cover
+    the party.' The communal wards keep their current spell levels under the same reasoning (was 22a — my reading of
+    'it's ok to make buffs better'; say so if you want them a level higher), and no separate single-target
+    Protection from Energy is added (was 22c).
+  - **Farrah** (was 4) 'is a medium — that is her class.' She stays a sorcerer until a Medium class exists.
 
 - **Josh's changes blessed** (2026-11-18, 'bless all josh changes'; were open items 3, 19, 20, 21, 22):
   - **Call Lightning's lingering storm** calls its bolt free at the caster's turn start — v3.37.143.

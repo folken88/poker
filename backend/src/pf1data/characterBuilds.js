@@ -32,7 +32,7 @@ const BUILDS = {
 
   // ── Humans (floating +2 pinned per character) ──
   'Sirona':                  { race: 'human', flex: 'str' },
-  'Gaspar':                  { race: 'human', flex: 'str' },
+  'Gaspar':                  { race: 'human', flex: 'str', style: 'melee' },   // v3.37.185 (Toby): an inquisitor who is generally melee focused — the bot leans harder on Curator
   'Kate Blackwood':          { race: 'human', flex: 'int' },
   'Dismas':                  { race: 'human', flex: 'dex' },
   'Estovion':                { race: 'human', flex: 'int' },

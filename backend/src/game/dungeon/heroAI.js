@@ -358,7 +358,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (!party.length || !foes || !foes.length) return false;
     const grounded = (m) => !m.flying || (!(m.incorporeal || m.ghost) && ((m.paralyzed > 0) || m.grappled));
     if (party.some(grounded)) return false;
-    return !foes.some(e => e.flying || e.ranged || e.arcane || e.caster || e.shout || e.hook || e.hellfire || e.summon || e.spellstrike || e.detonate);
+    return !foes.some(e => e.flying || e.ranged || e.arcane || e.caster || e.shout || e.hook || e.hellfire || e.summon || e.spellstrike || e.detonate || (typeof this._foeSidearm === 'function' && !!this._foeSidearm(e)));   // v3.37.185: a javelin reaches a flyer — only beasts and their like leave the party untouchable
   },
   // ── THE DOCTRINE ROLL (v3.37.171 — Tobias, 2026-09-23: 'all these characters could use a little RNG in their
   //    ai. instead of defaulting to buff 1, buff 2, buff 3 give them each a % chance between their possible
@@ -377,6 +377,7 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (cls === 'theurge') return { buff: 35, control: 30, dispel: 20, attack: 15 };   // Celeb: buffs, control, dispels, a rare attack
     if (['cleric', 'oracle', 'druid', 'bard', 'shaman', 'warpriest', 'witch'].includes(cls)) return { buff: 40, control: 30, dispel: 0, attack: 30 };   // the support caster (Tobias's numbers)
     if (['wizard', 'sorcerer', 'arcanist'].includes(cls)) return style === 'storm' ? { buff: 10, control: 25, dispel: 10, attack: 55 } : { buff: 15, control: 35, dispel: 10, attack: 40 };
+    if (style === 'melee') return { buff: 15, control: 0, dispel: 5, attack: 80 };   // v3.37.185 (Toby: 'gaspar is an inquisitor who is generally melee focused')
     if (cls === 'magus' || cls === 'inquisitor') return { buff: 20, control: 0, dispel: 10, attack: 70 };
     if (['paladin', 'antipaladin', 'ranger', 'bloodrager'].includes(cls)) return { buff: 25, control: 0, dispel: 0, attack: 75 };
     return { attack: 100 };   // fighters, rogues, monks, barbarians, gunslingers…: the old ladder, untouched
@@ -1268,6 +1269,8 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
         // GRAPPLE — lock down a DANGEROUS foe (caster/boss) the bot can reach; never
         // an incorporeal or already-grappled one (those refuse + waste the turn).
         if (a.effect === 'grapple') {
+          const held = targets.find(t => t.grappled && t.grappledBy === m.playerId && t.hp > 0);   // v3.37.185: PF1 — a hold must be renewed every turn (pin, then crush)
+          if (held) { offense.length = 0; offense.push({ ab: a, payload: { targetUid: held.uid } }); m._lastAbilityKey = null; break; }
           const grab = targets.filter(t => !t.grappled && !t.incorporeal && this._canReach(m, t));
           if (!grab.length) continue;
           const prey = grab.find(t => t.boss || t.arcane || t.caster || t.healer) || grab.slice().sort((x, y) => y.maxHp - x.maxHp)[0];

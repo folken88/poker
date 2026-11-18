@@ -2176,6 +2176,25 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.185 2026-11-18 TOBY'S RULINGS, FIRST BATCH (his answers to the queue, 2026-11-18; the rest are queued in docs/TOBY-QUESTIONS.md).
+//                     (17) SIDEARMS — 'most enemies would have some manner of ranged option but it would be less potent
+//                     than their melee'. A grounded melee foe that can see only flyers no longer 'claws at the air': it
+//                     throws. Javelin (d6), thrown dagger for the sneaks (d4), sling for casters (d4), darts for the
+//                     unarmed martial artists (d4), a boulder for giants (d8, full damage bonus). −4 to hit, one die plus
+//                     HALF the melee damage bonus, one shot on a new target and half the melee routine (rounded up) when
+//                     it stays on the same one; none of its melee riders travel. Beasts, vermin, oozes, aberrations,
+//                     constructs and claw-and-tooth fighters have none. Bots stop treating such a room as untouchable.
+//                     Fire Shield now scorches MELEE attackers only (it was burning archers too).
+//                     (5) GRAPPLE BY THE BOOK — two tiers. A grab GRAPPLES (−2 attacks, −2 AC, cannot get away; the foe
+//                     fights its holder or tries to break out) and deals no damage; the hold lasts one enemy turn and is
+//                     renewed with Grapple (+5): the first renewal PINS (helpless, −6 AC, sneak-attackable), later ones
+//                     crush for weapon damage with no attack roll. The holder is −2 AC. Black Tentacles grapple (never
+//                     pin) and deal the book's 1d6+4 on the seize and each round they keep their grip. Promethean
+//                     tentacles: first hit grapples, a later hit pins. Enemy grapples on heroes are unchanged (they were
+//                     already the grappled tier). The enemy-turn logic moved from Dungeon.js to enemyAI._grappledTurn.
+//                     (14b) Corrupting Touch / Grave Touch are a melee touch ATTACK with no save (shaken ½ level rounds) —
+//                     they were a Will save. (14c) Heavenly Fire follows the Holy Smite table: full vs evil, half vs
+//                     neutral, nothing vs good. (7) Gaspar gets the new 'melee' bot style (80% attack).
 //  3.37.184 2026-11-17 JOSH'S FOURTH PASS (his reply to the v183 note; runs dapper-acorn, plucky-badger, haunted-gecko read first —
 //                     v183 is doing its job there: his Teleport carried Tokala, Spell Turning and Stoneskin (Communal)
 //                     explain themselves). (1) COMMUNAL NAMES: 'the protection spells Olbryn carries at third level…
@@ -2509,7 +2528,7 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.184';
+const VERSION = '3.37.185';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33884;   // v3.37.184: V casts domain and bloodline spells (they leave the blind Spellbook); six party-wide wards carry '(Communal)'

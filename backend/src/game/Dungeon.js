@@ -1013,33 +1013,8 @@ class Dungeon {
         } else { e.paralyzed -= 1; this._note(`🖐️ ${e.name} is paralyzed — loses its turn.`, null, { side: 'enemy' }); }
         this._broadcast(); return this._nextTurn();
       }
-      // GRAPPLED (by a Promethean OR by Black Tentacles): helpless, loses its turn.
-      // Each turn it may struggle free (its attack bonus vs the grappler's CMD); the
-      // grip drops if the source is gone (grappler left/dead/un-shifted, or the
-      // tentacle field has lapsed).
-      if (e.grappled) {
-        let cmd, srcGlyph = '🐙', stillHeld;
-        if (e.grappledBy === 'tentacles') {
-          const bt = this.blackTentacles; srcGlyph = '🦑';
-          stillHeld = !!bt; cmd = bt ? 10 + bt.cmb : 0;
-        } else {
-          // A HERO holds the grip — either Promethean tentacles or a Grapple MANEUVER
-          // (both set grappledBy = the hero's playerId). Held as long as that hero is
-          // up; the foe rolls its CMB vs the grappler's CMD to slip free.
-          const grappler = this.member(e.grappledBy);
-          stillHeld = !!(grappler && !grappler.left && grappler.hp > 0);
-          cmd = stillHeld ? this._heroCMD(grappler) : 0;
-        }
-        if (!stillHeld) { e.grappled = false; e.grappledBy = null; e.grappleRounds = 0; this._note(`${srcGlyph} ${e.name} wrenches loose — the grip releases it.`, null, { side: 'enemy' }); }
-        else {
-          e.grappleRounds = (e.grappleRounds || 1) - 1;
-          const roll = dRoll(20), tot = roll + (e.toHit || 0);
-          const broke = roll === 20 || tot >= cmd;
-          if (broke || e.grappleRounds <= 0) { e.grappled = false; e.grappledBy = null; this._note(`${srcGlyph} ${e.name} ${broke ? 'tears free' : 'finally slips'} of the grapple! [Str ${tot} vs ${cmd}] — but the struggle cost its turn.`, null, { side: 'enemy' }); }
-          else this._note(`${srcGlyph} ${e.name} is held fast — helpless, loses its turn. [Str ${tot} vs ${cmd}]`, null, { side: 'enemy' });
-          this._broadcast(); return this._nextTurn();
-        }
-      }
+      // GRAPPLED / PINNED (PF1 two tiers, v3.37.185) — see _grappledTurn in dungeon/enemyAI.js.
+      if (e.grappled && this._withSide('enemy', () => this._grappledTurn(e))) { this._broadcast(); return this._nextTurn(); }
       if (e.loseTurn) { e.loseTurn = false; this._note(`${e.glyph} ${e.name} is off-balance — loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       if (e.nauseated > 0) { e.nauseated -= 1; this._note(`${e.glyph} ${e.name} retches — nauseated, loses its turn.`, null, { side: 'enemy' }); this._broadcast(); return this._nextTurn(); }
       // Slow (PF1 STAGGERED): the creature still acts every turn — the single-
@@ -1496,7 +1471,7 @@ class Dungeon {
    // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged; Slow drags Reflex −1 — PF1; Resistant Touch (Protection domain) +2 while warded)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).
-  _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + (m.grappled ? 2 : 0) + (m.gloriousAC || 0); }   // gloriousAC: Order of the Flame recklessness (−2 per consecutive glorious challenge this room)
+  _acPenalty(m) { return ((m.buffs && m.buffs.acPen) || 0) + (m.acPenRound === this.round ? (m.acPenAmt || 0) : 0) + ((m.grappled || this._holdingFoe(m)) ? 2 : 0) + (m.gloriousAC || 0); }   // gloriousAC: Order of the Flame recklessness (−2 per consecutive glorious challenge this room)
   // Is this hero fighting with two weapons (a double/dual weapon, or a rogue's
   // paired daggers)? Drives Two-Weapon Defense and the TWF attack sequence.
   _isDualWielding(m) {
@@ -1621,7 +1596,7 @@ class Dungeon {
     // defenses — flat-footed, prone, sickened, or paralyzed (PF1e). NOT crit-multiplied.
     // A target is denied its Dex vs an UNSEEN attacker too — Greater Invisibility
     // keeps a rogue striking from concealment, so every hit is a Sneak Attack.
-    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated || target.blinded > 0)) || !!attacker.greaterInvis || !!attacker._unseenStrike;   // _unseenStrike: the one blow struck while still invisible (before it breaks) catches the foe unseen — denies its Dex
+    const denied = !!(target && (target.flatFooted || target.prone || target.sickened > 0 || target.paralyzed > 0 || target.fascinated || target.blinded > 0 || (target.grappled && target.pinned))) || !!attacker.greaterInvis || !!attacker._unseenStrike;   // _unseenStrike: the one blow struck while still invisible (before it breaks) catches the foe unseen — denies its Dex
     // FLANK (Tobias 2026-07-04): once TWO+ melee allies work the SAME foe, they
     // flank it — +2 to hit, and Sneak Attack switches on for rogue-likes. The
     // first to close gets nothing (moved up alone); every ally who joins the

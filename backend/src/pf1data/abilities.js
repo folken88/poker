@@ -2181,6 +2181,12 @@ const _communalName = (a) => {
 for (const _a of Object.values(SPELL)) _communalName(_a);
 for (const _k of Object.values(KITS)) { if (_k && Array.isArray(_k.abilities)) for (const _a of _k.abilities) _communalName(_a); }
 // (end communal names)
+// (grapple words start) v3.37.185 — PF1's two tiers (Toby: 'use the book's rules for grapple'). The kit copies come
+// from kits.generated.js, so the words are set here, after the override.
+const _GRAPPLE_DESC = 'Seize a foe: your CMB against its CMD. A success GRAPPLES it: minus 2 to its attacks, minus 2 to its AC, and it cannot get away from you; on its turn it fights you or tries to break out. The grab deals no damage. The hold lasts one of its turns: Grapple the same foe again on your next turn (plus 5 to keep a hold) to PIN it, helpless, minus 6 AC, able only to struggle; Grapple a pinned foe again to crush it for your weapon damage with no attack roll. Fail a renewal and it breaks loose; do anything else and the hold ends. While you hold a foe you are minus 2 AC yourself. No grappling the incorporeal.';
+for (const _k of Object.values(KITS)) { if (_k && Array.isArray(_k.abilities)) for (const _a of _k.abilities) if (_a && _a.effect === 'grapple') _a.desc = _GRAPPLE_DESC; }
+_GRAPPLE_MV.desc = _GRAPPLE_DESC;
+// (end grapple words)
 // ── SPELLS KNOWN (v3.37.164 — Josh: 'it lets me choose every spell in that level… I should get a hard
 // stop'). PF1 CRB Table 3-15 (sorcerer; the oracle shares it) and Table 3-4 (bard; the inquisitor
 // shares it) — spells KNOWN per spell level 1..9, cantrips excluded. A sorcerer's BLOODLINE spell

@@ -370,6 +370,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       bolt:        () => this._abBolt(m, ab, payload.targetUid),
       missile:     () => this._abMissile(m, ab, payload),
       touch:       () => this._abTouch(m, ab, payload),
+      touchshaken: () => this._abTouchShaken(m, ab, payload),
       rays:        () => this._abRays(m, ab, payload),
       spellstrike: () => this._abSpellstrike(m, ab, payload),
       glitterdust: () => this._abGlitterdust(m, ab, payload),
@@ -724,8 +725,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const blastUses = (l) => l >= 20 ? 3 : l >= 17 ? 2 : 1;
     const base = (pw) => ({ key: 'bl_' + pw.key, name: pw.name, icon: bl.icon, blood: true, desc: `Bloodline (${bl.name}), level ${pw.level}: ${pw.desc}` });
     const T = {
-      ray:       (pw) => ({ ...base(pw), cost: 'room', uses: chaUses, effect: 'touch', target: 'enemy', die: pw.die || 6, dice: 1, flatHalfCL: true, dtype: pw.dtype || 'acid', sound: '/audio/spell_buff_invoke.mp3' }),
-      touchfear: (pw) => ({ ...base(pw), cost: 'room', uses: chaUses, effect: 'save_debuff', debuff: 'shaken', save: 'will', target: 'enemy', sound: '/audio/spell_buff_invoke.mp3' }),
+      ray:       (pw) => ({ ...base(pw), cost: 'room', uses: chaUses, effect: 'touch', target: 'enemy', die: pw.die || 6, dice: 1, flatHalfCL: true, dtype: pw.dtype || 'acid', vsAlign: pw.vsAlign || null, sound: '/audio/spell_buff_invoke.mp3' }),
+      touchfear: (pw) => ({ ...base(pw), cost: 'room', uses: chaUses, effect: 'touchshaken', target: 'enemy', sound: '/audio/spell_buff_invoke.mp3' }),   // v3.37.185 (Toby: 'touch attacks have to roll in pathfinder'): a melee touch ATTACK, no save — was a Will save
       claws:     (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'buff', target: 'self', sticky: true, buff: { dmg: lvl >= 7 ? 3 : 2, bonusDice: lvl >= 11 ? 1 : 0 }, sound: '/audio/spell_buff_invoke.mp3' }),
       blast:     (pw) => ({ ...base(pw), cost: 'room', uses: blastUses, effect: 'aoe', target: 'aoe', maxTargets: pw.maxTargets || 4, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: pw.dtype || 'fire', sound: '/audio/spell_buff_invoke.mp3' }),
       wings:     (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'buff', target: 'self', sticky: true, fly: true, canHitFlyers: true, sound: '/audio/spell_buff_invoke.mp3' }),
@@ -1311,7 +1312,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // GLORIOUS CHALLENGE (Order of the Flame): a cavalier on a kill-streak fights ever more
     // recklessly — −2 AC per consecutive glorious challenge this room (stacks; see _enemyMelee).
     const glory = e.gloriousChallenge ? 2 * (e.gloriousN || 0) : 0;
-    return base - glory - (e.stunned > 0 ? 2 : 0) + (e.prone ? (rangedAtk ? 4 : -4) : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) - (e.exhausted > 0 ? 3 : (e.fatigued > 0 ? 1 : 0)) + (e.flying ? HIGH_GROUND_AC : 0) + (e.fdOn ? 2 : 0);   // Fight Defensively: +2 dodge AC; exhausted/fatigued: Dex −6/−2 (v3.37.145)
+    return base - glory - (e.stunned > 0 ? 2 : 0) + (e.prone ? (rangedAtk ? 4 : -4) : 0) - (e.slowed > 0 ? 1 : 0) - (e.blinded > 0 ? 2 : 0) - (e.exhausted > 0 ? 3 : (e.fatigued > 0 ? 1 : 0)) + (e.flying ? HIGH_GROUND_AC : 0) + (e.fdOn ? 2 : 0) - (e.grappled ? (e.pinned ? (e.flatFooted ? 4 : 6) : 2) : 0);   // PF1 grappled: Dex −4 (−2 AC); pinned: denied Dex and −4 more (v3.37.185) · Fight Defensively: +2 dodge AC; exhausted/fatigued: Dex −6/−2 (v3.37.145)
   },
   // Energy-resistance multiplier for a damage type (see RESIST_BY_KEY): 0 immune,
   // 0.5 resistant, 1.5 vulnerable, 1 (default) unchanged. Physical/untyped (no
@@ -2406,8 +2407,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._echoToTable(ab.sound);
   },
   // Black Tentacles — a room hazard: each round (and on the cast) it grapples a
-  // random 1d4+1 ungrappled foes (PF1 grapple: CMB vs CMD). Grappled = helpless,
-  // losing turns until they break free (see _enemyAct). Lasts the room.
+  // random 1d4+1 ungrappled foes (PF1 grapple: CMB vs CMD). v3.37.185, by the book: a
+  // seized foe is GRAPPLED, not helpless (−2 attacks, −2 AC, cannot move — _grappledTurn),
+  // and takes 1d6+4; each round the field re-checks the ones it holds at +5 and a success
+  // crushes for 1d6+4 again. The tentacles never pin. Lasts the room.
   _abBlackTentacles(m, ab) {
     const cl = m.level || 1;
     this.blackTentacles = { cmb: cl + 5, caster: m.playerId, sound: ab.sound };   // CMB ≈ caster level + Str/size
@@ -2417,18 +2420,23 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   _blackTentaclesTick() {
     const bt = this.blackTentacles; if (!bt) return;
-    const free = this._targetableEnemies().filter(e => !e.grappled && e.hp > 0);
-    if (!free.length) return;
+    const live = this._targetableEnemies().filter(e => e.hp > 0);
+    let crushed = 0, crushDmg = 0, slain = 0;
+    for (const e of live.filter(x => x.grappled && x.grappledBy === 'tentacles')) {
+      const roll = dRoll(20);
+      if (roll === 20 || (roll !== 1 && roll + bt.cmb + 5 >= 10 + (e.toHit || 0) + 2)) { crushDmg += this._dmgE(e, dRoll(6) + 4); crushed++; if (e.hp <= 0) slain++; }
+    }
+    const free = live.filter(e => !e.grappled && e.hp > 0);
     for (let i = free.length - 1; i > 0; i--) { const j = dRoll(i + 1) - 1; [free[i], free[j]] = [free[j], free[i]]; }
     const grabbed = free.slice(0, dRoll(4) + 1);   // 1d4+1 foes
     let seized = 0, resisted = 0;                   // COUNTS-ONLY report (Josh: consistent AoE narration)
     for (const e of grabbed) {
       const ecmd = 10 + (e.toHit || 0) + 2;                    // foe's CMD (rough)
       const roll = dRoll(20), tot = roll + bt.cmb;
-      if (roll === 20 || tot >= ecmd) { e.grappled = true; e.grappledBy = 'tentacles'; e.grappleRounds = 99; seized++; }
+      if (roll === 20 || tot >= ecmd) { e.grappled = true; e.pinned = false; e.grappledBy = 'tentacles'; e.grappleRounds = 99; seized++; crushDmg += this._dmgE(e, dRoll(6) + 4); if (e.hp <= 0) slain++; }
       else resisted++;
     }
-    if (seized || resisted) { this._note(`🦑 The black tentacles lash out — ${seized} seized${resisted ? `, ${resisted} resisted` : ''}.`, bt.sound); this._broadcast(); }
+    if (seized || resisted || crushed) { this._note(`🦑 The black tentacles lash out — ${seized} seized${resisted ? `, ${resisted} resisted` : ''}${crushed ? `, ${crushed} already held and squeezed` : ''}${crushDmg ? ` — ${crushDmg} crushing damage in all` : ''}${slain ? `, ${slain} slain ☠️` : ''}.`, bt.sound); this._broadcast(); }
   },
   // Suffocation — single living target (not undead/constructs): Fort save or DIE.
   // A made save (or a boss too tough to fell outright) still takes heavy damage.
@@ -3205,6 +3213,23 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._echoToTable(sound);
   },
   // Touch spell (Shocking Grasp): a ranged touch attack for level d6.
+  // Corrupting Touch / Grave Touch (v3.37.185): the book's MELEE TOUCH ATTACK — roll to hit
+  // touch AC, no save; a hit leaves the foe SHAKEN (−2 to hit and damage) for ½ your level
+  // rounds (at least 1). The fearless (undead, constructs, the mindless) feel nothing.
+  _abTouchShaken(m, ab, payload) {
+    const e = this._oneEnemy(payload); if (!e) return;
+    const sound = ab.sound || pick(SND.stink);
+    if (mindImmune(e)) { this._note(`${ab.icon} ${e.name} is immune to ${ab.name} — ${this._mindImmuneWhy(e)}.`); this._echoToTable(); return; }
+    const touchAC = this._enemyAC(e, { touch: true, melee: true });
+    const toHit = this._spellToHit(m) + ((m.buffs && m.buffs.toHit) || 0);
+    const roll = dRoll(20), total = roll + toHit;
+    if (roll !== 20 && (roll === 1 || total < touchAC)) { this._note(`${ab.icon} ${m.nickname} reaches for ${e.name} with ${ab.name} — and misses. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound); this._echoToTable(sound); return; }
+    if (this._rayEvades(m, e, ab)) { this._echoToTable(sound); return; }
+    const rounds = Math.max(1, Math.floor((m.level || 1) / 2));
+    e.sickened = Math.max(e.sickened || 0, rounds);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} lands on ${e.name} — SHAKEN for ${rounds} round${rounds === 1 ? '' : 's'} (−2 to hit and damage), no save. [touch d20 ${roll} ${this._fmtBonus(toHit)} = ${total} vs ${touchAC}]`, sound);
+    this._echoToTable(sound);
+  },
   _abTouch(m, ab, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
     if (ab.onlyType && e.type !== ab.onlyType) { this._note(`${ab.icon} ${ab.name} bites only the ${ab.onlyType} — ${e.name} is no ${ab.onlyType}.`); this._echoToTable(); return; }   // Rusting Grasp (v3.37.162)
@@ -3239,7 +3264,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       dice = this._spellDice(ab, m); die = ab.die || 6;
     }
     const raw = Math.max(1, this._rollSpell(m, dice, die, ab)) + (ab.flatCL ? Math.min(ab.flatCL, m.level || 1) : 0) + (ab.flatHalfCL ? Math.floor((m.level || 1) / 2) : 0);   // flatCL (v3.37.162): + caster level, capped (Produce Flame, Rusting Grasp); flatHalfCL (v3.37.169): + ½ level (bloodline rays)
-    const dmg = this._dmgE(e, raw, ab.dtype);
+    const _am = ab.vsAlign ? (this._alignIs(e, ab.vsAlign) ? 1 : this._alignIs(e, { lawful: 'chaotic', chaotic: 'lawful', good: 'evil', evil: 'good' }[ab.vsAlign]) ? 0 : 0.5) : 1;   // v3.37.185 (Toby: 'heavenly can match holy smite'): opposed full, neutral half, same-aligned nothing
+    if (_am === 0) { this._note(`${ab.icon} ${m.nickname}'s ${ab.name} washes over ${e.name} and does nothing — it will not burn the ${{ evil: 'good', good: 'evil', chaotic: 'lawful', lawful: 'chaotic' }[ab.vsAlign]}.`, sound); this._echoToTable(sound); return; }
+    const dmg = this._dmgE(e, _am === 1 ? raw : Math.max(1, Math.floor(raw * _am)), ab.dtype);
     let slowNote = '';
     if (ab.slowRider && e.hp > 0 && dmg > 0) { const _rds = roll === 20 ? 10 : 1; e.slowed = Math.max(e.slowed || 0, _rds); slowNote = roll === 20 ? ' The cold CRITICALLY seizes it — STAGGERED for the room!' : ' It is STAGGERED — one action on its next turn.'; }   // Frigid Touch (v3.37.175, UM): staggered = the engine's slowed; a natural 20 holds for the room (PF1: 1 minute)
     // Lifesteal rider (antipaladin Vampiric Touch) — heal the caster by the
@@ -3255,7 +3282,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       e.acid = { rounds, dice: Math.max(1, Math.floor(dice / 2)), die: ab.die || 6 };   // a fading burn (half the initial dice)
       dotNote = ` It clings and KEEPS BURNING (${rounds} more round${rounds > 1 ? 's' : ''}).`;
     }
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}${undeadTag}.${stealNote}${slowNote}${dotNote}${this._afterEnemyHit(e)}`, sound);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name} hits ${e.name} for ${dmg} ${ab.dtype || ''}${this._resistTag(e, ab.dtype)}${undeadTag}${_am === 0.5 ? ' (half: it is neither good nor evil)' : ''}.${stealNote}${slowNote}${dotNote}${this._afterEnemyHit(e)}`, sound);
     if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
     this._echoToTable(sound);
   },
@@ -4071,23 +4098,55 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     this._note(`💪 ${m.nickname} BULL RUSHES ${e.name}${hard ? ' — a brutal shove that SLAMS it prone' : ''} — driven back, it loses its turn closing the distance! [CMB ${cmb} vs CMD ${cmd}]`, '/audio/spell_revive.mp3');
     this._echoToTable('/audio/spell_revive.mp3');
   },
-  // Grapple (STR maneuver): seize the foe. On a success it's grappled & helpless —
-  // it burns its turns struggling (the enemy-turn escape loop rolls its CMB vs the
-  // grappler's CMD; the grip lasts ~2 rounds) — and the grab crushes for a free
-  // strike. Can't grapple foes far bigger than the grappler or incorporeal ones.
+  // Grapple — PF1's two tiers (v3.37.185, Toby: 'use the book's rules for grapple'; it was
+  // one tier: any grab = helpless, plus a free strike that is not in the book).
+  //   GRAB   your CMB vs its CMD. It is GRAPPLED: −2 on its attacks, −2 AC, it cannot leave
+  //          you, and on its turn it fights you or tries to break out (_grappledTurn). The
+  //          grab itself deals no damage.
+  //   RENEW  the hold lasts ONE of its turns. Grapple the SAME foe on your next turn — the
+  //          book's maintain check, +5 — and a success PINS it (it can only struggle, −6 AC);
+  //          on a foe already pinned a success deals your weapon damage with no attack roll.
+  //          A failed renewal breaks the hold; doing anything else lets it lapse.
+  //   While you hold a foe you are in the clinch as well: −2 AC (_acPenalty).
+  _holdingFoe(m) { return !!m && (this.enemies || []).some(e => e.hp > 0 && e.grappled && e.grappledBy === m.playerId); },
   _abGrapple(m, payload) {
     const e = this._oneEnemy(payload); if (!e) return;
-    if (e.grappled) { this._note(`🤼 ${e.name} is already grappled.`); return this._echoToTable(); }
     if (e.incorporeal) { this._note(`🤼 ${m.nickname} can't grapple ${e.name} — it's incorporeal, hands pass right through.`); return this._echoToTable(); }
+    const mine = !!e.grappled && e.grappledBy === m.playerId;
+    if (e.grappled && !mine) {
+      const by = e.grappledBy === 'tentacles' ? 'the black tentacles' : ((this.member(e.grappledBy) || {}).nickname || 'someone else');
+      this._note(`🤼 ${e.name} is already held by ${by} — there is no second grip to take.`); return this._echoToTable();
+    }
     m.weapon = weaponOf(m.gear, m.weaponKey);
-    const cmb = this._heroCMB(m), cmd = this._enemyCMD(e, true);
-    if (cmb < cmd) { this._note(`🤼 ${m.nickname} grabs at ${e.name}, but it twists out of the hold. [CMB ${cmb} vs CMD ${cmd}]`, pick(SND.whiffSword)); return this._echoToTable(); }
-    e.grappled = true; e.grappledBy = m.playerId; e.grappleRounds = 2;   // helpless until it breaks free (enemy-turn escape) or ~2 rounds pass
-    this._note(`🤼 ${m.nickname} GRAPPLES ${e.name} — seized and helpless, it'll burn its turns struggling free! [CMB ${cmb} vs CMD ${cmd}] Free strike!`, '/audio/spell_revive.mp3');
-    const r = this._swingVsAC(m, this._enemyAC(e), e);
-    if (r.hit) { this._dmgE(e, r.damage); this._note(`💥 ${m.nickname} crushes the held ${e.name} for ${r.damage}${r.drTag || ''}.${this._afterEnemyHit(e)}`, r.sound); if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name }); }
-    else this._note(`💥 the crushing grip can't land clean. ${this._atkStr(r)}`, r.sound);
-    this._echoToTable(r.sound);
+    const cmb = this._heroCMB(m) + (mine ? 5 : 0), cmd = this._enemyCMD(e, true);
+    const tag = `[CMB ${cmb}${mine ? ' (+5 to keep a hold)' : ''} vs CMD ${cmd}]`;
+    if (cmb < cmd) {
+      if (mine) { e.grappled = false; e.pinned = false; e.grappledBy = null; e.grappleRounds = 0; this._note(`🤼 ${m.nickname} fights to keep hold of ${e.name} — and LOSES it. It breaks loose. ${tag}`, pick(SND.whiffSword)); }
+      else this._note(`🤼 ${m.nickname} grabs at ${e.name}, but it twists out of the hold. ${tag}`, pick(SND.whiffSword));
+      return this._echoToTable();
+    }
+    const snd = '/audio/spell_revive.mp3';
+    if (!mine) {
+      e.grappled = true; e.pinned = false; e.grappledBy = m.playerId; e.grappleRounds = 1;
+      this._note(`🤼 ${m.nickname} GRAPPLES ${e.name} — it is held: −2 to its attacks, −2 to its AC, and it cannot get away from ${m.nickname}. Grapple it again next turn to PIN it; otherwise the hold ends. ${tag}`, snd);
+      return this._echoToTable(snd);
+    }
+    e.grappleRounds = 1;
+    if (!e.pinned) {
+      e.pinned = true;
+      this._note(`🤼 ${m.nickname} PINS ${e.name} — helpless: it can only struggle, and it is −6 AC to everyone. Grapple again next turn to crush it. ${tag}`, snd);
+      return this._echoToTable(snd);
+    }
+    let r = null;
+    for (let i = 0; i < 8; i++) { r = this._swingVsAC(m, -99, e); if (r.hit) break; }   // PF1: a maintained grapple deals the damage — no attack roll
+    if (r && r.hit) {
+      this._dmgE(e, r.damage);
+      this._note(`🤼 ${m.nickname} keeps ${e.name} pinned and CRUSHES it for ${r.damage}${r.drTag || ''}.${this._afterEnemyHit(e)} ${tag}`, r.sound || snd);
+      if (e.hp <= 0) this._tryBanter(m, 'down', { enemy: e.name });
+      return this._echoToTable(r.sound || snd);
+    }
+    this._note(`🤼 ${m.nickname} keeps ${e.name} pinned. ${tag}`, snd);
+    this._echoToTable(snd);
   },
   // Spiritual Weapon (cleric): conjure a force-blade over a chosen foe. It strikes
   // that foe on EACH of the cleric's turns — see _spiritWeaponStrike, fired from
@@ -4479,8 +4538,10 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         // Rogue Offensive Defense (feat tree n8): landing a sneak attack grants +2 AC
         // until they next act — the strike leaves the foe off-balance.
         if (r.sneakDice && fighterFeats(m.cls, m.level, this._isRanged(m)).offDef && !m._offDef) { m._offDef = true; this._note(`🤸 ${m.nickname}'s strike leaves them covered — +2 AC until their next move (Offensive Defense).`); }
-        // Promethean tentacles GRAB on a hit — the foe is grappled & helpless until it breaks free.
-        if (m.weapon.grapple && tgt.hp > 0 && !tgt.grappled) { tgt.grappled = true; tgt.grappledBy = m.playerId; tgt.grappleRounds = 2; this._note(`🐙 ${tgt.name} is SEIZED in ${m.nickname}'s tentacles — grappled and helpless!`); }
+        // Promethean tentacles GRAB on a hit (PF1 grab). v3.37.185, the book's two tiers: the first hit GRAPPLES
+        // (−2 attacks, −2 AC, it can still fight); a later hit on the foe it already holds renews the grip and PINS.
+        if (m.weapon.grapple && tgt.hp > 0 && !tgt.grappled) { tgt.grappled = true; tgt.pinned = false; tgt.grappledBy = m.playerId; tgt.grappleRounds = 1; this._note(`🐙 ${tgt.name} is SEIZED in ${m.nickname}'s tentacles — grappled: −2 to its attacks and AC, and it cannot get away.`); }
+        else if (m.weapon.grapple && tgt.hp > 0 && tgt.grappled && tgt.grappledBy === m.playerId) { tgt.grappleRounds = 1; if (!tgt.pinned) { tgt.pinned = true; this._note(`🐙 ${m.nickname}'s tentacles tighten — ${tgt.name} is PINNED: it can only struggle.`); } }
         if (tgt.hp <= 0) this._gcBank(m, tgt);   // his own blow downed his glorious mark → the charge banks (v3.37.105)
         if (tgt.hp <= 0) this._tryBanter(m, 'down', { enemy: tgt.name });
         if (tgt.hp <= 0 && tgt.type === 'undead') this._radianceQuip(m, 'radiance_undead_down', { enemy: tgt.name });   // Radiance HATES undead — she erupts

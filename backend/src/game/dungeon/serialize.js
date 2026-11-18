@@ -146,7 +146,9 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     if (o.slowed > 0)    c.push({ key: 'slowed',    label: 'Slowed',    desc: 'STAGGERED — one single action a turn: move OR attack, never both, never a full attack; −1 AC', icon: `${I}slowed.webp` });
     if (o.exhausted > 0) c.push({ key: 'exhausted', label: 'Exhausted', desc: 'Str/Dex −6 (PF1): −3 to hit, damage, AC and Reflex; half speed stood in for by STAGGERED — one action a turn', icon: `${I}slowed.webp` });
     if (o.fatigued > 0)  c.push({ key: 'fatigued',  label: 'Fatigued',  desc: 'Str/Dex −2 (PF1): −1 to hit, damage, AC and Reflex', icon: `${I}sickened.webp` });
-    if (o.grappled)      c.push({ key: 'grappled',  label: 'Grappled',  desc: 'chained — −2 to hit, easier to strike; crushed each turn (Dispel or Grease frees you)', icon: `${I}grappled.webp` });
+    if (o.grappled && o.pinned && !o.playerId) c.push({ key: 'pinned', label: 'Pinned', desc: 'pinned — helpless: it can only struggle against the hold; −6 AC (PF1)', icon: `${I}grappled.webp` });   // v3.37.185: PF1's second tier
+    else if (o.grappled && !o.playerId) c.push({ key: 'grappled', label: 'Grappled', desc: 'held — −2 to its attacks and its AC, and it cannot get away; it may still fight its holder or break out (PF1)', icon: `${I}grappled.webp` });
+    else if (o.grappled) c.push({ key: 'grappled',  label: 'Grappled',  desc: 'chained — −2 to hit, easier to strike; crushed each turn (Dispel or Grease frees you)', icon: `${I}grappled.webp` });
     if (o.prayed > 0)    c.push({ key: 'prayed',     label: 'Prayer',    desc: `−${o.prayed} to hit, damage & saves (cleric Prayer covers the battlefield)`, icon: `${I}shaken.webp` });
     if (o.stunned > 0)   c.push({ key: 'stunned',   label: 'Stunned',   desc: 'loses a turn', icon: `${I}stunned.webp` });
     if (o.frightened > 0) c.push({ key: 'frightened', label: 'Frightened', desc: 'FLEES in terror — loses its turns while the panic holds, and is shaken (−2)', icon: `${I}stunned.webp` });

@@ -39,7 +39,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // High ground: a flyer swooping on grounded heroes gets a to-hit edge.
     const tire = e.exhausted > 0 ? 3 : (e.fatigued > 0 ? 1 : 0);   // PF1 exhausted/fatigued: Str/Dex −6/−2 → −3/−1 to hit and damage (v3.37.145)
     const fog = (this.wall && (this.wall.rider === 'fog' || this.wall.rider === 'acidfog' || this.wall.rider === 'firecloud') && e._fogRound === this.round) ? 2 : 0;   // Solid Fog: −2 to hit and damage while wading through (v3.37.146)
-    const toHit = e.toHit - sick - pray - tire - fog + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.hasted > 0 ? 1 : 0) - (e.cursed ? 4 : 0);   // Fight Defensively: −4; Blaze of Glory: +4; Haste (v3.37.126): +1; Bestow Curse (v3.37.129): −4
+    const toHit = e.toHit - sick - pray - tire - fog + (e.flying ? HIGH_GROUND_HIT : 0) - (e.fdOn ? 4 : 0) + (e._blazeBonus || 0) + (e.hasted > 0 ? 1 : 0) - (e.cursed ? 4 : 0) - (e.grappled ? 2 : 0);   // PF1 grappled: −2 on attack rolls (v3.37.185) · Fight Defensively: −4; Blaze of Glory: +4; Haste (v3.37.126): +1; Bestow Curse (v3.37.129): −4
     const roll = dRoll(20), total = roll + toHit;
     if (roll === 1) return { hit: false, roll, toHit, total, ac: targetAC, sound: SND.fumble };
     const hit = roll === 20 || total >= targetAC;
@@ -357,7 +357,99 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         e._lastAtkTarget = target.playerId;
       }
     }
-    if (noReach) this._note(`${e.glyph} ${e.name} claws at the air — its prey is on the wing, out of reach!`, null, { side: 'enemy' });
+    if (noReach) {
+      // SIDEARMS (v3.37.185 — Toby's ruling on Josh's 'if my party all gets flying we can
+      // steamroll': 'most enemies would have some manner of ranged option but it would be
+      // less potent than their melee'). A grounded foe with hands and a mind throws or
+      // slings at the flyer instead of clawing at the air — see _foeSidearm.
+      const side = this._foeSidearm(e);
+      const prey = side ? seen.filter(m => m.hp > 0 && !m.left) : [];
+      if (side && prey.length && !(e.slowed > 0 && stoodUp)) {
+        const tgt = (forced && prey.includes(forced) && forced) || prey.find(m => m.playerId === e._lastAtkTarget) || pick(prey);
+        const volley = (e._lastAtkTarget === tgt.playerId && !stoodUp && !(e.slowed > 0)) ? Math.max(1, Math.ceil((e.attacks || 1) / 2)) : 1;
+        this._enemySidearm(e, tgt, side, volley);
+      } else this._note(`${e.glyph} ${e.name} claws at the air — its prey is on the wing, out of reach!`, null, { side: 'enemy' });
+    }
+  },
+  // ── SIDEARMS (v3.37.185) ── what a grounded MELEE foe reaches for when every hero it can
+  // see is on the wing. PF1 stat blocks nearly always list one (javelin, sling, thrown axe,
+  // a giant's rock). The rule, same for all of them: −4 to hit, one die plus HALF its melee
+  // damage bonus (a giant's rock keeps the full bonus — that is what rock throwing is), ONE
+  // shot when it turns on a new target and half its melee routine (rounded up) when it stays
+  // on the same one. None of its melee riders travel with the throw (sneak attack, paralysis,
+  // bleed, a vicious blade). No sidearm: beasts, vermin, oozes, aberrations, constructs,
+  // anything fighting with its own claws and teeth, the incorporeal, the mindless — they still
+  // claw at the air. A stat block can carry its own `sidearm`, or `noSidearm: true`.
+  _foeSidearm(e) {
+    if (!e || e.ranged || e.flying || e.noSidearm) return null;
+    if (e.sidearm) return e.sidearm;
+    if (e.incorporeal || e.ghost || e.polymorphed || e.feebleminded) return null;
+    const t = e.type || 'humanoid';
+    if (t === 'giant') return { noun: 'boulder', verb: 'hurls a boulder into', draw: 'hefts a boulder from the rubble', die: 8, fullBonus: true, sound: '/audio/weapon_blunt.mp3' };
+    if (!['humanoid', 'monstrous humanoid', 'outsider', 'fey', 'undead'].includes(t)) return null;
+    if (e.natural && !/monk|adept|uke|fist|brawler|redactor|vakra|beastmode|puff/i.test(e.name || '')) return null;   // claws and teeth carry no javelin — but the unarmed martial artists throw darts
+    if (e.natural) return { noun: 'throwing dart', verb: 'flings a dart into', draw: 'palms a fan of throwing darts', die: 4, sound: '/audio/bow_shot.mp3' };
+    if (e.sneakDice) return { noun: 'thrown dagger', verb: 'throws a dagger into', draw: 'flips a dagger into a throwing grip', die: 4, sound: '/audio/bow_shot.mp3' };
+    if (e.caster || e.arcane || e.healer) return { noun: 'sling stone', verb: 'slings a stone into', draw: 'unwinds a sling', die: 4, sound: '/audio/bow_shot.mp3' };
+    return { noun: 'javelin', verb: 'hurls a javelin into', draw: 'pulls a javelin from its back', die: 6, sound: '/audio/bow_shot.mp3' };
+  },
+  _enemySidearm(e, target, side, volley) {
+    const swap = {
+      ranged: true, toHit: (e.toHit || 0) - 4, dmgDie: side.die, dmgCount: side.count || 1,
+      dmgBonus: side.fullBonus ? (e.dmgBonus || 0) : Math.floor(Math.max(0, e.dmgBonus || 0) / 2),
+      atkSound: side.sound || null, atkSounds: null, sneakDice: 0, paralyze: false, bleedTouch: false, vicious: 0,
+      gloriousChallenge: false, blazeOfGlory: false, gun: false, _sidearm: side,
+      _lastMeleeTargetId: target.playerId, _engagedAlly: e._engagedAlly,   // a throw is not closing to melee: no reach AoO, no point-blank range
+    };
+    const keep = {}; for (const k of Object.keys(swap)) keep[k] = e[k];
+    if (!e._sidearmDrawn) { e._sidearmDrawn = true; this._note(`${e.glyph} ${e.name} can't reach its airborne prey — it ${side.draw}. (−4 to hit, lighter than its melee)`, null, { side: 'enemy' }); }
+    Object.assign(e, swap);
+    try {
+      for (let i = 0; i < (volley || 1); i++) { if (target.hp <= 0 || target.left || e.hp <= 0) break; this._enemyMelee(e, target); }
+    } finally { for (const k of Object.keys(keep)) { if (keep[k] === undefined) delete e[k]; else e[k] = keep[k]; } }
+    e._lastAtkTarget = target.playerId;
+  },
+  // ── A GRAPPLED FOE'S TURN (v3.37.185 — Toby: 'use the book's rules for grapple') ──
+  // PF1 has two tiers. GRAPPLED: −2 on attacks, −4 Dex (−2 AC here), it cannot move — but
+  // it still acts: it may try to break free (a standard action: its CMB vs the holder's
+  // CMD) or fight whoever holds it. PINNED (a second successful grapple check on a later
+  // turn): denied Dex and a further −4 AC, and all it can do is struggle. Returns true
+  // when the turn is spent. Was: any grapple = helpless, every turn lost (Dungeon.js).
+  //   · held by a HERO: the hold lasts ONE of its turns per grab — the hero renews it with
+  //     Grapple on their next turn (PF1: a check each round to maintain) or it simply ends.
+  //   · held by BLACK TENTACLES: the field keeps its own grip (it re-checks every round).
+  //   · a pinned foe, an archer or a caster always struggles (no bow, no gestures in a
+  //     clinch); a melee foe in the tentacles can reach nobody, so it struggles too; a melee
+  //     foe held by a hero fights its holder two times in three.
+  _grappledTurn(e) {
+    if (!e.grappled) return false;
+    const free = (why) => { e.grappled = false; e.pinned = false; e.grappledBy = null; e.grappleRounds = 0; if (why) this._note(why, null, { side: 'enemy' }); };
+    let cmd, glyph = '🤼', holder = null;
+    if (e.grappledBy === 'tentacles') {
+      const bt = this.blackTentacles; glyph = '🦑';
+      if (!bt) { free(`🦑 ${e.name} wrenches loose — the tentacles are gone.`); return false; }
+      cmd = 10 + bt.cmb;
+    } else {
+      holder = this.member(e.grappledBy);
+      if (!holder || holder.left || !(holder.hp > 0)) { free(`${glyph} ${e.name} wrenches loose — nothing holds it anymore.`); return false; }
+      if ((e.grappleRounds || 0) <= 0) { free(`${glyph} ${holder.nickname}'s hold on ${e.name} was not renewed — it shakes loose and is free to act.`); return false; }
+      e.grappleRounds -= 1;
+      cmd = this._heroCMD(holder);
+    }
+    const struggle = e.pinned || !holder || e.ranged || e.arcane || e.caster || e.healer || dRoll(3) === 1;
+    if (struggle) {
+      const roll = dRoll(20), tot = roll + (e.toHit || 0);
+      if (roll === 20 || (roll !== 1 && tot >= cmd)) free(`${glyph} ${e.name} ${e.pinned ? 'heaves out of the pin' : 'tears free of the grapple'}! [CMB ${tot} vs CMD ${cmd}] — but the struggle cost its turn.`);
+      else this._note(`${glyph} ${e.name} ${e.pinned ? 'is PINNED — it can only strain against the hold' : 'strains to break the grapple and fails'}. Its turn is spent. [CMB ${tot} vs CMD ${cmd}]`, null, { side: 'enemy' });
+      return true;
+    }
+    // Fights in the clinch: its full routine at the one body in reach — its holder — at −2.
+    this._note(`${glyph} ${e.name}, grappled, turns on ${holder.nickname} — it fights in the clinch at −2.`, null, { side: 'enemy' });
+    e._lastMeleeTargetId = holder.playerId;   // it did not move to engage: no reach AoO
+    const swings = (e.slowed > 0) ? 1 : Math.max(1, e.attacks || 1);
+    for (let i = 0; i < swings; i++) { if (holder.hp <= 0 || holder.left || e.hp <= 0) break; this._enemyMelee(e, holder); }
+    e._lastAtkTarget = holder.playerId;
+    return true;
   },
   // REACH ATTACK OF OPPORTUNITY (Tobias 2026-07-08): a foe that MOVES to engage — charging in or
   // switching to a new melee target — provokes a free strike from every reach-weapon hero
@@ -472,7 +564,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
         e._bleedUsed = true; target._bleeding = true;
         this._note(`🩸 ${e.glyph} ${e.name}'s BLEEDING TOUCH opens a wound — ${target.nickname} bleeds 1d6 each round until magically healed!`, null, { side: 'enemy' });
       }
-      this._fireShieldRetaliate(target, e);   // Fire Shield scorches a melee attacker
+      if (!e.ranged) this._fireShieldRetaliate(target, e);   // Fire Shield scorches a MELEE attacker (PF1) — never an archer or a thrown sidearm (v3.37.185)
       // BROKEN WING GAMBIT (teamwork, v3.37.91): a foe that lands a blow on a
       // Gambit hero provokes — one paired ally with an AoO left punishes it.
       if (e.hp > 0 && target.hp > 0 && this._twkActive(target, 'brokenwing')) {
@@ -558,13 +650,13 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     const r = this._monsterSwing(e, targetAC, opts);
     if (e.atkSounds && e.atkSounds.length) r.sound = pick(e.atkSounds);
     else if (e.atkSound && (r.hit || e.ranged)) r.sound = e.atkSound;
-    r.verbHit = e.ranged ? 'shoots' : (opts.meleeVerb || 'hits');
+    r.verbHit = e._sidearm ? e._sidearm.verb : e.ranged ? 'shoots' : (opts.meleeVerb || 'hits');
     return r;
   },
   // The matching MISS line — one wording for every target kind.
   _foeMissText(e, r, who, withRoll) {
     if (r.blindMiss) return `${e.glyph} ${e.name}, BLIND, ${e.ranged ? 'looses a shot' : 'lashes out'} at where ${who} was — total concealment, and it finds nothing. [50% miss]`;
-    return (e.ranged
+    return (e._sidearm ? `${e.glyph} ${e.name}'s ${e._sidearm.noun} flies wide of ${who}.` : e.ranged
       ? `${e.glyph} ${e.name}'s shot flies wide of ${who}.`
       : `${e.glyph} ${e.name} misses ${who}.`) + (withRoll ? ` ${this._atkStr(r)}` : '');
   },

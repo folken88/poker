@@ -14,7 +14,7 @@
 //
 // power.kind (runtime vocabulary — see BL_TEMPLATES in abilities.js):
 //   ray        a ranged touch attack, 1d6 (or d4) + ½ level of `dtype`, 3+Cha uses/room
-//   touchfear  a touch that leaves the foe SHAKEN (engine: Will save, like Doom), 3+Cha uses
+//   touchfear  a melee touch ATTACK that leaves the foe SHAKEN ½ level rounds, no save (PF1; v3.37.185), 3+Cha uses
 //   claws      a room-long self buff standing in for two claw attacks (see desc)
 //   blast      a level d6 area burst, Reflex half, `dtype`, 1/room (2 at 17, 3 at 20)
 //   wings      a room-long self Fly, 1/room (Wings of Heaven)
@@ -73,7 +73,7 @@ const BLOODLINES = {
     blurb: 'Heaven-born — holy fire, resistances and wings of light.',
     arcana: 'Your summoned creatures gain DR/evil (not modelled).',
     powers: [
-      { level: 1,  key: 'heavenlyfire',    name: 'Heavenly Fire',     kind: 'ray',     die: 4, dtype: 'holy', desc: 'A ray of holy fire: 1d4 + ½ your level divine damage, 3 + Cha uses per room. (The book harms only evil creatures and heals good ones — here it burns any foe.)' },
+      { level: 1,  key: 'heavenlyfire',    name: 'Heavenly Fire',     kind: 'ray',     die: 4, dtype: 'holy', vsAlign: 'evil', desc: 'A ray of holy fire, a ranged touch attack: 1d4 + ½ your level divine damage to an EVIL creature, half to one that is neither good nor evil, nothing to a good one (the Holy Smite table). 3 + Cha uses per room. (The book also heals good creatures with it; here it only burns.)' },
       { level: 3,  key: 'celestialresist', name: 'Celestial Resistances', kind: 'passive', resist: (l) => ({ acid: l >= 9 ? 10 : 5, cold: l >= 9 ? 10 : 5 }), desc: 'Acid and cold resistance 5 (10 at 9), always on.' },
       { level: 9,  key: 'wingsofheaven',   name: 'Wings of Heaven',   kind: 'wings',   desc: 'Wings of light: fly for the rest of the room (the book: level minutes a day). Grounded foes cannot reach you; once per room.' },
       { level: 15, key: 'conviction',      name: 'Conviction',        kind: 'reroll',  desc: 'Once per room, re-roll your next MISSED attack (the same engine as the Luck domain; saves are not covered yet).' },
@@ -140,7 +140,7 @@ const BLOODLINES = {
     blurb: 'Devil blood — a corrupting touch, hellfire and, in time, dark wings.',
     arcana: '+2 to the save DC of your charm spells (not modelled).',
     powers: [
-      { level: 1,  key: 'corruptingtouch', name: 'Corrupting Touch',  kind: 'touchfear', desc: 'A touch that leaves a foe SHAKEN (−2 to hit and damage) for the fight, 3 + Cha uses per room. (The book: a melee touch, no save, ½ level rounds; here it is a Will save like Doom.)' },
+      { level: 1,  key: 'corruptingtouch', name: 'Corrupting Touch',  kind: 'touchfear', desc: 'A melee touch attack (roll to hit touch AC, no save): a hit leaves the foe SHAKEN (−2 to hit and damage) for ½ your level rounds, at least 1. 3 + Cha uses per room. As the book has it.' },
       { level: 3,  key: 'infernalresist',  name: 'Infernal Resistances', kind: 'passive', resist: (l) => ({ fire: l >= 9 ? 10 : 5 }), desc: 'Fire resistance 5 (10 at 9), always on. (+2/+4 vs poison not typed yet.)' },
       { level: 9,  key: 'hellfire',        name: 'Hellfire',          kind: 'blast',   dtype: 'fire', maxTargets: 3, desc: 'A column of hellfire: your level d6 fire on up to 3 foes, Reflex half. Once per room (twice at 17, three times at 20).' },
       { level: 15, key: 'ondarkwings',     name: 'On Dark Wings',     kind: 'passive', fly: true, desc: 'Bat-like wings: you fly, always. Grounded foes cannot reach you.' },
@@ -153,7 +153,7 @@ const BLOODLINES = {
     blurb: 'The grave calls — a frightening touch, cold resistance and the arms of the dead.',
     arcana: 'Your mind-affecting spells work on corporeal undead (not modelled).',
     powers: [
-      { level: 1,  key: 'gravetouch',      name: 'Grave Touch',       kind: 'touchfear', desc: 'A touch that leaves a foe SHAKEN (−2 to hit and damage) for the fight, 3 + Cha uses per room. (The book: a melee touch, no save, ½ level rounds; here it is a Will save like Doom.)' },
+      { level: 1,  key: 'gravetouch',      name: 'Grave Touch',       kind: 'touchfear', desc: 'A melee touch attack (roll to hit touch AC, no save): a hit leaves the foe SHAKEN (−2 to hit and damage) for ½ your level rounds, at least 1. 3 + Cha uses per room. As the book has it.' },
       { level: 3,  key: 'deathsgift',      name: "Death's Gift",      kind: 'passive', resist: (l) => ({ cold: l >= 9 ? 10 : 5 }), desc: 'Cold resistance 5 (10 at 9), always on. (DR vs nonlethal not modelled — no nonlethal damage here.)' },
       { level: 9,  key: 'graspofthedead',  name: 'Grasp of the Dead', kind: 'blast',   dtype: 'slashing', maxTargets: 4, desc: 'Skeletal arms erupt from the ground: your level d6 slashing on up to 4 foes, Reflex half. Once per room (twice at 17, three times at 20).' },
       { level: 15, key: 'incorporealform', name: 'Incorporeal Form',  kind: 'todo',    desc: 'Become incorporeal for level rounds, 1/day. Not in the engine yet.' },
