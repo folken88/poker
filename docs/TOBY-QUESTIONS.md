@@ -13,13 +13,6 @@ Ruled section with the version that implemented it.
 2. **Potion store port** — ruled yes earlier; Toby says "more on potion store
    soon" (2026-08-31). Awaiting his details before building.
 
-3. **Lingering-storm adaptation (veto point)** — Josh asked whether Call
-   Lightning should keep its book mechanic; v3.37.143 implements it with one
-   adaptation: the per-round bolt is AUTO-CALLED free at the caster's turn
-   start (RAW spends the caster's action to call each bolt). Rationale: in
-   our format a turn spent on a 3d6 bolt is strictly worse than attacking,
-   so RAW-strict would make the lingering storm dead weight. Veto or bless.
-
 4. **Farrah's concept** (Josh, 2026-09-03) — the bench sorcerer has NO concept on
    file: characterBuilds carries only `race: human, flex: cha`, so she runs the
    generic sorcerer loadout (whose priority list includes Summon Monster IV/VI/VIII
@@ -103,41 +96,18 @@ Ruled section with the version that implemented it.
     → 97% hits; the 25-damage shots are 1d12 + Dex + 5 enhancement + Deadly Aim + Up Close dice. Keep gear
     unbounded (his call to re-roll), or cap the usable enhancement by level (e.g. +1 per 3 levels)?
 
-19. **Bots and summons** (Josh, 2026-11-17: 'every spellcaster is summoning monsters… I'm tired of that spell').
-    Shipped in v3.37.181 on his report, yours to veto: only a 'summoner' style (Jason, Draymus) opens a room with a
-    summon; every other bot summons in BOSS rooms only (it was once per room whenever the summon was worth a third of
-    the top CR — 59 summons in his last ten runs, Olbryn 13 in 15 rooms). Also shipped: a bot whose loadout a human
-    SAVED casts exactly that loadout (no v3.37.177 wildcards on top). Related, your call: (a) Olbryn's elemental
-    bloodline grants Summon Monster VIII at 17 by the book, so he always knows it — swap it for a storm spell (Call
-    Lightning Storm? Chain Lightning?) as a house rule, or keep RAW? (b) the DEFAULT cleric/oracle/wizard lists still
-    carry Summon Monster IV/VI/VIII as staples — drop them from the defaults so only summoners prepare them?
+19. **Summon Monster on the non-summoners** (the bot change itself is blessed — see Ruled). Still open: (a)
+    Olbryn's elemental bloodline grants Summon Monster VIII at 17 by the book, so he always knows it — swap it for
+    a storm spell (Call Lightning Storm? Chain Lightning?) as a house rule, or keep RAW? (b) the DEFAULT
+    cleric/oracle/wizard lists still carry Summon Monster IV/VI/VIII as staples — drop them from the defaults so
+    only summoners prepare them?
 
-20. **Carvers get their full attack** (Josh, 2026-11-17: 'I can only cleave… I wanna beat the shit out of one guy').
-    Shipped in v3.37.182 on his report, yours to veto: a barbarian, a fighter from level 9 and Azwraith used to make
-    ONE swing on every plain Attack (the cleave sweep, by your 'carve through' spec) and so never rolled iteratives.
-    Now a NEW target is still the sweep, but staying on the SAME foe as last turn is the PF1 full attack every other
-    martial already had. This raises the single-target damage of the bot carvers too (Tokala, the fighter
-    hirelings). Keep it, or should carving stay their only swing?
-
-21. **The V key and the prepare menu** (Josh, 2026-11-17: 'is there any merit to moving bloodline spells to the V
-    key… and domain spells there too… and then this is your main spell loadout'). Shipped in v3.37.183 on his
-    suggestion, yours to veto: (a) a cleric's domain spells no longer appear in the K prepare list (blind) or the
-    Prepare popover (sighted, which shows them in a header line instead) — V reads them, and a sorcerer's V reads
-    the bloodline and its spells; (b) a saved prepared pick that a domain already grants is dropped and the pick is
-    handed back; (c) a HUMAN caster's flag-only ward (Spell Turning, Displacement, Protection from Energy…) now
-    says what it does, the hirelings' lines stay short. Keep all three, or change any?
-    (d) v3.37.184, on Josh's reply ('Let's try moving domain and bloodline spells under the V key… These are not
-    part of your normal spell loadout'): on the BLIND pad V now CASTS those spells (number casts, Tab browses, 0 goes
-    on to the domain picker) and the blind Spellbook leaves them out. The sighted Spellbook is unchanged. The cost:
-    a Healing-domain cleric's cures live on V, not in the Spellbook — two places to remember. One line to undo.
-22. **Communal wards: the name, and the level** (Josh, 2026-11-17: 'if it is going to act as a communal spell, it
-    says so. If it is not, it does not'). v3.37.184 renamed the six party-wide buffs that had single-target names:
-    Protection from Cold / Acid / Electricity / Sonic / Fire and Greater Magic Weapon now end in '(Communal)'.
-    Open for you: (a) the book puts Communal Protection from Energy ONE LEVEL ABOVE the single-target spell (Clr /
-    Drd / Sor-Wiz 4, Rgr 3); ours sit at the single-target level (3, ranger 2; the cleric's fire ward is already 4).
-    Move them up, or keep? (b) Greater Magic Weapon is one weapon in the book and there is no communal version; ours
-    covers the party. Keep the house version under the Communal name, or make it one ally? (c) Should the plain
-    single-target Protection from Energy exist beside the communal one, as Stoneskin does at 4 and 5?
+22. **Communal wards: the level** (the '(Communal)' names are blessed — see Ruled). Still open: (a) the book puts
+    Communal Protection from Energy ONE LEVEL ABOVE the single-target spell (Clr / Drd / Sor-Wiz 4, Rgr 3); ours
+    sit at the single-target level (3, ranger 2; the cleric's fire ward is already 4). Move them up, or keep? (b)
+    Greater Magic Weapon is one weapon in the book and there is no communal version; ours covers the party. Keep
+    the house version under the Communal name, or make it one ally? (c) Should the plain single-target Protection
+    from Energy exist beside the communal one, as Stoneskin does at 4 and 5?
 
 ## Standing policy (Toby)
 
@@ -150,6 +120,18 @@ Ruled section with the version that implemented it.
 
 ## Ruled
 
+- **Josh's changes blessed** (2026-11-18, 'bless all josh changes'; were open items 3, 19, 20, 21, 22):
+  - **Call Lightning's lingering storm** calls its bolt free at the caster's turn start — v3.37.143.
+  - **Bots and summons:** only a 'summoner' style (Jason, Draymus) opens a room with a summon; every other bot
+    summons in BOSS rooms only; a bot whose loadout a human SAVED casts exactly that loadout — v3.37.181.
+  - **Carvers get their full attack:** a barbarian, a fighter from level 9 and Azwraith sweep onto a NEW target
+    and make the PF1 full attack when they stay on the SAME foe — v3.37.182.
+  - **The V key and the prepare menu:** domain spells are out of the K prepare list and the Prepare popover; a
+    saved pick a domain already grants is handed back; a HUMAN caster's flag-only ward says what it does —
+    v3.37.183. On the BLIND pad V CASTS the domain and bloodline spells and the blind Spellbook leaves them out —
+    v3.37.184 (Josh is trying it; his verdict can still put them back).
+  - **Party-wide wards say '(Communal)':** Protection from Cold / Acid / Electricity / Sonic / Fire and Greater
+    Magic Weapon — v3.37.184.
 - **Fatigue tiers per PF1** (no ruling needed — PF1-first): exhausted = Str/Dex −6
   (−3 hit/damage/AC/Reflex) with STAGGERED standing in for the half-speed rider our
   format lacks; fatigued = −2 (−1 each); Ray of Exhaustion Fortitude-partial; Waves
