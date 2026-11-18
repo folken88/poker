@@ -149,6 +149,9 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
       e.taunted = null;
       if (forced) this._note(`📢 ${e.glyph} ${e.name}, taunted, charges ${forced.nickname}!`, null, { side: 'enemy' });
     }
+    // A foe GRAPPLED by a hero cannot leave them (PF1): whatever it does this turn, it does to its holder. Poker settles
+    // that clinch in _grappledTurn before this runs; PGM's own turn loop arrives here with the foe still held (v3.37.186).
+    if (!forced && e.grappled && e.grappledBy && e.grappledBy !== 'tentacles') forced = this._targetableParty().find(p => p.playerId === e.grappledBy && p.hp > 0 && !p.left) || null;
     if (!forced) {
       // Fire Skeleton: its whole purpose is to rush in and blow up. If it survives
       // to its turn, it detonates (and dies) instead of making a normal attack.

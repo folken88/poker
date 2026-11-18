@@ -2176,6 +2176,9 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.186 2026-11-18 A GRAPPLED FOE FIGHTS ITS HOLDER, wherever its turn is resolved: _enemyAct now forces the holder as the target
+//                     when a foe held by a hero reaches it. Poker settles the clinch earlier (_grappledTurn), so nothing changes
+//                     here; PGM's own turn loop calls _enemyAct directly and needed the rule (PGM v1.20.71).
 //  3.37.185 2026-11-18 TOBY'S RULINGS, FIRST BATCH (his answers to the queue, 2026-11-18; the rest are queued in docs/TOBY-QUESTIONS.md).
 //                     (17) SIDEARMS — 'most enemies would have some manner of ranged option but it would be less potent
 //                     than their melee'. A grounded melee foe that can see only flyers no longer 'claws at the air': it
@@ -2528,7 +2531,7 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.185';
+const VERSION = '3.37.186';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33884;   // v3.37.184: V casts domain and bloodline spells (they leave the blind Spellbook); six party-wide wards carry '(Communal)'
