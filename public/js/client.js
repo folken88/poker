@@ -877,6 +877,8 @@
   let _dmpOpen = false;        // "⛪ Domains ▾" DOMAIN picker popover open/closed (sighted, Domains Phase C)
   let _dmpModel = null;        // fetched domain model { max, picks, domains } — shared by the sighted panel + blind V menu
   let _dunDmp = false;         // blind dungeon: domain menu open (V opens; 1-9 toggles, Tab cycles + Enter toggles, Escape closes)
+  let _dunVsp = false, _dunVspIdx = -1;   // v3.37.184: blind dungeon — the V menu of domain / bloodline spells (numbers cast, Tab browses, Enter casts)
+  let _sbApartSaid = false;   // v3.37.184: the Spellbook says once per page load that those spells moved to V
   let _dunDmpIdx = -1;         // Tab cursor within the domain menu (the catalog outgrew the number row — 11 domains)
   let _padOpen = false;        // "🎛 My Pad ▾" numpad-manager popover open/closed (sighted, v3.37.93)
   let _padMgrModel = null;     // fetched pad model { abilities:[{key,name,icon,desc,hidden}], shown } — shared by the sighted panel + blind N menu
@@ -1018,7 +1020,7 @@
   // bundle's baked stamp; the server reports which bundle it SHIPPED. On
   // mismatch: toast + SPOKEN nag ("press Command Option R"), repeated every ten
   // minutes while stale — a blind player must never miss it.
-  const CLIENT_BUILD = 33883;
+  const CLIENT_BUILD = 33884;
   let _staleNaggedAt = 0;
   const _checkVersion = () => fetch('/api/version').then(r => r.json()).then(v => {
     if (!v || !v.version) return;
@@ -1468,7 +1470,7 @@
     // left the other five armed. Now every turn starts with a clean input state.
     if (isMyTurn !== _dunPrevMyTurn) {
       _dunTarget = null; _dunAllyPick = null; _dunDispelPick = null; _dunModePick = null;
-      _dunSbMode = false; _dunSbLevel = null; _dunSbIdx = -1;
+      _dunSbMode = false; _dunSbLevel = null; _dunSbIdx = -1; _dunVsp = false; _dunVspIdx = -1;
       _dunImbuedMode = false; _dunManeuvers = false; _dunMvIdx = -1; _dunRacial = false; _dunRcIdx = -1;
     }
     _dunPrevMyTurn = isMyTurn;
@@ -2341,7 +2343,7 @@
         // v3.37.183 (Josh: 'is there any merit to moving bloodline spells to the V key… and domain spells there too… and
         // then this is your main spell loadout'): the always-on spells are no longer read out here — one pointer to V.
         const nD = mdl.spont ? 0 : (mdl.domainSpells || []).length, nB = (mdl.bloodSpells || []).length;
-        const apart = nD ? ` Your ${nD} domain spells are always ready and are kept out of this list — the V key reads them.` : nB ? ` Your ${nB} bloodline spells are always known and are kept out of this list — the V key reads them.` : '';
+        const apart = nD ? ` Your ${nD} domain spells are always ready and are kept out of this list — the V key reads and casts them.` : nB ? ` Your ${nB} bloodline spells are always known and are kept out of this list — the V key reads and casts them.` : '';
         if (mdl.spont) { sayU(`Spells known: ${parts.join('; ')}. Those are the spells you may KNOW at each level — a hard limit: forget one to learn another. Your castings per room are separate: ${Object.keys(mdl.slots || {}).map(L => `level ${L}, ${mdl.slots[L]}`).join('; ')}.${apart} Press a level number (or Tab through the levels), Escape to close.`); return; }
         // v3.37.183 (Josh: 'it's still rather confusing knowing what you're preparing. It's still unknown to me if I
         // have seven slots, if I can prepare more than one slot of the same spell, or if I have to carry four spells'):
@@ -2453,10 +2455,10 @@
       }
       if (k === 'k') {
         e.preventDefault();
-        if (_blindHelp) { sayU('K: prepare spells, your spell kit. Press a level number, then a number toggles a spell — or Tab steps through the level one spell at a time and Enter toggles the one you are on. Changes are ready at once between fights; in a fight they land at the next door. If you prepare spells: each spell level gives you a number of castings per room, and you may prepare up to that many different spells there. Any prepared spell can be cast again and again until the castings run out, so never prepare one twice. Domain and bloodline spells are always ready and are read by the V key.'); return; }
+        if (_blindHelp) { sayU('K: prepare spells, your spell kit. Press a level number, then a number toggles a spell — or Tab steps through the level one spell at a time and Enter toggles the one you are on. Changes are ready at once between fights; in a fight they land at the next door. If you prepare spells: each spell level gives you a number of castings per room, and you may prepare up to that many different spells there. Any prepared spell can be cast again and again until the castings run out, so never prepare one twice. Domain and bloodline spells are always ready; they are read and cast from the V key.'); return; }
         if (!kit.caster) { sayU('Your class has no spells to prepare.'); return; }
         if (_dunSbp) { _dunSbp = null; sayU('Prepare menu closed.'); return; }
-        _dunSbp = { lvl: null, idx: -1 };
+        _dunSbp = { lvl: null, idx: -1 }; _dunVsp = false; _dunVspIdx = -1;
         // v3.37.121 (Josh, blessed-puffin: "Level 15 cleric. No true site? Doesn't
         // appear in the prepare menu at all"): the loadout model was fetched ONCE and
         // cached for the tab's whole life, so spells unlocked by LEVEL-UPS mid-run
@@ -2475,12 +2477,17 @@
       // first" and Josh was hard-stuck (2026-07-15). The server enforces the
       // cleric-2 / inquisitor-1 cap and speaks the refusal; Escape closes. Changes
       // land at the NEXT ROOM (the pad shows this room's ACTIVE domains until then).
+      // v3.37.184 (Josh: 'Let's try moving domain and bloodline spells under the V key. That way it's very clearly
+      // defined to the user. These are not part of your normal spell loadout'): V is now where those spells are CAST.
+      // The server flags each one (`apart`: 'domain' | 'bloodline'); the Spellbook further down leaves them out.
+      const _vSpells = (kit.abilities || []).filter(a => a.slvl != null && a.apart).slice().sort((a, b) => ((a.slvl || 0) - (b.slvl || 0)) || String(a.name).localeCompare(String(b.name)));
+      const _vKind = _vSpells.some(a => a.apart === 'domain') ? 'Domain' : 'Bloodline';
+      const _vspSpeak = () => sayU(`${kit.apartLabel ? kit.apartLabel + '. ' : ''}${_vKind} spells — ${_vKind === 'Domain' ? 'always ready' : 'always known'}, and cast from here, not from your Spellbook: ${_vSpells.map((sp, i) => `${i + 1} ${sp.name}, level ${sp.slvl}${sp.available === false ? ', no slots' : ''}`).join('; ')}. Press a number to cast, or Tab through them and Enter casts the one you are on.${kit.domainsMax ? ' 0 changes your domains.' : ''} Escape closes.`);
       const _dmpSpeak = () => {
         const mdl = _dmpModel; if (!mdl) { sayU('Still loading your domains.'); return; }
         const list = (mdl.domains || []).map((d, i) => `${i + 1} ${d.name}${d.picked ? ', picked' : ''}`).join('; ');
-        const mine = (mdl.domains || []).filter(d => d.picked).map(d => d.name);   // v3.37.183: your picks and the spells they grant come FIRST
-        const spTxt = (mdl.spells || []).length ? ` Your domain spells — always ready, they need no prepared pick and are kept out of the K list: ${mdl.spells.map(x => `${x.name}${x.slvl ? `, level ${x.slvl}` : ''}`).join('; ')}.` : '';
-        sayU(`Domains — choose ${mdl.max}, ${mine.length} picked${mine.length ? `: ${mine.join(' and ')}` : ''}.${spTxt} All domains: ${list}. Numbers 1 through 9 toggle; Tab steps through them all, Enter toggles the one you are on; Escape closes. Changes take effect next room — your number pad keeps this room's domains until then.`);
+        const mine = (mdl.domains || []).filter(d => d.picked).map(d => d.name);   // v3.37.183: your picks come FIRST (v3.37.184: the spells they grant are read and cast one step up, on V itself)
+        sayU(`Domains — choose ${mdl.max}, ${mine.length} picked${mine.length ? `: ${mine.join(' and ')}` : ''}. All domains: ${list}. Numbers 1 through 9 toggle; Tab steps through them all, Enter toggles the one you are on; Escape closes. Changes take effect next room — your number pad keeps this room's domains until then.`);
       };
       const _dmpToggle = (d) => {
         dmpickSend({ toggle: d.key }, (m2) => {
@@ -2521,20 +2528,27 @@
       }
       if (k === 'v') {
         e.preventDefault();
-        if (_blindHelp) { sayU('V: domains and bloodline. Clerics choose two domains, inquisitors one. Press V, then a number 1 through 9 toggles a domain; Tab steps through the full list and Enter toggles the one you are on. Changes land at the next room. V also reads the spells you always have without choosing them: a cleric\'s domain spells and a sorcerer\'s bloodline spells.'); return; }
+        if (_blindHelp) { sayU('V: domain and bloodline spells. The spells your domains or your bloodline give you are always ready, and they live here, not in your Spellbook. Press V, then a number casts one — or Tab steps through them and Enter casts the one you are on. To choose domains, a cleric presses V and then 0, an inquisitor presses V: a number toggles a domain, and the change lands at the next room.'); return; }
+        if (_dunVsp) { _dunVsp = false; _dunVspIdx = -1; sayU(`${_vKind} spells closed.`); return; }
+        if (_dunDmp) { _dunDmp = false; _dunDmpIdx = -1; sayU('Domain menu closed.'); return; }
+        if (_vSpells.length) {
+          // v3.37.184: the always-on spells are cast from here (the handler sits below castSpell, by the Spellbook's).
+          _dunSbMode = false; _dunSbLevel = null; _dunSbIdx = -1; _dunSbp = null;
+          _dunVsp = true; _dunVspIdx = -1;
+          _vspSpeak();
+          return;
+        }
         if (!kit.domainsMax) {
-          // v3.37.183 (Josh: 'is there any merit to moving bloodline spells to the V key'): a sorcerer's V reads the
-          // bloodline and its always-known spells, which no longer crowd the K list.
+          // No always-on spells on the pad right now (no bloodline, or none at this level yet): say what there is.
           if (!kit.caster) { sayU((kit.abilities || []).some(a => a.key === 'bl_info') ? 'Your bloodline is on your number pad: press its entry to hear what it grants.' : 'Your class has no domains or bloodline spells.'); return; }
           sbpickSend({}, (mdl) => {
             if (!mdl.bloodlineClass) { sayU('Your class has no domains or bloodline spells.'); return; }
             if (!mdl.bloodline || mdl.bloodline === 'none') { sayU('You have no bloodline. Choose one with the bloodline picker beside your class in your profile; it applies to your next run.'); return; }
             const bs = (mdl.bloodSpells || []).slice().sort((a, b) => (a.slvl || 0) - (b.slvl || 0));
-            sayU(`Bloodline: ${mdl.bloodlineName || mdl.bloodline}. ${bs.length ? `Bloodline spells — always known, they use none of your picks, cannot be forgotten and are kept out of the K list: ${bs.map(b => `${b.name}${b.slvl ? `, level ${b.slvl}` : ''}`).join('; ')}.` : 'No bloodline spells yet at your level.'} They are cast from your Spellbook like any other spell. Your bloodline powers are on your number pad. To change bloodline, use the picker beside your class in your profile; it applies to your next run.`);
+            sayU(`Bloodline: ${mdl.bloodlineName || mdl.bloodline}. ${bs.length ? `Bloodline spells — always known, they use none of your picks and cannot be forgotten: ${bs.map(b => `${b.name}${b.slvl ? `, level ${b.slvl}` : ''}`).join('; ')}. They will be castable from this key at the next door.` : 'No bloodline spells yet at your level.'} Your bloodline powers are on your number pad. To change bloodline, use the picker beside your class in your profile; it applies to your next run.`);
           });
           return;
         }
-        if (_dunDmp) { _dunDmp = false; _dunDmpIdx = -1; sayU('Domain menu closed.'); return; }
         _dunDmp = true; _dunDmpIdx = -1;
         if (_dmpModel) _dmpSpeak();
         else { sayU('Opening your domains.'); dmpickSend({}, () => { if (_dunDmp) _dmpSpeak(); }); }
@@ -2641,8 +2655,8 @@
       // "Spellbook" entry for casters. Spells are NOT individually numbered —
       // they're reached by opening the spellbook and picking a spell LEVEL.
       const ord = (nn) => { const s = ['th', 'st', 'nd', 'rd'], v = nn % 100; return nn + (s[(v - 20) % 10] || s[v] || s[0]); };
-      const spells = (kit.abilities || []).filter(a => a.slvl != null);
-      const hasSpellbook = spells.length > 0;   // v3.37.138 (Josh, twice: 'spell book appears nowhere'): ANY class whose kit carries spells gets the book — paladin/antipaladin/ranger/bloodrager included, and it shows BEFORE the unlock level (stable pad; inside it says when spells unlock)
+      const spells = (kit.abilities || []).filter(a => a.slvl != null && !a.apart);   // v3.37.184: domain and bloodline spells are cast from V (Josh: 'not part of your normal spell loadout')
+      const hasSpellbook = (kit.abilities || []).some(a => a.slvl != null);   // v3.37.138 (Josh, twice: 'spell book appears nowhere'): ANY class whose kit carries spells gets the book — paladin/antipaladin/ranger/bloodrager included, and it shows BEFORE the unlock level (stable pad; inside it says when spells unlock)
       const spellLevels = [...new Set(spells.map(s => s.slvl))].sort((a, b) => a - b);
       // Spellbook order is ALPHABETICAL within each level (Josh: "no discernible
       // order... alphabetical just makes sense") — numbering follows this sort.
@@ -2880,6 +2894,54 @@
           dungeonAction('ability', { slot });   // self / ally — server chooses
         }
       };
+      // ----- V: the domain / bloodline spell menu (v3.37.184) ----------------
+      // Open once V is pressed on a hero who has such spells. Numbers 1-9 CAST, Tab / arrows browse the whole list
+      // and Enter casts the one under the cursor, 0 steps on to the domain picker (cleric), Escape closes. It lives
+      // HERE because it needs castSpell, which is const-declared just above (the V key itself is handled earlier).
+      if (_dunVsp && !_vSpells.length) { _dunVsp = false; _dunVspIdx = -1; }   // the kit changed under the menu
+      if (_dunVsp) {
+        const _vClose = () => { _dunVsp = false; _dunVspIdx = -1; };
+        const _vCast = (sp) => {
+          if (!myTurn && d.status !== 'exploring') { sayU('Not your turn.'); return; }   // same gates as the Spellbook: the SERVER judges what is door-legal
+          if (sp.available === false) { sayU(`${sp.name} is out of slots.`); return; }
+          _vClose();
+          const willPrompt = sp.allyPick || sp.dispelPick || sp.modePick || (sp.target === 'enemy' && aliveE.length > 1) || (sp.target === 'aoe' && sp.aimAoe && aliveE.length > 1);
+          if (!willPrompt) sayU(`Casting ${sp.name}.`);
+          castSpell(sp);
+        };
+        if (e.key === 'Escape') { e.preventDefault(); _vClose(); sayU(`${_vKind} spells closed.`); return; }
+        if (k === '0') {
+          e.preventDefault();
+          if (!kit.domainsMax) { sayU('Nothing on 0 here. Escape closes.'); return; }
+          _vClose(); _dunDmp = true; _dunDmpIdx = -1;
+          if (_dmpModel) _dmpSpeak();
+          else { sayU('Opening your domains.'); dmpickSend({}, () => { if (_dunDmp) _dmpSpeak(); }); }
+          return;
+        }
+        if (e.key === 'Tab' || e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Home' || e.key === 'End') {
+          e.preventDefault();
+          const nV = _vSpells.length;
+          if (e.key === 'Home') _dunVspIdx = 0; else if (e.key === 'End') _dunVspIdx = nV - 1;
+          else _dunVspIdx = ((_dunVspIdx + ((e.shiftKey || e.key === 'ArrowUp') ? -1 : 1)) % nV + nV) % nV;
+          const sp = _vSpells[_dunVspIdx];
+          sayU(`${_dunVspIdx + 1}, ${sp.name}, level ${sp.slvl}${sp.available === false ? ', no slots' : ''}. Enter to cast.`);
+          return;
+        }
+        if (e.key === 'Enter' || e.code === 'NumpadEnter') {
+          e.preventDefault();
+          const sp = _dunVspIdx >= 0 ? _vSpells[_dunVspIdx] : null;
+          if (!sp) { sayU('Tab to a spell first, then Enter to cast — or just press its number.'); return; }
+          _vCast(sp);
+          return;
+        }
+        if (/^[1-9]$/.test(k)) {
+          e.preventDefault();
+          const sp = _vSpells[parseInt(k, 10) - 1];
+          if (!sp) { sayU(`No spell ${k} here. Tab steps through them all.`); return; }
+          _vCast(sp);
+          return;
+        }
+      }
       // ----- Spellbook sub-mode ----------------------------------------------
       // Active once the player opens the spellbook. Numbers pick a spell LEVEL,
       // Tab cycles the spells at that level (spoken by name), Return casts the
@@ -3326,7 +3388,9 @@
           }
           _dunSbMode = true; _dunSbLevel = null; _dunSbIdx = -1; _spellbookOpen = true;
           if (document.body.dataset.screen === 'dungeon') renderDungeon();
-          sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level, then press a spell's number to cast it. Escape to close.`);
+          const _sbTail = (_vSpells.length && !_sbApartSaid) ? ` Your ${_vKind.toLowerCase()} spells are not in here: they are cast from the V key.` : '';   // v3.37.184: said once per page load
+          if (_sbTail) _sbApartSaid = true;
+          sayU(`Spellbook. Levels: ${spellLevels.map(ord).join(', ')}. Pick a level, then press a spell's number to cast it. Escape to close.${_sbTail}`);
           return;
         }
         if (act.kind === 'maneuvers') {   // Combat Maneuvers submenu (v3.37.138, Josh's stable-pad design)

@@ -2176,6 +2176,24 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.184 2026-11-17 JOSH'S FOURTH PASS (his reply to the v183 note; runs dapper-acorn, plucky-badger, haunted-gecko read first —
+//                     v183 is doing its job there: his Teleport carried Tokala, Spell Turning and Stoneskin (Communal)
+//                     explain themselves). (1) COMMUNAL NAMES: 'the protection spells Olbryn carries at third level…
+//                     are communal spells. But they do not say so. So I didn't prepare them because I thought, well,
+//                     that's only for me… if it is going to act as a communal spell, it says so. If it is not, it does
+//                     not.' An audit of all 92 buffs found six that cover the WHOLE party under a single-target name:
+//                     Protection from Cold / Acid / Electricity / Sonic / Fire and Greater Magic Weapon. All six now
+//                     carry '(Communal)' — renamed in one pass after the kits.generated override, so SPELL, every kit
+//                     copy and a bloodline's bonus copy agree. Resist Energy, Stoneskin and Protection from Arrows are
+//                     one-ally spells and keep their plain names; spells the book already makes party-wide (Bless,
+//                     Prayer, Haste, the Mass spells) keep theirs. The descs name the book's levels (single 3rd,
+//                     communal 4th) — the level question is TOBY-QUESTIONS 22. (2) THE V KEY CASTS: 'Let's try moving
+//                     domain and bloodline spells under the V key… These are not part of your normal spell loadout.'
+//                     The kit payload flags each spell `apart` ('domain' | 'bloodline'); on the blind pad V opens a
+//                     menu of exactly those spells — a number casts, Tab browses, Enter casts, 0 goes on to the
+//                     domain picker — and the Spellbook leaves them out (it says so once per page load). The sighted
+//                     Spellbook is unchanged. Also: a self buff's line ends with its full stop. Tests 329-331 (328's
+//                     V pin moved with the wording). CLIENT_BUILD 33884. TOBY-QUESTIONS 21 (extended), 22.
 //  3.37.183 2026-11-17 JOSH'S THIRD PASS (two mails after v182; run blessed-anvil, playing Olbryn the sorcerer to room 15).
 //                     (1) TELEPORT / DIMENSION DOOR COULD NOT BE AIMED: 'I cannot target somebody with teleport or
 //                     dimension door… this has been a bug for a while and has not been fixed.' Right — the server
@@ -2491,9 +2509,9 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.183';
+const VERSION = '3.37.184';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
-const CLIENT_BUILD = 33883;   // v3.37.183: Teleport/Dimension Door ask 'on whom?'; the V key reads domain and bloodline spells; the K menu leads with the rule
+const CLIENT_BUILD = 33884;   // v3.37.184: V casts domain and bloodline spells (they leave the blind Spellbook); six party-wide wards carry '(Communal)'
 const HEADLINE = "The Iron Gods firearms: eight real guns, grit and deeds for gunslingers, and every gun hits touch AC.";
 module.exports = { VERSION, HEADLINE, CLIENT_BUILD };

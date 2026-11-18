@@ -2161,6 +2161,26 @@ function kitFor(classKey) { return KITS[classKey] || DEFAULT_KIT; }
 const isPoolClass = (cls) => POOL_CLASSES.has(cls);
 const isCaster    = (cls) => CASTER_CLASSES.has(cls);
 
+// ── COMMUNAL NAMES (v3.37.184 — Josh: 'the protection spells Olbryn carries at third level… are communal spells. But
+// they do not say so. So I didn't prepare them because I thought, well, that's only for me… if it is going to act as
+// a communal spell, it says so. If it is not, it does not'). Six buffs covered the WHOLE party under a single-target
+// name. The rule: a spell whose book version protects ONE creature but which covers the party here carries
+// '(Communal)', as Stoneskin / Protection from Evil / Darkvision already did; a buff without it is aimed at one ally
+// or is the caster's own. Spells the book already makes party-wide (Bless, Prayer, Haste, the Mass spells) keep their
+// book names. Runs AFTER the kits.generated override and every injection, over SPELL and every kit copy (the baked
+// literals above are dead once KITS = _gen swaps the object). ──
+// (communal names start)
+const _COMMUNAL_KEYS = new Set(['protectcold', 'protectacid', 'protectelectricity', 'protectsonic', 'protectfire', 'greatermagicweapon']);
+const _communalName = (a) => {
+  if (!a || !a.party || !_COMMUNAL_KEYS.has(a.key) || /\(Communal\)/.test(String(a.name))) return;
+  a.name = `${a.name} (Communal)`;
+  a.desc = a.key === 'greatermagicweapon'
+    ? `${a.desc || ''} (The book's Greater Magic Weapon enchants ONE weapon; this casting covers every ally's — a house version, hence the Communal name.)`
+    : `${String(a.desc || '').replace('PF1 Protection from Energy', 'PF1 Communal Protection from Energy')} In the book the single-target spell is 3rd level and the communal one 4th (ranger: 2nd and 3rd).`;
+};
+for (const _a of Object.values(SPELL)) _communalName(_a);
+for (const _k of Object.values(KITS)) { if (_k && Array.isArray(_k.abilities)) for (const _a of _k.abilities) _communalName(_a); }
+// (end communal names)
 // ── SPELLS KNOWN (v3.37.164 — Josh: 'it lets me choose every spell in that level… I should get a hard
 // stop'). PF1 CRB Table 3-15 (sorcerer; the oracle shares it) and Table 3-4 (bard; the inquisitor
 // shares it) — spells KNOWN per spell level 1..9, cantrips excluded. A sorcerer's BLOODLINE spell

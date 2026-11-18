@@ -16,7 +16,7 @@ const { kitFor, roomUses, isPoolClass, isCaster, isSpontaneous, spellSlots, slot
 const { xpProgress } = require('../../pf1data/xp');
 const RACES = require('../../pf1data/races');
 const BLOOD = require('../../pf1data/bloodlines');   // v3.37.169
-const { maxDomainsFor } = require('../../pf1data/domains');
+const { maxDomainsFor, DOMAINS } = require('../../pf1data/domains');
 const { TEAMWORK } = require('../../pf1data/feats');
 
 // Every applied spell/feat buff that should show an icon on a hero's buff strip,
@@ -427,7 +427,20 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     // ability" the moment you fire an Imbued Shot (Josh: "shocking grasp/frigid touch
     // are there but say no such attack exists"). One array = stable, correct indices.
     const abs = this._abilitiesFor(m);
+    // v3.37.184 (Josh: 'Let's try moving domain and bloodline spells under the V key… These are not part of your normal
+    // spell loadout. They are due to your domain or your bloodline'): each kit spell says whether it comes from a
+    // cleric's DOMAIN or a BLOODLINE (`apart`), so the blind pad can cast those from V and leave them out of the
+    // Spellbook. Domains: the saved picks AND this room's active ones (a mid-room swap lands at the next door).
+    const _domK = new Set(); let _domNow = [];
+    if (m.cls === 'cleric') {
+      try { for (const k of this._domainSpellKeys(m)) _domK.add(k); } catch (_) {}
+      for (const dk of (m.domains || [])) { const dd = DOMAINS[dk]; if (dd && dd.spells) for (const sk of Object.values(dd.spells)) _domK.add(sk); }
+      try { _domNow = (m.domains && m.domains.length) ? m.domains : (db.getDomains(m.playerId, m.cls) || []); } catch (_) {}
+    }
+    const _bloodK = new Set(m._bloodSpellKeys || []);
+    const _apartOf = (ab) => ab.slvl == null ? null : _domK.has(ab.key) ? 'domain' : _bloodK.has(ab.key) ? 'bloodline' : null;
     return {
+      apartLabel: _domNow.length ? `Domains: ${_domNow.map(k => (DOMAINS[k] && DOMAINS[k].name) || k).join(' and ')}` : (_bloodK.size && m.bloodline && m.bloodline !== 'none') ? `Bloodline: ${BLOOD.bloodlineName(m.bloodline)}` : null,   // v3.37.184: the heading the V menu speaks
       // The at-will button wears the CHOSEN cantrip's face — a caster who has
       // cycled to Acid Splash or Jolt sees that name, not a stale "Ray of Frost".
       atwill: (() => {
@@ -477,7 +490,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
         // or DEFENSIVELY (heal the party) — the client prompts and sends payload.mode.
         const modePick = ab.effect === 'heal' && ab.heal === 'party';
         return {
-        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, sla: !!ab.sla, blood: !!ab.blood, bloodSpell: !!ab.bloodSpell, cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
+        key: ab.key, name: ab.name, icon: ab.icon, img: ab.img || null, sla: !!ab.sla, blood: !!ab.blood, bloodSpell: !!ab.bloodSpell, apart: _apartOf(ab), cost: ab.cost, target: ab.target, effect: ab.effect, allyPick, dispelPick, modePick, maxTargets: ab.maxTargets || 1,
         slot: abs.indexOf(ab),   // stable index into kit+domain abilities (the action payload `slot`) — SAME array as above so magus spellstrikes resolve (were -1)
         active: ab.effect === 'form' ? !!(m.form && ab.form && m.form.key === ab.form.key) : (ab.powerattack || ab.deadlyaim || ab.fightdefensively) ? !!(m.buffApplied && m.buffApplied[ab.key]) : undefined,   // form currently shifted-into; v3.37.173: a STANCE says whether it is ON (Josh pressed Power Attack at every door — it rode through silently, so his press eased it OFF, and he pressed again)
         minLevel: ab.minLevel || 1, slvl: ab.slvl || null, slvlEff: slvlEff || null, aimAoe: !!ab.aimAoe,   // v3.37.143: Sunbeam is a BEAM — the client prompts for its primary target

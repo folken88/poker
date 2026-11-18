@@ -126,6 +126,18 @@ Ruled section with the version that implemented it.
     the bloodline and its spells; (b) a saved prepared pick that a domain already grants is dropped and the pick is
     handed back; (c) a HUMAN caster's flag-only ward (Spell Turning, Displacement, Protection from Energy…) now
     says what it does, the hirelings' lines stay short. Keep all three, or change any?
+    (d) v3.37.184, on Josh's reply ('Let's try moving domain and bloodline spells under the V key… These are not
+    part of your normal spell loadout'): on the BLIND pad V now CASTS those spells (number casts, Tab browses, 0 goes
+    on to the domain picker) and the blind Spellbook leaves them out. The sighted Spellbook is unchanged. The cost:
+    a Healing-domain cleric's cures live on V, not in the Spellbook — two places to remember. One line to undo.
+22. **Communal wards: the name, and the level** (Josh, 2026-11-17: 'if it is going to act as a communal spell, it
+    says so. If it is not, it does not'). v3.37.184 renamed the six party-wide buffs that had single-target names:
+    Protection from Cold / Acid / Electricity / Sonic / Fire and Greater Magic Weapon now end in '(Communal)'.
+    Open for you: (a) the book puts Communal Protection from Energy ONE LEVEL ABOVE the single-target spell (Clr /
+    Drd / Sor-Wiz 4, Rgr 3); ours sit at the single-target level (3, ranger 2; the cleric's fire ward is already 4).
+    Move them up, or keep? (b) Greater Magic Weapon is one weapon in the book and there is no communal version; ours
+    covers the party. Keep the house version under the Communal name, or make it one ally? (c) Should the plain
+    single-target Protection from Energy exist beside the communal one, as Stoneskin does at 4 and 5?
 
 ## Standing policy (Toby)
 

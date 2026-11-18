@@ -3846,7 +3846,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const _b = ab.buff || {}, _bw = [];
       if (_b.toHit) _bw.push(`${_b.toHit > 0 ? '+' : ''}${_b.toHit} to hit`); if (_b.dmg) _bw.push(`${_b.dmg > 0 ? '+' : ''}${_b.dmg} damage`); if (_b.ac) _bw.push(`${_b.ac > 0 ? '+' : ''}${_b.ac} AC`); if (_b.acPen) _bw.push(`−${_b.acPen} AC`); if (_b.save) _bw.push(`${_b.save > 0 ? '+' : ''}${_b.save} on saves`); if (_b.conHp) _bw.push(`+${_b.conHp * lvl} temporary HP`);
       const _fw = m.isBot ? [] : this._buffSays(ab, lvl);   // v3.37.183: Spell Turning, Displacement, Fire Shield… say what they do
-      this._note(`${ab.icon} ${m.nickname} uses ${ab.name}${_bw.length ? ` — ${_bw.concat(_fw).join(', ')}, on yourself only, for the rest of the room` : _fw.length ? ` — ${_fw.join('; ')}${ab.trueStrike ? '' : ab.persist ? ', for the rest of the dungeon' : ', for the rest of the room'}.` : '!'}`, sound);
+      this._note(`${ab.icon} ${m.nickname} uses ${ab.name}${_bw.length ? ` — ${_bw.concat(_fw).join(', ')}, on yourself only, for the rest of the room.` : _fw.length ? ` — ${_fw.join('; ')}${ab.trueStrike ? '' : ab.persist ? ', for the rest of the dungeon' : ', for the rest of the room'}.` : '!'}`, sound);
     }
     this._echoToTable(sound);
   },
