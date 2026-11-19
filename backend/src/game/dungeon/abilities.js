@@ -302,6 +302,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         return { ok: false, error: `${tgt.name} is flying out of reach — you can't ${ab.name.toLowerCase()} a foe on the wing. Use a ranged attack or get airborne.` };
       }
     }
+    // v3.37.187: bloodline CLAWS and the melee TOUCH powers (Corrupting / Grave Touch) are hand-to-hand — a grounded
+    // hero cannot rake or touch a foe on the wing. Refused with the reason, the use kept.
+    if (ab.effect === 'claws' || ab.effect === 'touchshaken') {
+      const tgt = this._oneEnemy(payload);
+      if (tgt && !this._handReach(m, tgt)) return { ok: false, error: `${tgt.name} is flying out of reach — ${ab.name} needs you close enough to touch it. Get airborne, or bring it down first.` };
+    }
     // ── PF1: CASTING WHILE GRAPPLED needs a concentration check or the spell is LOST ──
     // DC = 10 + the grappler's CMB + the spell's (metamagic-adjusted) level. The caster
     // rolls d20 + caster level + casting-stat mod (+4 with Combat Casting, which PF1 lets
@@ -371,6 +377,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       missile:     () => this._abMissile(m, ab, payload),
       touch:       () => this._abTouch(m, ab, payload),
       touchshaken: () => this._abTouchShaken(m, ab, payload),
+      claws:       () => this._abClaws(m, ab, payload),   // v3.37.187
       rays:        () => this._abRays(m, ab, payload),
       spellstrike: () => this._abSpellstrike(m, ab, payload),
       glitterdust: () => this._abGlitterdust(m, ab, payload),
@@ -713,13 +720,14 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   //    (applied at the END of _resetAbilities, after the per-room clears). Bonus spells are always
   //    known (castableKeys) and, when not on the sorcerer list, appended as spontaneous entries. ──
   _bloodlineSetup(m) {
-    m._bloodPowers = []; m._bloodSpells = []; m._bloodSpellKeys = []; m._bloodPassive = null; m._bloodMissing = [];
+    m._bloodPowers = []; m._bloodSpells = []; m._bloodSpellKeys = []; m._bloodPassive = null; m._bloodMissing = []; m._bloodArcana = null;
     if (!BLOOD.bloodlineClasses.includes(m.cls)) { m.bloodline = 'none'; return; }
     const stored = (db && typeof db.getBloodline === 'function') ? db.getBloodline(m.playerId) : null;   // null = no row (a test double, or PGM's shim) → keep whatever the member carries
     const key = BLOOD.bloodlineKey(stored != null ? stored : m.bloodline);
     m.bloodline = key;
     const bl = BLOOD.BLOODLINES[key]; if (!bl) return;
     const lvl = m.level || 1;
+    if (m.cls === 'sorcerer' && bl.arcanaDtype) m._bloodArcana = bl.arcanaDtype;   // v3.37.187 Draconic arcana: +1 damage per die on spells of the dragon's energy (bloodragers have no arcana)
     const ps = { ac: 0, save: 0, sr: 0, resist: {}, immune: [], dr: 0, fly: false, hit: 0, dmg: 0, names: [], todo: [] };
     const chaUses = (l, mm) => 3 + Math.max(0, (mm && mm.mods && mm.mods.cha) || 0);
     const blastUses = (l) => l >= 20 ? 3 : l >= 17 ? 2 : 1;
@@ -727,7 +735,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const T = {
       ray:       (pw) => ({ ...base(pw), cost: 'room', uses: chaUses, effect: 'touch', target: 'enemy', die: pw.die || 6, dice: 1, flatHalfCL: true, dtype: pw.dtype || 'acid', vsAlign: pw.vsAlign || null, sound: '/audio/spell_buff_invoke.mp3' }),
       touchfear: (pw) => ({ ...base(pw), cost: 'room', uses: chaUses, effect: 'touchshaken', target: 'enemy', sound: '/audio/spell_buff_invoke.mp3' }),   // v3.37.185 (Toby: 'touch attacks have to roll in pathfinder'): a melee touch ATTACK, no save — was a Will save
-      claws:     (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'buff', target: 'self', sticky: true, buff: { dmg: lvl >= 7 ? 3 : 2, bonusDice: lvl >= 11 ? 1 : 0 }, sound: '/audio/spell_buff_invoke.mp3' }),
+      claws:     (pw) => ({ ...base(pw), cost: 'room', uses: chaUses, effect: 'claws', target: 'enemy', dtype: pw.dtype || 'fire' }),   // v3.37.187 (Toby: 'claws as real claw attacks for bloodlines'): two claw attacks a round, 3 + Cha rounds — was a +2 damage room buff
       blast:     (pw) => ({ ...base(pw), cost: 'room', uses: blastUses, effect: 'aoe', target: 'aoe', maxTargets: pw.maxTargets || 4, save: 'reflex', die: 6, dice: 'level', dcap: 20, dtype: pw.dtype || 'fire', sound: '/audio/spell_buff_invoke.mp3' }),
       wings:     (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'buff', target: 'self', sticky: true, fly: true, canHitFlyers: true, sound: '/audio/spell_buff_invoke.mp3' }),
       invis:     (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'invisible', greater: true, selfOnly: true, target: 'self', sound: '/audio/spell_invisibility.mp3' }),
@@ -1174,6 +1182,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const mm = this._mmForCast(m, ab);
     let dmg = mm.maximize ? dice * die : dRollN(dice, die);
     if (mm.empower) dmg += Math.floor((mm.maximize ? dRollN(dice, die) : dmg) * 0.5);
+    if (m && m._bloodArcana && ab && ab.slvl != null && ab.dtype === m._bloodArcana) dmg += dice;   // v3.37.187 Draconic bloodline arcana: +1 per die on SPELLS of your dragon's energy
     return dmg;
   },
   // v3.37.181 (Josh, run proud-sparrow: 'mass spells are having to target one person' — his Mass Hold Monster held ONE
@@ -3210,6 +3219,55 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     else if (!sv.saved && ab.debuff === 'cursed')  e.cursed = true;   // Bestow Curse: −4 on its attacks for the room (the enemyAI swing math)
     else if (!sv.saved && ab.debuff === 'commanded') { e.stunned = Math.max(e.stunned || 0, 1); e.prone = true; }   // Command: "FALL!" — prone + turn lost
     this._note(`${ab.icon} ${m.nickname} casts ${ab.name} on ${e.name} — ${ab.noSave ? `NO save (PF1): ${ab.danceRounds ? `it DANCES helplessly (${e.stunned} turns)!` : `${String(ab.debuff).toUpperCase()}!`}` : `save ${sv.total} vs DC ${dc}: ${sv.saved ? 'resists' : `${(ab.debuff === 'sickened' ? 'NAUSEATED' : ab.debuff === 'commanded' ? 'it FALLS PRONE — turn lost' : String(ab.debuff).toUpperCase())}!`}`}${sv.saved && ab.shakenOnSave ? ' — but the dread lingers: SHAKEN for a round' : ''}`, sound);
+    this._echoToTable(sound);
+  },
+  // ── Bloodline CLAWS (v3.37.187 — Toby: 'claws as real claw attacks for bloodlines'). The book's power, CRB p.72/75:
+  //    two claw attacks as a full attack at your FULL base attack bonus, 1d4 + Str each (1d3 Small); magic for DR at
+  //    5th; 1d6 (1d4 Small) at 7th; +1d6 energy at 11th (fire for the Abyss, the dragon's own for Draconic). Each use
+  //    is ONE ROUND of claws, 3 + Cha rounds a room (the game's day). The claws ride _swingVsAC like any weapon, so
+  //    BAB, Strength / Dexterity, buffs, flanking, concealment, crits and DR all apply; a claw is bludgeoning AND
+  //    slashing (PF1), so it bypasses either of those DRs. A staggered hero gets one claw. ──
+  _handReach(m, e) {   // can m's own HANDS reach e, whatever weapon is carried?
+    if (!e || !e.flying || (m && m._tpStrike > 0)) return true;
+    if (!(e.incorporeal || e.ghost) && ((e.paralyzed > 0) || e.grappled)) return true;   // held or dragged down — the same rule as _canReach
+    return !!(m.canHitFlyers && m.flying);
+  },
+  _clawWeapon(m, ab) {
+    const lvl = m.level || 1, small = RACES.raceSize(m.race) === 'small', big = lvl >= (ab.clawStepAt || 7);
+    return { key: 'bloodclaws', name: 'Claws', isDagger: false, dmgCount: 1, dmgDie: big ? (small ? 4 : 6) : (small ? 3 : 4), toHit: 0, dmgBonus: 0, critRange: 20, critMult: 2,
+      cat: 'light', ranged: false, dtype: 'S', group: 'natural', finesse2h: false, prof: 'simple', custom: lvl >= (ab.clawMagicAt || 5),   // custom ⇒ _physDR reads it as magic
+      dual: false, noShield: false, boltAction: false, naturalAttacks: 2, reachFly: false, impCritAt: 0, grapple: false, atkSound: null };
+  },
+  _abClaws(m, ab, payload) {
+    const first = this._oneEnemy(payload); if (!first) return;
+    const lvl = m.level || 1, energy = lvl >= (ab.clawEnergyAt || 11) ? (ab.dtype || 'fire') : null;
+    const real = m.weapon, claw = this._clawWeapon(m, ab), swings = m.slowed > 0 ? 1 : 2;
+    const groups = []; let sound = null;
+    m.weapon = claw; m._lastAtkTarget = first.uid;
+    try {
+      for (let i = 0; i < swings; i++) {
+        const tgt = first.hp > 0 ? first : this._targetableEnemies().find(x => this._handReach(m, x));   // the second claw turns on another foe in reach if the first one fell
+        if (!tgt) break;
+        const _by = tgt.dr && typeof tgt.dr === 'object' ? tgt.dr.bypass : null;
+        claw.dtype = _by === 'B' ? 'B' : 'S';
+        const r = this._swingVsAC(m, this._enemyAC(tgt), tgt, 0, false);
+        if (i === 0) sound = r.sound;
+        let g = groups[groups.length - 1];
+        if (!g || g.tgt !== tgt) { g = { tgt, bits: [] }; groups.push(g); }
+        if (r.fumble) g.bits.push('FUMBLE');
+        else if (r.hit) {
+          const en = energy ? this._resisted(tgt, dRoll(6), energy) : 0;
+          this._dmgE(tgt, r.damage + en);
+          g.bits.push(`${r.crit ? 'CRIT ' : ''}${r.damage + en}${en ? ` (${en} ${energy})` : ''}${r.drTag || ''}${r.sneakDice ? ` (+${r.sneakDmg} sneak)` : ''}`);
+          if (r.crit && typeof this._dauntingSuccess === 'function') this._dauntingSuccess(m);
+          if (tgt.hp <= 0 && typeof this._gcBank === 'function') this._gcBank(m, tgt);
+        } else g.bits.push(r.conceal ? (r.blink ? 'blinked' : 'unseen') : r.image ? 'a mirror image' : 'miss');
+      }
+    } finally { m.weapon = real; }
+    m._domStrike = 0; m._domSmite = 0;   // one-attack riders are spent with the action, as on a weapon attack
+    const left = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 1) - 1);
+    const txt = groups.map(g => `${g.tgt.name}: ${g.bits.join(', ')}${g.tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`).join('; ');
+    this._note(`${ab.icon} ${m.nickname} rakes with ${swings === 1 ? 'a claw' : 'both claws'} (1d${claw.dmgDie}${energy ? ` +1d6 ${energy}` : ''}) — ${txt || 'nothing in reach'}. ${left} claw round${left === 1 ? '' : 's'} left this room.`, sound);
     this._echoToTable(sound);
   },
   // Touch spell (Shocking Grasp): a ranged touch attack for level d6.

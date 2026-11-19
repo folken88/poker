@@ -12,11 +12,6 @@ Ruled section with the version that implemented it.
   electricity/time/teleport type spells. I like to give Josh some choices.' To build: a short menu per bloodline
   spell level (lightning, time and teleport spells) that Josh picks from, replacing Burning Hands, Scorching Ray,
   Elemental Body and Summon Monster VIII on Olbryn. Needs Josh's picks (or a picker in the lobby).
-- **Q14a Claws.** Ruling: 'claws as real claw attacks for bloodlines.' To build: abyssal / draconic Claws become two
-  natural attacks (1d4, 1d6 and magic at 7, +1d6 energy at 11) for 3 + Cha rounds, replacing the +damage stand-in.
-- **Q14g Draconic.** Ruling: 'draconic chooses a type of dragon and that dictates type of elemental damage and
-  resistance so its important.' To build: the ten dragon types as a lobby choice (the colour sets the breath shape,
-  the claw energy at 11 and the resistance).
 - **Q14i Bloodrager bloodlines.** Ruling: 'use the real acg when it makes sense for our format.' To build: the ACG
   bloodrager ladder (1/4/8/12/16/20) with its own powers, replacing the sorcerer-ladder stopgap.
 - **Q15 Antimagic Field.** Ruling: 'antimagic field stops magic for anyone in it, and we don't have a placement
@@ -97,6 +92,16 @@ Ruled section with the version that implemented it.
   - **Touch attacks roll** (was 14b): Corrupting Touch and Grave Touch are a melee touch attack, no save.
   - **Heavenly Fire** (was 14c) follows the Holy Smite alignment table.
   - **Gaspar** (was 7) is 'an inquisitor who is generally melee focused' — the 'melee' bot style.
+- **Rulings of 2026-11-18, built in v3.37.187:**
+  - **Claws** (was 14a): 'claws as real claw attacks for bloodlines.' Abyssal and Draconic Claws are the book's power:
+    two claw attacks a round at full BAB (1d4 + Str, magic at 5th, 1d6 at 7th, +1d6 energy at 11th), 3 + Cha rounds a
+    room. Bots do not use them.
+  - **Draconic dragon types** (was 14g): 'draconic chooses a type of dragon and that dictates type of elemental damage
+    and resistance so its important.' Ten entries in the bloodline picker. The type sets the claw energy, the
+    resistance, the breath, the level-20 immunity and the arcana (+1 damage per die on spells of that energy, now
+    modelled for sorcerers). Two things that are my reading, say so if you want them otherwise: a LINE breath reaches
+    2 foes and a CONE 4 (the engine's Lightning Bolt convention), and Dragon Resistances now stop at 10 as the book
+    has it (the stand-in gave 20 at 15th).
 - **Rulings of 2026-11-18 that needed no build:**
   - **Greater Magic Weapon covers the party** (was 22b): 'greater magic weapon sucks as written, lets let it cover
     the party.' The communal wards keep their current spell levels under the same reasoning (was 22a — my reading of

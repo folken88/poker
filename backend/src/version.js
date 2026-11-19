@@ -2176,6 +2176,20 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.187 2026-11-19 TOBY'S RULINGS, SECOND BATCH — the bloodlines.
+//                     (14a) CLAWS ARE REAL CLAW ATTACKS ('claws as real claw attacks for bloodlines'). Abyssal and Draconic
+//                     Claws were a +2 damage room buff; they are the book's power now: each use is one round of two claw
+//                     attacks at full BAB, 1d4 + Str (1d3 Small), magic for DR at 5th, 1d6 (1d4 Small) at 7th, +1d6 energy
+//                     at 11th; 3 + Cha rounds a room. They ride _swingVsAC (buffs, flanking, crits, DR, concealment) and
+//                     bypass DR/bludgeoning or /slashing. A staggered hero gets one claw.
+//                     (14g) DRACONIC PICKS A DRAGON ('draconic chooses a type of dragon and that dictates type of elemental
+//                     damage and resistance so its important'). The ten CRB dragons are ten entries in the bloodline picker;
+//                     the type sets the claw energy, the resistance, the breath (energy and shape: a cone reaches 4 foes, a
+//                     line 2, the Lightning Bolt convention), the level-20 immunity, the Resist Energy bonus spell and the
+//                     ARCANA, now modelled: a sorcerer's spells of that energy deal +1 damage per die. 'draconic' stays red.
+//                     Book fix: Dragon Resistances stop at 10 (the stand-in gave 20 at 15th; the book raises only the armor).
+//                     Claws and the melee touch powers (Corrupting / Grave Touch) refuse a foe flying out of reach, use kept.
+//                     Bots do not use Claws (their weapons and spells are better). No client change.
 //  3.37.186 2026-11-18 A GRAPPLED FOE FIGHTS ITS HOLDER, wherever its turn is resolved: _enemyAct now forces the holder as the target
 //                     when a foe held by a hero reaches it. Poker settles the clinch earlier (_grappledTurn), so nothing changes
 //                     here; PGM's own turn loop calls _enemyAct directly and needed the rule (PGM v1.20.71).
@@ -2531,7 +2545,7 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.186';
+const VERSION = '3.37.187';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33884;   // v3.37.184: V casts domain and bloodline spells (they leave the blind Spellbook); six party-wide wards carry '(Communal)'

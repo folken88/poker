@@ -15,7 +15,8 @@
 // power.kind (runtime vocabulary — see BL_TEMPLATES in abilities.js):
 //   ray        a ranged touch attack, 1d6 (or d4) + ½ level of `dtype`, 3+Cha uses/room
 //   touchfear  a melee touch ATTACK that leaves the foe SHAKEN ½ level rounds, no save (PF1; v3.37.185), 3+Cha uses
-//   claws      a room-long self buff standing in for two claw attacks (see desc)
+//   claws      REAL claw attacks (v3.37.187): each use is one round — two claws at full BAB, 1d4 + Str (1d6 at 7th),
+//              magic at 5th, +1d6 `dtype` at 11th; 3 + Cha rounds a room
 //   blast      a level d6 area burst, Reflex half, `dtype`, 1/room (2 at 17, 3 at 20)
 //   wings      a room-long self Fly, 1/room (Wings of Heaven)
 //   invis      Greater Invisibility on yourself, 1/room (Fleeting Glance)
@@ -28,7 +29,7 @@
 
 const R = (n) => () => n;   // constant-by-level helper
 
-const BLOODLINES = {
+const _BASE = {
   aberrant: {
     key: 'aberrant', name: 'Aberrant', icon: '🐙',
     blurb: 'Something alien twists your blood — acid, reach and a body that refuses to die.',
@@ -47,7 +48,7 @@ const BLOODLINES = {
     blurb: 'Demon blood — claws, hardened flesh and the strength of the Abyss.',
     arcana: 'Your summoned creatures gain DR/good (not modelled).',
     powers: [
-      { level: 1,  key: 'claws',           name: 'Claws',             kind: 'claws',   desc: 'Grow claws for the room (the book: two 1d4 claw attacks for 3 + Cha rounds a day; 1d6 and magic at 7, +1d6 fire at 11). Engine stand-in: +2 damage on every hit this room (+3 from 7, plus 1d6 fire from 11).', dtype: 'fire' },
+      { level: 1,  key: 'claws',           name: 'Claws',             kind: 'claws',   dtype: 'fire', desc: 'Grow claws and attack: two claw attacks at your full attack bonus, 1d4 + Strength each (1d3 if you are Small). They count as magic from 5th level, deal 1d6 (1d4 Small) from 7th, and burn for +1d6 fire from 11th. Each use is one round of claws; 3 + Cha rounds per room. As the book has it.' },
       { level: 3,  key: 'demonresist',     name: 'Demon Resistances', kind: 'passive', resist: (l) => ({ electricity: l >= 9 ? 10 : 5 }), save: R(0), desc: 'Electricity resistance 5 (10 at 9), always on. (+2 vs poison at 3, +4 at 9 — poison saves are not typed yet.)' },
       { level: 9,  key: 'abyssstrength',   name: 'Strength of the Abyss', kind: 'passive', hit: (l) => l >= 17 ? 3 : l >= 13 ? 2 : 1, dmg: (l) => l >= 17 ? 3 : l >= 13 ? 2 : 1, desc: '+2 Strength (+4 at 13, +6 at 17): +1/+2/+3 to hit and melee damage, always on.' },
       { level: 15, key: 'addedsummonings', name: 'Added Summonings',  kind: 'todo',    desc: 'Summon Monster brings one extra creature. Not in the engine yet.' },
@@ -93,20 +94,6 @@ const BLOODLINES = {
       { level: 20, key: 'destinyrealized', name: 'Destiny Realized',  kind: 'todo',    desc: 'Foes confirm criticals against you only on a natural 20; yours confirm automatically. Not in the engine yet.' },
     ],
     spells: { 3: ['alarm'], 5: ['blur'], 7: ['protectenergy', 'protectfire'], 9: ['freedommove'], 11: ['breakenchantment'], 13: ['mislead'], 15: ['spellturning'], 17: ['momentofprescience', 'momentprescience'], 19: ['foresight'] },
-  },
-  draconic: {
-    key: 'draconic', name: 'Draconic (red — fire)', icon: '🐉',
-    blurb: 'A dragon in the family tree: claws, scales, a breath weapon and, in time, wings.',
-    arcana: 'Your fire spells deal +1 damage per die (not modelled). Other dragon colours (cold, electricity, acid) on request.',
-    energy: 'fire',
-    powers: [
-      { level: 1,  key: 'dragonclaws',     name: 'Claws',             kind: 'claws',   dtype: 'fire', desc: 'Grow claws for the room (the book: two 1d4 claw attacks for 3 + Cha rounds a day; 1d6 and magic at 7, +1d6 fire at 11). Engine stand-in: +2 damage on every hit this room (+3 from 7, plus 1d6 fire from 11).' },
-      { level: 3,  key: 'dragonresist',    name: 'Dragon Resistances', kind: 'passive', resist: (l) => ({ fire: l >= 15 ? 20 : l >= 9 ? 10 : 5 }), ac: (l) => l >= 15 ? 4 : l >= 9 ? 2 : 1, desc: 'Fire resistance 5 and +1 natural armor (10 / +2 at 9, 20 / +4 at 15), always on.' },
-      { level: 9,  key: 'breathweapon',    name: 'Breath Weapon',     kind: 'blast',   dtype: 'fire', maxTargets: 4, desc: 'A cone of dragonfire: your level d6 fire on up to 4 foes, Reflex half. Once per room (twice at 17, three times at 20).' },
-      { level: 15, key: 'dragonwings',     name: 'Wings',             kind: 'passive', fly: true, desc: 'Leathery wings: you fly, always. Grounded foes cannot reach you.' },
-      { level: 20, key: 'powerofwyrms',    name: 'Power of Wyrms',    kind: 'passive', immune: ['fire'], desc: 'Immune to fire, always on. (Immunity to paralysis and sleep, and blindsense 60 ft, not modelled.)' },
-    ],
-    spells: { 3: ['magearmor'], 5: ['resistenergy', 'resistfire'], 7: ['fly'], 9: ['fear'], 11: ['spellresistance'], 13: ['formofthedragon1', 'formdragon1'], 15: ['formofthedragon2', 'formdragon2'], 17: ['formofthedragon3', 'formdragon3'], 19: ['wish'] },
   },
   elemental: {
     key: 'elemental', name: 'Elemental (air — electricity)', icon: '⚡',
@@ -163,6 +150,48 @@ const BLOODLINES = {
   },
 };
 
+// ── DRACONIC, by dragon type (v3.37.187 — Toby: 'draconic chooses a type of dragon and that dictates type of
+//    elemental damage and resistance so its important'). CRB table: the type sets the ENERGY (claws at 11th, the
+//    resistance, the breath, the level-20 immunity, the arcana) and the breath SHAPE. No grid here, so a 30-ft
+//    cone reaches up to 4 foes (as the breath always did) and a 60-ft line up to 2 (the engine's Lightning Bolt
+//    convention). Stored key: 'draconic' is RED (every row saved before v187), the others 'draconic_<colour>'.
+const DRAGONS = {
+  black:  { energy: 'acid',        shape: 'line' },
+  blue:   { energy: 'electricity', shape: 'line' },
+  green:  { energy: 'acid',        shape: 'cone' },
+  red:    { energy: 'fire',        shape: 'cone' },
+  white:  { energy: 'cold',        shape: 'cone' },
+  brass:  { energy: 'fire',        shape: 'line' },
+  bronze: { energy: 'electricity', shape: 'line' },
+  copper: { energy: 'acid',        shape: 'line' },
+  gold:   { energy: 'fire',        shape: 'cone' },
+  silver: { energy: 'cold',        shape: 'cone' },
+};
+const _BREATH_WORD = { fire: 'dragonfire', acid: 'acid', cold: 'frost', electricity: 'lightning' };
+function draconic(colour) {
+  const d = DRAGONS[colour], en = d.energy, cone = d.shape === 'cone';
+  return {
+    key: colour === 'red' ? 'draconic' : 'draconic_' + colour, name: `Draconic (${colour} — ${en}, ${d.shape})`, icon: '🐉',
+    dragon: colour, energy: en, arcanaDtype: en,
+    blurb: `A ${colour} dragon in the family tree: claws, scales, a breath of ${_BREATH_WORD[en]} and, in time, wings.`,
+    arcana: `Your ${en} spells deal +1 damage per die rolled (sorcerers only, as the book has it).`,
+    powers: [
+      { level: 1,  key: 'dragonclaws',  name: 'Claws',              kind: 'claws',   dtype: en, desc: `Grow claws and attack: two claw attacks at your full attack bonus, 1d4 + Strength each (1d3 if you are Small). They count as magic from 5th level, deal 1d6 (1d4 Small) from 7th, and carry +1d6 ${en} from 11th. Each use is one round of claws; 3 + Cha rounds per room. As the book has it.` },
+      { level: 3,  key: 'dragonresist', name: 'Dragon Resistances', kind: 'passive', resist: (l) => ({ [en]: l >= 9 ? 10 : 5 }), ac: (l) => l >= 15 ? 4 : l >= 9 ? 2 : 1, desc: `${en[0].toUpperCase() + en.slice(1)} resistance 5 and +1 natural armor (10 and +2 at 9th, +4 natural armor at 15th), always on.` },
+      { level: 9,  key: 'breathweapon', name: 'Breath Weapon',      kind: 'blast',   dtype: en, maxTargets: cone ? 4 : 2, desc: cone ? `A 30-ft cone of ${_BREATH_WORD[en]}: your level d6 ${en} on up to 4 foes, Reflex half. Once per room (twice at 17, three times at 20).` : `A 60-ft line of ${_BREATH_WORD[en]}: your level d6 ${en} on up to 2 foes (a line catches fewer than a cone, as Lightning Bolt does here), Reflex half. Once per room (twice at 17, three times at 20).` },
+      { level: 15, key: 'dragonwings',  name: 'Wings',              kind: 'passive', fly: true, desc: 'Leathery wings: you fly, always. Grounded foes cannot reach you.' },
+      { level: 20, key: 'powerofwyrms', name: 'Power of Wyrms',     kind: 'passive', immune: [en], desc: `Immune to ${en}, always on. (Immunity to paralysis and sleep, and blindsense 60 ft, not modelled.)` },
+    ],
+    spells: { 3: ['magearmor'], 5: ['resistenergy', 'resist' + en], 7: ['fly'], 9: ['fear'], 11: ['spellresistance'], 13: ['formofthedragon1', 'formdragon1'], 15: ['formofthedragon2', 'formdragon2'], 17: ['formofthedragon3', 'formdragon3'], 19: ['wish'] },
+  };
+}
+const DRAGON_KEYS = Object.keys(DRAGONS);   // the book's table order: chromatic, then metallic
+const BLOODLINES = {};
+for (const k of Object.keys(_BASE)) {
+  BLOODLINES[k] = _BASE[k];
+  if (k === 'destined') for (const c of DRAGON_KEYS) { const b = draconic(c); BLOODLINES[b.key] = b; }   // the ten dragons sit where 'draconic' always sat
+}
+
 const BLOODLINE_KEYS = Object.keys(BLOODLINES);
 /** Normalize any stored value to a real bloodline key or 'none'. */
 const bloodlineKey = (k) => (k && BLOODLINES[String(k).toLowerCase()]) ? String(k).toLowerCase() : 'none';
@@ -177,4 +206,4 @@ function bloodlineList() {
  *  and a picked bloodline replaces the generic Bloodline Surge. */
 const bloodlineClasses = ['sorcerer', 'bloodrager'];
 
-module.exports = { BLOODLINES, BLOODLINE_KEYS, bloodlineKey, bloodlineName, bloodlineList, bloodlineClasses };
+module.exports = { BLOODLINES, BLOODLINE_KEYS, DRAGONS, bloodlineKey, bloodlineName, bloodlineList, bloodlineClasses };
