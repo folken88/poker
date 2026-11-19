@@ -44,6 +44,9 @@ module.exports = ({ ABILITY_MOD, mindImmune, fightsNatural, isSneakClass, ccd })
     if (!foes.length) return;
     m._unseenStrike = false;   // reset the unseen-opening-strike flag each turn (set only when a hidden hero breaks cover to attack)
     m._totalDefense = false;   // v3.37.107: last turn's TOTAL DEFENSE guard ends the moment they act again (PF1)
+    // v3.37.188: a hireling BLOODRAGER with a bloodline bloodrages before anything else. The rage is a free action
+    // and every power of its ACG table needs it; the sims showed bots going whole rooms without raging.
+    if (m.cls === 'bloodrager' && m._bloodRage && !(m.buffApplied && m.buffApplied.rage)) { const _ri = this._abilitiesFor(m).findIndex(a => a.key === 'rage'); if (_ri >= 0) this._useAbility(m, _ri, {}); }
     // Taunted by a goblin barbarian → drop the clever play and just go hit it.
     if (m.tauntedBy && foes.some(e => e.uid === m.tauntedBy)) {
       const tgt = this._preferredFoe(m, foes);   // returns + consumes the taunter

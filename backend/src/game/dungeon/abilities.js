@@ -26,6 +26,21 @@ const { DOMAINS, maxDomainsFor } = require('../../pf1data/domains');
 const BLOOD = require('../../pf1data/bloodlines');   // v3.37.169: sorcerer bloodlines (CRB)
 const { SPELL: _SPELL } = require('../../pf1data/abilities');
 const { fighterFeats, teamworkGrants, TEAMWORK } = require('../../pf1data/feats');
+// v3.37.188: a bloodline's bonus spell may be defined only inside a class kit (Bless and Bull's Strength on the cleric,
+// Heroism and Hideous Laughter on the bard, Entangle on the druid, Haste and Mage Armor on the wizard). _SPELL alone
+// called those 'spells the engine lacks'. _spellAny reads _SPELL first, then the first caster kit that carries the key.
+let _kitSpellIdx = null;
+function _spellAny(k) {
+  if (_SPELL && _SPELL[k]) return _SPELL[k];
+  if (!_kitSpellIdx) {
+    _kitSpellIdx = {};
+    for (const c of ['sorcerer', 'wizard', 'cleric', 'druid', 'bard', 'oracle', 'inquisitor', 'magus', 'witch', 'shaman', 'summoner', 'paladin', 'ranger', 'antipaladin', 'bloodrager']) {
+      let kit = null; try { kit = kitFor(c); } catch (_) { kit = null; }
+      for (const a of ((kit && kit.abilities) || [])) if (a && a.key && a.slvl != null && !a.char && !_kitSpellIdx[a.key]) _kitSpellIdx[a.key] = a;
+    }
+  }
+  return _kitSpellIdx[k] || null;
+}
 const loadouts = require('../../pf1data/loadouts');
 const banter = require('../../bot/banter');
 
@@ -302,6 +317,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         return { ok: false, error: `${tgt.name} is flying out of reach — you can't ${ab.name.toLowerCase()} a foe on the wing. Use a ranged attack or get airborne.` };
       }
     }
+    // v3.37.188: a bloodrager's bloodline powers work only WHILE BLOODRAGING (ACG) — refused with the reason, the use kept.
+    if (ab.needsRage && !(m.buffApplied && m.buffApplied.rage)) return { ok: false, error: `${ab.name} wakes only while you bloodrage — press Bloodrage first (it is a free action).` };
+    if (ab.effect === 'bloodboon' && m._boonTaken && m._boonTaken[ab.boonGroup]) return { ok: false, error: `You have already made that choice for this bloodrage.` };
     // v3.37.187: bloodline CLAWS and the melee TOUCH powers (Corrupting / Grave Touch) are hand-to-hand — a grounded
     // hero cannot rake or touch a foe on the wing. Refused with the reason, the use kept.
     if (ab.effect === 'claws' || ab.effect === 'touchshaken') {
@@ -378,6 +396,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       touch:       () => this._abTouch(m, ab, payload),
       touchshaken: () => this._abTouchShaken(m, ab, payload),
       claws:       () => this._abClaws(m, ab, payload),   // v3.37.187
+      bloodboon:   () => this._abBloodBoon(m, ab, payload),   // v3.37.188 bloodrager bloodlines (ACG)
+      bloodstrike: () => this._abBloodStrike(m, ab),
+      deststrike:  () => this._abDestStrike(m, ab),
       rays:        () => this._abRays(m, ab, payload),
       spellstrike: () => this._abSpellstrike(m, ab, payload),
       glitterdust: () => this._abGlitterdust(m, ab, payload),
@@ -720,7 +741,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   //    (applied at the END of _resetAbilities, after the per-room clears). Bonus spells are always
   //    known (castableKeys) and, when not on the sorcerer list, appended as spontaneous entries. ──
   _bloodlineSetup(m) {
-    m._bloodPowers = []; m._bloodSpells = []; m._bloodSpellKeys = []; m._bloodPassive = null; m._bloodMissing = []; m._bloodArcana = null;
+    m._bloodPowers = []; m._bloodSpells = []; m._bloodSpellKeys = []; m._bloodPassive = null; m._bloodRage = null; m._bloodMissing = []; m._bloodArcana = null;
     if (!BLOOD.bloodlineClasses.includes(m.cls)) { m.bloodline = 'none'; return; }
     const stored = (db && typeof db.getBloodline === 'function') ? db.getBloodline(m.playerId) : null;   // null = no row (a test double, or PGM's shim) → keep whatever the member carries
     const key = BLOOD.bloodlineKey(stored != null ? stored : m.bloodline);
@@ -728,7 +749,12 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     const bl = BLOOD.BLOODLINES[key]; if (!bl) return;
     const lvl = m.level || 1;
     if (m.cls === 'sorcerer' && bl.arcanaDtype) m._bloodArcana = bl.arcanaDtype;   // v3.37.187 Draconic arcana: +1 damage per die on spells of the dragon's energy (bloodragers have no arcana)
-    const ps = { ac: 0, save: 0, sr: 0, resist: {}, immune: [], dr: 0, fly: false, hit: 0, dmg: 0, names: [], todo: [] };
+    // v3.37.188 (Toby: 'use the real acg when it makes sense for our format'): a BLOODRAGER reads the bloodline's own
+    // ACG table (powers at 1/4/8/12/16/20, bonus spells at 7/10/13/16). Its powers work only WHILE BLOODRAGING unless
+    // marked `constant` — those fold into `rs` and are switched on by _bloodrageOn when the rage starts.
+    const rager = (m.cls === 'bloodrager' && bl.rager) ? bl.rager : null;
+    const blank = () => ({ ac: 0, save: 0, sr: 0, resist: {}, immune: [], dr: 0, fly: false, hit: 0, dmg: 0, acPen: 0, haste: false, saveVs: [], critShrug: 0, angelic: false, blindsense: 0, crit: [], strike: null, names: [], todo: [] });
+    const ps = blank(), rs = rager ? blank() : null;
     const chaUses = (l, mm) => 3 + Math.max(0, (mm && mm.mods && mm.mods.cha) || 0);
     const blastUses = (l) => l >= 20 ? 3 : l >= 17 ? 2 : 1;
     const base = (pw) => ({ key: 'bl_' + pw.key, name: pw.name, icon: bl.icon, blood: true, desc: `Bloodline (${bl.name}), level ${pw.level}: ${pw.desc}` });
@@ -741,42 +767,148 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       invis:     (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'invisible', greater: true, selfOnly: true, target: 'self', sound: '/audio/spell_invisibility.mp3' }),
       reroll:    (pw) => ({ ...base(pw), cost: 'room', uses: 1, effect: 'domfortune', target: 'self', sound: '/audio/spell_buff_invoke.mp3' }),
     };
-    for (const pw of bl.powers) {
+    // The bloodrager's builders (ACG). Everything here needs the rage to be on.
+    const RT = {
+      claws:      (pw) => [{ ...base(pw), cost: 'free', effect: 'claws', target: 'enemy', dtype: pw.dtype || 'fire', needsRage: true, clawAtWill: true, clawDie: 6, clawStepAt: 8, clawMagicAt: 4, clawEnergyAt: 12 }],
+      blast:      (pw) => [{ ...T.blast(pw), uses: pw.uses || ((l) => l >= 20 ? 3 : l >= 16 ? 2 : 1), dcStat: 'con', needsRage: true }],
+      reroll:     (pw) => [{ ...T.reroll(pw), needsRage: true }],
+      strike:     (pw) => (pw.alwaysAt && lvl >= pw.alwaysAt) ? [] : [{ ...base(pw), cost: 'room', uses: pw.uses, swift: true, effect: 'bloodstrike', target: 'self', needsRage: true, strike: { dtype: pw.dtype, burst: !!(pw.burstAt && lvl >= pw.burstAt), pierce: !!(pw.pierceAt && lvl >= pw.pierceAt) }, sound: '/audio/spell_buff_invoke.mp3' }],
+      deststrike: (pw) => [{ ...base(pw), cost: 'room', uses: pw.uses, freeAction: true, effect: 'deststrike', target: 'self', needsRage: true, sound: '/audio/spell_buff_invoke.mp3' }],
+      boon:       (pw) => (pw.boons || []).filter(k => k === 'haste' || k === 'bane' || _spellAny(k)).map(k => ({ ...base(pw), key: 'bl_' + pw.key + '_' + k, name: pw.boons.length > 1 ? `${pw.name}: ${k === 'haste' ? 'Haste' : k === 'bane' ? 'Bane' : _spellAny(k).name}` : pw.name,
+        cost: 'room', uses: 1, freeAction: true, effect: 'bloodboon', target: k === 'bane' ? 'enemy' : 'self', boon: k, boonGroup: pw.key, needsRage: true, sound: '/audio/spell_buff_invoke.mp3' })),
+    };
+    const fold = (o, pw) => {
+      o.names.push(pw.name);
+      if (pw.ac) o.ac += pw.ac(lvl); if (pw.save) o.save += pw.save(lvl); if (pw.sr) o.sr = Math.max(o.sr, pw.sr(lvl)); if (pw.dr) o.dr = Math.max(o.dr, pw.dr(lvl));
+      if (pw.hit) o.hit += pw.hit(lvl); if (pw.dmg) o.dmg += pw.dmg(lvl); if (pw.fly) o.fly = true;
+      if (pw.resist) for (const [t, n] of Object.entries(pw.resist(lvl))) o.resist[t] = Math.max(o.resist[t] || 0, n);
+      if (pw.immune) for (const t of pw.immune) if (!o.immune.includes(t)) o.immune.push(t);
+      if (pw.acPen) o.acPen += pw.acPen; if (pw.haste) o.haste = true; if (pw.angelic) o.angelic = true;
+      if (pw.saveVs) for (const t of pw.saveVs) if (!o.saveVs.includes(t)) o.saveVs.push(t);
+      if (pw.critShrug) o.critShrug = Math.max(o.critShrug, pw.critShrug); if (pw.blindsense) o.blindsense = Math.max(o.blindsense, pw.blindsense);
+      if (pw.crit) o.crit.push({ ...pw.crit, name: pw.name });
+    };
+    for (const pw of (rager ? rager.powers : bl.powers)) {
       if (lvl < pw.level) continue;
       if (pw.kind === 'todo') { ps.todo.push(pw.name); continue; }
-      if (pw.kind === 'passive') {
-        ps.names.push(pw.name);
-        if (pw.ac) ps.ac += pw.ac(lvl); if (pw.save) ps.save += pw.save(lvl); if (pw.sr) ps.sr = Math.max(ps.sr, pw.sr(lvl)); if (pw.dr) ps.dr = Math.max(ps.dr, pw.dr(lvl));
-        if (pw.hit) ps.hit += pw.hit(lvl); if (pw.dmg) ps.dmg += pw.dmg(lvl); if (pw.fly) ps.fly = true;
-        if (pw.resist) for (const [t, n] of Object.entries(pw.resist(lvl))) ps.resist[t] = Math.max(ps.resist[t] || 0, n);
-        if (pw.immune) for (const t of pw.immune) if (!ps.immune.includes(t)) ps.immune.push(t);
+      if (pw.kind === 'passive') { fold((rager && !pw.constant) ? rs : ps, pw); continue; }
+      if (rager) {
+        if (pw.kind === 'strike' && pw.alwaysAt && lvl >= pw.alwaysAt) { rs.names.push(pw.name); rs.strike = { dtype: pw.dtype, burst: !!(pw.burstAt && lvl >= pw.burstAt), pierce: !!(pw.pierceAt && lvl >= pw.pierceAt), name: pw.name }; continue; }
+        if (RT[pw.kind]) m._bloodPowers.push(...RT[pw.kind](pw));
         continue;
       }
       if (T[pw.kind]) m._bloodPowers.push(T[pw.kind](pw));
     }
-    m._bloodPassive = ps;
+    m._bloodPassive = ps; m._bloodRage = rs;
     // one free INFO entry (like the passive domains): press it and it speaks the always-on powers
     m._bloodPowers.push({ key: 'bl_info', name: `Bloodline: ${bl.name}`, icon: bl.icon, blood: true, cost: 'free', freeAction: true, effect: 'bloodinfo', target: 'self', desc: `${bl.blurb} Press to hear what your blood grants right now.` });
-    // BONUS SPELLS — the first implemented candidate per level; not on the sorcerer list → appended
+    // BONUS SPELLS — the first implemented candidate per level; not on the class list → appended
     const kitKeys = new Set(kitFor(m.cls).abilities.map(a => a.key));
-    for (const [cl, cands] of Object.entries(bl.spells || {})) {
+    for (const [cl, cands] of Object.entries((rager ? rager.spells : bl.spells) || {})) {
       if (lvl < Number(cl)) continue;
-      const k = (cands || []).find(c => _SPELL && _SPELL[c]);
+      const k = (cands || []).find(c => _spellAny(c)), _sp = k ? _spellAny(k) : null;
       if (!k) { m._bloodMissing.push(cands[0]); continue; }
       m._bloodSpellKeys.push(k);
-      if (!kitKeys.has(k)) m._bloodSpells.push({ ..._SPELL[k], ...(isSpontaneous(m.cls) ? { cost: 'slot' } : { cost: 'room', uses: 1 }), minLevel: Number(cl), bloodSpell: true, desc: `Bloodline spell (${bl.name}). ${_SPELL[k].desc || ''}` });   // v3.37.170: a bloodrager's bonus spells ride its once-a-room model
+      const _en = (rager && rager.spellEnergy && _sp.dtype === 'fire') ? rager.spellEnergy : null;   // ACG elemental: Burning Hands and Scorching Ray deal the element's energy
+      if (!kitKeys.has(k) || _en) m._bloodSpells.push({ ..._sp, ...(_en ? { key: k + '_bl', name: `${_sp.name} (${_en})`, dtype: _en } : {}), ...(isSpontaneous(m.cls) ? { cost: 'slot' } : { cost: 'room', uses: 1 }), minLevel: Number(cl), bloodSpell: true, desc: `Bloodline spell (${bl.name}). ${_en ? `It deals ${_en} damage, not fire. ` : ''}${_sp.desc || ''}` });   // v3.37.170: a bloodrager's bonus spells ride its once-a-room model
     }
   },
-  /** The always-on part, applied AFTER the per-room clears (spellResist / flight / buffs). */
+  /** The always-on part, applied AFTER the per-room clears (spellResist / flight / buffs). A bloodrager's
+   *  while-raging powers are cleared here and switched back on by _bloodrageOn when the rage starts. */
   _bloodlineApply(m) {
     const ps = m._bloodPassive;
     m.bloodAC = 0; m.bloodSave = 0; m.bloodResist = null; m.bloodImmune = null;
+    m._raged = false; m.bloodSaveVs = null; m.bloodCritShrug = 0; m.bloodAngelic = false; m.bloodCrit = null; m._bloodStrike = null; m._bloodStrikeAlways = null; m._destStrike = 0; m._boonTaken = {};
     if (!ps) return;
-    m.bloodAC = ps.ac; m.bloodSave = ps.save; m.bloodResist = ps.resist; m.bloodImmune = ps.immune.length ? ps.immune : null;
+    this._bloodFold(m, ps, true);
+  },
+  _bloodFold(m, ps, constant) {
+    m.bloodAC = (m.bloodAC || 0) + ps.ac; m.bloodSave = (m.bloodSave || 0) + ps.save;
+    if (Object.keys(ps.resist).length) { m.bloodResist = { ...(m.bloodResist || {}) }; for (const [t, n] of Object.entries(ps.resist)) m.bloodResist[t] = Math.max(m.bloodResist[t] || 0, n); }
+    else if (constant) m.bloodResist = ps.resist;
+    if (ps.immune.length) m.bloodImmune = [...new Set([...(m.bloodImmune || []), ...ps.immune])];
     if (ps.sr) m.spellResist = Math.max(m.spellResist || 0, ps.sr);
     if (ps.dr) m.dr = Math.max(m.dr || 0, ps.dr);
-    if (ps.fly) { m.flying = true; m.canHitFlyers = true; m.innateFly = true; }
-    if (ps.hit || ps.dmg) { m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 }; m.buffs.toHit += ps.hit; m.buffs.dmg += ps.dmg; }
+    if (ps.fly) { m.flying = true; m.canHitFlyers = true; if (constant) m.innateFly = true; }
+    if (ps.hit || ps.dmg || ps.acPen) { m.buffs = m.buffs || { toHit: 0, dmg: 0, bonusDice: 0, acPen: 0, save: 0, ac: 0, deflect: 0 }; m.buffs.toHit += ps.hit; m.buffs.dmg += ps.dmg; m.buffs.acPen += ps.acPen; }
+    if (ps.haste) { m.hasted = 99; m.hasteFull = true; }
+    if (ps.saveVs.length) m.bloodSaveVs = [...new Set([...(m.bloodSaveVs || []), ...ps.saveVs])];
+    if (ps.critShrug) m.bloodCritShrug = Math.max(m.bloodCritShrug || 0, ps.critShrug);
+    if (ps.blindsense) m.blindsense = Math.max(m.blindsense || 0, ps.blindsense);
+    if (ps.angelic) m.bloodAngelic = true;
+    if (ps.crit.length) m.bloodCrit = [...(m.bloodCrit || []), ...ps.crit];
+    if (ps.strike) m._bloodStrikeAlways = ps.strike;
+  },
+  // ── BLOODRAGER BLOODLINES, the runtime (v3.37.188). _bloodrageOn fires from the Rage branch of _abBuff: the
+  //    while-raging passives land, and a BOT takes the first boon of each of its on-rage choices. Hit riders
+  //    (_bloodHitRiders) are called by _playerAttack and _abClaws for every MELEE swing that connects. ──
+  _bloodrageOn(m) {
+    const rs = m._bloodRage; if (!rs || m._raged) return;
+    m._raged = true;
+    this._bloodFold(m, rs, false);
+    const bits = [];
+    if (rs.ac) bits.push(`+${rs.ac} AC`); if (rs.save) bits.push(`+${rs.save} on saves`); if (rs.hit) bits.push(`+${rs.hit} more to hit and damage, another −${rs.acPen} AC`);
+    for (const [t, n] of Object.entries(rs.resist)) bits.push(`${t} resistance ${n}`); for (const t of rs.immune) bits.push(`immune to ${t}`);
+    if (rs.fly) bits.push('wings — you fly'); if (rs.haste) bits.push('haste'); if (rs.saveVs.length) bits.push(`+4 on saves against ${rs.saveVs.join(' and ')}`);
+    if (rs.critShrug) bits.push(rs.critShrug >= 1 ? 'no critical hit can land on you' : 'half the critical hits against you are only hits');
+    if (rs.angelic) bits.push('+1d6 against evil outsiders'); for (const c of rs.crit) bits.push(`${c.name} on your critical hits`);
+    if (rs.strike) bits.push(`+1d6 ${rs.strike.dtype} on every melee hit`);
+    const bl = BLOOD.BLOODLINES[m.bloodline] || {};
+    if (bits.length) this._note(`${bl.icon || '🩸'} ${m.nickname}'s ${bl.name || 'bloodline'} blood answers the rage: ${bits.join(', ')}.`);
+    if (m.isBot) {   // a hireling takes its on-rage choices at once: the first boon of each group
+      for (const ab of (m._bloodPowers || [])) if (ab.effect === 'bloodboon' && !m._boonTaken[ab.boonGroup] && ((m.abilityUses && m.abilityUses[ab.key]) || 0) > 0) { m.abilityUses[ab.key] -= 1; this._abBloodBoon(m, ab, {}); }
+    }
+  },
+  _abBloodBoon(m, ab, payload) {
+    m._boonTaken = m._boonTaken || {}; m._boonTaken[ab.boonGroup] = ab.boon;
+    if (ab.boon === 'haste') { m.hasted = 99; m.hasteFull = true; this._note(`${ab.icon} ${m.nickname}'s blood quickens — HASTE for as long as the rage lasts (an extra attack, +1 to hit, AC and Reflex).`, ab.sound); this._echoToTable(ab.sound); return; }
+    if (ab.boon === 'bane') {
+      const e = payload && payload.targetUid ? this.enemies.find(x => x.uid === payload.targetUid && x.hp > 0) : null;
+      return this._abBane(m, { icon: ab.icon, sound: ab.sound }, { baneType: (payload && payload.baneType) || (e && e.type) || null });
+    }
+    const sp = _spellAny(ab.boon); if (!sp) return;
+    this._abBuff(m, { ...sp, target: 'self', cost: 'free', sound: ab.sound }, { allyUid: m.playerId });
+  },
+  _abBloodStrike(m, ab) {
+    m._bloodStrike = { ...ab.strike, round: this.round, name: ab.name };
+    this._note(`${ab.icon} ${m.nickname} calls up ${ab.name} — every melee hit this round carries +1d6 ${ab.strike.dtype}${ab.strike.burst ? ' (more on a critical hit)' : ''}.`, ab.sound);
+    this._echoToTable(ab.sound);
+  },
+  _abDestStrike(m, ab) {
+    m._destStrike = Math.max(1, Math.floor((m.level || 1) / 2));
+    this._note(`${ab.icon} ${m.nickname} feels fate lean in — DESTINED STRIKE: +${m._destStrike} to hit on the next melee attack.`, ab.sound);
+    this._echoToTable(ab.sound); this._broadcast();
+  },
+  /** A BOT bloodrager spends its swift / free strike powers as it attacks (no narration of the choice — the power's own line speaks). */
+  _bloodBotStrike(m) {
+    if (!m.isBot || !(m.buffApplied && m.buffApplied.rage) || !m.weapon || m.weapon.ranged) return;
+    for (const ab of (m._bloodPowers || [])) {
+      if (((m.abilityUses && m.abilityUses[ab.key]) || 0) <= 0) continue;
+      if (ab.effect === 'bloodstrike' && !m._swiftUsed && !(m._bloodStrike && m._bloodStrike.round === this.round)) { m._swiftUsed = true; m.abilityUses[ab.key] -= 1; this._abBloodStrike(m, ab); }
+      else if (ab.effect === 'deststrike' && !m._destStrike) { m.abilityUses[ab.key] -= 1; this._abDestStrike(m, ab); }
+    }
+  },
+  _bloodHitRiders(m, tgt, r) {
+    if (!r || !r.hit || !tgt || !m || !m.weapon || m.weapon.ranged) return;
+    const st = (m._bloodStrike && m._bloodStrike.round === this.round) ? m._bloodStrike : m._bloodStrikeAlways;
+    if (st && st.dtype) {
+      let n = dRoll(6);
+      if (r.crit && st.burst) n += dRollN(Math.max(1, (m.weapon.critMult || 2) - 1), 10);   // flaming burst
+      const dealt = st.pierce ? (this._resistMult(tgt, st.dtype) === 0 ? Math.floor(n / 2) : n) : this._resisted(tgt, n, st.dtype);   // Power of the Elements: resistance ignored, the immune take half
+      r.damage += dealt; r.drTag = `${r.drTag || ''} (${dealt} ${st.dtype})`;
+    }
+    if (m.bloodAngelic && tgt.type === 'outsider' && (tgt.evil || tgt.markedEvil)) { const n = dRoll(6); r.damage += n; r.drTag = `${r.drTag || ''} (${n} holy)`; }
+    if (r.crit && m.bloodCrit) {
+      const dc = 10 + Math.floor((m.level || 1) / 2) + Math.max(0, (m.mods && m.mods.con) || 0);
+      for (const c of m.bloodCrit) {
+        if (tgt.hp - r.damage <= 0) break;
+        if (c.mind && mindImmune(tgt)) { this._note(`${c.name}: ${tgt.name} has no mind to scramble.`); continue; }
+        const sv = this._saveVs(this._enemySave(tgt, c.save), dc);
+        if (sv.saved) { this._note(`${m.nickname}'s ${c.name}: ${tgt.name} holds firm. [${c.save === 'fort' ? 'Fort' : 'Will'} ${sv.total} vs DC ${dc}]`); continue; }
+        if (c.cond === 'staggered') tgt.slowed = Math.max(tgt.slowed || 0, 1); else if (c.cond === 'confused') tgt.confused = Math.max(tgt.confused || 0, 1);
+        this._note(`${m.nickname}'s ${c.name}: ${tgt.name} is ${c.cond.toUpperCase()} for 1 round. [${c.save === 'fort' ? 'Fort' : 'Will'} ${sv.total} vs DC ${dc}]`);
+      }
+    }
   },
   // ── GUNSLINGER DEEDS (v3.37.172 — Tobias, from the Iron Gods sheets) ──────────────────────────────────
   _gunInHand(m) { const w = m.weapon || weaponOf(m.gear, m.weaponKey); return !!(w && w.group === 'firearms'); },
@@ -816,8 +948,11 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     if (ps.ac) bits.push(`+${ps.ac} AC`); if (ps.save) bits.push(`+${ps.save} on saves`); if (ps.sr) bits.push(`spell resistance ${ps.sr}`); if (ps.dr) bits.push(`DR ${ps.dr}`);
     if (ps.hit || ps.dmg) bits.push(`+${ps.hit} to hit / +${ps.dmg} damage`); if (ps.fly) bits.push('you fly');
     for (const [t, n] of Object.entries(ps.resist || {})) bits.push(`${t} resistance ${n}`); for (const t of (ps.immune || [])) bits.push(`immune to ${t}`);
-    const sp = (m._bloodSpellKeys || []).map(k => (_SPELL[k] || {}).name || k);
-    this._note(`${ab.icon} ${m.nickname}'s ${ab.name}: ${bits.length ? bits.join(', ') : 'no always-on powers yet'}${sp.length ? `; bonus spells known: ${sp.join(', ')}` : ''}${(ps.todo || []).length ? `; not yet in the engine: ${ps.todo.join(', ')}` : ''}${(m._bloodMissing || []).length ? `; bonus spells the engine lacks: ${m._bloodMissing.join(', ')}` : ''}.`);
+    const rs = m._bloodRage, rbits = [];
+    if (rs) { if (rs.ac) rbits.push(`+${rs.ac} AC`); if (rs.save) rbits.push(`+${rs.save} on saves`); if (rs.hit) rbits.push(`+${rs.hit} more to hit and damage, another −${rs.acPen} AC`); for (const [t, n] of Object.entries(rs.resist || {})) rbits.push(`${t} resistance ${n}`); for (const t of (rs.immune || [])) rbits.push(`immune to ${t}`); if (rs.fly) rbits.push('you fly'); if (rs.haste) rbits.push('haste'); if (rs.saveVs.length) rbits.push(`+4 on saves against ${rs.saveVs.join(' and ')}`); if (rs.critShrug) rbits.push(rs.critShrug >= 1 ? 'immune to critical hits' : 'half the critical hits against you are only hits'); if (rs.angelic) rbits.push('+1d6 against evil outsiders'); for (const c of rs.crit) rbits.push(c.name); if (rs.strike) rbits.push(`+1d6 ${rs.strike.dtype} on every melee hit`); }
+    if (ps.saveVs && ps.saveVs.length) bits.push(`+4 on saves against ${ps.saveVs.join(' and ')}`); if (ps.critShrug) bits.push(ps.critShrug >= 1 ? 'immune to critical hits' : 'half the critical hits against you are only hits'); if (ps.blindsense) bits.push(`blindsight ${ps.blindsense} ft`);
+    const sp = (m._bloodSpellKeys || []).map(k => (_spellAny(k) || {}).name || k);
+    this._note(`${ab.icon} ${m.nickname}'s ${ab.name}: ${bits.length ? bits.join(', ') : 'no always-on powers yet'}${rs ? `; while you bloodrage: ${rbits.length ? rbits.join(', ') : 'nothing yet'}` : ''}${sp.length ? `; bonus spells known: ${sp.join(', ')}` : ''}${(ps.todo || []).length ? `; not yet in the engine: ${ps.todo.join(', ')}` : ''}${(m._bloodMissing || []).length ? `; bonus spells the engine lacks: ${m._bloodMissing.join(', ')}` : ''}.`);
     this._broadcast();
   },
   // DOMAINS Phase B — re-read the picks (they may change between rooms), rebuild
@@ -3234,7 +3369,8 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
   },
   _clawWeapon(m, ab) {
     const lvl = m.level || 1, small = RACES.raceSize(m.race) === 'small', big = lvl >= (ab.clawStepAt || 7);
-    return { key: 'bloodclaws', name: 'Claws', isDagger: false, dmgCount: 1, dmgDie: big ? (small ? 4 : 6) : (small ? 3 : 4), toHit: 0, dmgBonus: 0, critRange: 20, critMult: 2,
+    const LAD = [3, 4, 6, 8], die = LAD[Math.max(0, Math.min(3, LAD.indexOf(ab.clawDie || 4) + (big ? 1 : 0) - (small ? 1 : 0)))];   // sorcerer 1d4 → 1d6 at 7th; bloodrager (ACG) 1d6 → 1d8 at 8th; Small is one step down
+    return { key: 'bloodclaws', name: 'Claws', isDagger: false, dmgCount: 1, dmgDie: die, toHit: 0, dmgBonus: 0, critRange: 20, critMult: 2,
       cat: 'light', ranged: false, dtype: 'S', group: 'natural', finesse2h: false, prof: 'simple', custom: lvl >= (ab.clawMagicAt || 5),   // custom ⇒ _physDR reads it as magic
       dual: false, noShield: false, boltAction: false, naturalAttacks: 2, reachFly: false, impCritAt: 0, grapple: false, atkSound: null };
   },
@@ -3251,6 +3387,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
         const _by = tgt.dr && typeof tgt.dr === 'object' ? tgt.dr.bypass : null;
         claw.dtype = _by === 'B' ? 'B' : 'S';
         const r = this._swingVsAC(m, this._enemyAC(tgt), tgt, 0, false);
+        this._bloodHitRiders(m, tgt, r);   // v3.37.188
         if (i === 0) sound = r.sound;
         let g = groups[groups.length - 1];
         if (!g || g.tgt !== tgt) { g = { tgt, bits: [] }; groups.push(g); }
@@ -3267,7 +3404,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     m._domStrike = 0; m._domSmite = 0;   // one-attack riders are spent with the action, as on a weapon attack
     const left = Math.max(0, ((m.abilityUses && m.abilityUses[ab.key]) || 1) - 1);
     const txt = groups.map(g => `${g.tgt.name}: ${g.bits.join(', ')}${g.tgt.hp <= 0 ? ' ☠️ Slain!' : ''}`).join('; ');
-    this._note(`${ab.icon} ${m.nickname} rakes with ${swings === 1 ? 'a claw' : 'both claws'} (1d${claw.dmgDie}${energy ? ` +1d6 ${energy}` : ''}) — ${txt || 'nothing in reach'}. ${left} claw round${left === 1 ? '' : 's'} left this room.`, sound);
+    this._note(`${ab.icon} ${m.nickname} rakes with ${swings === 1 ? 'a claw' : 'both claws'} (1d${claw.dmgDie}${energy ? ` +1d6 ${energy}` : ''}) — ${txt || 'nothing in reach'}.${ab.clawAtWill ? '' : ` ${left} claw round${left === 1 ? '' : 's'} left this room.`}`, sound);
     this._echoToTable(sound);
   },
   // Touch spell (Shocking Grasp): a ranged touch attack for level d6.
@@ -3801,6 +3938,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       const tier = lvl >= 20 ? 'MIGHTY ' : lvl >= 11 ? 'GREATER ' : '';
       this._note(`😤 ${m.nickname} flies into a ${tier}RAGE!`, sound);   // the numbers live on the buff chip — the bellow is enough (Josh 2026-07-04)
       this._echoToTable(sound);
+      if (m.cls === 'bloodrager' && m._bloodRage) this._bloodrageOn(m);   // v3.37.188: a bloodrager's bloodline powers wake with the rage (ACG)
       return;
     }
     // Inspire Courage scales with BARD level, PF1-style: +1, rising to +2/+3/+4
@@ -4522,6 +4660,7 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
     // Build the swing sequence as a list of to-hit OFFSETS (see _attackOffsets):
     // dual-wielders attack twice; staying on the same target adds PF1 iteratives.
     // A Haste bonus swing (quiet) — or an improvised crossbow — is a single strike.
+    if (!quiet) this._bloodBotStrike(m);   // v3.37.188: a hireling bloodrager spends its strike powers as it swings
     const offsets = (quiet || drewCrossbow || m.slowed > 0) ? [{ off: 0, oh: false }] : this._attackOffsets(m, e);   // slowed/staggered → a SINGLE attack, no full-attack iteratives (PF1)
     if (!quiet) m._lastAtkTarget = e.uid;   // remember the target → next turn's full-attack check
     const swings = offsets.length;
@@ -4543,7 +4682,9 @@ module.exports = ({ ABILITY_MOD, CAST_MOD, SICKENED_PENALTY, SICKENED_ROUNDS, BL
       // a backup crossbow, being ranged, redirects freely).
       const tgt = (e.hp > 0) ? e : this._targetableEnemies().find(x => this._canReach(m, x));
       if (!tgt) break;
-      const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms', ranged: !!m.weapon.ranged }), tgt, offsets[i].off, offsets[i].oh);   // firearms hit vs touch AC; ranged flag drives prone ±4; offset = iterative/TWF penalty; oh = off-hand (½ mod)
+      const _ds = (i === 0 && !quiet && m._destStrike && !m.weapon.ranged) ? m._destStrike : 0; if (_ds) m._destStrike = 0;   // v3.37.188 Destined Strike rides the first melee swing
+      const r = this._swingVsAC(m, this._enemyAC(tgt, { touch: m.weapon.group === 'firearms', ranged: !!m.weapon.ranged }), tgt, offsets[i].off + _ds, offsets[i].oh);
+      this._bloodHitRiders(m, tgt, r);   // v3.37.188: Elemental / Hellfire Strike, Angelic Attacks, the critical-hit riders   // firearms hit vs touch AC; ranged flag drives prone ±4; offset = iterative/TWF penalty; oh = off-hand (½ mod)
       if (i > 0 || quiet) r.sound = null;            // one report for the whole flurry; haste swing silent
       else if (baseSound) r.sound = baseSound;       // signature / blunt report on the first swing
       // Rogue Sneak Attack with a light blade (dagger/kukri/shortsword) → Riki.

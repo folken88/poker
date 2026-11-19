@@ -24,6 +24,19 @@
 //   passive    always on: ac / save / sr / resist / immune / dr / fly / hit / dmg (functions of level)
 //   todo       written down, NOT in the engine yet (the picker and the info entry say so)
 //
+// BLOODRAGERS (v3.37.188 — Toby: 'use the real acg when it makes sense for our format'): each bloodline carries a
+// second table, `rager`, the Advanced Class Guide bloodrager bloodline — powers at 1 / 4 / 8 / 12 / 16 / 20 and
+// bonus spells at 7 / 10 / 13 / 16. A bloodrager's powers work only WHILE BLOODRAGING (the book's rule) unless the
+// entry says `constant: true`. Their save DC is 10 + ½ level + CON. Extra kinds on that table:
+//   claws      as above with the ACG numbers: 1d6 (1d8 at 8th), magic at 4th, energy at 12th, at will while raging
+//   blast      the same burst, DC on Constitution, uses from `uses(level)`
+//   passive    also: acPen / haste / saveVs [tags] (+4) / critShrug (chance to ignore a critical hit) / angelic /
+//              blindsense / crit { save, cond, mind } (a rider on your confirmed critical hits)
+//   strike     a SWIFT action: for one round your melee hits carry +1d6 `dtype` (burst on a crit from `burstAt`,
+//              through resistance from `pierceAt`, always on from `alwaysAt`)
+//   deststrike a FREE action: + ½ level to hit on your next melee attack
+//   boon       a FREE action once per bloodrage: put one of `boons` (a spell, haste, or bane) on yourself
+//
 // spells: class level → CANDIDATE spell keys (the first one the engine implements wins;
 // none implemented → that bonus spell is skipped and the info entry says which).
 
@@ -42,6 +55,17 @@ const _BASE = {
       { level: 20, key: 'aberrantform',    name: 'Aberrant Form',     kind: 'passive', dr: R(5), desc: 'DR 5/— always on (the book also grants immunity to critical hits and sneak attacks and blindsight 60 ft — not modelled yet).' },
     ],
     spells: { 3: ['enlargeperson'], 5: ['seeinvisibility'], 7: ['tongues'], 9: ['blacktentacles'], 11: ['feeblemind'], 13: ['veil'], 15: ['planeshift'], 17: ['mindblank'], 19: ['shapechange'] },
+    rager: {
+      powers: [
+        { level: 1,  key: 'staggeringstrike', name: 'Staggering Strike',  kind: 'passive', crit: { save: 'fort', cond: 'staggered' }, desc: 'When you confirm a critical hit in melee, the foe makes a Fortitude save (DC 10 + ½ level + Con) or is STAGGERED for 1 round (one action on its next turn).' },
+        { level: 4,  key: 'abnormalreach',    name: 'Abnormal Reach',     kind: 'todo',    desc: 'Your reach grows by 5 ft. No grid here — nothing to model yet.' },
+        { level: 8,  key: 'aberrantfort',     name: 'Aberrant Fortitude', kind: 'todo',    desc: 'Immune to the sickened and nauseated conditions. Not in the engine yet.' },
+        { level: 12, key: 'unusualanatomy',   name: 'Unusual Anatomy',    kind: 'passive', critShrug: 0.5, desc: 'A 50% chance that a critical hit against you is only a normal hit. (The book also covers sneak attacks — not modelled.)' },
+        { level: 16, key: 'aberrantresist',   name: 'Aberrant Resistance', kind: 'passive', immune: ['poison'], desc: 'Immune to poison. (Immunity to disease, exhaustion, fatigue and the staggered condition is not modelled — heroes do not suffer the first three here.)' },
+        { level: 20, key: 'aberrantform',     name: 'Aberrant Form',      kind: 'passive', constant: true, critShrug: 1, blindsense: 60, desc: 'Always, even outside a bloodrage: immune to critical hits, and blindsight 60 ft (you strike the unseen and ignore illusions). (Sneak-attack immunity and the +1 damage reduction are not modelled.)' },
+      ],
+      spells: { 7: ['enlargeperson'], 10: ['seeinvisibility'], 13: ['displacement'], 16: ['blacktentacles'] },
+    },
   },
   abyssal: {
     key: 'abyssal', name: 'Abyssal', icon: '😈',
@@ -55,6 +79,17 @@ const _BASE = {
       { level: 20, key: 'demonicmight',    name: 'Demonic Might',     kind: 'passive', immune: ['electricity', 'poison'], resist: () => ({ acid: 10, cold: 10, fire: 10 }), desc: 'Immune to electricity and poison; acid, cold and fire resistance 10. Always on.' },
     ],
     spells: { 3: ['causefear'], 5: ['bullsstrength', 'bullstrength'], 7: ['rage', 'ragespell'], 9: ['stoneskin'], 11: ['dismissal'], 13: ['transformation'], 15: ['greaterteleport', 'teleportgreater', 'teleport'], 17: ['unholyaura'], 19: ['summonmonster9'] },
+    rager: {
+      powers: [
+        { level: 1,  key: 'claws',            name: 'Claws',              kind: 'claws',   dtype: 'fire', desc: 'While bloodraging you have claws: two claw attacks at your full attack bonus, 1d6 + Strength each (1d4 if you are Small), as often as you like. They count as magic from 4th level, deal 1d8 (1d6 Small) from 8th, and burn for +1d6 fire from 12th. As the book has it.' },
+        { level: 4,  key: 'demonicbulk',      name: 'Demonic Bulk',       kind: 'boon',    boons: ['enlargeperson'], desc: 'When you bloodrage you may grow one size larger, as Enlarge Person. A free action, once per bloodrage.' },
+        { level: 8,  key: 'demonresist',      name: 'Demon Resistances',  kind: 'passive', resist: (l) => ({ acid: l >= 16 ? 10 : 5, cold: l >= 16 ? 10 : 5, fire: l >= 16 ? 10 : 5 }), desc: 'Acid, cold and fire resistance 5 (10 at 16th).' },
+        { level: 12, key: 'abyssalbloodrage', name: 'Abyssal Bloodrage',  kind: 'passive', hit: (l) => l >= 20 ? 3 : l >= 16 ? 2 : 1, dmg: (l) => l >= 20 ? 3 : l >= 16 ? 2 : 1, acPen: 2, desc: 'Your bloodrage is stronger and wilder: +2 more Strength (+4 at 16th, +6 at 20th) — +1 / +2 / +3 to hit and damage — and the AC penalty of the rage becomes −4.' },
+        { level: 16, key: 'demonicaura',      name: 'Demonic Aura',       kind: 'todo',    desc: 'A 5-ft aura of fire: 2d6 + Con to every creature that ends its turn beside you. Not in the engine yet — no positions.' },
+        { level: 20, key: 'demonicimmune',    name: 'Demonic Immunities', kind: 'passive', constant: true, immune: ['electricity', 'poison'], desc: 'Always, even outside a bloodrage: immune to electricity and poison.' },
+      ],
+      spells: { 7: ['rayofenfeeblement', 'rayenfeeble'], 10: ['bullsstrength', 'bullstrength'], 13: ['ragespell'], 16: ['stoneskin'] },
+    },
   },
   arcane: {
     key: 'arcane', name: 'Arcane', icon: '📘',
@@ -68,6 +103,17 @@ const _BASE = {
       { level: 20, key: 'apotheosis',      name: 'Arcane Apotheosis', kind: 'todo',    desc: 'Metamagic paid with lower-level slots instead of time. Not in the engine yet.' },
     ],
     spells: { 3: ['identify'], 5: ['invisibility'], 7: ['dispelmagic'], 9: ['dimensiondoor'], 11: ['overlandflight'], 13: ['trueseeing'], 15: ['greaterteleport', 'teleportgreater', 'teleport'], 17: ['powerwordstun'], 19: ['wish'] },
+    rager: {
+      powers: [
+        { level: 1,  key: 'disruptive',       name: 'Disruptive Bloodrage', kind: 'todo',  desc: 'Foes you threaten find casting defensively harder (+2 DC). Enemy casters make no concentration checks here — nothing to model yet.' },
+        { level: 4,  key: 'arcanebloodrage',  name: 'Arcane Bloodrage',   kind: 'boon',    boons: ['blur', 'protarrows'], desc: 'When you bloodrage you may put ONE of Blur or Protection from Arrows on yourself for as long as you rage. A free action, once per bloodrage. (The book also offers Resist Energy and Spider Climb.)' },
+        { level: 8,  key: 'greaterarcane',    name: 'Greater Arcane Bloodrage', kind: 'boon', boons: ['displacement', 'haste'], desc: 'When you bloodrage you may also put ONE of Displacement or Haste on yourself. A free action, once per bloodrage.' },
+        { level: 12, key: 'casterscourge',    name: "Caster's Scourge",   kind: 'todo',    desc: 'Extra attacks of opportunity against foes who cast near you. No attacks of opportunity against casters here — nothing to model yet.' },
+        { level: 16, key: 'truearcane',       name: 'True Arcane Bloodrage', kind: 'boon', boons: ['transformation'], desc: 'When you bloodrage you may also take on Transformation. A free action, once per bloodrage. (The book also offers Beast Shape IV and Form of the Dragon I — not in the engine.)' },
+        { level: 20, key: 'castersbane',      name: "Caster's Bane",      kind: 'todo',    desc: 'Weaker casters always provoke from you. Not in the engine yet.' },
+      ],
+      spells: { 7: ['magicmissile'], 10: ['invisibility'], 13: ['lightningbolt'], 16: ['dimensiondoor'] },
+    },
   },
   celestial: {
     key: 'celestial', name: 'Celestial', icon: '😇',
@@ -81,6 +127,17 @@ const _BASE = {
       { level: 20, key: 'ascension',       name: 'Ascension',         kind: 'passive', immune: ['acid', 'cold'], resist: () => ({ electricity: 10, fire: 10 }), desc: 'Immune to acid and cold; electricity and fire resistance 10. Always on. (Petrification immunity and +4 vs poison not modelled.)' },
     ],
     spells: { 3: ['bless'], 5: ['resistenergy', 'resistfire'], 7: ['magiccircleevil', 'magiccircleagainstevil', 'protevilcomm'], 9: ['removecurse'], 11: ['flamestrike'], 13: ['dispelmagicgreater', 'greaterdispel'], 15: ['banishment'], 17: ['sunburst'], 19: ['gate'] },
+    rager: {
+      powers: [
+        { level: 1,  key: 'angelicattacks',   name: 'Angelic Attacks',    kind: 'passive', angelic: true, desc: 'Your melee hits deal +1d6 to EVIL OUTSIDERS (devils, demons and their kin). (The book also lets them count as good against damage reduction — no aligned DR here.)' },
+        { level: 4,  key: 'celestialresist',  name: 'Celestial Resistances', kind: 'passive', resist: (l) => ({ acid: l >= 12 ? 10 : 5, cold: l >= 12 ? 10 : 5 }), desc: 'Acid and cold resistance 5 (10 at 12th).' },
+        { level: 8,  key: 'conviction',       name: 'Conviction',         kind: 'todo',    desc: 'Once per bloodrage, re-roll a saving throw (or an ability or skill check). Not in the engine yet — hero saves have no re-roll hook.' },
+        { level: 12, key: 'wingsofheaven',    name: 'Wings of Heaven',    kind: 'passive', fly: true, desc: 'Feathered wings: you fly while you bloodrage. Grounded foes cannot reach you.' },
+        { level: 16, key: 'angelicprotect',   name: 'Angelic Protection', kind: 'todo',    desc: '+4 to AC and saves against evil creatures. Not in the engine yet.' },
+        { level: 20, key: 'ascension',        name: 'Ascension',          kind: 'passive', constant: true, immune: ['acid', 'cold'], resist: () => ({ electricity: 10, fire: 10 }), desc: 'Always, even outside a bloodrage: immune to acid and cold; electricity and fire resistance 10. (Petrification immunity and +4 vs poison not modelled.)' },
+      ],
+      spells: { 7: ['bless'], 10: ['resistenergy', 'resistfire'], 13: ['heroism'], 16: ['holysmite'] },
+    },
   },
   destined: {
     key: 'destined', name: 'Destined', icon: '🌠',
@@ -93,7 +150,18 @@ const _BASE = {
       { level: 15, key: 'withinreach',     name: 'Within Reach',      kind: 'todo',    desc: 'Once a day a blow that would kill you leaves you at −1 and stable on a DC 20 Will save. Not in the engine yet.' },
       { level: 20, key: 'destinyrealized', name: 'Destiny Realized',  kind: 'todo',    desc: 'Foes confirm criticals against you only on a natural 20; yours confirm automatically. Not in the engine yet.' },
     ],
-    spells: { 3: ['alarm'], 5: ['blur'], 7: ['protectenergy', 'protectfire'], 9: ['freedommove'], 11: ['breakenchantment'], 13: ['mislead'], 15: ['spellturning'], 17: ['momentofprescience', 'momentprescience'], 19: ['foresight'] },
+    spells: { 3: ['alarm'], 5: ['blur'], 7: ['protectenergy', 'protectfire', 'protectelectricity', 'protectcold', 'protectacid'], 9: ['freedommove'], 11: ['breakenchantment'], 13: ['mislead'], 15: ['spellturning'], 17: ['momentofprescience', 'momentprescience'], 19: ['foresight'] },
+    rager: {
+      powers: [
+        { level: 1,  key: 'destinedstrike',   name: 'Destined Strike',    kind: 'deststrike', uses: (l) => l >= 12 ? 5 : 3, desc: 'A free action: + ½ your level (at least +1) to hit on your next melee attack. 3 uses per room (5 from 12th).' },
+        { level: 4,  key: 'fatedbloodrager',  name: 'Fated Bloodrager',   kind: 'passive', ac: (l) => Math.floor(l / 4), save: (l) => Math.floor(l / 4), desc: '+1 luck bonus to AC and saves (+2 at 8th, +3 at 12th, +4 at 16th, +5 at 20th).' },
+        { level: 8,  key: 'certainstrike',    name: 'Certain Strike',     kind: 'reroll',  desc: 'Once per bloodrage, re-roll an attack roll: your next MISSED attack is rolled again.' },
+        { level: 12, key: 'defydeath',        name: 'Defy Death',         kind: 'todo',    desc: 'Once a day a killing blow leaves you at 1 HP on a DC 20 Fortitude save. Not in the engine yet.' },
+        { level: 16, key: 'unstoppable',      name: 'Unstoppable',        kind: 'todo',    desc: 'Your critical threats confirm by themselves; threats against you confirm only on a natural 20. Not in the engine yet.' },
+        { level: 20, key: 'victoryordeath',   name: 'Victory or Death',   kind: 'todo',    desc: 'Immune to paralysis, petrification and the stunned, dazed and staggered conditions, always. Not in the engine yet.' },
+      ],
+      spells: { 7: ['shield'], 10: ['blur'], 13: ['protectenergy', 'protectfire', 'protectelectricity', 'protectcold', 'protectacid'], 16: ['freedommove'] },
+    },
   },
   elemental: {
     key: 'elemental', name: 'Elemental (air — electricity)', icon: '⚡',
@@ -108,6 +176,18 @@ const _BASE = {
       { level: 20, key: 'elementalbodycap', name: 'Elemental Body',   kind: 'passive', immune: ['electricity'], desc: 'Immune to electricity, always on. (Immunity to critical hits and sneak attacks not modelled.)' },
     ],
     spells: { 3: ['burninghands'], 5: ['scorchingray'], 7: ['protectenergy', 'protectelectricity', 'protectfire'], 9: ['elementalbody', 'elementalbody1'], 11: ['elementalbody2'], 13: ['elementalbody3'], 15: ['elementalbody4'], 17: ['summonmonster8'], 19: ['elementalswarm'] },
+    rager: {
+      powers: [
+        { level: 1,  key: 'elementalstrikes', name: 'Elemental Strikes',  kind: 'strike',  dtype: 'electricity', uses: (l) => l >= 8 ? 5 : 3, pierceAt: 12, alwaysAt: 20, desc: 'A swift action: for one round your melee hits deal +1d6 electricity. 3 uses per room (5 from 8th). At 20th level it is always on.' },
+        { level: 4,  key: 'elementalresist',  name: 'Elemental Resistance', kind: 'passive', resist: () => ({ electricity: 10 }), desc: 'Electricity resistance 10.' },
+        { level: 8,  key: 'elementalmove',    name: 'Elemental Movement', kind: 'passive', fly: true, desc: 'Air: you fly while you bloodrage. Grounded foes cannot reach you.' },
+        { level: 12, key: 'powerofelements',  name: 'Power of the Elements', kind: 'passive', desc: 'Your Elemental Strikes ignore electricity resistance, and a foe immune to it still takes half.' },
+        { level: 16, key: 'elementalform',    name: 'Elemental Form',     kind: 'todo',    desc: 'Once a day, take the form of Elemental Body IV when you bloodrage. Not in the engine yet.' },
+        { level: 20, key: 'elementalbodycap', name: 'Elemental Body',     kind: 'passive', constant: true, immune: ['electricity'], critShrug: 1, desc: 'Always, even outside a bloodrage: immune to electricity and to critical hits. (Sneak-attack immunity not modelled.)' },
+      ],
+      spells: { 7: ['burninghands'], 10: ['scorchingray'], 13: ['protectenergy', 'protectelectricity', 'protectfire'], 16: ['elementalbody', 'elementalbody1'] },
+      spellEnergy: 'electricity',   // the book: a bloodrager's Burning Hands and Scorching Ray deal the element's energy
+    },
   },
   fey: {
     key: 'fey', name: 'Fey', icon: '🧚',
@@ -121,6 +201,17 @@ const _BASE = {
       { level: 20, key: 'souloffey',       name: 'Soul of the Fey',   kind: 'passive', immune: ['poison'], dr: R(10), desc: 'Immune to poison; DR 10/— (the book: /cold iron). Always on. (Shadow Walk 1/day not modelled.)' },
     ],
     spells: { 3: ['entangle'], 5: ['hideouslaughter'], 7: ['deepslumber'], 9: ['poison'], 11: ['treestride'], 13: ['mislead'], 15: ['phasedoor'], 17: ['irresistibledance'], 19: ['shapechange'] },
+    rager: {
+      powers: [
+        { level: 1,  key: 'confusingcrit',    name: 'Confusing Critical', kind: 'passive', crit: { save: 'will', cond: 'confused', mind: true }, desc: 'When you confirm a critical hit in melee, the foe makes a Will save (DC 10 + ½ level + Con) or is CONFUSED for 1 round. Mind-affecting: the mindless shrug it off.' },
+        { level: 4,  key: 'leapingcharger',   name: 'Leaping Charger',    kind: 'todo',    desc: 'Charge through difficult terrain. No terrain here — nothing to model.' },
+        { level: 8,  key: 'blurringmove',     name: 'Blurring Movement',  kind: 'todo',    desc: 'Blur for a round whenever you move 10 ft. No movement here — awaiting a ruling on how it should read.' },
+        { level: 12, key: 'quickling',        name: 'Quickling Bloodrage', kind: 'passive', haste: true, desc: 'While you bloodrage you are under Haste: an extra attack, +1 to hit, +1 AC and Reflex.' },
+        { level: 16, key: 'onewithnature',    name: 'One with Nature',    kind: 'todo',    desc: 'Animals and plants do not attack you unless you strike first. Not in the engine yet.' },
+        { level: 20, key: 'furyofthefey',     name: 'Fury of the Fey',    kind: 'boon',    boons: ['bane'], desc: 'When you bloodrage, name one kind of creature (the kind you are aiming at, or the most common in the room): your melee attacks are BANE against it, +2 to hit and +2d6+2 damage. A free action, once per bloodrage.' },
+      ],
+      spells: { 7: ['entangle'], 10: ['hideouslaughter'], 13: ['haste'], 16: ['confusion'] },
+    },
   },
   infernal: {
     key: 'infernal', name: 'Infernal', icon: '🔥',
@@ -134,6 +225,17 @@ const _BASE = {
       { level: 20, key: 'powerofthepit',   name: 'Power of the Pit',  kind: 'passive', immune: ['fire', 'poison'], resist: () => ({ acid: 10, cold: 10 }), desc: 'Immune to fire and poison; acid and cold resistance 10. Always on. (Seeing in darkness not modelled.)' },
     ],
     spells: { 3: ['protgood', 'protectionfromgood', 'protevil'], 5: ['scorchingray'], 7: ['suggestion'], 9: ['charmmonster'], 11: ['dominateperson'], 13: ['planarbinding'], 15: ['greaterteleport', 'teleportgreater', 'teleport'], 17: ['powerwordstun'], 19: ['meteorswarm'] },
+    rager: {
+      powers: [
+        { level: 1,  key: 'hellfirestrike',   name: 'Hellfire Strike',    kind: 'strike',  dtype: 'fire', uses: (l) => l >= 12 ? 5 : 3, burstAt: 12, desc: 'A swift action: for one round your melee attacks are FLAMING, +1d6 fire on each hit. 3 uses per room. From 12th: 5 uses, and flaming burst (extra fire on a critical hit).' },
+        { level: 4,  key: 'infernalresist',   name: 'Infernal Resistance', kind: 'passive', resist: (l) => ({ fire: l >= 8 ? 10 : 5 }), desc: 'Fire resistance 5 (10 at 8th). (+2 / +4 on saves against poison is not typed here.)' },
+        { level: 8,  key: 'diabolicalarrog',  name: 'Diabolical Arrogance', kind: 'passive', saveVs: ['enchantment', 'fear'], desc: '+4 on saves against enchantment and fear effects.' },
+        { level: 12, key: 'darkwings',        name: 'Dark Wings',         kind: 'passive', fly: true, desc: 'Batlike wings: you fly while you bloodrage. Grounded foes cannot reach you.' },
+        { level: 16, key: 'hellfirecharge',   name: 'Hellfire Charge',    kind: 'todo',    desc: 'A charge carries Hellfire Strike for free. No charge here — nothing to model yet.' },
+        { level: 20, key: 'fiendofthepit',    name: 'Fiend of the Pit',   kind: 'passive', constant: true, immune: ['fire', 'poison'], resist: () => ({ acid: 10, cold: 10 }), desc: 'Always, even outside a bloodrage: immune to fire and poison; acid and cold resistance 10. (Seeing in darkness not modelled.)' },
+      ],
+      spells: { 7: ['protgood', 'protectionfromgood', 'protevil'], 10: ['scorchingray'], 13: ['suggestion'], 16: ['fireshield'] },
+    },
   },
   undead: {
     key: 'undead', name: 'Undead', icon: '💀',
@@ -147,6 +249,17 @@ const _BASE = {
       { level: 20, key: 'oneofthedead',    name: 'One of the Dead',   kind: 'passive', immune: ['cold'], dr: R(5), desc: 'Immune to cold; DR 5/—. Always on. (Immunity to paralysis, sleep and nonlethal not modelled.)' },
     ],
     spells: { 3: ['chilltouch'], 5: ['falselife'], 7: ['vampirictouch'], 9: ['animatedead'], 11: ['wavesfatigue', 'wavesoffatigue'], 13: ['undeathtodeath'], 15: ['fingerofdeath'], 17: ['horridwilting'], 19: ['energydrain'] },
+    rager: {
+      powers: [
+        { level: 1,  key: 'frightfulcharger', name: 'Frightful Charger',  kind: 'todo',    desc: 'A foe you hit on a charge is shaken for ½ your level rounds. No charge here — awaiting a ruling on what stands in for one.' },
+        { level: 4,  key: 'ghoststrike',      name: 'Ghost Strike',       kind: 'todo',    desc: 'Your melee attacks are ghost touch. Incorporeal foes take weapon hits in full here already — nothing to model.' },
+        { level: 8,  key: 'deathsgift',       name: "Death's Gift",       kind: 'passive', resist: () => ({ cold: 10 }), desc: 'Cold resistance 10. (DR against nonlethal damage not modelled — no nonlethal damage here.)' },
+        { level: 12, key: 'frightfulstrikes', name: 'Frightful Strikes',  kind: 'todo',    desc: 'Once per bloodrage, for one round your hits leave foes shaken (the shaken become frightened). Not in the engine yet.' },
+        { level: 16, key: 'incorporealrager', name: 'Incorporeal Bloodrager', kind: 'todo', desc: 'Once a day, become incorporeal. Not in the engine yet.' },
+        { level: 20, key: 'onefootgrave',     name: 'One Foot in the Grave', kind: 'passive', constant: true, immune: ['cold'], desc: 'Always, even outside a bloodrage: immune to cold. (Immunity to paralysis, sleep and nonlethal damage not modelled.)' },
+      ],
+      spells: { 7: ['chilltouch'], 10: ['falselife'], 13: ['vampirictouch'], 16: ['enervation'] },
+    },
   },
 };
 
@@ -183,6 +296,17 @@ function draconic(colour) {
       { level: 20, key: 'powerofwyrms', name: 'Power of Wyrms',     kind: 'passive', immune: [en], desc: `Immune to ${en}, always on. (Immunity to paralysis and sleep, and blindsense 60 ft, not modelled.)` },
     ],
     spells: { 3: ['magearmor'], 5: ['resistenergy', 'resist' + en], 7: ['fly'], 9: ['fear'], 11: ['spellresistance'], 13: ['formofthedragon1', 'formdragon1'], 15: ['formofthedragon2', 'formdragon2'], 17: ['formofthedragon3', 'formdragon3'], 19: ['wish'] },
+    rager: {
+      powers: [
+        { level: 1,  key: 'dragonclaws',  name: 'Claws',              kind: 'claws',   dtype: en, desc: `While bloodraging you have claws: two claw attacks at your full attack bonus, 1d6 + Strength each (1d4 if you are Small), as often as you like. They count as magic from 4th level, deal 1d8 (1d6 Small) from 8th, and carry +1d6 ${en} from 12th. As the book has it.` },
+        { level: 4,  key: 'dragonresist', name: 'Draconic Resistance', kind: 'passive', resist: (l) => ({ [en]: l >= 8 ? 10 : 5 }), ac: (l) => l >= 16 ? 4 : l >= 8 ? 2 : 1, desc: `${en[0].toUpperCase() + en.slice(1)} resistance 5 and +1 natural armor (10 and +2 at 8th, +4 natural armor at 16th).` },
+        { level: 8,  key: 'breathweapon', name: 'Breath Weapon',      kind: 'blast',   dtype: en, maxTargets: cone ? 4 : 2, uses: (l) => l >= 20 ? 3 : l >= 16 ? 2 : 1, desc: (cone ? `A 30-ft cone of ${_BREATH_WORD[en]}: your level d6 ${en} on up to 4 foes` : `A 60-ft line of ${_BREATH_WORD[en]}: your level d6 ${en} on up to 2 foes`) + ', Reflex half (DC 10 + ½ level + Con). Once per room (twice at 16th, three times at 20th).' },
+        { level: 12, key: 'dragonwings',  name: 'Dragon Wings',       kind: 'passive', fly: true, desc: 'Leathery wings: you fly while you bloodrage. Grounded foes cannot reach you.' },
+        { level: 16, key: 'dragonform',   name: 'Dragon Form',        kind: 'todo',    desc: 'Take the form of your dragon when you bloodrage (Form of the Dragon II). Not in the engine yet.' },
+        { level: 20, key: 'powerofwyrms', name: 'Power of Wyrms',     kind: 'passive', constant: true, immune: [en], desc: `Always, even outside a bloodrage: immune to ${en}. (Immunity to paralysis and sleep, and blindsense 60 ft, not modelled.)` },
+      ],
+      spells: { 7: ['shield'], 10: ['resistenergy', 'resist' + en], 13: ['fly'], 16: ['fear'] },
+    },
   };
 }
 const DRAGON_KEYS = Object.keys(DRAGONS);   // the book's table order: chromatic, then metallic
@@ -199,11 +323,11 @@ const bloodlineName = (k) => (BLOODLINES[bloodlineKey(k)] || {}).name || 'None';
 /** Picker rows for the lobby (pf1meta): key, name, icon, blurb, the power names by level. */
 function bloodlineList() {
   return [{ key: 'none', name: 'None (no bloodline)', icon: '—', blurb: 'The engine’s old model: one extra free spell pick per spell level, no powers.' }]
-    .concat(BLOODLINE_KEYS.map(k => { const b = BLOODLINES[k]; return { key: k, name: b.name, icon: b.icon, blurb: b.blurb, powers: b.powers.map(p => `${p.level}: ${p.name}${p.kind === 'todo' ? ' (not yet)' : ''}`) }; }));
+    .concat(BLOODLINE_KEYS.map(k => { const b = BLOODLINES[k]; return { key: k, name: b.name, icon: b.icon, blurb: b.blurb, powers: b.powers.map(p => `${p.level}: ${p.name}${p.kind === 'todo' ? ' (not yet)' : ''}`), ragerPowers: (b.rager ? b.rager.powers : []).map(p => `${p.level}: ${p.name}${p.kind === 'todo' ? ' (not yet)' : ''}`) }; }));
 }
 /** Which classes pick a bloodline. v3.37.170 (Tobias: 'bloodragers utilize them too'): the bloodrager picks from the
- *  same list; the sorcerer's power ladder (1/3/9/15/20) stands in for the ACG bloodrager one (1/4/8/12/16/20) for now,
- *  and a picked bloodline replaces the generic Bloodline Surge. */
+ *  same list. v3.37.188: a bloodrager reads the bloodline's `rager` table (the ACG ladder, 1/4/8/12/16/20), a sorcerer
+ *  its `powers`; a picked bloodline replaces the generic Bloodline Surge. */
 const bloodlineClasses = ['sorcerer', 'bloodrager'];
 
 module.exports = { BLOODLINES, BLOODLINE_KEYS, DRAGONS, bloodlineKey, bloodlineName, bloodlineList, bloodlineClasses };

@@ -218,7 +218,7 @@ module.exports = ({ fighterFeats, titleCase }) => ({
     }
     // Transient states tracked by their own flags, not in buffApplied:
     if (m.smiteActive)  push('smite', 'Smite', '+hit & +2×level damage vs evil');
-    if (m.hasted > 0)   push('haste', 'Haste', `an extra attack each turn (${m.hasted} left)`);
+    if (m.hasted > 0)   push('haste', 'Haste', `an extra attack each turn (${m.hasted > 50 ? 'for the room' : `${m.hasted} left`})`);   // v3.37.188: a bloodline haste lasts as long as the rage
     if (m.invisible)    push('invisible', 'Invisible', 'unseen — until you attack');
     if (m.flying)       push('fly', 'Flying', 'airborne — grounded foes cannot reach you');
     if (m.images > 0)   push('mirrorimage', 'Mirror Image', `${m.images} decoy${m.images > 1 ? 's' : ''} soaking incoming attacks`, '/dungeon/buffs/fly.webp', m.images);   // no mirrorimage.webp exists — reuse the shimmer icon (matches BUFF_META); n = remaining decoys badge

@@ -12,16 +12,13 @@ Ruled section with the version that implemented it.
   electricity/time/teleport type spells. I like to give Josh some choices.' To build: a short menu per bloodline
   spell level (lightning, time and teleport spells) that Josh picks from, replacing Burning Hands, Scorching Ray,
   Elemental Body and Summon Monster VIII on Olbryn. Needs Josh's picks (or a picker in the lobby).
-- **Q14i Bloodrager bloodlines.** Ruling: 'use the real acg when it makes sense for our format.' To build: the ACG
-  bloodrager ladder (1/4/8/12/16/20) with its own powers, replacing the sorcerer-ladder stopgap.
 - **Q15 Antimagic Field.** Ruling: 'antimagic field stops magic for anyone in it, and we don't have a placement
   system really. I think if it's placed on a target they cannot use spells until they move at least 20' and it can
-  affect multiple targets.' To build: a multi-target spell; each target cannot cast (and its spell effects are
-  suppressed) until it spends a move to get clear.
+  affect multiple targets.' Not built yet: one detail decides how strong it is — see 15a below.
 - **Q16 APG / UM / ACG.** Ruling: 'yes include advanced class guide, I don't care what order we go in.' The import
   order is ours: thin lists first (magus, inquisitor, oracle, bloodrager), then the big Sor/Wiz lists.
-- **Q6 Monsters.** Ruling: 'we need more monsters, dragons and giants are good, there are others too.' To build: a
-  Foundry import of CR 12-20 dragons and giants first, then other families.
+- **Q6 Monsters.** Ruling: 'we need more monsters, dragons and giants are good, there are others too.' Blocked on
+  ART, not on stats: every monster needs a token and the game has none for these — see 6a below.
 - **Q2 Potions.** Ruling: 'I'd like players to be able to keep & use them at will. Perhaps assume everyone has a
   "potion bandolier" they can pull from that stores potions for later use.' Details asked of Toby below (2).
 - **Q1 Sounds.** Toby will supply Mage Armor and Shield sounds and asked for the list of gaps — see
@@ -43,6 +40,13 @@ Ruled section with the version that implemented it.
    the grip lapses by itself after two rounds, and enemies never pin. Bring those to the book too (a pinned hero
    loses turns), or leave the hero side as it is?
 
+6a. **Tokens for the dragons and giants.** The stat blocks are standard Bestiary ones and I can write them at any
+   time, but the build fails a monster with no token art. The game has tokens for a black dragon, a void dragon, a
+   gold one (Parnoneryx) and hill / stone giants only. Needed, one token each (the usual round webp): red, blue,
+   green and white dragons; frost, fire, cloud and storm giants. With those I add each dragon at three ages
+   (roughly CR 12-19) and the four giants (CR 9-13). The only fitting art on the server is the D&D system's own
+   token set inside Foundry, which is not ours to publish.
+
 7. **Play styles.** Gaspar has the new 'melee' style (v3.37.185). 'Taboon' and 'Ramos' were my mistake — no such
    characters exist in the roster. Which other characters of yours should get a style? (Styles today: summoner,
    guardian, storm, melee.)
@@ -54,6 +58,22 @@ Ruled section with the version that implemented it.
     powers; proposed: Arcane Bond = once a dungeon, recover one spent casting; Metamagic Adept = free
     Empower/Maximize uses per room; School Power = +2 DC on one school; Arcane Apotheosis = metamagic never raises
     the slot.
+
+14j. **Bloodrager bloodline powers that need your reading** (the ACG table is in since v3.37.188; these are 'not
+    yet' because the book leans on something this format lacks). (1) **Blurring Movement** (fey 8): blur for a round
+    whenever you move 10 ft — with no movement here, blur for the whole bloodrage, or leave it out? (2)
+    **Frightful Charger** (undead 1) and **Hellfire Charge** (infernal 16) need a charge — should the first hit on
+    a foe you were not attacking last turn count as one? (3) **Demonic Aura** (abyssal 16): 2d6 + Con fire to
+    whoever ends its turn beside you — burn every foe that attacks you in melee instead? The rest of the 'not yet'
+    list is plain work with no question in it (Conviction, Defy Death, Unstoppable, Victory or Death, Angelic
+    Protection, Frightful Strikes, Incorporeal Bloodrager, the form powers).
+
+15a. **Antimagic Field, the one detail.** Your ruling: placed on targets, several of them, 'they cannot use spells
+    until they move at least 20 ft'. By the book that move is a move action, so a caster could step out and still
+    cast the same turn — the field would then cost a foe almost nothing. Two readings: (a) getting clear costs the
+    foe its WHOLE turn (strong: every affected caster loses a turn, and its buffs are off until then); (b) it costs
+    only the move (weak: the foe's magic is off just until its own turn comes). Which? And should an enemy caster
+    be able to drop one on the heroes too (then heroes need a 'step clear' action)?
 
 15. **Contingency and Mage's Faithful Hound.** Contingency: skip, or a single pre-set 'when I drop below half HP, a
     stored cure fires'? Hound: skip, or a room-long guard summon that bites whoever attacks the caster?
@@ -102,6 +122,12 @@ Ruled section with the version that implemented it.
     modelled for sorcerers). Two things that are my reading, say so if you want them otherwise: a LINE breath reaches
     2 foes and a CONE 4 (the engine's Lightning Bolt convention), and Dragon Resistances now stop at 10 as the book
     has it (the stand-in gave 20 at 15th).
+- **Rulings of 2026-11-18, built in v3.37.188:**
+  - **Bloodrager bloodlines from the ACG** (was 14i): 'use the real acg when it makes sense for our format.' Every
+    bloodline has its bloodrager table: powers at 1 / 4 / 8 / 12 / 16 / 20, bonus spells at 7 / 10 / 13 / 16, and
+    the powers work only while bloodraging (the level-20 ones always), as the book has it. 39 of the 60 powers are
+    in the engine; 21 are listed as 'not yet' (three of them wait on 14j). Choices the book leaves to the player
+    ('when you enter a bloodrage you may…') are free-action buttons; hirelings take the first option themselves.
 - **Rulings of 2026-11-18 that needed no build:**
   - **Greater Magic Weapon covers the party** (was 22b): 'greater magic weapon sucks as written, lets let it cover
     the party.' The communal wards keep their current spell levels under the same reasoning (was 22a — my reading of

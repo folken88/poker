@@ -383,6 +383,9 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   // bleed, a vicious blade). No sidearm: beasts, vermin, oozes, aberrations, constructs,
   // anything fighting with its own claws and teeth, the incorporeal, the mindless — they still
   // claw at the air. A stat block can carry its own `sidearm`, or `noSidearm: true`.
+  // v3.37.188 bloodrager bloodlines: Unusual Anatomy (a 50% chance a critical hit is only a hit) and the level-20
+  // immunities (Aberrant Form, Elemental Body). Rolled before the swing — the odds are the same.
+  _critShrug(t) { const c = (t && t.bloodCritShrug) || 0; return c >= 1 || (c > 0 && Math.random() < c); },
   _foeSidearm(e) {
     if (!e || e.ranged || e.flying || e.noSidearm) return null;
     if (e.sidearm) return e.sidearm;
@@ -512,7 +515,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
     // S1a) — one set of rules for every target kind. See the chokepoint's comment.
     if (e.ranged && this._windWall > 0) { this._note(`🌬️ ${e.glyph} ${e.name}'s shot is flung aside by the WIND WALL.`, null, { side: 'enemy' }); this._echoToTable(); return; }   // Wind Wall (v3.37.161)
     if (e.ranged && target.entropic && dRoll(5) === 1) { this._note(`🌀 ${e.glyph} ${e.name}'s shot bends away from ${target.nickname}'s ENTROPIC SHIELD.`, null, { side: 'enemy' }); this._echoToTable(); return; }   // Entropic Shield (v3.37.161): 20% miss vs ranged
-    const r = this._foeSwing(e, effAC, { critImmune: !!target.elemBody });
+    const r = this._foeSwing(e, effAC, { critImmune: !!target.elemBody || this._critShrug(target) });
     if (r.hit && !r.crit && r.roll !== 20 && e.ranged && target.cls === 'gunslinger' && (target.grit || 0) > 0 && (r.total - effAC) < 2) {   // v3.37.172 GUNSLINGER'S DODGE: 1 grit, +2 AC against a ranged shot that would just hit
       target.grit--;
       this._note(`🤸 ${target.nickname} spends a grit — GUNSLINGER'S DODGE: ${e.glyph} ${e.name}'s shot is turned aside [${r.total} vs ${effAC}+2]. ${target.grit}/${target.gritMax} grit left.`, null);
@@ -844,7 +847,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemyHook(e, target) {
     const cfg = e.hook || {};
     const snd = cfg.grabSound || GRAB_CHAIN_SND;   // the chain-hook GRAB always rattles out the "come here!" chain (Josh); cfg.sound is reserved for the constrict/crush
-    const r = this._foeSwing(e, this._foeTargetAC(e, target), { critImmune: !!target.elemBody });   // S1b chokepoint roll + shared AC stack; elemBody heroes can't be crit (v3.37.88)
+    const r = this._foeSwing(e, this._foeTargetAC(e, target), { critImmune: !!target.elemBody || this._critShrug(target) });   // S1b chokepoint roll + shared AC stack; elemBody heroes can't be crit (v3.37.88)
     if (!r.hit) {
       this._note(`⛓️ ${e.glyph} ${e.name} hurls its barbed chain at ${target.nickname} — the hook scrapes past. ${this._atkStr(r)}`, snd, { side: 'enemy' });
       this._echoToTable(snd); this._broadcast(); return;
@@ -1270,7 +1273,7 @@ module.exports = ({ SICKENED_PENALTY, SICKENED_ROUNDS, HIGH_GROUND_HIT, ABILITY_
   _enemySpellstrike(e, target) {
     const cfg = e.spellstrike || {};
     const SS = cfg.name || 'VAMPIRIC TOUCH';
-    const r = this._foeSwing(e, this._foeTargetAC(e, target), { critImmune: !!target.elemBody });   // S1b chokepoint roll + shared AC stack; elemBody heroes can't be crit (v3.37.88)
+    const r = this._foeSwing(e, this._foeTargetAC(e, target), { critImmune: !!target.elemBody || this._critShrug(target) });   // S1b chokepoint roll + shared AC stack; elemBody heroes can't be crit (v3.37.88)
     const snd = cfg.sound || null;
     if (!r.hit) { this._note(`🩸 ${e.glyph} ${e.name}'s ${SS.toLowerCase()} misses ${target.nickname}. ${this._atkStr(r)}`, snd, { side: 'enemy' }); this._echoToTable(snd); this._broadcast(); return; }
     const [phys, drTag] = this._physDR(target, r.damage);   // Stoneskin soaks the weapon part only

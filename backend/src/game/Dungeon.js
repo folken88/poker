@@ -1467,7 +1467,7 @@ class Dungeon {
   // stack with itself and ends exactly when Haste does. (Engine saves are generic,
   // so the Reflex bonus reads as +1 to all saves — a small, benign approximation.)
   _hasteMod(m) { return (m && m.hasted > 0 && m.hasteFull) ? 1 : 0; }
-  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + (m.bloodSave || 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.cursed ? 4 : 0) + ((m.fearWard && tags && tags.includes('fear')) ? 4 : 0) - (m.slowed > 0 && tags && tags.includes('reflex') ? 1 : 0) + (m._domWardRounds > 0 ? 2 : 0) + this._shakeItOff(m); }
+  _partySaveMod(m, tags) { return (m.level || 1) + ((m.buffs && m.buffs.save) || 0) + (m.bloodSave || 0) + ((m.bloodSaveVs && tags && tags.some(t => m.bloodSaveVs.includes(t))) ? 4 : 0) + fighterFeats(m.cls, m.level, this._isRanged(m)).save + this._hasteMod(m) + RACES.raceSaveBonus(m.race, tags) - (m.sickened > 0 ? SICKENED_PENALTY : 0) - (m.cursed ? 4 : 0) + ((m.fearWard && tags && tags.includes('fear')) ? 4 : 0) - (m.slowed > 0 && tags && tags.includes('reflex') ? 1 : 0) + (m._domWardRounds > 0 ? 2 : 0) + this._shakeItOff(m); }
    // saves scale with level (+ rage's +Will, + fighter save feats, + Haste's +1 Reflex, + racial save bonuses: flat 'all' always, typed only when tagged; Slow drags Reflex −1 — PF1; Resistant Touch (Protection domain) +2 while warded)
   // How much a hero's AC is lowered right now: sticky penalty (rage) + a
   // this-turn penalty (reckless / barbarian cleave drop their guard).

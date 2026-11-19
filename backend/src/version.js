@@ -2176,6 +2176,25 @@
 //                     affecting (undead/constructs immune). One applier now lands every save-or-
 //                     suffer outcome (single and mass); bots sweep the field with the mass ones.
 //                     Chips for all three. Tests 246+; CLIENT_BUILD unchanged.
+//  3.37.188 2026-11-19 TOBY'S RULINGS, THIRD BATCH — BLOODRAGER BLOODLINES FROM THE ADVANCED CLASS GUIDE (14i: 'use the real acg
+//                     when it makes sense for our format'). A bloodrager no longer borrows the sorcerer's ladder: every
+//                     bloodline carries a `rager` table with the ACG powers at 1 / 4 / 8 / 12 / 16 / 20 and the ACG bonus
+//                     spells at 7 / 10 / 13 / 16. As in the book the powers work only WHILE BLOODRAGING (the level-20 ones
+//                     always); _bloodrageOn switches them on from the Rage branch of _abBuff and says what woke.
+//                     In the engine: Claws (1d6, magic at 4th, 1d8 at 8th, energy at 12th, at will while raging), the
+//                     resistances / natural armor / luck bonuses / immunities, wings (celestial, draconic, infernal, air),
+//                     Breath Weapon on a Constitution DC, Certain Strike, Abyssal Bloodrage, Quickling Bloodrage (haste),
+//                     Staggering Strike and Confusing Critical (riders on a confirmed critical hit), Elemental Strikes and
+//                     Hellfire Strike (swift, one round, +1d6; flaming burst and resistance-piercing at 12th), Destined
+//                     Strike, Angelic Attacks, Diabolical Arrogance (+4 vs enchantment and fear), Unusual Anatomy and the
+//                     level-20 critical-hit immunities, and the on-rage choices as free-action buttons (Demonic Bulk,
+//                     Arcane / Greater / True Arcane Bloodrage, Fury of the Fey). Hirelings take their choices and
+//                     spend their strike powers by themselves. 21 powers with no surface here are listed as 'not yet'.
+//                     An elemental bloodrager's Burning Hands and Scorching Ray deal electricity (ACG). A hireling
+//                     bloodrager with a bloodline now bloodrages at the top of its first turn (it is free; the sims
+//                     showed bots fighting whole rooms unraged). FIX, sorcerers too: a bloodline bonus spell defined
+//                     only inside a class kit (Bless, Bull's Strength, Heroism, Haste, Mage Armor, Entangle, Hideous
+//                     Laughter, Flame Strike…) was reported as 'a spell the engine lacks' and never granted.
 //  3.37.187 2026-11-19 TOBY'S RULINGS, SECOND BATCH — the bloodlines.
 //                     (14a) CLAWS ARE REAL CLAW ATTACKS ('claws as real claw attacks for bloodlines'). Abyssal and Draconic
 //                     Claws were a +2 damage room buff; they are the book's power now: each use is one round of two claw
@@ -2545,7 +2564,7 @@
 //                     level negative energy, max 150, Will half; the undead are HEALED by it). Bots
 //                     now pick the right cleanse for the affliction. Neutralize Poison deferred —
 //                     the engine has no poison condition to cure. Tests 250+; CLIENT_BUILD unchanged.
-const VERSION = '3.37.187';
+const VERSION = '3.37.188';
 // The client bundle stamp — bumped with EVERY client.js deploy; /api/version
 // serves it so a live tab can hear that its files are stale (v3.37.113).
 const CLIENT_BUILD = 33884;   // v3.37.184: V casts domain and bloodline spells (they leave the blind Spellbook); six party-wide wards carry '(Communal)'
